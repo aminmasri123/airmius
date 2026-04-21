@@ -7,6 +7,7 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import { ref, onMounted } from 'vue'
 
 defineProps({
     canResetPassword: Boolean,
@@ -27,64 +28,140 @@ const submit = () => {
         onFinish: () => form.reset('password'),
     });
 };
+
+const images = [
+    '/img/login/slide1.jpeg',
+    '/img/login/slide2.jpeg',
+    '/img/login/slide3.jpeg',
+
+]
+
+const current = ref(0)
+
+let interval
+
+onMounted(() => {
+    interval = setInterval(() => {
+        current.value = (current.value + 1) % images.length
+    }, 8000)
+})
 </script>
 
 <template>
-    <Head title="Log in" />
 
-    <AuthenticationCard>
-        <template #logo>
-            <AuthenticationCardLogo />
-        </template>
+    <Head :title="$t('Anmelden')" />
 
-        <div v-if="status" class="mb-4 font-medium text-sm text-green-600">
-            {{ status }}
+    <div class="min-h-screen flex">
+
+        <!-- LINKS: LOGIN -->
+        <div class="w-full md:w-1/2 flex items-center justify-center bg-white px-10">
+            <div class="w-full max-w-md">
+
+                <div class="w-64 h-64 context-center mx-auto mt-10">
+                    <AuthenticationCardLogo />
+
+                </div>
+                <div v-if="status" class="mb-4 font-medium text-sm text-green-600">
+                    {{ status }}
+                </div>
+
+                <form @submit.prevent="submit">
+                    <div>
+                        <InputLabel for="email" value="Email" />
+                        <TextInput id="email" v-model="form.email" type="email" class="mt-1 block w-full" required
+                            autofocus autocomplete="username" />
+                        <InputError class="mt-2" :message="form.errors.email" />
+                    </div>
+
+                    <div class="mt-4">
+                        <InputLabel for="password" value="Password" />
+                        <TextInput id="password" v-model="form.password" type="password" class="mt-1 block w-full"
+                            required autocomplete="current-password" />
+                        <InputError class="mt-2" :message="form.errors.password" />
+                    </div>
+
+                    <div class="block mt-4">
+                        <label class="flex items-center">
+                            <Checkbox v-model:checked="form.remember" name="remember" />
+                            <span class="ms-2 text-sm text-gray-600">Remember me</span>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-end mt-4">
+                        <Link v-if="canResetPassword" :href="route('password.request')"
+                            class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Forgot your password?
+                        </Link>
+
+                        <PrimaryButton class="ms-4" :class="{ 'opacity-25': form.processing }"
+                            :disabled="form.processing">
+                            Log in
+                        </PrimaryButton>
+                    </div>
+                </form>
+
+
+            </div>
         </div>
 
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="email" value="Email" />
-                <TextInput
-                    id="email"
-                    v-model="form.email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    required
-                    autofocus
-                    autocomplete="username"
-                />
-                <InputError class="mt-2" :message="form.errors.email" />
-            </div>
+        <!-- RECHTS: SLIDER -->
 
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
-                <TextInput
-                    id="password"
-                    v-model="form.password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    required
-                    autocomplete="current-password"
-                />
-                <InputError class="mt-2" :message="form.errors.password" />
-            </div>
 
-            <div class="block mt-4">
-                <label class="flex items-center">
-                    <Checkbox v-model:checked="form.remember" name="remember" />
-                    <span class="ms-2 text-sm text-gray-600">Remember me</span>
-                </label>
-            </div>
+       <div class="w-1/2">
+         <div
+            class="hidden h-screen md:flex  text-white items-center justify-center">
 
-            <div class="flex items-center justify-end mt-4">
-                <Link v-if="canResetPassword" :href="route('password.request')" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Forgot your password?
-                </Link>
+            <div class="w-full h-full relative overflow-hidden">
+                <!-- Slider Container -->
+                <div class="h-full w-5/6 relative">
 
-                <PrimaryButton class="ms-4" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                    Log in
-                </PrimaryButton>
+                    <!-- SLIDES -->
+                    <div v-for="(img, index) in images" :key="index" :class="[
+                        'absolute inset-0 transition-all duration-700',
+                        current === index ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
+                        ]">
+                        <img
+                        :src="img"
+                        class="w-full h-full object-cover transition-transform duration-[8000ms] ease-in-out"
+                        :class="current === index ? 'scale-110' : 'scale-300'"
+                        />
+                    </div>
+
+                    <!-- LEFT BUTTON -->
+                    <button @click="current = (current - 1 + images.length) % images.length"
+                        class="absolute left-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 p-3 rounded-full z-20">
+                        ‹
+                    </button>
+
+                    <!-- RIGHT BUTTON -->
+                    <button @click="current = (current + 1) % images.length"
+                        class="absolute right-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 p-3 rounded-full z-20">
+                        ›
+                    </button>
+
+                <!-- Text Overlay -->
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="absolute text-center bottom-10  text-white bg-black/50 p-8 rounded-md">
+                        <h2 class="text-2xl font-bold">Sport Plattform</h2>
+                        <p class="text-sm opacity-80">Team Management · Kommunikation · Events</p>
+
+
+                        <div class="absolute  left-1/2 -translate-x-1/2 flex gap-2 z-20">
+                            <button v-for="(img, index) in images" :key="index" @click="current = index"
+                                class="w-2.5 h-2.5 rounded-full transition-all mt-2 duration-300"
+                                :class="current === index ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/70'" />
+                        </div>
+                    </div>
+                </div>
+
+
+                </div>
+
+
             </div>
-        </form>
-    </AuthenticationCard>
+        </div>
+       </div>
+    </div>
+
+
 </template>

@@ -1,9 +1,9 @@
 <script setup>
 import { Head, useForm } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import LanguageDropdown from '@/Components/LanguageDropdown.vue'
-
+import ApplicationLogo from '@/Components/ApplicationLogo.vue'
 
 
 const props = defineProps({
@@ -63,6 +63,14 @@ const submitForm = () => {
         },
     })
 }
+
+watch(mobileOpen, (val) => {
+    if (val) {
+        document.body.style.overflow = 'hidden'
+    } else {
+        document.body.style.overflow = ''
+    }
+})
 </script>
 
 <template>
@@ -73,10 +81,10 @@ const submitForm = () => {
         <nav id="nav" class="fixed top-0 left-0 w-full z-50 nav-blur border-b border-white/5 bg-white/10 backdrop-blur">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
                 <button @click="scrollTo('hero')" class="font-heading font-900 text-xl tracking-tight">
-                    <img src="/img/Logo-Airmius.png" alt="AIRMIUS Logo" class="w-10 h-10 mr-2 inline-block -mt-1">
+                    <ApplicationLogo />
                     <span class="text-white font-[--ubuntu]">AIRMIUS</span>
                 </button>
-                <div class="hidden md:flex items-center gap-6 text-sm font-medium text-gray-300">
+                <div class="hidden sm:inline-block md:flex items-center gap-6 text-sm font-medium text-gray-300">
                     <button @click="scrollTo('vorteile')" class="hover:text-white transition">Vorteile</button>
                     <button @click="scrollTo('funktionen')" class="hover:text-white transition">Funktionen</button>
                     <button @click="scrollTo('sportarten')" class="hover:text-white transition">Sportarten</button>
@@ -91,17 +99,13 @@ const submitForm = () => {
                 </div>
 
 
-
-
-
-
                 <div class="flex items-center gap-3">
                     <Link v-if="props.canLogin" :href="route('login')"
                             class="hidden sm:inline-block text-sm font-semibold text-air-blue hover:text-blue-400 transition">
                             {{ $t('Anmelden')}}
                     </Link>
                     <button @click="scrollTo('hero')"
-                        class="bg-air-blue hover:bg-blue-600 text-white text-sm font-semibold px-5 py-2 rounded-full transition">
+                        class="hidden bg-air-blue hover:bg-blue-600 text-white text-sm font-semibold px-5 py-2 rounded-full transition">
                         Jetzt starten
                     </button>
                     <button @click="toggleMobile" class="md:hidden text-gray-300 hover:text-white">
@@ -109,17 +113,48 @@ const submitForm = () => {
                     </button>
                 </div>
             </div>
-            <div v-show="mobileOpen" class="md:hidden border-t border-white/5 bg-air-dark/95 backdrop-blur">
-                <div class="px-4 py-4 flex flex-col gap-3 text-sm font-medium text-gray-300">
-                    <button @click="scrollTo('vorteile')" class="hover:text-white py-1 text-left">Vorteile</button>
-                    <button @click="scrollTo('funktionen')" class="hover:text-white py-1 text-left">Funktionen</button>
-                    <button @click="scrollTo('sportarten')" class="hover:text-white py-1 text-left">Sportarten</button>
-                    <button @click="scrollTo('ueber')" class="hover:text-white py-1 text-left">Über uns</button>
-                    <button @click="scrollTo('blog')" class="hover:text-white py-1 text-left">Blog</button>
-                    <button @click="scrollTo('kontakt')" class="hover:text-white py-1 text-left">Kontakt</button>
-                </div>
-            </div>
         </nav>
+            <div v-if="mobileOpen" class="fixed inset-0 z-50 md:hidden bg-air-dark/95 backdrop-blur">
+
+    <!-- HEADER -->
+    <div class="flex justify-between items-center p-5 border-b border-white/10">
+        <span class="text-white font-bold text-lg">Menü</span>
+        <button @click="mobileOpen = false" class="text-white text-2xl">✕</button>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="flex flex-col px-6 py-6 gap-6 text-lg text-gray-300 ">
+
+        <button @click="scrollTo('vorteile')" class="hover:text-white text-left">
+            Vorteile
+        </button>
+
+        <button @click="scrollTo('funktionen')" class="hover:text-white text-left">
+            Funktionen
+        </button>
+
+        <button @click="scrollTo('sportarten')" class="hover:text-white text-left">
+            Sportarten
+        </button>
+
+        <button @click="scrollTo('ueber')" class="hover:text-white text-left">
+            Über uns
+        </button>
+
+        <button @click="scrollTo('blog')" class="hover:text-white text-left">
+            Blog
+        </button>
+
+        <button @click="scrollTo('kontakt')" class="hover:text-white text-left">
+            Kontakt
+        </button>
+        <Link v-if="props.canLogin" :href="route('login')"
+            class=" hover:text-white text-left">
+            {{ $t('Anmelden')}}
+        </Link>
+
+    </div>
+</div>
 
         <!-- HERO -->
         <section id="hero" class="grad-hero pt-48 sm:pt-36 sm:pb-24 px-4 h-dvh flex items-center">
