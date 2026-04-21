@@ -67,8 +67,12 @@ const submitForm = () => {
 watch(mobileOpen, (val) => {
     if (val) {
         document.body.style.overflow = 'hidden'
+        document.body.style.position = 'fixed'
+        document.body.style.width = '100%'
     } else {
         document.body.style.overflow = ''
+        document.body.style.position = ''
+        document.body.style.width = ''
     }
 })
 </script>
@@ -80,11 +84,14 @@ watch(mobileOpen, (val) => {
         <!-- NAV -->
         <nav id="nav" class="fixed top-0 left-0 w-full z-50 nav-blur border-b border-white/5 bg-white/10 backdrop-blur">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
-                <button @click="scrollTo('hero')" class="font-heading font-900 text-xl tracking-tight">
-                    <ApplicationLogo />
+                <button @click="scrollTo('hero')"
+                    class="flex items-center gap-2 font-heading font-900 text-xl tracking-tight">
+                    <ApplicationLogo class="w-8 h-8" />
                     <span class="text-white font-[--ubuntu]">AIRMIUS</span>
                 </button>
-                <div class="hidden sm:inline-block md:flex items-center gap-6 text-sm font-medium text-gray-300">
+
+                <!-- Desktop Links: erst ab md anzeigen -->
+                <div class="hidden md:flex items-center gap-6 text-sm font-medium text-gray-300">
                     <button @click="scrollTo('vorteile')" class="hover:text-white transition">Vorteile</button>
                     <button @click="scrollTo('funktionen')" class="hover:text-white transition">Funktionen</button>
                     <button @click="scrollTo('sportarten')" class="hover:text-white transition">Sportarten</button>
@@ -93,72 +100,83 @@ watch(mobileOpen, (val) => {
                     <button @click="scrollTo('kontakt')" class="hover:text-white transition">Kontakt</button>
                 </div>
 
-
                 <div class="flex items-center gap-3">
                     <LanguageDropdown />
-                </div>
+
+                    <!-- Login nur Desktop -->
 
 
-                <div class="flex items-center gap-3">
-                    <Link v-if="props.canLogin" :href="route('login')"
-                            class="hidden sm:inline-block text-sm font-semibold text-air-blue hover:text-blue-400 transition">
-                            {{ $t('Anmelden')}}
-                    </Link>
+                    <!-- CTA nur Desktop -->
                     <button @click="scrollTo('hero')"
-                        class="hidden bg-air-blue hover:bg-blue-600 text-white text-sm font-semibold px-5 py-2 rounded-full transition">
+                        class="hidden md:block bg-air-blue hover:bg-blue-600 text-white text-sm font-semibold px-5 py-2 rounded-full transition">
                         Jetzt starten
                     </button>
-                    <button @click="toggleMobile" class="md:hidden text-gray-300 hover:text-white">
+                    <Link v-if="props.canLogin" :href="route('login')"
+                        class="hidden lg:inline-block text-sm font-semibold text-air-blue hover:text-blue-400 transition">
+                        {{ $t('Anmelden') }}
+                    </Link>
+                    <!-- Burger nur Mobile -->
+                    <button @click="toggleMobile" class="md:hidden text-gray-300 hover:text-white p-2">
                         <i class="las la-bars text-2xl"></i>
                     </button>
                 </div>
             </div>
         </nav>
-            <div v-if="mobileOpen" class="fixed inset-0 z-50 md:hidden bg-air-dark/95 backdrop-blur">
 
-    <!-- HEADER -->
-    <div class="flex justify-between items-center p-5 border-b border-white/10">
-        <span class="text-white font-bold text-lg">Menü</span>
-        <button @click="mobileOpen = false" class="text-white text-2xl">✕</button>
-    </div>
 
-    <!-- CONTENT -->
-    <div class="flex flex-col px-6 py-6 gap-6 text-lg text-gray-300 ">
 
-        <button @click="scrollTo('vorteile')" class="hover:text-white text-left">
-            Vorteile
-        </button>
 
-        <button @click="scrollTo('funktionen')" class="hover:text-white text-left">
-            Funktionen
-        </button>
 
-        <button @click="scrollTo('sportarten')" class="hover:text-white text-left">
-            Sportarten
-        </button>
+        <!-- MOBILE MENU -->
+        <Teleport to="body">
+            <Transition enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-0"
+                enter-to-class="opacity-100" leave-active-class="transition duration-200 ease-in"
+                leave-from-class="opacity-100" leave-to-class="opacity-0">
+                <div v-if="mobileOpen" class="fixed inset-0 z-[99999] md:hidden">
+                    <div class="absolute inset-0 bg-black/90 backdrop-blur-sm" @click="mobileOpen = false"></div>
 
-        <button @click="scrollTo('ueber')" class="hover:text-white text-left">
-            Über uns
-        </button>
+                    <Transition enter-active-class="transition duration-300 ease-out"
+                        enter-from-class="translate-x-full" enter-to-class="translate-x-0"
+                        leave-active-class="transition duration-200 ease-in" leave-from-class="translate-x-0"
+                        leave-to-class="translate-x-full">
+                        <div v-if="mobileOpen"
+                            class="absolute right-0 top-0 h-full w-full max-w- bg-air-dark border-l border-white/10 flex flex-col">
+                            <div class="flex justify-between items-center p-5 border-b border-white/10">
+                                <span class="text-white font-bold text-lg">Menü</span>
+                                <button @click="mobileOpen = false" class="text-white text-2xl p-1">✕</button>
+                            </div>
 
-        <button @click="scrollTo('blog')" class="hover:text-white text-left">
-            Blog
-        </button>
+                            <div class="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-1">
+                                <button @click="scrollTo('vorteile')"
+                                    class="text-left py-3 text-lg text-gray-300 hover:text-white transition">Vorteile</button>
+                                <button @click="scrollTo('funktionen')"
+                                    class="text-left py-3 text-lg text-gray-300 hover:text-white transition">Funktionen</button>
+                                <button @click="scrollTo('sportarten')"
+                                    class="text-left py-3 text-lg text-gray-300 hover:text-white transition">Sportarten</button>
+                                <button @click="scrollTo('ueber')"
+                                    class="text-left py-3 text-lg text-gray-300 hover:text-white transition">Über
+                                    uns</button>
+                                <button @click="scrollTo('blog')"
+                                    class="text-left py-3 text-lg text-gray-300 hover:text-white transition">Blog</button>
+                                <button @click="scrollTo('kontakt')"
+                                    class="text-left py-3 text-lg text-gray-300 hover:text-white transition">Kontakt</button>
 
-        <button @click="scrollTo('kontakt')" class="hover:text-white text-left">
-            Kontakt
-        </button>
-        <Link v-if="props.canLogin" :href="route('login')"
-            class=" hover:text-white text-left">
-            {{ $t('Anmelden')}}
-        </Link>
+                                <div class="border-t border-white/10 my-4"></div>
 
-    </div>
-</div>
+                                <Link v-if="props.canLogin" :href="route('login')" @click="mobileOpen = false"
+                                    class="text-left py-3 text-lg text-air-blue hover:text-blue-400 transition">
+                                    {{ $t('Anmelden') }}
+                                </Link>
+                            </div>
+                        </div>
+                    </Transition>
+                </div>
+            </Transition>
+        </Teleport>
 
         <!-- HERO -->
-        <section id="hero" class="grad-hero pt-48 sm:pt-36 sm:pb-24 px-4 h-dvh flex items-center">
-            <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-64">
+        <section id="hero" class="pt-24 pb-16 sm:pt-36 sm:pb-24 px-4 min-h-screen sm:h-dvh flex items-center">
+            <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-32">
                 <div class="flex-1 text-center lg:text-left">
                     <div
                         class="anim-fade inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-xs font-medium text-air-green mb-6">
@@ -185,14 +203,15 @@ watch(mobileOpen, (val) => {
                             Kostenlos registrieren
                         </button>
                     </div>
+                    <!-- Badge Zeile: umbrechen erlauben -->
                     <div
-                        class="anim-fade-d4 mt-8 flex items-center gap-6 justify-center lg:justify-start text-sm text-gray-500">
-                        <span class="flex items-center gap-1.5"><i class="las la-check-circle text-air-green"></i>
-                            Kostenlos</span>
-                        <span class="flex items-center gap-1.5"><i class="las la-check-circle text-air-green"></i> Keine
+                        class="anim-fade-d4 mt-8 flex flex-wrap items-center gap-4 justify-center lg:justify-start text-sm text-gray-500">
+                        <span class="flex items-center gap-1.5"><i
+                                class="las la-check-circle text-air-green"></i>Kostenlos</span>
+                        <span class="flex items-center gap-1.5"><i class="las la-check-circle text-air-green"></i>Keine
                             Kreditkarte</span>
-                        <span class="flex items-center gap-1.5"><i class="las la-check-circle text-air-green"></i>
-                            DSGVO-konform</span>
+                        <span class="flex items-center gap-1.5"><i
+                                class="las la-check-circle text-air-green"></i>DSGVO-konform</span>
                     </div>
                 </div>
 
@@ -200,7 +219,8 @@ watch(mobileOpen, (val) => {
 
 
 
-                <div class="flex-1 max-w-lg w-full">
+                <!-- Mockup: mobil ausblenden -->
+                <div class="hidden lg:block flex-1 max-w-lg w-full">
                     <div class="mockup-screen float-loop">
                         <div class="flex items-center gap-2 mb-4">
                             <span class="w-3 h-3 rounded-full bg-red-500/80"></span>
@@ -262,7 +282,7 @@ watch(mobileOpen, (val) => {
         </section>
 
         <!-- PROBLEM → LÖSUNG -->
-        <section class="py-16 sm:py-24 px-4 border-t border-white/5 ">
+        <section class="py-16 sm:py-24 px-4 border-t border-white/5 min-h-screen sm:h-dvh flex items-center">
             <div class="max-w-6xl mx-auto">
                 <div class="text-center mb-14">
                     <h2 class="font-heading font-800 text-3xl sm:text-4xl">Statt <span class="text-red-400">5
@@ -312,275 +332,260 @@ watch(mobileOpen, (val) => {
         <!-- VORTEILE -->
         <section id="vorteile" class="py-16 sm:py-24 px-4 border-t border-white/5">
             <div class="max-w-6xl mx-auto">
-                <div class="text-center mb-10">
-                    <span class="text-air-blue text-sm font-semibold uppercase tracking-wider">Vorteile</span>
-                    <h2 class="font-heading font-800 text-3xl sm:text-4xl mt-2">
+                <div class="text-center mb-8 sm:mb-10 px-2">
+                    <span class="text-air-blue text-xs sm:text-sm font-semibold uppercase tracking-wider">Vorteile</span>
+                    <h2 class="font-heading font-800 text-2xl sm:text-3xl lg:text-4xl mt-2 leading-tight">
                         Eine App für <span
                             class="bg-gradient-to-r from-air-blue to-air-green bg-clip-text text-transparent">alle im
                             Sport</span>
                     </h2>
-                    <p class="text-gray-400 mt-3 max-w-xl mx-auto">Egal ob Sportler, Trainer oder Verein – AIRMIUS macht
+                    <p class="text-gray-400 mt-3 text-sm sm:text-base max-w-xl mx-auto">Egal ob Sportler, Trainer oder Verein – AIRMIUS macht
                         deinen Alltag einfacher.</p>
                 </div>
 
-                <!-- Tabs -->
-                <div class="flex justify-center mb-10">
-                    <div class="inline-flex bg-white/5 rounded-full p-1 gap-1">
-                        <button v-for="tab in tabs" :key="tab.key" @click="switchTab(tab.key)" :class="[
-                            'rounded-full px-5 py-2.5 text-sm font-semibold transition-all flex items-center gap-2',
-                            activeTab === tab.key ? 'tab-active' : 'text-gray-400 hover:text-white'
-                        ]">
-                            {{ tab.label }}
-                        </button>
+                <!-- Tabs: Mobil nur Icons, horizontal scroll -->
+<div class="mb-8 sm:mb-10 flex justify-center px-4">
+    <div class="inline-flex bg-white/5 rounded-full p-1 gap-1 flex-wrap justify-center">
+        <button v-for="tab in tabs" :key="tab.key" @click="switchTab(tab.key)" :class="[
+            'rounded-full px-4 sm:px-5 py-2.5 text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap',
+            activeTab === tab.key? 'tab-active' : 'text-gray-400 hover:text-white'
+        ]">
+            {{ tab.label }}
+        </button>
+    </div>
+</div>
+
+                <!-- Sportler: 2 Spalten mobil -->
+                <div v-show="activeTab === 'sportler'" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-grip-lines text-air-blue text-lg sm:text-xl"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Alles an einem Ort</h4>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Training, Spiele, Nachrichten – eine App für alles.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-comment text-air-blue text-lg sm:text-xl"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Kein WhatsApp-Chaos</h4>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Strukturierte Kommunikation statt endloser Gruppenflut.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-mouse-pointer text-air-blue text-lg sm:text-xl"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Ein-Klick Zu-/Absage</h4>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Teilnahme bestätigen war noch nie so einfach.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-heart text-air-blue text-lg sm:text-xl"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Echtzeit-Übersicht</h4>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Immer wissen, was wann wo stattfindet.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-chart-bar text-air-blue text-lg sm:text-xl"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Persönliche Statistiken</h4>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Dein Fortschritt auf einen Blick – Motivation pur.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-history text-air-blue text-lg sm:text-xl"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Trainingshistorie</h4>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Alle vergangenen Einheiten jederzeit einsehen.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-bolt text-air-blue text-lg sm:text-xl"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Motivation steigern</h4>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Sichtbarer Fortschritt = mehr Leistung.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-mobile text-air-blue text-lg sm:text-xl"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Überall verfügbar</h4>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Smartphone, Tablet, Desktop – immer dabei.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-car text-air-blue text-lg sm:text-xl"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Fahrgemeinschaften</h4>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Gemeinsam zu Training & Events fahren – Kosten teilen.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-shopping-bag text-air-blue text-lg sm:text-xl"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Einkaufsgemeinschaft</h4>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Bestellt euer Equipment gemeinsam zum exklusiven Preis.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5 col-span-2 sm:col-span-1">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-users text-air-blue text-lg sm:text-xl"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Sport-Buddy finden</h4>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Finde jederzeit Leute zum Laufen, Trainieren oder Spielen.</p>
                     </div>
                 </div>
 
-                <!-- Sportler -->
-                <div v-show="activeTab === 'sportler'" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
-                            <i class="las la-grip-lines text-air-blue"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Alles an einem Ort</h4>
-                        <p class="text-xs text-gray-400">Training, Spiele, Nachrichten – eine App für alles.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
-                            <i class="las la-comment text-air-blue"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Kein WhatsApp-Chaos</h4>
-                        <p class="text-xs text-gray-400">Strukturierte Kommunikation statt endloser Gruppenflut.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
-                            <i class="las la-mouse-pointer text-air-blue"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Ein-Klick Zu-/Absage</h4>
-                        <p class="text-xs text-gray-400">Teilnahme bestätigen war noch nie so einfach.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
-                            <i class="las la-heart text-air-blue"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Echtzeit-Übersicht</h4>
-                        <p class="text-xs text-gray-400">Immer wissen, was wann wo stattfindet.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
-                            <i class="las la-chart-bar text-air-blue"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Persönliche Statistiken</h4>
-                        <p class="text-xs text-gray-400">Dein Fortschritt auf einen Blick – Motivation pur.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
-                            <i class="las la-history text-air-blue"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Trainingshistorie</h4>
-                        <p class="text-xs text-gray-400">Alle vergangenen Einheiten jederzeit einsehen.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
-                            <i class="las la-bolt text-air-blue"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Motivation steigern</h4>
-                        <p class="text-xs text-gray-400">Sichtbarer Fortschritt = mehr Leistung.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
-                            <i class="las la-mobile text-air-blue"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Überall verfügbar</h4>
-                        <p class="text-xs text-gray-400">Smartphone, Tablet, Desktop – immer dabei.</p>
-                    </div>
-
-                    <!-- NEU: Fahrgemeinschaften -->
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
-                            <i class="las la-car text-air-blue"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Fahrgemeinschaften</h4>
-                        <p class="text-xs text-gray-400">Gemeinsam zu Training, Wettkämpfen & Events fahren – Kosten
-                            teilen, Umwelt schonen.</p>
-                    </div>
-
-                    <!-- NEU: Einkaufsgemeinschaft -->
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
-                            <i class="las la-shopping-bag text-air-blue"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Einkaufsgemeinschaft</h4>
-                        <p class="text-xs text-gray-400">Finde Gleichgesinnte und spare zusammen: Bestellt euer
-                            Equipment gemeinsam zum exklusiven Preis.</p>
-                    </div>
-
-                    <!-- NEU: Sport-Buddy finden -->
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
-                            <i class="las la-users text-air-blue"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Sport-Buddy finden</h4>
-                        <p class="text-xs text-gray-400">Finde jederzeit Leute zum Laufen, Trainieren oder Spielen –
-                            auch außerhalb vom Verein.</p>
-                    </div>
-                </div>
-
-                <!-- Trainer -->
-                <div v-show="activeTab === 'trainer'" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-3">
-                            <i class="las la-clock text-air-green"></i>
+                <!-- Trainer: 1 Spalte mobil -->
+                <div v-show="activeTab === 'trainer'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-clock text-air-green text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Massive Zeitersparnis</h4>
-                        <p class="text-xs text-gray-400">Automatisiere Routineaufgaben und fokussiere dich aufs
-                            Training.</p>
+                        <p class="text-xs text-gray-400">Automatisiere Routineaufgaben und fokussiere dich aufs Training.</p>
                     </div>
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-3">
-                            <i class="las la-tasks text-air-green"></i>
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-tasks text-air-green text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Keine manuellen Listen</h4>
                         <p class="text-xs text-gray-400">Schluss mit Excel-Tabellen und handgeschriebenen Listen.</p>
                     </div>
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-3">
-                            <i class="las la-user-check text-air-green"></i>
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-user-check text-air-green text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Auto-Anwesenheit</h4>
                         <p class="text-xs text-gray-400">Automatische Erfassung – wer war da, wer nicht.</p>
                     </div>
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-3">
-                            <i class="las la-users text-air-green"></i>
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-users text-air-green text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Teamverwaltung</h4>
                         <p class="text-xs text-gray-400">Spieler hinzufügen, Gruppen erstellen, Struktur schaffen.</p>
                     </div>
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-3">
-                            <i class="las la-calendar-plus text-air-green"></i>
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-calendar-plus text-air-green text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Trainings- & Spielplanung</h4>
                         <p class="text-xs text-gray-400">Termine erstellen in Sekunden – auch wiederkehrend.</p>
                     </div>
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-3">
-                            <i class="las la-eye text-air-green"></i>
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-eye text-air-green text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Echtzeit-Teilnehmer</h4>
                         <p class="text-xs text-gray-400">Sofort sehen, wer zugesagt hat – keine Nachfragen mehr.</p>
                     </div>
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-3">
-                            <i class="las la-bullhorn text-air-green"></i>
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-bullhorn text-air-green text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Zentrale Kommunikation</h4>
                         <p class="text-xs text-gray-400">Keine Infoverluste mehr – alle erreichen, sofort.</p>
                     </div>
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-3">
-                            <i class="las la-chart-line text-air-green"></i>
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-chart-line text-air-green text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Leistungsanalysen</h4>
                         <p class="text-xs text-gray-400">Datenbasiert bessere Entscheidungen treffen.</p>
                     </div>
                 </div>
 
-                <!-- Vereine -->
-                <div v-show="activeTab === 'vereine'" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
-                            <i class="las la-laptop text-air-orange"></i>
+                <!-- Vereine: 1 Spalte mobil -->
+                <div v-show="activeTab === 'vereine'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-laptop text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Digitalisierung</h4>
                         <p class="text-xs text-gray-400">Kein Excel, kein Papier – moderner Vereinsbetrieb.</p>
                     </div>
 
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
-                            <i class="las la-building text-air-orange"></i>
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-building text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Zentrale Verwaltung</h4>
                         <p class="text-xs text-gray-400">Alle Teams & Mitglieder übersichtlich an einem Ort.</p>
                     </div>
 
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
-                            <i class="las la-sitemap text-air-orange"></i>
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-sitemap text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Klare Strukturen</h4>
                         <p class="text-xs text-gray-400">Hierarchien und Rollen sauber abgebildet.</p>
                     </div>
 
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
-                            <i class="las la-share-alt text-air-orange"></i>
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-share-alt text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Ebenenübergreifend</h4>
                         <p class="text-xs text-gray-400">Vorstand → Trainer → Spieler – Infos fließen reibungslos.</p>
                     </div>
 
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
-                            <i class="las la-piggy-bank text-air-orange"></i>
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-piggy-bank text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Zeit- & Kostenersparnis</h4>
                         <p class="text-xs text-gray-400">Weniger Aufwand, weniger Kosten, mehr Fokus.</p>
                     </div>
 
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
-                            <i class="las la-star text-air-orange"></i>
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-star text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Professionelle Wirkung</h4>
                         <p class="text-xs text-gray-400">Mehr Attraktivität für neue Mitglieder & Sponsoren.</p>
                     </div>
 
-                    <!-- NEU: Beiträge verwalten -->
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
-                            <i class="las la-wallet text-air-orange"></i>
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-wallet text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Beiträge verwalten</h4>
-                        <p class="text-xs text-gray-400">Mitgliedsbeiträge einziehen, Mahnungen automatisieren,
-                            Überblick behalten.</p>
+                        <p class="text-xs text-gray-400">Mitgliedsbeiträge einziehen, Mahnungen automatisieren, Überblick behalten.</p>
                     </div>
 
-                    <!-- NEU: Sponsoren -->
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
-                            <i class="las la-handshake text-air-orange"></i>
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-handshake text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Sponsoren-Management</h4>
-                        <p class="text-xs text-gray-400">Sponsoren pflegen, Pakete verwalten, Sichtbarkeit messen –
-                            alles zentral.</p>
+                        <p class="text-xs text-gray-400">Sponsoren pflegen, Pakete verwalten, Sichtbarkeit messen – alles zentral.</p>
                     </div>
 
-                    <!-- NEU: Rechnungen & Quittungen -->
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
-                            <i class="las la-file-invoice text-air-orange"></i>
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-file-invoice text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Belege & Abrechnung</h4>
-                        <p class="text-xs text-gray-400">Rechnungen & Quittungen digital ablegen, Ausgaben tracken,
-                            Kassenbuch führen.</p>
+                        <p class="text-xs text-gray-400">Rechnungen & Quittungen digital ablegen, Ausgaben tracken, Kassenbuch führen.</p>
                     </div>
 
-                    <!-- NEU: Termine anlegen -->
-                    <div class="benefit-card grad-card rounded-2xl p-5">
-                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
-                            <i class="las la-calendar-plus text-air-orange"></i>
+                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i class="las la-calendar-plus text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Termine für alle</h4>
-                        <p class="text-xs text-gray-400">Versammlungen, Events & Spieltage anlegen – mit Zu-/Absagen für
-                            den ganzen Verein.</p>
+                        <p class="text-xs text-gray-400">Versammlungen, Events & Spieltage anlegen – mit Zu-/Absagen für den ganzen Verein.</p>
                     </div>
                 </div>
             </div>
@@ -906,11 +911,14 @@ watch(mobileOpen, (val) => {
             <div class="max-w-6xl mx-auto">
                 <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
                     <div>
-                    <button @click="scrollTo('hero')" class="font-heading font-900 text-xl tracking-tight">
-                        <img src="/img/Logo-Airmius.png" alt="AIRMIUS Logo" class="w-10 h-10 mr-2 inline-block -mt-1">
-                        <span class="text-white font-[--ubuntu]">AIRMIUS</span>
-                    </button>
-                      <p class="text-sm text-gray-500 mt-3 leading-relaxed">Das soziale Netzwerk für deinen Sport. Für Sportler, Teams und Vereine. Organisation, Kommunikation und Vernetzung – vereint in einer App.</p>
+                        <button @click="scrollTo('hero')" class="font-heading font-900 text-xl tracking-tight">
+                            <img src="/img/Logo-Airmius.png" alt="AIRMIUS Logo"
+                                class="w-10 h-10 mr-2 inline-block -mt-1">
+                            <span class="text-white font-[--ubuntu]">AIRMIUS</span>
+                        </button>
+                        <p class="text-sm text-gray-500 mt-3 leading-relaxed">Das soziale Netzwerk für deinen Sport. Für
+                            Sportler, Teams und Vereine. Organisation, Kommunikation und Vernetzung – vereint in einer
+                            App.</p>
                     </div>
                     <div>
                         <h4 class="font-heading font-600 text-sm mb-3 text-gray-300">Produkt</h4>
@@ -1021,5 +1029,13 @@ watch(mobileOpen, (val) => {
 
 .item-4 {
     animation-delay: 0.45s;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 </style>
