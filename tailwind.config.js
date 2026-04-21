@@ -17,6 +17,9 @@ export default {
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
             },
+            colors: {
+                    air: { blue: '#0066FF', green: '#00C853', orange: '#FF6D00', dark: '#0A0E1A', card: '#111827' }
+            }
         },
     },
 

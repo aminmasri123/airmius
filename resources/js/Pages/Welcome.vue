@@ -1,176 +1,990 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3'
+import { ref } from 'vue'
+import { Link } from '@inertiajs/vue3'
+import LanguageDropdown from '@/Components/LanguageDropdown.vue'
 
-defineProps({
-    canLogin: {
-        type: Boolean,
-    },
-    canRegister: {
-        type: Boolean,
-    },
-    laravelVersion: {
-        type: String,
-        required: true,
-    },
-    phpVersion: {
-        type: String,
-        required: true,
-    },
-});
 
-function handleImageError() {
-    document.getElementById('screenshot-container')?.classList.add('!hidden');
-    document.getElementById('docs-card')?.classList.add('!row-span-1');
-    document.getElementById('docs-card-content')?.classList.add('!flex-row');
-    document.getElementById('background')?.classList.add('!hidden');
+
+const props = defineProps({
+    canLogin: Boolean,
+    canRegister: Boolean,
+    laravelVersion: String,
+    phpVersion: String,
+})
+
+// ========================
+// STATE
+// ========================
+const mobileOpen = ref(false)
+const activeTab = ref('sportler')
+
+const tabs = [
+    { key: 'sportler', label: '🏃 Sportler' },
+    { key: 'trainer', label: '🎯 Trainer' },
+    { key: 'vereine', label: '🏢 Vereine' },
+]
+
+// Inertia Form für Validation + Loading State
+const form = useForm({
+    name: '',
+    email: '',
+    message: ''
+})
+
+const formSuccess = ref(false)
+
+// ========================
+// METHODS
+// ========================
+const toggleMobile = () => {
+    mobileOpen.value = !mobileOpen.value
+}
+
+const switchTab = (tab) => {
+    activeTab.value = tab
+}
+
+const scrollTo = (id) => {
+    const el = document.getElementById(id)
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        mobileOpen.value = false
+    }
+}
+
+const submitForm = () => {
+    form.post(route('contact.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            form.reset()
+            formSuccess.value = true
+            setTimeout(() => formSuccess.value = false, 3000)
+        },
+    })
 }
 </script>
 
 <template>
+
     <Head title="Welcome" />
-    <div class="bg-gray-50 text-black/50 dark:bg-black dark:text-white/50">
-        <img id="background" class="absolute -left-20 top-0 max-w-[877px]" src="https://laravel.com/assets/img/welcome/background.svg" />
-        <div class="relative min-h-screen flex flex-col items-center justify-center selection:bg-[#FF2D20] selection:text-white">
-            <div class="relative w-full max-w-2xl px-6 lg:max-w-7xl">
-                <header class="grid grid-cols-2 items-center gap-2 py-10 lg:grid-cols-3">
-                    <div class="flex lg:justify-center lg:col-start-2">
-                        <svg class="h-12 w-auto text-white lg:h-16 lg:text-[#FF2D20]" viewBox="0 0 62 65" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M61.8548 14.6253C61.8778 14.7102 61.8895 14.7978 61.8897 14.8858V28.5615C61.8898 28.737 61.8434 28.9095 61.7554 29.0614C61.6675 29.2132 61.5409 29.3392 61.3887 29.4265L49.9104 36.0351V49.1337C49.9104 49.4902 49.7209 49.8192 49.4118 49.9987L25.4519 63.7916C25.3971 63.8227 25.3372 63.8427 25.2774 63.8639C25.255 63.8714 25.2338 63.8851 25.2101 63.8913C25.0426 63.9354 24.8666 63.9354 24.6991 63.8913C24.6716 63.8838 24.6467 63.8689 24.6205 63.8589C24.5657 63.8389 24.5084 63.8215 24.456 63.7916L0.501061 49.9987C0.348882 49.9113 0.222437 49.7853 0.134469 49.6334C0.0465019 49.4816 0.000120578 49.3092 0 49.1337L0 8.10652C0 8.01678 0.0124642 7.92953 0.0348998 7.84477C0.0423783 7.8161 0.0598282 7.78993 0.0697995 7.76126C0.0884958 7.70891 0.105946 7.65531 0.133367 7.6067C0.152063 7.5743 0.179485 7.54812 0.20192 7.51821C0.230588 7.47832 0.256763 7.43719 0.290416 7.40229C0.319084 7.37362 0.356476 7.35243 0.388883 7.32751C0.425029 7.29759 0.457436 7.26518 0.498568 7.2415L12.4779 0.345059C12.6296 0.257786 12.8015 0.211853 12.9765 0.211853C13.1515 0.211853 13.3234 0.257786 13.475 0.345059L25.4531 7.2415H25.4556C25.4955 7.26643 25.5292 7.29759 25.5653 7.32626C25.5977 7.35119 25.6339 7.37362 25.6625 7.40104C25.6974 7.43719 25.7224 7.47832 25.7523 7.51821C25.7735 7.54812 25.8021 7.5743 25.8196 7.6067C25.8483 7.65656 25.8645 7.70891 25.8844 7.76126C25.8944 7.78993 25.9118 7.8161 25.9193 7.84602C25.9423 7.93096 25.954 8.01853 25.9542 8.10652V33.7317L35.9355 27.9844V14.8846C35.9355 14.7973 35.948 14.7088 35.9704 14.6253C35.9792 14.5954 35.9954 14.5692 36.0053 14.5405C36.0253 14.4882 36.0427 14.4346 36.0702 14.386C36.0888 14.3536 36.1163 14.3274 36.1375 14.2975C36.1674 14.2576 36.1923 14.2165 36.2272 14.1816C36.2559 14.1529 36.292 14.1317 36.3244 14.1068C36.3618 14.0769 36.3942 14.0445 36.4341 14.0208L48.4147 7.12434C48.5663 7.03694 48.7383 6.99094 48.9133 6.99094C49.0883 6.99094 49.2602 7.03694 49.4118 7.12434L61.3899 14.0208C61.4323 14.0457 61.4647 14.0769 61.5021 14.1055C61.5333 14.1305 61.5694 14.1529 61.5981 14.1803C61.633 14.2165 61.6579 14.2576 61.6878 14.2975C61.7103 14.3274 61.7377 14.3536 61.7551 14.386C61.7838 14.4346 61.8 14.4882 61.8199 14.5405C61.8312 14.5692 61.8474 14.5954 61.8548 14.6253ZM59.893 27.9844V16.6121L55.7013 19.0252L49.9104 22.3593V33.7317L59.8942 27.9844H59.893ZM47.9149 48.5566V37.1768L42.2187 40.4299L25.953 49.7133V61.2003L47.9149 48.5566ZM1.99677 9.83281V48.5566L23.9562 61.199V49.7145L12.4841 43.2219L12.4804 43.2194L12.4754 43.2169C12.4368 43.1945 12.4044 43.1621 12.3682 43.1347C12.3371 43.1097 12.3009 43.0898 12.2735 43.0624L12.271 43.0586C12.2386 43.0275 12.2162 42.9888 12.1887 42.9539C12.1638 42.9203 12.1339 42.8916 12.114 42.8567L12.1127 42.853C12.0903 42.8156 12.0766 42.7707 12.0604 42.7283C12.0442 42.6909 12.023 42.656 12.013 42.6161C12.0005 42.5688 11.998 42.5177 11.9931 42.4691C11.9881 42.4317 11.9781 42.3943 11.9781 42.3569V15.5801L6.18848 12.2446L1.99677 9.83281ZM12.9777 2.36177L2.99764 8.10652L12.9752 13.8513L22.9541 8.10527L12.9752 2.36177H12.9777ZM18.1678 38.2138L23.9574 34.8809V9.83281L19.7657 12.2459L13.9749 15.5801V40.6281L18.1678 38.2138ZM48.9133 9.14105L38.9344 14.8858L48.9133 20.6305L58.8909 14.8846L48.9133 9.14105ZM47.9149 22.3593L42.124 19.0252L37.9323 16.6121V27.9844L43.7219 31.3174L47.9149 33.7317V22.3593ZM24.9533 47.987L39.59 39.631L46.9065 35.4555L36.9352 29.7145L25.4544 36.3242L14.9907 42.3482L24.9533 47.987Z" fill="currentColor"/></svg>
+    <div id="app" class="w-full h-full bg-air-dark text-white overflow-auto">
+        <!-- NAV -->
+        <nav id="nav" class="fixed top-0 left-0 w-full z-50 nav-blur border-b border-white/5 bg-white/10 backdrop-blur">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
+                <button @click="scrollTo('hero')" class="font-heading font-900 text-xl tracking-tight">
+                    <img src="/img/Logo-Airmius.png" alt="AIRMIUS Logo" class="w-10 h-10 mr-2 inline-block -mt-1">
+                    <span class="text-white font-[--ubuntu]">AIRMIUS</span>
+                </button>
+                <div class="hidden md:flex items-center gap-6 text-sm font-medium text-gray-300">
+                    <button @click="scrollTo('vorteile')" class="hover:text-white transition">Vorteile</button>
+                    <button @click="scrollTo('funktionen')" class="hover:text-white transition">Funktionen</button>
+                    <button @click="scrollTo('sportarten')" class="hover:text-white transition">Sportarten</button>
+                    <button @click="scrollTo('ueber')" class="hover:text-white transition">Über uns</button>
+                    <button @click="scrollTo('blog')" class="hover:text-white transition">Blog</button>
+                    <button @click="scrollTo('kontakt')" class="hover:text-white transition">Kontakt</button>
+                </div>
+
+
+                <div class="flex items-center gap-3">
+                    <LanguageDropdown />
+                </div>
+
+
+
+
+
+
+                <div class="flex items-center gap-3">
+                    <Link v-if="props.canLogin" :href="route('login')"
+                            class="hidden sm:inline-block text-sm font-semibold text-air-blue hover:text-blue-400 transition">
+                            {{ $t('Anmelden')}}
+                    </Link>
+                    <button @click="scrollTo('hero')"
+                        class="bg-air-blue hover:bg-blue-600 text-white text-sm font-semibold px-5 py-2 rounded-full transition">
+                        Jetzt starten
+                    </button>
+                    <button @click="toggleMobile" class="md:hidden text-gray-300 hover:text-white">
+                        <i class="las la-bars text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div v-show="mobileOpen" class="md:hidden border-t border-white/5 bg-air-dark/95 backdrop-blur">
+                <div class="px-4 py-4 flex flex-col gap-3 text-sm font-medium text-gray-300">
+                    <button @click="scrollTo('vorteile')" class="hover:text-white py-1 text-left">Vorteile</button>
+                    <button @click="scrollTo('funktionen')" class="hover:text-white py-1 text-left">Funktionen</button>
+                    <button @click="scrollTo('sportarten')" class="hover:text-white py-1 text-left">Sportarten</button>
+                    <button @click="scrollTo('ueber')" class="hover:text-white py-1 text-left">Über uns</button>
+                    <button @click="scrollTo('blog')" class="hover:text-white py-1 text-left">Blog</button>
+                    <button @click="scrollTo('kontakt')" class="hover:text-white py-1 text-left">Kontakt</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- HERO -->
+        <section id="hero" class="grad-hero pt-48 sm:pt-36 sm:pb-24 px-4 h-dvh flex items-center">
+            <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-64">
+                <div class="flex-1 text-center lg:text-left">
+                    <div
+                        class="anim-fade inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-xs font-medium text-air-green mb-6">
+                        <span class="pulse-dot bg-air-green"></span> Jetzt in der Beta – Kostenlos starten
                     </div>
-                    <nav v-if="canLogin" class="-mx-3 flex flex-1 justify-end">
-                        <Link
-                            v-if="$page.props.auth.user"
-                            :href="route('dashboard')"
-                            class="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
-                        >
-                            Dashboard
-                        </Link>
+                    <h1 id="hero-title"
+                        class="anim-fade-d1 font-heading font-900 text-4xl sm:text-5xl lg:text-6xl leading-tight tracking-tight">
+                        Das soziale Netzwerk <br>
+                        für deinen <span
+                            class="bg-gradient-to-r from-air-blue via-air-green to-air-orange bg-clip-text text-transparent">Sport</span>
+                    </h1>
+                    <p id="hero-subtitle"
+                        class="anim-fade-d2 mt-5 text-gray-400 text-lg sm:text-xl max-w-xl mx-auto lg:mx-0 leading-relaxed">
+                        Für Sportler, Teams und Vereine. Organisation, Kommunikation und Vernetzung – vereint in einer
+                        App.
+                    </p>
+                    <div class="anim-fade-d3 mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+                        <button @click="scrollTo('kontakt')"
+                            class="bg-air-blue hover:bg-blue-600 glow-blue text-white font-bold px-8 py-3.5 rounded-full text-center transition">
+                            Jetzt starten
+                        </button>
+                        <button @click="scrollTo('vorteile')"
+                            class="border border-white/15 hover:border-white/30 text-white font-semibold px-8 py-3.5 rounded-full text-center transition">
+                            Kostenlos registrieren
+                        </button>
+                    </div>
+                    <div
+                        class="anim-fade-d4 mt-8 flex items-center gap-6 justify-center lg:justify-start text-sm text-gray-500">
+                        <span class="flex items-center gap-1.5"><i class="las la-check-circle text-air-green"></i>
+                            Kostenlos</span>
+                        <span class="flex items-center gap-1.5"><i class="las la-check-circle text-air-green"></i> Keine
+                            Kreditkarte</span>
+                        <span class="flex items-center gap-1.5"><i class="las la-check-circle text-air-green"></i>
+                            DSGVO-konform</span>
+                    </div>
+                </div>
 
-                        <template v-else>
-                            <Link
-                                :href="route('login')"
-                                class="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
-                            >
-                                Log in
-                            </Link>
 
-                            <Link
-                                v-if="canRegister"
-                                :href="route('register')"
-                                class="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
-                            >
-                                Register
-                            </Link>
-                        </template>
-                    </nav>
-                </header>
 
-                <main class="mt-6">
-                    <div class="grid gap-6 lg:grid-cols-2 lg:gap-8">
-                        <a
-                            href="https://laravel.com/docs"
-                            id="docs-card"
-                            class="flex flex-col items-start gap-6 overflow-hidden rounded-lg bg-white p-6 shadow-[0px_14px_34px_0px_rgba(0,0,0,0.08)] ring-1 ring-white/[0.05] transition duration-300 hover:text-black/70 hover:ring-black/20 focus:outline-none focus-visible:ring-[#FF2D20] md:row-span-3 lg:p-10 lg:pb-10 dark:bg-zinc-900 dark:ring-zinc-800 dark:hover:text-white/70 dark:hover:ring-zinc-700 dark:focus-visible:ring-[#FF2D20]"
-                        >
-                            <div id="screenshot-container" class="relative flex w-full flex-1 items-stretch">
-                                <img
-                                    src="https://laravel.com/assets/img/welcome/docs-light.svg"
-                                    alt="Laravel documentation screenshot"
-                                    class="aspect-video h-full w-full flex-1 rounded-[10px] object-top object-cover drop-shadow-[0px_4px_34px_rgba(0,0,0,0.06)] dark:hidden"
-                                    @error="handleImageError"
-                                />
-                                <img
-                                    src="https://laravel.com/assets/img/welcome/docs-dark.svg"
-                                    alt="Laravel documentation screenshot"
-                                    class="hidden aspect-video h-full w-full flex-1 rounded-[10px] object-top object-cover drop-shadow-[0px_4px_34px_rgba(0,0,0,0.25)] dark:block"
-                                />
-                                <div
-                                    class="absolute -bottom-16 -left-16 h-40 w-[calc(100%+8rem)] bg-gradient-to-b from-transparent via-white to-white dark:via-zinc-900 dark:to-zinc-900"
-                                ></div>
-                            </div>
 
-                            <div class="relative flex items-center gap-6 lg:items-end">
-                                <div id="docs-card-content" class="flex items-start gap-6 lg:flex-col">
-                                    <div class="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#FF2D20]/10 sm:size-16">
-                                        <svg class="size-5 sm:size-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><path fill="#FF2D20" d="M23 4a1 1 0 0 0-1.447-.894L12.224 7.77a.5.5 0 0 1-.448 0L2.447 3.106A1 1 0 0 0 1 4v13.382a1.99 1.99 0 0 0 1.105 1.79l9.448 4.728c.14.065.293.1.447.1.154-.005.306-.04.447-.105l9.453-4.724a1.99 1.99 0 0 0 1.1-1.789V4ZM3 6.023a.25.25 0 0 1 .362-.223l7.5 3.75a.251.251 0 0 1 .138.223v11.2a.25.25 0 0 1-.362.224l-7.5-3.75a.25.25 0 0 1-.138-.22V6.023Zm18 11.2a.25.25 0 0 1-.138.224l-7.5 3.75a.249.249 0 0 1-.329-.099.249.249 0 0 1-.033-.12V9.772a.251.251 0 0 1 .138-.224l7.5-3.75a.25.25 0 0 1 .362.224v11.2Z"/><path fill="#FF2D20" d="m3.55 1.893 8 4.048a1.008 1.008 0 0 0 .9 0l8-4.048a1 1 0 0 0-.9-1.785l-7.322 3.706a.506.506 0 0 1-.452 0L4.454.108a1 1 0 0 0-.9 1.785H3.55Z"/></svg>
-                                    </div>
 
-                                    <div class="pt-3 sm:pt-5 lg:pt-0">
-                                        <h2 class="text-xl font-semibold text-black dark:text-white">Documentation</h2>
-
-                                        <p class="mt-4 text-sm/relaxed">
-                                            Laravel has wonderful documentation covering every aspect of the framework. Whether you are a newcomer or have prior experience with Laravel, we recommend reading our documentation from beginning to end.
-                                        </p>
-                                    </div>
+                <div class="flex-1 max-w-lg w-full">
+                    <div class="mockup-screen float-loop">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="w-3 h-3 rounded-full bg-red-500/80"></span>
+                            <span class="w-3 h-3 rounded-full bg-yellow-500/80"></span>
+                            <span class="w-3 h-3 rounded-full bg-green-500/80"></span>
+                        </div>
+                        <div class="space-y-3">
+                            <div
+                                class="card-item item-1 bg-air-blue/10 border border-air-blue/20 rounded-xl p-3 flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-air-blue/20 flex items-center justify-center">
+                                    <i class="las la-comment text-air-blue"></i>
                                 </div>
-
-                                <svg class="size-6 shrink-0 stroke-[#FF2D20]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"/></svg>
-                            </div>
-                        </a>
-
-                        <a
-                            href="https://laracasts.com"
-                            class="flex items-start gap-4 rounded-lg bg-white p-6 shadow-[0px_14px_34px_0px_rgba(0,0,0,0.08)] ring-1 ring-white/[0.05] transition duration-300 hover:text-black/70 hover:ring-black/20 focus:outline-none focus-visible:ring-[#FF2D20] lg:pb-10 dark:bg-zinc-900 dark:ring-zinc-800 dark:hover:text-white/70 dark:hover:ring-zinc-700 dark:focus-visible:ring-[#FF2D20]"
-                        >
-                            <div class="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#FF2D20]/10 sm:size-16">
-                                <svg class="size-5 sm:size-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><g fill="#FF2D20"><path d="M24 8.25a.5.5 0 0 0-.5-.5H.5a.5.5 0 0 0-.5.5v12a2.5 2.5 0 0 0 2.5 2.5h19a2.5 2.5 0 0 0 2.5-2.5v-12Zm-7.765 5.868a1.221 1.221 0 0 1 0 2.264l-6.626 2.776A1.153 1.153 0 0 1 8 18.123v-5.746a1.151 1.151 0 0 1 1.609-1.035l6.626 2.776ZM19.564 1.677a.25.25 0 0 0-.177-.427H15.6a.106.106 0 0 0-.072.03l-4.54 4.543a.25.25 0 0 0 .177.427h3.783c.027 0 .054-.01.073-.03l4.543-4.543ZM22.071 1.318a.047.047 0 0 0-.045.013l-4.492 4.492a.249.249 0 0 0 .038.385.25.25 0 0 0 .14.042h5.784a.5.5 0 0 0 .5-.5v-2a2.5 2.5 0 0 0-1.925-2.432ZM13.014 1.677a.25.25 0 0 0-.178-.427H9.101a.106.106 0 0 0-.073.03l-4.54 4.543a.25.25 0 0 0 .177.427H8.4a.106.106 0 0 0 .073-.03l4.54-4.543ZM6.513 1.677a.25.25 0 0 0-.177-.427H2.5A2.5 2.5 0 0 0 0 3.75v2a.5.5 0 0 0 .5.5h1.4a.106.106 0 0 0 .073-.03l4.54-4.543Z"/></g></svg>
+                                <div>
+                                    <div class="text-xs text-gray-400">Team Chat</div>
+                                    <div class="text-sm font-medium">Training morgen um 18:00 👍</div>
+                                </div>
                             </div>
 
-                            <div class="pt-3 sm:pt-5">
-                                <h2 class="text-xl font-semibold text-black dark:text-white">Laracasts</h2>
-
-                                <p class="mt-4 text-sm/relaxed">
-                                    Laracasts offers thousands of video tutorials on Laravel, PHP, and JavaScript development. Check them out, see for yourself, and massively level up your development skills in the process.
-                                </p>
+                            <div
+                                class="card-item item-2 bg-air-green/10 border border-air-green/20 rounded-xl p-3 flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-air-green/20 flex items-center justify-center">
+                                    <i class="las la-calendar text-air-green"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-400">Nächstes Spiel</div>
+                                    <div class="text-sm font-medium">Sa, 15:30 – FC Muster vs. Sportfreunde</div>
+                                </div>
                             </div>
 
-                            <svg class="size-6 shrink-0 self-center stroke-[#FF2D20]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"/></svg>
-                        </a>
-
-                        <a
-                            href="https://laravel-news.com"
-                            class="flex items-start gap-4 rounded-lg bg-white p-6 shadow-[0px_14px_34px_0px_rgba(0,0,0,0.08)] ring-1 ring-white/[0.05] transition duration-300 hover:text-black/70 hover:ring-black/20 focus:outline-none focus-visible:ring-[#FF2D20] lg:pb-10 dark:bg-zinc-900 dark:ring-zinc-800 dark:hover:text-white/70 dark:hover:ring-zinc-700 dark:focus-visible:ring-[#FF2D20]"
-                        >
-                            <div class="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#FF2D20]/10 sm:size-16">
-                                <svg class="size-5 sm:size-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><g fill="#FF2D20"><path d="M8.75 4.5H5.5c-.69 0-1.25.56-1.25 1.25v4.75c0 .69.56 1.25 1.25 1.25h3.25c.69 0 1.25-.56 1.25-1.25V5.75c0-.69-.56-1.25-1.25-1.25Z"/><path d="M24 10a3 3 0 0 0-3-3h-2V2.5a2 2 0 0 0-2-2H2a2 2 0 0 0-2 2V20a3.5 3.5 0 0 0 3.5 3.5h17A3.5 3.5 0 0 0 24 20V10ZM3.5 21.5A1.5 1.5 0 0 1 2 20V3a.5.5 0 0 1 .5-.5h14a.5.5 0 0 1 .5.5v17c0 .295.037.588.11.874a.5.5 0 0 1-.484.625L3.5 21.5ZM22 20a1.5 1.5 0 1 1-3 0V9.5a.5.5 0 0 1 .5-.5H21a1 1 0 0 1 1 1v10Z"/><path d="M12.751 6.047h2a.75.75 0 0 1 .75.75v.5a.75.75 0 0 1-.75.75h-2A.75.75 0 0 1 12 7.3v-.5a.75.75 0 0 1 .751-.753ZM12.751 10.047h2a.75.75 0 0 1 .75.75v.5a.75.75 0 0 1-.75.75h-2A.75.75 0 0 1 12 11.3v-.5a.75.75 0 0 1 .751-.753ZM4.751 14.047h10a.75.75 0 0 1 .75.75v.5a.75.75 0 0 1-.75.75h-10A.75.75 0 0 1 4 15.3v-.5a.75.75 0 0 1 .751-.753ZM4.75 18.047h7.5a.75.75 0 0 1 .75.75v.5a.75.75 0 0 1-.75.75h-7.5A.75.75 0 0 1 4 19.3v-.5a.75.75 0 0 1 .75-.753Z"/></g></svg>
+                            <div
+                                class="card-item item-3 bg-air-orange/10 border border-air-orange/20 rounded-xl p-3 flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-air-orange/20 flex items-center justify-center">
+                                    <i class="las la-chart-bar text-air-orange"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-400">Deine Statistik</div>
+                                    <div class="text-sm font-medium">12 Trainings · 89% Anwesenheit</div>
+                                </div>
                             </div>
 
-                            <div class="pt-3 sm:pt-5">
-                                <h2 class="text-xl font-semibold text-black dark:text-white">Laravel News</h2>
-
-                                <p class="mt-4 text-sm/relaxed">
-                                    Laravel News is a community driven portal and newsletter aggregating all of the latest and most important news in the Laravel ecosystem, including new package releases and tutorials.
-                                </p>
-                            </div>
-
-                            <svg class="size-6 shrink-0 self-center stroke-[#FF2D20]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"/></svg>
-                        </a>
-
-                        <div class="flex items-start gap-4 rounded-lg bg-white p-6 shadow-[0px_14px_34px_0px_rgba(0,0,0,0.08)] ring-1 ring-white/[0.05] lg:pb-10 dark:bg-zinc-900 dark:ring-zinc-800">
-                            <div class="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#FF2D20]/10 sm:size-16">
-                                <svg class="size-5 sm:size-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <g fill="#FF2D20">
-                                        <path
-                                            d="M16.597 12.635a.247.247 0 0 0-.08-.237 2.234 2.234 0 0 1-.769-1.68c.001-.195.03-.39.084-.578a.25.25 0 0 0-.09-.267 8.8 8.8 0 0 0-4.826-1.66.25.25 0 0 0-.268.181 2.5 2.5 0 0 1-2.4 1.824.045.045 0 0 0-.045.037 12.255 12.255 0 0 0-.093 3.86.251.251 0 0 0 .208.214c2.22.366 4.367 1.08 6.362 2.118a.252.252 0 0 0 .32-.079 10.09 10.09 0 0 0 1.597-3.733ZM13.616 17.968a.25.25 0 0 0-.063-.407A19.697 19.697 0 0 0 8.91 15.98a.25.25 0 0 0-.287.325c.151.455.334.898.548 1.328.437.827.981 1.594 1.619 2.28a.249.249 0 0 0 .32.044 29.13 29.13 0 0 0 2.506-1.99ZM6.303 14.105a.25.25 0 0 0 .265-.274 13.048 13.048 0 0 1 .205-4.045.062.062 0 0 0-.022-.07 2.5 2.5 0 0 1-.777-.982.25.25 0 0 0-.271-.149 11 11 0 0 0-5.6 2.815.255.255 0 0 0-.075.163c-.008.135-.02.27-.02.406.002.8.084 1.598.246 2.381a.25.25 0 0 0 .303.193 19.924 19.924 0 0 1 5.746-.438ZM9.228 20.914a.25.25 0 0 0 .1-.393 11.53 11.53 0 0 1-1.5-2.22 12.238 12.238 0 0 1-.91-2.465.248.248 0 0 0-.22-.187 18.876 18.876 0 0 0-5.69.33.249.249 0 0 0-.179.336c.838 2.142 2.272 4 4.132 5.353a.254.254 0 0 0 .15.048c1.41-.01 2.807-.282 4.117-.802ZM18.93 12.957l-.005-.008a.25.25 0 0 0-.268-.082 2.21 2.21 0 0 1-.41.081.25.25 0 0 0-.217.2c-.582 2.66-2.127 5.35-5.75 7.843a.248.248 0 0 0-.09.299.25.25 0 0 0 .065.091 28.703 28.703 0 0 0 2.662 2.12.246.246 0 0 0 .209.037c2.579-.701 4.85-2.242 6.456-4.378a.25.25 0 0 0 .048-.189 13.51 13.51 0 0 0-2.7-6.014ZM5.702 7.058a.254.254 0 0 0 .2-.165A2.488 2.488 0 0 1 7.98 5.245a.093.093 0 0 0 .078-.062 19.734 19.734 0 0 1 3.055-4.74.25.25 0 0 0-.21-.41 12.009 12.009 0 0 0-10.4 8.558.25.25 0 0 0 .373.281 12.912 12.912 0 0 1 4.826-1.814ZM10.773 22.052a.25.25 0 0 0-.28-.046c-.758.356-1.55.635-2.365.833a.25.25 0 0 0-.022.48c1.252.43 2.568.65 3.893.65.1 0 .2 0 .3-.008a.25.25 0 0 0 .147-.444c-.526-.424-1.1-.917-1.673-1.465ZM18.744 8.436a.249.249 0 0 0 .15.228 2.246 2.246 0 0 1 1.352 2.054c0 .337-.08.67-.23.972a.25.25 0 0 0 .042.28l.007.009a15.016 15.016 0 0 1 2.52 4.6.25.25 0 0 0 .37.132.25.25 0 0 0 .096-.114c.623-1.464.944-3.039.945-4.63a12.005 12.005 0 0 0-5.78-10.258.25.25 0 0 0-.373.274c.547 2.109.85 4.274.901 6.453ZM9.61 5.38a.25.25 0 0 0 .08.31c.34.24.616.561.8.935a.25.25 0 0 0 .3.127.631.631 0 0 1 .206-.034c2.054.078 4.036.772 5.69 1.991a.251.251 0 0 0 .267.024c.046-.024.093-.047.141-.067a.25.25 0 0 0 .151-.23A29.98 29.98 0 0 0 15.957.764a.25.25 0 0 0-.16-.164 11.924 11.924 0 0 0-2.21-.518.252.252 0 0 0-.215.076A22.456 22.456 0 0 0 9.61 5.38Z"
-                                        />
-                                    </g>
-                                </svg>
-                            </div>
-
-                            <div class="pt-3 sm:pt-5">
-                                <h2 class="text-xl font-semibold text-black dark:text-white">Vibrant Ecosystem</h2>
-
-                                <p class="mt-4 text-sm/relaxed">
-                                    Laravel's robust library of first-party tools and libraries, such as <a href="https://forge.laravel.com" class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white dark:focus-visible:ring-[#FF2D20]">Forge</a>, <a href="https://vapor.laravel.com" class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white">Vapor</a>, <a href="https://nova.laravel.com" class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white">Nova</a>, and <a href="https://envoyer.io" class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white">Envoyer</a> help you take your projects to the next level. Pair them with powerful open source libraries like <a href="https://laravel.com/docs/billing" class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white">Cashier</a>, <a href="https://laravel.com/docs/dusk" class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white">Dusk</a>, <a href="https://laravel.com/docs/broadcasting" class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white">Echo</a>, <a href="https://laravel.com/docs/horizon" class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white">Horizon</a>, <a href="https://laravel.com/docs/sanctum" class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white">Sanctum</a>, <a href="https://laravel.com/docs/telescope" class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white">Telescope</a>, and more.
-                                </p>
+                            <div class="flex gap-2 mt-2 card-item item-4">
+                                <div class="flex-1 bg-white/5 rounded-lg p-2 text-center">
+                                    <div class="text-2xl font-heading font-bold text-air-blue">24</div>
+                                    <div class="text-[10px] text-gray-500">Spieler</div>
+                                </div>
+                                <div class="flex-1 bg-white/5 rounded-lg p-2 text-center">
+                                    <div class="text-2xl font-heading font-bold text-air-green">18</div>
+                                    <div class="text-[10px] text-gray-500">Zusagen</div>
+                                </div>
+                                <div class="flex-1 bg-white/5 rounded-lg p-2 text-center">
+                                    <div class="text-2xl font-heading font-bold text-air-orange">3</div>
+                                    <div class="text-[10px] text-gray-500">Absagen</div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </main>
-
-                <footer class="py-16 text-center text-sm text-black dark:text-white/70">
-                    Laravel v{{ laravelVersion }} (PHP v{{ phpVersion }})
-                </footer>
+                </div>
             </div>
-        </div>
+        </section>
+
+        <!-- PROBLEM → LÖSUNG -->
+        <section class="py-16 sm:py-24 px-4 border-t border-white/5 ">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-14">
+                    <h2 class="font-heading font-800 text-3xl sm:text-4xl">Statt <span class="text-red-400">5
+                            Tools</span> nur <span class="text-air-green">eine Lösung</span></h2>
+                    <p class="text-gray-400 mt-3 max-w-2xl mx-auto">WhatsApp, Excel, OneNote, E-Mail, Telefon⁉️</p>
+                    <p class="text-gray-400 mt-2"> Schluss mit dem Chaos❗ AIRMIUS vereint alles.</p>
+                </div>
+                <div class="grid sm:grid-cols-3 gap-6">
+                    <div class="grad-card rounded-2xl p-6 text-center">
+                        <div class="w-14 h-14 mx-auto rounded-xl bg-red-500/10 flex items-center justify-center mb-4">
+                            <i class="las la-comment-dots text-red-400 text-3xl"></i>
+                        </div>
+                        <h3 class="font-heading font-700 text-lg mb-2">Chaos bei Kommunikation</h3>
+                        <p class="text-sm text-gray-400">Infos gehen in WhatsApp-Gruppen unter. Wichtige Nachrichten
+                            werden übersehen.</p>
+                        <div class="mt-4 pt-4 border-t border-white/5">
+                            <span class="text-air-green text-sm font-semibold">→ Zentraler Team-Chat mit Struktur</span>
+                        </div>
+                    </div>
+
+                    <div class="grad-card rounded-2xl p-6 text-center">
+                        <div class="w-14 h-14 mx-auto rounded-xl bg-red-500/10 flex items-center justify-center mb-4">
+                            <i class="las la-clock text-red-400 text-3xl"></i>
+                        </div>
+                        <h3 class="font-heading font-700 text-lg mb-2">Hoher Zeitaufwand</h3>
+                        <p class="text-sm text-gray-400">Manuelle Listen, endlose Abfragen, Zettelwirtschaft. Zeit, die
+                            im Training fehlt.</p>
+                        <div class="mt-4 pt-4 border-t border-white/5">
+                            <span class="text-air-green text-sm font-semibold">→ Automatisierte Prozesse</span>
+                        </div>
+                    </div>
+                    <div class="grad-card rounded-2xl p-6 text-center">
+                        <div class="w-14 h-14 mx-auto rounded-xl bg-red-500/10 flex items-center justify-center mb-4">
+                            <i class="las la-eye-slash text-red-400 text-3xl"></i>
+                        </div>
+                        <h3 class="font-heading font-700 text-lg mb-2">Fehlende Übersicht</h3>
+                        <p class="text-sm text-gray-400">Wer kommt? Wann ist Training? Wo stehen wir? Keiner weiß
+                            Bescheid.</p>
+                        <div class="mt-4 pt-4 border-t border-white/5">
+                            <span class="text-air-green text-sm font-semibold">→ Echtzeit-Dashboard für alles</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VORTEILE -->
+        <section id="vorteile" class="py-16 sm:py-24 px-4 border-t border-white/5">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-10">
+                    <span class="text-air-blue text-sm font-semibold uppercase tracking-wider">Vorteile</span>
+                    <h2 class="font-heading font-800 text-3xl sm:text-4xl mt-2">
+                        Eine App für <span
+                            class="bg-gradient-to-r from-air-blue to-air-green bg-clip-text text-transparent">alle im
+                            Sport</span>
+                    </h2>
+                    <p class="text-gray-400 mt-3 max-w-xl mx-auto">Egal ob Sportler, Trainer oder Verein – AIRMIUS macht
+                        deinen Alltag einfacher.</p>
+                </div>
+
+                <!-- Tabs -->
+                <div class="flex justify-center mb-10">
+                    <div class="inline-flex bg-white/5 rounded-full p-1 gap-1">
+                        <button v-for="tab in tabs" :key="tab.key" @click="switchTab(tab.key)" :class="[
+                            'rounded-full px-5 py-2.5 text-sm font-semibold transition-all flex items-center gap-2',
+                            activeTab === tab.key ? 'tab-active' : 'text-gray-400 hover:text-white'
+                        ]">
+                            {{ tab.label }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sportler -->
+                <div v-show="activeTab === 'sportler'" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
+                            <i class="las la-grip-lines text-air-blue"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Alles an einem Ort</h4>
+                        <p class="text-xs text-gray-400">Training, Spiele, Nachrichten – eine App für alles.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
+                            <i class="las la-comment text-air-blue"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Kein WhatsApp-Chaos</h4>
+                        <p class="text-xs text-gray-400">Strukturierte Kommunikation statt endloser Gruppenflut.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
+                            <i class="las la-mouse-pointer text-air-blue"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Ein-Klick Zu-/Absage</h4>
+                        <p class="text-xs text-gray-400">Teilnahme bestätigen war noch nie so einfach.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
+                            <i class="las la-heart text-air-blue"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Echtzeit-Übersicht</h4>
+                        <p class="text-xs text-gray-400">Immer wissen, was wann wo stattfindet.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
+                            <i class="las la-chart-bar text-air-blue"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Persönliche Statistiken</h4>
+                        <p class="text-xs text-gray-400">Dein Fortschritt auf einen Blick – Motivation pur.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
+                            <i class="las la-history text-air-blue"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Trainingshistorie</h4>
+                        <p class="text-xs text-gray-400">Alle vergangenen Einheiten jederzeit einsehen.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
+                            <i class="las la-bolt text-air-blue"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Motivation steigern</h4>
+                        <p class="text-xs text-gray-400">Sichtbarer Fortschritt = mehr Leistung.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
+                            <i class="las la-mobile text-air-blue"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Überall verfügbar</h4>
+                        <p class="text-xs text-gray-400">Smartphone, Tablet, Desktop – immer dabei.</p>
+                    </div>
+
+                    <!-- NEU: Fahrgemeinschaften -->
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
+                            <i class="las la-car text-air-blue"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Fahrgemeinschaften</h4>
+                        <p class="text-xs text-gray-400">Gemeinsam zu Training, Wettkämpfen & Events fahren – Kosten
+                            teilen, Umwelt schonen.</p>
+                    </div>
+
+                    <!-- NEU: Einkaufsgemeinschaft -->
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
+                            <i class="las la-shopping-bag text-air-blue"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Einkaufsgemeinschaft</h4>
+                        <p class="text-xs text-gray-400">Finde Gleichgesinnte und spare zusammen: Bestellt euer
+                            Equipment gemeinsam zum exklusiven Preis.</p>
+                    </div>
+
+                    <!-- NEU: Sport-Buddy finden -->
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-3">
+                            <i class="las la-users text-air-blue"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Sport-Buddy finden</h4>
+                        <p class="text-xs text-gray-400">Finde jederzeit Leute zum Laufen, Trainieren oder Spielen –
+                            auch außerhalb vom Verein.</p>
+                    </div>
+                </div>
+
+                <!-- Trainer -->
+                <div v-show="activeTab === 'trainer'" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-3">
+                            <i class="las la-clock text-air-green"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Massive Zeitersparnis</h4>
+                        <p class="text-xs text-gray-400">Automatisiere Routineaufgaben und fokussiere dich aufs
+                            Training.</p>
+                    </div>
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-3">
+                            <i class="las la-tasks text-air-green"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Keine manuellen Listen</h4>
+                        <p class="text-xs text-gray-400">Schluss mit Excel-Tabellen und handgeschriebenen Listen.</p>
+                    </div>
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-3">
+                            <i class="las la-user-check text-air-green"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Auto-Anwesenheit</h4>
+                        <p class="text-xs text-gray-400">Automatische Erfassung – wer war da, wer nicht.</p>
+                    </div>
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-3">
+                            <i class="las la-users text-air-green"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Teamverwaltung</h4>
+                        <p class="text-xs text-gray-400">Spieler hinzufügen, Gruppen erstellen, Struktur schaffen.</p>
+                    </div>
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-3">
+                            <i class="las la-calendar-plus text-air-green"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Trainings- & Spielplanung</h4>
+                        <p class="text-xs text-gray-400">Termine erstellen in Sekunden – auch wiederkehrend.</p>
+                    </div>
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-3">
+                            <i class="las la-eye text-air-green"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Echtzeit-Teilnehmer</h4>
+                        <p class="text-xs text-gray-400">Sofort sehen, wer zugesagt hat – keine Nachfragen mehr.</p>
+                    </div>
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-3">
+                            <i class="las la-bullhorn text-air-green"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Zentrale Kommunikation</h4>
+                        <p class="text-xs text-gray-400">Keine Infoverluste mehr – alle erreichen, sofort.</p>
+                    </div>
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-3">
+                            <i class="las la-chart-line text-air-green"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Leistungsanalysen</h4>
+                        <p class="text-xs text-gray-400">Datenbasiert bessere Entscheidungen treffen.</p>
+                    </div>
+                </div>
+
+                <!-- Vereine -->
+                <div v-show="activeTab === 'vereine'" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
+                            <i class="las la-laptop text-air-orange"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Digitalisierung</h4>
+                        <p class="text-xs text-gray-400">Kein Excel, kein Papier – moderner Vereinsbetrieb.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
+                            <i class="las la-building text-air-orange"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Zentrale Verwaltung</h4>
+                        <p class="text-xs text-gray-400">Alle Teams & Mitglieder übersichtlich an einem Ort.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
+                            <i class="las la-sitemap text-air-orange"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Klare Strukturen</h4>
+                        <p class="text-xs text-gray-400">Hierarchien und Rollen sauber abgebildet.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
+                            <i class="las la-share-alt text-air-orange"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Ebenenübergreifend</h4>
+                        <p class="text-xs text-gray-400">Vorstand → Trainer → Spieler – Infos fließen reibungslos.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
+                            <i class="las la-piggy-bank text-air-orange"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Zeit- & Kostenersparnis</h4>
+                        <p class="text-xs text-gray-400">Weniger Aufwand, weniger Kosten, mehr Fokus.</p>
+                    </div>
+
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
+                            <i class="las la-star text-air-orange"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Professionelle Wirkung</h4>
+                        <p class="text-xs text-gray-400">Mehr Attraktivität für neue Mitglieder & Sponsoren.</p>
+                    </div>
+
+                    <!-- NEU: Beiträge verwalten -->
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
+                            <i class="las la-wallet text-air-orange"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Beiträge verwalten</h4>
+                        <p class="text-xs text-gray-400">Mitgliedsbeiträge einziehen, Mahnungen automatisieren,
+                            Überblick behalten.</p>
+                    </div>
+
+                    <!-- NEU: Sponsoren -->
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
+                            <i class="las la-handshake text-air-orange"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Sponsoren-Management</h4>
+                        <p class="text-xs text-gray-400">Sponsoren pflegen, Pakete verwalten, Sichtbarkeit messen –
+                            alles zentral.</p>
+                    </div>
+
+                    <!-- NEU: Rechnungen & Quittungen -->
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
+                            <i class="las la-file-invoice text-air-orange"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Belege & Abrechnung</h4>
+                        <p class="text-xs text-gray-400">Rechnungen & Quittungen digital ablegen, Ausgaben tracken,
+                            Kassenbuch führen.</p>
+                    </div>
+
+                    <!-- NEU: Termine anlegen -->
+                    <div class="benefit-card grad-card rounded-2xl p-5">
+                        <div class="w-10 h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-3">
+                            <i class="las la-calendar-plus text-air-orange"></i>
+                        </div>
+                        <h4 class="font-heading font-600 text-sm mb-1">Termine für alle</h4>
+                        <p class="text-xs text-gray-400">Versammlungen, Events & Spieltage anlegen – mit Zu-/Absagen für
+                            den ganzen Verein.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FUNKTIONEN -->
+        <section id="funktionen" class="py-16 sm:py-24 px-4 border-t border-white/5"
+            style="background: radial-gradient(ellipse 60% 40% at 50% 100%, rgba(0,102,255,.08) 0%, transparent 60%);">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-14">
+                    <span class="text-air-green text-sm font-semibold uppercase tracking-wider">Funktionen</span>
+                    <h2 class="font-heading font-800 text-3xl sm:text-4xl mt-2">Alles, was du brauchst</h2>
+                    <p class="text-gray-400 mt-3 max-w-xl mx-auto">Leistungsstarke Features, einfach zu bedienen.</p>
+                </div>
+                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="grad-card rounded-2xl p-6 hover:border-air-blue/30 transition group">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-air-blue/15 flex items-center justify-center mb-4 group-hover:glow-blue transition">
+                            <i class="las la-comments text-air-blue text-2xl"></i>
+                        </div>
+                        <h3 class="font-heading font-700 mb-2">Team-Chat</h3>
+                        <p class="text-sm text-gray-400">Echtzeit-Kommunikation wie WhatsApp – aber strukturiert,
+                            übersichtlich und ohne Ablenkung.</p>
+                    </div>
+                    <div class="grad-card rounded-2xl p-6 hover:border-air-green/30 transition group">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-air-green/15 flex items-center justify-center mb-4 group-hover:glow-green transition">
+                            <i class="las la-dumbbell text-air-green text-2xl"></i>
+                        </div>
+                        <h3 class="font-heading font-700 mb-2">Trainingsplanung</h3>
+                        <p class="text-sm text-gray-400">Erstelle Trainingspläne, wiederkehrende Termine und teile sie
+                            mit dem ganzen Team.</p>
+                    </div>
+                    <div class="grad-card rounded-2xl p-6 hover:border-air-orange/30 transition group">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-air-orange/15 flex items-center justify-center mb-4 group-hover:glow-orange transition">
+                            <i class="las la-calendar text-air-orange text-2xl"></i>
+                        </div>
+                        <h3 class="font-heading font-700 mb-2">Terminverwaltung</h3>
+                        <p class="text-sm text-gray-400">Spiele, Training, Events – alles im Kalender. Mit Erinnerungen
+                            und Zu-/Absagen.</p>
+                    </div>
+                    <div class="grad-card rounded-2xl p-6 hover:border-air-blue/30 transition group">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-air-blue/15 flex items-center justify-center mb-4 group-hover:glow-blue transition">
+                            <i class="las la-users text-air-blue text-2xl"></i>
+                        </div>
+                        <h3 class="font-heading font-700 mb-2">Teammanagement</h3>
+                        <p class="text-sm text-gray-400">Spieler verwalten, Rollen zuweisen, Teams strukturieren – alles
+                            zentral.</p>
+                    </div>
+                    <div class="grad-card rounded-2xl p-6 hover:border-air-green/30 transition group">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-air-green/15 flex items-center justify-center mb-4 group-hover:glow-green transition">
+                            <i class="las la-chart-bar text-air-green text-2xl"></i>
+                        </div>
+                        <h3 class="font-heading font-700 mb-2">Statistiken & Analysen</h3>
+                        <p class="text-sm text-gray-400">Leistungsdaten, Anwesenheitsquoten und Fortschritt – visuell
+                            aufbereitet.</p>
+                    </div>
+                    <div class="grad-card rounded-2xl p-6 hover:border-air-orange/30 transition group">
+                        <div
+                            class="w-12 h-12 rounded-xl bg-air-orange/15 flex items-center justify-center mb-4 group-hover:glow-orange transition">
+                            <i class="las la-clipboard text-air-orange text-2xl"></i>
+                        </div>
+                        <h3 class="font-heading font-700 mb-2">Anwesenheitssystem</h3>
+                        <p class="text-sm text-gray-400">Automatische Erfassung, wer dabei war. Keine Listen, kein
+                            Nachfragen.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SPORTARTEN -->
+        <section id="sportarten" class="py-16 sm:py-24 px-4 border-t border-white/5">
+            <div class="max-w-6xl mx-auto text-center">
+                <span class="text-air-orange text-sm font-semibold uppercase tracking-wider">Sportarten</span>
+                <h2 class="font-heading font-800 text-3xl sm:text-4xl mt-2">Für jede Sportart gemacht</h2>
+                <p class="text-gray-400 mt-3 max-w-xl mx-auto">Teamsport oder Einzelsport – AIRMIUS passt sich an.</p>
+                <div class="mt-12 flex flex-wrap justify-center gap-4">
+                    <div
+                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-air-blue/30 transition">
+                        <span class="text-3xl">⚽</span><span class="font-heading font-600">Fußball</span>
+                    </div>
+                    <div
+                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-air-green/30 transition">
+                        <span class="text-3xl">🏀</span><span class="font-heading font-600">Basketball</span>
+                    </div>
+                    <div
+                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-air-orange/30 transition">
+                        <span class="text-3xl">🏋️</span><span class="font-heading font-600">Fitness</span>
+                    </div>
+                    <div
+                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-air-blue/30 transition">
+                        <span class="text-3xl">🎾</span><span class="font-heading font-600">Tennis</span>
+                    </div>
+                    <div
+                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-air-green/30 transition">
+                        <span class="text-3xl">🏐</span><span class="font-heading font-600">Volleyball</span>
+                    </div>
+                    <div
+                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-air-orange/30 transition">
+                        <span class="text-3xl">🏊</span><span class="font-heading font-600">Schwimmen</span>
+                    </div>
+                    <div
+                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-air-blue/30 transition">
+                        <span class="text-3xl">🤸</span><span class="font-heading font-600">Turnen</span>
+                    </div>
+                    <div
+                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-air-green/30 transition">
+                        <span class="text-3xl">🚴</span><span class="font-heading font-600">Radsport</span>
+                    </div>
+                    <div
+                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-air-orange/30 transition">
+                        <span class="text-3xl">🥊</span><span class="font-heading font-600">Kampfsport</span>
+                    </div>
+                    <div
+                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-white/10 transition">
+                        <span class="text-3xl">➕</span>
+                        <span class="font-heading font-600 text-gray-400">und viele mehr</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ÜBER UNS -->
+        <section id="ueber" class="py-16 sm:py-24 px-4 border-t border-white/5"
+            style="background: radial-gradient(ellipse 50% 40% at 20% 50%, rgba(0,200,83,.06) 0%, transparent 50%);">
+            <div class="max-w-5xl mx-auto">
+                <div class="text-center mb-14">
+                    <span class="text-air-blue text-sm font-semibold uppercase tracking-wider">Über uns</span>
+                    <h2 class="font-heading font-800 text-3xl sm:text-4xl mt-2">Wir digitalisieren den Sport</h2>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="grad-card rounded-2xl p-8">
+                        <div class="w-12 h-12 rounded-xl bg-air-blue/15 flex items-center justify-center mb-4">
+                            <i class="las la-rocket text-air-blue text-2xl"></i>
+                        </div>
+                        <h3 class="font-heading font-700 text-xl mb-3">Unsere Vision</h3>
+                        <p class="text-gray-400 leading-relaxed">
+                            Die Digitalisierung im Sport vorantreiben. Wir bauen ein soziales Netzwerk für den Sport –
+                            vergleichbar mit LinkedIn für berufliche Chancen und Airmius für sportliche Vernetzung.
+                            Technologie soll den Sport besser, fairer und für alle zugänglicher machen.
+                        </p>
+                    </div>
+
+                    <div class="grad-card rounded-2xl p-8">
+                        <div class="w-12 h-12 rounded-xl bg-air-green/15 flex items-center justify-center mb-4">
+                            <i class="las la-crosshairs text-air-green text-2xl"></i>
+                        </div>
+                        <h3 class="font-heading font-700 text-xl mb-3">Unsere Mission</h3>
+                        <p class="text-gray-400 leading-relaxed">
+                            Sport einfacher organisieren und Menschen verbinden. Wir schaffen eine Plattform, auf der
+                            Trainer, Spieler und Vereine sich vernetzen, Chancen entdecken und ihre sportliche Zukunft
+                            gestalten können. <br> Alles an einem Ort!
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mt-8 grid sm:grid-cols-3 gap-4">
+                    <div class="grad-card rounded-xl p-5 text-center">
+                        <div class="flex items-center justify-center gap-2 mb-2">
+                            <i class="las la-shield-alt text-air-blue"></i>
+                            <span class="font-heading font-600">DSGVO-konform</span>
+                        </div>
+                        <p class="text-xs text-gray-500">Datenschutz nach höchsten Standards</p>
+                    </div>
+
+                    <div class="grad-card rounded-xl p-5 text-center">
+                        <div class="flex items-center justify-center gap-2 mb-2">
+                            <i class="las la-flag text-air-orange"></i>
+                            <span class="font-heading font-600">Made in Germany</span>
+                        </div>
+                        <p class="text-xs text-gray-500">Entwickelt und gehostet in Deutschland</p>
+                    </div>
+
+                    <div class="grad-card rounded-xl p-5 text-center">
+                        <div class="flex items-center justify-center gap-2 mb-2">
+                            <i class="las la-heart text-air-green"></i>
+                            <span class="font-heading font-600">Startup mit Herz</span>
+                        </div>
+                        <p class="text-xs text-gray-500">Von Sportlern für Sportler gebaut</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- BLOG -->
+        <section id="blog" class="py-16 sm:py-24 px-4 border-t border-white/5">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-14">
+                    <span class="text-air-green text-sm font-semibold uppercase tracking-wider">Blog</span>
+                    <h2 class="font-heading font-800 text-3xl sm:text-4xl mt-2">Neuigkeiten & Tipps</h2>
+                </div>
+                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="grad-card rounded-2xl overflow-hidden group hover:border-air-blue/20 transition">
+                        <div
+                            class="h-40 bg-gradient-to-br from-air-blue/20 to-air-blue/5 flex items-center justify-center">
+                            <i class="las la-brain text-air-blue text-5xl opacity-60"></i>
+                        </div>
+                        <div class="p-5">
+                            <span class="text- uppercase tracking-wider text-air-blue font-semibold">Training</span>
+                            <h3 class="font-heading font-600 mt-2 mb-2 group-hover:text-air-blue transition">5 Tipps für
+                                effektiveres Mannschaftstraining</h3>
+                            <p class="text-xs text-gray-500">Wie du mit einfachen Methoden das Beste aus jeder Einheit
+                                holst.</p>
+                        </div>
+                    </div>
+                    <div class="grad-card rounded-2xl overflow-hidden group hover:border-air-green/20 transition">
+                        <div
+                            class="h-40 bg-gradient-to-br from-air-green/20 to-air-green/5 flex items-center justify-center">
+                            <i class="las la-fire text-air-green text-5xl opacity-60"></i>
+                        </div>
+                        <div class="p-5">
+                            <span class="text- uppercase tracking-wider text-air-green font-semibold">Motivation</span>
+                            <h3 class="font-heading font-600 mt-2 mb-2 group-hover:text-air-green transition">Wie du
+                                dein Team langfristig motivierst</h3>
+                            <p class="text-xs text-gray-500">Strategien für mehr Engagement und Teamgeist.</p>
+                        </div>
+                    </div>
+                    <div class="grad-card rounded-2xl overflow-hidden group hover:border-air-orange/20 transition">
+                        <div
+                            class="h-40 bg-gradient-to-br from-air-orange/20 to-air-orange/5 flex items-center justify-center">
+                            <i class="las la-laptop-code text-air-orange text-5xl opacity-60"></i>
+                        </div>
+                        <div class="p-5">
+                            <span
+                                class="text- uppercase tracking-wider text-air-orange font-semibold">Digitalisierung</span>
+                            <h3 class="font-heading font-600 mt-2 mb-2 group-hover:text-air-orange transition">Warum
+                                dein Verein jetzt digital werden muss</h3>
+                            <p class="text-xs text-gray-500">Der Wettbewerbsvorteil durch moderne Vereinsführung.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- KONTAKT -->
+        <section id="kontakt" class="py-16 sm:py-24 px-4 border-t border-white/5"
+            style="background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(0,102,255,.08) 0%, transparent 50%);">
+            <div class="max-w-3xl mx-auto">
+                <div class="text-center mb-10">
+                    <span class="text-air-blue text-sm font-semibold uppercase tracking-wider">Kontakt</span>
+                    <h2 class="font-heading font-800 text-3xl sm:text-4xl mt-2">Schreib uns</h2>
+                    <p class="text-gray-400 mt-3">Fragen, Feedback oder Partnerschaften? Wir freuen uns auf dich.</p>
+                </div>
+                <form @submit.prevent="submitForm" class="grad-card rounded-2xl p-6 sm:p-8 space-y-5">
+                    <div class="grid sm:grid-cols-2 gap-5">
+                        <div>
+                            <label for="cf-name" class="block text-sm font-medium text-gray-300 mb-1.5">Name</label>
+                            <input id="cf-name" v-model="form.name" type="text" placeholder="Dein Name"
+                                class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-air-blue/50 transition">
+                            <div v-if="form.errors.name" class="text-red-400 text-xs mt-1">{{ form.errors.name }}</div>
+                        </div>
+                        <div>
+                            <label for="cf-email" class="block text-sm font-medium text-gray-300 mb-1.5">E-Mail</label>
+                            <input id="cf-email" v-model="form.email" type="email" placeholder="deine@email.de"
+                                class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-air-blue/50 transition">
+                            <div v-if="form.errors.email" class="text-red-400 text-xs mt-1">{{ form.errors.email }}
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="cf-msg" class="block text-sm font-medium text-gray-300 mb-1.5">Nachricht</label>
+                        <textarea id="cf-msg" v-model="form.message" rows="4" placeholder="Was möchtest du uns sagen?"
+                            class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-air-blue/50 transition resize-none"></textarea>
+                        <div v-if="form.errors.message" class="text-red-400 text-xs mt-1">{{ form.errors.message }}
+                        </div>
+                    </div>
+                    <button type="submit" :disabled="form.processing"
+                        class="w-full bg-air-blue hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-full transition">
+                        <span v-if="form.processing">Wird gesendet...</span>
+                        <span v-else>Nachricht senden</span>
+                    </button>
+                    <div v-show="formSuccess" class="text-center text-air-green text-sm font-medium py-2">
+                        ✅ Danke! Deine Nachricht wurde gesendet.
+                    </div>
+                </form>
+                <div class="mt-8 flex justify-center gap-5">
+                    <a href="#"
+                        class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:border-air-blue/50 transition">
+                        <i class="lab la-instagram text-gray-400"></i>
+                    </a>
+                    <a href="#"
+                        class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:border-air-blue/50 transition">
+                        <i class="lab la-twitter text-gray-400"></i>
+                    </a>
+                    <a href="#"
+                        class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:border-air-blue/50 transition">
+                        <i class="lab la-linkedin text-gray-400"></i>
+                    </a>
+                    <a href="#"
+                        class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:border-air-blue/50 transition">
+                        <i class="lab la-facebook text-gray-400"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA BANNER -->
+        <section class="py-16 px-4 border-t border-white/5">
+            <div class="max-w-4xl mx-auto text-center grad-card rounded-3xl p-10 sm:p-14"
+                style="background: linear-gradient(135deg, rgba(0,102,255,.15), rgba(0,200,83,.1), rgba(255,109,0,.08)); border-color: rgba(0,102,255,.2);">
+                <h2 class="font-heading font-800 text-3xl sm:text-4xl">Bereit, dein Team zu digitalisieren?</h2>
+                <p class="text-gray-400 mt-3 max-w-lg mx-auto">Starte jetzt kostenlos und erlebe, wie einfach
+                    Sportorganisation sein kann.</p>
+                <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+                    <button @click="scrollTo('hero')"
+                        class="bg-air-blue hover:bg-blue-600 glow-blue text-white font-bold px-8 py-3.5 rounded-full transition">
+                        Kostenlos starten
+                    </button>
+                    <button @click="scrollTo('funktionen')"
+                        class="border border-white/15 hover:border-white/30 text-white font-semibold px-8 py-3.5 rounded-full transition">
+                        Funktionen entdecken
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="border-t border-white/5 py-12 px-4">
+            <div class="max-w-6xl mx-auto">
+                <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
+                    <div>
+                    <button @click="scrollTo('hero')" class="font-heading font-900 text-xl tracking-tight">
+                        <img src="/img/Logo-Airmius.png" alt="AIRMIUS Logo" class="w-10 h-10 mr-2 inline-block -mt-1">
+                        <span class="text-white font-[--ubuntu]">AIRMIUS</span>
+                    </button>
+                      <p class="text-sm text-gray-500 mt-3 leading-relaxed">Das soziale Netzwerk für deinen Sport. Für Sportler, Teams und Vereine. Organisation, Kommunikation und Vernetzung – vereint in einer App.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-heading font-600 text-sm mb-3 text-gray-300">Produkt</h4>
+                        <div class="space-y-2 text-sm text-gray-500">
+                            <button @click="scrollTo('funktionen')"
+                                class="block hover:text-white transition">Funktionen</button>
+                            <button @click="scrollTo('vorteile')"
+                                class="block hover:text-white transition">Vorteile</button>
+                            <button @click="scrollTo('sportarten')"
+                                class="block hover:text-white transition">Sportarten</button>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-heading font-600 text-sm mb-3 text-gray-300">Unternehmen</h4>
+                        <div class="space-y-2 text-sm text-gray-500">
+                            <button @click="scrollTo('ueber')" class="block hover:text-white transition">Über
+                                uns</button>
+                            <button @click="scrollTo('blog')" class="block hover:text-white transition">Blog</button>
+                            <button @click="scrollTo('kontakt')"
+                                class="block hover:text-white transition">Kontakt</button>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-heading font-600 text-sm mb-3 text-gray-300">Rechtliches</h4>
+                        <div class="space-y-2 text-sm text-gray-500">
+                            <a href="#" class="block hover:text-white transition">Impressum</a>
+                            <a href="#" class="block hover:text-white transition">Datenschutz</a>
+                            <a href="#" class="block hover:text-white transition">AGB</a>
+                        </div>
+                    </div>
+                </div>
+                <div
+                    class="border-t border-white/5 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-600">
+                    <span>© 2025 AIRMIUS. Alle Rechte vorbehalten.</span>
+                    <span>Made with ❤️ in Germany</span>
+                </div>
+            </div>
+        </footer>
     </div>
 </template>
+<style scoped>
+/* 1. Mockup schwebt dauerhaft */
+@keyframes floatLoop {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-12px);
+    }
+}
+
+.float-loop {
+    animation: floatLoop 6s ease-in-out infinite;
+}
+
+/* 2. Items verschwinden und listen sich neu auf - 10s Loop */
+@keyframes listLoop {
+
+    /* Start: alle da */
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    /* 60%: alle verschwinden */
+    60% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    65% {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.95);
+    }
+
+    /* 70%: noch weg */
+    70% {
+        opacity: 0;
+        transform: translateY(10px) scale(0.95);
+    }
+
+    /* 100%: wieder da */
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.card-item {
+    animation: listLoop 10s ease-in-out infinite;
+}
+
+/* Nacheinander einblenden mit delay */
+.item-1 {
+    animation-delay: 0s;
+}
+
+.item-2 {
+    animation-delay: 0.15s;
+}
+
+.item-3 {
+    animation-delay: 0.3s;
+}
+
+.item-4 {
+    animation-delay: 0.45s;
+}
+</style>
