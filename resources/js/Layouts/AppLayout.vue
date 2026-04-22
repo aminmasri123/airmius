@@ -23,7 +23,11 @@ const switchToTeam = (team) => {
 };
 
 const logout = () => {
-    router.post(route('logout'));
+    router.post(route('logout'), {}, {
+        onSuccess: () => {
+            localStorage.setItem('logout', Date.now());
+        }
+    });
 };
 </script>
 

@@ -33,6 +33,12 @@ const i18n = createI18n({
     }
 })
 
+window.addEventListener('storage', (event) => {
+    if (event.key === 'logout') {
+        window.location.href = route('welcome');
+    }
+});
+
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob('./Pages/**/*.vue')),

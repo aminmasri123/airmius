@@ -6,6 +6,8 @@ import Checkbox from '@/Components/Checkbox.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
+
 import TextInput from '@/Components/TextInput.vue';
 
 const form = useForm({
@@ -27,9 +29,10 @@ const submit = () => {
     <Head title="Register" />
 
     <AuthenticationCard>
-        <template #logo>
-            <AuthenticationCardLogo />
-        </template>
+            <div class="w-48 h-48 context-center mx-auto ">
+                    <AuthenticationCardLogo />
+
+                </div>
 
         <form @submit.prevent="submit">
             <div>
@@ -99,13 +102,14 @@ const submit = () => {
             </div>
 
             <div class="flex items-center justify-end mt-4">
-                <Link :href="route('login')" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Already registered?
-                </Link>
-
                 <PrimaryButton class="ms-4" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                    Register
+                    {{ $t('Registrieren') }}
                 </PrimaryButton>
+
+                <SecondaryButton class="ms-4" :class="{ 'opacity-25': form.processing }"
+                    :disabled="form.processing">
+                    <Link :href="route('login') ">{{ $t('Anmelden') }}</Link>
+                </SecondaryButton>
             </div>
         </form>
     </AuthenticationCard>

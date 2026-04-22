@@ -333,172 +333,210 @@ watch(mobileOpen, (val) => {
         <section id="vorteile" class="py-16 sm:py-24 px-4 border-t border-white/5">
             <div class="max-w-6xl mx-auto">
                 <div class="text-center mb-8 sm:mb-10 px-2">
-                    <span class="text-air-blue text-xs sm:text-sm font-semibold uppercase tracking-wider">Vorteile</span>
+                    <span
+                        class="text-air-blue text-xs sm:text-sm font-semibold uppercase tracking-wider">Vorteile</span>
                     <h2 class="font-heading font-800 text-2xl sm:text-3xl lg:text-4xl mt-2 leading-tight">
                         Eine App für <span
                             class="bg-gradient-to-r from-air-blue to-air-green bg-clip-text text-transparent">alle im
                             Sport</span>
                     </h2>
-                    <p class="text-gray-400 mt-3 text-sm sm:text-base max-w-xl mx-auto">Egal ob Sportler, Trainer oder Verein – AIRMIUS macht
+                    <p class="text-gray-400 mt-3 text-sm sm:text-base max-w-xl mx-auto">Egal ob Sportler, Trainer oder
+                        Verein – AIRMIUS macht
                         deinen Alltag einfacher.</p>
                 </div>
 
                 <!-- Tabs: Mobil nur Icons, horizontal scroll -->
-<div class="mb-8 sm:mb-10 flex justify-center px-4">
-    <div class="inline-flex bg-white/5 rounded-full p-1 gap-1 flex-wrap justify-center">
-        <button v-for="tab in tabs" :key="tab.key" @click="switchTab(tab.key)" :class="[
-            'rounded-full px-4 sm:px-5 py-2.5 text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap',
-            activeTab === tab.key? 'tab-active' : 'text-gray-400 hover:text-white'
-        ]">
-            {{ tab.label }}
-        </button>
-    </div>
-</div>
+                <div class="mb-8 sm:mb-10 flex justify-center px-4">
+                    <div class="inline-flex bg-white/5 rounded-full p-1 gap-1 flex-wrap justify-center">
+                        <button v-for="tab in tabs" :key="tab.key" @click="switchTab(tab.key)" :class="[
+                            'rounded-full px-4 sm:px-5 py-2.5 text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap',
+                            activeTab === tab.key ? 'tab-active' : 'text-gray-400 hover:text-white'
+                        ]">
+                            {{ tab.label }}
+                        </button>
+                    </div>
+                </div>
 
                 <!-- Sportler: 2 Spalten mobil -->
-                <div v-show="activeTab === 'sportler'" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div v-show="activeTab === 'sportler'"
+                    class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-grip-lines text-air-blue text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Alles an einem Ort</h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Training, Spiele, Nachrichten – eine App für alles.</p>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Training, Spiele, Nachrichten – eine App
+                            für alles.</p>
                     </div>
 
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-comment text-air-blue text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Kein WhatsApp-Chaos</h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Strukturierte Kommunikation statt endloser Gruppenflut.</p>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Strukturierte Kommunikation statt
+                            endloser Gruppenflut.</p>
                     </div>
 
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-mouse-pointer text-air-blue text-lg sm:text-xl"></i>
                         </div>
-                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Ein-Klick Zu-/Absage</h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Teilnahme bestätigen war noch nie so einfach.</p>
+                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Ein-Klick Zu-/Absage
+                        </h4>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Teilnahme bestätigen war noch nie so
+                            einfach.</p>
                     </div>
 
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-heart text-air-blue text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Echtzeit-Übersicht</h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Immer wissen, was wann wo stattfindet.</p>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Immer wissen, was wann wo stattfindet.
+                        </p>
                     </div>
 
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-chart-bar text-air-blue text-lg sm:text-xl"></i>
                         </div>
-                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Persönliche Statistiken</h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Dein Fortschritt auf einen Blick – Motivation pur.</p>
+                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Persönliche Statistiken
+                        </h4>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Dein Fortschritt auf einen Blick –
+                            Motivation pur.</p>
                     </div>
 
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-history text-air-blue text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Trainingshistorie</h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Alle vergangenen Einheiten jederzeit einsehen.</p>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Alle vergangenen Einheiten jederzeit
+                            einsehen.</p>
                     </div>
 
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-bolt text-air-blue text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Motivation steigern</h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Sichtbarer Fortschritt = mehr Leistung.</p>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Sichtbarer Fortschritt = mehr Leistung.
+                        </p>
                     </div>
 
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-mobile text-air-blue text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Überall verfügbar</h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Smartphone, Tablet, Desktop – immer dabei.</p>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Smartphone, Tablet, Desktop – immer
+                            dabei.</p>
                     </div>
 
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-car text-air-blue text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Fahrgemeinschaften</h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Gemeinsam zu Training & Events fahren – Kosten teilen.</p>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Gemeinsam zu Training & Events fahren –
+                            Kosten teilen.</p>
                     </div>
 
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-shopping-bag text-air-blue text-lg sm:text-xl"></i>
                         </div>
-                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Einkaufsgemeinschaft</h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Bestellt euer Equipment gemeinsam zum exklusiven Preis.</p>
+                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Einkaufsgemeinschaft
+                        </h4>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Bestellt euer Equipment gemeinsam zum
+                            exklusiven Preis.</p>
                     </div>
 
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5 col-span-2 sm:col-span-1">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-users text-air-blue text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Sport-Buddy finden</h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Finde jederzeit Leute zum Laufen, Trainieren oder Spielen.</p>
+                        <p class="text- sm:text-xs text-gray-400 leading-snug">Finde jederzeit Leute zum Laufen,
+                            Trainieren oder Spielen.</p>
                     </div>
                 </div>
 
                 <!-- Trainer: 1 Spalte mobil -->
-                <div v-show="activeTab === 'trainer'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                <div v-show="activeTab === 'trainer'"
+                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-clock text-air-green text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Massive Zeitersparnis</h4>
-                        <p class="text-xs text-gray-400">Automatisiere Routineaufgaben und fokussiere dich aufs Training.</p>
+                        <p class="text-xs text-gray-400">Automatisiere Routineaufgaben und fokussiere dich aufs
+                            Training.</p>
                     </div>
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-tasks text-air-green text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Keine manuellen Listen</h4>
                         <p class="text-xs text-gray-400">Schluss mit Excel-Tabellen und handgeschriebenen Listen.</p>
                     </div>
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-user-check text-air-green text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Auto-Anwesenheit</h4>
                         <p class="text-xs text-gray-400">Automatische Erfassung – wer war da, wer nicht.</p>
                     </div>
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-users text-air-green text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Teamverwaltung</h4>
                         <p class="text-xs text-gray-400">Spieler hinzufügen, Gruppen erstellen, Struktur schaffen.</p>
                     </div>
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-calendar-plus text-air-green text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Trainings- & Spielplanung</h4>
                         <p class="text-xs text-gray-400">Termine erstellen in Sekunden – auch wiederkehrend.</p>
                     </div>
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-eye text-air-green text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Echtzeit-Teilnehmer</h4>
                         <p class="text-xs text-gray-400">Sofort sehen, wer zugesagt hat – keine Nachfragen mehr.</p>
                     </div>
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-bullhorn text-air-green text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Zentrale Kommunikation</h4>
                         <p class="text-xs text-gray-400">Keine Infoverluste mehr – alle erreichen, sofort.</p>
                     </div>
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-chart-line text-air-green text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Leistungsanalysen</h4>
@@ -507,9 +545,11 @@ watch(mobileOpen, (val) => {
                 </div>
 
                 <!-- Vereine: 1 Spalte mobil -->
-                <div v-show="activeTab === 'vereine'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                <div v-show="activeTab === 'vereine'"
+                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-laptop text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Digitalisierung</h4>
@@ -517,7 +557,8 @@ watch(mobileOpen, (val) => {
                     </div>
 
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-building text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Zentrale Verwaltung</h4>
@@ -525,7 +566,8 @@ watch(mobileOpen, (val) => {
                     </div>
 
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-sitemap text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Klare Strukturen</h4>
@@ -533,7 +575,8 @@ watch(mobileOpen, (val) => {
                     </div>
 
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-share-alt text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Ebenenübergreifend</h4>
@@ -541,7 +584,8 @@ watch(mobileOpen, (val) => {
                     </div>
 
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-piggy-bank text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Zeit- & Kostenersparnis</h4>
@@ -549,7 +593,8 @@ watch(mobileOpen, (val) => {
                     </div>
 
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-star text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Professionelle Wirkung</h4>
@@ -557,35 +602,43 @@ watch(mobileOpen, (val) => {
                     </div>
 
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-wallet text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Beiträge verwalten</h4>
-                        <p class="text-xs text-gray-400">Mitgliedsbeiträge einziehen, Mahnungen automatisieren, Überblick behalten.</p>
+                        <p class="text-xs text-gray-400">Mitgliedsbeiträge einziehen, Mahnungen automatisieren,
+                            Überblick behalten.</p>
                     </div>
 
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-handshake text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Sponsoren-Management</h4>
-                        <p class="text-xs text-gray-400">Sponsoren pflegen, Pakete verwalten, Sichtbarkeit messen – alles zentral.</p>
+                        <p class="text-xs text-gray-400">Sponsoren pflegen, Pakete verwalten, Sichtbarkeit messen –
+                            alles zentral.</p>
                     </div>
 
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-file-invoice text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Belege & Abrechnung</h4>
-                        <p class="text-xs text-gray-400">Rechnungen & Quittungen digital ablegen, Ausgaben tracken, Kassenbuch führen.</p>
+                        <p class="text-xs text-gray-400">Rechnungen & Quittungen digital ablegen, Ausgaben tracken,
+                            Kassenbuch führen.</p>
                     </div>
 
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                        <div
+                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
                             <i class="las la-calendar-plus text-air-orange text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-sm mb-1">Termine für alle</h4>
-                        <p class="text-xs text-gray-400">Versammlungen, Events & Spieltage anlegen – mit Zu-/Absagen für den ganzen Verein.</p>
+                        <p class="text-xs text-gray-400">Versammlungen, Events & Spieltage anlegen – mit Zu-/Absagen für
+                            den ganzen Verein.</p>
                     </div>
                 </div>
             </div>
@@ -1034,6 +1087,7 @@ watch(mobileOpen, (val) => {
 .scrollbar-hide::-webkit-scrollbar {
     display: none;
 }
+
 .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;

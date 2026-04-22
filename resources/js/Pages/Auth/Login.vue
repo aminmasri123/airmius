@@ -6,6 +6,7 @@ import Checkbox from '@/Components/Checkbox.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { ref, onMounted } from 'vue'
 
@@ -30,9 +31,13 @@ const submit = () => {
 };
 
 const images = [
-    '/img/login/slide1.jpeg',
-    '/img/login/slide2.jpeg',
+    '/img/login/slide1.png',
+    '/img/login/slide2.png',
+
+   /*  '/img/login/slide2.jpeg',
     '/img/login/slide3.jpeg',
+    '/img/login/slide4.jpeg', */
+
 
 ]
 
@@ -93,9 +98,15 @@ onMounted(() => {
                             Forgot your password?
                         </Link>
 
+
+                        <SecondaryButton class="ms-4" :class="{ 'opacity-25': form.processing }"
+                            :disabled="form.processing">
+                            <Link :href="route('register') ">{{ $t('Registrieren?') }}</Link>
+                        </SecondaryButton>
+
                         <PrimaryButton class="ms-4" :class="{ 'opacity-25': form.processing }"
                             :disabled="form.processing">
-                            Log in
+                            {{ $t('Anmelden') }}
                         </PrimaryButton>
                     </div>
                 </form>
@@ -113,7 +124,7 @@ onMounted(() => {
 
             <div class="w-full h-full relative overflow-hidden">
                 <!-- Slider Container -->
-                <div class="h-full w-5/6 relative">
+                <div class="h-full w-4/6 relative">
 
                     <!-- SLIDES -->
                     <div v-for="(img, index) in images" :key="index" :class="[
