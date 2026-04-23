@@ -72,14 +72,14 @@ onMounted(() => {
 
                 <form @submit.prevent="submit">
                     <div>
-                        <InputLabel for="email" value="Email" />
+                        <InputLabel for="email" :value="$t('Email')" />
                         <TextInput id="email" v-model="form.email" type="email" class="mt-1 block w-full" required
                             autofocus autocomplete="username" />
                         <InputError class="mt-2" :message="form.errors.email" />
                     </div>
 
                     <div class="mt-4">
-                        <InputLabel for="password" value="Password" />
+                        <InputLabel for="password" :value="$t('Passwort')" />
                         <TextInput id="password" v-model="form.password" type="password" class="mt-1 block w-full"
                             required autocomplete="current-password" />
                         <InputError class="mt-2" :message="form.errors.password" />
@@ -88,20 +88,20 @@ onMounted(() => {
                     <div class="block mt-4">
                         <label class="flex items-center">
                             <Checkbox v-model:checked="form.remember" name="remember" />
-                            <span class="ms-2 text-sm text-gray-600">Remember me</span>
+                            <span class="ms-2 text-sm text-gray-600">{{ $t('Angemeldet bleiben') }}</span>
                         </label>
                     </div>
 
                     <div class="flex items-center justify-end mt-4">
                         <Link v-if="canResetPassword" :href="route('password.request')"
                             class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            Forgot your password?
+                            {{ $t('Passwort vergessen?') }}
                         </Link>
 
 
                         <SecondaryButton class="ms-4" :class="{ 'opacity-25': form.processing }"
                             :disabled="form.processing">
-                            <Link :href="route('register') ">{{ $t('Registrieren?') }}</Link>
+                            <Link :href="route('register') ">{{ $t('Registrieren') }}?</Link>
                         </SecondaryButton>
 
                         <PrimaryButton class="ms-4" :class="{ 'opacity-25': form.processing }"
@@ -153,8 +153,8 @@ onMounted(() => {
                 <!-- Text Overlay -->
                 <div class="absolute inset-0 flex items-center justify-center">
                     <div class="absolute text-center bottom-10  text-white bg-black/50 p-8 rounded-md">
-                        <h2 class="text-2xl font-bold">Sport Plattform</h2>
-                        <p class="text-sm opacity-80">Team Management · Kommunikation · Events</p>
+                        <h2 class="text-2xl font-bold">{{ $t('Sport Plattform') }}</h2>
+                        <p class="text-sm opacity-80">{{ $t('Team Management · Kommunikation · Events') }}</p>
 
 
                         <div class="absolute  left-1/2 -translate-x-1/2 flex gap-2 z-20">

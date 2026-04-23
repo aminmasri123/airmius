@@ -3,7 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
+use App\Notifications\MyCustomResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -31,6 +31,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'language',
     ];
 
     /**
@@ -66,4 +67,15 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function sendPasswordResetNotification($token)
+    {
+   // Erstelle zuerst die Instanz der Notification
+    $notification = new MyCustomResetPassword($token);
+
+    // Setze die Sprache auf der Notification-Instanz
+    $notification->locale('en');
+
+    // Sende die fertig konfigurierte Notification
+    $this->notify($notification);    }
 }
