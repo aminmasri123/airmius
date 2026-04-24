@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\KontaktController;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -48,3 +49,5 @@ Route::post('/user/language', function (Request $request) {
     return back()->with('message', 'Sprache erfolgreich aktualisiert!');
 
 })->name('user.language.update');
+
+    Route::post('/standort/anlegen', [KontaktController::class, 'store'])->name('contact.store');

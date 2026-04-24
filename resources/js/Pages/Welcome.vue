@@ -2,9 +2,9 @@
 import { Head, useForm } from '@inertiajs/vue3'
 import { ref, watch } from 'vue'
 import { Link } from '@inertiajs/vue3'
-import LanguageDropdown from '@/Components/LanguageDropdown.vue'
-import ApplicationLogo from '@/Components/ApplicationLogo.vue'
-
+import Nav from '@/Components/Guest/Nav.vue'
+import Subnav from '@/Components/Guest/Subnav.vue'
+import Footer from '@/Components/Guest/Footer.vue'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -16,7 +16,6 @@ const props = defineProps({
 // ========================
 // STATE
 // ========================
-const mobileOpen = ref(false)
 const activeTab = ref('sportler')
 
 const tabs = [
@@ -37,20 +36,9 @@ const formSuccess = ref(false)
 // ========================
 // METHODS
 // ========================
-const toggleMobile = () => {
-    mobileOpen.value = !mobileOpen.value
-}
 
 const switchTab = (tab) => {
     activeTab.value = tab
-}
-
-const scrollTo = (id) => {
-    const el = document.getElementById(id)
-    if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        mobileOpen.value = false
-    }
 }
 
 const submitForm = () => {
@@ -64,17 +52,7 @@ const submitForm = () => {
     })
 }
 
-watch(mobileOpen, (val) => {
-    if (val) {
-        document.body.style.overflow = 'hidden'
-        document.body.style.position = 'fixed'
-        document.body.style.width = '100%'
-    } else {
-        document.body.style.overflow = ''
-        document.body.style.position = ''
-        document.body.style.width = ''
-    }
-})
+
 </script>
 
 <template>
@@ -82,97 +60,28 @@ watch(mobileOpen, (val) => {
     <Head title="Welcome" />
     <div id="app" class="w-full h-full bg-air-dark text-white overflow-auto">
         <!-- NAV -->
-        <nav id="nav" class="fixed top-0 left-0 w-full z-50 nav-blur border-b border-white/5 bg-white/10 backdrop-blur">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
-                <button @click="scrollTo('hero')"
-                    class="flex items-center gap-2 font-heading font-900 text-xl tracking-tight">
-                    <ApplicationLogo class="w-8 h-8" />
-                    <span class="text-white font-[--ubuntu]">AIRMIUS</span>
-                </button>
+        <Nav
+            :canLogin="canLogin"
+            :toggleMobile="toggleMobile"
+        />
 
-                <!-- Desktop Links: erst ab md anzeigen -->
-                <div class="hidden md:flex items-center gap-6 text-sm font-medium text-gray-300">
-                    <button @click="scrollTo('vorteile')" class="hover:text-white transition">Vorteile</button>
-                    <button @click="scrollTo('funktionen')" class="hover:text-white transition">Funktionen</button>
-                    <button @click="scrollTo('sportarten')" class="hover:text-white transition">Sportarten</button>
-                    <button @click="scrollTo('ueber')" class="hover:text-white transition">Über uns</button>
-                    <button @click="scrollTo('blog')" class="hover:text-white transition">Blog</button>
-                    <button @click="scrollTo('kontakt')" class="hover:text-white transition">Kontakt</button>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <LanguageDropdown />
-
-                    <!-- Login nur Desktop -->
-
-
-                    <!-- CTA nur Desktop -->
-                    <button @click="scrollTo('hero')"
-                        class="hidden md:block bg-air-blue hover:bg-blue-600 text-white text-sm font-semibold px-5 py-2 rounded-full transition">
-                        Jetzt starten
-                    </button>
-                    <Link v-if="props.canLogin" :href="route('login')"
-                        class="hidden lg:inline-block text-sm font-semibold text-air-blue hover:text-blue-400 transition">
-                        {{ $t('Anmelden') }}
-                    </Link>
-                    <!-- Burger nur Mobile -->
-                    <button @click="toggleMobile" class="md:hidden text-gray-300 hover:text-white p-2">
-                        <i class="las la-bars text-2xl"></i>
-                    </button>
-                </div>
-            </div>
-        </nav>
+        <!-- SUB NAV -->
+         <Subnav />
 
 
 
 
 
-        <!-- MOBILE MENU -->
-        <Teleport to="body">
-            <Transition enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-0"
-                enter-to-class="opacity-100" leave-active-class="transition duration-200 ease-in"
-                leave-from-class="opacity-100" leave-to-class="opacity-0">
-                <div v-if="mobileOpen" class="fixed inset-0 z-[99999] md:hidden">
-                    <div class="absolute inset-0 bg-black/90 backdrop-blur-sm" @click="mobileOpen = false"></div>
 
-                    <Transition enter-active-class="transition duration-300 ease-out"
-                        enter-from-class="translate-x-full" enter-to-class="translate-x-0"
-                        leave-active-class="transition duration-200 ease-in" leave-from-class="translate-x-0"
-                        leave-to-class="translate-x-full">
-                        <div v-if="mobileOpen"
-                            class="absolute right-0 top-0 h-full w-full max-w- bg-air-dark border-l border-white/10 flex flex-col">
-                            <div class="flex justify-between items-center p-5 border-b border-white/10">
-                                <span class="text-white font-bold text-lg">Menü</span>
-                                <button @click="mobileOpen = false" class="text-white text-2xl p-1">✕</button>
-                            </div>
 
-                            <div class="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-1">
-                                <button @click="scrollTo('vorteile')"
-                                    class="text-left py-3 text-lg text-gray-300 hover:text-white transition">Vorteile</button>
-                                <button @click="scrollTo('funktionen')"
-                                    class="text-left py-3 text-lg text-gray-300 hover:text-white transition">Funktionen</button>
-                                <button @click="scrollTo('sportarten')"
-                                    class="text-left py-3 text-lg text-gray-300 hover:text-white transition">Sportarten</button>
-                                <button @click="scrollTo('ueber')"
-                                    class="text-left py-3 text-lg text-gray-300 hover:text-white transition">Über
-                                    uns</button>
-                                <button @click="scrollTo('blog')"
-                                    class="text-left py-3 text-lg text-gray-300 hover:text-white transition">Blog</button>
-                                <button @click="scrollTo('kontakt')"
-                                    class="text-left py-3 text-lg text-gray-300 hover:text-white transition">Kontakt</button>
 
-                                <div class="border-t border-white/10 my-4"></div>
 
-                                <Link v-if="props.canLogin" :href="route('login')" @click="mobileOpen = false"
-                                    class="text-left py-3 text-lg text-air-blue hover:text-blue-400 transition">
-                                    {{ $t('Anmelden') }}
-                                </Link>
-                            </div>
-                        </div>
-                    </Transition>
-                </div>
-            </Transition>
-        </Teleport>
+
+
+
+
+
+
 
         <!-- HERO -->
         <section id="hero" class="pt-24 pb-16 sm:pt-36 sm:pb-24 px-4 min-h-screen sm:h-dvh flex items-center">
@@ -280,7 +189,6 @@ watch(mobileOpen, (val) => {
                 </div>
             </div>
         </section>
-
         <!-- PROBLEM → LÖSUNG -->
         <section class="py-16 sm:py-24 px-4 border-t border-white/5 min-h-screen sm:h-dvh flex items-center">
             <div class="max-w-6xl mx-auto">
@@ -960,56 +868,7 @@ watch(mobileOpen, (val) => {
         </section>
 
         <!-- FOOTER -->
-        <footer class="border-t border-white/5 py-12 px-4">
-            <div class="max-w-6xl mx-auto">
-                <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
-                    <div>
-                        <button @click="scrollTo('hero')" class="font-heading font-900 text-xl tracking-tight">
-                            <img src="/img/Logo-Airmius.png" alt="AIRMIUS Logo"
-                                class="w-10 h-10 mr-2 inline-block -mt-1">
-                            <span class="text-white font-[--ubuntu]">AIRMIUS</span>
-                        </button>
-                        <p class="text-sm text-gray-500 mt-3 leading-relaxed">Das soziale Netzwerk für deinen Sport. Für
-                            Sportler, Teams und Vereine. Organisation, Kommunikation und Vernetzung – vereint in einer
-                            App.</p>
-                    </div>
-                    <div>
-                        <h4 class="font-heading font-600 text-sm mb-3 text-gray-300">Produkt</h4>
-                        <div class="space-y-2 text-sm text-gray-500">
-                            <button @click="scrollTo('funktionen')"
-                                class="block hover:text-white transition">Funktionen</button>
-                            <button @click="scrollTo('vorteile')"
-                                class="block hover:text-white transition">Vorteile</button>
-                            <button @click="scrollTo('sportarten')"
-                                class="block hover:text-white transition">Sportarten</button>
-                        </div>
-                    </div>
-                    <div>
-                        <h4 class="font-heading font-600 text-sm mb-3 text-gray-300">Unternehmen</h4>
-                        <div class="space-y-2 text-sm text-gray-500">
-                            <button @click="scrollTo('ueber')" class="block hover:text-white transition">Über
-                                uns</button>
-                            <button @click="scrollTo('blog')" class="block hover:text-white transition">Blog</button>
-                            <button @click="scrollTo('kontakt')"
-                                class="block hover:text-white transition">Kontakt</button>
-                        </div>
-                    </div>
-                    <div>
-                        <h4 class="font-heading font-600 text-sm mb-3 text-gray-300">Rechtliches</h4>
-                        <div class="space-y-2 text-sm text-gray-500">
-                            <a href="#" class="block hover:text-white transition">Impressum</a>
-                            <a href="#" class="block hover:text-white transition">Datenschutz</a>
-                            <a href="#" class="block hover:text-white transition">AGB</a>
-                        </div>
-                    </div>
-                </div>
-                <div
-                    class="border-t border-white/5 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-600">
-                    <span>© 2025 AIRMIUS. Alle Rechte vorbehalten.</span>
-                    <span>Made with ❤️ in Germany</span>
-                </div>
-            </div>
-        </footer>
+        <Footer/>
     </div>
 </template>
 <style scoped>
