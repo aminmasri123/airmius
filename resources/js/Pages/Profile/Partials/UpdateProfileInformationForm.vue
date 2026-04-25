@@ -78,7 +78,7 @@ const clearPhotoFileInput = () => {
 <template>
     <FormSection @submitted="updateProfileInformation">
         <template #title>
-            Profile Information
+            {{ $t('Profile Information') }}
         </template>
 
         <template #description>

@@ -59,14 +59,14 @@ onMounted(() => {
     <div class="min-h-screen flex">
 
         <!-- LINKS: LOGIN -->
-        <div class="w-full md:w-1/2 flex items-center justify-center bg-white px-10">
+        <div class="w-full md:w-1/2 flex items-center justify-center bg-card px-10">
             <div class="w-full max-w-md">
 
                 <div class="w-64 h-64 context-center mx-auto mt-10">
                     <AuthenticationCardLogo />
 
                 </div>
-                <div v-if="status" class="mb-4 font-medium text-sm text-green-600">
+                <div v-if="status" class="mb-4 font-medium text-sm text-success">
                     {{ status }}
                 </div>
 
@@ -160,7 +160,7 @@ onMounted(() => {
                         <div class="absolute  left-1/2 -translate-x-1/2 flex gap-2 z-20">
                             <button v-for="(img, index) in images" :key="index" @click="current = index"
                                 class="w-2.5 h-2.5 rounded-full transition-all mt-2 duration-300"
-                                :class="current === index ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/70'" />
+                                :class="current === index ? 'bg-primary scale-125' : 'bg-primary/40 hover:bg-primary/70'" />
                         </div>
                     </div>
                 </div>

@@ -5,3 +5,38 @@
 [x-cloak] {
     display: none;
 }
+
+@layer base {
+  .theme-air {
+    --bg: theme('colors.air.bg');
+    --card: theme('colors.air.card');
+    --primary: theme('colors.air.primary');
+    --secondary: theme('colors.air.secondary');
+    --success: theme('colors.air.success');
+    --error: theme('colors.air.error');
+    --border: theme('colors.air.border');
+    --muted: theme('colors.air.muted');
+  }
+
+  .theme-dark {
+    --bg: theme('colors.dark.bg');
+    --card: theme('colors.dark.card');
+    --primary: theme('colors.dark.primary');
+    --secondary: theme('colors.dark.secondary');
+    --success: theme('colors.dark.success');
+    --error: theme('colors.dark.error');
+    --border: theme('colors.dark.border');
+    --muted: theme('colors.dark.muted');
+  }
+
+  .theme-womanly {
+    --bg: theme('colors.womanly.bg');
+    --card: theme('colors.womanly.card');
+    --primary: theme('colors.womanly.primary');
+    --secondary: theme('colors.womanly.secondary');
+    --success: theme('colors.womanly.success');
+    --error: theme('colors.womanly.error');
+    --border: theme('colors.womanly.border');
+    --muted: theme('colors.womanly.muted');
+  }
+}

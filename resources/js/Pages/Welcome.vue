@@ -1,6 +1,6 @@
 <script setup>
 import { Head, useForm } from '@inertiajs/vue3'
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
@@ -13,6 +13,12 @@ const props = defineProps({
     phpVersion: String,
 })
 
+onMounted(() => {
+    const theme = localStorage.getItem('theme')
+    if (theme) {
+        document.documentElement.classList.add(`theme-${theme}`)
+    }
+})
 // ========================
 // STATE
 // ========================
@@ -58,7 +64,7 @@ const submitForm = () => {
 <template>
 
     <Head title="Welcome" />
-    <div id="app" class="w-full h-full bg-air-dark text-white overflow-auto">
+    <div id="app" class="w-full h-full bg-bg text-primary overflow-auto">
         <!-- NAV -->
         <Nav
             :canLogin="canLogin"
@@ -67,18 +73,6 @@ const submitForm = () => {
 
         <!-- SUB NAV -->
          <Subnav />
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

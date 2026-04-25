@@ -131,56 +131,46 @@ class RolesPermissionsSeeder extends Seeder
         */
 
         $roles = [
-
+            //👑 SYSTEM (GLOBAL)
             ['name' => 'super_admin', 'description' => 'Globaler Systemadministrator mit Vollzugriff'],
-
             ['name' => 'admin', 'description' => 'System Administrator auf Plattform Ebene'],
-
+            ['name' => 'system_admin', 'description' => 'Technischer System Admin'],
             ['name' => 'support', 'description' => 'Support Mitarbeiter für Tickets & Hilfe'],
 
+            //🏢 CLUB MANAGEMENT
             ['name' => 'club_owner', 'description' => 'Besitzer eines Clubs'],
-
             ['name' => 'club_admin', 'description' => 'Verwaltet einen Club vollständig'],
-
             ['name' => 'club_manager', 'description' => 'Operativer Manager eines Clubs'],
-
-            ['name' => 'coach', 'description' => 'Trainer'],
-
-            ['name' => 'assistant_coach', 'description' => 'Assistent Trainer'],
-
-            ['name' => 'team_manager', 'description' => 'Team Organisation'],
-
-            ['name' => 'captain', 'description' => 'Team Kapitän'],
-
-            ['name' => 'player', 'description' => 'Spieler'],
-
-            ['name' => 'youth_player', 'description' => 'Jugendspieler'],
-
-            ['name' => 'guest_player', 'description' => 'Gastspieler'],
-
-            ['name' => 'parent', 'description' => 'Elternteil'],
-
-            ['name' => 'guardian', 'description' => 'Erziehungsberechtigter'],
-
-            ['name' => 'viewer', 'description' => 'Nur Ansicht Zugriff'],
-
-            ['name' => 'guest', 'description' => 'Gast Benutzer'],
-
-            ['name' => 'data_analyst', 'description' => 'Analysiert Leistungsdaten'],
-
-            ['name' => 'performance_coach', 'description' => 'Performance Coach'],
-
-            ['name' => 'fitness_coach', 'description' => 'Fitness Trainer'],
-
-            ['name' => 'physiotherapist', 'description' => 'Physiotherapeut'],
-
             ['name' => 'academy_manager', 'description' => 'Leitet Akademie'],
-
             ['name' => 'financial_controller', 'description' => 'Finanz Kontrolle'],
-
             ['name' => 'media_manager', 'description' => 'Medien & Content'],
 
-            ['name' => 'system_admin', 'description' => 'Technischer System Admin'],
+            //⚽ TEAM & Sport
+
+            ['name' => 'coach', 'description' => 'Trainer'],
+            ['name' => 'assistant_coach', 'description' => 'Assistent Trainer'],
+            ['name' => 'performance_coach', 'description' => 'Performance Coach'],
+            ['name' => 'fitness_coach', 'description' => 'Fitness Trainer'],
+            ['name' => 'team_manager', 'description' => 'Team Organisation'],
+            ['name' => 'captain', 'description' => 'Team Kapitän'],
+
+            //👤 PLAYER
+
+            ['name' => 'player', 'description' => 'Spieler'],
+            ['name' => 'youth_player', 'description' => 'Jugendspieler'],
+            ['name' => 'guest_player', 'description' => 'Gastspieler'],
+
+            //👪 COMMUNITY & Familly & OTHER
+            ['name' => 'parent', 'description' => 'Elternteil'],
+            ['name' => 'guardian', 'description' => 'Erziehungsberechtigter'],
+
+            //👀 PASSIVE
+            ['name' => 'viewer', 'description' => 'Nur Ansicht Zugriff'],
+            ['name' => 'guest', 'description' => 'Gast Benutzer'],
+            ['name' => 'data_analyst', 'description' => 'Analysiert Leistungsdaten'],
+            ['name' => 'physiotherapist', 'description' => 'Physiotherapeut'],
+
+
         ];
 
         foreach ($roles as $role) {

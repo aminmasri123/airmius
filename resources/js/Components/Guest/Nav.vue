@@ -78,7 +78,7 @@ const mobileOpen = ref(false)
                         {{ $t('Anmelden') }}
                     </Link>
 
-                    <Link :href="route('dashboard')"><i class="las la-rocket"></i><span class="ml-2">  {{$t("Feed")}}</span></Link>
+                    <Link v-if="$page.props.auth.user" :href="route('auth.dashboard')"><i class="las la-rocket"></i><span class="ml-2">  {{$t("Feed")}}</span></Link>
                     <!-- Burger nur Mobile -->
                     <button @click="toggleMobile" class="md:hidden text-gray-300 hover:text-white p-2">
                         <i class="las la-bars text-2xl"></i>
