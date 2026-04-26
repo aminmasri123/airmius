@@ -7,6 +7,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import 'line-awesome/dist/line-awesome/css/line-awesome.min.css';
 
+import { useTheme } from './services/useTheme';
 import { createI18n } from 'vue-i18n';
 
 // Sprachdateien importieren
@@ -26,6 +27,14 @@ createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob('./Pages/**/*.vue')),
     setup({ el, App, props, plugin }) {
+        // Theme früh laden
+        const theme = localStorage.getItem('theme')
+        || props.initialPage.props.auth?.user?.theme
+        || 'dark';
+
+        const { initTheme } = useTheme()
+        initTheme(theme)
+
         // i18n erst HIER erstellen, damit 'props' verfügbar ist
             const i18n = createI18n({
             legacy: false,
@@ -42,6 +51,6 @@ createInertiaApp({
             .mount(el);
     },
     progress: {
-        color: '#4B5563',
+        color: 'var(--progress)',
     },
 });

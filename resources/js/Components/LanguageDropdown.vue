@@ -33,7 +33,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
         <!-- BUTTON -->
         <button
             @click="open = !open"
-            class="flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-sm hover:bg-white/20 transition active:scale-95"
+            class="flex items-center gap-2 px-4 py-2 bg-card/80 border border-border rounded-lg text-sm text-primary hover:border-borderHover hover:bg-muted transition active:scale-95"
         >
             <span v-if="!showSuccess">🌍 {{ locale.toUpperCase() }}</span>
             <span v-else class="text-green-400">✅ Gespeichert</span> <!-- 👉 Feedback -->
@@ -50,15 +50,15 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
         >
             <div
                 v-if="open"
-                class="absolute right-0 mt-2 w-44 bg-white text-gray-800 rounded-xl shadow-xl z-50 overflow-hidden border border-gray-100"
+                class="absolute right-0 mt-2 w-44 bg-card text-primary rounded-xl shadow-xl z-50 overflow-hidden border border-border"
             >
                 <div class="py-1">
                     <button
                         v-for="lang in languages"
                         :key="lang.code"
                         @click="handleLanguageChange(lang.code)"
-                        class="flex items-center w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition"
-                        :class="locale === lang.code ? 'bg-indigo-50 text-indigo-700 font-bold' : ''"
+                        class="flex items-center w-full text-left px-4 py-3 text-sm hover:bg-muted transition"
+                        :class="locale === lang.code ? 'bg-muted text-primary font-bold' : ''"
                     >
                         <span class="flex-1">{{ lang.label }}</span>
                         <i v-if="locale === lang.code" class="las la-check text-xs"></i>

@@ -34,9 +34,9 @@ const images = [
     '/img/login/slide1.png',
     '/img/login/slide2.png',
 
-   /*  '/img/login/slide2.jpeg',
-    '/img/login/slide3.jpeg',
-    '/img/login/slide4.jpeg', */
+    /*  '/img/login/slide2.jpeg',
+     '/img/login/slide3.jpeg',
+     '/img/login/slide4.jpeg', */
 
 
 ]
@@ -55,14 +55,16 @@ onMounted(() => {
 <template>
 
     <Head :title="$t('Anmelden')" />
-
-    <div class="min-h-screen flex">
+    <Link :href="route('welcome')" class="absolute top-4 left-4 md:top-16 md:left-24 text-primary text-sm">
+        <i class="las la-chevron-circle-left la-lg"></i>
+    </Link>
+    <div class="min-h-screen flex bg-bg text-primary">
 
         <!-- LINKS: LOGIN -->
-        <div class="w-full md:w-1/2 flex items-center justify-center bg-card px-10">
-            <div class="w-full max-w-md">
+        <div class="w-full md:w-1/2 flex items-center justify-center px-6 sm:px-10">
+            <div class="surface-card w-full max-w-md px-6 py-8 sm:px-8">
 
-                <div class="w-64 h-64 context-center mx-auto mt-10">
+                <div class="w-36 h-36 md:w-48 md:h-48 context-center mx-auto mt-10">
                     <AuthenticationCardLogo />
 
                 </div>
@@ -88,90 +90,85 @@ onMounted(() => {
                     <div class="block mt-4">
                         <label class="flex items-center">
                             <Checkbox v-model:checked="form.remember" name="remember" />
-                            <span class="ms-2 text-sm text-gray-600">{{ $t('Angemeldet bleiben') }}</span>
+                            <span class="ms-2 text-sm text-secondary">{{ $t('Angemeldet bleiben') }}</span>
                         </label>
                     </div>
 
-                    <div class="flex items-center justify-end mt-4">
+                        <div class="flex items-center justify-start my-4">
+                            <SecondaryButton class="" :class="{ 'opacity-25': form.processing }"
+                                :disabled="form.processing">
+                                <Link :href="route('register')">{{ $t('Registrieren') }}?</Link>
+                            </SecondaryButton>
+
+                            <PrimaryButton class="ms-4" :class="{ 'opacity-25': form.processing }"
+                                :disabled="form.processing">
+                                {{ $t('Anmelden') }}
+                            </PrimaryButton>
+                        </div>
+
                         <Link v-if="canResetPassword" :href="route('password.request')"
-                            class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            class="underline  text-sm text-secondary hover:text-primary">
                             {{ $t('Passwort vergessen?') }}
                         </Link>
-
-
-                        <SecondaryButton class="ms-4" :class="{ 'opacity-25': form.processing }"
-                            :disabled="form.processing">
-                            <Link :href="route('register') ">{{ $t('Registrieren') }}?</Link>
-                        </SecondaryButton>
-
-                        <PrimaryButton class="ms-4" :class="{ 'opacity-25': form.processing }"
-                            :disabled="form.processing">
-                            {{ $t('Anmelden') }}
-                        </PrimaryButton>
-                    </div>
                 </form>
-
-
             </div>
         </div>
 
         <!-- RECHTS: SLIDER -->
 
 
-       <div class="w-1/2">
-         <div
-            class="hidden h-screen md:flex  text-white items-center justify-center">
+        <div class="hidden md:block md:w-1/2 bg-bg">
+            <div class="hidden h-screen md:flex  text-white items-center justify-center">
 
-            <div class="w-full h-full relative overflow-hidden">
-                <!-- Slider Container -->
-                <div class="h-full w-4/6 relative">
+                <div class="w-full h-full relative overflow-hidden">
+                    <!-- Slider Container -->
+                    <div class="h-full w-4/6 relative">
 
-                    <!-- SLIDES -->
-                    <div v-for="(img, index) in images" :key="index" :class="[
-                        'absolute inset-0 transition-all duration-700',
-                        current === index ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
+                        <!-- SLIDES -->
+                        <div v-for="(img, index) in images" :key="index" :class="[
+                            'absolute inset-0 transition-all duration-700',
+                            current === index ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
                         ]">
-                        <img
-                        :src="img"
-                        class="w-full h-full object-cover transition-transform duration-[8000ms] ease-in-out"
-                        :class="current === index ? 'scale-110' : 'scale-300'"
-                        />
-                    </div>
-
-                    <!-- LEFT BUTTON -->
-                    <button @click="current = (current - 1 + images.length) % images.length"
-                        class="absolute left-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 p-3 rounded-full z-20">
-                        ‹
-                    </button>
-
-                    <!-- RIGHT BUTTON -->
-                    <button @click="current = (current + 1) % images.length"
-                        class="absolute right-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 p-3 rounded-full z-20">
-                        ›
-                    </button>
-
-                <!-- Text Overlay -->
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <div class="absolute text-center bottom-10  text-white bg-black/50 p-8 rounded-md">
-                        <h2 class="text-2xl font-bold">{{ $t('Sport Plattform') }}</h2>
-                        <p class="text-sm opacity-80">{{ $t('Team Management · Kommunikation · Events') }}</p>
-
-
-                        <div class="absolute  left-1/2 -translate-x-1/2 flex gap-2 z-20">
-                            <button v-for="(img, index) in images" :key="index" @click="current = index"
-                                class="w-2.5 h-2.5 rounded-full transition-all mt-2 duration-300"
-                                :class="current === index ? 'bg-primary scale-125' : 'bg-primary/40 hover:bg-primary/70'" />
+                            <img :src="img"
+                                class="w-full h-full object-cover transition-transform duration-[8000ms] ease-in-out"
+                                :class="current === index ? 'scale-110' : 'scale-300'" />
                         </div>
+
+                        <!-- LEFT BUTTON -->
+                        <button @click="current = (current - 1 + images.length) % images.length"
+                            class="absolute left-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 p-3 rounded-full z-20">
+                            ‹
+                        </button>
+
+                        <!-- RIGHT BUTTON -->
+                        <button @click="current = (current + 1) % images.length"
+                            class="absolute right-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 p-3 rounded-full z-20">
+                            ›
+                        </button>
+
+                        <!-- Text Overlay -->
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div
+                                class="absolute text-center bottom-10 text-white bg-black/55 p-8 rounded-xl backdrop-blur">
+                                <h2 class="text-2xl font-bold">{{ $t('Sport Plattform') }}</h2>
+                                <p class="text-sm opacity-80">{{ $t('Team Management · Kommunikation · Events') }}</p>
+
+
+                                <div class="absolute  left-1/2 -translate-x-1/2 flex gap-2 z-20">
+                                    <button v-for="(img, index) in images" :key="index" @click="current = index"
+                                        class="w-2.5 h-2.5 rounded-full transition-all mt-2 duration-300"
+                                        :class="current === index ? 'bg-primary scale-125' : 'bg-primary/40 hover:bg-primary/70'" />
+                                </div>
+                            </div>
+                        </div>
+
+
                     </div>
-                </div>
 
 
                 </div>
-
-
             </div>
         </div>
-       </div>
     </div>
 
 

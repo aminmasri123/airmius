@@ -16,44 +16,73 @@ export default {
         extend: {
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                heading: ['Figtree', ...defaultTheme.fontFamily.sans],
             },
+
             colors: {
                 air: {
-                    bg: '#f2f2f0',
-                    card: '#505155',
-                    primary: '#87a1c5',
-                    secondary: '#ffbb1d',
-                    success: '#b9eb84',
-                    error: '#ffa8a8',
-                    border: '#505155',
-                    muted: '#87a1c5',
+                    bg: '#f7fbff',
+                    card: '#ffffff',
+                    primary: '#102033',
+                    secondary: '#5d6b7e',
+                    success: '#22c55e',
+                    error: '#ef4444',
+                    border: '#d7e4ef',
+                    borderHover: '#38bdf8',
+                    muted: '#eaf4fb',
+                    buttonPrimary: '#0ea5e9',
+                    inputBg: '#ffffff',
+                    table: '#f1f7fb',
+                    buttonTextPrimary: '#ffffff',
+                    buttonTextSecondary: '#123047',
+                    buttonPrimaryHover: '#0284c7',
+                    buttonTextPrimaryHover: '#ffffff',
+                    buttonTextSecondaryHover: '#0ea5e9',
+                    progress: '#0ea5e9',
                 },
 
                 dark: {
-                    bg: '#141414',
-                    card: '#1f1f1f',
-                    primary: '#ffffff',
-                    secondary: '#9CA3AF',
-                    success: '#00C853',
-                    error: '#ff5252',
-                    border: '#2a2a2a',
-                    muted: '#9CA3AF',
+                    bg: '#0c1016',
+                    card: '#121821',
+                    primary: '#f4f7fb',
+                    secondary: '#aab6c5',
+                    success: '#34d399',
+                    error: '#fb7185',
+                    border: '#263241',
+                    borderHover: '#60a5fa',
+                    muted: '#1d2633',
+                    buttonPrimary: '#f4f7fb',
+                    inputBg: '#0f1520',
+                    table: '#151b23',
+                    buttonTextPrimary: '#0c1016',
+                    buttonTextSecondary: '#f4f7fb',
+                    buttonPrimaryHover: '#c7d2fe',
+                    buttonTextPrimaryHover: '#101624',
+                    buttonTextSecondaryHover: '#c7d2fe',
+                    progress: '#60a5fa',
                 },
 
                 womanly: {
-                    bg: '#fff0f5',        // bleibt (sehr hell)
-                    card: '#ffffff',      // leicht dunkler für mehr Tiefe
-
-                    primary: '#4a1f3d',   // 👈 WICHTIG: dunkler Text statt weiß
-                    secondary: '#b95aa2', // bleibt (Accent)
-
-                    success: '#7bc96f',   // etwas kräftiger
-                    error: '#e57373',     // besser sichtbar
-
-                    border: '#f3b6cc',    // klarer als vorher
-                    muted: '#9c4a84',     // dunkler für Lesbarkeit
+                    bg: '#fff7fb',
+                    card: '#ffffff',
+                    primary: '#43223b',
+                    secondary: '#8a5b7d',
+                    success: '#16a34a',
+                    error: '#e11d48',
+                    border: '#f1cfe0',
+                    borderHover: '#db2777',
+                    muted: '#fde8f2',
+                    buttonPrimary: '#be185d',
+                    inputBg: '#fffafd',
+                    table: '#fff0f7',
+                    buttonTextPrimary: '#ffffff',
+                    buttonTextSecondary: '#5c294f',
+                    buttonPrimaryHover: '#9d174d',
+                    buttonTextPrimaryHover: '#ffffff',
+                    buttonTextSecondaryHover: '#be185d',
+                    progress: '#db2777',
                 },
-                // 👇 DIESE sind entscheidend
+
                 bg: 'var(--bg)',
                 card: 'var(--card)',
                 primary: 'var(--primary)',
@@ -61,8 +90,29 @@ export default {
                 success: 'var(--success)',
                 error: 'var(--error)',
                 border: 'var(--border)',
+                borderHover: 'var(--borderHover)',
                 muted: 'var(--muted)',
-            }
+                buttonPrimary: 'var(--buttonPrimary)',
+                inputBg: 'var(--inputBg)',
+                table: 'var(--table)',
+                buttonTextPrimary: 'var(--buttonTextPrimary)',
+                buttonTextSecondary: 'var(--buttonTextSecondary)',
+                buttonPrimaryHover: 'var(--buttonPrimaryHover)',
+                buttonTextPrimaryHover: 'var(--buttonTextPrimaryHover)',
+                buttonTextSecondaryHover: 'var(--buttonTextSecondaryHover)',
+                progress: 'var(--progress)',
+                'air-blue': 'var(--accent)',
+                'air-green': 'var(--accent-2)',
+                'air-orange': 'var(--accent-3)',
+                'air-dark': 'var(--surface-strong)',
+            },
+
+            fontWeight: {
+                600: '600',
+                700: '700',
+                800: '800',
+                900: '900',
+            },
         },
     },
 

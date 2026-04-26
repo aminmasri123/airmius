@@ -10,7 +10,7 @@ class PostService
     {
         return Post::create([
             'user_id' => $user->id,
-            'club_id' => $data['club_id'],
+            'club_id' => $data['club_id'] ?? null,
             'content' => $data['content'],
             'image' => $data['image'] ?? null,
         ]);

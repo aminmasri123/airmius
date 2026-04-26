@@ -27,6 +27,8 @@ class RolesPermissionsSeeder extends Seeder
             ['name' => 'users.edit', 'description' => 'Benutzer bearbeiten'],
             ['name' => 'users.delete', 'description' => 'Benutzer löschen'],
             ['name' => 'users.assign_roles', 'description' => 'Rollen an Benutzer vergeben'],
+            ['name' => 'guardians.children.view', 'description' => 'Verknuepfte Kinderprofile anzeigen'],
+            ['name' => 'guardians.children.manage', 'description' => 'Zustimmung und Kinderprofile verwalten'],
 
             // CLUBS
             ['name' => 'clubs.view', 'description' => 'Clubs anzeigen'],
@@ -158,6 +160,8 @@ class RolesPermissionsSeeder extends Seeder
 
             ['name' => 'player', 'description' => 'Spieler'],
             ['name' => 'youth_player', 'description' => 'Jugendspieler'],
+            ['name' => 'minor_pending_consent', 'description' => 'Minderjaehriger Account wartet auf Zustimmung der Erziehungsberechtigten'],
+            ['name' => 'minor_player', 'description' => 'Minderjaehriger Spieler mit Zustimmung der Erziehungsberechtigten'],
             ['name' => 'guest_player', 'description' => 'Gastspieler'],
 
             //👪 COMMUNITY & Familly & OTHER
@@ -229,10 +233,31 @@ class RolesPermissionsSeeder extends Seeder
             'players.stats.view',
         ]);
 
+        Role::findByName('minor_pending_consent')->givePermissionTo([
+            'training.view',
+            'matches.view',
+        ]);
+
+        Role::findByName('minor_player')->givePermissionTo([
+            'training.view',
+            'matches.view',
+            'players.stats.view',
+        ]);
+
         Role::findByName('parent')->givePermissionTo([
             'players.view',
             'training.view',
             'matches.view',
+            'guardians.children.view',
+            'guardians.children.manage',
+        ]);
+
+        Role::findByName('guardian')->givePermissionTo([
+            'players.view',
+            'training.view',
+            'matches.view',
+            'guardians.children.view',
+            'guardians.children.manage',
         ]);
 
         Role::findByName('data_analyst')->givePermissionTo([

@@ -2,7 +2,8 @@
 
 namespace Database\Seeders;
 
-use Database\Seeders\RolesPermissions\RolesPermissionsSeeder;
+use Database\Seeders\ClubsTeamsUsersSeeder;
+use Database\Seeders\RolesPermissionsSeeder;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -25,6 +26,8 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
               RolesPermissionsSeeder::class,
+              ClubsTeamsUsersSeeder::class,
+              FeedChatSeeder::class,
         ]);
 }
 }

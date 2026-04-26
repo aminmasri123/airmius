@@ -8,6 +8,7 @@ use Illuminate\Auth\Access\Response;
 
 class ClubPolicy
 {
+
     public function viewAny(User $user)
     {
         return $user->clubs()->exists() || $this->isSystem($user);

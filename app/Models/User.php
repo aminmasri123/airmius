@@ -3,6 +3,14 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Club;
+use App\Models\FriendInvitation;
+use App\Models\Friendship;
+use App\Models\Message;
+use App\Models\Notification;
+use App\Models\Post;
+use App\Models\Ride;
+use App\Models\Team;
 use App\Notifications\MyCustomResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -10,6 +18,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
@@ -17,6 +26,7 @@ class User extends Authenticatable
 
     /** @use HasFactory<UserFactory> */
     use HasFactory;
+    use HasRoles;
 
     use HasProfilePhoto;
     use Notifiable;
@@ -27,7 +37,18 @@ class User extends Authenticatable
      *
      * @var array<int, string>
      */
-    protected $fillable = ['name','email','password', 'theme'];
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'theme',
+        'birth_date',
+        'guardian_email',
+        'guardian_user_id',
+        'guardian_consent_requested_at',
+        'guardian_consent_at',
+        'guardian_consent_token',
+    ];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -59,8 +80,21 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'birth_date' => 'date',
+            'guardian_consent_requested_at' => 'datetime',
+            'guardian_consent_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function guardian()
+    {
+        return $this->belongsTo(User::class, 'guardian_user_id');
+    }
+
+    public function supervisedChildren()
+    {
+        return $this->hasMany(User::class, 'guardian_user_id');
     }
 
     public function clubs()
@@ -83,9 +117,39 @@ class User extends Authenticatable
         return $this->hasMany(Message::class, 'sender_id');
     }
 
+    public function conversations()
+    {
+        return $this->belongsToMany(Conversation::class, 'conversation_users');
+    }
+
     public function rides()
     {
         return $this->hasMany(Ride::class, 'driver_id');
+    }
+
+    public function appNotifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    public function sentFriendInvitations()
+    {
+        return $this->hasMany(FriendInvitation::class, 'sender_id');
+    }
+
+    public function receivedFriendInvitations()
+    {
+        return $this->hasMany(FriendInvitation::class, 'recipient_id');
+    }
+
+    public function friendships()
+    {
+        return $this->hasMany(Friendship::class);
+    }
+
+    public function receivedFriendships()
+    {
+        return $this->hasMany(Friendship::class, 'friend_id');
     }
 
     public function sendPasswordResetNotification($token)

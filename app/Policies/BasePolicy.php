@@ -2,29 +2,35 @@
 
 namespace App\Policies;
 
+
 use App\Models\User;
+use App\Support\Roles;
 
 class BasePolicy
 {
     /**
      * Create a new policy instance.
      */
+
     public function __construct()
     {
         //
     }
-
+     public function before($user, $ability)
+    {
+        if ($this->isSystem($user)) {
+            return true;
+        }
+    }
 
     protected function hasRole(User $user, array $roles)
     {
         return $user->hasAnyRole($roles);
     }
 
-    protected function isSystem(User $user)
+   protected function isSystem(User $user)
     {
-        return $this->hasRole($user, [
-            'super_admin','admin','system_admin'
-        ]);
+        return $user->hasAnyRole(Roles::SYSTEM);
     }
 
     protected function isClubAdmin(User $user)

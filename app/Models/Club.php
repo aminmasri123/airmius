@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Roles;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -9,7 +10,18 @@ class Club extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name','logo','owner_id'];
+    protected $fillable = ['name', 'logo', 'owner_id'];
+
+    public function scopeVisibleTo($query, $user)
+    {
+        if ($user->hasAnyRole(Roles::SYSTEM)) {
+            return $query;
+        }
+
+        return $query->whereHas('users', function ($q) use ($user) {
+            $q->where('user_id', $user->id);
+        });
+    }
 
     public function owner()
     {

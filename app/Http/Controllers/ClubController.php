@@ -13,23 +13,46 @@ class ClubController extends Controller
 
     public function index()
     {
-        return Inertia::render('Clubs/Index', [
-            'clubs' => auth()->user()->clubs
+        $this->authorize('viewAny', Team::class);
+
+        $clubs = Club::query()
+            ->visibleTo(auth()->user())
+            ->with('teams')
+            ->get();
+
+        return Inertia::render('Auth/Dashboard/Teams/Index', [
+            'clubs' => $clubs,
         ]);
     }
 
     public function store(Request $request)
     {
-        $this->service->create(auth()->user(), $request->validate([
-            'name' => 'required|string|max:255'
-        ]));
+        /*    $this->service->create(auth()->user(), $request->validate([
+               'name' => 'required|string|max:255'
+           ]));
 
-        return back();
+           return back();
+           */
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $club = Club::create([
+            'name' => $request->name,
+        ]);
+
+        // 🔥 User direkt zuweisen
+        $club->users()->attach(auth()->id());
+
+        return back()->with('success', 'Club erstellt');
+
     }
 
     public function destroy(Club $club)
     {
         $this->service->delete($club);
+
         return back();
     }
 }

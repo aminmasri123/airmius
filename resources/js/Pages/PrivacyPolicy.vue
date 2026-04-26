@@ -17,7 +17,7 @@ defineProps({
                     <AuthenticationCardLogo />
                 </div>
 
-                <div class="w-full sm:max-w-2xl mt-6 p-6 bg-card shadow-md overflow-hidden sm:rounded-lg prose" v-html="policy" />
+                <div class="surface-card w-full sm:max-w-2xl mt-6 p-6 prose" v-html="policy" />
             </div>
         </div>
     </div>

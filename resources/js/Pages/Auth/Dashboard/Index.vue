@@ -8,16 +8,16 @@ defineOptions({ layout: AppLayout })
 <template>
 
     <Head :title="$t('Dashboard')" />
-    <div>
-        <h1 class="text-2xl font-bold mb-4">Dashboard</h1>
+    <div class="space-y-6">
+        <h1 class="text-2xl font-bold">Dashboard</h1>
 
-        <div class="grid grid-cols-3 gap-4">
-            <div class="bg-card p-4 rounded">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="surface-card p-5">
                 <div class="text-xl font-bold">4</div>
                 <div class="text-secondary text-sm">Trainings</div>
             </div>
 
-            <div class="bg-card p-4 rounded">
+            <div class="surface-card p-5">
                 <div class="text-xl font-bold">87</div>
                 <div class="text-secondary text-sm">Fitness</div>
             </div>

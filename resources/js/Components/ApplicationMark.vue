@@ -1,3 +1,15 @@
+<script setup>
+import { computed } from 'vue'
+import { useTheme } from '@/services/useTheme'
+
+const { isDark } = useTheme()
+
+const logoSrc = computed(() => {
+    return isDark.value
+        ? '/img/logo/LOGO-Dark-Airmius-Quervormat.png'
+        : '/img/logo/Logo-Airmius-Quervormat.png'
+})
+</script>
 <template>
-    <img src="/img/logo/Logo-Airmius-Quervormat.png" alt="AIRMIUS Logo" class="w-10 h-10 mr-2 inline-block -mt-1">
+    <img :src="logoSrc" alt="AIRMIUS Logo" >
 </template>

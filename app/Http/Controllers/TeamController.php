@@ -2,66 +2,73 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Club;
 use App\Models\Team;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class TeamController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    use AuthorizesRequests;
+
     public function index()
     {
-        return Inertia::render('Auth/Dashboard/Teams/Index');
+        $this->authorize('viewAny', Team::class);
 
+        $clubs = Club::query()
+            ->visibleTo(auth()->user())
+            ->with('teams')
+            ->get();
+
+        return Inertia::render('Auth/Dashboard/Teams/Index', [
+            'clubs' => $clubs,
+        ]);
+
+        dd($clubs);
+
+        return Inertia::render('Auth/Dashboard/Teams/Index', [
+            'clubs' => $clubs,
+        ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
+        $this->authorize('create', Team::class);
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        Team::create([
+            'name' => $request->name,
+            'club_id' => currentClub()->id,
+        ]);
+
+        return back()->with('success', 'Team erstellt');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Team $team)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Team $team)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Team $team)
     {
-        //
+        $this->authorize('update', $team);
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $team->update([
+            'name' => $request->name,
+        ]);
+
+        return back()->with('success', 'Team aktualisiert');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Team $team)
     {
-        //
+        $this->authorize('delete', $team);
+
+        $team->delete();
+
+        return back()->with('success', 'Team gelöscht');
     }
 }

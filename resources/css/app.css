@@ -7,17 +7,7 @@
 }
 
 @layer base {
-  .theme-air {
-    --bg: theme('colors.air.bg');
-    --card: theme('colors.air.card');
-    --primary: theme('colors.air.primary');
-    --secondary: theme('colors.air.secondary');
-    --success: theme('colors.air.success');
-    --error: theme('colors.air.error');
-    --border: theme('colors.air.border');
-    --muted: theme('colors.air.muted');
-  }
-
+  :root,
   .theme-dark {
     --bg: theme('colors.dark.bg');
     --card: theme('colors.dark.card');
@@ -27,6 +17,49 @@
     --error: theme('colors.dark.error');
     --border: theme('colors.dark.border');
     --muted: theme('colors.dark.muted');
+    --buttonPrimary: theme('colors.dark.buttonPrimary');
+    --inputBg: theme('colors.dark.inputBg');
+    --borderHover: theme('colors.dark.borderHover');
+    --table: theme('colors.dark.table');
+    --buttonTextPrimary: theme('colors.dark.buttonTextPrimary');
+    --buttonTextSecondary: theme('colors.dark.buttonTextSecondary');
+    --buttonPrimaryHover: theme('colors.dark.buttonPrimaryHover');
+    --buttonTextPrimaryHover: theme('colors.dark.buttonTextPrimaryHover');
+    --buttonTextSecondaryHover: theme('colors.dark.buttonTextSecondaryHover');
+    --progress: theme('colors.dark.progress');
+    --accent: #60a5fa;
+    --accent-2: #34d399;
+    --accent-3: #f59e0b;
+    --surface-strong: #090d13;
+    --soft-shadow: 0 18px 55px rgba(0, 0, 0, .28);
+    --card-gradient: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.025));
+  }
+
+  .theme-air {
+    --bg: theme('colors.air.bg');
+    --card: theme('colors.air.card');
+    --primary: theme('colors.air.primary');
+    --secondary: theme('colors.air.secondary');
+    --success: theme('colors.air.success');
+    --error: theme('colors.air.error');
+    --border: theme('colors.air.border');
+    --muted: theme('colors.air.muted');
+    --buttonPrimary: theme('colors.air.buttonPrimary');
+    --inputBg: theme('colors.air.inputBg');
+    --borderHover: theme('colors.air.borderHover');
+    --table: theme('colors.air.table');
+    --buttonTextPrimary: theme('colors.air.buttonTextPrimary');
+    --buttonTextSecondary: theme('colors.air.buttonTextSecondary');
+    --buttonPrimaryHover: theme('colors.air.buttonPrimaryHover');
+    --buttonTextPrimaryHover: theme('colors.air.buttonTextPrimaryHover');
+    --buttonTextSecondaryHover: theme('colors.air.buttonTextSecondaryHover');
+    --progress: theme('colors.air.progress');
+    --accent: #0ea5e9;
+    --accent-2: #10b981;
+    --accent-3: #f97316;
+    --surface-strong: #e8f4fb;
+    --soft-shadow: 0 18px 50px rgba(14, 74, 116, .12);
+    --card-gradient: linear-gradient(180deg, rgba(255,255,255,.95), rgba(241,247,251,.88));
   }
 
   .theme-womanly {
@@ -38,5 +71,153 @@
     --error: theme('colors.womanly.error');
     --border: theme('colors.womanly.border');
     --muted: theme('colors.womanly.muted');
+    --buttonPrimary: theme('colors.womanly.buttonPrimary');
+    --inputBg: theme('colors.womanly.inputBg');
+    --borderHover: theme('colors.womanly.borderHover');
+    --table: theme('colors.womanly.table');
+    --buttonTextPrimary: theme('colors.womanly.buttonTextPrimary');
+    --buttonTextSecondary: theme('colors.womanly.buttonTextSecondary');
+    --buttonPrimaryHover: theme('colors.womanly.buttonPrimaryHover');
+    --buttonTextPrimaryHover: theme('colors.womanly.buttonTextPrimaryHover');
+    --buttonTextSecondaryHover: theme('colors.womanly.buttonTextSecondaryHover');
+    --progress: theme('colors.womanly.progress');
+    --accent: #db2777;
+    --accent-2: #0f9f6e;
+    --accent-3: #f97316;
+    --surface-strong: #fde8f2;
+    --soft-shadow: 0 18px 50px rgba(151, 38, 101, .13);
+    --card-gradient: linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,240,247,.9));
   }
+
+  html {
+    background: var(--bg);
+    color: var(--primary);
+  }
+
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 28rem),
+      radial-gradient(circle at 85% 18%, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent 24rem),
+      var(--bg);
+    color: var(--primary);
+    text-rendering: optimizeLegibility;
+  }
+
+  input,
+  select,
+  textarea {
+    color: var(--primary);
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--accent) 25%, transparent);
+    color: var(--primary);
+  }
+}
+
+@layer components {
+  .surface-card,
+  .grad-card,
+  .mockup-screen {
+    background: var(--card-gradient);
+    border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+    box-shadow: var(--soft-shadow);
+    color: var(--primary);
+  }
+
+  .surface-card {
+    border-radius: 1rem;
+  }
+
+  .grad-card,
+  .mockup-screen {
+    backdrop-filter: blur(18px);
+  }
+
+  .mockup-screen {
+    border-radius: 1.5rem;
+    padding: 1.25rem;
+  }
+
+  .nav-blur {
+    background: color-mix(in srgb, var(--card) 82%, transparent);
+    border-color: color-mix(in srgb, var(--border) 70%, transparent);
+    box-shadow: 0 10px 35px color-mix(in srgb, var(--bg) 75%, transparent);
+  }
+
+  .tab-active {
+    background: var(--buttonPrimary);
+    color: var(--buttonTextPrimary);
+    box-shadow: 0 10px 30px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+
+  .pulse-dot {
+    width: .5rem;
+    height: .5rem;
+    border-radius: 9999px;
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent-2) 14%, transparent);
+  }
+
+  .glow-blue {
+    box-shadow: 0 16px 36px color-mix(in srgb, var(--accent) 24%, transparent);
+  }
+
+  .glow-green {
+    box-shadow: 0 16px 36px color-mix(in srgb, var(--accent-2) 22%, transparent);
+  }
+
+  .glow-orange {
+    box-shadow: 0 16px 36px color-mix(in srgb, var(--accent-3) 22%, transparent);
+  }
+
+  .prose {
+    color: var(--primary);
+  }
+
+  .prose :where(h1, h2, h3, h4, strong) {
+    color: var(--primary);
+  }
+
+  .prose :where(p, li) {
+    color: var(--secondary);
+  }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--secondary) 42%, transparent);
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--secondary) 68%, transparent);
+}
+
+.text-gray-300,
+.text-gray-400,
+.text-gray-500,
+.text-gray-600 {
+    color: var(--secondary) !important;
+}
+
+.border-white\/5,
+.border-white\/10,
+.border-white\/15,
+.border-white\/20,
+.border-white\/30 {
+    border-color: color-mix(in srgb, var(--border) 70%, transparent) !important;
+}
+
+.bg-white\/5,
+.bg-white\/10,
+.bg-white\/20 {
+    background-color: color-mix(in srgb, var(--card) 70%, transparent) !important;
 }

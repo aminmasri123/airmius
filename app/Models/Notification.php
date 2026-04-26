@@ -9,9 +9,15 @@ class Notification extends Model
 {
     use HasFactory;
 
-    protected $table = 'notifications_custom';
-
     protected $fillable = ['user_id','type','data','read'];
+
+    protected function casts(): array
+    {
+        return [
+            'data' => 'array',
+            'read' => 'boolean',
+        ];
+    }
 
     public function user()
     {

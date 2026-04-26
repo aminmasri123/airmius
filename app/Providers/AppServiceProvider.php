@@ -23,7 +23,6 @@ use Inertia\Inertia;
 
 class AppServiceProvider extends ServiceProvider
 {
-
     protected $policies = [
         Club::class => ClubPolicy::class,
         Team::class => TeamPolicy::class,
@@ -34,6 +33,7 @@ class AppServiceProvider extends ServiceProvider
         Ride::class => RidePolicy::class,
         Message::class => MessagePolicy::class,
     ];
+
     /**
      * Register any application services.
      */
@@ -49,8 +49,8 @@ class AppServiceProvider extends ServiceProvider
     {
         Inertia::share([
             'theme' => fn () => auth()->user()?->theme ?? 'air',
+
+            
         ]);
     }
-
-
 }

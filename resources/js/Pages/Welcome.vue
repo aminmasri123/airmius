@@ -16,6 +16,7 @@ const props = defineProps({
 onMounted(() => {
     const theme = localStorage.getItem('theme')
     if (theme) {
+        document.documentElement.classList.remove('theme-air', 'theme-dark', 'theme-womanly')
         document.documentElement.classList.add(`theme-${theme}`)
     }
 })
@@ -47,6 +48,19 @@ const switchTab = (tab) => {
     activeTab.value = tab
 }
 
+const scrollTo = (id) => {
+    const el = document.getElementById(id)
+    if (!el) return
+
+    const offset = 80
+    const elementPosition = el.getBoundingClientRect().top + window.pageYOffset
+
+    window.scrollTo({
+        top: elementPosition - offset,
+        behavior: 'smooth',
+    })
+}
+
 const submitForm = () => {
     form.post(route('contact.store'), {
         preserveScroll: true,
@@ -66,10 +80,7 @@ const submitForm = () => {
     <Head title="Welcome" />
     <div id="app" class="w-full h-full bg-bg text-primary overflow-auto">
         <!-- NAV -->
-        <Nav
-            :canLogin="canLogin"
-            :toggleMobile="toggleMobile"
-        />
+        <Nav :canLogin="canLogin" />
 
         <!-- SUB NAV -->
          <Subnav />
@@ -268,7 +279,7 @@ const submitForm = () => {
                             <i class="las la-grip-lines text-air-blue text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Alles an einem Ort</h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Training, Spiele, Nachrichten – eine App
+                        <p class="text-xs text-gray-400 leading-snug">Training, Spiele, Nachrichten – eine App
                             für alles.</p>
                     </div>
 
@@ -278,7 +289,7 @@ const submitForm = () => {
                             <i class="las la-comment text-air-blue text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Kein WhatsApp-Chaos</h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Strukturierte Kommunikation statt
+                        <p class="text-xs text-gray-400 leading-snug">Strukturierte Kommunikation statt
                             endloser Gruppenflut.</p>
                     </div>
 
@@ -289,7 +300,7 @@ const submitForm = () => {
                         </div>
                         <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Ein-Klick Zu-/Absage
                         </h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Teilnahme bestätigen war noch nie so
+                        <p class="text-xs text-gray-400 leading-snug">Teilnahme bestätigen war noch nie so
                             einfach.</p>
                     </div>
 
@@ -299,7 +310,7 @@ const submitForm = () => {
                             <i class="las la-heart text-air-blue text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Echtzeit-Übersicht</h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Immer wissen, was wann wo stattfindet.
+                        <p class="text-xs text-gray-400 leading-snug">Immer wissen, was wann wo stattfindet.
                         </p>
                     </div>
 
@@ -310,7 +321,7 @@ const submitForm = () => {
                         </div>
                         <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Persönliche Statistiken
                         </h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Dein Fortschritt auf einen Blick –
+                        <p class="text-xs text-gray-400 leading-snug">Dein Fortschritt auf einen Blick –
                             Motivation pur.</p>
                     </div>
 
@@ -320,7 +331,7 @@ const submitForm = () => {
                             <i class="las la-history text-air-blue text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Trainingshistorie</h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Alle vergangenen Einheiten jederzeit
+                        <p class="text-xs text-gray-400 leading-snug">Alle vergangenen Einheiten jederzeit
                             einsehen.</p>
                     </div>
 
@@ -330,7 +341,7 @@ const submitForm = () => {
                             <i class="las la-bolt text-air-blue text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Motivation steigern</h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Sichtbarer Fortschritt = mehr Leistung.
+                        <p class="text-xs text-gray-400 leading-snug">Sichtbarer Fortschritt = mehr Leistung.
                         </p>
                     </div>
 
@@ -340,7 +351,7 @@ const submitForm = () => {
                             <i class="las la-mobile text-air-blue text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Überall verfügbar</h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Smartphone, Tablet, Desktop – immer
+                        <p class="text-xs text-gray-400 leading-snug">Smartphone, Tablet, Desktop – immer
                             dabei.</p>
                     </div>
 
@@ -350,7 +361,7 @@ const submitForm = () => {
                             <i class="las la-car text-air-blue text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Fahrgemeinschaften</h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Gemeinsam zu Training & Events fahren –
+                        <p class="text-xs text-gray-400 leading-snug">Gemeinsam zu Training & Events fahren –
                             Kosten teilen.</p>
                     </div>
 
@@ -361,7 +372,7 @@ const submitForm = () => {
                         </div>
                         <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Einkaufsgemeinschaft
                         </h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Bestellt euer Equipment gemeinsam zum
+                        <p class="text-xs text-gray-400 leading-snug">Bestellt euer Equipment gemeinsam zum
                             exklusiven Preis.</p>
                     </div>
 
@@ -371,7 +382,7 @@ const submitForm = () => {
                             <i class="las la-users text-air-blue text-lg sm:text-xl"></i>
                         </div>
                         <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Sport-Buddy finden</h4>
-                        <p class="text- sm:text-xs text-gray-400 leading-snug">Finde jederzeit Leute zum Laufen,
+                        <p class="text-xs text-gray-400 leading-snug">Finde jederzeit Leute zum Laufen,
                             Trainieren oder Spielen.</p>
                     </div>
                 </div>
@@ -743,7 +754,7 @@ const submitForm = () => {
                             <i class="las la-brain text-air-blue text-5xl opacity-60"></i>
                         </div>
                         <div class="p-5">
-                            <span class="text- uppercase tracking-wider text-air-blue font-semibold">Training</span>
+                            <span class="text-xs uppercase tracking-wider text-air-blue font-semibold">Training</span>
                             <h3 class="font-heading font-600 mt-2 mb-2 group-hover:text-air-blue transition">5 Tipps für
                                 effektiveres Mannschaftstraining</h3>
                             <p class="text-xs text-gray-500">Wie du mit einfachen Methoden das Beste aus jeder Einheit
@@ -756,7 +767,7 @@ const submitForm = () => {
                             <i class="las la-fire text-air-green text-5xl opacity-60"></i>
                         </div>
                         <div class="p-5">
-                            <span class="text- uppercase tracking-wider text-air-green font-semibold">Motivation</span>
+                            <span class="text-xs uppercase tracking-wider text-air-green font-semibold">Motivation</span>
                             <h3 class="font-heading font-600 mt-2 mb-2 group-hover:text-air-green transition">Wie du
                                 dein Team langfristig motivierst</h3>
                             <p class="text-xs text-gray-500">Strategien für mehr Engagement und Teamgeist.</p>
@@ -769,7 +780,7 @@ const submitForm = () => {
                         </div>
                         <div class="p-5">
                             <span
-                                class="text- uppercase tracking-wider text-air-orange font-semibold">Digitalisierung</span>
+                                class="text-xs uppercase tracking-wider text-air-orange font-semibold">Digitalisierung</span>
                             <h3 class="font-heading font-600 mt-2 mb-2 group-hover:text-air-orange transition">Warum
                                 dein Verein jetzt digital werden muss</h3>
                             <p class="text-xs text-gray-500">Der Wettbewerbsvorteil durch moderne Vereinsführung.</p>

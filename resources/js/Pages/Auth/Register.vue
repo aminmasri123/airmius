@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import AuthenticationCard from '@/Components/AuthenticationCard.vue';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
@@ -13,9 +14,28 @@ import TextInput from '@/Components/TextInput.vue';
 const form = useForm({
     name: '',
     email: '',
+    birth_date: '',
+    guardian_email: '',
     password: '',
     password_confirmation: '',
     terms: false,
+});
+
+const requiresGuardianConsent = computed(() => {
+    if (! form.birth_date) {
+        return false;
+    }
+
+    const birthDate = new Date(`${form.birth_date}T00:00:00`);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDifference = today.getMonth() - birthDate.getMonth();
+
+    if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
+        age -= 1;
+    }
+
+    return age < 16;
 });
 
 const submit = () => {
@@ -29,7 +49,7 @@ const submit = () => {
     <Head title="Register" />
 
     <AuthenticationCard>
-            <div class="w-48 h-48 context-center mx-auto ">
+            <div class="w-36 h-36 md:w-48 md:h-48 context-center mx-auto ">
                     <AuthenticationCardLogo />
 
                 </div>
@@ -60,6 +80,35 @@ const submit = () => {
                     autocomplete="username"
                 />
                 <InputError class="mt-2" :message="form.errors.email" />
+            </div>
+
+            <div class="mt-4">
+                <InputLabel for="birth_date" value="Geburtsdatum" />
+                <TextInput
+                    id="birth_date"
+                    v-model="form.birth_date"
+                    type="date"
+                    class="mt-1 block w-full"
+                    required
+                    autocomplete="bday"
+                />
+                <InputError class="mt-2" :message="form.errors.birth_date" />
+            </div>
+
+            <div v-if="requiresGuardianConsent" class="mt-4">
+                <InputLabel for="guardian_email" value="E-Mail des Erziehungsberechtigten" />
+                <TextInput
+                    id="guardian_email"
+                    v-model="form.guardian_email"
+                    type="email"
+                    class="mt-1 block w-full"
+                    required
+                    autocomplete="email"
+                />
+                <p class="mt-2 text-sm text-secondary">
+                    Unter 16 Jahren ist eine Zustimmung eines Erziehungsberechtigten erforderlich.
+                </p>
+                <InputError class="mt-2" :message="form.errors.guardian_email" />
             </div>
 
             <div class="mt-4">
@@ -94,7 +143,7 @@ const submit = () => {
                         <Checkbox id="terms" v-model:checked="form.terms" name="terms" required />
 
                         <div class="ms-2">
-                            I agree to the <a target="_blank" :href="route('terms.show')" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Terms of Service</a> and <a target="_blank" :href="route('policy.show')" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Privacy Policy</a>
+                            I agree to the <a target="_blank" :href="route('terms.show')" class="underline text-sm text-secondary hover:text-primary rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-borderHover">Terms of Service</a> and <a target="_blank" :href="route('policy.show')" class="underline text-sm text-secondary hover:text-primary rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-borderHover">Privacy Policy</a>
                         </div>
                     </div>
                     <InputError class="mt-2" :message="form.errors.terms" />
