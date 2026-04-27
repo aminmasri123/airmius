@@ -13,6 +13,12 @@ return new class extends Migration
     {
         Schema::create('activities', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('club_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('team_id')->nullable()->constrained()->nullOnDelete();
+            $table->string('type');
+            $table->nullableMorphs('subject');
+            $table->json('data')->nullable();
             $table->timestamps();
         });
     }

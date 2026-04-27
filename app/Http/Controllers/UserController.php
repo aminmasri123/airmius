@@ -53,9 +53,35 @@ class UserController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Request $request, User $user)
     {
-        //
+        $viewer = $request->user();
+        $canManageRoles = $viewer->can('user.manage') || $viewer->can('users.assign_roles');
+        $profileVisible = $user->isProfileVisibleTo($viewer);
+
+        return Inertia::render('Auth/Dashboard/Users/Profile', [
+            'profileUser' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $profileVisible || $canManageRoles ? $user->email : null,
+                'bio' => $profileVisible ? $user->bio : null,
+                'profile_visibility' => $user->profile_visibility,
+                'profile_photo_url' => $user->profile_photo_url,
+                'followers_count' => $user->followers()->count(),
+                'following_count' => $user->following()->count(),
+                'roles' => $canManageRoles ? $user->getRoleNames()->values()->all() : [],
+                'permissions' => $canManageRoles
+                    ? $user->getAllPermissions()->pluck('name')->values()->all()
+                    : [],
+            ],
+            'viewer' => [
+                'is_self' => $viewer->is($user),
+                'is_following' => $user->isFollowedBy($viewer),
+                'can_follow' => ! $viewer->is($user) && $viewer->can('follow.user'),
+                'can_manage_roles' => $canManageRoles,
+                'can_view_private_profile' => $profileVisible,
+            ],
+        ]);
     }
 
     /**

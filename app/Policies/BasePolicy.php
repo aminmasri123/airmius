@@ -56,6 +56,10 @@ class BasePolicy
 
     protected function inClub(User $user, $club)
     {
+        if (! $club) {
+            return false;
+        }
+
         return $club->users()->where('user_id', $user->id)->exists();
     }
 }

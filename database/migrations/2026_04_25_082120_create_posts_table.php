@@ -14,7 +14,9 @@ return new class extends Migration
         Schema::create('posts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('club_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('club_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('team_id')->nullable()->constrained()->nullOnDelete();
+            $table->enum('visibility', ['team', 'organization', 'public'])->default('organization');
             $table->text('content');
             $table->string('image')->nullable();
             $table->timestamps();

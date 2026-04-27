@@ -17,6 +17,8 @@ const form = useForm({
     _method: 'PUT',
     name: props.user.name,
     email: props.user.email,
+    bio: props.user.bio || '',
+    profile_visibility: props.user.profile_visibility || 'public',
     photo: null,
 });
 
@@ -174,6 +176,30 @@ const clearPhotoFileInput = () => {
                         A new verification link has been sent to your email address.
                     </div>
                 </div>
+            </div>
+
+            <div class="col-span-6 sm:col-span-4">
+                <InputLabel for="profile_visibility" value="Profile visibility" />
+                <select
+                    id="profile_visibility"
+                    v-model="form.profile_visibility"
+                    class="mt-1 block w-full rounded-md border-border bg-inputBg text-primary shadow-sm focus:border-borderHover focus:ring-borderHover"
+                >
+                    <option value="public">Public</option>
+                    <option value="private">Private</option>
+                </select>
+                <InputError :message="form.errors.profile_visibility" class="mt-2" />
+            </div>
+
+            <div class="col-span-6 sm:col-span-4">
+                <InputLabel for="bio" value="Bio" />
+                <textarea
+                    id="bio"
+                    v-model="form.bio"
+                    rows="4"
+                    class="mt-1 block w-full rounded-md border-border bg-inputBg text-primary shadow-sm focus:border-borderHover focus:ring-borderHover"
+                />
+                <InputError :message="form.errors.bio" class="mt-2" />
             </div>
         </template>
 

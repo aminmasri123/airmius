@@ -6,6 +6,7 @@ namespace App\Models;
 use App\Models\Club;
 use App\Models\FriendInvitation;
 use App\Models\Friendship;
+use App\Models\Follow;
 use App\Models\Message;
 use App\Models\Notification;
 use App\Models\Post;
@@ -42,12 +43,15 @@ class User extends Authenticatable
         'email',
         'password',
         'theme',
+        'status',
         'birth_date',
         'guardian_email',
         'guardian_user_id',
         'guardian_consent_requested_at',
         'guardian_consent_at',
         'guardian_consent_token',
+        'profile_visibility',
+        'bio',
     ];
 
     /**
@@ -112,6 +116,16 @@ class User extends Authenticatable
         return $this->hasMany(Post::class);
     }
 
+    public function files()
+    {
+        return $this->hasMany(File::class);
+    }
+
+    public function folders()
+    {
+        return $this->hasMany(Folder::class);
+    }
+
     public function messages()
     {
         return $this->hasMany(Message::class, 'sender_id');
@@ -150,6 +164,35 @@ class User extends Authenticatable
     public function receivedFriendships()
     {
         return $this->hasMany(Friendship::class, 'friend_id');
+    }
+
+    public function following()
+    {
+        return $this->hasMany(Follow::class, 'follower_id');
+    }
+
+    public function followers()
+    {
+        return $this->hasMany(Follow::class, 'followed_id');
+    }
+
+    public function isFollowedBy(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $this->followers()
+            ->where('follower_id', $user->id)
+            ->exists();
+    }
+
+    public function isProfileVisibleTo(?User $user): bool
+    {
+        return $this->profile_visibility !== 'private'
+            || $user?->id === $this->id
+            || $user?->can('user.manage')
+            || $this->isFollowedBy($user);
     }
 
     public function sendPasswordResetNotification($token)

@@ -9,7 +9,9 @@ class Post extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['club_id','user_id','content','image'];
+    public const VISIBILITIES = ['team', 'organization', 'public'];
+
+    protected $fillable = ['club_id','team_id','user_id','content','image','visibility'];
 
     public function user()
     {
@@ -21,6 +23,11 @@ class Post extends Model
         return $this->belongsTo(Club::class);
     }
 
+    public function team()
+    {
+        return $this->belongsTo(Team::class);
+    }
+
     public function comments()
     {
         return $this->hasMany(Comment::class);
@@ -29,5 +36,20 @@ class Post extends Model
     public function likes()
     {
         return $this->morphMany(Like::class, 'likeable');
+    }
+
+    public function attachments()
+    {
+        return $this->hasMany(PostAttachment::class);
+    }
+
+    public function files()
+    {
+        return $this->belongsToMany(File::class, 'post_attachments');
+    }
+
+    public function activities()
+    {
+        return $this->morphMany(Activity::class, 'subject');
     }
 }

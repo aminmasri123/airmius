@@ -5,7 +5,6 @@ use App\Http\Controllers\MemberController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SponsorController;
-use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -14,10 +13,12 @@ Route::middleware(['auth'])->group(function () {
 
     
     // Users
-    Route::get('/admin/users', [UserController::class, 'index'])->name('users.index');
-    Route::post('/admin/users', [UserController::class, 'store'])->name('users.store');
-    Route::put('/admin/users/{user}', [UserController::class, 'update'])->name('users.update');
-    Route::delete('/admin/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    Route::get('/admin/users', [MemberController::class, 'index'])->name('users.index');
+    Route::get('/admin/users/create', [MemberController::class, 'create'])->name('users.create');
+    Route::get('/admin/users/{user}/edit', [MemberController::class, 'edit'])->name('users.edit');
+    Route::post('/admin/users', [MemberController::class, 'store'])->name('users.store');
+    Route::put('/admin/users/{user}', [MemberController::class, 'update'])->name('users.update');
+    Route::delete('/admin/users/{user}', [MemberController::class, 'destroy'])->name('users.destroy');
     // MEMBERS
     Route::get('/admin/members', [MemberController::class, 'index'])->name('members.index');
     Route::get('/admin/members/create', [MemberController::class, 'create'])->name('members.create');

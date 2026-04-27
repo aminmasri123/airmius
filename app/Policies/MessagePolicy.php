@@ -21,7 +21,9 @@ class MessagePolicy
      */
     public function view(User $user, Message $message): bool
     {
-        return false;
+        return $message->conversation()
+            ->whereHas('users', fn ($query) => $query->where('users.id', $user->id))
+            ->exists();
     }
 
     /**
@@ -45,7 +47,7 @@ class MessagePolicy
      */
     public function delete(User $user, Message $message): bool
     {
-        return false;
+        return $message->sender_id === $user->id || $user->can('user.manage');
     }
 
     /**

@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MessageDeleted;
+use App\Events\MessageReactionUpdated;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\MessageReceipt;
+use App\Models\MessageReaction;
 use App\Services\ChatService;
 use App\Support\AppNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class MessageController extends Controller
 {
@@ -17,7 +21,9 @@ class MessageController extends Controller
     {
         $data = $request->validate([
             'conversation_id' => ['required', 'exists:conversations,id'],
-            'message' => ['required', 'string', 'max:4000'],
+            'message' => ['nullable', 'required_without:attachments', 'string', 'max:4000'],
+            'attachments' => ['nullable', 'array', 'max:5'],
+            'attachments.*' => ['file', 'max:10240'],
         ]);
 
         $conversation = Conversation::findOrFail($data['conversation_id']);
@@ -27,7 +33,8 @@ class MessageController extends Controller
         $message = $this->service->sendMessage(
             auth()->user(),
             $data['conversation_id'],
-            $data['message']
+            $data['message'] ?? null,
+            $request->file('attachments', [])
         );
 
         $conversation->users()
@@ -35,7 +42,7 @@ class MessageController extends Controller
             ->get()
             ->each(fn ($recipient) => AppNotification::send($recipient, 'chat.message', [
                 'title' => 'Neue Nachricht von '.auth()->user()->name,
-                'body' => str($message->message)->limit(120)->toString(),
+                'body' => str($message->message ?: 'Dateianhang')->limit(120)->toString(),
                 'url' => route('auth.conversations.index', ['conversation' => $conversation->id]),
                 'actor_id' => auth()->id(),
                 'actor_name' => auth()->user()->name,
@@ -45,7 +52,7 @@ class MessageController extends Controller
 
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
-                'message' => $message->load('sender'),
+                'message' => $message->load(['sender', 'receipts', 'attachments.file', 'reactions.user']),
                 'success' => true,
             ]);
         }
@@ -75,5 +82,60 @@ class MessageController extends Controller
             ]);
 
         return response()->json(['success' => true]);
+    }
+
+    public function destroy(Message $message)
+    {
+        abort_unless($message->conversation->users()->where('users.id', auth()->id())->exists(), 403);
+        abort_unless($message->sender_id === auth()->id() || auth()->user()->can('user.manage'), 403);
+
+        $message->load('attachments.file');
+
+        foreach ($message->attachments as $attachment) {
+            if ($attachment->file?->path) {
+                Storage::disk('public')->delete($attachment->file->path);
+            }
+
+            $attachment->file?->delete();
+            $attachment->delete();
+        }
+
+        $message->delete();
+
+        broadcast(new MessageDeleted($message))->toOthers();
+
+        return response()->json(['success' => true]);
+    }
+
+    public function react(Request $request, Message $message)
+    {
+        abort_unless($message->conversation->users()->where('users.id', auth()->id())->exists(), 403);
+
+        $data = $request->validate([
+            'reaction' => ['required', 'in:like,heart,ok'],
+        ]);
+
+        $reaction = MessageReaction::query()
+            ->where('message_id', $message->id)
+            ->where('user_id', auth()->id())
+            ->first();
+
+        if ($reaction?->reaction === $data['reaction']) {
+            $reaction->delete();
+        } else {
+            MessageReaction::updateOrCreate(
+                ['message_id' => $message->id, 'user_id' => auth()->id()],
+                ['reaction' => $data['reaction']]
+            );
+        }
+
+        $message->load('reactions.user');
+
+        broadcast(new MessageReactionUpdated($message))->toOthers();
+
+        return response()->json([
+            'success' => true,
+            'reactions' => $message->reactions,
+        ]);
     }
 }

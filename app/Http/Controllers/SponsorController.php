@@ -2,64 +2,69 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Club;
 use App\Models\Sponsor;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class SponsorController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        //
+        abort_unless($request->user()->can('org.manage'), 403);
+
+        return Inertia::render('Auth/Dashboard/Sponsors/Index', [
+            'sponsors' => Sponsor::query()
+                ->with('club:id,name')
+                ->latest('id')
+                ->paginate(25),
+            'clubs' => Club::query()
+                ->visibleTo($request->user())
+                ->select(['id', 'name'])
+                ->orderBy('name')
+                ->get(),
+        ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
+        abort_unless($request->user()->can('org.manage'), 403);
+
+        Sponsor::create($this->validated($request));
+
+        return back()->with('success', 'Sponsor erstellt.');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Sponsor $sponsor)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Sponsor $sponsor)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Sponsor $sponsor)
     {
-        //
+        abort_unless($request->user()->can('org.manage'), 403);
+
+        $sponsor->update($this->validated($request));
+
+        return back()->with('success', 'Sponsor aktualisiert.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Sponsor $sponsor)
+    public function destroy(Request $request, Sponsor $sponsor)
     {
-        //
+        abort_unless($request->user()->can('org.manage'), 403);
+
+        $sponsor->delete();
+
+        return back()->with('success', 'Sponsor geloescht.');
+    }
+
+    private function validated(Request $request): array
+    {
+        return $request->validate([
+            'club_id' => ['required', 'exists:clubs,id'],
+            'name' => ['required', 'string', 'max:255'],
+            'contact_name' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'website' => ['nullable', 'url', 'max:255'],
+            'logo' => ['nullable', 'string', 'max:2048'],
+            'amount' => ['nullable', 'numeric', 'min:0'],
+            'starts_at' => ['nullable', 'date'],
+            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+        ]);
     }
 }

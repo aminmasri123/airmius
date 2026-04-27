@@ -13,7 +13,10 @@ return new class extends Migration
     {
         Schema::create('folders', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('club_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->foreignId('club_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->foreignId('team_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->foreignId('event_id')->nullable()->constrained()->cascadeOnDelete();
             $table->string('name');
             $table->foreignId('parent_id')->nullable()->constrained('folders')->cascadeOnDelete();
             $table->timestamps();

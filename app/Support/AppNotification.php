@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Events\NotificationCreated;
 use App\Models\Notification;
 use App\Models\User;
 
@@ -15,11 +16,15 @@ class AppNotification
             return null;
         }
 
-        return Notification::create([
+        $notification = Notification::create([
             'user_id' => $userId,
             'type' => $type,
             'data' => $data,
             'read' => false,
         ]);
+
+        broadcast(new NotificationCreated($notification));
+
+        return $notification;
     }
 }

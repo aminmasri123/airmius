@@ -12,11 +12,21 @@ defineProps({
 const page = usePage()
 
 const notificationOpen = ref(false)
+const currentStatus = ref(page.props.auth?.user?.status || 'online')
 
 let notificationInterval = null
+let notificationChannel = null
+let statusChannel = null
+let markOfflineOnUnload = null
 
 const unreadCount = computed(() => page.props.notificationCenter?.unread_count || 0)
 const latestNotifications = computed(() => page.props.notificationCenter?.latest || [])
+const statusOptions = [
+    { value: 'online', label: 'Online' },
+    { value: 'offline', label: 'Offline' },
+    { value: 'training', label: 'Training' },
+    { value: 'work', label: 'Work' },
+]
 
 const iconFor = (type) => ({
     'chat.message': 'las la-comment-dots',
@@ -38,17 +48,86 @@ const refreshNotifications = () => {
     if (document.hidden) return
 
     router.reload({
-        only: ['notificationCenter'],
+        only: ['notificationCenter', 'unreadChatsCount'],
         preserveScroll: true,
         preserveState: true,
     })
 }
 
+const setStatus = (status) => {
+    currentStatus.value = status
+    window.axios.put(route('auth.user.status.update'), { status }).catch(() => {})
+}
+
+const bindRealtime = () => {
+    if (!window.Echo || !page.props.auth?.user?.realtime) return
+
+    notificationChannel = window.Echo
+        .private(page.props.auth.user.realtime.notification_channel)
+        .listen('.notification.created', () => refreshNotifications())
+
+    statusChannel = window.Echo
+        .join('users.status')
+        .listen('.user.status.updated', () => {})
+
+    const eventChannels = [
+        ...(page.props.auth.user.realtime.team_event_channels || []),
+        ...(page.props.auth.user.realtime.club_event_channels || []),
+        'events.public',
+    ]
+
+    eventChannels.forEach((channel) => {
+        const subscription = channel === 'events.public'
+            ? window.Echo.channel(channel)
+            : window.Echo.private(channel)
+
+        subscription.listen('.event.updated', () => {
+            if (window.location.pathname.startsWith('/events')) {
+                router.reload({ preserveScroll: true, preserveState: true })
+            }
+        })
+    })
+}
+
+const unbindRealtime = () => {
+    if (!window.Echo || !page.props.auth?.user?.realtime) return
+
+    if (notificationChannel) {
+        window.Echo.leave(page.props.auth.user.realtime.notification_channel)
+    }
+
+    if (statusChannel) {
+        window.Echo.leave('users.status')
+    }
+
+    const eventChannels = [
+        ...(page.props.auth.user.realtime.team_event_channels || []),
+        ...(page.props.auth.user.realtime.club_event_channels || []),
+        'events.public',
+    ]
+
+    eventChannels.forEach((channel) => {
+        window.Echo.leave(channel)
+    })
+}
+
 onMounted(() => {
+    setStatus(currentStatus.value === 'offline' ? 'online' : currentStatus.value)
+    bindRealtime()
+    markOfflineOnUnload = () => {
+        window.axios.put(route('auth.user.status.update'), { status: 'offline' }).catch(() => {})
+    }
+    window.addEventListener('beforeunload', markOfflineOnUnload)
     notificationInterval = window.setInterval(refreshNotifications, 8000)
 })
 
 onUnmounted(() => {
+    if (markOfflineOnUnload) {
+        window.removeEventListener('beforeunload', markOfflineOnUnload)
+    }
+
+    unbindRealtime()
+
     if (notificationInterval) {
         window.clearInterval(notificationInterval)
     }
@@ -69,15 +148,25 @@ onUnmounted(() => {
             <h1 class="text-lg font-semibold">Dashboard</h1>
 
             <div class="flex items-center gap-4">
+                <select
+                    v-model="currentStatus"
+                    class="hidden rounded-lg border border-border bg-inputBg px-2 py-1 text-xs text-primary focus:border-borderHover focus:ring-borderHover sm:block"
+                    @change="setStatus(currentStatus)"
+                >
+                    <option v-for="option in statusOptions" :key="option.value" :value="option.value">
+                        {{ option.label }}
+                    </option>
+                </select>
+
                 <!-- 🔔 chats -->
 
-                <div>
-                    <Link href="/conversations" class="relative  hover:bg-muted rounded-lg">
+                <div class="relative">
+                    <Link href="/conversations" class="hover:bg-muted rounded-lg p-2">
                         <i class="las la-comments text-xl"></i>
 
                         <span
                             v-if="page.props.unreadChatsCount"
-                            class="absolute -right-1 -top-1 min-w-5 px-1.5 py-0.5 text-[10px] bg-error text-white rounded-full"
+                            class="absolute -right-1 -top-3 min-w-5 px-1.5 py-0.5 text-[10px] bg-error text-white rounded-full"
                         >
                             {{ page.props.unreadChatsCount > 99 ? '99+' : page.props.unreadChatsCount }}
                         </span>

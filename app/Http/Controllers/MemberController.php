@@ -4,7 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class MemberController extends Controller
 {
@@ -13,10 +17,12 @@ class MemberController extends Controller
      */
     public function index(Request $request)
     {
+        abort_unless($request->user()->can('user.manage') || $request->user()->can('users.view'), 403);
+
         $search = trim((string) $request->input('search', ''));
 
         $users = User::query()
-            ->select(['id', 'name', 'email', 'created_at'])
+            ->select(['id', 'name', 'email', 'profile_visibility', 'created_at'])
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('name', 'like', "%{$search}%")
@@ -40,6 +46,8 @@ class MemberController extends Controller
      */
     public function create()
     {
+        abort_unless(request()->user()->can('user.manage') || request()->user()->can('users.create'), 403);
+
         return Inertia::render('Auth/Dashboard/Users/Create');
     }
 
@@ -48,16 +56,20 @@ class MemberController extends Controller
      */
     public function store(Request $request)
     {
+        abort_unless($request->user()->can('user.manage') || $request->user()->can('users.create'), 403);
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
+            'profile_visibility' => ['nullable', Rule::in(['public', 'private'])],
         ]);
 
         User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => $request->password,
+            'password' => Hash::make($request->password),
+            'profile_visibility' => $request->input('profile_visibility', 'public'),
         ]);
 
         return redirect()->route('members.index')->with('success', 'User created successfully.');
@@ -76,8 +88,22 @@ class MemberController extends Controller
      */
     public function edit(User $user)
     {
+        abort_unless(request()->user()->can('user.manage') || request()->user()->can('users.edit'), 403);
+
+        $canManageRoles = request()->user()->can('user.manage') || request()->user()->can('users.assign_roles');
+
         return Inertia::render('Auth/Dashboard/Users/Edit', [
-            'user' => $user,
+            'user' => array_merge($user->only(['id', 'name', 'email', 'profile_visibility', 'bio']), [
+                'roles' => $user->getRoleNames()->values()->all(),
+                'permissions' => $user->getAllPermissions()->pluck('name')->values()->all(),
+            ]),
+            'availableRoles' => $canManageRoles
+                ? Role::query()->orderBy('name')->pluck('name')->values()
+                : [],
+            'availablePermissions' => $canManageRoles
+                ? Permission::query()->orderBy('name')->pluck('name')->values()
+                : [],
+            'canManageRoles' => $canManageRoles,
         ]);
     }
 
@@ -86,12 +112,29 @@ class MemberController extends Controller
      */
     public function update(Request $request, User $user)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+        abort_unless($request->user()->can('user.manage') || $request->user()->can('users.edit'), 403);
+
+        $canManageRoles = $request->user()->can('user.manage') || $request->user()->can('users.assign_roles');
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'profile_visibility' => ['required', Rule::in(['public', 'private'])],
+            'bio' => ['nullable', 'string', 'max:1000'],
+            'roles' => [$canManageRoles ? 'array' : 'prohibited'],
+            'roles.*' => ['string', 'exists:roles,name'],
         ]);
 
-        $user->update($request->only(['name', 'email']));
+        $user->update([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'profile_visibility' => $data['profile_visibility'],
+            'bio' => $data['bio'] ?? null,
+        ]);
+
+        if ($canManageRoles && array_key_exists('roles', $data)) {
+            $user->syncRoles($data['roles']);
+        }
 
         return redirect()->route('members.index')->with('success', 'User updated successfully.');
     }
@@ -101,6 +144,8 @@ class MemberController extends Controller
      */
     public function destroy(User $user)
     {
+        abort_unless(request()->user()->can('user.manage') || request()->user()->can('users.delete'), 403);
+
         $user->delete();
 
         return redirect()->route('members.index')->with('success', 'User deleted successfully.');

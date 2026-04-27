@@ -5,7 +5,7 @@ import NavItem from './NavItem.vue'
 import { ref } from 'vue'
 import NavGroup from '@/Components/NavGroup.vue'
 import ApplicationMark from '../ApplicationMark.vue'
-import { usePage } from '@inertiajs/vue3'
+import { usePage, Link } from '@inertiajs/vue3'
 
 const user = usePage().props.auth?.user
 const unreadNotificationsCount = usePage().props.notificationCenter?.unread_count || 0
@@ -38,9 +38,9 @@ const isOpen = ref(false)
         </div>
 
         <!-- Logo -->
-        <div class="w-48   py-4">
+        <Link :href="route('auth.feed.index')" class="w-48 py-4">
             <ApplicationMark />
-        </div>
+        </Link>
 
         <!-- Teams -->
         <TeamSwitcher />
@@ -53,13 +53,14 @@ const isOpen = ref(false)
 
             <!-- <NavItem @click="isOpen = false" :href="route('profile.show')" label="Mein Profil" icon="las la-user" /> -->
             <NavItem @click="isOpen = false" :href="route('auth.feed.index')" label="Feed" icon="las la-newspaper" />
+            <NavItem v-if="can('file.view')" @click="isOpen = false" :href="route('auth.files.index')" label="Dateien" icon="las la-folder-open" />
 
-            <NavItem @click="isOpen = false" href="" label="Events & Training" icon="las la-calendar" />
-            <NavItem @click="isOpen = false" href="" label="Nachrichten" icon="las la-comment-dots" badge="3" />
+            <NavItem @click="isOpen = false" :href="route('auth.events.index')" label="Events & Training" icon="las la-calendar" />
             <NavItem @click="isOpen = false" href="" label="Statistiken" icon="las la-chart-bar" />
             <NavItem @click="isOpen = false" :href="route('auth.friends.index')" label="Freunde" icon="las la-user-plus" />
             <NavItem @click="isOpen = false" href="" label="Verfügbarkeit" icon="las la-clock" />
-            <NavItem @click="isOpen = false" href="" label="Fahrgemeinschaften" icon="las la-car" />
+            <NavItem @click="isOpen = false" :href="route('auth.rides.index')" label="Fahrgemeinschaften" icon="las la-car" />
+            <NavItem @click="isOpen = false" :href="route('auth.files.index')" label="Dateimanager" icon="las la-file" />
            <!--  <NavItem
                 @click="isOpen = false"
                 :href="route('auth.notifications.index')"

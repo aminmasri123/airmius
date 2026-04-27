@@ -30,12 +30,22 @@ class Club extends Model
 
     public function users()
     {
-        return $this->belongsToMany(User::class)->withPivot('role');
+        return $this->belongsToMany(User::class)->withPivot('role')->withTimestamps();
     }
 
     public function teams()
     {
         return $this->hasMany(Team::class);
+    }
+
+    public function sponsors()
+    {
+        return $this->hasMany(Sponsor::class);
+    }
+
+    public function admins()
+    {
+        return $this->users()->wherePivotIn('role', ['owner', 'admin']);
     }
 
     public function posts()

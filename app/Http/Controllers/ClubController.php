@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Club;
+use App\Models\Team;
 use App\Services\ClubService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
 class ClubController extends Controller
@@ -27,30 +29,21 @@ class ClubController extends Controller
 
     public function store(Request $request)
     {
-        /*    $this->service->create(auth()->user(), $request->validate([
-               'name' => 'required|string|max:255'
-           ]));
+        Gate::authorize('create', Club::class);
 
-           return back();
-           */
+        $club = $this->service->create(auth()->user(), $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+        ]));
 
-        $request->validate([
-            'name' => 'required|string|max:255',
-        ]);
-
-        $club = Club::create([
-            'name' => $request->name,
-        ]);
-
-        // 🔥 User direkt zuweisen
-        $club->users()->attach(auth()->id());
+        session(['club_id' => $club->id]);
 
         return back()->with('success', 'Club erstellt');
-
     }
 
     public function destroy(Club $club)
     {
+        $this->authorize('delete', $club);
+
         $this->service->delete($club);
 
         return back();

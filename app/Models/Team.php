@@ -14,10 +14,12 @@ class Team extends Model
 
     protected $fillable = ['name','club_id','sport_type'];
 
+    public const ROLES = ['Coach', 'Captain', 'Player'];
+
 
     public function scopeVisibleTo($query, $user)
     {
-        if ($user->isSystem()) {
+        if ($user->hasAnyRole(\App\Support\Roles::SYSTEM)) {
             return $query;
         }
 
@@ -33,11 +35,31 @@ class Team extends Model
 
     public function users()
     {
-        return $this->belongsToMany(User::class)->withPivot('role');
+        return $this->belongsToMany(User::class)->withPivot('role')->withTimestamps();
     }
 
     public function events()
     {
         return $this->hasMany(Event::class);
+    }
+
+    public function files()
+    {
+        return $this->hasMany(File::class);
+    }
+
+    public function folders()
+    {
+        return $this->hasMany(Folder::class);
+    }
+
+    public function invitations()
+    {
+        return $this->hasMany(TeamInvitation::class);
+    }
+
+    public function joinRequests()
+    {
+        return $this->hasMany(TeamJoinRequest::class);
     }
 }

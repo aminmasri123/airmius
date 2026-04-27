@@ -2,14 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\ChatTyping;
 use App\Models\Conversation;
 use App\Models\MessageReceipt;
+use App\Models\Team;
 use App\Models\User;
+use App\Services\ChatService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class ConversationController extends Controller
 {
+    public function __construct(private ChatService $chatService) {}
+
     /**
      * Display a listing of the resource.
      */
@@ -40,14 +45,15 @@ class ConversationController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'type' => ['required', 'in:direct,group'],
+            'type' => ['required', 'in:direct,group,team'],
             'club_id' => ['nullable', 'exists:clubs,id'],
-            'participant_ids' => ['required', 'array', 'min:1'],
+            'team_id' => ['nullable', 'required_if:type,team', 'exists:teams,id'],
+            'participant_ids' => ['nullable', 'array'],
             'participant_ids.*' => ['integer', 'exists:users,id'],
             'message' => ['nullable', 'string', 'max:4000'],
         ]);
 
-        $participantIds = collect($data['participant_ids'])
+        $participantIds = collect($data['participant_ids'] ?? [])
             ->push(auth()->id())
             ->unique()
             ->values();
@@ -55,7 +61,17 @@ class ConversationController extends Controller
         abort_if($data['type'] === 'direct' && $participantIds->count() !== 2, 422);
         abort_if($data['type'] === 'group' && $participantIds->count() < 3, 422);
 
-        if ($data['type'] === 'direct') {
+        if ($data['type'] === 'team') {
+            $team = Team::query()
+                ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()))
+                ->findOrFail($data['team_id']);
+
+            $conversation = Conversation::firstOrCreate(
+                ['type' => 'team', 'team_id' => $team->id],
+                ['club_id' => $team->club_id]
+            );
+            $conversation->users()->syncWithoutDetaching($team->users()->pluck('users.id')->push(auth()->id())->unique());
+        } elseif ($data['type'] === 'direct') {
             $conversation = Conversation::query()
                 ->where('type', 'direct')
                 ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()))
@@ -78,10 +94,7 @@ class ConversationController extends Controller
         }
 
         if (!empty($data['message'])) {
-            $conversation->messages()->create([
-                'sender_id' => auth()->id(),
-                'message' => $data['message'],
-            ]);
+            $this->chatService->sendMessage(auth()->user(), $conversation->id, $data['message']);
         }
 
         return redirect()
@@ -97,6 +110,19 @@ class ConversationController extends Controller
         abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
 
         return $this->renderIndex($conversation);
+    }
+
+    public function typing(Request $request, Conversation $conversation)
+    {
+        abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
+
+        $data = $request->validate([
+            'typing' => ['nullable', 'boolean'],
+        ]);
+
+        broadcast(new ChatTyping($conversation, $request->user(), $data['typing'] ?? true))->toOthers();
+
+        return response()->json(['success' => true]);
     }
 
     /**
@@ -137,7 +163,7 @@ class ConversationController extends Controller
 
         $conversations = Conversation::query()
             ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()))
-            ->with(['users:id,name'])
+            ->with(['users:id,name', 'team:id,name', 'event:id,conversation_id,title'])
             ->withMax('messages', 'created_at')
             ->orderByDesc('messages_max_created_at')
             ->orderByDesc('id')
@@ -158,8 +184,15 @@ class ConversationController extends Controller
 
         $selectedConversation?->load([
             'users:id,name',
+            'team:id,name',
+            'event:id,conversation_id,title',
             'messages' => fn ($query) => $query
-                ->with(['sender:id,name', 'receipts:id,message_id,user_id,delivered_at,read_at'])
+                ->with([
+                    'sender:id,name',
+                    'receipts:id,message_id,user_id,delivered_at,read_at',
+                    'attachments.file:id,path,type,size',
+                    'reactions.user:id,name',
+                ])
                 ->oldest('id')
                 ->limit(80),
         ]);
@@ -180,6 +213,11 @@ class ConversationController extends Controller
                 ->select(['id', 'name', 'email'])
                 ->orderBy('name')
                 ->limit(100)
+                ->get(),
+            'teams' => auth()->user()
+                ->teams()
+                ->select(['teams.id', 'teams.name', 'teams.club_id'])
+                ->orderBy('teams.name')
                 ->get(),
         ]);
     }

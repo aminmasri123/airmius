@@ -14,7 +14,8 @@ return new class extends Migration
         Schema::create('conversations', function (Blueprint $table) {
              $table->id();
             $table->foreignId('club_id')->nullable()->constrained()->cascadeOnDelete();
-            $table->enum('type', ['direct','group']);
+            $table->foreignId('team_id')->nullable()->constrained()->nullOnDelete();
+            $table->enum('type', ['direct','group','team','event']);
             $table->timestamps();
         });
     }

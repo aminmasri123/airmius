@@ -16,21 +16,33 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    teams: {
+        type: Array,
+        default: () => [],
+    },
 })
 
 const page = usePage()
 const authUser = page.props.auth?.user
 const messagesContainer = ref(null)
+const attachmentInput = ref(null)
 const optimisticMessages = ref([])
+const realtimeMessages = ref([])
+const typingUsers = ref([])
 let chatInterval = null
+let chatChannelName = null
+let typingTimeout = null
+let typingStopTimeout = null
 
 const messageForm = useForm({
     conversation_id: props.selectedConversation?.id ?? null,
     message: '',
+    attachments: [],
 })
 
 const conversationForm = useForm({
     type: 'direct',
+    team_id: null,
     participant_ids: [],
     message: '',
 })
@@ -65,27 +77,50 @@ const titleFor = (conversation) => {
         return others[0]?.name || 'Direktchat'
     }
 
+    if (conversation.type === 'team') {
+        return conversation.team?.name || 'Teamchat'
+    }
+
+    if (conversation.type === 'event') {
+        return conversation.event?.title || 'Eventchat'
+    }
+
     return others.length
         ? others.map((user) => user.name).join(', ')
         : 'Gruppenchat'
 }
 
+const typeLabelFor = (conversation) => ({
+    direct: 'Direkt',
+    group: 'Gruppe',
+    team: 'Team',
+    event: 'Event',
+}[conversation?.type] || 'Chat')
+
 const selectedMessages = computed(() => {
     const serverMessages = props.selectedConversation?.messages || []
     const serverIds = new Set(serverMessages.map((message) => message.id))
     const pendingMessages = optimisticMessages.value.filter((message) => !serverIds.has(message.id))
+    const pushedMessages = realtimeMessages.value.filter((message) => !serverIds.has(message.id))
 
-    return [...serverMessages, ...pendingMessages]
+    return [...serverMessages, ...pushedMessages, ...pendingMessages].filter((message) => !message.deleted_at)
 })
 const selectedUsers = computed(() => props.selectedConversation?.users || [])
 const canCreateConversation = computed(() => {
+    if (conversationForm.type === 'team') {
+        return !!conversationForm.team_id
+    }
+
     return conversationForm.type === 'direct'
         ? conversationForm.participant_ids.length === 1
         : conversationForm.participant_ids.length >= 2
 })
+const canSendMessage = computed(() => {
+    return !!props.selectedConversation && (!!messageForm.message.trim() || messageForm.attachments.length > 0)
+})
 
 const sendMessage = () => {
-    if (!props.selectedConversation || !messageForm.message.trim()) return
+    if (!canSendMessage.value) return
 
     const text = messageForm.message.trim()
     const temporaryId = `local-${Date.now()}`
@@ -96,18 +131,24 @@ const sendMessage = () => {
         sender_id: authUser?.id,
         sender: authUser,
         message: text,
+        attachments: [],
+        reactions: [],
         created_at: new Date().toISOString(),
         local_status: 'sending',
         delivery_status: 'sending',
     })
 
-    messageForm.reset('message')
+    const payload = new FormData()
+    payload.append('conversation_id', props.selectedConversation.id)
+    payload.append('message', text)
+    messageForm.attachments.forEach((file) => payload.append('attachments[]', file))
+
+    messageForm.reset('message', 'attachments')
+    const inputs = Array.isArray(attachmentInput.value) ? attachmentInput.value : [attachmentInput.value]
+    inputs.filter(Boolean).forEach((input) => { input.value = '' })
     scrollMessagesToBottom()
 
-    window.axios.post(route('auth.messages.store'), {
-        conversation_id: props.selectedConversation.id,
-        message: text,
-    }).then((response) => {
+    window.axios.post(route('auth.messages.store'), payload).then((response) => {
         const message = response.data.message
         const index = optimisticMessages.value.findIndex((item) => item.id === temporaryId)
 
@@ -133,13 +174,15 @@ const createConversationAndOpen = () => {
     conversationForm.post(route('auth.conversations.store'), {
         preserveScroll: true,
         onSuccess: () => {
-            conversationForm.reset('participant_ids', 'message')
+            conversationForm.reset('team_id', 'participant_ids', 'message')
             showNewConversationModal.value = false
         },
     })
 }
 
 const toggleParticipant = (id) => {
+    if (conversationForm.type === 'team') return
+
     if (conversationForm.type === 'direct') {
         conversationForm.participant_ids = [id]
         createConversationAndOpen()
@@ -153,7 +196,12 @@ const toggleParticipant = (id) => {
 
 const setType = (type) => {
     conversationForm.type = type
+    conversationForm.team_id = null
     conversationForm.participant_ids = []
+}
+
+const onAttachmentChange = (event) => {
+    messageForm.attachments = Array.from(event.target.files || [])
 }
 
 const refreshChat = () => {
@@ -191,7 +239,64 @@ const markSelectedConversationAsRead = () => {
 
     window.axios.post(route('auth.messages.read'), {
         conversation_id: props.selectedConversation.id,
-    }).catch(() => {})
+    }).catch(() => { })
+}
+
+const bindChatRealtime = () => {
+    if (!window.Echo || !props.selectedConversation?.id) return
+
+    unbindChatRealtime()
+
+    chatChannelName = `chat.conversation.${props.selectedConversation.id}`
+
+    window.Echo.private(chatChannelName)
+        .listen('.message.sent', (event) => {
+            const message = event.message
+
+            if (message.sender_id === authUser?.id) return
+            if (realtimeMessages.value.some((item) => item.id === message.id)) return
+
+            realtimeMessages.value.push(message)
+            markSelectedConversationAsRead()
+        })
+        .listen('.message.deleted', (event) => {
+            markMessageDeleted(event.message_id)
+        })
+        .listen('.message.reaction.updated', (event) => {
+            updateMessageReactions(event.message_id, event.reactions)
+        })
+        .listen('.chat.typing', (event) => {
+            if (event.user?.id === authUser?.id) return
+
+            typingUsers.value = event.typing
+                ? [...typingUsers.value.filter((user) => user.id !== event.user.id), event.user]
+                : typingUsers.value.filter((user) => user.id !== event.user.id)
+
+            window.clearTimeout(typingStopTimeout)
+            typingStopTimeout = window.setTimeout(() => {
+                typingUsers.value = []
+            }, 3000)
+        })
+}
+
+const unbindChatRealtime = () => {
+    if (window.Echo && chatChannelName) {
+        window.Echo.leave(chatChannelName)
+    }
+
+    chatChannelName = null
+    typingUsers.value = []
+}
+
+const announceTyping = () => {
+    if (!props.selectedConversation?.id) return
+
+    window.clearTimeout(typingTimeout)
+    typingTimeout = window.setTimeout(() => {
+        window.axios.post(route('auth.conversations.typing', props.selectedConversation.id), {
+            typing: true,
+        }).catch(() => { })
+    }, 200)
 }
 
 const statusIconFor = (message) => {
@@ -208,12 +313,57 @@ const statusIconFor = (message) => {
 
 const isOwnMessage = (message) => message.sender_id === authUser?.id
 
+const fileUrl = (file) => file?.path ? `/storage/${file.path}` : '#'
+const attachmentLabel = (attachment) => attachment.file?.path?.split('/').pop() || 'Datei'
+
+const reactionCounts = (message) => {
+    return (message.reactions || []).reduce((counts, reaction) => {
+        counts[reaction.reaction] = (counts[reaction.reaction] || 0) + 1
+        return counts
+    }, {})
+}
+
+const userReaction = (message) => {
+    return (message.reactions || []).find((reaction) => reaction.user_id === authUser?.id)?.reaction
+}
+
+const updateMessageReactions = (messageId, reactions) => {
+    const message = selectedMessages.value.find((item) => item.id === messageId)
+    if (message) message.reactions = reactions || []
+}
+
+const markMessageDeleted = (messageId) => {
+    optimisticMessages.value = optimisticMessages.value.filter((message) => message.id !== messageId)
+    realtimeMessages.value = realtimeMessages.value.filter((message) => message.id !== messageId)
+
+    const message = props.selectedConversation?.messages?.find((item) => item.id === messageId)
+    if (message) message.deleted_at = new Date().toISOString()
+}
+
+const deleteMessage = (message) => {
+    if (!message.id || String(message.id).startsWith('local-')) return
+
+    window.axios.delete(route('auth.messages.destroy', message.id))
+        .then(() => markMessageDeleted(message.id))
+        .catch(() => { })
+}
+
+const reactToMessage = (message, reaction) => {
+    if (!message.id || String(message.id).startsWith('local-')) return
+
+    window.axios.post(route('auth.messages.reactions.store', message.id), { reaction })
+        .then((response) => updateMessageReactions(message.id, response.data.reactions))
+        .catch(() => { })
+}
+
 watch(
     () => props.selectedConversation?.id,
     () => {
+        realtimeMessages.value = []
         scrollMessagesToBottom(false)
         selectConversation()
         markSelectedConversationAsRead()
+        bindChatRealtime()
     },
 )
 
@@ -225,10 +375,15 @@ watch(
 onMounted(() => {
     scrollMessagesToBottom(false)
     markSelectedConversationAsRead()
+    bindChatRealtime()
     chatInterval = window.setInterval(refreshChat, 2500)
 })
 
 onUnmounted(() => {
+    unbindChatRealtime()
+    window.clearTimeout(typingTimeout)
+    window.clearTimeout(typingStopTimeout)
+
     if (chatInterval) {
         window.clearInterval(chatInterval)
     }
@@ -237,19 +392,18 @@ onUnmounted(() => {
 
 <template>
     <AppLayout title="Chat">
+
         <Head title="Chat" />
 
         <!-- MOBILE: Konversationsliste oder Chat -->
-        <div class="h-[calc(100vh-3rem)] min-h-[680px]">
+        <div class="h-full flex flex-col">
             <!-- Mobile Konversationsliste -->
             <div v-show="!showChatOnMobile" class="flex h-full flex-col lg:hidden">
                 <div class="border-b border-border bg-card p-4">
                     <div class="mb-4 flex items-center justify-between">
                         <h1 class="text-xl font-semibold text-primary">Chat</h1>
-                        <button
-                            @click="showNewConversationModal = true"
-                            class="rounded-full bg-buttonPrimary p-2 text-buttonTextPrimary hover:bg-buttonPrimaryHover"
-                        >
+                        <button @click="showNewConversationModal = true"
+                            class="rounded-full bg-buttonPrimary p-2 text-buttonTextPrimary hover:bg-buttonPrimaryHover">
                             <i class="las la-plus text-xl"></i>
                         </button>
                     </div>
@@ -257,26 +411,23 @@ onUnmounted(() => {
                 </div>
 
                 <div class="min-h-0 flex-1 overflow-y-auto p-2 custom-scrollbar">
-                    <Link
-    v-for="conversation in conversations"
-    :key="conversation.id"
-    :href="route('auth.conversations.index', { conversation: conversation.id })"
-    @click="selectConversation"
-    preserve-scroll
-    preserve-state
-    class="flex gap-3 rounded-lg p-3 transition hover:bg-muted hover:text-card"
-    :class="selectedConversation?.id === conversation.id ? 'bg-muted text-card' : 'text-primary'"
->
-                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary">
+                    <Link v-for="conversation in conversations" :key="conversation.id"
+                        :href="route('auth.conversations.index', { conversation: conversation.id })"
+                        @click="selectConversation" preserve-scroll preserve-state
+                        class="flex gap-3 rounded-lg p-3 transition hover:bg-muted hover:text-card"
+                        :class="selectedConversation?.id === conversation.id ? 'bg-muted text-card' : 'text-primary'">
+                        <div
+                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary">
                             {{ initials(titleFor(conversation)) }}
                         </div>
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center justify-between gap-2">
                                 <h2 class="truncate text-sm font-semibold">{{ titleFor(conversation) }}</h2>
-                                <span class="shrink-0 text-xs opacity-75">{{ formatTime(conversation.messages_max_created_at) }}</span>
+                                <span class="shrink-0 text-xs opacity-75">{{
+                                    formatTime(conversation.messages_max_created_at) }}</span>
                             </div>
                             <p class="mt-1 truncate text-xs opacity-75">
-                                {{ conversation.type === 'group' ? 'Gruppe' : 'Direkt' }} · {{ conversation.users.length }} Mitglieder
+                                {{ typeLabelFor(conversation) }} · {{ conversation.users.length }} Mitglieder
                             </p>
                         </div>
                     </Link>
@@ -289,67 +440,95 @@ onUnmounted(() => {
 
             <!-- Mobile Chat View -->
             <div v-show="showChatOnMobile" class="flex h-full flex-col lg:hidden">
-                <div v-if="selectedConversation" class="flex items-center justify-between gap-4 border-b border-border bg-card p-4">
+                <div v-if="selectedConversation"
+                    class="flex items-center justify-between gap-4 border-b border-border bg-card p-4">
                     <div class="flex items-center gap-3 min-w-0">
                         <button @click="goBackToConversations" class="shrink-0 text-primary hover:text-secondary">
                             <i class="las la-arrow-left text-xl"></i>
                         </button>
                         <div class="min-w-0">
-                            <h2 class="truncate text-lg font-semibold text-primary">{{ titleFor(selectedConversation) }}</h2>
+                            <h2 class="truncate text-lg font-semibold text-primary">{{ titleFor(selectedConversation) }}
+                            </h2>
                             <p class="text-xs text-secondary">{{ selectedUsers.length }} Mitglieder</p>
                         </div>
                     </div>
                 </div>
 
-                <div v-if="selectedConversation" ref="messagesContainer" class="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 custom-scrollbar">
-                    <div
-                        v-for="message in selectedMessages"
-                        :key="message.id"
-                        class="flex"
-                        :class="isOwnMessage(message) ? 'justify-end' : 'justify-start'"
-                    >
-                        <div
-                            class="max-w-[78%] rounded-lg px-4 py-3"
-                            :class="isOwnMessage(message)
-                                ? 'bg-buttonPrimary text-buttonTextPrimary'
-                                : 'bg-inputBg text-primary'"
-                        >
+                <div v-if="selectedConversation" ref="messagesContainer"
+                    class="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 custom-scrollbar">
+                    <div v-for="message in selectedMessages" :key="message.id" class="flex"
+                        :class="isOwnMessage(message) ? 'justify-end' : 'justify-start'">
+                        <div class="max-w-[78%] rounded-lg px-4 py-3" :class="isOwnMessage(message)
+                            ? 'bg-buttonPrimary text-buttonTextPrimary'
+                            : 'bg-inputBg text-primary'">
                             <div class="mb-1 flex items-center justify-between gap-4 text-xs opacity-80">
                                 <span>{{ message.sender?.name }}</span>
                                 <span>{{ formatTime(message.created_at) }}</span>
                             </div>
-                            <p class="whitespace-pre-line text-sm leading-6">{{ message.message }}</p>
+                            <p v-if="message.message" class="whitespace-pre-line text-sm leading-6">{{ message.message
+                                }}</p>
+                            <div v-if="message.attachments?.length" class="mt-2 space-y-1">
+                                <a v-for="attachment in message.attachments" :key="attachment.id"
+                                    :href="fileUrl(attachment.file)" target="_blank"
+                                    class="flex items-center gap-2 rounded border border-border/50 px-2 py-1 text-xs underline-offset-2 hover:underline">
+                                    <i class="las la-paperclip"></i>
+                                    <span class="truncate">{{ attachmentLabel(attachment) }}</span>
+                                </a>
+                            </div>
+                            <div class="mt-2 flex flex-wrap items-center gap-1 text-xs">
+                                <button v-for="reaction in ['like', 'heart', 'ok']" :key="reaction" type="button"
+                                    class="rounded border px-2 py-1"
+                                    :class="userReaction(message) === reaction ? 'border-primary bg-card text-primary' : 'border-border/50 opacity-80'"
+                                    @click="reactToMessage(message, reaction)">
+                                    {{ reaction }} {{ reactionCounts(message)[reaction] || '' }}
+                                </button>
+                                <button v-if="isOwnMessage(message) && !String(message.id).startsWith('local-')"
+                                    type="button" class="ml-auto rounded border border-border/50 px-2 py-1 opacity-80"
+                                    @click="deleteMessage(message)">
+                                    <i class="las la-trash"></i>
+                                </button>
+                            </div>
                             <div v-if="isOwnMessage(message)" class="mt-1 flex justify-end">
-                                <span
-                                    class="inline-flex items-center gap-1 text-xs opacity-80"
-                                    :title="statusIconFor(message).label"
-                                >
-                                    <i :class="[statusIconFor(message).icon, message.local_status === 'failed' ? 'text-error' : '']"></i>
+                                <span class="inline-flex items-center gap-1 text-xs opacity-80"
+                                    :title="statusIconFor(message).label">
+                                    <i
+                                        :class="[statusIconFor(message).icon, message.local_status === 'failed' ? 'text-error' : '']"></i>
                                     <span class="sr-only">{{ statusIconFor(message).label }}</span>
                                 </span>
                             </div>
                         </div>
                     </div>
 
-                    <div v-if="selectedMessages.length === 0" class="flex h-full items-center justify-center text-sm text-secondary">
+                    <div v-if="selectedMessages.length === 0"
+                        class="flex h-full items-center justify-center text-sm text-secondary">
                         Keine Nachrichten in diesem Chat.
+                    </div>
+
+                    <div v-if="typingUsers.length" class="text-xs text-secondary">
+                        {{typingUsers.map((user) => user.name).join(', ')}} schreibt...
                     </div>
                 </div>
 
-                <form v-if="selectedConversation" class="border-t border-border bg-card p-4" @submit.prevent="sendMessage">
+                <form v-if="selectedConversation" class="border-t border-border bg-card p-4"
+                    @submit.prevent="sendMessage">
+                    <div v-if="messageForm.attachments.length" class="mb-2 flex flex-wrap gap-2 text-xs text-secondary">
+                        <span v-for="file in messageForm.attachments" :key="file.name"
+                            class="rounded border border-border px-2 py-1">
+                            {{ file.name }}
+                        </span>
+                    </div>
                     <div class="flex gap-2">
-                        <textarea
-                            v-model="messageForm.message"
-                            rows="2"
-                            placeholder="Nachricht..."
+                        <textarea v-model="messageForm.message" rows="2" placeholder="Nachricht..."
                             class="min-w-0 flex-1 resize-none rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary placeholder-secondary focus:border-primary focus:ring-primary"
-                            required
-                        />
-                        <button
-                            type="submit"
-                            :disabled="messageForm.processing || !messageForm.message.trim()"
-                            class="rounded-lg bg-buttonPrimary px-4 py-2 text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50"
-                        >
+                            @input="announceTyping" />
+                        <label
+                            class="flex cursor-pointer items-center rounded-lg border border-border px-3 py-2 text-primary hover:bg-inputBg">
+                            <i class="las la-paperclip text-xl"></i>
+                            <input ref="attachmentInput" type="file" multiple class="hidden"
+                                @change="onAttachmentChange">
+                        </label>
+                        <button type="submit" :disabled="messageForm.processing || !canSendMessage"
+                            class="rounded-lg bg-buttonPrimary px-4 py-2 text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50">
                             <i class="las la-paper-plane text-xl"></i>
                         </button>
                     </div>
@@ -366,10 +545,8 @@ onUnmounted(() => {
                     <div class="border-b border-border p-4">
                         <div class="mb-4 flex items-center justify-between">
                             <h1 class="text-xl font-semibold text-primary">Chat</h1>
-                            <button
-                                @click="showNewConversationModal = true"
-                                class="rounded-full bg-buttonPrimary p-2 text-buttonTextPrimary hover:bg-buttonPrimaryHover"
-                            >
+                            <button @click="showNewConversationModal = true"
+                                class="rounded-full bg-buttonPrimary p-2 text-buttonTextPrimary hover:bg-buttonPrimaryHover">
                                 <i class="las la-plus text-xl"></i>
                             </button>
                         </div>
@@ -377,26 +554,23 @@ onUnmounted(() => {
                     </div>
 
                     <div class="min-h-0 flex-1 overflow-y-auto p-2 custom-scrollbar">
-                        <Link
-    v-for="conversation in conversations"
-    :key="conversation.id"
-    :href="route('auth.conversations.index', { conversation: conversation.id })"
-    @click="selectConversation"
-    preserve-scroll
-    preserve-state
-    class="flex gap-3 rounded-lg p-3 transition hover:bg-muted hover:text-card"
-    :class="selectedConversation?.id === conversation.id ? 'bg-muted text-card' : 'text-primary'"
->
-                            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary">
+                        <Link v-for="conversation in conversations" :key="conversation.id"
+                            :href="route('auth.conversations.index', { conversation: conversation.id })"
+                            @click="selectConversation" preserve-scroll preserve-state
+                            class="flex gap-3 rounded-lg p-3 transition hover:bg-muted hover:text-card"
+                            :class="selectedConversation?.id === conversation.id ? 'bg-muted text-card' : 'text-primary'">
+                            <div
+                                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary">
                                 {{ initials(titleFor(conversation)) }}
                             </div>
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-center justify-between gap-2">
                                     <h2 class="truncate text-sm font-semibold">{{ titleFor(conversation) }}</h2>
-                                    <span class="shrink-0 text-xs opacity-75">{{ formatTime(conversation.messages_max_created_at) }}</span>
+                                    <span class="shrink-0 text-xs opacity-75">{{
+                                        formatTime(conversation.messages_max_created_at) }}</span>
                                 </div>
                                 <p class="mt-1 truncate text-xs opacity-75">
-                                    {{ conversation.type === 'group' ? 'Gruppe' : 'Direkt' }} · {{ conversation.users.length }} Mitglieder
+                                    {{ typeLabelFor(conversation) }} · {{ conversation.users.length }} Mitglieder
                                 </p>
                             </div>
                         </Link>
@@ -408,74 +582,101 @@ onUnmounted(() => {
                 </aside>
 
                 <section class="flex min-h-0 flex-col rounded-lg border border-border bg-card">
-                    <div v-if="selectedConversation" class="flex items-center justify-between gap-4 border-b border-border p-4">
+                    <div v-if="selectedConversation"
+                        class="flex items-center justify-between gap-4 border-b border-border p-4">
                         <div class="min-w-0">
-                            <h2 class="truncate text-lg font-semibold text-primary">{{ titleFor(selectedConversation) }}</h2>
+                            <h2 class="truncate text-lg font-semibold text-primary">{{ titleFor(selectedConversation) }}
+                            </h2>
                             <p class="mt-1 text-sm text-secondary">
-                                {{ selectedConversation.type === 'group' ? 'Gruppenchat' : 'Direktchat' }}
+                                {{ typeLabelFor(selectedConversation) }}chat
                                 · {{ selectedUsers.length }} Mitglieder
                             </p>
                         </div>
                         <div class="flex -space-x-2">
-                            <div
-                                v-for="member in selectedUsers.slice(0, 4)"
-                                :key="member.id"
-                                class="flex h-9 w-9 items-center justify-center rounded-lg border border-card bg-inputBg text-xs font-semibold text-primary"
-                            >
+                            <div v-for="member in selectedUsers.slice(0, 4)" :key="member.id"
+                                class="flex h-9 w-9 items-center justify-center rounded-lg border border-card bg-inputBg text-xs font-semibold text-primary">
                                 {{ initials(member.name) }}
                             </div>
                         </div>
                     </div>
 
-                    <div v-if="selectedConversation" ref="messagesContainer" class="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 custom-scrollbar">
-                        <div
-                            v-for="message in selectedMessages"
-                            :key="message.id"
-                            class="flex"
-                            :class="isOwnMessage(message) ? 'justify-end' : 'justify-start'"
-                        >
-                            <div
-                                class="max-w-[78%] rounded-lg px-4 py-3"
-                                :class="isOwnMessage(message)
-                                    ? 'bg-buttonPrimary text-buttonTextPrimary'
-                                    : 'bg-inputBg text-primary'"
-                            >
+                    <div v-if="selectedConversation" ref="messagesContainer"
+                        class="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 custom-scrollbar">
+                        <div v-for="message in selectedMessages" :key="message.id" class="flex"
+                            :class="isOwnMessage(message) ? 'justify-end' : 'justify-start'">
+                            <div class="max-w-[78%] rounded-lg px-4 py-3" :class="isOwnMessage(message)
+                                ? 'bg-buttonPrimary text-buttonTextPrimary'
+                                : 'bg-inputBg text-primary'">
                                 <div class="mb-1 flex items-center justify-between gap-4 text-xs opacity-80">
                                     <span>{{ message.sender?.name }}</span>
                                     <span>{{ formatTime(message.created_at) }}</span>
                                 </div>
-                                <p class="whitespace-pre-line text-sm leading-6">{{ message.message }}</p>
+                                <p v-if="message.message" class="whitespace-pre-line text-sm leading-6">{{
+                                    message.message }}</p>
+                                <div v-if="message.attachments?.length" class="mt-2 space-y-1">
+                                    <a v-for="attachment in message.attachments" :key="attachment.id"
+                                        :href="fileUrl(attachment.file)" target="_blank"
+                                        class="flex items-center gap-2 rounded border border-border/50 px-2 py-1 text-xs underline-offset-2 hover:underline">
+                                        <i class="las la-paperclip"></i>
+                                        <span class="truncate">{{ attachmentLabel(attachment) }}</span>
+                                    </a>
+                                </div>
+                                <div class="mt-2 flex flex-wrap items-center gap-1 text-xs">
+                                    <button v-for="reaction in ['like', 'heart', 'ok']" :key="reaction" type="button"
+                                        class="rounded border px-2 py-1"
+                                        :class="userReaction(message) === reaction ? 'border-primary bg-card text-primary' : 'border-border/50 opacity-80'"
+                                        @click="reactToMessage(message, reaction)">
+                                        {{ reaction }} {{ reactionCounts(message)[reaction] || '' }}
+                                    </button>
+                                    <button v-if="isOwnMessage(message) && !String(message.id).startsWith('local-')"
+                                        type="button"
+                                        class="ml-auto rounded border border-border/50 px-2 py-1 opacity-80"
+                                        @click="deleteMessage(message)">
+                                        <i class="las la-trash"></i>
+                                    </button>
+                                </div>
                                 <div v-if="isOwnMessage(message)" class="mt-1 flex justify-end">
-                                    <span
-                                        class="inline-flex items-center gap-1 text-xs opacity-80"
-                                        :title="statusIconFor(message).label"
-                                    >
-                                        <i :class="[statusIconFor(message).icon, message.local_status === 'failed' ? 'text-error' : '']"></i>
+                                    <span class="inline-flex items-center gap-1 text-xs opacity-80"
+                                        :title="statusIconFor(message).label">
+                                        <i
+                                            :class="[statusIconFor(message).icon, message.local_status === 'failed' ? 'text-error' : '']"></i>
                                         <span class="sr-only">{{ statusIconFor(message).label }}</span>
                                     </span>
                                 </div>
                             </div>
                         </div>
 
-                        <div v-if="selectedMessages.length === 0" class="flex h-full items-center justify-center text-sm text-secondary">
+                        <div v-if="selectedMessages.length === 0"
+                            class="flex h-full items-center justify-center text-sm text-secondary">
                             Keine Nachrichten in diesem Chat.
+                        </div>
+
+                        <div v-if="typingUsers.length" class="text-xs text-secondary">
+                            {{typingUsers.map((user) => user.name).join(', ')}} schreibt...
                         </div>
                     </div>
 
                     <form v-if="selectedConversation" class="border-t border-border p-4" @submit.prevent="sendMessage">
+                        <div v-if="messageForm.attachments.length"
+                            class="mb-2 flex flex-wrap gap-2 text-xs text-secondary">
+                            <span v-for="file in messageForm.attachments" :key="file.name"
+                                class="rounded border border-border px-2 py-1">
+                                {{ file.name }}
+                            </span>
+                        </div>
                         <div class="flex gap-2">
-                            <textarea
-                                v-model="messageForm.message"
-                                rows="2"
+                            <textarea v-model="messageForm.message" @keydown.enter.prevent="sendMessage" rows="2"
                                 placeholder="Nachricht schreiben..."
                                 class="min-w-0 flex-1 resize-none rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary placeholder-secondary focus:border-primary focus:ring-primary"
-                                required
-                            />
-                            <button
-                                type="submit"
-                                :disabled="messageForm.processing || !messageForm.message.trim()"
-                                class="rounded-lg bg-buttonPrimary px-4 py-2 text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50"
-                            >
+                                @input="announceTyping" />
+                            <label
+                                class="flex cursor-pointer items-center rounded-lg border border-border px-3 py-2 text-primary hover:bg-inputBg">
+                                <i class="las la-paperclip text-xl"></i>
+                                <input ref="attachmentInput" type="file" multiple class="hidden"
+                                    @change="onAttachmentChange">
+                            </label>
+                            <button type="submit" :disabled="messageForm.processing || !canSendMessage"
+                                class="rounded-lg bg-buttonPrimary px-4 py-2 text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50">
                                 <i class="las la-paper-plane text-xl"></i>
                             </button>
                         </div>
@@ -489,63 +690,57 @@ onUnmounted(() => {
                 <aside class="min-h-0 hidden flex-col rounded-lg border border-border bg-card p-4 lg:flex">
                     <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Neue Konversation</h2>
 
-                    <div class="mt-4 grid grid-cols-2 rounded-lg border border-border bg-inputBg p-1">
-                        <button
-                            type="button"
-                            class="rounded px-3 py-2 text-sm font-medium"
+                    <div class="mt-4 grid grid-cols-3 rounded-lg border border-border bg-inputBg p-1">
+                        <button type="button" class="rounded px-3 py-2 text-sm font-medium"
                             :class="conversationForm.type === 'direct' ? 'bg-card text-primary shadow-sm' : 'text-secondary'"
-                            @click="setType('direct')"
-                        >
+                            @click="setType('direct')">
                             Direkt
                         </button>
-                        <button
-                            type="button"
-                            class="rounded px-3 py-2 text-sm font-medium"
+                        <button type="button" class="rounded px-3 py-2 text-sm font-medium"
                             :class="conversationForm.type === 'group' ? 'bg-card text-primary shadow-sm' : 'text-secondary'"
-                            @click="setType('group')"
-                        >
+                            @click="setType('group')">
                             Gruppe
+                        </button>
+                        <button type="button" class="rounded px-3 py-2 text-sm font-medium"
+                            :class="conversationForm.type === 'team' ? 'bg-card text-primary shadow-sm' : 'text-secondary'"
+                            @click="setType('team')">
+                            Team
                         </button>
                     </div>
 
-                    <form class="mt-4 flex h-[calc(100%-5rem)] min-h-0 flex-col" @submit.prevent="createConversationAndOpen">
-                        <div class="min-h-0 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                            <button
-                                v-for="member in users"
-                                :key="member.id"
-                                type="button"
+                    <form class="mt-4 flex h-[calc(100%-5rem)] min-h-0 flex-col"
+                        @submit.prevent="createConversationAndOpen">
+                        <select v-if="conversationForm.type === 'team'" v-model="conversationForm.team_id"
+                            class="mb-3 rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary focus:border-primary focus:ring-primary">
+                            <option :value="null">Team auswÃ¤hlen</option>
+                            <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
+                        </select>
+
+                        <div v-if="conversationForm.type !== 'team'"
+                            class="min-h-0 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                            <button v-for="member in users" :key="member.id" type="button"
                                 class="mb-2 flex w-full items-center gap-3 rounded-lg border p-3 text-left transition"
                                 :class="conversationForm.participant_ids.includes(member.id)
                                     ? 'border-primary bg-inputBg'
-                                    : 'border-border hover:bg-inputBg'"
-                                @click="toggleParticipant(member.id)"
-                            >
-                                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-buttonPrimary text-xs font-semibold text-buttonTextPrimary">
+                                    : 'border-border hover:bg-inputBg'" @click="toggleParticipant(member.id)">
+                                <div
+                                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-buttonPrimary text-xs font-semibold text-buttonTextPrimary">
                                     {{ initials(member.name) }}
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate text-sm font-medium text-primary">{{ member.name }}</p>
                                     <p class="truncate text-xs text-secondary">{{ member.email }}</p>
                                 </div>
-                                <i
-                                    class="las text-lg"
-                                    :class="conversationForm.participant_ids.includes(member.id) ? 'la-check-circle text-success' : 'la-circle text-secondary'"
-                                ></i>
+                                <i class="las text-lg"
+                                    :class="conversationForm.participant_ids.includes(member.id) ? 'la-check-circle text-success' : 'la-circle text-secondary'"></i>
                             </button>
                         </div>
 
-                        <textarea
-                            v-model="conversationForm.message"
-                            rows="3"
-                            placeholder="Erste Nachricht optional"
-                            class="mt-3 resize-none rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary placeholder-secondary focus:border-primary focus:ring-primary"
-                        />
+                        <textarea v-model="conversationForm.message" rows="3" placeholder="Erste Nachricht optional"
+                            class="mt-3 resize-none rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary placeholder-secondary focus:border-primary focus:ring-primary" />
 
-                        <button
-                            type="submit"
-                            :disabled="conversationForm.processing || !canCreateConversation"
-                            class="mt-3 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50"
-                        >
+                        <button type="submit" :disabled="conversationForm.processing || !canCreateConversation"
+                            class="mt-3 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50">
                             Chat starten
                         </button>
                     </form>
@@ -568,76 +763,67 @@ onUnmounted(() => {
 
                 <!-- Tabs -->
                 <div class="border-b border-border bg-inputBg p-2">
-                    <div class="grid grid-cols-2 gap-1 rounded-lg">
-                        <button
-                            type="button"
-                            class="rounded px-3 py-2 text-sm font-medium transition"
+                    <div class="grid grid-cols-3 gap-1 rounded-lg">
+                        <button type="button" class="rounded px-3 py-2 text-sm font-medium transition"
                             :class="conversationForm.type === 'direct' ? 'bg-card text-primary shadow-sm' : 'text-secondary'"
-                            @click="setType('direct')"
-                        >
+                            @click="setType('direct')">
                             Direkt
                         </button>
-                        <button
-                            type="button"
-                            class="rounded px-3 py-2 text-sm font-medium transition"
+                        <button type="button" class="rounded px-3 py-2 text-sm font-medium transition"
                             :class="conversationForm.type === 'group' ? 'bg-card text-primary shadow-sm' : 'text-secondary'"
-                            @click="setType('group')"
-                        >
+                            @click="setType('group')">
                             Gruppe
+                        </button>
+                        <button type="button" class="rounded px-3 py-2 text-sm font-medium transition"
+                            :class="conversationForm.type === 'team' ? 'bg-card text-primary shadow-sm' : 'text-secondary'"
+                            @click="setType('team')">
+                            Team
                         </button>
                     </div>
                 </div>
 
                 <!-- User List -->
                 <form class="flex min-h-0 flex-1 flex-col" @submit.prevent="createConversationAndOpen">
-                    <div class="min-h-0 flex-1 overflow-y-auto p-2 custom-scrollbar">
-                        <button
-                            v-for="member in users"
-                            :key="member.id"
-                            type="button"
+                    <div v-if="conversationForm.type === 'team'" class="p-3">
+                        <select v-model="conversationForm.team_id"
+                            class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary focus:border-primary focus:ring-primary">
+                            <option :value="null">Team auswÃ¤hlen</option>
+                            <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
+                        </select>
+                    </div>
+
+                    <div v-else class="min-h-0 flex-1 overflow-y-auto p-2 custom-scrollbar">
+                        <button v-for="member in users" :key="member.id" type="button"
                             class="mb-2 flex w-full items-center gap-3 rounded-lg border p-3 text-left transition"
                             :class="conversationForm.participant_ids.includes(member.id)
                                 ? 'border-primary bg-inputBg'
-                                : 'border-border hover:bg-inputBg'"
-                            @click="toggleParticipant(member.id)"
-                        >
-                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary">
+                                : 'border-border hover:bg-inputBg'" @click="toggleParticipant(member.id)">
+                            <div
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary">
                                 {{ initials(member.name) }}
                             </div>
                             <div class="min-w-0 flex-1">
                                 <p class="text-sm font-medium text-primary">{{ member.name }}</p>
                                 <p class="truncate text-xs text-secondary">{{ member.email }}</p>
                             </div>
-                            <i
-                                class="las text-xl"
-                                :class="conversationForm.participant_ids.includes(member.id) ? 'la-check-circle text-success' : 'la-circle text-secondary'"
-                            ></i>
+                            <i class="las text-xl"
+                                :class="conversationForm.participant_ids.includes(member.id) ? 'la-check-circle text-success' : 'la-circle text-secondary'"></i>
                         </button>
                     </div>
 
                     <!-- Message Input -->
                     <div class="border-t border-border p-3">
-                        <textarea
-                            v-model="conversationForm.message"
-                            rows="2"
-                            placeholder="Erste Nachricht optional"
-                            class="mb-3 w-full resize-none rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary placeholder-secondary focus:border-primary focus:ring-primary"
-                        />
+                        <textarea v-model="conversationForm.message" rows="2" placeholder="Erste Nachricht optional"
+                            class="mb-3 w-full resize-none rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary placeholder-secondary focus:border-primary focus:ring-primary" />
 
                         <!-- Buttons -->
                         <div class="flex gap-2">
-                            <button
-                                type="button"
-                                @click="showNewConversationModal = false"
-                                class="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary transition hover:bg-inputBg"
-                            >
+                            <button type="button" @click="showNewConversationModal = false"
+                                class="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary transition hover:bg-inputBg">
                                 Abbrechen
                             </button>
-                            <button
-                                type="submit"
-                                :disabled="conversationForm.processing || !canCreateConversation"
-                                class="flex-1 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50"
-                            >
+                            <button type="submit" :disabled="conversationForm.processing || !canCreateConversation"
+                                class="flex-1 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50">
                                 Chat starten
                             </button>
                         </div>

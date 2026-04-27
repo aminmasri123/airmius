@@ -9,7 +9,7 @@ class Conversation extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['club_id','type'];
+    protected $fillable = ['club_id','team_id','type'];
 
     public function users()
     {
@@ -19,5 +19,15 @@ class Conversation extends Model
     public function messages()
     {
         return $this->hasMany(Message::class);
+    }
+
+    public function team()
+    {
+        return $this->belongsTo(Team::class);
+    }
+
+    public function event()
+    {
+        return $this->hasOne(Event::class);
     }
 }

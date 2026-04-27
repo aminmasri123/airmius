@@ -7,6 +7,7 @@ const form = useForm({
     email: '',
     password: '',
     password_confirmation: '',
+    profile_visibility: 'public',
 })
 
 const submit = () => {
@@ -67,6 +68,18 @@ const submit = () => {
                             class="mt-1 block w-full px-3 py-2 border border-border rounded-lg bg-inputBg text-primary focus:outline-none focus:ring-borderHover focus:border-borderHover"
                             required
                         />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-primary">Profil-Sichtbarkeit</label>
+                        <select
+                            v-model="form.profile_visibility"
+                            class="mt-1 block w-full px-3 py-2 border border-border rounded-lg bg-inputBg text-primary focus:outline-none focus:ring-borderHover focus:border-borderHover"
+                        >
+                            <option value="public">Öffentlich</option>
+                            <option value="private">Privat</option>
+                        </select>
+                        <div v-if="form.errors.profile_visibility" class="mt-1 text-sm text-error">{{ form.errors.profile_visibility }}</div>
                     </div>
 
                     <div class="flex gap-2">

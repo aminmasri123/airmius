@@ -22,18 +22,22 @@ class TeamPolicy extends BasePolicy
 
     public function create(User $user)
     {
-        return $this->isClubAdmin($user) || $this->isCoach($user);
+        return $user->can('team.create')
+            || $this->isClubAdmin($user)
+            || $this->isCoach($user);
     }
 
     public function update(User $user, Team $team)
     {
-        return $this->isClubAdmin($user)
+        return ($user->can('team.update') && $this->inClub($user, $team->club))
+            || $this->isClubAdmin($user)
             || $this->isCoach($user)
             || $user->hasRole('team_manager');
     }
 
     public function delete(User $user, Team $team)
     {
-        return $this->isClubAdmin($user);
+        return ($user->can('team.delete') && $this->inClub($user, $team->club))
+            || $this->isClubAdmin($user);
     }
 }

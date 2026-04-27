@@ -4,11 +4,23 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 
 const props = defineProps({
     user: Object,
+    availableRoles: {
+        type: Array,
+        default: () => [],
+    },
+    availablePermissions: {
+        type: Array,
+        default: () => [],
+    },
+    canManageRoles: Boolean,
 })
 
 const form = useForm({
     name: props.user.name,
     email: props.user.email,
+    bio: props.user.bio || '',
+    profile_visibility: props.user.profile_visibility || 'public',
+    roles: [...(props.user.roles || [])],
 })
 
 const submit = () => {
@@ -56,6 +68,57 @@ const submit = () => {
                             required
                         />
                         <div v-if="form.errors.email" class="mt-1 text-sm text-error">{{ form.errors.email }}</div>
+                    </div>
+
+                    <div>
+                        <label for="profile_visibility" class="block text-sm font-medium text-primary">Profil-Sichtbarkeit</label>
+                        <select
+                            id="profile_visibility"
+                            v-model="form.profile_visibility"
+                            class="mt-1 block w-full px-3 py-2 border border-border rounded-lg bg-inputBg text-primary focus:outline-none focus:ring-borderHover focus:border-borderHover"
+                        >
+                            <option value="public">Öffentlich</option>
+                            <option value="private">Privat</option>
+                        </select>
+                        <div v-if="form.errors.profile_visibility" class="mt-1 text-sm text-error">{{ form.errors.profile_visibility }}</div>
+                    </div>
+
+                    <div>
+                        <label for="bio" class="block text-sm font-medium text-primary">Bio</label>
+                        <textarea
+                            id="bio"
+                            v-model="form.bio"
+                            rows="4"
+                            class="mt-1 block w-full px-3 py-2 border border-border rounded-lg bg-inputBg text-primary focus:outline-none focus:ring-borderHover focus:border-borderHover"
+                        />
+                        <div v-if="form.errors.bio" class="mt-1 text-sm text-error">{{ form.errors.bio }}</div>
+                    </div>
+
+                    <div v-if="canManageRoles" class="space-y-3 border-t border-border pt-4">
+                        <div>
+                            <h2 class="text-sm font-semibold text-primary">Rollen</h2>
+                            <p class="text-xs text-secondary">Nur Administratoren können Rollen ändern.</p>
+                        </div>
+
+                        <div class="grid gap-2 sm:grid-cols-2">
+                            <label
+                                v-for="role in availableRoles"
+                                :key="role"
+                                class="flex items-center gap-2 rounded border border-border px-3 py-2 text-sm text-primary"
+                            >
+                                <input v-model="form.roles" type="checkbox" :value="role" class="rounded border-border" />
+                                <span>{{ role }}</span>
+                            </label>
+                        </div>
+                        <div v-if="form.errors.roles" class="mt-1 text-sm text-error">{{ form.errors.roles }}</div>
+
+                        <div>
+                            <h2 class="text-sm font-semibold text-primary">Berechtigungen</h2>
+                            <div class="mt-2 max-h-32 overflow-auto rounded border border-border bg-inputBg p-3 text-xs text-secondary">
+                                <span v-if="user.permissions?.length">{{ user.permissions.join(', ') }}</span>
+                                <span v-else>Keine direkten oder rollenbasierten Berechtigungen.</span>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="flex space-x-4">

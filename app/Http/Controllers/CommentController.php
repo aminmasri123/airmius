@@ -3,12 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Comment;
+use App\Models\Activity;
 use App\Models\Post;
 use App\Support\AppNotification;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 
 class CommentController extends Controller
 {
+    use AuthorizesRequests;
+
     /**
      * Display a listing of the resource.
      */
@@ -30,6 +34,8 @@ class CommentController extends Controller
      */
     public function store(Request $request, Post $post)
     {
+        $this->authorize('view', $post);
+
         $data = $request->validate([
             'content' => ['required', 'string', 'max:1500'],
         ]);
@@ -50,6 +56,19 @@ class CommentController extends Controller
                 'comment_id' => $comment->id,
             ]);
         }
+
+        Activity::create([
+            'user_id' => auth()->id(),
+            'club_id' => $post->club_id,
+            'team_id' => $post->team_id,
+            'type' => 'post.commented',
+            'subject_type' => Post::class,
+            'subject_id' => $post->id,
+            'data' => [
+                'comment_id' => $comment->id,
+                'visibility' => $post->visibility,
+            ],
+        ]);
 
         return back()->with('success', 'Kommentar erstellt.');
     }

@@ -4,10 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Message extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $fillable = ['conversation_id','sender_id','message', 'status', 'read_at'];
     protected $appends = ['delivery_status'];
@@ -29,6 +31,21 @@ class Message extends Model
     public function receipts()
     {
         return $this->hasMany(MessageReceipt::class);
+    }
+
+    public function attachments()
+    {
+        return $this->hasMany(MessageAttachment::class);
+    }
+
+    public function files()
+    {
+        return $this->belongsToMany(File::class, 'message_attachments');
+    }
+
+    public function reactions()
+    {
+        return $this->hasMany(MessageReaction::class);
     }
 
     public function getDeliveryStatusAttribute(): string
