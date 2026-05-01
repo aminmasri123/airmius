@@ -43,17 +43,16 @@ class EventPolicy extends BasePolicy
     {
         $club = $event->resolvedClub();
 
-        return ($club && $user->can('event.update') && $this->inClub($user, $club))
-            || $this->isCoach($user)
-            || $this->isClubAdmin($user);
+        return ($club && $user->can('event.update') && $this->managesClub($user, $club))
+            || ($event->team && $user->can('event.update') && $this->managesTeam($user, $event->team));
     }
 
     public function delete(User $user, Event $event)
     {
         $club = $event->resolvedClub();
 
-        return ($club && $user->can('event.delete') && $this->inClub($user, $club))
-            || $this->isClubAdmin($user);
+        return ($club && $user->can('event.delete') && $this->managesClub($user, $club))
+            || ($event->team && $user->can('event.delete') && $this->managesTeam($user, $event->team));
     }
 
     public function join(User $user, ?Event $event = null)

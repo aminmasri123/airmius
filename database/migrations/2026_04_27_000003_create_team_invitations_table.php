@@ -12,14 +12,18 @@ return new class extends Migration
             $table->id();
             $table->foreignId('team_id')->constrained()->cascadeOnDelete();
             $table->foreignId('inviter_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('recipient_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('recipient_id')->nullable()->constrained('users')->cascadeOnDelete();
+            $table->string('email')->nullable();
+            $table->string('token', 80)->nullable()->unique();
             $table->string('role', 20)->default('Player');
             $table->string('status', 20)->default('pending');
             $table->timestamp('responded_at')->nullable();
             $table->timestamps();
 
             $table->unique(['team_id', 'recipient_id']);
+            $table->unique(['team_id', 'email']);
             $table->index(['recipient_id', 'status']);
+            $table->index(['email', 'status']);
         });
     }
 

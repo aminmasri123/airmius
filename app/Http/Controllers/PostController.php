@@ -5,8 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Club;
 use App\Models\Activity;
 use App\Models\Post;
+use App\Models\Sport;
+use App\Models\SportSkill;
 use App\Models\Team;
+use App\Services\GamificationService;
+use App\Services\MediaOptimizer;
 use App\Services\PostService;
+use App\Support\Roles;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -17,7 +22,11 @@ class PostController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(private PostService $service) {}
+    public function __construct(
+        private PostService $service,
+        private MediaOptimizer $mediaOptimizer,
+        private GamificationService $gamification,
+    ) {}
 
     public function index()
     {
@@ -37,20 +46,24 @@ class PostController extends Controller
                     ->orWhere('user_id', $user->id);
             })
             ->with([
-                'user:id,name',
+                'user:id,name,profile_photo_path',
                 'club' => fn ($query) => $query->select('id', 'name'),
                 'team' => fn ($query) => $query->select('id', 'name', 'club_id'),
+                'sport:id,name,slug,category',
+                'sportSkills:id,sport_id,key,name',
                 'attachments.file:id,path,type,size',
                 'comments' => fn ($query) => $query
-                    ->with('user:id,name')
+                    ->with('user:id,name,profile_photo_path')
                     ->withCount('likes')
                     ->latest('id')
                     ->limit(3),
             ])
             ->withCount('comments')
             ->withCount('likes')
+            ->withCount('helpfuls')
             ->withExists([
                 'likes as liked_by_me' => fn ($query) => $query->where('user_id', $user->id),
+                'helpfuls as helpful_by_me' => fn ($query) => $query->where('user_id', $user->id),
             ])
             ->latest('id')
             ->paginate(10)
@@ -59,7 +72,11 @@ class PostController extends Controller
         return Inertia::render('Auth/Dashboard/Feed/Index', [
             'posts' => $posts,
             'clubs' => Club::query()
-                ->visibleTo($user)
+                ->when(
+                    $user->hasAnyRole(Roles::PLAYER),
+                    fn ($query) => $query->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id)),
+                    fn ($query) => $query->visibleTo($user),
+                )
                 ->select(['id', 'name'])
                 ->orderBy('name')
                 ->get(),
@@ -69,6 +86,13 @@ class PostController extends Controller
                 ->orderBy('name')
                 ->get(),
             'visibilities' => Post::VISIBILITIES,
+            'postTypes' => Post::TYPES,
+            'sports' => Sport::query()
+                ->where('is_active', true)
+                ->with(['skills' => fn ($query) => $query->select('id', 'sport_id', 'key', 'name')->orderBy('sort_order')])
+                ->select(['id', 'name', 'slug', 'category'])
+                ->orderBy('sort_order')
+                ->get(),
             'activities' => Activity::query()
                 ->with('user:id,name')
                 ->where(function ($query) use ($user) {
@@ -91,27 +115,31 @@ class PostController extends Controller
             'club_id' => ['nullable', 'exists:clubs,id'],
             'team_id' => ['nullable', 'exists:teams,id'],
             'visibility' => ['required', Rule::in(Post::VISIBILITIES)],
+            'post_type' => ['required', Rule::in(Post::TYPES)],
+            'sport_id' => ['nullable', 'exists:sports,id'],
+            'sport_skill_ids' => ['nullable', 'array', 'max:8'],
+            'sport_skill_ids.*' => ['integer', 'exists:sport_skills,id'],
             'content' => ['nullable', 'required_without_all:image,attachments', 'string', 'max:5000'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
             'attachments' => ['nullable', 'array', 'max:10'],
-            'attachments.*' => ['file', 'mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,xls,xlsx,txt,zip', 'max:10240'],
+            'attachments.*' => ['file', 'mimes:jpg,jpeg,png,webp,gif,mp4,mov,webm,ogg,pdf,doc,docx,xls,xlsx,txt,zip', 'max:51200'],
         ]);
 
-        if (!empty($data['team_id'])) {
+        if (! empty($data['team_id'])) {
             $team = Team::findOrFail($data['team_id']);
-            abort_unless($team->users()->where('users.id', auth()->id())->exists(), 403);
+            $this->authorize('view', $team);
             $data['club_id'] = $team->club_id;
         }
 
-        if (!empty($data['club_id']) && !auth()->user()->hasRole('super_admin')) {
-            abort_unless(auth()->user()->clubs()->where('clubs.id', $data['club_id'])->exists(), 403);
+        if (! empty($data['club_id'])) {
+            $this->authorize('view', Club::findOrFail($data['club_id']));
         }
 
         abort_if($data['visibility'] === 'team' && empty($data['team_id']), 422, 'Team posts brauchen ein Team.');
         abort_if($data['visibility'] === 'organization' && empty($data['club_id']), 422, 'Organization posts brauchen eine Organization.');
 
         if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('posts', 'public');
+            $data['image'] = $this->mediaOptimizer->store($request->file('image'), 'posts')['path'];
         }
 
         $data['attachments'] = $request->file('attachments', []);
@@ -119,8 +147,17 @@ class PostController extends Controller
         $data['content'] ??= '';
         $data['club_id'] = $data['club_id'] ?? null;
         $data['team_id'] = $data['team_id'] ?? null;
+        $data['sport_id'] = $data['sport_id'] ?? null;
+        $data['sport_skill_ids'] = $this->validSkillIdsForSport($data['sport_skill_ids'] ?? [], $data['sport_id']);
 
-        $this->service->create(auth()->user(), $data);
+        $post = $this->service->create(auth()->user(), $data);
+
+        if (in_array($post->post_type, ['knowledge', 'training_drill', 'tactic', 'analysis', 'experience'], true)) {
+            $this->gamification->grant(auth()->user(), 'content_created', $post, [
+                'post_type' => $post->post_type,
+                'sport_id' => $post->sport_id,
+            ]);
+        }
 
         return back()->with('success', 'Beitrag erstellt.');
     }
@@ -133,16 +170,24 @@ class PostController extends Controller
             'club_id' => ['nullable', 'exists:clubs,id'],
             'team_id' => ['nullable', 'exists:teams,id'],
             'visibility' => ['required', Rule::in(Post::VISIBILITIES)],
+            'post_type' => ['required', Rule::in(Post::TYPES)],
+            'sport_id' => ['nullable', 'exists:sports,id'],
+            'sport_skill_ids' => ['nullable', 'array', 'max:8'],
+            'sport_skill_ids.*' => ['integer', 'exists:sport_skills,id'],
             'content' => ['nullable', 'required_without_all:image,attachments', 'string', 'max:5000'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
             'attachments' => ['nullable', 'array', 'max:10'],
-            'attachments.*' => ['file', 'mimes:jpg,jpeg,png,webp,gif,pdf,doc,docx,xls,xlsx,txt,zip', 'max:10240'],
+            'attachments.*' => ['file', 'mimes:jpg,jpeg,png,webp,gif,mp4,mov,webm,ogg,pdf,doc,docx,xls,xlsx,txt,zip', 'max:51200'],
         ]);
 
-        if (!empty($data['team_id'])) {
+        if (! empty($data['team_id'])) {
             $team = Team::findOrFail($data['team_id']);
-            abort_unless($team->users()->where('users.id', auth()->id())->exists(), 403);
+            $this->authorize('view', $team);
             $data['club_id'] = $team->club_id;
+        }
+
+        if (! empty($data['club_id'])) {
+            $this->authorize('view', Club::findOrFail($data['club_id']));
         }
 
         abort_if($data['visibility'] === 'team' && empty($data['team_id']), 422, 'Team posts brauchen ein Team.');
@@ -153,15 +198,19 @@ class PostController extends Controller
                 Storage::disk('public')->delete($post->image);
             }
 
-            $data['image'] = $request->file('image')->store('posts', 'public');
+            $data['image'] = $this->mediaOptimizer->store($request->file('image'), 'posts')['path'];
         }
 
         $data['content'] ??= '';
         $data['club_id'] = $data['club_id'] ?? null;
         $data['team_id'] = $data['team_id'] ?? null;
+        $data['sport_id'] = $data['sport_id'] ?? null;
+        $skillIds = $this->validSkillIdsForSport($data['sport_skill_ids'] ?? [], $data['sport_id']);
         unset($data['attachments']);
+        unset($data['sport_skill_ids']);
 
         $post->update($data);
+        $post->sportSkills()->sync($skillIds);
         $this->service->attachFiles($post, auth()->user(), $request->file('attachments', []));
         $this->service->recordActivity($post, 'post.updated', auth()->user());
 
@@ -184,5 +233,19 @@ class PostController extends Controller
         $post->delete();
 
         return back()->with('success', 'Beitrag gelöscht.');
+    }
+
+    private function validSkillIdsForSport(array $skillIds, mixed $sportId): array
+    {
+        if (! $sportId || empty($skillIds)) {
+            return [];
+        }
+
+        return SportSkill::query()
+            ->where('sport_id', $sportId)
+            ->whereIn('id', $skillIds)
+            ->pluck('id')
+            ->values()
+            ->all();
     }
 }

@@ -29,7 +29,7 @@ class SetLocale
         }
 
         // 4. FINAL FALLBACK
-        if (!in_array($locale, ['de', 'en', 'fr'])) {
+        if (!in_array($locale, ['de', 'en', 'fr', 'ar'])) {
             $locale = 'de';
         }
 
@@ -38,5 +38,4 @@ class SetLocale
         return $next($request);
     }
 }
-
 

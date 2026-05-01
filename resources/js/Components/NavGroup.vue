@@ -16,7 +16,7 @@ const open = ref(false)
 
             <div class="flex items-center gap-2">
                 <i :class="icon"></i>
-                <span>{{ label }}</span>
+                <span>{{ $t(label) }}</span>
             </div>
 
             <i :class="open ? 'las la-angle-down' : 'las la-angle-right'"></i>

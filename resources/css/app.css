@@ -104,6 +104,14 @@
     text-rendering: optimizeLegibility;
   }
 
+  html[dir="rtl"] body {
+    direction: rtl;
+  }
+
+  html[dir="ltr"] body {
+    direction: ltr;
+  }
+
   input,
   select,
   textarea {
@@ -220,4 +228,12 @@
 .bg-white\/10,
 .bg-white\/20 {
     background-color: color-mix(in srgb, var(--card) 70%, transparent) !important;
+}
+
+html[dir="rtl"] .rtl-flip-x {
+    transform: scaleX(-1);
+}
+
+html[dir="rtl"] .search-box {
+    direction: rtl;
 }

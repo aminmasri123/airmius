@@ -132,6 +132,12 @@ class RolesPermissionsSeeder extends Seeder
             ['name' => 'content.create', 'description' => 'Inhalte erstellen'],
             ['name' => 'content.edit', 'description' => 'Inhalte bearbeiten'],
             ['name' => 'content.delete', 'description' => 'Inhalte löschen'],
+            ['name' => 'blog.view', 'description' => 'Blogbeitraege anzeigen'],
+            ['name' => 'blog.create', 'description' => 'Blogbeitraege erstellen'],
+            ['name' => 'blog.update', 'description' => 'Blogbeitraege bearbeiten'],
+            ['name' => 'blog.delete', 'description' => 'Blogbeitraege loeschen'],
+            ['name' => 'blog.publish', 'description' => 'Blogbeitraege veroeffentlichen'],
+            ['name' => 'blog.manage', 'description' => 'Blog-CMS verwalten'],
             ['name' => 'media.upload', 'description' => 'Medien hochladen'],
             ['name' => 'media.delete', 'description' => 'Medien löschen'],
             ['name' => 'seo.manage', 'description' => 'SEO verwalten'],
@@ -174,6 +180,7 @@ class RolesPermissionsSeeder extends Seeder
             ['name' => 'admin', 'description' => 'System Administrator auf Plattform Ebene'],
             ['name' => 'system_admin', 'description' => 'Technischer System Admin'],
             ['name' => 'support', 'description' => 'Support Mitarbeiter für Tickets & Hilfe'],
+            ['name' => 'redaktor', 'description' => 'Website Redaktion für Blog und Inhalte'],
 
             //🏢 CLUB MANAGEMENT
             ['name' => 'club_owner', 'description' => 'Besitzer eines Clubs'],
@@ -243,6 +250,13 @@ class RolesPermissionsSeeder extends Seeder
             'matches.view','matches.create','matches.edit','matches.delete','matches.manage_lineup','matches.report',
             'players.view','players.edit','players.stats.view',
             'analytics.view','logs.view','system.manage',
+            'blog.view','blog.create','blog.update','blog.delete','blog.publish','blog.manage',
+        ]);
+
+        Role::findByName('redaktor')->givePermissionTo([
+            'blog.view',
+            'blog.create',
+            'blog.update',
         ]);
 
         Role::findByName('club_owner')->givePermissionTo([
@@ -280,6 +294,7 @@ class RolesPermissionsSeeder extends Seeder
             'post.create','post.update',
             'file.upload','file.view',
             'follow.user',
+            'clubs.view','teams.view',
         ]);
 
         Role::findByName('academy_manager')->givePermissionTo([
@@ -289,6 +304,7 @@ class RolesPermissionsSeeder extends Seeder
             'post.create','post.update',
             'file.upload','file.view',
             'follow.user',
+            'clubs.view','teams.view',
         ]);
 
         Role::findByName('coach')->givePermissionTo([
@@ -310,6 +326,7 @@ class RolesPermissionsSeeder extends Seeder
             'post.create','post.update',
             'file.upload','file.view',
             'follow.user',
+            'clubs.view','teams.view',
         ]);
 
         Role::findByName('performance_coach')->givePermissionTo([
@@ -318,6 +335,7 @@ class RolesPermissionsSeeder extends Seeder
             'post.create','post.update',
             'file.upload','file.view',
             'follow.user',
+            'clubs.view','teams.view',
         ]);
 
         Role::findByName('fitness_coach')->givePermissionTo([
@@ -326,6 +344,7 @@ class RolesPermissionsSeeder extends Seeder
             'post.create','post.update',
             'file.upload','file.view',
             'follow.user',
+            'clubs.view','teams.view',
         ]);
 
         Role::findByName('team_manager')->givePermissionTo([
@@ -334,6 +353,7 @@ class RolesPermissionsSeeder extends Seeder
             'post.create','post.update',
             'file.upload','file.view',
             'follow.user',
+            'clubs.view','teams.view',
         ]);
 
         Role::findByName('captain')->givePermissionTo([
@@ -342,6 +362,7 @@ class RolesPermissionsSeeder extends Seeder
             'post.create','post.update','post.delete',
             'file.view',
             'follow.user',
+            'clubs.view','teams.view',
         ]);
 
         Role::findByName('player')->givePermissionTo([
@@ -349,12 +370,14 @@ class RolesPermissionsSeeder extends Seeder
             'post.create','post.update','post.delete',
             'file.view',
             'follow.user',
+            'clubs.view','teams.view',
             'training.view',
             'matches.view',
             'players.stats.view',
         ]);
 
         Role::findByName('minor_pending_consent')->givePermissionTo([
+            'clubs.view','teams.view',
             'training.view',
             'matches.view',
         ]);
@@ -363,6 +386,7 @@ class RolesPermissionsSeeder extends Seeder
             'event.join',
             'file.view',
             'follow.user',
+            'clubs.view','teams.view',
             'training.view',
             'matches.view',
             'players.stats.view',
@@ -373,17 +397,20 @@ class RolesPermissionsSeeder extends Seeder
             'post.create','post.update',
             'file.view',
             'follow.user',
+            'clubs.view','teams.view',
         ]);
 
         Role::findByName('guest_player')->givePermissionTo([
             'event.join',
             'file.view',
             'follow.user',
+            'clubs.view','teams.view',
         ]);
 
         Role::findByName('parent')->givePermissionTo([
             'file.view',
             'follow.user',
+            'clubs.view','teams.view',
             'players.view',
             'training.view',
             'matches.view',
@@ -394,6 +421,7 @@ class RolesPermissionsSeeder extends Seeder
         Role::findByName('guardian')->givePermissionTo([
             'file.view',
             'follow.user',
+            'clubs.view','teams.view',
             'players.view',
             'training.view',
             'matches.view',
@@ -404,6 +432,7 @@ class RolesPermissionsSeeder extends Seeder
         Role::findByName('viewer')->givePermissionTo([
             'file.view',
             'follow.user',
+            'clubs.view','teams.view',
         ]);
 
         Role::findByName('data_analyst')->givePermissionTo([
@@ -442,5 +471,8 @@ class RolesPermissionsSeeder extends Seeder
             'api.manage',
             'security.manage',
         ]);
+
+        app()[\Spatie\Permission\PermissionRegistrar::class]
+            ->forgetCachedPermissions();
     }
 }

@@ -22,11 +22,11 @@ class TeamFactory extends Factory
             'club_id' => null,
 
             'sport_type' => fake()->randomElement([
-                'football',
+                'fussball',
                 'basketball',
                 'tennis',
-                'running',
-                'cycling'
+                'strassenlauf',
+                'radsport'
             ]),
         ];
     }

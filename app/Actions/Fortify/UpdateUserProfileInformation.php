@@ -3,7 +3,9 @@
 namespace App\Actions\Fortify;
 
 use App\Models\User;
+use App\Services\ImageService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Laravel\Fortify\Contracts\UpdatesUserProfileInformation;
@@ -25,8 +27,29 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
             'bio' => ['nullable', 'string', 'max:1000'],
         ])->validateWithBag('updateProfileInformation');
 
-        if (isset($input['photo'])) {
+        /* if (isset($input['photo'])) {
             $user->updateProfilePhoto($input['photo']);
+        } */
+
+        if (isset($input['photo'])) {
+
+            $imageService = new ImageService;
+
+            $previousPath = $user->profile_photo_path;
+            $path = "profile/avatars/{$user->id}/".Str::uuid().'.jpg';
+
+            $imageService->upload(
+                $input['photo'],
+                $path,
+                'avatar'
+            );
+
+            if ($previousPath && $previousPath !== $path) {
+                $user->deleteProfilePhotoFiles($previousPath);
+            }
+
+            $user->profile_photo_path = $path;
+            $user->save();
         }
 
         if ($input['email'] !== $user->email &&

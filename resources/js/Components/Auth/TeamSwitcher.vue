@@ -9,7 +9,7 @@ const switchTeam = (id) => {
 
 <template>
 <div class="px-4 mt-4">
-    <div class="text-xs text-gray-500 mb-2">Meine Teams</div>
+    <div class="text-xs text-gray-500 mb-2">{{ $t('My teams') }}</div>
 
     <div class="space-y-2">
         <div

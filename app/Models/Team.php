@@ -12,14 +12,17 @@ class Team extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name','club_id','sport_type'];
+    protected $fillable = ['name','club_id','sport_type','logo','cover_image'];
 
     public const ROLES = ['Coach', 'Captain', 'Player'];
 
 
     public function scopeVisibleTo($query, $user)
     {
-        if ($user->hasAnyRole(\App\Support\Roles::SYSTEM)) {
+        if (
+            $user->hasAnyRole(\App\Support\Roles::FULL_ACCESS)
+            || $user->can('teams.view')
+        ) {
             return $query;
         }
 

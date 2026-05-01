@@ -18,6 +18,12 @@ class FolderPolicy extends BasePolicy
         return $user->can('file.upload') || $this->isClubAdmin($user) || $this->isCoach($user);
     }
 
+    public function view(User $user, Folder $folder)
+    {
+        return $folder->user_id === $user->id
+            || ($user->can('file.view') && $this->canAccessScope($user, $folder));
+    }
+
     public function delete(User $user, Folder $folder)
     {
         return $folder->user_id === $user->id

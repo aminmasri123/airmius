@@ -1,36 +1,280 @@
 {
-    "Anmelden": "Anmelden",
-    "Passwort": "Passwort",
-    "Email": "Email",
-    "Passwort Zurücksetzen": "Passwort Zurücksetzen",
-    "Passwort vergessen? Kein Problem. Teilen Sie uns einfach Ihre E-Mail-Adresse mit und wir senden Ihnen per E-Mail einen Link zum Zurücksetzen des Passworts, über den Sie eine neue auswählen können.": "Passwort vergessen? Kein Problem. Teilen Sie uns einfach Ihre E-Mail-Adresse mit und wir senden Ihnen per E-Mail einen Link zum Zurücksetzen des Passworts, über den Sie eine neue auswählen können.",
-    "Angemeldet bleiben": "Angemeldet bleiben",
-    "Sport Plattform": "Sport Plattform",
-    "Team Management · Kommunikation · Events": "Team Management · Kommunikation · Events",
-    "Hallo!": "Hallo!",
-    "Du erhältst diese E-Mail, weil wir eine Anfrage zum Zurücksetzen des Passworts für dein Konto erhalten haben.": "Du erhältst diese E-Mail, weil wir eine Anfrage zum Zurücksetzen des Passworts für dein Konto erhalten haben.",
-    "Dieser Link läuft in 60 Minuten ab.": "Dieser Link läuft in 60 Minuten ab.",
-    "Beste Grüße, dein Airmius Team": "Beste Grüße, dein Airmius Team",
-    "cta": "Loslegen",
-    "Passwort vergessen?": "Passwort vergessen?",
-    "Neues Kennwort": "Neues Kennwort",
-    "Kennwort bestätigen": "Kennwort bestätigen",
-    "Passwort zurücksetzen": "Passwort zurücksetzen",
-
-    "Anmeldeseite": "Anmeldeseite"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  "Dashboard": "Dashboard",
+  "Vereine & Teams": "Vereine & Teams",
+  "Verwalte Teams": "Verwalte Teams",
+  "Verein erstellen": "Verein erstellen",
+  "Verein suchen": "Verein suchen",
+  "Sportart suchen": "Sportart suchen",
+  "Ort, Stadt, PLZ oder Land": "Ort, Stadt, PLZ oder Land",
+  "TN": "TN",
+  "Suchen": "Suchen",
+  "Teams": "Teams",
+  "Feed": "Feed",
+  "Dateien": "Dateien",
+  "Events": "Events",
+  "Events & Training": "Events & Training",
+  "Statistiken": "Statistiken",
+  "Freunde": "Freunde",
+  "Verfügbarkeit": "Verfügbarkeit",
+  "Fahrgemeinschaften": "Fahrgemeinschaften",
+  "Dateimanager": "Dateimanager",
+  "Benachrichtigungen": "Benachrichtigungen",
+  "Notifications": "Benachrichtigungen",
+  "Equipment": "Equipment",
+  "Einstellungen": "Einstellungen",
+  "Settings": "Einstellungen",
+  "Admin": "Admin",
+  "Users": "Nutzer",
+  "Payments": "Zahlungen",
+  "Invoices": "Rechnungen",
+  "Sponsors": "Sponsoren",
+  "Rollen & Rechte": "Rollen & Rechte",
+  "Blogs": "Blogs",
+  "Gamification": "Gamification",
+  "Profile": "Profil",
+  "Profile Information": "Profilinformationen",
+  "Member": "Mitglied",
+  "Logout": "Abmelden",
+  "My teams": "Meine Teams",
+  "Top Inhalte": "Top Inhalte",
+  "Jobs": "Jobs",
+  "E-Learning": "E-Learning",
+  "Vereine": "Vereine",
+  "Marketplace": "Marketplace",
+  "Anmelden": "Anmelden",
+  "Passwort": "Passwort",
+  "Email": "E-Mail",
+  "Passwort vergessen?": "Passwort vergessen?",
+  "Registrieren": "Registrieren",
+  "Angemeldet bleiben": "Angemeldet bleiben",
+  "Sport Plattform": "Sport Plattform",
+  "Team Management · Kommunikation · Events": "Team Management · Kommunikation · Events",
+  "Passwort Zurücksetzen": "Passwort zurücksetzen",
+  "Passwort zurücksetzen": "Passwort zurücksetzen",
+  "cta": "Loslegen",
+  "common": {
+    "all": "Alle",
+    "none": "Keine",
+    "saved": "Gespeichert",
+    "description": "Beschreibung",
+    "no_description": "Keine Beschreibung"
+  },
+  "actions": {
+    "save": "Speichern",
+    "delete": "Löschen",
+    "toggle": "Umschalten",
+    "join": "Beitreten"
+  },
+  "status": {
+    "online": "Online",
+    "offline": "Offline",
+    "training": "Training",
+    "work": "Arbeit"
+  },
+  "search": {
+    "placeholder": "Suche nach Personen, Teams, Vereinen",
+    "short": "Suche...",
+    "loading": "Suche läuft...",
+    "no_results": "Keine passenden Ergebnisse."
+  },
+  "notifications": {
+    "new": "Neue Benachrichtigung",
+    "empty": "Keine Benachrichtigungen"
+  },
+  "events": {
+    "subtitle": "Training, Spiele, Meetings und öffentliche Termine.",
+    "create": "Event erstellen",
+    "public_scope": "Öffentlich",
+    "private_requires_team": "Private Events brauchen ein Team.",
+    "training_days": "Trainingstage",
+    "next_occurrence": "Nächster Termin",
+    "rsvp": {
+      "yes": "Zusagen",
+      "maybe": "Eventuell",
+      "no": "Absagen"
+    },
+    "fields": {
+      "title": "Titel",
+      "type": "Typ",
+      "visibility": "Sichtbarkeit",
+      "club": "Verein",
+      "team": "Team",
+      "location": "Ort",
+      "notes": "Notizen",
+      "start": "Start",
+      "end": "Ende",
+      "reminder": "Erinnerung",
+      "recurrence": "Wiederholung",
+      "recurrence_end": "Wiederholen bis",
+      "recurrence_days": "Trainingstage"
+    },
+    "placeholders": {
+      "title": "z.B. U17 Training",
+      "location": "Platz, Halle oder Adresse",
+      "notes": "Optional: Treffpunkt, Ausrüstung, Hinweise"
+    },
+    "none": {
+      "club": "Kein Verein",
+      "team": "Kein Team"
+    },
+    "types": {
+      "training": "Training",
+      "match": "Spiel",
+      "meeting": "Besprechung",
+      "public": "Öffentliches Event"
+    },
+    "visibility": {
+      "private": "Nur Team",
+      "organization": "Verein",
+      "public": "Öffentlich"
+    },
+    "recurrence": {
+      "label": "Wiederholung",
+      "none": "Keine Wiederholung",
+      "daily": "Täglich",
+      "weekly": "Wöchentlich",
+      "biweekly": "Alle 2 Wochen",
+      "monthly": "Monatlich"
+    },
+    "weekdays": {
+      "monday": "Montag",
+      "tuesday": "Dienstag",
+      "wednesday": "Mittwoch",
+      "thursday": "Donnerstag",
+      "friday": "Freitag",
+      "saturday": "Samstag",
+      "sunday": "Sonntag"
+    },
+    "weekdays_short": {
+      "monday": "Mo",
+      "tuesday": "Di",
+      "wednesday": "Mi",
+      "thursday": "Do",
+      "friday": "Fr",
+      "saturday": "Sa",
+      "sunday": "So"
+    }
+  },
+  "roles": {
+    "title": "Rollen & Rechte",
+    "subtitle": "Verwalte Rollen, Berechtigungen und die Zuordnung zwischen beiden.",
+    "roles": "Rollen",
+    "summary": "{users} Nutzer, {permissions} Berechtigungen aktiv",
+    "selected_permissions": "Ausgewählte Berechtigungen",
+    "no_permissions_selected": "Noch keine Berechtigung für diese Rolle ausgewählt.",
+    "group_selected": "{selected} von {total} ausgewählt",
+    "new_role": "Neue Rolle",
+    "new_permission": "Neue Berechtigung",
+    "create_role": "Rolle erstellen",
+    "create_permission": "Berechtigung erstellen",
+    "confirm_delete": "Rolle \"{role}\" wirklich löschen?"
+  },
+  "guest": {
+    "cta": {
+      "start": "Kostenlos starten",
+      "explore": "Airmius entdecken"
+    },
+    "top": {
+      "hero": {
+        "title": "Impulse, die deinen Sportalltag besser machen.",
+        "subtitle": "Entdecke kuratierte Inhalte zu Training, Teamorganisation, Vereinsarbeit und digitaler Sportentwicklung."
+      },
+      "preview": {
+        "label": "Empfohlen",
+        "title": "Was heute wichtig ist"
+      },
+      "cards": {
+        "planning": {
+          "title": "Bessere Planung",
+          "text": "Termine, Zusagen und Aufgaben kommen in eine klare Struktur."
+        },
+        "communication": {
+          "title": "Klare Kommunikation",
+          "text": "Weniger Gruppenchaos, mehr Fokus auf das Wesentliche."
+        },
+        "performance": {
+          "title": "Mehr Entwicklung",
+          "text": "Daten und Routinen helfen Teams, Fortschritt sichtbar zu machen."
+        }
+      },
+      "sections": {
+        "latest": "Aktuelle Empfehlungen",
+        "latest_text": "Praxisnahe Inhalte für Trainer, Spieler und Vereinsverantwortliche."
+      },
+      "articles": {
+        "training": {
+          "title": "Training mit weniger Reibung organisieren",
+          "text": "Wie digitale Zusagen, Kalender und Teamrollen den Trainingsalltag entlasten."
+        },
+        "club": {
+          "title": "Vereinsarbeit zentral denken",
+          "text": "Warum eine gemeinsame Plattform den Informationsfluss im Verein verbessert."
+        },
+        "digital": {
+          "title": "Digitalisierung im Breitensport",
+          "text": "Welche Prozesse zuerst digitalisiert werden sollten und wo der Nutzen sofort spuerbar ist."
+        }
+      }
+    },
+    "jobs": {
+      "hero": {
+        "title": "Arbeite mit uns an der Zukunft des Sports.",
+        "subtitle": "Wir bauen Airmius für Sportler, Teams und Vereine. Wenn du Produkt, Sport und Community liebst, bist du hier richtig."
+      },
+      "values": {
+        "sport": {
+          "title": "Nah am Sport",
+          "text": "Wir entwickeln mit echtem Blick auf Kabine, Platz, Verein und Alltag."
+        },
+        "ownership": {
+          "title": "Viel Verantwortung",
+          "text": "Du bekommst Raum, Ideen schnell in Wirkung zu verwandeln."
+        },
+        "team": {
+          "title": "Kleines starkes Team",
+          "text": "Direkte Wege, ehrliches Feedback und Fokus auf gute Arbeit."
+        }
+      },
+      "open_roles": "Offene Rollen",
+      "open_roles_text": "Aktuelle Rollen und Bereiche, in denen wir Unterstuetzung suchen.",
+      "apply": "Interesse melden",
+      "roles": {
+        "frontend": "Frontend Engineer",
+        "growth": "Growth & Partnerships",
+        "content": "Content & Learning"
+      }
+    },
+    "learning": {
+      "hero": {
+        "title": "Lerne, wie moderne Sportorganisation funktioniert.",
+        "subtitle": "Kompakte Lernmodule für Trainer, Teammanager, Spieler und Vereinsverantwortliche."
+      },
+      "start": "Lernbereich starten",
+      "steps": {
+        "learn": "Kurz lernen",
+        "apply": "Direkt anwenden",
+        "improve": "Team verbessern"
+      },
+      "library": "Lernbibliothek",
+      "library_text": "Module für Organisation, Kommunikation, Analyse und sichere digitale Vereinsarbeit.",
+      "courses": {
+        "organization": {
+          "title": "Teamorganisation",
+          "text": "Plane Trainings, Spiele und Aufgaben mit klaren Rollen und Ablaeufen."
+        },
+        "communication": {
+          "title": "Teamkommunikation",
+          "text": "Lerne, wie Nachrichten, Gruppen und Updates sinnvoll strukturiert werden."
+        },
+        "analysis": {
+          "title": "Daten & Auswertung",
+          "text": "Nutze Anwesenheit, Feedback und einfache Kennzahlen für bessere Entscheidungen."
+        },
+        "privacy": {
+          "title": "Datenschutz im Verein",
+          "text": "Verstehe die Grundlagen für sichere und vertrauensvolle digitale Prozesse."
+        }
+      }
+    }
+  }
 }

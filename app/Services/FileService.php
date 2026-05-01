@@ -27,8 +27,12 @@ class FileService
 
     public function delete(File $file): void
     {
-        Storage::disk('public')->delete($file->path);
+        $path = $file->path;
         $file->delete();
+
+        if (! File::where('path', $path)->exists()) {
+            Storage::disk('public')->delete($path);
+        }
     }
 
     private function directoryFor(array $data): string

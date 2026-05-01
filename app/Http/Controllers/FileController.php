@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\File;
 use App\Models\Folder;
 use App\Models\Team;
+use App\Models\User;
 use App\Services\FileService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -25,27 +26,49 @@ class FileController extends Controller
         $this->authorize('viewAny', File::class);
 
         $scope = $this->scopeData($request);
+        $currentFolder = null;
+
+        if ($request->filled('folder_id')) {
+            $currentFolder = Folder::query()
+                ->with('parent:id,name,parent_id')
+                ->where($scope)
+                ->findOrFail($request->integer('folder_id'));
+        }
 
         return Inertia::render('Auth/Dashboard/Files/Index', [
             'files' => File::query()
                 ->with(['user:id,name', 'club:id,name', 'team:id,name', 'event:id,title', 'folder:id,name'])
                 ->where($scope)
+                ->where('folder_id', $currentFolder?->id)
                 ->latest('id')
                 ->get(),
             'folders' => Folder::query()
                 ->with('parent:id,name')
                 ->withCount('files')
                 ->where($scope)
+                ->where('parent_id', $currentFolder?->id)
                 ->orderBy('name')
                 ->get(),
+            'allFolders' => Folder::query()
+                ->where($scope)
+                ->orderBy('name')
+                ->get(['id', 'name', 'parent_id']),
+            'currentFolder' => $currentFolder,
             'scope' => [
                 'type' => $request->input('scope', 'user'),
                 'club_id' => $scope['club_id'] ?? null,
                 'team_id' => $scope['team_id'] ?? null,
                 'event_id' => $scope['event_id'] ?? null,
+                'folder_id' => $currentFolder?->id,
             ],
             'clubs' => Club::query()->visibleTo(auth()->user())->select(['id', 'name'])->orderBy('name')->get(),
             'teams' => Team::query()->visibleTo(auth()->user())->select(['id', 'club_id', 'name'])->orderBy('name')->get(),
+            'users' => User::query()
+                ->where('id', '!=', auth()->id())
+                ->select(['id', 'name', 'email'])
+                ->orderBy('name')
+                ->limit(200)
+                ->get(),
             'events' => Event::query()
                 ->where(function ($query) {
                     $query->whereHas('participants', fn ($q) => $q->where('users.id', auth()->id()))
@@ -106,6 +129,29 @@ class FileController extends Controller
         return back()->with('success', 'Datei gelÃ¶scht.');
     }
 
+    public function share(Request $request, File $file)
+    {
+        $this->authorize('view', $file);
+
+        $data = $request->validate([
+            'target_type' => ['required', Rule::in(['user', 'team', 'club'])],
+            'target_id' => ['required', 'integer'],
+        ]);
+
+        File::firstOrCreate(
+            array_merge($this->targetScope($data['target_type'], (int) $data['target_id']), [
+                'path' => $file->path,
+                'folder_id' => null,
+            ]),
+            [
+                'type' => $file->type,
+                'size' => $file->size,
+            ],
+        );
+
+        return back()->with('success', 'Datei freigegeben.');
+    }
+
     private function scopeData(Request $request): array
     {
         return $this->authorizeScope($request->validate([
@@ -113,6 +159,7 @@ class FileController extends Controller
             'club_id' => ['nullable', 'exists:clubs,id'],
             'team_id' => ['nullable', 'exists:teams,id'],
             'event_id' => ['nullable', 'exists:events,id'],
+            'folder_id' => ['nullable', 'exists:folders,id'],
         ]) + ['scope' => 'user']);
     }
 
@@ -156,6 +203,38 @@ class FileController extends Controller
             'club_id' => $event->resolvedClub()?->id,
             'team_id' => $event->team_id,
             'event_id' => $event->id,
+        ];
+    }
+
+    private function targetScope(string $targetType, int $targetId): array
+    {
+        if ($targetType === 'team') {
+            $team = Team::visibleTo(auth()->user())->findOrFail($targetId);
+
+            return [
+                'user_id' => auth()->id(),
+                'club_id' => $team->club_id,
+                'team_id' => $team->id,
+                'event_id' => null,
+            ];
+        }
+
+        if ($targetType === 'club') {
+            $club = Club::visibleTo(auth()->user())->findOrFail($targetId);
+
+            return [
+                'user_id' => auth()->id(),
+                'club_id' => $club->id,
+                'team_id' => null,
+                'event_id' => null,
+            ];
+        }
+
+        return [
+            'user_id' => User::findOrFail($targetId)->id,
+            'club_id' => null,
+            'team_id' => null,
+            'event_id' => null,
         ];
     }
 }

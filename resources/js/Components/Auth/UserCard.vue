@@ -7,7 +7,6 @@ const page = usePage()
 const user = page.props.auth.user
 
 const open = ref(false)
-
 const initials = (name) => (name || '?')
     .split(' ')
     .slice(0, 2)
@@ -32,8 +31,8 @@ const logout = () => {
             <!-- Avatar -->
             <div>
                 <img
-                    v-if="user.profile_photo_url"
-                    :src="user.profile_photo_url"
+                    v-if="user.profile_photo_thumb"
+                    :src="user.profile_photo_thumb"
                     :alt="user.name"
                     class="h-10 w-10 rounded-full object-cover"
                 />
@@ -46,9 +45,9 @@ const logout = () => {
             </div>
 
             <!-- Name -->
-            <div class="hidden sm:block text-left">
+            <div class="hidden text-start sm:block">
                 <div class="text-sm font-semibold">{{ user.name }}</div>
-                <div class="text-xs text-secondary">{{ user.roles?.[0] || 'Mitglied' }}</div>
+                <div class="text-xs text-secondary">{{ user.roles?.[0] || $t('Member') }}</div>
             </div>
 
             <i class="las la-chevron-down text-lg text-secondary"></i>
@@ -57,14 +56,21 @@ const logout = () => {
         <!-- Dropdown -->
         <div
             v-if="open"
-            class="absolute right-0 mt-2 w-48 rounded-xl border border-border bg-card shadow-lg z-50"
+            class="absolute end-0 mt-2 w-48 rounded-xl border border-border bg-card shadow-lg z-50"
         >
-            <Link
+            <!-- <Link
                 :href="route('profile.show')"
                 class="block px-4 py-2 text-sm hover:bg-muted"
                 @click="open = false"
             >
-                Profil
+                {{ $t('Profile') }}
+            </Link> -->
+            <Link
+                :href="route('auth.users.show', user.id)"
+                class="block px-4 py-2 text-sm hover:bg-muted"
+                @click="open = false"
+            >
+                {{ $t('Profile') }}
             </Link>
 
             <Link
@@ -72,14 +78,14 @@ const logout = () => {
                 class="block px-4 py-2 text-sm hover:bg-muted"
                 @click="open = false"
             >
-                Einstellungen
+                {{ $t('Settings') }}
             </Link>
 
             <button
                 @click="logout"
-                class="w-full text-left px-4 py-2 text-sm hover:bg-muted"
+                class="w-full px-4 py-2 text-start text-sm hover:bg-muted"
             >
-                Logout
+                {{ $t('Logout') }}
             </button>
         </div>
     </div>

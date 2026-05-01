@@ -9,7 +9,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (Schema::hasColumn('folders', 'club_id')) {
+        if (Schema::hasColumn('folders', 'club_id') && DB::getDriverName() === 'mysql') {
             DB::statement('ALTER TABLE folders MODIFY club_id BIGINT UNSIGNED NULL');
         }
 

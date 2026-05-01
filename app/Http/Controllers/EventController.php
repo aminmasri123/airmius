@@ -6,9 +6,11 @@ use App\Models\Club;
 use App\Models\Event;
 use App\Models\Team;
 use App\Services\EventService;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class EventController extends Controller
@@ -22,7 +24,14 @@ class EventController extends Controller
         $this->authorize('viewAny', Event::class);
 
         $events = Event::query()
-            ->with(['team:id,name,club_id', 'club:id,name', 'conversation:id', 'participants:id,name'])
+            ->with([
+                'team:id,name,club_id',
+                'club:id,name',
+                'conversation:id',
+                'participants' => fn ($query) => $query
+                    ->where('users.id', $request->user()->id)
+                    ->select('users.id', 'name'),
+            ])
             ->withCount(['comments', 'participants'])
             ->where(function ($query) use ($request) {
                 $query->where('visibility', 'public')
@@ -31,7 +40,11 @@ class EventController extends Controller
                     ->orWhereHas('team.club.users', fn ($q) => $q->where('users.id', $request->user()->id));
             })
             ->orderBy('start_time')
-            ->get();
+            ->get()
+            ->each(fn (Event $event) => $event->setAttribute(
+                'current_participant_status',
+                $event->participants->first()?->pivot?->status,
+            ));
 
         return Inertia::render('Auth/Dashboard/Events/Index', [
             'events' => $events,
@@ -161,13 +174,38 @@ class EventController extends Controller
             'location' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
             'recurring' => ['nullable', 'string', 'max:80'],
-            'recurrence_ends_at' => ['nullable', 'date', 'after_or_equal:start_time'],
+            'recurrence_days' => ['nullable', 'array'],
+            'recurrence_days.*' => ['integer', Rule::in([0, 1, 2, 3, 4, 5, 6])],
+            'recurrence_ends_at' => ['nullable', 'date'],
             'reminder_at' => ['nullable', 'date', 'before_or_equal:start_time'],
+            'event_timezone' => ['nullable', 'timezone'],
         ]);
+
+        if (in_array($data['recurring'] ?? null, ['weekly', 'biweekly'], true) && empty($data['recurrence_days'])) {
+            throw ValidationException::withMessages([
+                'recurrence_days' => 'Bitte mindestens einen Wochentag auswählen.',
+            ]);
+        }
+
+        if (! empty($data['recurrence_ends_at'])) {
+            $startDate = CarbonImmutable::parse($data['start_time'])->startOfDay();
+            $endDate = CarbonImmutable::parse($data['recurrence_ends_at'])->startOfDay();
+
+            if ($endDate->lt($startDate)) {
+                throw ValidationException::withMessages([
+                    'recurrence_ends_at' => 'Das Wiederholungsende muss nach dem Startdatum liegen.',
+                ]);
+            }
+        }
 
         if (! empty($data['team_id'])) {
             $team = Team::findOrFail($data['team_id']);
+            $this->authorize('view', $team);
             $data['club_id'] = $team->club_id;
+        }
+
+        if (! empty($data['club_id'])) {
+            $this->authorize('view', Club::findOrFail($data['club_id']));
         }
 
         abort_if($data['visibility'] === 'private' && empty($data['team_id']), 422, 'Private Events brauchen ein Team.');

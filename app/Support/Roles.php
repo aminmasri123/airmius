@@ -3,12 +3,19 @@ namespace App\Support;
 
 class Roles
 {
+    public const FULL_ACCESS = [
+        'super_admin',
+        'admin',
+        'system_admin',
+    ];
+
     // 👑 SYSTEM (GLOBAL)
     public const SYSTEM = [
         'super_admin',      // Globaler Systemadministrator mit Vollzugriff
         'admin',            // System Administrator auf Plattform Ebene
         'system_admin',     // Technischer System Admin
         'support',          // Support Mitarbeiter für Tickets & Hilfe
+        'redaktor',         // Website Redaktion für Blog und Inhalte
     ];
 
     // 🏢 CLUB MANAGEMENT
@@ -76,6 +83,7 @@ class Roles
             ['name' => 'admin', 'description' => 'System Administrator auf Plattform Ebene'],
             ['name' => 'system_admin', 'description' => 'Technischer System Admin'],
             ['name' => 'support', 'description' => 'Support Mitarbeiter für Tickets & Hilfe'],
+            ['name' => 'redaktor', 'description' => 'Website Redaktion für Blog und Inhalte'],
 
             // 🏢 CLUB MANAGEMENT
             ['name' => 'club_owner', 'description' => 'Besitzer eines Clubs'],

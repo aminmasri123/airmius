@@ -3,31 +3,63 @@
 namespace App\Http\Controllers;
 
 use App\Models\Club;
+use App\Models\Post;
+use App\Models\Sport;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\TeamJoinRequest;
 use App\Models\User;
+use App\Notifications\ExternalTeamInvitation;
+use App\Services\MediaOptimizer;
+use App\Support\Roles;
 use App\Support\AppNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class TeamController extends Controller
 {
     use AuthorizesRequests;
 
+    public const CLUB_MEMBER_ROLES = ['owner', 'admin', 'manager', 'member'];
+
+    public function __construct(private MediaOptimizer $mediaOptimizer) {}
+
     public function index()
     {
         $this->authorize('viewAny', Team::class);
 
+        $user = auth()->user();
+        $filters = request()->only(['search', 'sport_type', 'location']);
         $clubs = Club::query()
-            ->visibleTo(auth()->user())
+            ->where(function ($query) use ($user) {
+                $query->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id))
+                    ->orWhereHas('teams.users', fn ($userQuery) => $userQuery->where('users.id', $user->id));
+            })
+            ->when($filters['search'] ?? null, fn ($query, $search) => $query->where('name', 'like', "%{$search}%"))
+            ->when($filters['sport_type'] ?? null, fn ($query, $sport) => $query->where(function ($query) use ($sport, $user) {
+                $query->where('sport_type', 'like', "%{$sport}%")
+                    ->orWhereHas('teams', fn ($teamQuery) => $teamQuery
+                        ->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id))
+                        ->where('sport_type', 'like', "%{$sport}%"));
+            }))
+            ->when($filters['location'] ?? null, fn ($query, $location) => $query->where(function ($query) use ($location) {
+                $query->where('city', 'like', "%{$location}%")
+                    ->orWhere('postal_code', 'like', "%{$location}%")
+                    ->orWhere('country', 'like', "%{$location}%");
+            }))
             ->orderBy('name')
             ->with([
                 'admins:id,name,email',
+                'users:id,name,email,profile_photo_path',
                 'sponsors',
+                'jobs' => fn ($query) => $query->latest('id'),
                 'teams' => fn ($query) => $query
                     ->withCount('users')
                     ->with([
@@ -40,7 +72,20 @@ class TeamController extends Controller
                             ->with('user:id,name,email'),
                     ]),
             ])
-            ->get();
+            ->get()
+            ->each(function (Club $club) use ($user) {
+                $club->setAttribute('can_manage', $user->can('update', $club));
+                $club->setAttribute('can_delete', $user->can('delete', $club));
+                $teams = $club->can_manage
+                    ? $club->teams
+                    : $club->teams->filter(fn (Team $team) => $team->users->contains('id', $user->id))->values();
+
+                $teams->each(function (Team $team) use ($user) {
+                    $team->setAttribute('can_manage', $user->can('update', $team));
+                    $team->setAttribute('can_delete', $user->can('delete', $team));
+                });
+                $club->setRelation('teams', $teams);
+            });
         return Inertia::render('Auth/Dashboard/Teams/Index', [
             'clubs' => $clubs,
             'availableUsers' => User::query()
@@ -49,6 +94,13 @@ class TeamController extends Controller
                 ->limit(200)
                 ->get(),
             'teamRoles' => Team::ROLES,
+            'clubRoles' => self::CLUB_MEMBER_ROLES,
+            'filters' => $filters,
+            'sports' => Sport::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name', 'slug', 'category']),
         ]);
     }
 
@@ -59,21 +111,41 @@ class TeamController extends Controller
         $data = $request->validate([
             'club_id' => ['required', 'exists:clubs,id'],
             'name' => ['required', 'string', 'max:255'],
-            'sport_type' => ['nullable', 'string', 'max:80'],
+            'sport_type' => ['nullable', 'string', 'max:120'],
         ]);
 
         $club = Club::findOrFail($data['club_id']);
 
+        $user = $request->user();
+
         abort_unless(
-            $club->users()->where('users.id', auth()->id())->exists() || auth()->user()->can('org.manage'),
+            $club->users()->where('users.id', $user->id)->exists()
+                || $user->hasAnyRole(Roles::FULL_ACCESS)
+                || $user->can('org.manage'),
             403
         );
 
-        Team::create([
-            'name' => $data['name'],
-            'club_id' => $club->id,
-            'sport_type' => $data['sport_type'] ?? 'football',
-        ]);
+        DB::transaction(function () use ($club, $data, $user) {
+            $team = Team::firstOrCreate(
+                [
+                    'club_id' => $club->id,
+                    'name' => $data['name'],
+                ],
+                [
+                    'sport_type' => $data['sport_type'] ?? 'fussball',
+                ],
+            );
+
+            if (! $team->wasRecentlyCreated) {
+                $team->update([
+                    'sport_type' => $data['sport_type'] ?? $team->sport_type,
+                ]);
+            }
+
+            $team->users()->syncWithoutDetaching([
+                $user->id => ['role' => 'Coach'],
+            ]);
+        });
 
         return back()->with('success', 'Team erstellt');
     }
@@ -84,7 +156,7 @@ class TeamController extends Controller
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'sport_type' => ['nullable', 'string', 'max:80'],
+            'sport_type' => ['nullable', 'string', 'max:120'],
         ]);
 
         $team->update([
@@ -95,11 +167,94 @@ class TeamController extends Controller
         return back()->with('success', 'Team aktualisiert');
     }
 
-    public function show(Team $team)
+    public function show(Request $request, Team $team)
     {
         $this->authorize('view', $team);
 
-        return redirect()->route('auth.teams.index');
+        $viewer = $request->user();
+        $isMember = $team->users()->where('users.id', $viewer->id)->exists();
+        $hasPendingJoinRequest = $team->joinRequests()
+            ->where('user_id', $viewer->id)
+            ->where('status', 'pending')
+            ->exists();
+        $canManage = $viewer->can('update', $team);
+
+        $team->loadCount(['users', 'events', 'files']);
+        $team->load([
+            'club:id,name,logo,cover_image',
+            'users' => fn ($query) => $query
+                ->select('users.id', 'name', 'email', 'profile_photo_path')
+                ->orderBy('name')
+                ->limit(18),
+        ]);
+
+        $posts = Post::query()
+            ->where('team_id', $team->id)
+            ->where(function ($query) use ($viewer, $isMember) {
+                $query->where('visibility', 'public')
+                    ->orWhere('user_id', $viewer->id)
+                    ->when($isMember, fn ($query) => $query->orWhere('visibility', 'team'));
+            })
+            ->with(['user:id,name,profile_photo_path', 'club:id,name'])
+            ->withCount(['comments', 'likes'])
+            ->latest('id')
+            ->limit(8)
+            ->get();
+
+        return Inertia::render('Auth/Dashboard/Teams/Profile', [
+            'teamProfile' => [
+                'id' => $team->id,
+                'name' => $team->name,
+                'sport_type' => $team->sport_type,
+                'logo' => $team->logo,
+                'cover_image' => $team->cover_image,
+                'club' => $team->club,
+                'users_count' => $team->users_count,
+                'events_count' => $team->events_count,
+                'files_count' => $team->files_count,
+                'members' => $team->users,
+            ],
+            'posts' => $posts,
+            'viewer' => [
+                'is_member' => $isMember,
+                'has_pending_join_request' => $hasPendingJoinRequest,
+                'can_manage' => $canManage,
+            ],
+        ]);
+    }
+
+    public function updateImages(Request $request, Team $team)
+    {
+        $this->authorize('update', $team);
+
+        $data = $request->validate([
+            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'cover_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
+        ]);
+
+        abort_unless($request->hasFile('logo') || $request->hasFile('cover_image'), 422);
+
+        $updates = [];
+
+        if ($request->hasFile('logo')) {
+            if ($team->logo) {
+                Storage::disk('public')->delete($team->logo);
+            }
+
+            $updates['logo'] = $this->mediaOptimizer->store($request->file('logo'), 'teams/'.$team->id.'/profile')['path'];
+        }
+
+        if ($request->hasFile('cover_image')) {
+            if ($team->cover_image) {
+                Storage::disk('public')->delete($team->cover_image);
+            }
+
+            $updates['cover_image'] = $this->mediaOptimizer->store($request->file('cover_image'), 'teams/'.$team->id.'/profile')['path'];
+        }
+
+        $team->update($updates);
+
+        return back()->with('success', 'Teambilder aktualisiert.');
     }
 
     public function destroy(Team $team)
@@ -113,35 +268,65 @@ class TeamController extends Controller
 
     public function invite(Request $request, Team $team)
     {
-        $this->authorize('update', $team);
-        abort_unless($request->user()->can('team.invite'), 403);
+        $this->authorize('invite', $team);
 
         $data = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
+            'email' => ['required_without:user_id', 'nullable', 'email', 'max:255'],
+            'user_id' => ['nullable', 'exists:users,id'],
             'role' => ['required', Rule::in(Team::ROLES)],
         ]);
 
-        abort_if($team->users()->where('users.id', $data['user_id'])->exists(), 422, 'User ist bereits im Team.');
+        $recipient = ! empty($data['user_id'])
+            ? User::findOrFail($data['user_id'])
+            : User::where('email', strtolower($data['email']))->first();
+
+        if ($recipient) {
+            if ($team->users()->where('users.id', $recipient->id)->exists()) {
+                throw ValidationException::withMessages([
+                    'email' => 'User ist bereits im Team.',
+                ]);
+            }
+
+            $invitation = TeamInvitation::updateOrCreate(
+                ['team_id' => $team->id, 'recipient_id' => $recipient->id],
+                [
+                    'inviter_id' => $request->user()->id,
+                    'email' => $recipient->email,
+                    'token' => Str::random(64),
+                    'role' => $data['role'],
+                    'status' => 'pending',
+                    'responded_at' => null,
+                ],
+            );
+
+            AppNotification::send($recipient->id, 'team.invite', [
+                'title' => 'Einladung zu '.$team->name,
+                'body' => 'Du wurdest als '.$data['role'].' eingeladen.',
+                'url' => route('auth.teams.index'),
+                'team_id' => $team->id,
+                'invitation_id' => $invitation->id,
+            ]);
+
+            return back()->with('success', 'Einladung gesendet.');
+        }
+
+        $email = strtolower($data['email']);
 
         $invitation = TeamInvitation::updateOrCreate(
-            ['team_id' => $team->id, 'recipient_id' => $data['user_id']],
+            ['team_id' => $team->id, 'email' => $email],
             [
                 'inviter_id' => $request->user()->id,
+                'recipient_id' => null,
+                'token' => Str::random(64),
                 'role' => $data['role'],
                 'status' => 'pending',
                 'responded_at' => null,
             ],
         );
 
-        AppNotification::send($data['user_id'], 'team.invite', [
-            'title' => 'Einladung zu '.$team->name,
-            'body' => 'Du wurdest als '.$data['role'].' eingeladen.',
-            'url' => route('auth.teams.index'),
-            'team_id' => $team->id,
-            'invitation_id' => $invitation->id,
-        ]);
+        Notification::route('mail', $email)->notify(new ExternalTeamInvitation($invitation->load('team')));
 
-        return back()->with('success', 'Einladung gesendet.');
+        return back()->with('success', 'Einladung per E-Mail gesendet.');
     }
 
     public function acceptInvitation(Request $request, TeamInvitation $invitation)
@@ -167,8 +352,38 @@ class TeamController extends Controller
         return back()->with('success', 'Einladung angenommen.');
     }
 
+    public function acceptInvitationByToken(Request $request, string $token)
+    {
+        $invitation = TeamInvitation::query()
+            ->where('token', $token)
+            ->where('status', 'pending')
+            ->firstOrFail();
+
+        abort_unless(strtolower((string) $invitation->email) === strtolower($request->user()->email), 403);
+
+        DB::transaction(function () use ($invitation, $request) {
+            $invitation->team->users()->syncWithoutDetaching([
+                $request->user()->id => ['role' => $invitation->role],
+            ]);
+
+            $invitation->team->club->users()->syncWithoutDetaching([
+                $request->user()->id => ['role' => 'member'],
+            ]);
+
+            $invitation->update([
+                'recipient_id' => $request->user()->id,
+                'status' => 'accepted',
+                'responded_at' => now(),
+            ]);
+        });
+
+        return redirect()->route('auth.teams.index')->with('success', 'Einladung angenommen.');
+    }
+
     public function requestJoin(Request $request, Team $team)
     {
+        $this->authorize('view', $team);
+
         abort_if($team->users()->where('users.id', $request->user()->id)->exists(), 422, 'Du bist bereits im Team.');
 
         TeamJoinRequest::updateOrCreate(
@@ -181,8 +396,7 @@ class TeamController extends Controller
 
     public function approveJoinRequest(Request $request, TeamJoinRequest $joinRequest)
     {
-        $this->authorize('update', $joinRequest->team);
-        abort_unless($request->user()->can('team.invite'), 403);
+        $this->authorize('invite', $joinRequest->team);
         abort_unless($joinRequest->status === 'pending', 422);
 
         $data = $request->validate([

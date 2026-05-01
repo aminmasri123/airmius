@@ -10,11 +10,40 @@ class Club extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'logo', 'owner_id'];
+    protected static function booted(): void
+    {
+        static::created(function (Club $club) {
+            if (! $club->owner_id) {
+                return;
+            }
+
+            $club->users()->syncWithoutDetaching([
+                $club->owner_id => ['role' => 'owner'],
+            ]);
+        });
+    }
+
+    protected $fillable = [
+        'name',
+        'sport_type',
+        'logo',
+        'cover_image',
+        'country',
+        'street',
+        'house_number',
+        'postal_code',
+        'city',
+        'state',
+        'owner_id',
+    ];
 
     public function scopeVisibleTo($query, $user)
     {
-        if ($user->hasAnyRole(Roles::SYSTEM)) {
+        if (
+            $user->hasAnyRole(Roles::FULL_ACCESS)
+            || $user->can('clubs.view')
+            || $user->can('teams.view')
+        ) {
             return $query;
         }
 
@@ -41,6 +70,11 @@ class Club extends Model
     public function sponsors()
     {
         return $this->hasMany(Sponsor::class);
+    }
+
+    public function jobs()
+    {
+        return $this->hasMany(OrganizationJob::class);
     }
 
     public function admins()

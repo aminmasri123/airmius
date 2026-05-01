@@ -13,6 +13,8 @@ class TeamInvitation extends Model
         'team_id',
         'inviter_id',
         'recipient_id',
+        'email',
+        'token',
         'role',
         'status',
         'responded_at',

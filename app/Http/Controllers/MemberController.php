@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -12,12 +13,14 @@ use Spatie\Permission\Models\Role;
 
 class MemberController extends Controller
 {
+    use AuthorizesRequests;
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        abort_unless($request->user()->can('user.manage') || $request->user()->can('users.view'), 403);
+        $this->authorize('viewAny', User::class);
 
         $search = trim((string) $request->input('search', ''));
 
@@ -46,7 +49,7 @@ class MemberController extends Controller
      */
     public function create()
     {
-        abort_unless(request()->user()->can('user.manage') || request()->user()->can('users.create'), 403);
+        $this->authorize('create', User::class);
 
         return Inertia::render('Auth/Dashboard/Users/Create');
     }
@@ -56,7 +59,7 @@ class MemberController extends Controller
      */
     public function store(Request $request)
     {
-        abort_unless($request->user()->can('user.manage') || $request->user()->can('users.create'), 403);
+        $this->authorize('create', User::class);
 
         $request->validate([
             'name' => 'required|string|max:255',
@@ -88,9 +91,9 @@ class MemberController extends Controller
      */
     public function edit(User $user)
     {
-        abort_unless(request()->user()->can('user.manage') || request()->user()->can('users.edit'), 403);
+        $this->authorize('update', $user);
 
-        $canManageRoles = request()->user()->can('user.manage') || request()->user()->can('users.assign_roles');
+        $canManageRoles = request()->user()->can('assignRoles', $user);
 
         return Inertia::render('Auth/Dashboard/Users/Edit', [
             'user' => array_merge($user->only(['id', 'name', 'email', 'profile_visibility', 'bio']), [
@@ -112,9 +115,9 @@ class MemberController extends Controller
      */
     public function update(Request $request, User $user)
     {
-        abort_unless($request->user()->can('user.manage') || $request->user()->can('users.edit'), 403);
+        $this->authorize('update', $user);
 
-        $canManageRoles = $request->user()->can('user.manage') || $request->user()->can('users.assign_roles');
+        $canManageRoles = $request->user()->can('assignRoles', $user);
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -144,7 +147,7 @@ class MemberController extends Controller
      */
     public function destroy(User $user)
     {
-        abort_unless(request()->user()->can('user.manage') || request()->user()->can('users.delete'), 403);
+        $this->authorize('delete', $user);
 
         $user->delete();
 

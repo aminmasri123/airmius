@@ -20,15 +20,11 @@ return new class extends Migration
             if (! Schema::hasColumn('event_participants', 'created_at')) {
                 $table->timestamps();
             }
-
-            $table->unique(['event_id', 'user_id']);
         });
     }
 
     public function down(): void
     {
-        Schema::table('event_participants', function (Blueprint $table) {
-            $table->dropUnique(['event_id', 'user_id']);
-        });
+        //
     }
 };

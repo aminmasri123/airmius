@@ -41,7 +41,7 @@ const isActive = computed(() => {
         >
             <span class="flex items-center">
                 <i :class="icon" class="mr-3 la-lg"></i>
-                {{ label }}
+                {{ $t(label) }}
             </span>
             <i :class="isOpen ? 'las la-chevron-up' : 'las la-chevron-down'" class="la-lg"></i>
         </button>
@@ -54,7 +54,7 @@ const isActive = computed(() => {
         >
             <span>
                 <i :class="icon" class="mr-3 la-lg"></i>
-                {{ label }}
+                {{ $t(label) }}
             </span>
             <span v-if="badge" class="rounded-full bg-buttonPrimary px-2 py-0.5 text-xs font-semibold text-buttonTextPrimary">
                 {{ badge }}
@@ -69,7 +69,7 @@ const isActive = computed(() => {
                 class="block px-4 py-2 rounded text-secondary hover:bg-muted hover:text-card transition-colors duration-200"
                 :class="{ 'bg-white/10 text-white': page.url === sub.href }"
             >
-                {{ sub.label }}
+                {{ $t(sub.label) }}
             </Link>
         </div>
     </div>

@@ -14,6 +14,7 @@ import TextInput from '@/Components/TextInput.vue';
 const form = useForm({
     name: '',
     email: '',
+    country: 'DE',
     birth_date: '',
     guardian_email: '',
     password: '',
@@ -93,6 +94,27 @@ const submit = () => {
                     autocomplete="bday"
                 />
                 <InputError class="mt-2" :message="form.errors.birth_date" />
+            </div>
+
+            <div class="mt-4">
+                <InputLabel for="country" value="Land" />
+                <select
+                    id="country"
+                    v-model="form.country"
+                    class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary"
+                    required
+                    autocomplete="country"
+                >
+                    <option value="DE">Deutschland</option>
+                    <option value="AT">Österreich</option>
+                    <option value="CH">Schweiz</option>
+                    <option value="FR">Frankreich</option>
+                    <option value="NL">Niederlande</option>
+                    <option value="BE">Belgien</option>
+                    <option value="TR">Türkei</option>
+                    <option value="US">USA</option>
+                </select>
+                <InputError class="mt-2" :message="form.errors.country" />
             </div>
 
             <div v-if="requiresGuardianConsent" class="mt-4">

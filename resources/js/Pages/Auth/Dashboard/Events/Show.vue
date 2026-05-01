@@ -12,6 +12,23 @@ const props = defineProps({
 
 const commentForm = useForm({ content: '' })
 
+const formatDateTime = (date) => new Intl.DateTimeFormat('de-DE', {
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short',
+}).format(new Date(date))
+
+const formatDate = (date) => new Intl.DateTimeFormat('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZoneName: 'short',
+}).format(new Date(date))
+
 const setStatus = (status) => {
     router.post(route('auth.events.join', props.event.id), { status }, { preserveScroll: true })
 }
@@ -33,7 +50,7 @@ const submitComment = () => {
                 <div>
                     <h1 class="text-2xl font-semibold text-primary">{{ event.title }}</h1>
                     <p class="mt-1 text-sm text-secondary">{{ event.type }} · {{ event.visibility }}</p>
-                    <p class="mt-3 text-sm text-primary">{{ new Date(event.start_time).toLocaleString() }}</p>
+                    <p class="mt-3 text-sm text-primary">{{ formatDateTime(event.start_time) }}</p>
                     <p v-if="event.location" class="text-sm text-secondary">{{ event.location }}</p>
                 </div>
                 <Link
@@ -47,8 +64,8 @@ const submitComment = () => {
             <p v-if="event.notes" class="mt-4 whitespace-pre-line text-sm text-primary">{{ event.notes }}</p>
             <div class="mt-4 grid gap-2 text-sm text-secondary sm:grid-cols-3">
                 <div>Recurring: {{ event.recurring || 'none' }}</div>
-                <div>Reminder: {{ event.reminder_at ? new Date(event.reminder_at).toLocaleString() : 'none' }}</div>
-                <div>Until: {{ event.recurrence_ends_at ? new Date(event.recurrence_ends_at).toLocaleDateString() : 'none' }}</div>
+                <div>Reminder: {{ event.reminder_at ? formatDateTime(event.reminder_at) : 'none' }}</div>
+                <div>Until: {{ event.recurrence_ends_at ? formatDate(event.recurrence_ends_at) : 'none' }}</div>
             </div>
         </section>
 

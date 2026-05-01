@@ -25,19 +25,18 @@ class Event extends Model
         'location',
         'notes',
         'recurring',
+        'recurrence_days',
         'recurrence_ends_at',
         'reminder_at',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'start_time' => 'datetime',
-            'end_time' => 'datetime',
-            'recurrence_ends_at' => 'datetime',
-            'reminder_at' => 'datetime',
-        ];
-    }
+  protected $casts = [
+    'start_time' => 'datetime',
+    'end_time' => 'datetime',
+    'recurrence_days' => 'array',
+    'recurrence_ends_at' => 'datetime',
+    'reminder_at' => 'datetime',
+];
 
     public function club()
     {

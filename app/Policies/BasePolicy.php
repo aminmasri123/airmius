@@ -16,9 +16,9 @@ class BasePolicy
     {
         //
     }
-     public function before($user, $ability)
+    public function before($user, $ability)
     {
-        if ($this->isSystem($user)) {
+        if ($this->hasFullAccess($user)) {
             return true;
         }
     }
@@ -28,7 +28,12 @@ class BasePolicy
         return $user->hasAnyRole($roles);
     }
 
-   protected function isSystem(User $user)
+    protected function hasFullAccess(User $user)
+    {
+        return $user->hasAnyRole(Roles::FULL_ACCESS);
+    }
+
+    protected function isSystem(User $user)
     {
         return $user->hasAnyRole(Roles::SYSTEM);
     }
@@ -61,5 +66,34 @@ class BasePolicy
         }
 
         return $club->users()->where('user_id', $user->id)->exists();
+    }
+
+    protected function managesClub(User $user, $club): bool
+    {
+        if (! $club) {
+            return false;
+        }
+
+        return $this->hasFullAccess($user)
+            || $club->owner_id === $user->id
+            || $club->users()
+                ->where('users.id', $user->id)
+                ->wherePivotIn('role', ['owner', 'admin', 'manager'])
+                ->exists()
+            || ($user->can('org.manage') && $this->inClub($user, $club));
+    }
+
+    protected function managesTeam(User $user, $team): bool
+    {
+        if (! $team) {
+            return false;
+        }
+
+        return $this->managesClub($user, $team->club)
+            || $team->users()
+                ->where('users.id', $user->id)
+                ->wherePivotIn('role', ['Coach', 'Captain'])
+                ->exists()
+            || ($user->can('team.update') && $team->users()->where('users.id', $user->id)->exists());
     }
 }

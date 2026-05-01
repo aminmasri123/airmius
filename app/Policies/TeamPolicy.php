@@ -11,33 +11,40 @@ class TeamPolicy extends BasePolicy
     public function viewAny(User $user)
     {
         return $user->teams()->exists()
-            || $this->isCoach($user)
-            || $this->isClubAdmin($user);
+            || $user->clubs()->exists()
+            || $user->can('teams.view')
+            || $user->can('clubs.view')
+            || $this->hasFullAccess($user);
     }
 
     public function view(User $user, Team $team)
     {
-        return $this->inClub($user, $team->club);
+        return $this->hasFullAccess($user)
+            || $user->can('teams.view')
+            || $team->users()->where('users.id', $user->id)->exists()
+            || $this->inClub($user, $team->club);
     }
 
     public function create(User $user)
     {
         return $user->can('team.create')
-            || $this->isClubAdmin($user)
-            || $this->isCoach($user);
+            || $user->can('teams.create');
     }
 
     public function update(User $user, Team $team)
     {
-        return ($user->can('team.update') && $this->inClub($user, $team->club))
-            || $this->isClubAdmin($user)
-            || $this->isCoach($user)
-            || $user->hasRole('team_manager');
+        return $this->managesTeam($user, $team);
+    }
+
+    public function invite(User $user, Team $team)
+    {
+        return ($user->can('team.invite') || $user->can('teams.manage_players'))
+            && $this->managesTeam($user, $team);
     }
 
     public function delete(User $user, Team $team)
     {
-        return ($user->can('team.delete') && $this->inClub($user, $team->club))
-            || $this->isClubAdmin($user);
+        return $this->managesClub($user, $team->club)
+            || (($user->can('team.delete') || $user->can('teams.delete')) && $this->managesTeam($user, $team));
     }
 }

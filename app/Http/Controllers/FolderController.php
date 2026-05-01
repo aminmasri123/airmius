@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Club;
 use App\Models\Event;
+use App\Models\File;
 use App\Models\Folder;
 use App\Models\Team;
+use App\Models\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -95,14 +97,23 @@ class FolderController extends Controller
     {
         $this->authorize('delete', $folder);
 
-        foreach ($folder->files as $file) {
-            // optional: Storage::delete($file->path);
-            $file->delete();
-        }
-
-        $folder->delete();
+        $this->deleteTree($folder);
 
         return back()->with('success', 'Ordner und Dateien gelöscht.');
+    }
+
+    public function share(Request $request, Folder $folder)
+    {
+        $this->authorize('view', $folder);
+
+        $data = $request->validate([
+            'target_type' => ['required', Rule::in(['user', 'team', 'club'])],
+            'target_id' => ['required', 'integer'],
+        ]);
+
+        $this->copyTree($folder, $this->targetScope($data['target_type'], (int) $data['target_id']));
+
+        return back()->with('success', 'Ordner freigegeben.');
     }
 
     private function authorizeScope(array $data): array
@@ -144,6 +155,81 @@ class FolderController extends Controller
             'club_id' => $event->resolvedClub()?->id,
             'team_id' => $event->team_id,
             'event_id' => $event->id,
+        ];
+    }
+
+    private function deleteTree(Folder $folder): void
+    {
+        $folder->loadMissing(['children', 'files']);
+
+        foreach ($folder->children as $child) {
+            $this->deleteTree($child);
+        }
+
+        $folder->files()->delete();
+        $folder->delete();
+    }
+
+    private function copyTree(Folder $source, array $scope, ?Folder $parent = null): Folder
+    {
+        $target = Folder::firstOrCreate(
+            array_merge($scope, [
+                'parent_id' => $parent?->id,
+                'name' => $source->name,
+            ]),
+        );
+
+        $source->loadMissing(['files', 'children']);
+
+        foreach ($source->files as $file) {
+            File::firstOrCreate(
+                array_merge($scope, [
+                    'folder_id' => $target->id,
+                    'path' => $file->path,
+                ]),
+                [
+                    'type' => $file->type,
+                    'size' => $file->size,
+                ],
+            );
+        }
+
+        foreach ($source->children as $child) {
+            $this->copyTree($child, $scope, $target);
+        }
+
+        return $target;
+    }
+
+    private function targetScope(string $targetType, int $targetId): array
+    {
+        if ($targetType === 'team') {
+            $team = Team::visibleTo(auth()->user())->findOrFail($targetId);
+
+            return [
+                'user_id' => null,
+                'club_id' => $team->club_id,
+                'team_id' => $team->id,
+                'event_id' => null,
+            ];
+        }
+
+        if ($targetType === 'club') {
+            $club = Club::visibleTo(auth()->user())->findOrFail($targetId);
+
+            return [
+                'user_id' => null,
+                'club_id' => $club->id,
+                'team_id' => null,
+                'event_id' => null,
+            ];
+        }
+
+        return [
+            'user_id' => User::findOrFail($targetId)->id,
+            'club_id' => null,
+            'team_id' => null,
+            'event_id' => null,
         ];
     }
 }

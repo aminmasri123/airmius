@@ -15,8 +15,11 @@ return new class extends Migration
             }
         });
 
-        if (Schema::hasTable('conversations')) {
+        if (Schema::hasTable('conversations') && DB::getDriverName() === 'mysql') {
             DB::statement("ALTER TABLE conversations MODIFY type ENUM('direct','group','team','event') NOT NULL");
+        }
+
+        if (Schema::hasTable('conversations') && DB::getDriverName() === 'mysql') {
             DB::table('conversations')
                 ->join('events', 'events.conversation_id', '=', 'conversations.id')
                 ->update([
@@ -25,7 +28,7 @@ return new class extends Migration
                 ]);
         }
 
-        if (Schema::hasColumn('messages', 'message')) {
+        if (Schema::hasColumn('messages', 'message') && DB::getDriverName() === 'mysql') {
             DB::statement('ALTER TABLE messages MODIFY message TEXT NULL');
         }
 
@@ -66,7 +69,7 @@ return new class extends Migration
             }
         });
 
-        if (Schema::hasTable('conversations')) {
+        if (Schema::hasTable('conversations') && DB::getDriverName() === 'mysql') {
             DB::statement("ALTER TABLE conversations MODIFY type ENUM('direct','group') NOT NULL");
         }
 

@@ -27,6 +27,7 @@ class CreateNewUser implements CreatesNewUsers
         Validator::make($input, [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'country' => ['required', 'string', 'size:2'],
             'birth_date' => ['required', 'date', 'before_or_equal:today'],
             'guardian_email' => ['nullable', 'string', 'email', 'max:255', 'different:email'],
             'password' => $this->passwordRules(),
@@ -56,6 +57,7 @@ class CreateNewUser implements CreatesNewUsers
         $user = User::create([
             'name' => $input['name'],
             'email' => $input['email'],
+            'country' => strtoupper($input['country']),
             'birth_date' => $birthDate->toDateString(),
             'guardian_email' => $requiresGuardianConsent ? $input['guardian_email'] : null,
             'guardian_consent_requested_at' => $requiresGuardianConsent ? now() : null,

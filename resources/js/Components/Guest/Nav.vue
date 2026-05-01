@@ -45,7 +45,6 @@ const navItems = [
     ['funktionen', 'Funktionen'],
     ['sportarten', 'Sportarten'],
     ['ueber', 'Über uns'],
-    ['blog', 'Blog'],
     ['kontakt', 'Kontakt'],
 ]
 </script>
@@ -67,6 +66,9 @@ const navItems = [
                 >
                     {{ label }}
                 </button>
+                <Link :href="route('guest.blog.index')" class="hover:text-primary transition">
+                    Blog
+                </Link>
             </div>
 
             <div class="flex items-center gap-3">
@@ -130,6 +132,14 @@ const navItems = [
                             >
                                 {{ label }}
                             </button>
+
+                            <Link
+                                :href="route('guest.blog.index')"
+                                @click="mobileOpen = false"
+                                class="text-left py-3 text-lg text-secondary hover:text-primary transition"
+                            >
+                                Blog
+                            </Link>
 
                             <div class="border-t border-border my-4"></div>
 

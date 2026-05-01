@@ -17,6 +17,7 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
+        $can = $user ? $this->permissionsFor($user) : [];
         $unreadNotificationsCount = $user
             ? $user->appNotifications()->where('read', false)->where('type', '!=', 'chat.message')->count()
             : 0;
@@ -45,11 +46,14 @@ class HandleInertiaRequests extends Middleware
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'country' => $user->country,
                     'bio' => $user->bio,
                     'profile_visibility' => $user->profile_visibility,
                     'status' => $user->status,
                     'profile_photo_path' => $user->profile_photo_path,
                     'profile_photo_url' => $user->profile_photo_url,
+                    'profile_photo_thumb' => $user->profile_photo_thumb,
+
 
                     // 🔥 HIER IST DER FIX
                     'roles' => $user->getRoleNames()->values()->all(),
@@ -58,6 +62,7 @@ class HandleInertiaRequests extends Middleware
                         ->pluck('name')
                         ->values()
                         ->all(),
+                    'can' => $can,
                     'unread_notifications_count' => $unreadNotificationsCount,
                     'realtime' => [
                         'notification_channel' => 'notifications.user.'.$user->id,
@@ -82,9 +87,86 @@ class HandleInertiaRequests extends Middleware
 
             'unreadChatsCount' => $unreadChatsCount,
 
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
+                'message' => fn () => $request->session()->get('message'),
+            ],
+
             'locale' => $user?->language
                 ?? session('locale')
                 ?? app()->getLocale(),
+            'direction' => in_array($user?->language ?? session('locale') ?? app()->getLocale(), ['ar'], true)
+                ? 'rtl'
+                : 'ltr',
         ]);
+    }
+
+    private function permissionsFor($user): array
+    {
+        return [
+            'dashboard.view' => true,
+            'settings.view' => true,
+            'notifications.view' => true,
+            'friends.view' => true,
+            'profile.view' => true,
+
+            'feed.view' => $user->can('viewAny', \App\Models\Post::class),
+            'post.create' => $user->can('create', \App\Models\Post::class),
+            'post.store' => $user->can('create', \App\Models\Post::class),
+            'post.update' => $user->can('post.update'),
+            'post.delete' => $user->can('post.delete'),
+
+            'clubs.view' => $user->can('viewAny', \App\Models\Club::class),
+            'clubs.create' => $user->can('create', \App\Models\Club::class),
+            'club.index' => $user->can('viewAny', \App\Models\Club::class),
+            'club.create' => $user->can('create', \App\Models\Club::class),
+            'club.store' => $user->can('create', \App\Models\Club::class),
+            'club.update' => $user->can('clubs.edit') || $user->can('org.manage'),
+            'club.delete' => $user->can('clubs.delete'),
+
+            'teams.view' => $user->can('viewAny', \App\Models\Team::class),
+            'teams.create' => $user->can('create', \App\Models\Team::class),
+            'team.index' => $user->can('viewAny', \App\Models\Team::class),
+            'team.create' => $user->can('create', \App\Models\Team::class),
+            'team.store' => $user->can('create', \App\Models\Team::class),
+            'team.update' => $user->can('team.update') || $user->can('teams.edit'),
+            'team.delete' => $user->can('team.delete') || $user->can('teams.delete'),
+            'team.invite' => $user->can('team.invite') || $user->can('teams.manage_players'),
+
+            'events.view' => $user->can('viewAny', \App\Models\Event::class),
+            'event.index' => $user->can('viewAny', \App\Models\Event::class),
+            'event.create' => $user->can('create', \App\Models\Event::class),
+            'event.store' => $user->can('create', \App\Models\Event::class),
+            'event.update' => $user->can('event.update'),
+            'event.delete' => $user->can('event.delete'),
+            'event.join' => $user->can('event.join'),
+
+            'files.view' => $user->can('viewAny', \App\Models\File::class),
+            'file.index' => $user->can('viewAny', \App\Models\File::class),
+            'file.upload' => $user->can('file.upload'),
+            'file.store' => $user->can('file.upload'),
+            'file.delete' => $user->can('file.delete'),
+
+            'chat.view' => $user->teams()->exists() || $user->clubs()->exists(),
+            'rides.view' => $user->can('event.join'),
+
+            'users.view' => $user->can('users.view'),
+            'users.create' => $user->can('users.create'),
+            'users.edit' => $user->can('users.edit'),
+            'users.delete' => $user->can('users.delete'),
+            'roles.manage' => $user->can('users.assign_roles'),
+
+            'blog.view' => $user->can('blog.view'),
+            'blog.create' => $user->can('blog.create'),
+            'blog.update' => $user->can('blog.update'),
+            'blog.delete' => $user->can('blog.delete'),
+
+            'payments.view' => $user->can('billing.manage'),
+            'invoices.view' => $user->can('billing.manage'),
+            'sponsors.view' => $user->can('finance.view') || $user->can('org.manage'),
+            'system.manage' => $user->can('system.manage'),
+            'admin.settings.view' => $user->can('system.manage'),
+        ];
     }
 }

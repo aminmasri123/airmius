@@ -35,17 +35,14 @@ class PostPolicy extends BasePolicy
     public function update(User $user, Post $post)
     {
         return $post->user_id === $user->id
-            || ($post->club && $user->can('post.update') && $this->inClub($user, $post->club))
-            || ($post->team && $user->can('post.update') && $post->team->users()->where('users.id', $user->id)->exists())
-            || $this->hasRole($user, ['media_manager','club_admin']);
+            || ($post->club && $user->can('post.update') && $this->managesClub($user, $post->club))
+            || ($post->team && $user->can('post.update') && $this->managesTeam($user, $post->team));
     }
 
     public function delete(User $user, Post $post)
     {
         return $post->user_id === $user->id
-            || ($post->club && $user->can('post.delete') && $this->inClub($user, $post->club))
-            || ($post->team && $user->can('post.delete') && $post->team->users()->where('users.id', $user->id)->exists())
-            || $this->isClubAdmin($user)
-            || $this->isSystem($user);
+            || ($post->club && $user->can('post.delete') && $this->managesClub($user, $post->club))
+            || ($post->team && $user->can('post.delete') && $this->managesTeam($user, $post->team));
     }
 }

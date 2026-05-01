@@ -1,39 +1,203 @@
-<!-- Pages/Chat/Index.vue -->
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
-import { Head } from '@inertiajs/vue3'
-
+import { Head, useForm } from '@inertiajs/vue3'
+import { ref } from 'vue'
 import { useTheme } from '@/services/useTheme'
+
+// Jetstream Components
+import DeleteUserForm from '@/Pages/Profile/Partials/DeleteUserForm.vue'
+import LogoutOtherBrowserSessionsForm from '@/Pages/Profile/Partials/LogoutOtherBrowserSessionsForm.vue'
+import SectionBorder from '@/Components/SectionBorder.vue'
+import TwoFactorAuthenticationForm from '@/Pages/Profile/Partials/TwoFactorAuthenticationForm.vue'
+import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue'
+import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfileInformationForm.vue'
 
 defineOptions({ layout: AppLayout })
 
+// Props
+const props = defineProps({
+    profileAddress: {
+        type: Object,
+        default: () => ({}),
+    },
+    confirmsTwoFactorAuthentication: Boolean,
+    sessions: {
+        type: Array,
+        default: () => [], // FIX gegen undefined
+    },
+})
+
+// Tabs
+const activeTab = ref('profile')
+
+const tabClass = (tab) =>
+    `px-4 py-2 rounded-lg text-sm font-semibold transition ${
+        activeTab.value === tab
+            ? 'bg-buttonPrimary text-buttonTextPrimary'
+            : 'bg-muted text-secondary'
+    }`
+
+// Theme
 const { setTheme } = useTheme()
 
+// Form
+const form = useForm({
+    theme: '',
+    country: props.profileAddress.country || 'DE',
+    street: props.profileAddress.street || '',
+    house_number: props.profileAddress.house_number || '',
+    postal_code: props.profileAddress.postal_code || '',
+    city: props.profileAddress.city || '',
+    state: props.profileAddress.state || '',
+})
 
-import { router } from '@inertiajs/vue3'
+// Actions
+const saveAddress = () => {
+    form.put(route('auth.settings.update'), {
+        preserveScroll: true,
+    })
+}
 
-setTheme
+const updateTheme = (theme) => {
+    setTheme(theme)
+    form.theme = theme
+    saveAddress()
+}
 </script>
 
 <template>
-
-    <Head :title="$t('Einstellungen')" />
+    <Head title="Einstellungen" />
 
     <div class="space-y-5">
 
-        <!-- Contacts -->
-        <div class="surface-card p-5 text-xl font-semibold">
-            {{ $t('Einstellungen') }}
+        <!-- HEADER -->
+        <div class="surface-card p-5">
+            <h1 class="text-xl font-semibold text-primary">Einstellungen</h1>
+            <p class="mt-1 text-sm text-secondary">
+                Profil, Sicherheit, Design und Adresse verwalten.
+            </p>
         </div>
 
+        <!-- TABS -->
+        <div class="surface-card p-3 flex flex-wrap gap-2">
+            <button @click="activeTab = 'profile'" :class="tabClass('profile')">Profil</button>
+            <button @click="activeTab = 'address'" :class="tabClass('address')">Adresse</button>
+            <button @click="activeTab = 'design'" :class="tabClass('design')">Design</button>
+            <button @click="activeTab = 'security'" :class="tabClass('security')">Sicherheit</button>
+        </div>
 
-        <div class="surface-card p-5">
-            <div class="mb-3 text-sm font-semibold text-secondary">Design</div>
+        <!-- PROFIL -->
+        <div v-if="activeTab === 'profile'" class="surface-card p-5 space-y-6">
+            <UpdateProfileInformationForm :user="$page.props.auth.user" />
+        </div>
+
+        <!-- SICHERHEIT -->
+        <div v-if="activeTab === 'security'" class="surface-card p-5 space-y-6">
+
+            <UpdatePasswordForm />
+
+            <SectionBorder />
+
+            <TwoFactorAuthenticationForm
+                :requires-confirmation="confirmsTwoFactorAuthentication"
+            />
+
+            <SectionBorder />
+
+            <LogoutOtherBrowserSessionsForm :sessions="sessions || []" />
+
+            <SectionBorder />
+
+            <DeleteUserForm />
+
+        </div>
+
+        <!-- DESIGN -->
+        <div v-if="activeTab === 'design'" class="surface-card p-5">
+            <h2 class="text-sm font-semibold text-secondary mb-3">Design</h2>
+
             <div class="flex flex-wrap gap-3">
-                <button class="px-4 py-2 rounded-lg border border-border bg-muted hover:border-borderHover transition" @click="setTheme('air')">Air</button>
-                <button class="px-4 py-2 rounded-lg border border-border bg-muted hover:border-borderHover transition" @click="setTheme('dark')">Dark</button>
-                <button class="px-4 py-2 rounded-lg border border-border bg-muted hover:border-borderHover transition" @click="setTheme('womanly')">Womanly</button>
+                <button class="btn" @click="updateTheme('air')">Air</button>
+                <button class="btn" @click="updateTheme('dark')">Dark</button>
+                <button class="btn" @click="updateTheme('womanly')">Womanly</button>
             </div>
         </div>
+
+        <!-- ADRESSE -->
+        <div v-if="activeTab === 'address'" class="surface-card p-5">
+
+            <form class="grid gap-4 md:grid-cols-2" @submit.prevent="saveAddress">
+
+                <div class="md:col-span-2">
+                    <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">
+                        Adresse
+                    </h2>
+                    <p class="mt-1 text-sm text-secondary">
+                        Land ist Pflicht. Rest optional.
+                    </p>
+                </div>
+
+                <div>
+                    <label class="text-sm font-semibold text-primary">Land</label>
+                    <select v-model="form.country" required class="input">
+                        <option value="DE">Deutschland</option>
+                        <option value="AT">Österreich</option>
+                        <option value="CH">Schweiz</option>
+                        <option value="FR">Frankreich</option>
+                        <option value="NL">Niederlande</option>
+                        <option value="BE">Belgien</option>
+                        <option value="TR">Türkei</option>
+                        <option value="US">USA</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-sm font-semibold text-primary">Stadt</label>
+                    <input v-model="form.city" class="input" />
+                </div>
+
+                <div>
+                    <label class="text-sm font-semibold text-primary">PLZ</label>
+                    <input v-model="form.postal_code" class="input" />
+                </div>
+
+                <div>
+                    <label class="text-sm font-semibold text-primary">Bundesland</label>
+                    <input v-model="form.state" class="input" />
+                </div>
+
+                <div>
+                    <label class="text-sm font-semibold text-primary">Straße</label>
+                    <input v-model="form.street" class="input" />
+                </div>
+
+                <div>
+                    <label class="text-sm font-semibold text-primary">Hausnummer</label>
+                    <input v-model="form.house_number" class="input" />
+                </div>
+
+                <div class="md:col-span-2">
+                    <button class="btn-primary" :disabled="form.processing">
+                        Adresse speichern
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
     </div>
 </template>
+
+<style scoped>
+.input {
+    @apply mt-1 w-full rounded-lg border-border bg-inputBg text-primary;
+}
+
+.btn {
+    @apply rounded-lg border border-border bg-muted px-4 py-2 hover:border-borderHover;
+}
+
+.btn-primary {
+    @apply rounded-lg bg-buttonPrimary px-4 py-2 text-buttonTextPrimary;
+}
+</style>

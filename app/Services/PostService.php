@@ -9,16 +9,22 @@ use Illuminate\Http\UploadedFile;
 
 class PostService
 {
+    public function __construct(private MediaOptimizer $mediaOptimizer) {}
+
     public function create($user, $data)
     {
         $post = Post::create([
             'user_id' => $user->id,
             'club_id' => $data['club_id'] ?? null,
             'team_id' => $data['team_id'] ?? null,
+            'sport_id' => $data['sport_id'] ?? null,
+            'post_type' => $data['post_type'] ?? 'normal',
             'visibility' => $data['visibility'] ?? 'organization',
             'content' => $data['content'],
             'image' => $data['image'] ?? null,
         ]);
+
+        $post->sportSkills()->sync($data['sport_skill_ids'] ?? []);
 
         $this->attachFiles($post, $user, $data['attachments'] ?? []);
         $this->recordActivity($post, 'post.created', $user);
@@ -35,9 +41,7 @@ class PostService
                     'club_id' => $post->club_id,
                     'team_id' => $post->team_id,
                     'user_id' => $user->id,
-                    'path' => $attachment->store($this->directoryFor($post, $user->id), 'public'),
-                    'type' => $attachment->getClientMimeType(),
-                    'size' => $attachment->getSize(),
+                    ...$this->mediaOptimizer->store($attachment, $this->directoryFor($post, $user->id)),
                 ]);
 
                 $post->attachments()->create([

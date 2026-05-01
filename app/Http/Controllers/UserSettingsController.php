@@ -10,9 +10,18 @@ class UserSettingsController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return Inertia::render('Auth/Dashboard/Settings/Index');
+        return Inertia::render('Auth/Dashboard/Settings/Index', [
+            'profileAddress' => $request->user()->only([
+                'country',
+                'street',
+                'house_number',
+                'postal_code',
+                'city',
+                'state',
+            ]),
+        ]);
 
     }
 
@@ -53,12 +62,23 @@ class UserSettingsController extends Controller
      */
     public function update(Request $request)
     {
-            $request->validate([
-                'theme' => 'required|in:air,dark,womanly',
+            $data = $request->validate([
+                'theme' => ['nullable', 'in:air,dark,womanly'],
+                'country' => ['required', 'string', 'size:2'],
+                'street' => ['nullable', 'string', 'max:255'],
+                'house_number' => ['nullable', 'string', 'max:40'],
+                'postal_code' => ['nullable', 'string', 'max:30'],
+                'city' => ['nullable', 'string', 'max:255'],
+                'state' => ['nullable', 'string', 'max:255'],
             ]);
 
+            if (empty($data['theme'])) {
+                unset($data['theme']);
+            }
+
             $request->user()->update([
-                'theme' => $request->theme,
+                ...$data,
+                'country' => strtoupper($data['country']),
             ]);
 
             return back(); // oder Inertia redirect

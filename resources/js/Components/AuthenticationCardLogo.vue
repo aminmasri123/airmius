@@ -9,7 +9,9 @@ const logoSrc = computed(() => {
 </script>
 
 <template>
-    <Link :href="'/'">
+    <Link :href="route('welcome')">
         <img :src="logoSrc" alt="AIRMIUS Logo" class=" mr-2 inline-block -mt-1">
+
+
     </Link>
 </template>

@@ -3,19 +3,12 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use App\Models\Club;
-use App\Models\FriendInvitation;
-use App\Models\Friendship;
-use App\Models\Follow;
-use App\Models\Message;
-use App\Models\Notification;
-use App\Models\Post;
-use App\Models\Ride;
-use App\Models\Team;
 use App\Notifications\MyCustomResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
+use Laravel\Jetstream\Features;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
@@ -27,9 +20,9 @@ class User extends Authenticatable
 
     /** @use HasFactory<UserFactory> */
     use HasFactory;
-    use HasRoles;
 
     use HasProfilePhoto;
+    use HasRoles;
     use Notifiable;
     use TwoFactorAuthenticatable;
 
@@ -43,6 +36,12 @@ class User extends Authenticatable
         'email',
         'password',
         'theme',
+        'country',
+        'street',
+        'house_number',
+        'postal_code',
+        'city',
+        'state',
         'status',
         'birth_date',
         'guardian_email',
@@ -73,6 +72,7 @@ class User extends Authenticatable
      */
     protected $appends = [
         'profile_photo_url',
+        'profile_photo_thumb',
     ];
 
     /**
@@ -85,6 +85,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'birth_date' => 'date',
+            'gamification_last_active_on' => 'date',
             'guardian_consent_requested_at' => 'datetime',
             'guardian_consent_at' => 'datetime',
             'password' => 'hashed',
@@ -109,6 +110,36 @@ class User extends Authenticatable
     public function teams()
     {
         return $this->belongsToMany(Team::class)->withPivot('role');
+    }
+
+    public function sportProfiles()
+    {
+        return $this->hasMany(UserSport::class);
+    }
+
+    public function sportSkills()
+    {
+        return $this->hasMany(UserSportSkill::class);
+    }
+
+    public function skillEndorsementsGiven()
+    {
+        return $this->hasMany(SkillEndorsement::class, 'endorser_id');
+    }
+
+    public function recommendationsReceived()
+    {
+        return $this->hasMany(ProfileRecommendation::class, 'profile_user_id');
+    }
+
+    public function recommendationsGiven()
+    {
+        return $this->hasMany(ProfileRecommendation::class, 'author_id');
+    }
+
+    public function xpEvents()
+    {
+        return $this->hasMany(GamificationXpEvent::class);
     }
 
     public function posts()
@@ -195,14 +226,71 @@ class User extends Authenticatable
             || $this->isFollowedBy($user);
     }
 
+    public function deleteProfilePhoto()
+    {
+        if (! Features::managesProfilePhotos() || is_null($this->profile_photo_path)) {
+            return;
+        }
+
+        $this->deleteProfilePhotoFiles($this->profile_photo_path);
+
+        $this->forceFill([
+            'profile_photo_path' => null,
+        ])->save();
+    }
+
+    public function deleteProfilePhotoFiles(?string $path = null): void
+    {
+        if (! $path) {
+            return;
+        }
+
+        $paths = [$path];
+
+        if (str_ends_with(strtolower($path), '.jpg')) {
+            $paths[] = substr($path, 0, -4).'_thumb.jpg';
+        }
+
+        Storage::disk('r2')->delete(array_unique($paths));
+    }
+
+    public function getProfilePhotoUrlAttribute()
+    {
+        if ($this->profile_photo_path) {
+            return 'https://cdn.airmius.com/'.$this->profile_photo_path.'?v='.$this->profilePhotoVersion();
+        }
+
+        //return 'https://cdn.airmius.com/system/defaults/avatar.png';
+    }
+
+    public function getProfilePhotoThumbAttribute()
+    {
+        if ($this->profile_photo_path) {
+
+            return str_replace(
+                '.jpg',
+                '_thumb.jpg',
+                'https://cdn.airmius.com/'.$this->profile_photo_path
+            ).'?v='.$this->profilePhotoVersion();
+        }
+
+        //return 'https://cdn.airmius.com/system/defaults/avatar.png';
+    }
+
+    private function profilePhotoVersion(): string
+    {
+        return (string) ($this->updated_at?->timestamp ?? time());
+    }
+
     public function sendPasswordResetNotification($token)
     {
-   // Erstelle zuerst die Instanz der Notification
-    $notification = new MyCustomResetPassword($token);
+        // Erstelle zuerst die Instanz der Notification
+        $notification = new MyCustomResetPassword($token);
 
-    // Setze die Sprache auf der Notification-Instanz
-    $notification->locale('en');
+        // Setze die Sprache auf der Notification-Instanz
+        $notification->locale('en');
 
-    // Sende die fertig konfigurierte Notification
-    $this->notify($notification);    }
+        // Sende die fertig konfigurierte Notification
+        $this->notify($notification);
+    }
 }

@@ -7,12 +7,16 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\FolderController;
+use App\Http\Controllers\GlobalSearchController;
 use App\Http\Controllers\FollowController;
 use App\Http\Controllers\FriendController;
 use App\Http\Controllers\LikeController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OrganizationJobController;
 use App\Http\Controllers\PostController;
+use App\Http\Controllers\PostHelpfulController;
+use App\Http\Controllers\ProfileGamificationController;
 use App\Http\Controllers\RideController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\UserController;
@@ -33,32 +37,47 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::get('/users/{user}', [UserController::class, 'show'])->name('auth.users.show');
     Route::post('/users/{user}/follow', [FollowController::class, 'store'])->name('auth.users.follow');
     Route::delete('/users/{user}/follow', [FollowController::class, 'destroy'])->name('auth.users.unfollow');
+    Route::post('/profile/sports', [ProfileGamificationController::class, 'storeSport'])->name('auth.profile.sports.store');
+    Route::put('/profile/skills/{userSportSkill}', [ProfileGamificationController::class, 'updateSkill'])->name('auth.profile.skills.update');
+    Route::post('/users/{user}/skills/{userSportSkill}/endorse', [ProfileGamificationController::class, 'endorse'])->name('auth.users.skills.endorse');
+    Route::post('/users/{user}/recommendations', [ProfileGamificationController::class, 'recommend'])->name('auth.users.recommendations.store');
+    Route::put('/profile/recommendations/{profileRecommendation}/approve', [ProfileGamificationController::class, 'approveRecommendation'])->name('auth.profile.recommendations.approve');
+    Route::put('/profile/recommendations/{profileRecommendation}/reject', [ProfileGamificationController::class, 'rejectRecommendation'])->name('auth.profile.recommendations.reject');
 
     //SETTINGS
     Route::get('/settings', [UserSettingsController::class, 'index'])->name('auth.settings');
     Route::put('/settings', [UserSettingsController::class, 'update'])->name('auth.settings.update');
     Route::put('/user/status', [UserStatusController::class, 'update'])->name('auth.user.status.update');
+    Route::get('/search', GlobalSearchController::class)->name('auth.search');
 
 
 
 
     // CLUBS
     Route::get('/clubs', [ClubController::class, 'index'])->middleware('club');
-    Route::get('/clubs/{club}', [ClubController::class, 'show'])->middleware('club');
+    Route::get('/clubs/{club}', [ClubController::class, 'show'])->name('auth.clubs.show');
     Route::post('/clubs', [ClubController::class, 'store']);
     Route::put('/clubs/{club}', [ClubController::class, 'update'])->middleware('club');
-    Route::delete('/clubs/{club}', [ClubController::class, 'destroy'])->middleware('club');
+    Route::put('/clubs/{club}/members/{user}', [ClubController::class, 'updateMember'])->name('auth.clubs.members.update');
+    Route::post('/clubs/{club}/images', [ClubController::class, 'updateImages'])->name('auth.clubs.images.update');
+    Route::post('/clubs/{club}/jobs', [OrganizationJobController::class, 'store'])->name('auth.clubs.jobs.store');
+    Route::delete('/clubs/{club}', [ClubController::class, 'destroy'])->middleware('club')->name('auth.clubs.destroy');
+    Route::put('/organization-jobs/{organizationJob}', [OrganizationJobController::class, 'update'])->name('auth.organization-jobs.update');
+    Route::delete('/organization-jobs/{organizationJob}', [OrganizationJobController::class, 'destroy'])->name('auth.organization-jobs.destroy');
 
     // TEAMS
     Route::get('/teams', [TeamController::class, 'index'])->name('auth.teams.index');
     Route::get('/teams/{team}', [TeamController::class, 'show'])->name('auth.teams.show');
     Route::post('/teams', [TeamController::class, 'store'])->name('auth.teams.store');
     Route::put('/teams/{team}', [TeamController::class, 'update'])->name('auth.teams.update');
+    Route::post('/teams/{team}/images', [TeamController::class, 'updateImages'])->name('auth.teams.images.update');
     Route::delete('/teams/{team}', [TeamController::class, 'destroy'])->name('auth.teams.destroy');
     Route::post('/teams/{team}/invite', [TeamController::class, 'invite'])->name('auth.teams.invite');
     Route::post('/teams/{team}/join-requests', [TeamController::class, 'requestJoin'])->name('auth.teams.join-requests.store');
     Route::post('/team-invitations/{invitation}/accept', [TeamController::class, 'acceptInvitation'])
         ->name('auth.team-invitations.accept');
+    Route::get('/team-invitations/token/{token}/accept', [TeamController::class, 'acceptInvitationByToken'])
+        ->name('auth.team-invitations.accept-by-token');
     Route::post('/team-join-requests/{joinRequest}/approve', [TeamController::class, 'approveJoinRequest'])
         ->name('auth.team-join-requests.approve');
     Route::post('/team-join-requests/{joinRequest}/decline', [TeamController::class, 'declineJoinRequest'])
@@ -85,6 +104,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::post('/posts', [PostController::class, 'store'])->name('auth.posts.store');
     Route::put('/posts/{post}', [PostController::class, 'update'])->name('auth.posts.update');
     Route::delete('/posts/{post}', [PostController::class, 'destroy'])->name('auth.posts.destroy');
+    Route::post('/posts/{post}/helpful', [PostHelpfulController::class, 'toggle'])->name('auth.posts.helpful');
 
     // COMMENTS
     Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->name('auth.comments.store');
@@ -114,11 +134,13 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     // FILES
     Route::get('/files', [FileController::class, 'index'])->name('auth.files.index');
     Route::post('/files', [FileController::class, 'store'])->name('auth.files.store');
+    Route::post('/files/{file}/share', [FileController::class, 'share'])->name('auth.files.share');
     Route::get('/files/{file}/download', [FileController::class, 'download'])->name('auth.files.download');
     Route::delete('/files/{file}', [FileController::class, 'destroy'])->name('auth.files.destroy');
 
     // FOLDERS
     Route::post('/folders', [FolderController::class, 'store'])->name('auth.folders.store');
+    Route::post('/folders/{folder}/share', [FolderController::class, 'share'])->name('auth.folders.share');
     Route::delete('/folders/{folder}', [FolderController::class, 'destroy'])->name('auth.folders.destroy');
 
     // RIDES

@@ -10,8 +10,9 @@ class Post extends Model
     use HasFactory;
 
     public const VISIBILITIES = ['team', 'organization', 'public'];
+    public const TYPES = ['normal', 'question', 'knowledge', 'training_drill', 'tactic', 'analysis', 'experience', 'club_update'];
 
-    protected $fillable = ['club_id','team_id','user_id','content','image','visibility'];
+    protected $fillable = ['club_id','team_id','user_id','sport_id','post_type','content','image','visibility'];
 
     public function user()
     {
@@ -28,6 +29,16 @@ class Post extends Model
         return $this->belongsTo(Team::class);
     }
 
+    public function sport()
+    {
+        return $this->belongsTo(Sport::class);
+    }
+
+    public function sportSkills()
+    {
+        return $this->belongsToMany(SportSkill::class, 'post_sport_skill');
+    }
+
     public function comments()
     {
         return $this->hasMany(Comment::class);
@@ -36,6 +47,11 @@ class Post extends Model
     public function likes()
     {
         return $this->morphMany(Like::class, 'likeable');
+    }
+
+    public function helpfuls()
+    {
+        return $this->hasMany(PostHelpful::class);
     }
 
     public function attachments()

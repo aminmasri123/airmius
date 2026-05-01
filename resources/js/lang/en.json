@@ -1,29 +1,281 @@
 {
-
-
-
-    "Anmelden": "Login",
-    "Email": "Email",
-    "Passwort": "Password",
-    "Passwort vergessen?": "Forgot your password?",
-    "Registrieren": "Register",
-
-    "Passwort Zurücksetzen": "Email Password Reset Link",
-
-    "Passwort vergessen? Kein Problem. Teilen Sie uns einfach Ihre E-Mail-Adresse mit und wir senden Ihnen per E-Mail einen Link zum Zurücksetzen des Passworts, über den Sie eine neue auswählen können.": "Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.",
-
-
-    "Angemeldet bleiben": "Remember me",
-    "Sport Plattform": "Sports Platform",
-    "Team Management · Kommunikation · Events": "Team Management · Communication · Events",
-
-
-    "Passwort zurücksetzen": "Reset Password",
-    "Hallo!": "Hello!",
-    "Du erhältst diese E-Mail, weil wir eine Anfrage zum Zurücksetzen des Passworts für dein Konto erhalten haben.": "You are receiving this email because we received a password reset request for your account.",
-    "Dieser Link läuft in 60 Minuten ab.": "This password reset link will expire in 60 minutes.",
-    "Beste Grüße, dein Airmius Team": "Best regards, your Airmius Team",
-
-
-    "cta": "Get Started"
+  "Dashboard": "Dashboard",
+  "Teams": "Teams",
+  "Feed": "Feed",
+  "Dateien": "Files",
+  "Events": "Events",
+  "Events & Training": "Events & Training",
+  "Statistiken": "Statistics",
+  "Freunde": "Friends",
+  "Verfügbarkeit": "Availability",
+  "Fahrgemeinschaften": "Rides",
+  "Dateimanager": "File manager",
+  "Benachrichtigungen": "Notifications",
+  "Notifications": "Notifications",
+  "Equipment": "Equipment",
+  "Einstellungen": "Settings",
+  "Settings": "Settings",
+  "Admin": "Admin",
+  "Users": "Users",
+  "Payments": "Payments",
+  "Invoices": "Invoices",
+  "Sponsors": "Sponsors",
+  "Rollen & Rechte": "Roles & Permissions",
+  "Blogs": "Blogs",
+  "Gamification": "Gamification",
+  "Profile": "Profile",
+  "Profile Information": "Profile Information",
+  "Member": "Member",
+  "Logout": "Logout",
+  "My teams": "My teams",
+  "Top Inhalte": "Top Content",
+  "Jobs": "Jobs",
+  "E-Learning": "E-Learning",
+  "Suchen": "Search",
+  "Verein erstellen": "Create club",
+  "Ort, Stadt, PLZ oder Land": "Location, city, zip code or country",
+  "Verein beitreten": "Join club",
+  "Verein suchen": "Search club",
+  "Sportart suchen": "Search sport",
+  "TN": "Participants",
+  "Vereine & Teams": "Clubs & teams",
+  "Verwalte Teams, Mitglieder und Rollen": "Manage teams, members and roles",
+  "Vereine": "Clubs",
+  "Marketplace": "Marketplace",
+  "Anmelden": "Login",
+  "Passwort": "Password",
+  "Email": "Email",
+  "Passwort vergessen?": "Forgot password?",
+  "Registrieren": "Register",
+  "Angemeldet bleiben": "Remember me",
+  "Sport Plattform": "Sports platform",
+  "Team Management · Kommunikation · Events": "Team management · Communication · Events",
+  "Passwort Zurücksetzen": "Reset password",
+  "Passwort zurücksetzen": "Reset password",
+  "cta": "Get started",
+  "common": {
+    "all": "All",
+    "none": "None",
+    "saved": "Saved",
+    "description": "Description",
+    "no_description": "No description"
+  },
+  "actions": {
+    "save": "Save",
+    "delete": "Delete",
+    "toggle": "Toggle",
+    "join": "Join"
+  },
+  "status": {
+    "online": "Online",
+    "offline": "Offline",
+    "training": "Training",
+    "work": "Work"
+  },
+  "search": {
+    "placeholder": "Search people, teams, clubs",
+    "short": "Search...",
+    "loading": "Searching...",
+    "no_results": "No matching results."
+  },
+  "notifications": {
+    "new": "New notification",
+    "empty": "No notifications"
+  },
+  "events": {
+    "subtitle": "Training sessions, matches, meetings and public events.",
+    "create": "Create event",
+    "public_scope": "Public",
+    "private_requires_team": "Private events require a team.",
+    "training_days": "Training days",
+    "next_occurrence": "Next session",
+    "rsvp": {
+      "yes": "Going",
+      "maybe": "Maybe",
+      "no": "Decline"
+    },
+    "fields": {
+      "title": "Title",
+      "type": "Type",
+      "visibility": "Visibility",
+      "club": "Club",
+      "team": "Team",
+      "location": "Location",
+      "notes": "Notes",
+      "start": "Start",
+      "end": "End",
+      "reminder": "Reminder",
+      "recurrence": "Recurrence",
+      "recurrence_end": "Repeat until",
+      "recurrence_days": "Training days"
+    },
+    "placeholders": {
+      "title": "e.g. U17 training",
+      "location": "Pitch, hall or address",
+      "notes": "Optional: meeting point, equipment, notes"
+    },
+    "none": {
+      "club": "No club",
+      "team": "No team"
+    },
+    "types": {
+      "training": "Training",
+      "match": "Match",
+      "meeting": "Meeting",
+      "public": "Public event"
+    },
+    "visibility": {
+      "private": "Team only",
+      "organization": "Club",
+      "public": "Public"
+    },
+    "recurrence": {
+      "label": "Recurrence",
+      "none": "No recurrence",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "biweekly": "Every 2 weeks",
+      "monthly": "Monthly"
+    },
+    "weekdays": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
+    },
+    "weekdays_short": {
+      "monday": "Mon",
+      "tuesday": "Tue",
+      "wednesday": "Wed",
+      "thursday": "Thu",
+      "friday": "Fri",
+      "saturday": "Sat",
+      "sunday": "Sun"
+    }
+  },
+  "roles": {
+    "title": "Roles & Permissions",
+    "subtitle": "Manage roles, permissions and their assignments.",
+    "roles": "Roles",
+    "summary": "{users} users, {permissions} active permissions",
+    "selected_permissions": "Selected permissions",
+    "no_permissions_selected": "No permissions selected for this role yet.",
+    "group_selected": "{selected} of {total} selected",
+    "new_role": "New role",
+    "new_permission": "New permission",
+    "create_role": "Create role",
+    "create_permission": "Create permission",
+    "confirm_delete": "Really delete role \"{role}\"?"
+  },
+  "guest": {
+    "cta": {
+      "start": "Start for free",
+      "explore": "Explore Airmius"
+    },
+    "top": {
+      "hero": {
+        "title": "Ideas that improve everyday sports work.",
+        "subtitle": "Discover curated content about training, team organization, club work and digital sports development."
+      },
+      "preview": {
+        "label": "Recommended",
+        "title": "What matters today"
+      },
+      "cards": {
+        "planning": {
+          "title": "Better planning",
+          "text": "Dates, attendance and tasks move into one clear structure."
+        },
+        "communication": {
+          "title": "Clear communication",
+          "text": "Less group chaos, more focus on what matters."
+        },
+        "performance": {
+          "title": "More development",
+          "text": "Data and routines help teams make progress visible."
+        }
+      },
+      "sections": {
+        "latest": "Current recommendations",
+        "latest_text": "Practical content for coaches, players and club leaders."
+      },
+      "articles": {
+        "training": {
+          "title": "Organize training with less friction",
+          "text": "How digital attendance, calendars and team roles reduce daily effort."
+        },
+        "club": {
+          "title": "Think club work centrally",
+          "text": "Why a shared platform improves information flow across the club."
+        },
+        "digital": {
+          "title": "Digitalization in grassroots sport",
+          "text": "Which processes should be digitalized first and where value appears immediately."
+        }
+      }
+    },
+    "jobs": {
+      "hero": {
+        "title": "Work with us on the future of sport.",
+        "subtitle": "We build Airmius for athletes, teams and clubs. If you love product, sport and community, you are in the right place."
+      },
+      "values": {
+        "sport": {
+          "title": "Close to sport",
+          "text": "We build with a real view of locker rooms, pitches, clubs and daily work."
+        },
+        "ownership": {
+          "title": "High ownership",
+          "text": "You get room to turn ideas into impact quickly."
+        },
+        "team": {
+          "title": "Small strong team",
+          "text": "Short paths, honest feedback and focus on good work."
+        }
+      },
+      "open_roles": "Open roles",
+      "open_roles_text": "Current roles and areas where we are looking for support.",
+      "apply": "Register interest",
+      "roles": {
+        "frontend": "Frontend Engineer",
+        "growth": "Growth & Partnerships",
+        "content": "Content & Learning"
+      }
+    },
+    "learning": {
+      "hero": {
+        "title": "Learn how modern sports organization works.",
+        "subtitle": "Compact learning modules for coaches, team managers, players and club leaders."
+      },
+      "start": "Start learning",
+      "steps": {
+        "learn": "Learn quickly",
+        "apply": "Apply directly",
+        "improve": "Improve the team"
+      },
+      "library": "Learning library",
+      "library_text": "Modules for organization, communication, analysis and safe digital club work.",
+      "courses": {
+        "organization": {
+          "title": "Team organization",
+          "text": "Plan training sessions, matches and tasks with clear roles and workflows."
+        },
+        "communication": {
+          "title": "Team communication",
+          "text": "Learn how messages, groups and updates should be structured."
+        },
+        "analysis": {
+          "title": "Data & analysis",
+          "text": "Use attendance, feedback and simple metrics for better decisions."
+        },
+        "privacy": {
+          "title": "Data protection in clubs",
+          "text": "Understand the basics for secure and trustworthy digital processes."
+        }
+      }
+    }
+  }
 }
