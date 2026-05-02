@@ -33,10 +33,13 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'first_name',
+        'last_name',
         'email',
         'password',
         'theme',
         'country',
+        'athlete_license_number',
         'street',
         'house_number',
         'postal_code',
@@ -48,6 +51,9 @@ class User extends Authenticatable
         'guardian_user_id',
         'guardian_consent_requested_at',
         'guardian_consent_at',
+        'guardian_consent_rejected_at',
+        'guardian_consent_revoked_at',
+        'guardian_consent_revoked_by_email',
         'guardian_consent_token',
         'profile_visibility',
         'bio',
@@ -88,6 +94,8 @@ class User extends Authenticatable
             'gamification_last_active_on' => 'date',
             'guardian_consent_requested_at' => 'datetime',
             'guardian_consent_at' => 'datetime',
+            'guardian_consent_rejected_at' => 'datetime',
+            'guardian_consent_revoked_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -104,7 +112,16 @@ class User extends Authenticatable
 
     public function clubs()
     {
-        return $this->belongsToMany(Club::class)->withPivot('role');
+        return $this->belongsToMany(Club::class)
+            ->withPivot([
+                'role',
+                'membership_status',
+                'member_number',
+                'contribution_amount',
+                'contribution_interval',
+                'joined_on',
+                'membership_notes',
+            ]);
     }
 
     public function teams()
@@ -150,6 +167,16 @@ class User extends Authenticatable
     public function files()
     {
         return $this->hasMany(File::class);
+    }
+
+    public function invoices()
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
     }
 
     public function folders()

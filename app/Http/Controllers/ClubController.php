@@ -65,6 +65,8 @@ class ClubController extends Controller
         $club = $this->service->create(auth()->user(), $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'sport_type' => ['nullable', 'string', 'max:120'],
+            'is_official' => ['boolean'],
+            'official_club_number' => ['nullable', 'required_if:is_official,true,1', 'string', 'max:120'],
             'country' => ['required', 'string', 'size:2'],
             'street' => ['nullable', 'string', 'max:255'],
             'house_number' => ['nullable', 'string', 'max:40'],
@@ -100,13 +102,17 @@ class ClubController extends Controller
 
         $posts = Post::query()
             ->where('club_id', $club->id)
+            ->where('moderation_status', '!=', 'removed')
             ->where(function ($query) use ($viewer, $isMember) {
                 $query->where('visibility', 'public')
                     ->orWhere('user_id', $viewer->id)
                     ->when($isMember, fn ($query) => $query->orWhere('visibility', 'organization'));
             })
             ->with(['user:id,name,profile_photo_path', 'team:id,name,club_id'])
-            ->withCount(['comments', 'likes'])
+            ->withCount([
+                'comments' => fn ($query) => $query->where('moderation_status', '!=', 'removed'),
+                'likes',
+            ])
             ->latest('id')
             ->limit(8)
             ->get();
@@ -116,6 +122,8 @@ class ClubController extends Controller
                 'id' => $club->id,
                 'name' => $club->name,
                 'sport_type' => $club->sport_type,
+                'is_official' => (bool) $club->is_official,
+                'official_club_number' => $club->official_club_number,
                 'logo' => $club->logo,
                 'cover_image' => $club->cover_image,
                 'country' => $club->country,
@@ -147,6 +155,8 @@ class ClubController extends Controller
         $this->service->update($club, $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'sport_type' => ['nullable', 'string', 'max:120'],
+            'is_official' => ['boolean'],
+            'official_club_number' => ['nullable', 'required_if:is_official,true,1', 'string', 'max:120'],
             'logo' => ['nullable', 'string', 'max:255'],
             'country' => ['required', 'string', 'size:2'],
             'street' => ['nullable', 'string', 'max:255'],

@@ -8,12 +8,17 @@ use App\Models\MessageReceipt;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\ChatService;
+use App\Services\ModerationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class ConversationController extends Controller
 {
-    public function __construct(private ChatService $chatService) {}
+    public function __construct(
+        private ChatService $chatService,
+        private ModerationService $moderation,
+    ) {}
 
     /**
      * Display a listing of the resource.
@@ -94,7 +99,8 @@ class ConversationController extends Controller
         }
 
         if (!empty($data['message'])) {
-            $this->chatService->sendMessage(auth()->user(), $conversation->id, $data['message']);
+            $message = $this->chatService->sendMessage(auth()->user(), $conversation->id, $data['message']);
+            $this->moderation->flagIfNeeded($message, $message->message, auth()->id());
         }
 
         return redirect()
@@ -123,6 +129,33 @@ class ConversationController extends Controller
         broadcast(new ChatTyping($conversation, $request->user(), $data['typing'] ?? true))->toOthers();
 
         return response()->json(['success' => true]);
+    }
+
+    public function leave(Request $request, Conversation $conversation)
+    {
+        abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
+        abort_if($conversation->type === 'direct', 422, 'Direktchats können nicht verlassen werden.');
+
+        $data = $request->validate([
+            'delete_conversation' => ['nullable', 'boolean'],
+        ]);
+
+        DB::transaction(function () use ($conversation, $data) {
+            $conversation->loadCount('users');
+            $remainingAfterLeave = max(0, $conversation->users_count - 1);
+
+            if (($data['delete_conversation'] ?? false) && $remainingAfterLeave <= 1) {
+                $conversation->delete();
+
+                return;
+            }
+
+            $conversation->users()->detach(auth()->id());
+        });
+
+        return redirect()
+            ->route('auth.conversations.index')
+            ->with('success', 'Du hast die Gruppe verlassen.');
     }
 
     /**
@@ -169,8 +202,6 @@ class ConversationController extends Controller
             ->orderByDesc('id')
             ->get();
 
-        $selectedConversation ??= $conversations->first();
-
         if ($selectedConversation) {
             MessageReceipt::query()
                 ->where('user_id', auth()->id())
@@ -187,6 +218,7 @@ class ConversationController extends Controller
             'team:id,name',
             'event:id,conversation_id,title',
             'messages' => fn ($query) => $query
+                ->where('moderation_status', '!=', 'removed')
                 ->with([
                     'sender:id,name',
                     'receipts:id,message_id,user_id,delivered_at,read_at',

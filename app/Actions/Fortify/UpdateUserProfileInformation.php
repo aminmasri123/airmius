@@ -20,8 +20,10 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
     public function update(User $user, array $input): void
     {
         Validator::make($input, [
-            'name' => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:120'],
+            'last_name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'athlete_license_number' => ['nullable', 'string', 'max:120'],
             'photo' => ['nullable', 'mimes:jpg,jpeg,png', 'max:2048'],
             'profile_visibility' => ['required', Rule::in(['public', 'private'])],
             'bio' => ['nullable', 'string', 'max:1000'],
@@ -56,9 +58,15 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
             $user instanceof MustVerifyEmail) {
             $this->updateVerifiedUser($user, $input);
         } else {
+            $firstName = trim($input['first_name']);
+            $lastName = trim($input['last_name']);
+
             $user->forceFill([
-                'name' => $input['name'],
+                'name' => trim($firstName.' '.$lastName),
+                'first_name' => $firstName,
+                'last_name' => $lastName,
                 'email' => $input['email'],
+                'athlete_license_number' => $input['athlete_license_number'] ?? null,
                 'profile_visibility' => $input['profile_visibility'],
                 'bio' => $input['bio'] ?? null,
             ])->save();
@@ -72,9 +80,15 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
      */
     protected function updateVerifiedUser(User $user, array $input): void
     {
+        $firstName = trim($input['first_name']);
+        $lastName = trim($input['last_name']);
+
         $user->forceFill([
-            'name' => $input['name'],
+            'name' => trim($firstName.' '.$lastName),
+            'first_name' => $firstName,
+            'last_name' => $lastName,
             'email' => $input['email'],
+            'athlete_license_number' => $input['athlete_license_number'] ?? null,
             'profile_visibility' => $input['profile_visibility'],
             'bio' => $input['bio'] ?? null,
             'email_verified_at' => null,

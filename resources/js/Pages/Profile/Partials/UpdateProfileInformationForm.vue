@@ -20,8 +20,10 @@ const initials = (name) => (name || '?')
     .toUpperCase()
 const form = useForm({
     _method: 'PUT',
-    name: props.user.name,
+    first_name: props.user.first_name || (props.user.name || '').split(' ')[0] || '',
+    last_name: props.user.last_name || (props.user.name || '').split(' ').slice(1).join(' ') || '',
     email: props.user.email,
+    athlete_license_number: props.user.athlete_license_number || '',
     bio: props.user.bio || '',
     profile_visibility: props.user.profile_visibility || 'public',
     photo: null,
@@ -128,11 +130,18 @@ const clearPhotoFileInput = () => {
             </div>
 
             <!-- Name -->
-            <div class="col-span-6 sm:col-span-4">
-                <InputLabel for="name" value="Name" />
-                <TextInput id="name" v-model="form.name" type="text" class="mt-1 block w-full" required
-                    autocomplete="name" />
-                <InputError :message="form.errors.name" class="mt-2" />
+            <div class="col-span-6 sm:col-span-2">
+                <InputLabel for="first_name" value="Vorname" />
+                <TextInput id="first_name" v-model="form.first_name" type="text" class="mt-1 block w-full" required
+                    autocomplete="given-name" />
+                <InputError :message="form.errors.first_name" class="mt-2" />
+            </div>
+
+            <div class="col-span-6 sm:col-span-2">
+                <InputLabel for="last_name" value="Nachname" />
+                <TextInput id="last_name" v-model="form.last_name" type="text" class="mt-1 block w-full" required
+                    autocomplete="family-name" />
+                <InputError :message="form.errors.last_name" class="mt-2" />
             </div>
 
             <!-- Email -->
@@ -167,6 +176,22 @@ const clearPhotoFileInput = () => {
                     <option value="private">Private</option>
                 </select>
                 <InputError :message="form.errors.profile_visibility" class="mt-2" />
+            </div>
+
+            <div class="col-span-6 sm:col-span-4">
+                <InputLabel for="athlete_license_number" value="Lizenznummer" />
+                <TextInput
+                    id="athlete_license_number"
+                    v-model="form.athlete_license_number"
+                    type="text"
+                    class="mt-1 block w-full"
+                    autocomplete="off"
+                    placeholder="z. B. Verbands- oder Spielerpassnummer"
+                />
+                <p class="mt-2 text-sm text-secondary">
+                    Diese Nummer kannst du selbst pflegen. Vereine koennen sie zur Zuordnung sehen, wenn dein Profil fuer sie sichtbar ist.
+                </p>
+                <InputError :message="form.errors.athlete_license_number" class="mt-2" />
             </div>
 
             <div class="col-span-6 sm:col-span-4">

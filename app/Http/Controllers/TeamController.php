@@ -190,13 +190,17 @@ class TeamController extends Controller
 
         $posts = Post::query()
             ->where('team_id', $team->id)
+            ->where('moderation_status', '!=', 'removed')
             ->where(function ($query) use ($viewer, $isMember) {
                 $query->where('visibility', 'public')
                     ->orWhere('user_id', $viewer->id)
                     ->when($isMember, fn ($query) => $query->orWhere('visibility', 'team'));
             })
             ->with(['user:id,name,profile_photo_path', 'club:id,name'])
-            ->withCount(['comments', 'likes'])
+            ->withCount([
+                'comments' => fn ($query) => $query->where('moderation_status', '!=', 'removed'),
+                'likes',
+            ])
             ->latest('id')
             ->limit(8)
             ->get();
@@ -340,7 +344,11 @@ class TeamController extends Controller
             ]);
 
             $invitation->team->club->users()->syncWithoutDetaching([
-                $invitation->recipient_id => ['role' => 'member'],
+                $invitation->recipient_id => [
+                    'role' => 'member',
+                    'membership_status' => 'non_member',
+                    'joined_on' => now()->toDateString(),
+                ],
             ]);
 
             $invitation->update([
@@ -367,7 +375,11 @@ class TeamController extends Controller
             ]);
 
             $invitation->team->club->users()->syncWithoutDetaching([
-                $request->user()->id => ['role' => 'member'],
+                $request->user()->id => [
+                    'role' => 'member',
+                    'membership_status' => 'non_member',
+                    'joined_on' => now()->toDateString(),
+                ],
             ]);
 
             $invitation->update([
@@ -386,10 +398,22 @@ class TeamController extends Controller
 
         abort_if($team->users()->where('users.id', $request->user()->id)->exists(), 422, 'Du bist bereits im Team.');
 
-        TeamJoinRequest::updateOrCreate(
+        $joinRequest = TeamJoinRequest::updateOrCreate(
             ['team_id' => $team->id, 'user_id' => $request->user()->id],
             ['status' => 'pending', 'responded_at' => null],
         );
+
+        $team->load('club.users');
+
+        $team->club->users
+            ->filter(fn (User $member) => in_array($member->pivot?->role, ['owner', 'admin', 'manager'], true))
+            ->each(fn (User $member) => AppNotification::send($member, 'team.join_request', [
+                'title' => 'Neue Team-Anfrage',
+                'body' => $request->user()->name.' moechte '.$team->name.' beitreten.',
+                'url' => route('auth.club-memberships.index'),
+                'team_id' => $team->id,
+                'join_request_id' => $joinRequest->id,
+            ]));
 
         return back()->with('success', 'Beitrittsanfrage gesendet.');
     }
@@ -409,7 +433,11 @@ class TeamController extends Controller
             ]);
 
             $joinRequest->team->club->users()->syncWithoutDetaching([
-                $joinRequest->user_id => ['role' => 'member'],
+                $joinRequest->user_id => [
+                    'role' => 'member',
+                    'membership_status' => 'non_member',
+                    'joined_on' => now()->toDateString(),
+                ],
             ]);
 
             $joinRequest->update([

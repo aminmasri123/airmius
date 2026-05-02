@@ -100,6 +100,7 @@ class UserController extends Controller
 
         $posts = Post::query()
             ->where('user_id', $user->id)
+            ->where('moderation_status', '!=', 'removed')
             ->where(function ($query) use ($viewer) {
                 $query->where('visibility', 'public')
                     ->orWhere('user_id', $viewer->id)
@@ -113,7 +114,10 @@ class UserController extends Controller
                     });
             })
             ->with(['club:id,name', 'team:id,name,club_id'])
-            ->withCount(['comments', 'likes'])
+            ->withCount([
+                'comments' => fn ($query) => $query->where('moderation_status', '!=', 'removed'),
+                'likes',
+            ])
             ->latest('id')
             ->limit(8)
             ->get();
@@ -123,6 +127,7 @@ class UserController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $profileVisible || $canManageRoles ? $user->email : null,
+                'athlete_license_number' => $profileVisible ? $user->athlete_license_number : null,
                 'bio' => $profileVisible ? $user->bio : null,
                 'profile_visibility' => $user->profile_visibility,
                 'profile_photo_url' => $user->profile_photo_url,

@@ -26,6 +26,19 @@ const imageForm = useForm({
     cover_image: null,
 })
 
+const clubForm = useForm({
+    name: props.clubProfile.name || '',
+    sport_type: props.clubProfile.sport_type || '',
+    is_official: Boolean(props.clubProfile.is_official),
+    official_club_number: props.clubProfile.official_club_number || '',
+    country: props.clubProfile.country || 'DE',
+    street: props.clubProfile.street || '',
+    house_number: props.clubProfile.house_number || '',
+    postal_code: props.clubProfile.postal_code || '',
+    city: props.clubProfile.city || '',
+    state: props.clubProfile.state || '',
+})
+
 const uploadImage = (field, event) => {
     const file = event.target.files?.[0] || null
 
@@ -50,6 +63,12 @@ const updateMemberRole = (member) => {
     router.put(route('auth.clubs.members.update', [props.clubProfile.id, member.id]), {
         role: member.pivot.role,
     }, {
+        preserveScroll: true,
+    })
+}
+
+const updateClubProfile = () => {
+    clubForm.put(route('auth.clubs.update', props.clubProfile.id), {
         preserveScroll: true,
     })
 }
@@ -119,6 +138,82 @@ const updateMemberRole = (member) => {
                 </div>
             </section>
 
+            <section v-if="viewer.can_manage" class="rounded-lg border border-border bg-card p-5">
+                <h2 class="text-lg font-semibold text-primary">Vereinsdaten</h2>
+                <p class="mt-1 text-sm text-secondary">
+                    Offizielle Vereine muessen ihre Vereinsnummer hinterlegen. Nicht-offizielle Gruppen koennen das Feld leer lassen.
+                </p>
+
+                <form class="mt-4 grid gap-4 md:grid-cols-2" @submit.prevent="updateClubProfile">
+                    <div>
+                        <label class="text-sm font-semibold text-primary">Vereinsname</label>
+                        <input v-model="clubForm.name" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </div>
+
+                    <div>
+                        <label class="text-sm font-semibold text-primary">Sportart</label>
+                        <input v-model="clubForm.sport_type" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </div>
+
+                    <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary md:col-span-2">
+                        <input v-model="clubForm.is_official" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                        <span>
+                            <span class="block font-semibold">Offizieller Verein</span>
+                            <span class="block text-secondary">Aktivieren, wenn der Verein offiziell registriert oder einem Verband zugeordnet ist.</span>
+                        </span>
+                    </label>
+
+                    <div class="md:col-span-2">
+                        <label class="text-sm font-semibold text-primary">Vereinsnummer</label>
+                        <input
+                            v-model="clubForm.official_club_number"
+                            class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                            :required="clubForm.is_official"
+                            placeholder="z. B. Vereinsregister- oder Verbandsnummer"
+                        >
+                        <p class="mt-1 text-xs text-secondary">
+                            Pflichtfeld fuer offizielle Vereine.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label class="text-sm font-semibold text-primary">Land</label>
+                        <input v-model="clubForm.country" maxlength="2" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm uppercase text-primary">
+                    </div>
+
+                    <div>
+                        <label class="text-sm font-semibold text-primary">Stadt</label>
+                        <input v-model="clubForm.city" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </div>
+
+                    <div>
+                        <label class="text-sm font-semibold text-primary">PLZ</label>
+                        <input v-model="clubForm.postal_code" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </div>
+
+                    <div>
+                        <label class="text-sm font-semibold text-primary">Region</label>
+                        <input v-model="clubForm.state" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </div>
+
+                    <div>
+                        <label class="text-sm font-semibold text-primary">Strasse</label>
+                        <input v-model="clubForm.street" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </div>
+
+                    <div>
+                        <label class="text-sm font-semibold text-primary">Hausnummer</label>
+                        <input v-model="clubForm.house_number" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="clubForm.processing">
+                            Vereinsdaten speichern
+                        </button>
+                    </div>
+                </form>
+            </section>
+
             <div class="grid gap-6 lg:grid-cols-[1fr_320px]">
                 <section class="space-y-4">
                     <article v-for="post in posts" :key="post.id" class="rounded-lg border border-border bg-card p-4">
@@ -186,7 +281,6 @@ const updateMemberRole = (member) => {
                         <div class="mt-4 space-y-2">
                             <div v-for="member in clubProfile.members" :key="member.id"
                                 class="flex items-center gap-3 rounded-lg p-2 hover:bg-inputBg">
-
                                 <div class="min-w-0 flex-1">
                                     <Link :href="route('auth.users.show', member.id)"
                                         class="block truncate text-sm font-medium text-primary hover:underline">

@@ -11,7 +11,7 @@ class Message extends Model
     use HasFactory;
     use SoftDeletes;
 
-    protected $fillable = ['conversation_id','sender_id','message', 'status', 'read_at'];
+    protected $fillable = ['moderation_status','conversation_id','sender_id','message', 'status', 'read_at'];
     protected $appends = ['delivery_status'];
 
     protected $casts = [
@@ -46,6 +46,16 @@ class Message extends Model
     public function reactions()
     {
         return $this->hasMany(MessageReaction::class);
+    }
+
+    public function moderationFlags()
+    {
+        return $this->morphMany(ModerationFlag::class, 'flaggable');
+    }
+
+    public function reports()
+    {
+        return $this->morphMany(ContentReport::class, 'reportable');
     }
 
     public function getDeliveryStatusAttribute(): string

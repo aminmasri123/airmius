@@ -1,0 +1,188 @@
+<script setup>
+import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import { Head, router, usePage } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
+
+defineOptions({ layout: AppLayout })
+
+const props = defineProps({
+    flags: { type: Array, default: () => [] },
+    reports: { type: Array, default: () => [] },
+})
+
+const page = usePage()
+const activeTab = ref('reports')
+
+const openReports = computed(() => props.reports.filter((item) => item.status === 'open'))
+const openFlags = computed(() => props.flags.filter((item) => item.status === 'open'))
+
+const badgeClass = (severity) => ({
+    high: 'bg-error/10 text-error border-error/30',
+    medium: 'bg-warning/10 text-warning border-warning/30',
+    low: 'bg-muted text-secondary border-border',
+}[severity] || 'bg-muted text-secondary border-border')
+
+const contentLabel = (content) => {
+    if (!content) return 'Gelöschter Inhalt'
+    return `${content.type} #${content.id}`
+}
+
+const updateReport = (report, status, removeContent = false) => {
+    router.put(route('admin.moderation.reports.update', report.id), {
+        status,
+        remove_content: removeContent,
+    }, {
+        preserveScroll: true,
+    })
+}
+
+const updateFlag = (flag, status, removeContent = false) => {
+    router.put(route('admin.moderation.flags.update', flag.id), {
+        status,
+        remove_content: removeContent,
+    }, {
+        preserveScroll: true,
+    })
+}
+</script>
+
+<template>
+    <Head title="Moderation" />
+
+    <div class="space-y-5">
+        <section class="surface-card p-5">
+            <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Admin</p>
+                    <h1 class="mt-1 text-2xl font-semibold text-primary">Moderation</h1>
+                    <p class="mt-2 max-w-2xl text-sm text-secondary">
+                        Prüfe gemeldete und automatisch markierte Inhalte aus Feed, Kommentaren und Chat.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="rounded-lg border border-border bg-bg px-4 py-3">
+                        <p class="text-xs text-secondary">Offene Meldungen</p>
+                        <p class="mt-1 text-2xl font-semibold text-primary">{{ openReports.length }}</p>
+                    </div>
+                    <div class="rounded-lg border border-border bg-bg px-4 py-3">
+                        <p class="text-xs text-secondary">Automatische Treffer</p>
+                        <p class="mt-1 text-2xl font-semibold text-primary">{{ openFlags.length }}</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="surface-card overflow-hidden">
+            <div class="flex gap-2 border-b border-border p-3">
+                <button
+                    type="button"
+                    class="rounded-lg px-4 py-2 text-sm font-semibold"
+                    :class="activeTab === 'reports' ? 'bg-buttonPrimary text-buttonTextPrimary' : 'bg-muted text-secondary'"
+                    @click="activeTab = 'reports'"
+                >
+                    Meldungen
+                </button>
+                <button
+                    type="button"
+                    class="rounded-lg px-4 py-2 text-sm font-semibold"
+                    :class="activeTab === 'flags' ? 'bg-buttonPrimary text-buttonTextPrimary' : 'bg-muted text-secondary'"
+                    @click="activeTab = 'flags'"
+                >
+                    Automatisch markiert
+                </button>
+            </div>
+
+            <div v-if="page.props.flash?.success" class="m-4 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
+                {{ page.props.flash.success }}
+            </div>
+
+            <div v-if="activeTab === 'reports'" class="divide-y divide-border">
+                <article v-for="report in reports" :key="report.id" class="grid gap-4 p-4 lg:grid-cols-[1fr_18rem]">
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="rounded border border-border bg-bg px-2 py-1 text-xs font-semibold text-primary">
+                                {{ contentLabel(report.content) }}
+                            </span>
+                            <span class="rounded border border-border px-2 py-1 text-xs text-secondary">
+                                {{ report.reason }}
+                            </span>
+                            <span class="rounded border border-border px-2 py-1 text-xs text-secondary">
+                                {{ report.status }}
+                            </span>
+                        </div>
+
+                        <p class="mt-3 whitespace-pre-line rounded-lg bg-bg p-3 text-sm leading-6 text-primary">
+                            {{ report.content?.text || 'Kein Inhalt mehr vorhanden.' }}
+                        </p>
+
+                        <p v-if="report.details" class="mt-2 text-sm text-secondary">
+                            Hinweis: {{ report.details }}
+                        </p>
+                        <p class="mt-2 text-xs text-secondary">
+                            Gemeldet von {{ report.reporter?.name || 'Unbekannt' }} · {{ report.created_at }}
+                        </p>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <button class="btn" @click="updateReport(report, 'dismissed')">Als unkritisch schließen</button>
+                        <button class="btn-primary" @click="updateReport(report, 'actioned')">Als bearbeitet markieren</button>
+                        <button class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white" @click="updateReport(report, 'actioned', true)">
+                            Inhalt entfernen
+                        </button>
+                    </div>
+                </article>
+
+                <div v-if="!reports.length" class="p-8 text-center text-sm text-secondary">
+                    Keine Meldungen vorhanden.
+                </div>
+            </div>
+
+            <div v-else class="divide-y divide-border">
+                <article v-for="flag in flags" :key="flag.id" class="grid gap-4 p-4 lg:grid-cols-[1fr_18rem]">
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="rounded border border-border bg-bg px-2 py-1 text-xs font-semibold text-primary">
+                                {{ contentLabel(flag.content) }}
+                            </span>
+                            <span class="rounded border px-2 py-1 text-xs font-semibold" :class="badgeClass(flag.severity)">
+                                {{ flag.severity }}
+                            </span>
+                            <span class="rounded border border-border px-2 py-1 text-xs text-secondary">
+                                {{ flag.status }}
+                            </span>
+                        </div>
+
+                        <p class="mt-3 whitespace-pre-line rounded-lg bg-bg p-3 text-sm leading-6 text-primary">
+                            {{ flag.content?.text || 'Kein Inhalt mehr vorhanden.' }}
+                        </p>
+
+                        <div class="mt-2 flex flex-wrap gap-2 text-xs text-secondary">
+                            <span v-for="category in flag.categories" :key="category" class="rounded bg-muted px-2 py-1">
+                                {{ category }}
+                            </span>
+                            <span v-for="term in flag.matched_terms" :key="term" class="rounded bg-muted px-2 py-1">
+                                Treffer: {{ term }}
+                            </span>
+                        </div>
+                        <p class="mt-2 text-xs text-secondary">
+                            Quelle: {{ flag.source }} · Benutzer: {{ flag.user?.name || 'System' }} · {{ flag.created_at }}
+                        </p>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                        <button class="btn" @click="updateFlag(flag, 'dismissed')">Als unkritisch schließen</button>
+                        <button class="btn-primary" @click="updateFlag(flag, 'actioned')">Als bearbeitet markieren</button>
+                        <button class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white" @click="updateFlag(flag, 'actioned', true)">
+                            Inhalt entfernen
+                        </button>
+                    </div>
+                </article>
+
+                <div v-if="!flags.length" class="p-8 text-center text-sm text-secondary">
+                    Keine automatischen Treffer vorhanden.
+                </div>
+            </div>
+        </section>
+    </div>
+</template>

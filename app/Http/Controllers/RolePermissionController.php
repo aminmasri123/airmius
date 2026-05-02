@@ -103,7 +103,7 @@ class RolePermissionController extends Controller
     {
         $this->authorizeAccess($request);
 
-        abort_if(in_array($role->name, ['super_admin', 'admin', 'system_admin'], true), 422, 'Systemrollen koennen nicht geloescht werden.');
+        abort_if(in_array($role->name, ['super_admin', 'admin', 'system_admin'], true), 422, 'Systemrollen können nicht geloescht werden.');
         abort_if($role->users()->exists(), 422, 'Rolle ist noch Nutzern zugewiesen.');
 
         $role->delete();

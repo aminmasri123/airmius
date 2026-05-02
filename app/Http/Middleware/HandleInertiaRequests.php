@@ -45,8 +45,11 @@ class HandleInertiaRequests extends Middleware
                 'user' => $user ? [
                     'id' => $user->id,
                     'name' => $user->name,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
                     'email' => $user->email,
                     'country' => $user->country,
+                    'athlete_license_number' => $user->athlete_license_number,
                     'bio' => $user->bio,
                     'profile_visibility' => $user->profile_visibility,
                     'status' => $user->status,
@@ -124,6 +127,10 @@ class HandleInertiaRequests extends Middleware
             'club.store' => $user->can('create', \App\Models\Club::class),
             'club.update' => $user->can('clubs.edit') || $user->can('org.manage'),
             'club.delete' => $user->can('clubs.delete'),
+            'club-memberships.view' => $user->can('org.manage')
+                || $user->clubs()
+                    ->wherePivotIn('role', ['owner', 'admin', 'manager'])
+                    ->exists(),
 
             'teams.view' => $user->can('viewAny', \App\Models\Team::class),
             'teams.create' => $user->can('create', \App\Models\Team::class),
@@ -166,6 +173,7 @@ class HandleInertiaRequests extends Middleware
             'invoices.view' => $user->can('billing.manage'),
             'sponsors.view' => $user->can('finance.view') || $user->can('org.manage'),
             'system.manage' => $user->can('system.manage'),
+            'admin.moderation.view' => $user->can('system.manage'),
             'admin.settings.view' => $user->can('system.manage'),
         ];
     }

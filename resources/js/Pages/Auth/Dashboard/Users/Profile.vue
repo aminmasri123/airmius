@@ -164,8 +164,11 @@ const rejectRecommendation = (recommendation) => {
                         />
                         <div>
                             <h1 class="text-2xl font-semibold text-primary">{{ profileUser.name }}</h1>
-                            <p v-if="profileUser.email" class="text-sm text-secondary">{{ profileUser.email }}</p>
-                            <p class="mt-1 text-xs uppercase tracking-wide text-secondary">
+                        <p v-if="profileUser.email" class="text-sm text-secondary">{{ profileUser.email }}</p>
+                        <p v-if="profileUser.athlete_license_number" class="text-sm text-secondary">
+                            Lizenznummer: {{ profileUser.athlete_license_number }}
+                        </p>
+                        <p class="mt-1 text-xs uppercase tracking-wide text-secondary">
                                 {{ profileUser.profile_visibility === 'private' ? 'Privates Profil' : 'Öffentliches Profil' }}
                             </p>
                         </div>

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BlogPostController;
 use App\Http\Controllers\KontaktController;
+use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\OrganizationJobController;
 use App\Http\Controllers\PublicClubController;
 use Illuminate\Foundation\Application;
@@ -55,6 +56,15 @@ Route::get('/vereine', [PublicClubController::class, 'index'])->name('guest.vere
 
 Route::get('/blog', [BlogPostController::class, 'publicIndex'])->name('guest.blog.index');
 Route::get('/blog/{blogPost:slug}', [BlogPostController::class, 'publicShow'])->name('guest.blog.show');
+
+Route::get('/impressum', [LegalPageController::class, 'imprint'])->name('legal.imprint');
+Route::get('/datenschutz', [LegalPageController::class, 'privacy'])->name('policy.show');
+Route::get('/agb', [LegalPageController::class, 'terms'])->name('terms.show');
+Route::get('/community-richtlinien', [LegalPageController::class, 'community'])->name('legal.community');
+Route::get('/jugendschutz', [LegalPageController::class, 'minors'])->name('legal.minors');
+Route::get('/cookies', [LegalPageController::class, 'cookies'])->name('legal.cookies');
+Route::get('/widerruf', [LegalPageController::class, 'withdrawal'])->name('legal.withdrawal');
+Route::get('/kontakt-und-melden', [LegalPageController::class, 'reporting'])->name('legal.reporting');
 
 
 Route::post('/user/language', function (Request $request) {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Club;
+use App\Models\Conversation;
 use App\Models\Event;
 use App\Models\Team;
 use App\Services\EventService;
@@ -154,10 +155,15 @@ class EventController extends Controller
     {
         $this->authorize('view', $event);
 
-        abort_unless($event->conversation_id, 404);
+        $conversationId = $event->conversation_id ?: Conversation::query()
+            ->where('type', 'team')
+            ->where('team_id', $event->team_id)
+            ->value('conversations.id');
+
+        abort_unless($conversationId, 404);
 
         return redirect()->route('auth.conversations.index', [
-            'conversation' => $event->conversation_id,
+            'conversation' => $conversationId,
         ]);
     }
 

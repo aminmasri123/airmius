@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Comment;
 use App\Models\Activity;
 use App\Models\Post;
+use App\Services\ModerationService;
 use App\Support\AppNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -12,6 +13,8 @@ use Illuminate\Http\Request;
 class CommentController extends Controller
 {
     use AuthorizesRequests;
+
+    public function __construct(private ModerationService $moderation) {}
 
     /**
      * Display a listing of the resource.
@@ -44,6 +47,7 @@ class CommentController extends Controller
             'user_id' => auth()->id(),
             'content' => $data['content'],
         ]);
+        $this->moderation->flagIfNeeded($comment, $comment->content, auth()->id());
 
         if ($post->user_id !== auth()->id()) {
             AppNotification::send($post->user_id, 'post.comment', [
@@ -101,6 +105,7 @@ class CommentController extends Controller
         ]);
 
         $comment->update($data);
+        $this->moderation->flagIfNeeded($comment, $comment->content, auth()->id());
 
         return back()->with('success', 'Kommentar aktualisiert.');
     }

@@ -1,0 +1,1018 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Club;
+use App\Models\ClubExternalMember;
+use App\Models\Invoice;
+use App\Models\Payment;
+use App\Models\Team;
+use App\Models\TeamJoinRequest;
+use App\Models\User;
+use App\Notifications\ExternalClubMembershipInvitation;
+use App\Support\AppNotification;
+use App\Support\Roles;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
+
+class ClubMembershipController extends Controller
+{
+    use AuthorizesRequests;
+
+    public const MEMBERSHIP_STATUSES = ['active', 'non_member', 'pending', 'former'];
+    public const CONTRIBUTION_INTERVALS = ['none', 'monthly', 'quarterly', 'yearly', 'once'];
+
+    public function index(Request $request)
+    {
+        $user = $request->user();
+
+        $hasFullClubAccess = $user->hasAnyRole(Roles::FULL_ACCESS) || $user->can('org.manage');
+
+        $clubs = Club::query()
+            ->when(! $hasFullClubAccess, function ($query) use ($user) {
+                $query->where('owner_id', $user->id)
+                    ->orWhereHas('users', fn ($memberQuery) => $memberQuery
+                        ->where('users.id', $user->id)
+                        ->whereIn('club_user.role', ['owner', 'admin', 'manager']));
+            })
+            ->with([
+                'users' => fn ($query) => $query
+                    ->select('users.id', 'name', 'email', 'athlete_license_number', 'profile_photo_path')
+                    ->withCount(['invoices', 'payments'])
+                    ->orderBy('name'),
+                'teams' => fn ($query) => $query
+                    ->select('id', 'club_id', 'name')
+                    ->with([
+                        'joinRequests' => fn ($requestQuery) => $requestQuery
+                            ->where('status', 'pending')
+                            ->with('user:id,name,email,profile_photo_path'),
+                    ])
+                    ->orderBy('name'),
+                'invoices' => fn ($query) => $query
+                    ->with('user:id,name,email')
+                    ->latest('id')
+                    ->limit(60),
+                'payments' => fn ($query) => $query
+                    ->with(['user:id,name,email', 'invoice:id,number,title'])
+                    ->latest('id')
+                    ->limit(60),
+                'externalMembers' => fn ($query) => $query
+                    ->with('linkedUser:id,name,email,profile_photo_path')
+                    ->orderBy('name')
+                    ->orderBy('email'),
+            ])
+            ->withCount(['users', 'teams'])
+            ->orderBy('name')
+            ->get()
+            ->map(function (Club $club) {
+                $pendingRequests = $club->teams
+                    ->flatMap(fn (Team $team) => $team->joinRequests->map(fn (TeamJoinRequest $joinRequest) => [
+                        'id' => $joinRequest->id,
+                        'team' => [
+                            'id' => $team->id,
+                            'name' => $team->name,
+                        ],
+                        'user' => $joinRequest->user,
+                        'created_at' => $joinRequest->created_at,
+                    ]))
+                    ->values();
+
+                return [
+                    'id' => $club->id,
+                    'name' => $club->name,
+                    'users_count' => $club->users_count,
+                    'teams_count' => $club->teams_count,
+                    'pending_requests' => $pendingRequests,
+                    'members' => $club->users->map(fn (User $member) => [
+                        'id' => $member->id,
+                        'name' => $member->name,
+                        'email' => $member->email,
+                        'athlete_license_number' => $member->athlete_license_number,
+                        'profile_photo_url' => $member->profile_photo_url,
+                        'profile_photo_thumb' => $member->profile_photo_thumb,
+                        'pivot' => $member->pivot,
+                        'invoices_count' => $member->invoices_count,
+                        'payments_count' => $member->payments_count,
+                    ])->values(),
+                    'external_members' => $club->externalMembers->map(fn (ClubExternalMember $externalMember) => [
+                        'id' => $externalMember->id,
+                        'name' => $externalMember->name,
+                        'email' => $externalMember->email,
+                        'role' => $externalMember->role,
+                        'membership_status' => $externalMember->membership_status,
+                        'member_number' => $externalMember->member_number,
+                        'athlete_license_number' => $externalMember->athlete_license_number,
+                        'contribution_amount' => $externalMember->contribution_amount,
+                        'contribution_interval' => $externalMember->contribution_interval,
+                        'joined_on' => $externalMember->joined_on,
+                        'membership_notes' => $externalMember->membership_notes,
+                        'invitation_status' => $externalMember->invitation_status,
+                        'invited_at' => $externalMember->invited_at,
+                        'linked_at' => $externalMember->linked_at,
+                        'linked_user' => $externalMember->linkedUser,
+                    ])->values(),
+                    'invoices' => $club->invoices,
+                    'payments' => $club->payments,
+                ];
+            });
+
+        return Inertia::render('Auth/Dashboard/ClubMemberships/Index', [
+            'clubs' => $clubs,
+            'membershipStatuses' => self::MEMBERSHIP_STATUSES,
+            'contributionIntervals' => self::CONTRIBUTION_INTERVALS,
+            'teamRoles' => Team::ROLES,
+        ]);
+    }
+
+    public function updateMember(Request $request, Club $club, User $user)
+    {
+        $this->authorize('update', $club);
+
+        abort_unless($club->users()->where('users.id', $user->id)->exists(), 404);
+
+        $data = $request->validate([
+            'role' => ['required', Rule::in(ClubController::MEMBER_ROLES)],
+            'membership_status' => ['required', Rule::in(self::MEMBERSHIP_STATUSES)],
+            'member_number' => ['nullable', 'string', 'max:80'],
+            'athlete_license_number' => ['nullable', 'string', 'max:120'],
+            'contribution_amount' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+            'contribution_interval' => ['nullable', Rule::in(self::CONTRIBUTION_INTERVALS)],
+            'joined_on' => ['nullable', 'date'],
+            'membership_notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        abort_if(
+            $club->owner_id === $user->id && $data['role'] !== 'owner',
+            422,
+            'Der Owner kann hier nicht herabgestuft werden.'
+        );
+
+        $duplicateNumber = filled($data['member_number'] ?? null)
+            && DB::table('club_user')
+                ->where('club_id', $club->id)
+                ->where('member_number', $data['member_number'])
+                ->where('user_id', '!=', $user->id)
+                ->exists();
+
+        abort_if($duplicateNumber, 422, 'Diese Mitgliedsnummer ist in diesem Verein bereits vergeben.');
+
+        $club->users()->updateExistingPivot($user->id, [
+            'role' => $data['role'],
+            'membership_status' => $data['membership_status'],
+            'member_number' => $data['member_number'] ?? null,
+            'contribution_amount' => $data['contribution_amount'] ?? null,
+            'contribution_interval' => $data['contribution_interval'] ?? 'none',
+            'joined_on' => $data['joined_on'] ?? null,
+            'membership_notes' => $data['membership_notes'] ?? null,
+        ]);
+
+        $user->forceFill([
+            'athlete_license_number' => $data['athlete_license_number'] ?? null,
+        ])->save();
+
+        return back()->with('success', 'Mitgliedsdaten aktualisiert.');
+    }
+
+    public function storeEmailMember(Request $request, Club $club)
+    {
+        $this->authorize('update', $club);
+
+        if ($request->has('members')) {
+            $data = $request->validate([
+                'send_invitation' => ['boolean'],
+                'members' => ['required', 'array', 'min:1', 'max:50'],
+                'members.*.name' => ['nullable', 'string', 'max:255'],
+                'members.*.email' => ['required', 'email', 'max:255'],
+                'members.*.membership_status' => ['required', Rule::in(self::MEMBERSHIP_STATUSES)],
+                'members.*.member_number' => ['nullable', 'string', 'max:80'],
+                'members.*.athlete_license_number' => ['nullable', 'string', 'max:120'],
+                'members.*.contribution_amount' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+                'members.*.contribution_interval' => ['nullable', Rule::in(self::CONTRIBUTION_INTERVALS)],
+            ]);
+
+            $stats = ['stored' => 0, 'linked' => 0, 'invited' => 0];
+
+            foreach ($data['members'] as $memberData) {
+                $result = $this->storeEmailMemberData($club, $request->user(), $memberData, (bool) ($data['send_invitation'] ?? false));
+                $stats[$result]++;
+            }
+
+            return back()->with(
+                'success',
+                "Mitglieder gespeichert: {$stats['stored']} extern, {$stats['linked']} verknuepft, {$stats['invited']} eingeladen."
+            );
+        }
+
+        $data = $request->validate([
+            'name' => ['nullable', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'send_invitation' => ['boolean'],
+            'membership_status' => ['required', Rule::in(self::MEMBERSHIP_STATUSES)],
+            'member_number' => ['nullable', 'string', 'max:80'],
+            'athlete_license_number' => ['nullable', 'string', 'max:120'],
+            'contribution_amount' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
+            'contribution_interval' => ['nullable', Rule::in(self::CONTRIBUTION_INTERVALS)],
+        ]);
+
+        $result = $this->storeEmailMemberData($club, $request->user(), $data, (bool) ($data['send_invitation'] ?? false));
+
+        return back()->with('success', match ($result) {
+            'linked' => 'Bestehender User wurde direkt mit dem Verein verknuepft.',
+            'invited' => 'Externes Mitglied gespeichert und Einladung versendet.',
+            default => 'Externes Mitglied ohne Einladung gespeichert.',
+        });
+    }
+
+    public function importEmailMembers(Request $request, Club $club)
+    {
+        $this->authorize('update', $club);
+
+        $data = $request->validate([
+            'file' => ['required', 'file', 'max:10240'],
+            'send_invitation' => ['boolean'],
+        ]);
+
+        $rows = $this->readMembershipImportRows($data['file']->getRealPath(), $data['file']->getClientOriginalExtension());
+        $sendInvitation = (bool) ($data['send_invitation'] ?? false);
+        $stats = [
+            'stored' => 0,
+            'linked' => 0,
+            'invited' => 0,
+            'skipped' => 0,
+        ];
+
+        foreach ($rows as $row) {
+            $email = strtolower(trim((string) ($row['email'] ?? '')));
+
+            if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $stats['skipped']++;
+                continue;
+            }
+
+            $memberData = [
+                'name' => trim((string) ($row['name'] ?? '')) ?: null,
+                'email' => $email,
+                'membership_status' => $this->normalizeMembershipStatus($row['mitgliedschaft'] ?? $row['membership_status'] ?? 'active'),
+                'member_number' => trim((string) ($row['mitgliedsnummer'] ?? $row['member_number'] ?? '')) ?: null,
+                'athlete_license_number' => trim((string) ($row['lizenznummer'] ?? $row['athlete_license_number'] ?? '')) ?: null,
+                'contribution_amount' => $this->normalizeMoney($row['beitrag'] ?? $row['contribution_amount'] ?? null),
+                'contribution_interval' => $this->normalizeContributionInterval($row['intervall'] ?? $row['contribution_interval'] ?? 'none'),
+                'joined_on' => $this->normalizeImportDate($row['eintritt'] ?? $row['joined_on'] ?? null),
+                'membership_notes' => trim((string) ($row['notiz'] ?? $row['membership_notes'] ?? '')) ?: null,
+            ];
+
+            $existingUser = User::query()->where('email', $email)->first();
+
+            if ($sendInvitation && $existingUser) {
+                $this->attachExistingUserToClub($club, $existingUser, $memberData);
+                $stats['linked']++;
+                continue;
+            }
+
+            $externalMember = ClubExternalMember::updateOrCreate(
+                [
+                    'club_id' => $club->id,
+                    'email' => $email,
+                ],
+                [
+                    'created_by' => $request->user()->id,
+                    'name' => $memberData['name'],
+                    'role' => 'member',
+                    'membership_status' => $memberData['membership_status'],
+                    'member_number' => $memberData['member_number'],
+                    'athlete_license_number' => $memberData['athlete_license_number'],
+                    'contribution_amount' => $memberData['contribution_amount'],
+                    'contribution_interval' => $memberData['contribution_interval'],
+                    'joined_on' => $memberData['joined_on'] ?? now()->toDateString(),
+                    'membership_notes' => $memberData['membership_notes'],
+                    'invitation_status' => $sendInvitation ? 'pending' : 'none',
+                    'invitation_token' => $sendInvitation ? Str::random(64) : null,
+                    'invited_at' => $sendInvitation ? now() : null,
+                ],
+            );
+
+            if ($sendInvitation) {
+                Notification::route('mail', $email)
+                    ->notify(new ExternalClubMembershipInvitation($externalMember->load('club')));
+                $stats['invited']++;
+            } else {
+                $stats['stored']++;
+            }
+        }
+
+        return back()->with(
+            'success',
+            "Import fertig: {$stats['stored']} gespeichert, {$stats['linked']} verknuepft, {$stats['invited']} eingeladen, {$stats['skipped']} uebersprungen."
+        );
+    }
+
+    public function downloadImportTemplate()
+    {
+        $path = $this->buildMembershipImportTemplate();
+
+        return response()
+            ->download($path, 'airmius-mitglieder-import-vorlage.xlsx', [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ])
+            ->deleteFileAfterSend(true);
+    }
+
+    public function inviteEmailMember(Request $request, ClubExternalMember $externalMember)
+    {
+        $this->authorize('update', $externalMember->club);
+
+        $existingUser = User::query()
+            ->where('email', strtolower($externalMember->email))
+            ->first();
+
+        if ($existingUser) {
+            DB::transaction(function () use ($externalMember, $existingUser) {
+                $externalMember->club->users()->syncWithoutDetaching([
+                    $existingUser->id => [
+                        'role' => $externalMember->role,
+                        'membership_status' => $externalMember->membership_status,
+                        'member_number' => $externalMember->member_number,
+                        'contribution_amount' => $externalMember->contribution_amount,
+                        'contribution_interval' => $externalMember->contribution_interval ?? 'none',
+                        'joined_on' => $externalMember->joined_on?->toDateString() ?? now()->toDateString(),
+                        'membership_notes' => $externalMember->membership_notes,
+                    ],
+                ]);
+
+                if (filled($externalMember->athlete_license_number)) {
+                    $existingUser->forceFill([
+                        'athlete_license_number' => $externalMember->athlete_license_number,
+                    ])->save();
+                }
+
+                $externalMember->delete();
+            });
+
+            AppNotification::send($existingUser, 'club.member_linked', [
+                'title' => 'Du wurdest mit '.$externalMember->club->name.' verknuepft',
+                'body' => 'Der Verein hat deine Mitgliedschaft mit deinem Airmius-Konto verbunden.',
+                'url' => route('auth.club-memberships.index'),
+                'club_id' => $externalMember->club_id,
+            ]);
+
+            return back()->with('success', 'Bestehender User wurde verknuepft.');
+        }
+
+        $externalMember->update([
+            'invitation_status' => 'pending',
+            'invitation_token' => Str::random(64),
+            'invited_at' => now(),
+        ]);
+
+        Notification::route('mail', $externalMember->email)
+            ->notify(new ExternalClubMembershipInvitation($externalMember->load('club')));
+
+        return back()->with('success', 'Einladung wurde versendet.');
+    }
+
+    public function acceptExternalInvitation(Request $request, string $token)
+    {
+        $externalMember = ClubExternalMember::query()
+            ->where('invitation_token', $token)
+            ->where('invitation_status', 'pending')
+            ->firstOrFail();
+
+        abort_unless(strtolower((string) $request->user()->email) === strtolower($externalMember->email), 403);
+
+        DB::transaction(function () use ($externalMember, $request) {
+            $externalMember->club->users()->syncWithoutDetaching([
+                $request->user()->id => [
+                    'role' => $externalMember->role,
+                    'membership_status' => $externalMember->membership_status,
+                    'member_number' => $externalMember->member_number,
+                    'contribution_amount' => $externalMember->contribution_amount,
+                    'contribution_interval' => $externalMember->contribution_interval ?? 'none',
+                    'joined_on' => $externalMember->joined_on?->toDateString() ?? now()->toDateString(),
+                    'membership_notes' => $externalMember->membership_notes,
+                ],
+            ]);
+
+            if (filled($externalMember->athlete_license_number)) {
+                $request->user()->forceFill([
+                    'athlete_license_number' => $externalMember->athlete_license_number,
+                ])->save();
+            }
+
+            $externalMember->delete();
+        });
+
+        return redirect()
+            ->route('auth.club-memberships.index')
+            ->with('success', 'Vereinsmitgliedschaft wurde mit deinem Konto verknuepft.');
+    }
+
+    public function storeInvoice(Request $request, Club $club, User $user)
+    {
+        $this->authorize('update', $club);
+        abort_unless($club->users()->where('users.id', $user->id)->exists(), 404);
+
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:999999.99'],
+            'due_date' => ['required', 'date'],
+        ]);
+
+        $invoice = Invoice::create([
+            'club_id' => $club->id,
+            'user_id' => $user->id,
+            'number' => $this->nextInvoiceNumber($club),
+            'title' => $data['title'],
+            'description' => $data['description'] ?? null,
+            'amount' => $data['amount'],
+            'status' => 'open',
+            'due_date' => $data['due_date'],
+            'issued_at' => now(),
+        ]);
+
+        AppNotification::send($user, 'invoice.created', [
+            'title' => 'Neue Rechnung von '.$club->name,
+            'body' => $invoice->title.' - '.number_format((float) $invoice->amount, 2, ',', '.').' EUR',
+            'url' => route('auth.settings'),
+            'club_id' => $club->id,
+            'invoice_id' => $invoice->id,
+        ]);
+
+        return back()->with('success', 'Rechnung erstellt.');
+    }
+
+    public function generateMemberNumber(Club $club, User $user)
+    {
+        $this->authorize('update', $club);
+        abort_unless($club->users()->where('users.id', $user->id)->exists(), 404);
+
+        $club->users()->updateExistingPivot($user->id, [
+            'member_number' => $this->nextMemberNumber($club),
+        ]);
+
+        return back()->with('success', 'Mitgliedsnummer generiert.');
+    }
+
+    public function updateInvoiceStatus(Request $request, Invoice $invoice)
+    {
+        $this->authorize('update', $invoice->club);
+
+        $data = $request->validate([
+            'status' => ['required', Rule::in(['open', 'paid', 'overdue', 'cancelled'])],
+        ]);
+
+        $invoice->update([
+            'status' => $data['status'],
+            'paid_at' => $data['status'] === 'paid' ? ($invoice->paid_at ?? now()) : null,
+        ]);
+
+        return back()->with('success', 'Rechnungsstatus aktualisiert.');
+    }
+
+    public function recordPayment(Request $request, Invoice $invoice)
+    {
+        $this->authorize('update', $invoice->club);
+
+        $data = $request->validate([
+            'amount' => ['nullable', 'numeric', 'min:0.01', 'max:999999.99'],
+            'method' => ['nullable', 'string', 'max:60'],
+            'reference' => ['nullable', 'string', 'max:255'],
+            'paid_at' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        Payment::create([
+            'club_id' => $invoice->club_id,
+            'user_id' => $invoice->user_id,
+            'invoice_id' => $invoice->id,
+            'amount' => $data['amount'] ?? $invoice->amount,
+            'status' => 'paid',
+            'method' => $data['method'] ?? 'manual',
+            'reference' => $data['reference'] ?? null,
+            'paid_at' => $data['paid_at'] ?? now(),
+            'notes' => $data['notes'] ?? null,
+        ]);
+
+        $invoice->update([
+            'status' => 'paid',
+            'paid_at' => $data['paid_at'] ?? now(),
+        ]);
+
+        AppNotification::send((int) $invoice->user_id, 'invoice.paid', [
+            'title' => 'Zahlung erfasst',
+            'body' => 'Deine Zahlung fuer '.$invoice->number.' wurde markiert.',
+            'url' => route('auth.settings'),
+            'invoice_id' => $invoice->id,
+        ]);
+
+        return back()->with('success', 'Zahlung markiert.');
+    }
+
+    public function sendReminder(Invoice $invoice)
+    {
+        $this->authorize('update', $invoice->club);
+        abort_if($invoice->status === 'paid', 422, 'Bezahlte Rechnungen koennen nicht gemahnt werden.');
+
+        $invoice->update([
+            'status' => 'overdue',
+            'reminder_sent_at' => now(),
+        ]);
+
+        AppNotification::send((int) $invoice->user_id, 'invoice.reminder', [
+            'title' => 'Zahlungserinnerung',
+            'body' => 'Bitte pruefe die offene Rechnung '.$invoice->number.'.',
+            'url' => route('auth.settings'),
+            'invoice_id' => $invoice->id,
+        ]);
+
+        return back()->with('success', 'Mahnung gesendet.');
+    }
+
+    private function attachExistingUserToClub(Club $club, User $user, array $data): void
+    {
+        $club->users()->syncWithoutDetaching([
+            $user->id => [
+                'role' => 'member',
+                'membership_status' => $data['membership_status'],
+                'member_number' => $data['member_number'],
+                'contribution_amount' => $data['contribution_amount'],
+                'contribution_interval' => $data['contribution_interval'] ?? 'none',
+                'joined_on' => $data['joined_on'] ?? now()->toDateString(),
+                'membership_notes' => $data['membership_notes'],
+            ],
+        ]);
+
+        if (filled($data['athlete_license_number'])) {
+            $user->forceFill([
+                'athlete_license_number' => $data['athlete_license_number'],
+            ])->save();
+        }
+
+        ClubExternalMember::query()
+            ->where('club_id', $club->id)
+            ->where('email', strtolower($user->email))
+            ->delete();
+
+        AppNotification::send($user, 'club.member_linked', [
+            'title' => 'Du wurdest mit '.$club->name.' verknuepft',
+            'body' => 'Der Verein hat dich als Mitglied hinzugefuegt.',
+            'url' => route('auth.club-memberships.index'),
+            'club_id' => $club->id,
+        ]);
+    }
+
+    private function storeEmailMemberData(Club $club, User $creator, array $data, bool $sendInvitation): string
+    {
+        $email = strtolower(trim((string) $data['email']));
+        $memberData = [
+            'name' => trim((string) ($data['name'] ?? '')) ?: null,
+            'email' => $email,
+            'membership_status' => $data['membership_status'] ?? 'active',
+            'member_number' => trim((string) ($data['member_number'] ?? '')) ?: null,
+            'athlete_license_number' => trim((string) ($data['athlete_license_number'] ?? '')) ?: null,
+            'contribution_amount' => $data['contribution_amount'] ?? null,
+            'contribution_interval' => $data['contribution_interval'] ?? 'none',
+            'joined_on' => now()->toDateString(),
+            'membership_notes' => null,
+        ];
+
+        $existingUser = User::query()->where('email', $email)->first();
+
+        if ($sendInvitation && $existingUser) {
+            $this->attachExistingUserToClub($club, $existingUser, $memberData);
+
+            return 'linked';
+        }
+
+        $externalMember = ClubExternalMember::updateOrCreate(
+            [
+                'club_id' => $club->id,
+                'email' => $email,
+            ],
+            [
+                'created_by' => $creator->id,
+                'name' => $memberData['name'],
+                'role' => 'member',
+                'membership_status' => $memberData['membership_status'],
+                'member_number' => $memberData['member_number'],
+                'athlete_license_number' => $memberData['athlete_license_number'],
+                'contribution_amount' => $memberData['contribution_amount'],
+                'contribution_interval' => $memberData['contribution_interval'],
+                'joined_on' => $memberData['joined_on'],
+                'invitation_status' => $sendInvitation ? 'pending' : 'none',
+                'invitation_token' => $sendInvitation ? Str::random(64) : null,
+                'invited_at' => $sendInvitation ? now() : null,
+            ],
+        );
+
+        if ($sendInvitation) {
+            Notification::route('mail', $email)
+                ->notify(new ExternalClubMembershipInvitation($externalMember->load('club')));
+
+            return 'invited';
+        }
+
+        return 'stored';
+    }
+
+    private function readMembershipImportRows(string $path, ?string $extension): array
+    {
+        $extension = strtolower((string) $extension);
+
+        if ($extension === 'xlsx') {
+            return $this->readXlsxRows($path);
+        }
+
+        return $this->readCsvRows($path);
+    }
+
+    private function readCsvRows(string $path): array
+    {
+        $handle = fopen($path, 'r');
+
+        if (! $handle) {
+            return [];
+        }
+
+        $firstLine = fgets($handle) ?: '';
+        rewind($handle);
+        $delimiter = str_contains($firstLine, ';') ? ';' : (str_contains($firstLine, "\t") ? "\t" : ',');
+        $tableRows = [];
+
+        while (($values = fgetcsv($handle, 0, $delimiter)) !== false) {
+            if ($values === [null] || $values === false) {
+                continue;
+            }
+
+            $tableRows[] = $values;
+        }
+
+        fclose($handle);
+
+        return $this->normalizeImportTableRows($tableRows);
+    }
+
+    private function readXlsxRows(string $path): array
+    {
+        $zip = new \ZipArchive();
+
+        if ($zip->open($path) !== true) {
+            return [];
+        }
+
+        $sharedStrings = [];
+        $sharedStringsXml = $zip->getFromName('xl/sharedStrings.xml');
+
+        if ($sharedStringsXml !== false) {
+            $xml = simplexml_load_string($sharedStringsXml);
+            foreach ($xml->si ?? [] as $string) {
+                if (isset($string->t)) {
+                    $sharedStrings[] = (string) $string->t;
+                    continue;
+                }
+
+                $text = '';
+                foreach ($string->r ?? [] as $run) {
+                    $text .= (string) $run->t;
+                }
+                $sharedStrings[] = $text;
+            }
+        }
+
+        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $zip->close();
+
+        if ($sheetXml === false) {
+            return [];
+        }
+
+        $xml = simplexml_load_string($sheetXml);
+        $tableRows = [];
+
+        foreach ($xml->sheetData->row ?? [] as $row) {
+            $values = [];
+
+            foreach ($row->c ?? [] as $cell) {
+                $reference = (string) $cell['r'];
+                $column = preg_replace('/\d+/', '', $reference);
+                $index = $this->excelColumnIndex($column);
+                $type = (string) $cell['t'];
+                $value = (string) ($cell->v ?? '');
+
+                if ($type === 's') {
+                    $value = $sharedStrings[(int) $value] ?? '';
+                } elseif ($type === 'inlineStr') {
+                    $value = (string) ($cell->is->t ?? '');
+                }
+
+                $values[$index] = $value;
+            }
+
+            if ($values !== []) {
+                ksort($values);
+                $tableRows[] = $values;
+            }
+        }
+
+        if ($tableRows === []) {
+            return [];
+        }
+
+        return $this->normalizeImportTableRows($tableRows);
+    }
+
+    private function normalizeImportTableRows(array $tableRows): array
+    {
+        $headerIndex = null;
+        $headers = [];
+
+        foreach ($tableRows as $index => $values) {
+            $candidate = array_map(fn ($value) => $this->normalizeImportKey($value), $values);
+
+            if (in_array('email', $candidate, true)) {
+                $headerIndex = $index;
+                $headers = $candidate;
+                break;
+            }
+        }
+
+        if ($headerIndex === null) {
+            return [];
+        }
+
+        $rows = [];
+
+        foreach (array_slice($tableRows, $headerIndex + 1) as $values) {
+            $row = [];
+            foreach ($headers as $index => $header) {
+                if ($header !== '') {
+                    $row[$header] = $values[$index] ?? null;
+                }
+            }
+
+            if (array_filter($row, fn ($value) => filled($value))) {
+                $rows[] = $row;
+            }
+        }
+
+        return $rows;
+    }
+
+    private function buildMembershipImportTemplate(): string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'airmius-members-').'.xlsx';
+        $zip = new \ZipArchive();
+        $zip->open($path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+
+        $zip->addFromString('[Content_Types].xml', <<<'XML'
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Default Extension="png" ContentType="image/png"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+  <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
+</Types>
+XML);
+        $zip->addFromString('_rels/.rels', <<<'XML'
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
+</Relationships>
+XML);
+        $zip->addFromString('docProps/core.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>Airmius Mitgliederimport</dc:title></cp:coreProperties>');
+        $zip->addFromString('docProps/app.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Airmius</Application></Properties>');
+        $zip->addFromString('xl/workbook.xml', <<<'XML'
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets><sheet name="Mitgliederimport" sheetId="1" r:id="rId1"/></sheets>
+</workbook>
+XML);
+        $zip->addFromString('xl/_rels/workbook.xml.rels', <<<'XML'
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>
+XML);
+        $zip->addFromString('xl/styles.xml', <<<'XML'
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="16"/><color rgb="FF000000"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts>
+  <fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF111827"/><bgColor indexed="64"/></patternFill></fill></fills>
+  <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+  <cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs>
+</styleSheet>
+XML);
+
+        $sheetRows = [
+            ['Airmius Mitgliederimport'],
+            ['Fuellen Sie ab Zeile 5 die Mitglieder aus. Pflichtfeld ist E-Mail. Mitgliedschaft: active, non_member, pending, former. Intervall: none, monthly, quarterly, yearly, once.'],
+            [],
+            ['Name', 'E-Mail', 'Mitgliedschaft', 'Mitgliedsnummer', 'Lizenznummer', 'Beitrag', 'Intervall', 'Eintritt', 'Notiz'],
+            ['Max Mustermann', 'max@example.org', 'active', 'MV-1001', 'LIC-2026-001', '12,50', 'monthly', '2026-05-02', 'Beispielzeile entfernen'],
+        ];
+
+        $sheetXml = $this->buildTemplateSheetXml($sheetRows);
+        $zip->addFromString('xl/worksheets/sheet1.xml', $sheetXml);
+        $zip->addFromString('xl/worksheets/_rels/sheet1.xml.rels', <<<'XML'
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/>
+</Relationships>
+XML);
+        $zip->addFromString('xl/drawings/drawing1.xml', <<<'XML'
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+  <xdr:oneCellAnchor>
+    <xdr:from><xdr:col>7</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>0</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from>
+    <xdr:ext cx="1600000" cy="520000"/>
+    <xdr:pic>
+      <xdr:nvPicPr><xdr:cNvPr id="2" name="Airmius Logo"/><xdr:cNvPicPr/></xdr:nvPicPr>
+      <xdr:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill>
+      <xdr:spPr><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr>
+    </xdr:pic>
+    <xdr:clientData/>
+  </xdr:oneCellAnchor>
+</xdr:wsDr>
+XML);
+        $zip->addFromString('xl/drawings/_rels/drawing1.xml.rels', <<<'XML'
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/airmius-logo.png"/>
+</Relationships>
+XML);
+
+        $logoPath = public_path('img/logo/Logo-Airmius-Quervormat.png');
+        if (is_file($logoPath)) {
+            $zip->addFile($logoPath, 'xl/media/airmius-logo.png');
+        } else {
+            $zip->addFromString('xl/media/airmius-logo.png', base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII='));
+        }
+
+        $zip->close();
+
+        return $path;
+    }
+
+    private function buildTemplateSheetXml(array $rows): string
+    {
+        $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+        $xml .= '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">';
+        $xml .= '<cols><col min="1" max="1" width="24" customWidth="1"/><col min="2" max="2" width="30" customWidth="1"/><col min="3" max="9" width="18" customWidth="1"/></cols>';
+        $xml .= '<sheetData>';
+
+        foreach ($rows as $rowIndex => $row) {
+            $number = $rowIndex + 1;
+            $height = $number === 1 ? ' ht="54" customHeight="1"' : '';
+            $xml .= '<row r="'.$number.'"'.$height.'>';
+
+            foreach ($row as $columnIndex => $value) {
+                $cell = $this->excelColumnName($columnIndex).$number;
+                $style = $number === 1 ? 1 : ($number === 4 ? 2 : 0);
+                $xml .= '<c r="'.$cell.'" t="inlineStr" s="'.$style.'"><is><t>'.htmlspecialchars((string) $value, ENT_XML1).'</t></is></c>';
+            }
+
+            $xml .= '</row>';
+        }
+
+        $xml .= '</sheetData><mergeCells count="2"><mergeCell ref="A1:I1"/><mergeCell ref="A2:I2"/></mergeCells><dataValidations count="1"><dataValidation type="list" allowBlank="1" showDropDown="0" sqref="G5:G1000"><formula1>"none,monthly,quarterly,yearly,once"</formula1></dataValidation></dataValidations><drawing r:id="rId1"/></worksheet>';
+
+        return $xml;
+    }
+
+    private function normalizeImportKey(mixed $value): string
+    {
+        $key = strtolower(trim((string) $value));
+        $key = str_replace(['ä', 'ö', 'ü', 'ß', ' '], ['ae', 'oe', 'ue', 'ss', '_'], $key);
+
+        return preg_replace('/[^a-z0-9_]/', '', $key) ?: '';
+    }
+
+    private function normalizeMembershipStatus(mixed $value): string
+    {
+        $status = strtolower(trim((string) $value));
+        $aliases = [
+            'vereinsmitglied' => 'active',
+            'mitglied' => 'active',
+            'aktiv' => 'active',
+            'kein_mitglied' => 'non_member',
+            'nichtmitglied' => 'non_member',
+            'pruefung' => 'pending',
+            'in_pruefung' => 'pending',
+            'ehemalig' => 'former',
+        ];
+
+        return in_array($status, self::MEMBERSHIP_STATUSES, true) ? $status : ($aliases[$status] ?? 'active');
+    }
+
+    private function normalizeContributionInterval(mixed $value): string
+    {
+        $interval = strtolower(trim((string) $value));
+        $aliases = [
+            'kein_beitrag' => 'none',
+            'keiner' => 'none',
+            'monatlich' => 'monthly',
+            'quartal' => 'quarterly',
+            'vierteljaehrlich' => 'quarterly',
+            'jaehrlich' => 'yearly',
+            'jährlich' => 'yearly',
+            'einmalig' => 'once',
+        ];
+
+        return in_array($interval, self::CONTRIBUTION_INTERVALS, true) ? $interval : ($aliases[$interval] ?? 'none');
+    }
+
+    private function normalizeMoney(mixed $value): ?float
+    {
+        if ($value === null || trim((string) $value) === '') {
+            return null;
+        }
+
+        return (float) str_replace(',', '.', preg_replace('/[^0-9,.\-]/', '', (string) $value));
+    }
+
+    private function normalizeImportDate(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            return \Carbon\Carbon::create(1899, 12, 30)->addDays((int) $value)->toDateString();
+        }
+
+        try {
+            return \Carbon\Carbon::parse($value)->toDateString();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function excelColumnIndex(string $column): int
+    {
+        $index = 0;
+        foreach (str_split($column) as $char) {
+            $index = ($index * 26) + (ord(strtoupper($char)) - 64);
+        }
+
+        return max(0, $index - 1);
+    }
+
+    private function excelColumnName(int $index): string
+    {
+        $name = '';
+        $index++;
+
+        while ($index > 0) {
+            $modulo = ($index - 1) % 26;
+            $name = chr(65 + $modulo).$name;
+            $index = intdiv($index - $modulo, 26);
+        }
+
+        return $name;
+    }
+
+    private function nextInvoiceNumber(Club $club): string
+    {
+        $next = Invoice::query()
+            ->where('club_id', $club->id)
+            ->whereYear('created_at', now()->year)
+            ->count() + 1;
+
+        return 'AIR-'.$club->id.'-'.now()->format('Y').'-'.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+    }
+
+    private function nextMemberNumber(Club $club): string
+    {
+        $next = DB::table('club_user')
+            ->where('club_id', $club->id)
+            ->whereNotNull('member_number')
+            ->count() + 1;
+
+        do {
+            $number = 'M-'.$club->id.'-'.str_pad((string) $next, 5, '0', STR_PAD_LEFT);
+            $exists = DB::table('club_user')
+                ->where('club_id', $club->id)
+                ->where('member_number', $number)
+                ->exists();
+            $next++;
+        } while ($exists);
+
+        return $number;
+    }
+}

@@ -12,7 +12,7 @@ class Post extends Model
     public const VISIBILITIES = ['team', 'organization', 'public'];
     public const TYPES = ['normal', 'question', 'knowledge', 'training_drill', 'tactic', 'analysis', 'experience', 'club_update'];
 
-    protected $fillable = ['club_id','team_id','user_id','sport_id','post_type','content','image','visibility'];
+    protected $fillable = ['moderation_status','club_id','team_id','user_id','sport_id','post_type','content','image','visibility'];
 
     public function user()
     {
@@ -67,5 +67,15 @@ class Post extends Model
     public function activities()
     {
         return $this->morphMany(Activity::class, 'subject');
+    }
+
+    public function moderationFlags()
+    {
+        return $this->morphMany(ModerationFlag::class, 'flaggable');
+    }
+
+    public function reports()
+    {
+        return $this->morphMany(ContentReport::class, 'reportable');
     }
 }

@@ -9,13 +9,17 @@ use App\Models\Message;
 use App\Models\MessageReceipt;
 use App\Models\MessageReaction;
 use App\Services\ChatService;
+use App\Services\ModerationService;
 use App\Support\AppNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class MessageController extends Controller
 {
-    public function __construct(private ChatService $service) {}
+    public function __construct(
+        private ChatService $service,
+        private ModerationService $moderation,
+    ) {}
 
     public function store(Request $request)
     {
@@ -36,6 +40,7 @@ class MessageController extends Controller
             $data['message'] ?? null,
             $request->file('attachments', [])
         );
+        $this->moderation->flagIfNeeded($message, $message->message, auth()->id());
 
         $conversation->users()
             ->where('users.id', '!=', auth()->id())

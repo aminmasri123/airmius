@@ -28,11 +28,32 @@ const messagesContainer = ref(null)
 const attachmentInput = ref(null)
 const optimisticMessages = ref([])
 const realtimeMessages = ref([])
+const reportTarget = ref(null)
+const reportForm = useForm({
+    type: 'message',
+    id: null,
+    reason: 'other',
+    details: '',
+})
 const typingUsers = ref([])
+const showNewConversationModal = ref(false)
+const showLeaveConversationModal = ref(false)
+const showChatOnMobile = ref(!!props.selectedConversation)
+const conversationSearch = ref('')
+const activeConversationFilter = ref(props.selectedConversation?.type ?? 'direct')
 let chatInterval = null
 let chatChannelName = null
 let typingTimeout = null
 let typingStopTimeout = null
+
+const conversationFilters = [
+    { key: 'direct', label: 'Personen', icon: 'las la-user' },
+    { key: 'team', label: 'Teams', icon: 'las la-users' },
+    { key: 'group', label: 'Gruppen', icon: 'las la-comments' },
+    { key: 'event', label: 'Training', icon: 'las la-calendar' },
+    { key: 'all', label: 'Alle', icon: 'las la-inbox' },
+]
+const conversationsByTypeKeys = ['direct', 'team', 'group', 'event']
 
 const messageForm = useForm({
     conversation_id: props.selectedConversation?.id ?? null,
@@ -47,8 +68,9 @@ const conversationForm = useForm({
     message: '',
 })
 
-const showNewConversationModal = ref(false)
-const showChatOnMobile = ref(!!props.selectedConversation)
+const leaveConversationForm = useForm({
+    delete_conversation: false,
+})
 
 const initials = (name) => (name || '?')
     .split(' ')
@@ -94,8 +116,37 @@ const typeLabelFor = (conversation) => ({
     direct: 'Direkt',
     group: 'Gruppe',
     team: 'Team',
-    event: 'Event',
+    event: 'Training',
 }[conversation?.type] || 'Chat')
+
+const conversationsByType = computed(() => {
+    return conversationsByTypeKeys.reduce((counts, key) => {
+        counts[key] = props.conversations.filter((conversation) => conversation.type === key).length
+        return counts
+    }, {})
+})
+
+const filteredConversations = computed(() => {
+    const search = conversationSearch.value.trim().toLowerCase()
+
+    return props.conversations.filter((conversation) => {
+        const matchesFilter = activeConversationFilter.value === 'all'
+            || conversation.type === activeConversationFilter.value
+
+        if (!matchesFilter) return false
+        if (!search) return true
+
+        const haystack = [
+            titleFor(conversation),
+            typeLabelFor(conversation),
+            conversation.team?.name,
+            conversation.event?.title,
+            ...(conversation.users || []).map((user) => user.name),
+        ].filter(Boolean).join(' ').toLowerCase()
+
+        return haystack.includes(search)
+    })
+})
 
 const selectedMessages = computed(() => {
     const serverMessages = props.selectedConversation?.messages || []
@@ -105,7 +156,12 @@ const selectedMessages = computed(() => {
 
     return [...serverMessages, ...pushedMessages, ...pendingMessages].filter((message) => !message.deleted_at)
 })
+
 const selectedUsers = computed(() => props.selectedConversation?.users || [])
+const remainingMembersAfterLeave = computed(() => Math.max(0, selectedUsers.value.length - 1))
+const canLeaveConversation = computed(() => {
+    return !!props.selectedConversation && props.selectedConversation.type !== 'direct'
+})
 const canCreateConversation = computed(() => {
     if (conversationForm.type === 'team') {
         return !!conversationForm.team_id
@@ -200,6 +256,32 @@ const setType = (type) => {
     conversationForm.participant_ids = []
 }
 
+const openLeaveConversationModal = () => {
+    if (!canLeaveConversation.value) return
+
+    leaveConversationForm.delete_conversation = remainingMembersAfterLeave.value <= 1
+    showLeaveConversationModal.value = true
+}
+
+const closeLeaveConversationModal = () => {
+    if (leaveConversationForm.processing) return
+
+    leaveConversationForm.reset('delete_conversation')
+    showLeaveConversationModal.value = false
+}
+
+const leaveSelectedConversation = () => {
+    if (!canLeaveConversation.value) return
+
+    leaveConversationForm.delete(route('auth.conversations.leave', props.selectedConversation.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showLeaveConversationModal.value = false
+            showChatOnMobile.value = false
+        },
+    })
+}
+
 const onAttachmentChange = (event) => {
     messageForm.attachments = Array.from(event.target.files || [])
 }
@@ -211,16 +293,22 @@ const refreshChat = () => {
         only: ['conversations', 'selectedConversation', 'notificationCenter', 'auth'],
         preserveScroll: true,
         preserveState: true,
-        onSuccess: () => scrollMessagesToBottom(false),
+        onSuccess: () => {
+            if (props.selectedConversation) scrollMessagesToBottom(false)
+        },
     })
 }
 
 const scrollMessagesToBottom = (smooth = true) => {
     nextTick(() => {
-        if (!messagesContainer.value) return
+        const container = Array.isArray(messagesContainer.value)
+            ? messagesContainer.value[0]
+            : messagesContainer.value
 
-        messagesContainer.value.scrollTo({
-            top: messagesContainer.value.scrollHeight,
+        if (!container) return
+
+        container.scrollTo({
+            top: container.scrollHeight,
             behavior: smooth ? 'smooth' : 'auto',
         })
     })
@@ -348,6 +436,30 @@ const deleteMessage = (message) => {
         .catch(() => { })
 }
 
+const openReport = (message) => {
+    if (!message.id || String(message.id).startsWith('local-')) return
+
+    reportTarget.value = message
+    reportForm.type = 'message'
+    reportForm.id = message.id
+    reportForm.reason = 'other'
+    reportForm.details = ''
+    reportForm.clearErrors()
+}
+
+const closeReport = () => {
+    reportTarget.value = null
+    reportForm.reset()
+}
+
+const submitReport = () => {
+    reportForm.post(route('auth.reports.store'), {
+        preserveScroll: true,
+        only: ['selectedConversation', 'notificationCenter', 'unreadChatsCount', 'flash', 'errors'],
+        onSuccess: closeReport,
+    })
+}
+
 const reactToMessage = (message, reaction) => {
     if (!message.id || String(message.id).startsWith('local-')) return
 
@@ -358,24 +470,40 @@ const reactToMessage = (message, reaction) => {
 
 watch(
     () => props.selectedConversation?.id,
-    () => {
+    (conversationId) => {
         realtimeMessages.value = []
-        scrollMessagesToBottom(false)
-        selectConversation()
-        markSelectedConversationAsRead()
-        bindChatRealtime()
+        messageForm.conversation_id = conversationId ?? null
+
+        if (conversationId) {
+            if (props.selectedConversation?.type && activeConversationFilter.value !== 'all') {
+                activeConversationFilter.value = props.selectedConversation.type
+            }
+
+            scrollMessagesToBottom(false)
+            selectConversation()
+            markSelectedConversationAsRead()
+            bindChatRealtime()
+        } else {
+            unbindChatRealtime()
+            showChatOnMobile.value = false
+        }
     },
 )
 
 watch(
     () => selectedMessages.value.length,
-    () => scrollMessagesToBottom(),
+    () => {
+        if (props.selectedConversation) scrollMessagesToBottom()
+    },
 )
 
 onMounted(() => {
-    scrollMessagesToBottom(false)
-    markSelectedConversationAsRead()
-    bindChatRealtime()
+    if (props.selectedConversation) {
+        scrollMessagesToBottom(false)
+        markSelectedConversationAsRead()
+        bindChatRealtime()
+    }
+
     chatInterval = window.setInterval(refreshChat, 2500)
 })
 
@@ -392,444 +520,488 @@ onUnmounted(() => {
 
 <template>
     <AppLayout title="Chat">
-
         <Head title="Chat" />
 
-        <!-- MOBILE: Konversationsliste oder Chat -->
-        <div class="h-full flex flex-col">
-            <!-- Mobile Konversationsliste -->
-            <div v-show="!showChatOnMobile" class="flex h-full flex-col lg:hidden">
-                <div class="border-b border-border bg-card p-4">
-                    <div class="mb-4 flex items-center justify-between">
-                        <h1 class="text-xl font-semibold text-primary">Chat</h1>
-                        <button @click="showNewConversationModal = true"
-                            class="rounded-full bg-buttonPrimary p-2 text-buttonTextPrimary hover:bg-buttonPrimaryHover">
+        <div class="grid h-[calc(100vh-5rem)] min-h-0 grid-cols-1 gap-4 overflow-hidden lg:grid-cols-[minmax(300px,380px)_minmax(0,1fr)]">
+            <aside
+                class="min-h-0 flex-col rounded-lg border border-border bg-card"
+                :class="showChatOnMobile ? 'hidden lg:flex' : 'flex'"
+            >
+                <div class="border-b border-border p-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <h1 class="text-xl font-semibold text-primary">Chat</h1>
+                            <p class="mt-1 text-sm text-secondary">
+                                Erst Person oder Gruppe wählen, dann öffnen.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary text-buttonTextPrimary transition hover:bg-buttonPrimaryHover"
+                            title="Neue Konversation"
+                            @click="showNewConversationModal = true"
+                        >
                             <i class="las la-plus text-xl"></i>
                         </button>
                     </div>
-                    <p class="text-sm text-secondary">{{ conversations.length }} Konversationen</p>
+
+                    <label class="mt-4 flex items-center gap-2 rounded-lg border border-border bg-inputBg px-3 py-2">
+                        <i class="las la-search text-lg text-secondary"></i>
+                        <input
+                            v-model="conversationSearch"
+                            type="search"
+                            placeholder="Person, Team oder Training suchen"
+                            class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-primary placeholder-secondary focus:ring-0"
+                        >
+                    </label>
+
+                    <div class="mt-3 flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                        <button
+                            v-for="filter in conversationFilters"
+                            :key="filter.key"
+                            type="button"
+                            class="inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition"
+                            :class="activeConversationFilter === filter.key
+                                ? 'border-primary bg-buttonPrimary text-buttonTextPrimary'
+                                : 'border-border bg-card text-secondary hover:bg-inputBg hover:text-primary'"
+                            @click="activeConversationFilter = filter.key"
+                        >
+                            <i :class="filter.icon"></i>
+                            <span>{{ filter.label }}</span>
+                            <span v-if="filter.key !== 'all'" class="text-xs opacity-75">
+                                {{ conversationsByType[filter.key] || 0 }}
+                            </span>
+                            <span v-else class="text-xs opacity-75">{{ conversations.length }}</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="min-h-0 flex-1 overflow-y-auto p-2 custom-scrollbar">
-                    <Link v-for="conversation in conversations" :key="conversation.id"
+                    <Link
+                        v-for="conversation in filteredConversations"
+                        :key="conversation.id"
                         :href="route('auth.conversations.index', { conversation: conversation.id })"
-                        @click="selectConversation" preserve-scroll preserve-state
-                        class="flex gap-3 rounded-lg p-3 transition hover:bg-muted hover:text-card"
-                        :class="selectedConversation?.id === conversation.id ? 'bg-muted text-card' : 'text-primary'">
-                        <div
-                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary">
+                        preserve-scroll
+                        preserve-state
+                        class="mb-1 flex gap-3 rounded-lg p-3 text-primary transition hover:bg-muted"
+                        :class="selectedConversation?.id === conversation.id ? 'bg-muted' : ''"
+                        @click="selectConversation"
+                    >
+                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary">
                             {{ initials(titleFor(conversation)) }}
                         </div>
                         <div class="min-w-0 flex-1">
-                            <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-start justify-between gap-2">
                                 <h2 class="truncate text-sm font-semibold">{{ titleFor(conversation) }}</h2>
-                                <span class="shrink-0 text-xs opacity-75">{{
-                                    formatTime(conversation.messages_max_created_at) }}</span>
+                                <span class="shrink-0 text-xs text-secondary">
+                                    {{ formatTime(conversation.messages_max_created_at) }}
+                                </span>
                             </div>
-                            <p class="mt-1 truncate text-xs opacity-75">
-                                {{ typeLabelFor(conversation) }} · {{ conversation.users.length }} Mitglieder
+                            <p class="mt-1 truncate text-xs text-secondary">
+                                {{ typeLabelFor(conversation) }} - {{ conversation.users.length }} Mitglieder
                             </p>
                         </div>
                     </Link>
 
-                    <div v-if="conversations.length === 0" class="p-6 text-center text-sm text-secondary">
-                        Noch keine Chats.
+                    <div v-if="conversations.length === 0" class="p-8 text-center text-sm text-secondary">
+                        Noch keine Chats. Starte oben eine neue Konversation.
+                    </div>
+
+                    <div v-else-if="filteredConversations.length === 0" class="p-8 text-center text-sm text-secondary">
+                        Keine passenden Chats Für diesen Filter.
                     </div>
                 </div>
-            </div>
+            </aside>
 
-            <!-- Mobile Chat View -->
-            <div v-show="showChatOnMobile" class="flex h-full flex-col lg:hidden">
-                <div v-if="selectedConversation"
-                    class="flex items-center justify-between gap-4 border-b border-border bg-card p-4">
-                    <div class="flex items-center gap-3 min-w-0">
-                        <button @click="goBackToConversations" class="shrink-0 text-primary hover:text-secondary">
+            <section
+                class="min-h-0 flex-col rounded-lg border border-border bg-card"
+                :class="showChatOnMobile ? 'flex' : 'hidden lg:flex'"
+            >
+                <div v-if="selectedConversation" class="flex items-center justify-between gap-4 border-b border-border p-4">
+                    <div class="flex min-w-0 items-center gap-3">
+                        <button
+                            type="button"
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-primary hover:bg-inputBg lg:hidden"
+                            title="Zurueck"
+                            @click="goBackToConversations"
+                        >
                             <i class="las la-arrow-left text-xl"></i>
                         </button>
                         <div class="min-w-0">
-                            <h2 class="truncate text-lg font-semibold text-primary">{{ titleFor(selectedConversation) }}
-                            </h2>
-                            <p class="text-xs text-secondary">{{ selectedUsers.length }} Mitglieder</p>
+                            <h2 class="truncate text-lg font-semibold text-primary">{{ titleFor(selectedConversation) }}</h2>
+                            <p class="mt-1 text-sm text-secondary">
+                                {{ typeLabelFor(selectedConversation) }}chat - {{ selectedUsers.length }} Mitglieder
+                            </p>
                         </div>
                     </div>
+                    <div class="hidden -space-x-2 sm:flex">
+                        <div
+                            v-for="member in selectedUsers.slice(0, 4)"
+                            :key="member.id"
+                            class="flex h-9 w-9 items-center justify-center rounded-lg border border-card bg-inputBg text-xs font-semibold text-primary"
+                        >
+                            {{ initials(member.name) }}
+                        </div>
+                    </div>
+                    <button
+                        v-if="canLeaveConversation"
+                        type="button"
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-error"
+                        title="Gruppe verlassen"
+                        @click="openLeaveConversationModal"
+                    >
+                        <i class="las la-sign-out-alt text-xl"></i>
+                    </button>
                 </div>
 
-                <div v-if="selectedConversation" ref="messagesContainer"
-                    class="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 custom-scrollbar">
-                    <div v-for="message in selectedMessages" :key="message.id" class="flex"
-                        :class="isOwnMessage(message) ? 'justify-end' : 'justify-start'">
-                        <div class="max-w-[78%] rounded-lg px-4 py-3" :class="isOwnMessage(message)
-                            ? 'bg-buttonPrimary text-buttonTextPrimary'
-                            : 'bg-inputBg text-primary'">
+                <div v-if="selectedConversation" ref="messagesContainer" class="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 custom-scrollbar">
+                    <div
+                        v-for="message in selectedMessages"
+                        :key="message.id"
+                        class="flex"
+                        :class="isOwnMessage(message) ? 'justify-end' : 'justify-start'"
+                    >
+                        <div
+                            class="max-w-[82%] rounded-lg px-4 py-3"
+                            :class="isOwnMessage(message)
+                                ? 'bg-buttonPrimary text-buttonTextPrimary'
+                                : 'bg-inputBg text-primary'"
+                        >
                             <div class="mb-1 flex items-center justify-between gap-4 text-xs opacity-80">
-                                <span>{{ message.sender?.name }}</span>
-                                <span>{{ formatTime(message.created_at) }}</span>
+                                <span class="truncate">{{ message.sender?.name }}</span>
+                                <span class="shrink-0">{{ formatTime(message.created_at) }}</span>
                             </div>
-                            <p v-if="message.message" class="whitespace-pre-line text-sm leading-6">{{ message.message
-                                }}</p>
+                            <p v-if="message.message" class="whitespace-pre-line text-sm leading-6">{{ message.message }}</p>
+
                             <div v-if="message.attachments?.length" class="mt-2 space-y-1">
-                                <a v-for="attachment in message.attachments" :key="attachment.id"
-                                    :href="fileUrl(attachment.file)" target="_blank"
-                                    class="flex items-center gap-2 rounded border border-border/50 px-2 py-1 text-xs underline-offset-2 hover:underline">
+                                <a
+                                    v-for="attachment in message.attachments"
+                                    :key="attachment.id"
+                                    :href="fileUrl(attachment.file)"
+                                    target="_blank"
+                                    class="flex items-center gap-2 rounded border border-border/50 px-2 py-1 text-xs underline-offset-2 hover:underline"
+                                >
                                     <i class="las la-paperclip"></i>
                                     <span class="truncate">{{ attachmentLabel(attachment) }}</span>
                                 </a>
                             </div>
+
                             <div class="mt-2 flex flex-wrap items-center gap-1 text-xs">
-                                <button v-for="reaction in ['like', 'heart', 'ok']" :key="reaction" type="button"
+                                <button
+                                    v-for="reaction in ['like', 'heart', 'ok']"
+                                    :key="reaction"
+                                    type="button"
                                     class="rounded border px-2 py-1"
                                     :class="userReaction(message) === reaction ? 'border-primary bg-card text-primary' : 'border-border/50 opacity-80'"
-                                    @click="reactToMessage(message, reaction)">
+                                    @click="reactToMessage(message, reaction)"
+                                >
                                     {{ reaction }} {{ reactionCounts(message)[reaction] || '' }}
                                 </button>
-                                <button v-if="isOwnMessage(message) && !String(message.id).startsWith('local-')"
-                                    type="button" class="ml-auto rounded border border-border/50 px-2 py-1 opacity-80"
-                                    @click="deleteMessage(message)">
+                                <button
+                                    v-if="isOwnMessage(message) && !String(message.id).startsWith('local-')"
+                                    type="button"
+                                    class="ml-auto rounded border border-border/50 px-2 py-1 opacity-80"
+                                    @click="deleteMessage(message)"
+                                >
                                     <i class="las la-trash"></i>
                                 </button>
+                                <button
+                                    v-else-if="!String(message.id).startsWith('local-')"
+                                    type="button"
+                                    class="ml-auto rounded border border-border/50 px-2 py-1 opacity-80"
+                                    title="Nachricht melden"
+                                    @click="openReport(message)"
+                                >
+                                    <i class="las la-flag"></i>
+                                </button>
                             </div>
+
                             <div v-if="isOwnMessage(message)" class="mt-1 flex justify-end">
-                                <span class="inline-flex items-center gap-1 text-xs opacity-80"
-                                    :title="statusIconFor(message).label">
-                                    <i
-                                        :class="[statusIconFor(message).icon, message.local_status === 'failed' ? 'text-error' : '']"></i>
+                                <span class="inline-flex items-center gap-1 text-xs opacity-80" :title="statusIconFor(message).label">
+                                    <i :class="[statusIconFor(message).icon, message.local_status === 'failed' ? 'text-error' : '']"></i>
                                     <span class="sr-only">{{ statusIconFor(message).label }}</span>
                                 </span>
                             </div>
                         </div>
                     </div>
 
-                    <div v-if="selectedMessages.length === 0"
-                        class="flex h-full items-center justify-center text-sm text-secondary">
+                    <div v-if="selectedMessages.length === 0" class="flex h-full items-center justify-center text-sm text-secondary">
                         Keine Nachrichten in diesem Chat.
                     </div>
 
                     <div v-if="typingUsers.length" class="text-xs text-secondary">
-                        {{typingUsers.map((user) => user.name).join(', ')}} schreibt...
+                        {{ typingUsers.map((user) => user.name).join(', ') }} schreibt...
                     </div>
                 </div>
 
-                <form v-if="selectedConversation" class="border-t border-border bg-card p-4"
-                    @submit.prevent="sendMessage">
+                <form v-if="selectedConversation" class="border-t border-border p-4" @submit.prevent="sendMessage">
                     <div v-if="messageForm.attachments.length" class="mb-2 flex flex-wrap gap-2 text-xs text-secondary">
-                        <span v-for="file in messageForm.attachments" :key="file.name"
-                            class="rounded border border-border px-2 py-1">
+                        <span v-for="file in messageForm.attachments" :key="file.name" class="rounded border border-border px-2 py-1">
                             {{ file.name }}
                         </span>
                     </div>
                     <div class="flex gap-2">
-                        <textarea v-model="messageForm.message" rows="2" placeholder="Nachricht..."
+                        <textarea
+                            v-model="messageForm.message"
+                            rows="2"
+                            placeholder="Nachricht schreiben..."
                             class="min-w-0 flex-1 resize-none rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary placeholder-secondary focus:border-primary focus:ring-primary"
-                            @input="announceTyping" />
-                        <label
-                            class="flex cursor-pointer items-center rounded-lg border border-border px-3 py-2 text-primary hover:bg-inputBg">
+                            @keydown.enter.prevent="sendMessage"
+                            @input="announceTyping"
+                        />
+                        <label class="flex cursor-pointer items-center rounded-lg border border-border px-3 py-2 text-primary hover:bg-inputBg">
                             <i class="las la-paperclip text-xl"></i>
-                            <input ref="attachmentInput" type="file" multiple class="hidden"
-                                @change="onAttachmentChange">
+                            <input ref="attachmentInput" type="file" multiple class="hidden" @change="onAttachmentChange">
                         </label>
-                        <button type="submit" :disabled="messageForm.processing || !canSendMessage"
-                            class="rounded-lg bg-buttonPrimary px-4 py-2 text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50">
+                        <button
+                            type="submit"
+                            :disabled="messageForm.processing || !canSendMessage"
+                            class="rounded-lg bg-buttonPrimary px-4 py-2 text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50"
+                        >
                             <i class="las la-paper-plane text-xl"></i>
                         </button>
                     </div>
                 </form>
 
-                <div v-else class="flex h-full items-center justify-center p-8 text-center text-secondary">
-                    Wähle einen Chat.
+                <div v-else class="flex min-h-0 flex-1 items-center justify-center p-8 text-center">
+                    <div class="max-w-sm">
+                        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-lg bg-inputBg text-primary">
+                            <i class="las la-user-lock text-3xl"></i>
+                        </div>
+                        <h2 class="mt-4 text-lg font-semibold text-primary">Kein Chat geoeffnet</h2>
+                        <p class="mt-2 text-sm leading-6 text-secondary">
+                            Aus Datenschutzgruenden wird keine Konversation automatisch angezeigt.
+                            Waehle links bewusst eine Person, ein Team oder eine Gruppe aus.
+                        </p>
+                        <button
+                            type="button"
+                            class="mt-5 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover lg:hidden"
+                            @click="goBackToConversations"
+                        >
+                            Chat auswählen
+                        </button>
+                    </div>
                 </div>
-            </div>
-
-            <!-- DESKTOP: 3-Spalten Layout -->
-            <div class="hidden h-full grid-cols-1 gap-4 lg:grid lg:grid-cols-[320px_1fr_340px]">
-                <aside class="flex min-h-0 flex-col rounded-lg border border-border bg-card">
-                    <div class="border-b border-border p-4">
-                        <div class="mb-4 flex items-center justify-between">
-                            <h1 class="text-xl font-semibold text-primary">Chat</h1>
-                            <button @click="showNewConversationModal = true"
-                                class="rounded-full bg-buttonPrimary p-2 text-buttonTextPrimary hover:bg-buttonPrimaryHover">
-                                <i class="las la-plus text-xl"></i>
-                            </button>
-                        </div>
-                        <p class="text-sm text-secondary">{{ conversations.length }} Konversationen</p>
-                    </div>
-
-                    <div class="min-h-0 flex-1 overflow-y-auto p-2 custom-scrollbar">
-                        <Link v-for="conversation in conversations" :key="conversation.id"
-                            :href="route('auth.conversations.index', { conversation: conversation.id })"
-                            @click="selectConversation" preserve-scroll preserve-state
-                            class="flex gap-3 rounded-lg p-3 transition hover:bg-muted hover:text-card"
-                            :class="selectedConversation?.id === conversation.id ? 'bg-muted text-card' : 'text-primary'">
-                            <div
-                                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary">
-                                {{ initials(titleFor(conversation)) }}
-                            </div>
-                            <div class="min-w-0 flex-1">
-                                <div class="flex items-center justify-between gap-2">
-                                    <h2 class="truncate text-sm font-semibold">{{ titleFor(conversation) }}</h2>
-                                    <span class="shrink-0 text-xs opacity-75">{{
-                                        formatTime(conversation.messages_max_created_at) }}</span>
-                                </div>
-                                <p class="mt-1 truncate text-xs opacity-75">
-                                    {{ typeLabelFor(conversation) }} · {{ conversation.users.length }} Mitglieder
-                                </p>
-                            </div>
-                        </Link>
-
-                        <div v-if="conversations.length === 0" class="p-6 text-center text-sm text-secondary">
-                            Noch keine Chats.
-                        </div>
-                    </div>
-                </aside>
-
-                <section class="flex min-h-0 flex-col rounded-lg border border-border bg-card">
-                    <div v-if="selectedConversation"
-                        class="flex items-center justify-between gap-4 border-b border-border p-4">
-                        <div class="min-w-0">
-                            <h2 class="truncate text-lg font-semibold text-primary">{{ titleFor(selectedConversation) }}
-                            </h2>
-                            <p class="mt-1 text-sm text-secondary">
-                                {{ typeLabelFor(selectedConversation) }}chat
-                                · {{ selectedUsers.length }} Mitglieder
-                            </p>
-                        </div>
-                        <div class="flex -space-x-2">
-                            <div v-for="member in selectedUsers.slice(0, 4)" :key="member.id"
-                                class="flex h-9 w-9 items-center justify-center rounded-lg border border-card bg-inputBg text-xs font-semibold text-primary">
-                                {{ initials(member.name) }}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div v-if="selectedConversation" ref="messagesContainer"
-                        class="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 custom-scrollbar">
-                        <div v-for="message in selectedMessages" :key="message.id" class="flex"
-                            :class="isOwnMessage(message) ? 'justify-end' : 'justify-start'">
-                            <div class="max-w-[78%] rounded-lg px-4 py-3" :class="isOwnMessage(message)
-                                ? 'bg-buttonPrimary text-buttonTextPrimary'
-                                : 'bg-inputBg text-primary'">
-                                <div class="mb-1 flex items-center justify-between gap-4 text-xs opacity-80">
-                                    <span>{{ message.sender?.name }}</span>
-                                    <span>{{ formatTime(message.created_at) }}</span>
-                                </div>
-                                <p v-if="message.message" class="whitespace-pre-line text-sm leading-6">{{
-                                    message.message }}</p>
-                                <div v-if="message.attachments?.length" class="mt-2 space-y-1">
-                                    <a v-for="attachment in message.attachments" :key="attachment.id"
-                                        :href="fileUrl(attachment.file)" target="_blank"
-                                        class="flex items-center gap-2 rounded border border-border/50 px-2 py-1 text-xs underline-offset-2 hover:underline">
-                                        <i class="las la-paperclip"></i>
-                                        <span class="truncate">{{ attachmentLabel(attachment) }}</span>
-                                    </a>
-                                </div>
-                                <div class="mt-2 flex flex-wrap items-center gap-1 text-xs">
-                                    <button v-for="reaction in ['like', 'heart', 'ok']" :key="reaction" type="button"
-                                        class="rounded border px-2 py-1"
-                                        :class="userReaction(message) === reaction ? 'border-primary bg-card text-primary' : 'border-border/50 opacity-80'"
-                                        @click="reactToMessage(message, reaction)">
-                                        {{ reaction }} {{ reactionCounts(message)[reaction] || '' }}
-                                    </button>
-                                    <button v-if="isOwnMessage(message) && !String(message.id).startsWith('local-')"
-                                        type="button"
-                                        class="ml-auto rounded border border-border/50 px-2 py-1 opacity-80"
-                                        @click="deleteMessage(message)">
-                                        <i class="las la-trash"></i>
-                                    </button>
-                                </div>
-                                <div v-if="isOwnMessage(message)" class="mt-1 flex justify-end">
-                                    <span class="inline-flex items-center gap-1 text-xs opacity-80"
-                                        :title="statusIconFor(message).label">
-                                        <i
-                                            :class="[statusIconFor(message).icon, message.local_status === 'failed' ? 'text-error' : '']"></i>
-                                        <span class="sr-only">{{ statusIconFor(message).label }}</span>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div v-if="selectedMessages.length === 0"
-                            class="flex h-full items-center justify-center text-sm text-secondary">
-                            Keine Nachrichten in diesem Chat.
-                        </div>
-
-                        <div v-if="typingUsers.length" class="text-xs text-secondary">
-                            {{typingUsers.map((user) => user.name).join(', ')}} schreibt...
-                        </div>
-                    </div>
-
-                    <form v-if="selectedConversation" class="border-t border-border p-4" @submit.prevent="sendMessage">
-                        <div v-if="messageForm.attachments.length"
-                            class="mb-2 flex flex-wrap gap-2 text-xs text-secondary">
-                            <span v-for="file in messageForm.attachments" :key="file.name"
-                                class="rounded border border-border px-2 py-1">
-                                {{ file.name }}
-                            </span>
-                        </div>
-                        <div class="flex gap-2">
-                            <textarea v-model="messageForm.message" @keydown.enter.prevent="sendMessage" rows="2"
-                                placeholder="Nachricht schreiben..."
-                                class="min-w-0 flex-1 resize-none rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary placeholder-secondary focus:border-primary focus:ring-primary"
-                                @input="announceTyping" />
-                            <label
-                                class="flex cursor-pointer items-center rounded-lg border border-border px-3 py-2 text-primary hover:bg-inputBg">
-                                <i class="las la-paperclip text-xl"></i>
-                                <input ref="attachmentInput" type="file" multiple class="hidden"
-                                    @change="onAttachmentChange">
-                            </label>
-                            <button type="submit" :disabled="messageForm.processing || !canSendMessage"
-                                class="rounded-lg bg-buttonPrimary px-4 py-2 text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50">
-                                <i class="las la-paper-plane text-xl"></i>
-                            </button>
-                        </div>
-                    </form>
-
-                    <div v-else class="flex h-full items-center justify-center p-8 text-center text-secondary">
-                        Wähle einen Chat oder starte eine neue Konversation.
-                    </div>
-                </section>
-
-                <aside class="min-h-0 hidden flex-col rounded-lg border border-border bg-card p-4 lg:flex">
-                    <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Neue Konversation</h2>
-
-                    <div class="mt-4 grid grid-cols-3 rounded-lg border border-border bg-inputBg p-1">
-                        <button type="button" class="rounded px-3 py-2 text-sm font-medium"
-                            :class="conversationForm.type === 'direct' ? 'bg-card text-primary shadow-sm' : 'text-secondary'"
-                            @click="setType('direct')">
-                            Direkt
-                        </button>
-                        <button type="button" class="rounded px-3 py-2 text-sm font-medium"
-                            :class="conversationForm.type === 'group' ? 'bg-card text-primary shadow-sm' : 'text-secondary'"
-                            @click="setType('group')">
-                            Gruppe
-                        </button>
-                        <button type="button" class="rounded px-3 py-2 text-sm font-medium"
-                            :class="conversationForm.type === 'team' ? 'bg-card text-primary shadow-sm' : 'text-secondary'"
-                            @click="setType('team')">
-                            Team
-                        </button>
-                    </div>
-
-                    <form class="mt-4 flex h-[calc(100%-5rem)] min-h-0 flex-col"
-                        @submit.prevent="createConversationAndOpen">
-                        <select v-if="conversationForm.type === 'team'" v-model="conversationForm.team_id"
-                            class="mb-3 rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary focus:border-primary focus:ring-primary">
-                            <option :value="null">Team auswÃ¤hlen</option>
-                            <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
-                        </select>
-
-                        <div v-if="conversationForm.type !== 'team'"
-                            class="min-h-0 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                            <button v-for="member in users" :key="member.id" type="button"
-                                class="mb-2 flex w-full items-center gap-3 rounded-lg border p-3 text-left transition"
-                                :class="conversationForm.participant_ids.includes(member.id)
-                                    ? 'border-primary bg-inputBg'
-                                    : 'border-border hover:bg-inputBg'" @click="toggleParticipant(member.id)">
-                                <div
-                                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-buttonPrimary text-xs font-semibold text-buttonTextPrimary">
-                                    {{ initials(member.name) }}
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-medium text-primary">{{ member.name }}</p>
-                                    <p class="truncate text-xs text-secondary">{{ member.email }}</p>
-                                </div>
-                                <i class="las text-lg"
-                                    :class="conversationForm.participant_ids.includes(member.id) ? 'la-check-circle text-success' : 'la-circle text-secondary'"></i>
-                            </button>
-                        </div>
-
-                        <textarea v-model="conversationForm.message" rows="3" placeholder="Erste Nachricht optional"
-                            class="mt-3 resize-none rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary placeholder-secondary focus:border-primary focus:ring-primary" />
-
-                        <button type="submit" :disabled="conversationForm.processing || !canCreateConversation"
-                            class="mt-3 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50">
-                            Chat starten
-                        </button>
-                    </form>
-                </aside>
-            </div>
+            </section>
         </div>
 
-        <!-- Modal für neue Konversation (Mobile) -->
-        <div v-if="showNewConversationModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div class="flex h-full w-full flex-col bg-card sm:h-auto sm:w-full sm:max-w-md sm:rounded-lg">
-                <!-- Header -->
+        <div v-if="showNewConversationModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-0 sm:p-4">
+            <div class="flex h-full w-full flex-col bg-card sm:h-[min(720px,90vh)] sm:max-w-lg sm:rounded-lg">
                 <div class="border-b border-border p-4">
-                    <div class="flex items-center justify-between">
-                        <h2 class="text-lg font-semibold text-primary">Neue Konversation</h2>
-                        <button @click="showNewConversationModal = false" class="text-secondary hover:text-primary">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-lg font-semibold text-primary">Neue Konversation</h2>
+                            <p class="mt-1 text-sm text-secondary">Direktchat, Gruppe oder Team gezielt starten.</p>
+                        </div>
+                        <button type="button" class="text-secondary hover:text-primary" @click="showNewConversationModal = false">
                             <i class="las la-times text-2xl"></i>
                         </button>
                     </div>
                 </div>
 
-                <!-- Tabs -->
                 <div class="border-b border-border bg-inputBg p-2">
                     <div class="grid grid-cols-3 gap-1 rounded-lg">
-                        <button type="button" class="rounded px-3 py-2 text-sm font-medium transition"
+                        <button
+                            type="button"
+                            class="rounded px-3 py-2 text-sm font-medium transition"
                             :class="conversationForm.type === 'direct' ? 'bg-card text-primary shadow-sm' : 'text-secondary'"
-                            @click="setType('direct')">
+                            @click="setType('direct')"
+                        >
                             Direkt
                         </button>
-                        <button type="button" class="rounded px-3 py-2 text-sm font-medium transition"
+                        <button
+                            type="button"
+                            class="rounded px-3 py-2 text-sm font-medium transition"
                             :class="conversationForm.type === 'group' ? 'bg-card text-primary shadow-sm' : 'text-secondary'"
-                            @click="setType('group')">
+                            @click="setType('group')"
+                        >
                             Gruppe
                         </button>
-                        <button type="button" class="rounded px-3 py-2 text-sm font-medium transition"
+                        <button
+                            type="button"
+                            class="rounded px-3 py-2 text-sm font-medium transition"
                             :class="conversationForm.type === 'team' ? 'bg-card text-primary shadow-sm' : 'text-secondary'"
-                            @click="setType('team')">
+                            @click="setType('team')"
+                        >
                             Team
                         </button>
                     </div>
                 </div>
 
-                <!-- User List -->
                 <form class="flex min-h-0 flex-1 flex-col" @submit.prevent="createConversationAndOpen">
                     <div v-if="conversationForm.type === 'team'" class="p-3">
-                        <select v-model="conversationForm.team_id"
-                            class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary focus:border-primary focus:ring-primary">
-                            <option :value="null">Team auswÃ¤hlen</option>
+                        <select
+                            v-model="conversationForm.team_id"
+                            class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary focus:border-primary focus:ring-primary"
+                        >
+                            <option :value="null">Team auswählen</option>
                             <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
                         </select>
                     </div>
 
                     <div v-else class="min-h-0 flex-1 overflow-y-auto p-2 custom-scrollbar">
-                        <button v-for="member in users" :key="member.id" type="button"
+                        <button
+                            v-for="member in users"
+                            :key="member.id"
+                            type="button"
                             class="mb-2 flex w-full items-center gap-3 rounded-lg border p-3 text-left transition"
                             :class="conversationForm.participant_ids.includes(member.id)
                                 ? 'border-primary bg-inputBg'
-                                : 'border-border hover:bg-inputBg'" @click="toggleParticipant(member.id)">
-                            <div
-                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary">
+                                : 'border-border hover:bg-inputBg'"
+                            @click="toggleParticipant(member.id)"
+                        >
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary">
                                 {{ initials(member.name) }}
                             </div>
                             <div class="min-w-0 flex-1">
-                                <p class="text-sm font-medium text-primary">{{ member.name }}</p>
+                                <p class="truncate text-sm font-medium text-primary">{{ member.name }}</p>
                                 <p class="truncate text-xs text-secondary">{{ member.email }}</p>
                             </div>
-                            <i class="las text-xl"
-                                :class="conversationForm.participant_ids.includes(member.id) ? 'la-check-circle text-success' : 'la-circle text-secondary'"></i>
+                            <i
+                                class="las text-xl"
+                                :class="conversationForm.participant_ids.includes(member.id) ? 'la-check-circle text-success' : 'la-circle text-secondary'"
+                            ></i>
                         </button>
                     </div>
 
-                    <!-- Message Input -->
                     <div class="border-t border-border p-3">
-                        <textarea v-model="conversationForm.message" rows="2" placeholder="Erste Nachricht optional"
-                            class="mb-3 w-full resize-none rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary placeholder-secondary focus:border-primary focus:ring-primary" />
+                        <textarea
+                            v-model="conversationForm.message"
+                            rows="2"
+                            placeholder="Erste Nachricht optional"
+                            class="mb-3 w-full resize-none rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary placeholder-secondary focus:border-primary focus:ring-primary"
+                        />
 
-                        <!-- Buttons -->
                         <div class="flex gap-2">
-                            <button type="button" @click="showNewConversationModal = false"
-                                class="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary transition hover:bg-inputBg">
+                            <button
+                                type="button"
+                                class="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary transition hover:bg-inputBg"
+                                @click="showNewConversationModal = false"
+                            >
                                 Abbrechen
                             </button>
-                            <button type="submit" :disabled="conversationForm.processing || !canCreateConversation"
-                                class="flex-1 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50">
+                            <button
+                                type="submit"
+                                :disabled="conversationForm.processing || !canCreateConversation"
+                                class="flex-1 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50"
+                            >
                                 Chat starten
                             </button>
                         </div>
                     </div>
                 </form>
             </div>
+        </div>
+
+        <div v-if="showLeaveConversationModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div class="w-full max-w-md rounded-lg bg-card shadow-xl">
+                <div class="border-b border-border p-4">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <h2 class="text-lg font-semibold text-primary">Gruppe verlassen?</h2>
+                            <p class="mt-1 text-sm text-secondary">
+                                Du wirst aus "{{ titleFor(selectedConversation) }}" entfernt und siehst danach keine neuen Nachrichten mehr.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            class="text-secondary hover:text-primary"
+                            @click="closeLeaveConversationModal"
+                        >
+                            <i class="las la-times text-2xl"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-4 p-4">
+                    <div class="rounded-lg border border-border bg-inputBg p-3 text-sm text-secondary">
+                        Nach deinem Austritt bleiben
+                        <span class="font-semibold text-primary">{{ remainingMembersAfterLeave }}</span>
+                        Mitglied(er) in dieser Gruppe.
+                    </div>
+
+                    <label
+                        v-if="remainingMembersAfterLeave <= 1"
+                        class="flex gap-3 rounded-lg border border-border p-3 text-sm text-primary"
+                    >
+                        <input
+                            v-model="leaveConversationForm.delete_conversation"
+                            type="checkbox"
+                            class="mt-1 rounded border-border text-buttonPrimary focus:ring-buttonPrimary"
+                        >
+                        <span>
+                            Gruppe direkt loeschen, weil danach hoechstens eine Person uebrig bleibt.
+                            Die Conversation wird dadurch Für alle verbleibenden Mitglieder entfernt.
+                        </span>
+                    </label>
+                </div>
+
+                <div class="flex gap-2 border-t border-border p-4">
+                    <button
+                        type="button"
+                        class="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary transition hover:bg-inputBg"
+                        @click="closeLeaveConversationModal"
+                    >
+                        Abbrechen
+                    </button>
+                    <button
+                        type="button"
+                        :disabled="leaveConversationForm.processing"
+                        class="flex-1 rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                        @click="leaveSelectedConversation"
+                    >
+                        {{ leaveConversationForm.delete_conversation ? 'Verlassen und loeschen' : 'Gruppe verlassen' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div
+            v-if="reportTarget"
+            class="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
+            @click.self="closeReport"
+        >
+            <form class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-xl" @submit.prevent="submitReport">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Nachricht melden</p>
+                        <h2 class="mt-1 text-xl font-semibold text-primary">Warum soll diese Nachricht geprüft werden?</h2>
+                    </div>
+                    <button type="button" class="rounded p-2 text-secondary hover:bg-muted" @click="closeReport">
+                        <i class="las la-times"></i>
+                    </button>
+                </div>
+
+                <div class="mt-4 space-y-4">
+                    <select v-model="reportForm.reason" class="w-full rounded-lg border-border bg-inputBg text-primary">
+                        <option value="insult">Beleidigung</option>
+                        <option value="bullying">Mobbing</option>
+                        <option value="hate">Hassrede</option>
+                        <option value="sexual">Sexueller Inhalt</option>
+                        <option value="violence">Gewalt</option>
+                        <option value="threat">Drohung</option>
+                        <option value="image_rights">Bild ohne Zustimmung</option>
+                        <option value="spam">Spam</option>
+                        <option value="other">Sonstiges</option>
+                    </select>
+                    <p v-if="reportForm.errors.reason" class="text-sm text-error">{{ reportForm.errors.reason }}</p>
+
+                    <textarea
+                        v-model="reportForm.details"
+                        rows="4"
+                        class="w-full rounded-lg border-border bg-inputBg text-primary"
+                        placeholder="Details optional"
+                    />
+                    <p v-if="reportForm.errors.details" class="text-sm text-error">{{ reportForm.errors.details }}</p>
+                </div>
+
+                <div class="mt-5 flex justify-end gap-2">
+                    <button type="button" class="btn" @click="closeReport">Abbrechen</button>
+                    <button type="submit" class="btn-primary" :disabled="reportForm.processing">
+                        Meldung senden
+                    </button>
+                </div>
+            </form>
         </div>
     </AppLayout>
 </template>

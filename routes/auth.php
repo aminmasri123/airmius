@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\ClubController;
+use App\Http\Controllers\ClubMembershipController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\ContentReportController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
@@ -57,13 +59,25 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::get('/clubs', [ClubController::class, 'index'])->middleware('club');
     Route::get('/clubs/{club}', [ClubController::class, 'show'])->name('auth.clubs.show');
     Route::post('/clubs', [ClubController::class, 'store']);
-    Route::put('/clubs/{club}', [ClubController::class, 'update'])->middleware('club');
+    Route::put('/clubs/{club}', [ClubController::class, 'update'])->middleware('club')->name('auth.clubs.update');
     Route::put('/clubs/{club}/members/{user}', [ClubController::class, 'updateMember'])->name('auth.clubs.members.update');
     Route::post('/clubs/{club}/images', [ClubController::class, 'updateImages'])->name('auth.clubs.images.update');
     Route::post('/clubs/{club}/jobs', [OrganizationJobController::class, 'store'])->name('auth.clubs.jobs.store');
     Route::delete('/clubs/{club}', [ClubController::class, 'destroy'])->middleware('club')->name('auth.clubs.destroy');
     Route::put('/organization-jobs/{organizationJob}', [OrganizationJobController::class, 'update'])->name('auth.organization-jobs.update');
     Route::delete('/organization-jobs/{organizationJob}', [OrganizationJobController::class, 'destroy'])->name('auth.organization-jobs.destroy');
+    Route::get('/club-memberships', [ClubMembershipController::class, 'index'])->name('auth.club-memberships.index');
+    Route::get('/club-memberships/import-template', [ClubMembershipController::class, 'downloadImportTemplate'])->name('auth.club-memberships.import-template');
+    Route::post('/clubs/{club}/membership/email-members', [ClubMembershipController::class, 'storeEmailMember'])->name('auth.club-memberships.email-members.store');
+    Route::post('/clubs/{club}/membership/email-members/import', [ClubMembershipController::class, 'importEmailMembers'])->name('auth.club-memberships.email-members.import');
+    Route::post('/club-external-members/{externalMember}/invite', [ClubMembershipController::class, 'inviteEmailMember'])->name('auth.club-memberships.email-members.invite');
+    Route::get('/club-member-invitations/token/{token}/accept', [ClubMembershipController::class, 'acceptExternalInvitation'])->name('auth.club-member-invitations.accept');
+    Route::put('/clubs/{club}/membership/{user}', [ClubMembershipController::class, 'updateMember'])->name('auth.club-memberships.members.update');
+    Route::post('/clubs/{club}/membership/{user}/member-number', [ClubMembershipController::class, 'generateMemberNumber'])->name('auth.club-memberships.members.member-number');
+    Route::post('/clubs/{club}/membership/{user}/invoices', [ClubMembershipController::class, 'storeInvoice'])->name('auth.club-memberships.invoices.store');
+    Route::put('/membership-invoices/{invoice}', [ClubMembershipController::class, 'updateInvoiceStatus'])->name('auth.club-memberships.invoices.update');
+    Route::post('/membership-invoices/{invoice}/payments', [ClubMembershipController::class, 'recordPayment'])->name('auth.club-memberships.invoices.payments.store');
+    Route::post('/membership-invoices/{invoice}/reminder', [ClubMembershipController::class, 'sendReminder'])->name('auth.club-memberships.invoices.reminder');
 
     // TEAMS
     Route::get('/teams', [TeamController::class, 'index'])->name('auth.teams.index');
@@ -114,10 +128,14 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     // LIKES
     Route::post('/posts/{post}/like', [LikeController::class, 'togglePost'])->name('auth.posts.like');
 
+    // CONTENT REPORTS
+    Route::post('/reports', [ContentReportController::class, 'store'])->name('auth.reports.store');
+
     // CHAT
     Route::get('/conversations', [ConversationController::class, 'index'])->name('auth.conversations.index');
     Route::get('/conversations/{conversation}', [ConversationController::class, 'show'])->name('auth.conversations.show');
     Route::post('/conversations', [ConversationController::class, 'store'])->name('auth.conversations.store');
+    Route::delete('/conversations/{conversation}/leave', [ConversationController::class, 'leave'])->name('auth.conversations.leave');
     Route::post('/conversations/{conversation}/typing', [ConversationController::class, 'typing'])->name('auth.conversations.typing');
 
     Route::post('/messages', [MessageController::class, 'store'])->name('auth.messages.store');

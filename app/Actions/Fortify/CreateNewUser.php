@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
-use Laravel\Jetstream\Jetstream;
 
 class CreateNewUser implements CreatesNewUsers
 {
@@ -25,13 +24,19 @@ class CreateNewUser implements CreatesNewUsers
     public function create(array $input): User
     {
         Validator::make($input, [
-            'name' => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:120'],
+            'last_name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'country' => ['required', 'string', 'size:2'],
+            'street' => ['nullable', 'string', 'max:255'],
+            'house_number' => ['nullable', 'string', 'max:40'],
+            'postal_code' => ['nullable', 'string', 'max:30'],
+            'city' => ['nullable', 'string', 'max:255'],
+            'state' => ['nullable', 'string', 'max:255'],
             'birth_date' => ['required', 'date', 'before_or_equal:today'],
             'guardian_email' => ['nullable', 'string', 'email', 'max:255', 'different:email'],
             'password' => $this->passwordRules(),
-            'terms' => Jetstream::hasTermsAndPrivacyPolicyFeature() ? ['accepted', 'required'] : '',
+            'terms' => ['accepted', 'required'],
         ])->after(function ($validator) use ($input) {
             if (! isset($input['birth_date'])) {
                 return;
@@ -53,11 +58,20 @@ class CreateNewUser implements CreatesNewUsers
 
         $birthDate = Carbon::parse($input['birth_date']);
         $requiresGuardianConsent = $birthDate->age < 16;
+        $firstName = trim($input['first_name']);
+        $lastName = trim($input['last_name']);
 
         $user = User::create([
-            'name' => $input['name'],
+            'name' => trim($firstName.' '.$lastName),
+            'first_name' => $firstName,
+            'last_name' => $lastName,
             'email' => $input['email'],
             'country' => strtoupper($input['country']),
+            'street' => $input['street'] ?? null,
+            'house_number' => $input['house_number'] ?? null,
+            'postal_code' => $input['postal_code'] ?? null,
+            'city' => $input['city'] ?? null,
+            'state' => $input['state'] ?? null,
             'birth_date' => $birthDate->toDateString(),
             'guardian_email' => $requiresGuardianConsent ? $input['guardian_email'] : null,
             'guardian_consent_requested_at' => $requiresGuardianConsent ? now() : null,

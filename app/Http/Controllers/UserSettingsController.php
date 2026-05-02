@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Invoice;
+use App\Models\Payment;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -21,6 +23,20 @@ class UserSettingsController extends Controller
                 'city',
                 'state',
             ]),
+            'billingHistory' => [
+                'invoices' => Invoice::query()
+                    ->where('user_id', $request->user()->id)
+                    ->with('club:id,name')
+                    ->latest('id')
+                    ->limit(30)
+                    ->get(),
+                'payments' => Payment::query()
+                    ->where('user_id', $request->user()->id)
+                    ->with(['club:id,name', 'invoice:id,number,title'])
+                    ->latest('id')
+                    ->limit(30)
+                    ->get(),
+            ],
         ]);
 
     }

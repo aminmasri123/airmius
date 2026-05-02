@@ -4,9 +4,11 @@ use App\Http\Controllers\BlogPostController;
 use App\Http\Controllers\GamificationRuleController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MemberController;
+use App\Http\Controllers\ModerationController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\SportAdminController;
 use App\Http\Controllers\SponsorController;
 use Illuminate\Support\Facades\Route;
 
@@ -22,6 +24,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/admin/users', [MemberController::class, 'store'])->middleware('can:users.create')->name('users.store');
     Route::put('/admin/users/{user}', [MemberController::class, 'update'])->middleware('can:users.edit')->name('users.update');
     Route::delete('/admin/users/{user}', [MemberController::class, 'destroy'])->middleware('can:users.delete')->name('users.destroy');
+   
     // MEMBERS
     Route::get('/admin/members', [MemberController::class, 'index'])->middleware('can:users.view')->name('members.index');
     Route::get('/admin/members/create', [MemberController::class, 'create'])->middleware('can:users.create')->name('members.create');
@@ -40,6 +43,17 @@ Route::middleware(['auth'])->group(function () {
     // GAMIFICATION
     Route::get('/admin/gamification', [GamificationRuleController::class, 'index'])->middleware('can:system.manage')->name('gamification-rules.index');
     Route::put('/admin/gamification', [GamificationRuleController::class, 'update'])->middleware('can:system.manage')->name('gamification-rules.update');
+
+    // SPORTS
+    Route::get('/admin/sports', [SportAdminController::class, 'index'])->middleware('can:system.manage')->name('admin.sports.index');
+    Route::post('/admin/sports', [SportAdminController::class, 'store'])->middleware('can:system.manage')->name('admin.sports.store');
+    Route::put('/admin/sports/{sport}', [SportAdminController::class, 'update'])->middleware('can:system.manage')->name('admin.sports.update');
+    Route::delete('/admin/sports/{sport}', [SportAdminController::class, 'destroy'])->middleware('can:system.manage')->name('admin.sports.destroy');
+
+    // MODERATION
+    Route::get('/admin/moderation', [ModerationController::class, 'index'])->middleware('can:system.manage')->name('admin.moderation.index');
+    Route::put('/admin/moderation/flags/{flag}', [ModerationController::class, 'updateFlag'])->middleware('can:system.manage')->name('admin.moderation.flags.update');
+    Route::put('/admin/moderation/reports/{report}', [ModerationController::class, 'updateReport'])->middleware('can:system.manage')->name('admin.moderation.reports.update');
 
     // BLOG CMS
     Route::get('/admin/blogs', [BlogPostController::class, 'index'])->middleware('can:blog.view')->name('blogs.index');
@@ -64,7 +78,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/admin/sponsors/{sponsor}', [SponsorController::class, 'destroy'])->middleware('can:finance.edit')->name('sponsors.destroy');
 
     // SETTINGS
-    Route::get('/admin/settings', [SettingController::class, 'index'])->middleware('can:system.manage')->name('settings.index');
-    Route::put('/admin/settings', [SettingController::class, 'update'])->middleware('can:system.manage')->name('settings.update');
+    Route::get('/admin/settings', [SettingController::class, 'index'])->middleware('can:system.manage')->name('admin.settings.index');
+    Route::put('/admin/settings', [SettingController::class, 'update'])->middleware('can:system.manage')->name('admin.settings.update');
 
 });

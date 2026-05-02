@@ -26,6 +26,8 @@ class Club extends Model
     protected $fillable = [
         'name',
         'sport_type',
+        'is_official',
+        'official_club_number',
         'logo',
         'cover_image',
         'country',
@@ -36,6 +38,13 @@ class Club extends Model
         'state',
         'owner_id',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_official' => 'boolean',
+        ];
+    }
 
     public function scopeVisibleTo($query, $user)
     {
@@ -59,7 +68,22 @@ class Club extends Model
 
     public function users()
     {
-        return $this->belongsToMany(User::class)->withPivot('role')->withTimestamps();
+        return $this->belongsToMany(User::class)
+            ->withPivot([
+                'role',
+                'membership_status',
+                'member_number',
+                'contribution_amount',
+                'contribution_interval',
+                'joined_on',
+                'membership_notes',
+            ])
+            ->withTimestamps();
+    }
+
+    public function externalMembers()
+    {
+        return $this->hasMany(ClubExternalMember::class);
     }
 
     public function teams()
@@ -90,5 +114,15 @@ class Club extends Model
     public function files()
     {
         return $this->hasMany(File::class);
+    }
+
+    public function invoices()
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
     }
 }

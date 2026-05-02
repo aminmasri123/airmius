@@ -18,6 +18,7 @@ const searchTerm = ref('')
 const searchResults = ref([])
 const searchLoading = ref(false)
 const currentStatus = ref(page.props.auth?.user?.status || 'online')
+const sidebarOpen = ref(false)
 
 let notificationInterval = null
 let notificationChannel = null
@@ -27,6 +28,7 @@ let searchTimeout = null
 
 const unreadCount = computed(() => page.props.notificationCenter?.unread_count || 0)
 const latestNotifications = computed(() => page.props.notificationCenter?.latest || [])
+
 const statusOptions = [
     { value: 'online', label: 'status.online' },
     { value: 'offline', label: 'status.offline' },
@@ -65,16 +67,23 @@ const setStatus = (status) => {
     window.axios.put(route('auth.user.status.update'), { status }).catch(() => { })
 }
 
+const closeSearch = () => {
+    searchOpen.value = false
+    searchTerm.value = ''
+    searchResults.value = []
+}
+
 const runSearch = () => {
     const term = searchTerm.value.trim()
 
-    if (term.length < 5) {
+    if (term.length < 2) {
         searchResults.value = []
         searchLoading.value = false
         return
     }
 
     searchLoading.value = true
+
     window.axios.get(route('auth.search'), { params: { q: term } })
         .then((response) => searchResults.value = response.data.results || [])
         .finally(() => searchLoading.value = false)
@@ -85,11 +94,7 @@ const requestJoin = (result) => {
 
     router.post(result.join_url, {}, {
         preserveScroll: true,
-        onSuccess: () => {
-            searchOpen.value = false
-            searchTerm.value = ''
-            searchResults.value = []
-        },
+        onSuccess: closeSearch,
     })
 }
 
@@ -147,11 +152,15 @@ const unbindRealtime = () => {
 
 onMounted(() => {
     setStatus(currentStatus.value === 'offline' ? 'online' : currentStatus.value)
+
     bindRealtime()
+
     markOfflineOnUnload = () => {
         window.axios.put(route('auth.user.status.update'), { status: 'offline' }).catch(() => { })
     }
+
     window.addEventListener('beforeunload', markOfflineOnUnload)
+
     notificationInterval = window.setInterval(refreshNotifications, 8000)
 })
 
@@ -181,59 +190,101 @@ watch(searchTerm, () => {
 
     <Head :title="title" />
 
-    <div class="flex h-screen bg-bg text-primary">
-        <Sidebar />
-
-        <div class="flex-1 flex flex-col">
-
+    <div class="flex min-h-screen w-full overflow-hidden bg-bg text-primary">
+<Sidebar :open="sidebarOpen" @close="sidebarOpen = false" />
+        <div class="flex min-w-0 flex-1 flex-col">
             <!-- Topbar -->
-            <div class="h-16 bg-card flex items-center justify-between px-6 border-b border-border">
+            <header class="fixed top-0 right-0 left-0 z-50 border-b border-border bg-card lg:left-64">
+                <div class="flex h-16 items-center justify-between px-3 sm:px-4 lg:px-6">
 
-                <h1 class="text-lg font-semibold">{{ $t(title || 'Dashboard') }}</h1>
+                    <!-- LINKS -->
+                    <div class="flex items-center gap-2 min-w-0">
 
-                <div class="flex items-center gap-3">
-                    <!-- SEARCH -->
-                    <div class="relative w-72 search-box">
-                        <!-- Mobile Button -->
-                        <button class="rounded-lg p-2 hover:bg-muted sm:hidden" @click="searchOpen = !searchOpen">
+                        <!-- ☰ MOBILE MENU BUTTON -->
+                        <button type="button" class="rounded-lg p-2 hover:bg-muted lg:hidden"
+                            @click="sidebarOpen = !sidebarOpen">
+                            <i class="las la-bars text-xl"></i>
+                        </button>
+
+                        <!-- Titel -->
+                        <h1 class="truncate text-base font-semibold sm:text-lg">
+                            {{ $t(title || 'Dashboard') }}
+                        </h1>
+                    </div>
+
+                    <!-- RECHTS -->
+                    <div class="flex items-center gap-2 sm:gap-3">
+
+                        <!-- Search Mobile -->
+                        <button type="button" class="rounded-lg p-2 hover:bg-muted sm:hidden"
+                            @click="searchOpen = true">
                             <i class="las la-search text-xl"></i>
                         </button>
 
-                        <!-- Input -->
-                        <div class="hidden sm:block">
-                            <div class="relative">
-                                <i class="las la-search absolute left-3 top-1/2 -translate-y-1/2 text-secondary"></i>
+                        <!-- Search Desktop -->
+                        <div class="relative hidden sm:block w-48 lg:w-72">
+                            <i class="las la-search absolute left-3 top-1/2 -translate-y-1/2 text-secondary"></i>
 
-                                <input v-model="searchTerm" @focus="searchOpen = true"
-                                    class="w-full rounded-lg border border-border bg-inputBg py-2 pl-9 pr-3 text-sm text-primary focus:border-borderHover focus:ring-borderHover"
-                                    :placeholder="$t('search.placeholder')">
-                            </div>
+                            <input v-model="searchTerm" @focus="searchOpen = true"
+                                class="w-full rounded-lg border border-border bg-inputBg py-2 pl-9 pr-3 text-sm"
+                                :placeholder="$t('search.placeholder')">
                         </div>
 
-                        <!-- Mobile Input -->
-                        <div v-if="searchOpen" class="absolute right-0 top-0 z-50 w-72 sm:hidden">
-                            <div class="relative">
+                        <LanguageDropdown />
+
+                        <!-- Chats -->
+                        <Link href="/conversations" class="relative rounded-lg p-2 hover:bg-muted">
+                            <i class="las la-comments text-xl"></i>
+                        </Link>
+
+                        <!-- Notifications -->
+                        <button @click="notificationOpen = !notificationOpen"
+                            class="relative rounded-lg p-2 hover:bg-muted">
+                            <i class="las la-bell text-xl"></i>
+                        </button>
+
+                        <!-- User -->
+                        <div class="hidden sm:block">
+                            <UserCard />
+                        </div>
+
+                    </div>
+                </div>
+            </header>
+
+            <!-- Mobile Search Overlay -->
+            <Teleport to="body">
+                <div v-if="searchOpen" class="fixed inset-0 z-50 bg-black/60 p-3 sm:hidden">
+                    <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
+                        <div class="flex items-center gap-2 border-b border-border p-3">
+                            <div class="relative min-w-0 flex-1">
                                 <i class="las la-search absolute left-3 top-1/2 -translate-y-1/2 text-secondary"></i>
 
                                 <input v-model="searchTerm"
-                                    class="w-full rounded-lg border border-border bg-inputBg py-2 pl-9 pr-3 text-sm text-primary"
+                                    class="w-full rounded-lg border border-border bg-inputBg py-3 pl-9 pr-3 text-sm text-primary"
                                     :placeholder="$t('search.short')" autofocus>
                             </div>
+
+                            <button type="button"
+                                class="rounded-lg px-3 py-2 text-sm text-secondary hover:bg-muted hover:text-primary"
+                                @click="closeSearch">
+                                Schließen
+                            </button>
                         </div>
 
-                        <!-- RESULTS DROPDOWN -->
-                        <div v-if="searchOpen && searchTerm.trim().length >= 2"
-                            class="absolute left-0 top-full mt-2 w-full z-50 rounded-lg border border-border bg-card shadow-xl overflow-hidden">
-                            <!-- Loading -->
-                            <div v-if="searchLoading" class="p-4 text-sm text-secondary">
+                        <div class="max-h-[70vh] overflow-y-auto">
+                            <div v-if="searchTerm.trim().length < 2" class="p-4 text-sm text-secondary">
+                                Mindestens 2 Zeichen eingeben.
+                            </div>
+
+                            <div v-else-if="searchLoading" class="p-4 text-sm text-secondary">
                                 Suche läuft...
                             </div>
 
-                            <!-- Results -->
-                            <div v-else-if="searchResults.length" class="max-h-80 overflow-y-auto">
+                            <div v-else-if="searchResults.length">
                                 <div v-for="result in searchResults" :key="`${result.type}-${result.id}`"
-                                    class="flex items-center gap-3 px-3 py-3 hover:bg-muted border-b last:border-b-0">
-                                    <Link :href="result.url" class="flex-1 min-w-0" @click="searchOpen = false">
+                                    class="flex items-center gap-3 border-b border-border px-3 py-3 last:border-b-0">
+                                    <Link :href="result.url" class="min-w-0 flex-1" @click="closeSearch">
                                         <p class="truncate text-sm font-semibold text-primary">
                                             {{ result.title }}
                                         </p>
@@ -242,98 +293,23 @@ watch(searchTerm, () => {
                                         </p>
                                     </Link>
 
-                                    <button v-if="result.join_url" @click="requestJoin(result)"
-                                        class="rounded-lg border border-border px-2 py-1 text-xs hover:bg-inputBg">
+                                    <button v-if="result.join_url" type="button" @click="requestJoin(result)"
+                                        class="shrink-0 rounded-lg border border-border px-2 py-2 text-xs hover:bg-inputBg">
                                         Beitreten
                                     </button>
                                 </div>
                             </div>
 
-                            <!-- Empty -->
-                            <div v-else class="p-4 text-sm text-secondary text-center">
+                            <div v-else class="p-4 text-center text-sm text-secondary">
                                 Keine passenden Ergebnisse.
                             </div>
                         </div>
                     </div>
-
-                    <select v-model="currentStatus"
-                        class="hidden rounded-lg border border-border bg-inputBg px-2 py-1 text-xs text-primary focus:border-borderHover focus:ring-borderHover sm:block"
-                        @change="setStatus(currentStatus)">
-                        <option v-for="option in statusOptions" :key="option.value" :value="option.value">
-                            {{ $t(option.label) }}
-                        </option>
-                    </select>
-
-                    <LanguageDropdown />
-
-                    <!-- 🔔 chats -->
-
-                    <div class="relative">
-                        <Link href="/conversations" class="hover:bg-muted rounded-lg p-2">
-                            <i class="las la-comments text-xl"></i>
-
-                            <span v-if="page.props.unreadChatsCount"
-                                class="absolute -right-1 -top-3 min-w-5 px-1.5 py-0.5 text-[10px] bg-error text-white rounded-full">
-                                {{ page.props.unreadChatsCount > 99 ? '99+' : page.props.unreadChatsCount }}
-                            </span>
-                        </Link>
-                    </div>
-
-                    <!-- 🔔 Notifications -->
-                    <div class="relative">
-                        <button @click="notificationOpen = !notificationOpen"
-                            class="relative p-2 hover:bg-muted rounded-lg">
-                            <i class="las la-bell text-xl"></i>
-
-                            <span v-if="unreadCount"
-                                class="absolute -right-1 -top-1 min-w-5 px-1.5 py-0.5 text-[10px] bg-error text-white rounded-full">
-                                {{ unreadCount > 99 ? '99+' : unreadCount }}
-                            </span>
-                        </button>
-
-                        <!-- Dropdown -->
-                        <div v-if="notificationOpen"
-                            class="absolute right-0 mt-2 w-80 rounded-xl border border-border bg-card shadow-xl z-50">
-                            <div class="flex justify-between items-center px-3 py-2 border-b">
-                                <span class="text-sm font-semibold">{{ $t('Notifications') }}</span>
-                                <Link href="/notifications" class="text-xs text-air-blue"
-                                    @click="notificationOpen = false">
-                                    {{ $t('common.all') }}
-                                </Link>
-                            </div>
-
-                            <div v-if="latestNotifications.length" class="max-h-80 overflow-y-auto">
-                                <Link v-for="notification in latestNotifications" :key="notification.id"
-                                    :href="notification.data?.url || '/notifications'"
-                                    class="flex gap-3 px-3 py-3 border-b hover:bg-muted"
-                                    @click="markAsRead(notification); notificationOpen = false">
-                                    <i :class="[iconFor(notification.type), 'text-lg']"></i>
-
-                                    <div>
-                                        <p class="text-xs font-semibold">
-                                            {{ notification.data?.title || 'Neue Benachrichtigung' }}
-                                        </p>
-                                        <p class="text-xs text-secondary">
-                                            {{ notification.data?.body }}
-                                        </p>
-                                    </div>
-                                </Link>
-                            </div>
-
-                            <div v-else class="p-4 text-sm text-secondary text-center">
-                                Keine Benachrichtigungen
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 👤 User -->
-                    <UserCard />
-
                 </div>
-            </div>
+            </Teleport>
 
             <!-- Content -->
-            <main class="flex-1 overflow-auto p-6">
+            <main class="flex-1 overflow-y-auto overflow-x-hidden p-3 pt-20 pb-24 sm:p-4 sm:pt-20 lg:p-6 lg:pt-20">
                 <slot />
             </main>
         </div>

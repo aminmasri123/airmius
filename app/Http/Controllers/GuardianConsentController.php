@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
 use Illuminate\View\View;
 
 class GuardianConsentController extends Controller
@@ -32,6 +34,7 @@ class GuardianConsentController extends Controller
         $minor->forceFill([
             'guardian_user_id' => $request->user()?->id,
             'guardian_consent_at' => now(),
+            'guardian_consent_rejected_at' => null,
             'guardian_consent_token' => null,
         ])->save();
 
@@ -52,10 +55,38 @@ class GuardianConsentController extends Controller
             ->with('status', 'Die Registrierung wurde bestaetigt.');
     }
 
+    public function reject(Request $request, string $token): RedirectResponse
+    {
+        $minor = $this->findMinorByToken($token);
+
+        $minor->forceFill([
+            'guardian_user_id' => $request->user()?->id,
+            'guardian_consent_rejected_at' => now(),
+            'guardian_consent_token' => null,
+        ])->save();
+
+        return redirect()
+            ->route('login')
+            ->with('status', 'Die Registrierung wurde abgelehnt.');
+    }
+
+    public function pending(Request $request): Response
+    {
+        $user = $request->user();
+
+        return Inertia::render('Auth/GuardianConsent/Pending', [
+            'guardianEmail' => $user->guardian_email,
+            'requestedAt' => $user->guardian_consent_requested_at,
+            'rejectedAt' => $user->guardian_consent_rejected_at,
+            'approvedAt' => $user->guardian_consent_at,
+        ]);
+    }
+
     private function findMinorByToken(string $token): User
     {
         return User::where('guardian_consent_token', $token)
             ->whereNull('guardian_consent_at')
+            ->whereNull('guardian_consent_rejected_at')
             ->firstOrFail();
     }
 }

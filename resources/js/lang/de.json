@@ -82,7 +82,7 @@
     "empty": "Keine Benachrichtigungen"
   },
   "events": {
-    "subtitle": "Training, Spiele, Meetings und öffentliche Termine.",
+    "subtitle": "Training, Spiele, Meetings und öff. Termine.",
     "create": "Event erstellen",
     "public_scope": "Öffentlich",
     "private_requires_team": "Private Events brauchen ein Team.",

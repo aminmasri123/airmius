@@ -8,13 +8,18 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
-
 import TextInput from '@/Components/TextInput.vue';
 
 const form = useForm({
-    name: '',
+    first_name: '',
+    last_name: '',
     email: '',
     country: 'DE',
+    street: '',
+    house_number: '',
+    postal_code: '',
+    city: '',
+    state: '',
     birth_date: '',
     guardian_email: '',
     password: '',
@@ -50,24 +55,38 @@ const submit = () => {
     <Head title="Register" />
 
     <AuthenticationCard>
-            <div class="w-36 h-36 md:w-48 md:h-48 context-center mx-auto ">
-                    <AuthenticationCardLogo />
-
-                </div>
+        <div class="mx-auto h-36 w-36 md:h-48 md:w-48">
+            <AuthenticationCardLogo />
+        </div>
 
         <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="name" value="Name" />
-                <TextInput
-                    id="name"
-                    v-model="form.name"
-                    type="text"
-                    class="mt-1 block w-full"
-                    required
-                    autofocus
-                    autocomplete="name"
-                />
-                <InputError class="mt-2" :message="form.errors.name" />
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                    <InputLabel for="first_name" value="Vorname" />
+                    <TextInput
+                        id="first_name"
+                        v-model="form.first_name"
+                        type="text"
+                        class="mt-1 block w-full"
+                        required
+                        autofocus
+                        autocomplete="given-name"
+                    />
+                    <InputError class="mt-2" :message="form.errors.first_name" />
+                </div>
+
+                <div>
+                    <InputLabel for="last_name" value="Nachname" />
+                    <TextInput
+                        id="last_name"
+                        v-model="form.last_name"
+                        type="text"
+                        class="mt-1 block w-full"
+                        required
+                        autocomplete="family-name"
+                    />
+                    <InputError class="mt-2" :message="form.errors.last_name" />
+                </div>
             </div>
 
             <div class="mt-4">
@@ -83,39 +102,117 @@ const submit = () => {
                 <InputError class="mt-2" :message="form.errors.email" />
             </div>
 
-            <div class="mt-4">
-                <InputLabel for="birth_date" value="Geburtsdatum" />
-                <TextInput
-                    id="birth_date"
-                    v-model="form.birth_date"
-                    type="date"
-                    class="mt-1 block w-full"
-                    required
-                    autocomplete="bday"
-                />
-                <InputError class="mt-2" :message="form.errors.birth_date" />
+            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                    <InputLabel for="birth_date" value="Geburtsdatum" />
+                    <TextInput
+                        id="birth_date"
+                        v-model="form.birth_date"
+                        type="date"
+                        class="mt-1 block w-full"
+                        required
+                        autocomplete="bday"
+                    />
+                    <InputError class="mt-2" :message="form.errors.birth_date" />
+                </div>
+
+                <div>
+                    <InputLabel for="country" value="Land" />
+                    <select
+                        id="country"
+                        v-model="form.country"
+                        class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary"
+                        required
+                        autocomplete="country"
+                    >
+                        <option value="AU">{{$t('Australien')}}</option>
+                        <option value="BE">{{$t('Belgien')}}</option>
+                        <option value="BR">{{$t('Brasilien')}}</option>
+                        <option value="CN">{{$t('China')}}</option>
+                        <option value="DE">{{$t('Deutschland')}}</option>
+                        <option value="FR">{{$t('Frankreich')}}</option>
+                        <option value="GB">{{$t('Großbritannien')}}</option>
+                        <option value="IN">{{$t('Indien')}}</option>
+                        <option value="IT">{{$t('Italien')}}</option>
+                        <option value="CA">{{$t('Kanada')}}</option>
+                        <option value="NL">{{$t('Marokko')}}</option>
+                        <option value="NL">{{$t('Niederlande')}}</option>
+                        <option value="AT">{{$t('Österreich')}}</option>
+                        <option value="PL">{{$t('Polen')}}</option>
+                        <option value="RU">{{$t('Russland')}}</option>
+                        <option value="CH">{{$t('Schweiz')}}</option>
+                        <option value="ES">{{$t('Spanien')}}</option>
+                        <option value="TR">{{$t('Türkei')}}</option>
+                        <option value="US">{{$t('USA')}}</option>
+                        <option value="Other">{{$t('Anderes Land')}}</option>
+                    </select>
+                    <InputError class="mt-2" :message="form.errors.country" />
+                </div>
+            </div>
+
+            <!-- <div class="mt-4 grid gap-4 sm:grid-cols-[1fr_8rem]">
+                <div>
+                    <InputLabel for="street" value="Straße" />
+                    <TextInput
+                        id="street"
+                        v-model="form.street"
+                        type="text"
+                        class="mt-1 block w-full"
+                        autocomplete="street-address"
+                    />
+                    <InputError class="mt-2" :message="form.errors.street" />
+                </div>
+
+                <div>
+                    <InputLabel for="house_number" value="Hausnr." />
+                    <TextInput
+                        id="house_number"
+                        v-model="form.house_number"
+                        type="text"
+                        class="mt-1 block w-full"
+                        autocomplete="address-line2"
+                    />
+                    <InputError class="mt-2" :message="form.errors.house_number" />
+                </div>
+            </div>
+
+            <div class="mt-4 grid gap-4 sm:grid-cols-[8rem_1fr]">
+                <div>
+                    <InputLabel for="postal_code" value="PLZ" />
+                    <TextInput
+                        id="postal_code"
+                        v-model="form.postal_code"
+                        type="text"
+                        class="mt-1 block w-full"
+                        autocomplete="postal-code"
+                    />
+                    <InputError class="mt-2" :message="form.errors.postal_code" />
+                </div>
+
+                <div>
+                    <InputLabel for="city" value="Stadt" />
+                    <TextInput
+                        id="city"
+                        v-model="form.city"
+                        type="text"
+                        class="mt-1 block w-full"
+                        autocomplete="address-level2"
+                    />
+                    <InputError class="mt-2" :message="form.errors.city" />
+                </div>
             </div>
 
             <div class="mt-4">
-                <InputLabel for="country" value="Land" />
-                <select
-                    id="country"
-                    v-model="form.country"
-                    class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary"
-                    required
-                    autocomplete="country"
-                >
-                    <option value="DE">Deutschland</option>
-                    <option value="AT">Österreich</option>
-                    <option value="CH">Schweiz</option>
-                    <option value="FR">Frankreich</option>
-                    <option value="NL">Niederlande</option>
-                    <option value="BE">Belgien</option>
-                    <option value="TR">Türkei</option>
-                    <option value="US">USA</option>
-                </select>
-                <InputError class="mt-2" :message="form.errors.country" />
-            </div>
+                <InputLabel for="state" value="Bundesland / Region" />
+                <TextInput
+                    id="state"
+                    v-model="form.state"
+                    type="text"
+                    class="mt-1 block w-full"
+                    autocomplete="address-level1"
+                />
+                <InputError class="mt-2" :message="form.errors.state" />
+            </div> -->
 
             <div v-if="requiresGuardianConsent" class="mt-4">
                 <InputLabel for="guardian_email" value="E-Mail des Erziehungsberechtigten" />
@@ -159,27 +256,37 @@ const submit = () => {
                 <InputError class="mt-2" :message="form.errors.password_confirmation" />
             </div>
 
-            <div v-if="$page.props.jetstream.hasTermsAndPrivacyPolicyFeature" class="mt-4">
+            <div class="mt-4">
                 <InputLabel for="terms">
                     <div class="flex items-center">
                         <Checkbox id="terms" v-model:checked="form.terms" name="terms" required />
 
                         <div class="ms-2">
-                            I agree to the <a target="_blank" :href="route('terms.show')" class="underline text-sm text-secondary hover:text-primary rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-borderHover">Terms of Service</a> and <a target="_blank" :href="route('policy.show')" class="underline text-sm text-secondary hover:text-primary rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-borderHover">Privacy Policy</a>
+                            Ich akzeptiere die
+                            <a
+                                target="_blank"
+                                :href="route('terms.show')"
+                                class="rounded-md text-sm text-secondary underline hover:text-primary focus:outline-none focus:ring-2 focus:ring-borderHover focus:ring-offset-2"
+                            >AGB</a>
+                            und die
+                            <a
+                                target="_blank"
+                                :href="route('policy.show')"
+                                class="rounded-md text-sm text-secondary underline hover:text-primary focus:outline-none focus:ring-2 focus:ring-borderHover focus:ring-offset-2"
+                            >Datenschutzerklärung</a>
                         </div>
                     </div>
                     <InputError class="mt-2" :message="form.errors.terms" />
                 </InputLabel>
             </div>
 
-            <div class="flex items-center justify-end mt-4">
+            <div class="mt-4 flex items-center justify-end">
                 <PrimaryButton class="ms-4" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
                     {{ $t('Registrieren') }}
                 </PrimaryButton>
 
-                <SecondaryButton class="ms-4" :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing">
-                    <Link :href="route('login') ">{{ $t('Anmelden') }}</Link>
+                <SecondaryButton class="ms-4" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
+                    <Link :href="route('login')">{{ $t('Anmelden') }}</Link>
                 </SecondaryButton>
             </div>
         </form>

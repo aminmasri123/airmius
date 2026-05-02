@@ -54,11 +54,11 @@ const submitComment = () => {
                     <p v-if="event.location" class="text-sm text-secondary">{{ event.location }}</p>
                 </div>
                 <Link
-                    v-if="event.conversation_id"
+                    v-if="event.conversation_id || event.team_id"
                     :href="route('auth.events.chat', event.id)"
                     class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm text-buttonTextPrimary"
                 >
-                    Event chat
+                    Teamchat
                 </Link>
             </div>
             <p v-if="event.notes" class="mt-4 whitespace-pre-line text-sm text-primary">{{ event.notes }}</p>

@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\DB;
 
 class EventService
 {
+    public function __construct(private ChatService $chatService) {}
+
     public function create(array $data): Event
     {
         return DB::transaction(function () use ($data) {
@@ -30,11 +32,10 @@ class EventService
             $firstEvent = null;
 
             foreach ($events as $eventData) {
-                $conversation = $this->createConversationForEvent($clubId, $teamId, $participantIds);
-                $eventData['conversation_id'] = $conversation->id;
-
                 $event = Event::create($eventData);
                 $firstEvent ??= $event;
+
+                $this->postEventNoticeToTeamChat($event, $teamId, $clubId, $participantIds);
 
                 broadcast(new EventUpdated($event->refresh(), 'created'));
             }
@@ -78,17 +79,44 @@ class EventService
         return $participantIds->filter()->unique()->values()->all();
     }
 
-    private function createConversationForEvent(?int $clubId, ?int $teamId, array $participantIds): Conversation
+    private function teamConversationForEvent(?int $clubId, ?int $teamId, array $participantIds): ?Conversation
     {
-        $conversation = Conversation::create([
-            'type' => 'event',
-            'club_id' => $clubId,
-            'team_id' => $teamId,
-        ]);
+        if (! $teamId) {
+            return null;
+        }
 
-        $conversation->users()->sync($participantIds);
+        $conversation = Conversation::firstOrCreate(
+            [
+                'type' => 'team',
+                'team_id' => $teamId,
+            ],
+            [
+                'club_id' => $clubId,
+            ],
+        );
+
+        if (! $conversation->club_id && $clubId) {
+            $conversation->update(['club_id' => $clubId]);
+        }
+
+        $conversation->users()->syncWithoutDetaching($participantIds);
 
         return $conversation;
+    }
+
+    private function postEventNoticeToTeamChat(Event $event, ?int $teamId, ?int $clubId, array $participantIds): void
+    {
+        $conversation = $this->teamConversationForEvent($clubId, $teamId, $participantIds);
+
+        if (! $conversation) {
+            return;
+        }
+
+        $start = $event->start_time?->timezone(config('app.timezone'))->format('d.m.Y H:i');
+        $link = route('auth.events.show', $event);
+        $text = trim("Trainingseinheit geplant: {$event->title}\n{$start}\n{$link}");
+
+        $this->chatService->sendMessage(auth()->user(), $conversation->id, $text);
     }
 
     private function expandRecurringEvents(array $data): array

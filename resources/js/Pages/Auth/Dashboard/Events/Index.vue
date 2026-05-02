@@ -17,6 +17,14 @@ const props = defineProps({
 const { t } = useI18n()
 
 const showCreateModal = ref(false)
+const createStep = ref(1)
+
+const steps = [
+    { number: 1, label: 'Basis' },
+    { number: 2, label: 'Zeit' },
+    { number: 3, label: 'Details' },
+    { number: 4, label: 'Prüfen' },
+]
 
 const recurrenceOptions = [
     { value: '', label: 'events.recurrence.none' },
@@ -112,11 +120,30 @@ const resetCreateForm = () => {
     )
 
     form.clearErrors()
+    createStep.value = 1
 }
 
 const closeCreateModal = () => {
     showCreateModal.value = false
+    createStep.value = 1
     form.clearErrors()
+}
+
+const openCreateModal = () => {
+    createStep.value = 1
+    showCreateModal.value = true
+}
+
+const nextStep = () => {
+    if (createStep.value < steps.length) {
+        createStep.value++
+    }
+}
+
+const prevStep = () => {
+    if (createStep.value > 1) {
+        createStep.value--
+    }
 }
 
 const submit = () => {
@@ -143,17 +170,7 @@ const recurrenceLabel = (value) => {
     const label = recurrenceOptions.find((option) => option.value === value)?.label
     return label ? t(label) : value
 }
-const formatMonthShort = (date, event = null) => {
-    if (!date) return ''
 
-    return new Intl.DateTimeFormat('de-DE', {
-        timeZone: eventTimeZone(event),
-        month: 'short',
-    })
-        .format(new Date(date))
-        .replace('.', '')
-        .toUpperCase()
-}
 const recurrenceSummary = computed(() => {
     if (!form.recurring) return ''
 
@@ -167,6 +184,14 @@ const recurrenceSummary = computed(() => {
     }
 
     return recurrenceLabel(form.recurring)
+})
+
+const selectedClubName = computed(() => {
+    return props.clubs?.find((club) => Number(club.id) === Number(form.club_id))?.name || '-'
+})
+
+const selectedTeamName = computed(() => {
+    return props.teams?.find((team) => Number(team.id) === Number(form.team_id))?.name || '-'
 })
 
 const eventTimeZone = (event = null) => event?.event_timezone || browserTimeZone()
@@ -208,6 +233,18 @@ const formatDay = (date, event = null) => {
         timeZone: eventTimeZone(event),
         day: '2-digit',
     }).format(new Date(date))
+}
+
+const formatMonthShort = (date, event = null) => {
+    if (!date) return ''
+
+    return new Intl.DateTimeFormat('de-DE', {
+        timeZone: eventTimeZone(event),
+        month: 'short',
+    })
+        .format(new Date(date))
+        .replace('.', '')
+        .toUpperCase()
 }
 
 const formatWeekdayShort = (date, event = null) => {
@@ -261,271 +298,468 @@ const setParticipation = (event, status) => {
     <Head :title="$t('Events')" />
 
     <div class="space-y-6">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <h1 class="text-2xl font-semibold text-primary">{{ $t('Events') }}</h1>
-                <p class="mt-1 text-sm text-secondary">{{ $t('events.subtitle') }}</p>
+        <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+                <h1 class="text-2xl font-semibold text-primary">
+                    {{ $t('Events') }}
+                </h1>
+
+                <p class="mt-1 text-sm text-secondary">
+                    {{ $t('events.subtitle') }}
+                </p>
             </div>
 
+            <!-- Mobile Plus Button -->
             <button type="button"
-                class="rounded-lg bg-buttonPrimary px-4 py-2 font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover"
-                @click="showCreateModal = true">
+                class="flex h-8 w-8 shrink-0 items-center justify-center rounded hover:bg-buttonPrimaryHover bg-buttonPrimary text-buttonTextPrimary shadow sm:hidden"
+                @click="openCreateModal" :aria-label="$t('events.create')">
+                <i class="las la-plus text-2xl"></i>
+            </button>
+
+            <!-- Desktop Button -->
+            <button type="button"
+                class="hidden rounded-lg bg-buttonPrimary px-4 py-3 font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover sm:inline-flex"
+                @click="openCreateModal">
                 + {{ $t('events.create') }}
             </button>
         </div>
 
-        <div v-if="showCreateModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-            @click.self="closeCreateModal">
-            <div
-                class="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-xl border border-border bg-card shadow-xl">
+        <!-- CREATE EVENT MODAL / WIZARD -->
+        <Teleport to="body">
+            <div v-if="showCreateModal" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/60"
+                @click.self="closeCreateModal">
                 <div
-                    class="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border bg-card p-5">
-                    <div>
-                        <h2 class="text-xl font-semibold text-primary">
-                            {{ $t('events.create') }}
-                        </h2>
-                        <p class="mt-1 text-sm text-secondary">
-                            Training, Event oder Meeting erstellen
-                        </p>
+                    class="flex h-full w-full flex-col bg-card sm:h-auto sm:max-h-[92vh] sm:max-w-2xl sm:rounded-2xl sm:border sm:border-border sm:shadow-xl">
+
+                    <!-- Modal Header -->
+                    <div class="shrink-0 border-b border-border bg-card p-4">
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="min-w-0">
+                                <h2 class="truncate text-lg font-semibold text-primary">
+                                    {{ $t('events.create') }}
+                                </h2>
+
+                                <p class="mt-1 text-sm text-secondary">
+                                    Schritt {{ createStep }} von {{ steps.length }}
+                                </p>
+                            </div>
+
+                            <button type="button"
+                                class="shrink-0 rounded-lg border border-border px-3 py-1 text-secondary transition hover:border-borderHover hover:text-primary"
+                                @click="closeCreateModal">
+                                ✕
+                            </button>
+                        </div>
+
+                        <!-- Step Indicator -->
+                        <div class="mt-4 grid grid-cols-4 gap-2">
+                            <button v-for="step in steps" :key="step.number" type="button"
+                                class="rounded-full px-2 py-2 text-xs font-semibold transition" :class="createStep === step.number
+                                    ? 'bg-buttonPrimary text-buttonTextPrimary'
+                                    : createStep > step.number
+                                        ? 'bg-air-green/15 text-air-green'
+                                        : 'bg-inputBg text-secondary'" @click="createStep = step.number">
+                                {{ step.label }}
+                            </button>
+                        </div>
                     </div>
 
-                    <button type="button"
-                        class="rounded-lg border border-border px-3 py-1 text-secondary transition hover:border-borderHover hover:text-primary"
-                        @click="closeCreateModal">
-                        ✕
-                    </button>
-                </div>
-
-                <form class="p-5" @submit.prevent="submit">
-                    <div class="grid gap-6 lg:grid-cols-3">
-                        <div class="space-y-5 lg:col-span-2">
-                            <section class="rounded-lg border border-border bg-inputBg p-4">
-                                <h3 class="mb-4 text-sm font-semibold text-primary">
+                    <!-- Modal Body -->
+                    <form class="min-h-0 flex-1 overflow-y-auto p-4" @submit.prevent="submit">
+                        <!-- STEP 1 -->
+                        <section v-show="createStep === 1" class="space-y-4">
+                            <div>
+                                <h3 class="text-base font-semibold text-primary">
                                     Basisdaten
                                 </h3>
 
-                                <div class="space-y-4">
-                                    <div>
-                                        <label for="event-title" class="block text-sm font-semibold text-primary">
-                                            {{ $t('events.fields.title') }}
-                                        </label>
-                                        <input id="event-title" v-model="form.title"
-                                            class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
-                                            :placeholder="$t('events.placeholders.title')" required>
-                                        <div v-if="form.errors.title" class="mt-1 text-sm text-error">
-                                            {{ form.errors.title }}
-                                        </div>
-                                    </div>
-
-                                    <div class="grid gap-4 md:grid-cols-2">
-                                        <div>
-                                            <label for="event-type" class="block text-sm font-semibold text-primary">
-                                                {{ $t('events.fields.type') }}
-                                            </label>
-                                            <select id="event-type" v-model="form.type"
-                                                class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-primary focus:border-borderHover focus:ring-borderHover">
-                                                <option v-for="type in eventTypes" :key="type" :value="type">
-                                                    {{ $t(typeLabels[type] || type) }}
-                                                </option>
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label for="event-visibility"
-                                                class="block text-sm font-semibold text-primary">
-                                                {{ $t('events.fields.visibility') }}
-                                            </label>
-                                            <select id="event-visibility" v-model="form.visibility"
-                                                class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-primary focus:border-borderHover focus:ring-borderHover">
-                                                <option v-for="visibility in visibilities" :key="visibility"
-                                                    :value="visibility">
-                                                    {{ $t(visibilityLabels[visibility] || visibility) }}
-                                                </option>
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label for="event-club" class="block text-sm font-semibold text-primary">
-                                                {{ $t('events.fields.club') }}
-                                            </label>
-                                            <select id="event-club" v-model="form.club_id"
-                                                class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-primary focus:border-borderHover focus:ring-borderHover">
-                                                <option value="">{{ $t('events.none.club') }}</option>
-                                                <option v-for="club in clubs" :key="club.id" :value="club.id">
-                                                    {{ club.name }}
-                                                </option>
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label for="event-team" class="block text-sm font-semibold text-primary">
-                                                {{ $t('events.fields.team') }}
-                                            </label>
-                                            <select id="event-team" v-model="form.team_id"
-                                                class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-primary focus:border-borderHover focus:ring-borderHover">
-                                                <option value="">{{ $t('events.none.team') }}</option>
-                                                <option v-for="team in filteredTeams" :key="team.id" :value="team.id">
-                                                    {{ team.name }}
-                                                </option>
-                                            </select>
-
-                                            <p v-if="form.visibility === 'private'" class="mt-1 text-xs text-secondary">
-                                                {{ $t('events.private_requires_team') }}
-                                            </p>
-
-                                            <div v-if="form.errors.team_id" class="mt-1 text-sm text-error">
-                                                {{ form.errors.team_id }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </section>
-
-                            <section class="rounded-lg border border-border bg-inputBg p-4">
-                                <h3 class="mb-4 text-sm font-semibold text-primary">
-                                    Details
-                                </h3>
-
-                                <div class="space-y-4">
-                                    <div>
-                                        <label for="event-location" class="block text-sm font-semibold text-primary">
-                                            {{ $t('events.fields.location') }}
-                                        </label>
-                                        <input id="event-location" v-model="form.location"
-                                            class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
-                                            :placeholder="$t('events.placeholders.location')">
-                                    </div>
-
-                                    <div>
-                                        <label for="event-notes" class="block text-sm font-semibold text-primary">
-                                            {{ $t('events.fields.notes') }}
-                                        </label>
-                                        <textarea id="event-notes" v-model="form.notes" rows="4"
-                                            class="mt-1 w-full resize-none rounded-lg border border-border bg-card px-3 py-2 text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
-                                            :placeholder="$t('events.placeholders.notes')" />
-                                    </div>
-                                </div>
-                            </section>
-                        </div>
-
-                        <div class="space-y-5">
-                            <section class="rounded-lg border border-border bg-inputBg p-4">
-                                <h3 class="mb-4 text-sm font-semibold text-primary">
-                                    Zeit & Wiederholung
-                                </h3>
-
-                                <div class="space-y-4">
-                                    <div>
-                                        <label for="event-start" class="block text-sm font-semibold text-primary">
-                                            {{ $t('events.fields.start') }}
-                                        </label>
-                                        <input id="event-start" v-model="form.start_time"
-                                            class="date-input mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-primary focus:border-borderHover focus:ring-borderHover"
-                                            type="datetime-local" required>
-                                        <p class="mt-1 text-xs text-secondary">
-                                            Zeitzone: {{ form.event_timezone }}
-                                        </p>
-                                        <div v-if="form.errors.start_time" class="mt-1 text-sm text-error">
-                                            {{ form.errors.start_time }}
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label for="event-end" class="block text-sm font-semibold text-primary">
-                                            {{ $t('events.fields.end') }}
-                                        </label>
-                                        <input id="event-end" v-model="form.end_time"
-                                            class="date-input mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-primary focus:border-borderHover focus:ring-borderHover"
-                                            type="datetime-local">
-                                        <div v-if="form.errors.end_time" class="mt-1 text-sm text-error">
-                                            {{ form.errors.end_time }}
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label for="event-reminder" class="block text-sm font-semibold text-primary">
-                                            {{ $t('events.fields.reminder') }}
-                                        </label>
-                                        <input id="event-reminder" v-model="form.reminder_at"
-                                            class="date-input mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-primary focus:border-borderHover focus:ring-borderHover"
-                                            type="datetime-local">
-                                        <div v-if="form.errors.reminder_at" class="mt-1 text-sm text-error">
-                                            {{ form.errors.reminder_at }}
-                                        </div>
-                                    </div>
-
-                                    <div class="border-t border-border pt-4">
-                                        <label for="event-recurring" class="block text-sm font-semibold text-primary">
-                                            {{ $t('events.fields.recurrence') }}
-                                        </label>
-                                        <select id="event-recurring" v-model="form.recurring"
-                                            class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-primary focus:border-borderHover focus:ring-borderHover">
-                                            <option v-for="option in recurrenceOptions" :key="option.value"
-                                                :value="option.value">
-                                                {{ $t(option.label) }}
-                                            </option>
-                                        </select>
-                                    </div>
-
-                                    <div v-if="form.recurring">
-                                        <label for="event-recurrence-end"
-                                            class="block text-sm font-semibold text-primary">
-                                            {{ $t('events.fields.recurrence_end') }}
-                                        </label>
-                                        <input id="event-recurrence-end" v-model="form.recurrence_ends_at"
-                                            class="date-input mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-primary focus:border-borderHover focus:ring-borderHover"
-                                            type="date">
-                                        <div v-if="form.errors.recurrence_ends_at" class="mt-1 text-sm text-error">
-                                            {{ form.errors.recurrence_ends_at }}
-                                        </div>
-                                    </div>
-
-                                    <div v-if="['weekly', 'biweekly'].includes(form.recurring)">
-                                        <div class="mb-2 text-sm font-semibold text-primary">
-                                            {{ $t('events.fields.recurrence_days') }}
-                                        </div>
-
-                                        <div class="grid grid-cols-4 gap-2 sm:grid-cols-7 lg:grid-cols-4">
-                                            <button v-for="day in weekdayOptions" :key="day.value" type="button"
-                                                class="rounded-lg border px-2 py-2 text-xs font-semibold transition"
-                                                :class="form.recurrence_days.map(Number).includes(day.value)
-                                                    ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary'
-                                                    : 'border-border bg-card text-primary hover:bg-muted'"
-                                                :title="$t(day.label)" @click="toggleWeekday(day.value)">
-                                                {{ $t(day.short) }}
-                                            </button>
-                                        </div>
-
-                                        <div v-if="form.errors.recurrence_days" class="mt-1 text-sm text-error">
-                                            {{ form.errors.recurrence_days }}
-                                        </div>
-
-                                        <p v-if="recurrenceSummary" class="mt-2 text-xs text-secondary">
-                                            {{ recurrenceSummary }}
-                                        </p>
-                                    </div>
-                                </div>
-                            </section>
-
-                            <div class="flex gap-3">
-                                <button type="button"
-                                    class="flex-1 rounded-lg border border-border px-4 py-2 font-semibold text-secondary transition hover:border-borderHover hover:text-primary"
-                                    @click="closeCreateModal">
-                                    Abbrechen
-                                </button>
-
-                                <button type="submit"
-                                    class="flex-1 rounded-lg bg-buttonPrimary px-4 py-2 font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:opacity-50"
-                                    :disabled="form.processing">
-                                    {{ form.processing ? 'Speichern...' : $t('events.create') }}
-                                </button>
+                                <p class="mt-1 text-sm text-secondary">
+                                    Was für ein Event möchtest du erstellen?
+                                </p>
                             </div>
+
+                            <div>
+                                <label for="event-title" class="block text-sm font-semibold text-primary">
+                                    {{ $t('events.fields.title') }}
+                                </label>
+
+                                <input id="event-title" v-model="form.title"
+                                    class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
+                                    :placeholder="$t('events.placeholders.title')" required>
+
+                                <div v-if="form.errors.title" class="mt-1 text-sm text-error">
+                                    {{ form.errors.title }}
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label for="event-type" class="block text-sm font-semibold text-primary">
+                                        {{ $t('events.fields.type') }}
+                                    </label>
+
+                                    <select id="event-type" v-model="form.type"
+                                        class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary focus:border-borderHover focus:ring-borderHover">
+                                        <option v-for="type in eventTypes" :key="type" :value="type">
+                                            {{ $t(typeLabels[type] || type) }}
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="event-visibility" class="block text-sm font-semibold text-primary">
+                                        {{ $t('events.fields.visibility') }}
+                                    </label>
+
+                                    <select id="event-visibility" v-model="form.visibility"
+                                        class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary focus:border-borderHover focus:ring-borderHover">
+                                        <option v-for="visibility in visibilities" :key="visibility"
+                                            :value="visibility">
+                                            {{ $t(visibilityLabels[visibility] || visibility) }}
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label for="event-club" class="block text-sm font-semibold text-primary">
+                                        {{ $t('events.fields.club') }}
+                                    </label>
+
+                                    <select id="event-club" v-model="form.club_id"
+                                        class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary focus:border-borderHover focus:ring-borderHover">
+                                        <option value="">
+                                            {{ $t('events.none.club') }}
+                                        </option>
+
+                                        <option v-for="club in clubs" :key="club.id" :value="club.id">
+                                            {{ club.name }}
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="event-team" class="block text-sm font-semibold text-primary">
+                                        {{ $t('events.fields.team') }}
+                                    </label>
+
+                                    <select id="event-team" v-model="form.team_id"
+                                        class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary focus:border-borderHover focus:ring-borderHover">
+                                        <option value="">
+                                            {{ $t('events.none.team') }}
+                                        </option>
+
+                                        <option v-for="team in filteredTeams" :key="team.id" :value="team.id">
+                                            {{ team.name }}
+                                        </option>
+                                    </select>
+
+                                    <p v-if="form.visibility === 'private'" class="mt-1 text-xs text-secondary">
+                                        {{ $t('events.private_requires_team') }}
+                                    </p>
+
+                                    <div v-if="form.errors.team_id" class="mt-1 text-sm text-error">
+                                        {{ form.errors.team_id }}
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- STEP 2 -->
+                        <section v-show="createStep === 2" class="space-y-4">
+                            <div>
+                                <h3 class="text-base font-semibold text-primary">
+                                    Zeit
+                                </h3>
+
+                                <p class="mt-1 text-sm text-secondary">
+                                    Wann findet das Event statt?
+                                </p>
+                            </div>
+
+                            <div>
+                                <label for="event-start" class="block text-sm font-semibold text-primary">
+                                    {{ $t('events.fields.start') }}
+                                </label>
+
+                                <input id="event-start" v-model="form.start_time"
+                                    class="date-input mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary focus:border-borderHover focus:ring-borderHover"
+                                    type="datetime-local" required>
+
+                                <p class="mt-1 text-xs text-secondary">
+                                    Zeitzone: {{ form.event_timezone }}
+                                </p>
+
+                                <div v-if="form.errors.start_time" class="mt-1 text-sm text-error">
+                                    {{ form.errors.start_time }}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="event-end" class="block text-sm font-semibold text-primary">
+                                    {{ $t('events.fields.end') }}
+                                </label>
+
+                                <input id="event-end" v-model="form.end_time"
+                                    class="date-input mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary focus:border-borderHover focus:ring-borderHover"
+                                    type="datetime-local">
+
+                                <div v-if="form.errors.end_time" class="mt-1 text-sm text-error">
+                                    {{ form.errors.end_time }}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="event-reminder" class="block text-sm font-semibold text-primary">
+                                    {{ $t('events.fields.reminder') }}
+                                </label>
+
+                                <input id="event-reminder" v-model="form.reminder_at"
+                                    class="date-input mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary focus:border-borderHover focus:ring-borderHover"
+                                    type="datetime-local">
+
+                                <div v-if="form.errors.reminder_at" class="mt-1 text-sm text-error">
+                                    {{ form.errors.reminder_at }}
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- STEP 3 -->
+                        <section v-show="createStep === 3" class="space-y-4">
+                            <div>
+                                <h3 class="text-base font-semibold text-primary">
+                                    Details & Wiederholung
+                                </h3>
+
+                                <p class="mt-1 text-sm text-secondary">
+                                    Optional: Ort, Notizen und Wiederholung hinzufügen.
+                                </p>
+                            </div>
+
+                            <div>
+                                <label for="event-recurring" class="block text-sm font-semibold text-primary">
+                                    {{ $t('events.fields.recurrence') }}
+                                </label>
+
+                                <select id="event-recurring" v-model="form.recurring"
+                                    class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary focus:border-borderHover focus:ring-borderHover">
+                                    <option v-for="option in recurrenceOptions" :key="option.value"
+                                        :value="option.value">
+                                        {{ $t(option.label) }}
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div v-if="form.recurring">
+                                <label for="event-recurrence-end" class="block text-sm font-semibold text-primary">
+                                    {{ $t('events.fields.recurrence_end') }}
+                                </label>
+
+                                <input id="event-recurrence-end" v-model="form.recurrence_ends_at"
+                                    class="date-input mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary focus:border-borderHover focus:ring-borderHover"
+                                    type="date">
+
+                                <div v-if="form.errors.recurrence_ends_at" class="mt-1 text-sm text-error">
+                                    {{ form.errors.recurrence_ends_at }}
+                                </div>
+                            </div>
+
+                            <div v-if="['weekly', 'biweekly'].includes(form.recurring)">
+                                <div class="mb-2 text-sm font-semibold text-primary">
+                                    {{ $t('events.fields.recurrence_days') }}
+                                </div>
+
+                                <div class="grid grid-cols-4 gap-2 sm:grid-cols-7">
+                                    <button v-for="day in weekdayOptions" :key="day.value" type="button"
+                                        class="rounded-lg border px-2 py-3 text-xs font-semibold transition" :class="form.recurrence_days.map(Number).includes(day.value)
+                                            ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary'
+                                            : 'border-border bg-inputBg text-primary hover:bg-muted'"
+                                        :title="$t(day.label)" @click="toggleWeekday(day.value)">
+                                        {{ $t(day.short) }}
+                                    </button>
+                                </div>
+
+                                <div v-if="form.errors.recurrence_days" class="mt-1 text-sm text-error">
+                                    {{ form.errors.recurrence_days }}
+                                </div>
+
+                                <p v-if="recurrenceSummary" class="mt-2 text-xs text-secondary">
+                                    {{ recurrenceSummary }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <label for="event-location" class="block text-sm font-semibold text-primary">
+                                    {{ $t('events.fields.location') }}
+                                </label>
+
+                                <input id="event-location" v-model="form.location"
+                                    class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
+                                    :placeholder="$t('events.placeholders.location')">
+                            </div>
+
+                            <div>
+                                <label for="event-notes" class="block text-sm font-semibold text-primary">
+                                    {{ $t('events.fields.notes') }}
+                                </label>
+
+                                <textarea id="event-notes" v-model="form.notes" rows="4"
+                                    class="mt-1 w-full resize-none rounded-lg border border-border bg-inputBg px-3 py-3 text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
+                                    :placeholder="$t('events.placeholders.notes')" />
+                            </div>
+                        </section>
+
+                        <!-- STEP 4 -->
+                        <section v-show="createStep === 4" class="space-y-4">
+                            <div>
+                                <h3 class="text-base font-semibold text-primary">
+                                    Prüfen
+                                </h3>
+
+                                <p class="mt-1 text-sm text-secondary">
+                                    Kontrolliere deine Angaben vor dem Speichern.
+                                </p>
+                            </div>
+
+                            <div class="rounded-xl border border-border bg-inputBg p-4">
+                                <div class="space-y-3 text-sm">
+                                    <div>
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                                            Titel
+                                        </p>
+                                        <p class="mt-1 font-semibold text-primary">
+                                            {{ form.title || '-' }}
+                                        </p>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        <div>
+                                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                                                Typ
+                                            </p>
+                                            <p class="mt-1 text-primary">
+                                                {{ $t(typeLabels[form.type] || form.type) }}
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                                                Sichtbarkeit
+                                            </p>
+                                            <p class="mt-1 text-primary">
+                                                {{ $t(visibilityLabels[form.visibility] || form.visibility) }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        <div>
+                                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                                                Verein
+                                            </p>
+                                            <p class="mt-1 text-primary">
+                                                {{ selectedClubName }}
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                                                Team
+                                            </p>
+                                            <p class="mt-1 text-primary">
+                                                {{ selectedTeamName }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        <div>
+                                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                                                Start
+                                            </p>
+                                            <p class="mt-1 text-primary">
+                                                {{ form.start_time || '-' }}
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                                                Ende
+                                            </p>
+                                            <p class="mt-1 text-primary">
+                                                {{ form.end_time || '-' }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                                            Erinnerung
+                                        </p>
+                                        <p class="mt-1 text-primary">
+                                            {{ form.reminder_at || '-' }}
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                                            Wiederholung
+                                        </p>
+                                        <p class="mt-1 text-primary">
+                                            {{ recurrenceSummary || recurrenceLabel(form.recurring) || 'Keine' }}
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                                            Ort
+                                        </p>
+                                        <p class="mt-1 text-primary">
+                                            {{ form.location || '-' }}
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                                            Notizen
+                                        </p>
+                                        <p class="mt-1 whitespace-pre-line break-words text-primary">
+                                            {{ form.notes || '-' }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </form>
+
+                    <!-- Modal Footer -->
+                    <div class="shrink-0 border-t border-border bg-card p-4">
+                        <div class="flex gap-3">
+                            <button type="button"
+                                class="flex-1 rounded-lg border border-border px-4 py-3 font-semibold text-secondary transition hover:border-borderHover hover:text-primary disabled:opacity-50"
+                                :disabled="createStep === 1" @click="prevStep">
+                                Zurück
+                            </button>
+
+                            <button v-if="createStep < steps.length" type="button"
+                                class="flex-1 rounded-lg bg-buttonPrimary px-4 py-3 font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover"
+                                @click="nextStep">
+                                Weiter
+                            </button>
+
+                            <button v-else type="button"
+                                class="flex-1 rounded-lg bg-buttonPrimary px-4 py-3 font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:opacity-50"
+                                :disabled="form.processing" @click="submit">
+                                {{ form.processing ? 'Speichern...' : $t('events.create') }}
+                            </button>
                         </div>
                     </div>
-                </form>
+                </div>
             </div>
-        </div>
+        </Teleport>
 
+        <!-- EVENT LIST -->
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <article v-for="event in events" :key="event.id"
                 class="rounded-lg border border-border bg-card p-4 transition hover:border-borderHover">
@@ -591,6 +825,10 @@ const setParticipation = (event, status) => {
                     </div>
                 </div>
             </article>
+        </div>
+
+        <div v-if="!events?.length" class="rounded-lg border border-border bg-card p-8 text-center text-secondary">
+            Keine Events vorhanden.
         </div>
     </div>
 </template>

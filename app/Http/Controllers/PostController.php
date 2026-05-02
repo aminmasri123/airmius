@@ -10,6 +10,7 @@ use App\Models\SportSkill;
 use App\Models\Team;
 use App\Services\GamificationService;
 use App\Services\MediaOptimizer;
+use App\Services\ModerationService;
 use App\Services\PostService;
 use App\Support\Roles;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -26,6 +27,7 @@ class PostController extends Controller
         private PostService $service,
         private MediaOptimizer $mediaOptimizer,
         private GamificationService $gamification,
+        private ModerationService $moderation,
     ) {}
 
     public function index()
@@ -33,6 +35,7 @@ class PostController extends Controller
         $user = auth()->user();
 
         $posts = Post::query()
+            ->where('moderation_status', '!=', 'removed')
             ->where(function ($query) use ($user) {
                 $query->where('visibility', 'public')
                     ->orWhere(function ($query) use ($user) {
@@ -53,12 +56,13 @@ class PostController extends Controller
                 'sportSkills:id,sport_id,key,name',
                 'attachments.file:id,path,type,size',
                 'comments' => fn ($query) => $query
+                    ->where('moderation_status', '!=', 'removed')
                     ->with('user:id,name,profile_photo_path')
                     ->withCount('likes')
                     ->latest('id')
                     ->limit(3),
             ])
-            ->withCount('comments')
+            ->withCount(['comments' => fn ($query) => $query->where('moderation_status', '!=', 'removed')])
             ->withCount('likes')
             ->withCount('helpfuls')
             ->withExists([
@@ -151,6 +155,7 @@ class PostController extends Controller
         $data['sport_skill_ids'] = $this->validSkillIdsForSport($data['sport_skill_ids'] ?? [], $data['sport_id']);
 
         $post = $this->service->create(auth()->user(), $data);
+        $this->moderation->flagIfNeeded($post, $post->content, auth()->id());
 
         if (in_array($post->post_type, ['knowledge', 'training_drill', 'tactic', 'analysis', 'experience'], true)) {
             $this->gamification->grant(auth()->user(), 'content_created', $post, [
@@ -210,6 +215,7 @@ class PostController extends Controller
         unset($data['sport_skill_ids']);
 
         $post->update($data);
+        $this->moderation->flagIfNeeded($post, $post->content, auth()->id());
         $post->sportSkills()->sync($skillIds);
         $this->service->attachFiles($post, auth()->user(), $request->file('attachments', []));
         $this->service->recordActivity($post, 'post.updated', auth()->user());

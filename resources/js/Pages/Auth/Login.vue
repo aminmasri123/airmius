@@ -37,8 +37,6 @@ const images = [
     /*  '/img/login/slide2.jpeg',
      '/img/login/slide3.jpeg',
      '/img/login/slide4.jpeg', */
-
-
 ]
 
 const current = ref(0)
@@ -50,14 +48,23 @@ onMounted(() => {
         current.value = (current.value + 1) % images.length
     }, 8000)
 })
+
+
+const goBack = () => {
+  if (window.history.length > 1) {
+    window.history.back()
+  } else {
+    window.location.href = route('dashboard')
+  }
+}
 </script>
 
 <template>
 
     <Head :title="$t('Anmelden')" />
-    <Link :href="route('welcome')" class="absolute top-4 left-4 md:top-16 md:left-24 text-primary text-sm">
+    <button type="button" @click="goBack" class="absolute top-4 left-4 md:top-16 md:left-24 text-primary text-sm">
         <i class="las la-chevron-circle-left la-lg"></i>
-    </Link>
+    </button>
     <div class="min-h-screen flex bg-bg text-primary">
 
         <!-- LINKS: LOGIN -->
@@ -70,6 +77,12 @@ onMounted(() => {
                 </div>
                 <div v-if="status" class="mb-4 font-medium text-sm text-success">
                     {{ status }}
+                </div>
+                <div class="mb-4 rounded-lg border border-border bg-inputBg p-3 text-sm text-secondary">
+                    Eltern/Erziehungsberechtigte?
+                    <Link :href="route('guardian-access.create')" class="font-semibold text-primary underline">
+                        Elternbereich ohne Konto oeffnen
+                    </Link>
                 </div>
 
                 <form @submit.prevent="submit">

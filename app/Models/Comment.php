@@ -9,7 +9,7 @@ class Comment extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['post_id','user_id','content'];
+    protected $fillable = ['moderation_status','post_id','user_id','content'];
 
     public function post()
     {
@@ -24,5 +24,15 @@ class Comment extends Model
     public function likes()
     {
         return $this->morphMany(Like::class, 'likeable');
+    }
+
+    public function moderationFlags()
+    {
+        return $this->morphMany(ModerationFlag::class, 'flaggable');
+    }
+
+    public function reports()
+    {
+        return $this->morphMany(ContentReport::class, 'reportable');
     }
 }

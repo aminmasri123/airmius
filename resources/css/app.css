@@ -192,8 +192,15 @@
   }
 }
 
+.custom-scrollbar {
+    scrollbar-color: color-mix(in srgb, var(--secondary) 42%, transparent) transparent;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
+    height: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {

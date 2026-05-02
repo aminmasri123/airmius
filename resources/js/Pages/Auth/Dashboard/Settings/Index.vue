@@ -21,6 +21,10 @@ const props = defineProps({
         default: () => ({}),
     },
     confirmsTwoFactorAuthentication: Boolean,
+    billingHistory: {
+        type: Object,
+        default: () => ({ invoices: [], payments: [] }),
+    },
     sessions: {
         type: Array,
         default: () => [], // FIX gegen undefined
@@ -63,6 +67,23 @@ const updateTheme = (theme) => {
     form.theme = theme
     saveAddress()
 }
+
+const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: 'EUR',
+}).format(Number(value || 0))
+
+const formatDate = (value) => {
+    if (!value) return '-'
+    return new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
+}
+
+const invoiceStatusLabel = (status) => ({
+    open: 'Offen',
+    paid: 'Bezahlt',
+    overdue: 'Ueberfaellig',
+    cancelled: 'Storniert',
+}[status] || status)
 </script>
 
 <template>
@@ -82,6 +103,7 @@ const updateTheme = (theme) => {
         <div class="surface-card p-3 flex flex-wrap gap-2">
             <button @click="activeTab = 'profile'" :class="tabClass('profile')">Profil</button>
             <button @click="activeTab = 'address'" :class="tabClass('address')">Adresse</button>
+            <button @click="activeTab = 'billing'" :class="tabClass('billing')">Zahlungen</button>
             <button @click="activeTab = 'design'" :class="tabClass('design')">Design</button>
             <button @click="activeTab = 'security'" :class="tabClass('security')">Sicherheit</button>
         </div>
@@ -183,6 +205,75 @@ const updateTheme = (theme) => {
                 </div>
 
             </form>
+        </div>
+
+        <div v-if="activeTab === 'billing'" class="space-y-5">
+            <section class="surface-card p-5">
+                <h2 class="text-lg font-semibold text-primary">Meine Rechnungen</h2>
+                <p class="mt-1 text-sm text-secondary">
+                    Hier siehst du offene und bezahlte Vereinsbeitraege.
+                </p>
+
+                <div class="mt-4 overflow-x-auto">
+                    <table class="min-w-full text-left text-sm">
+                        <thead class="text-xs uppercase text-secondary">
+                            <tr>
+                                <th class="py-2 pr-4">Nr.</th>
+                                <th class="py-2 pr-4">Verein</th>
+                                <th class="py-2 pr-4">Titel</th>
+                                <th class="py-2 pr-4">Betrag</th>
+                                <th class="py-2 pr-4">Faellig</th>
+                                <th class="py-2 pr-4">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-border">
+                            <tr v-for="invoice in billingHistory.invoices" :key="invoice.id">
+                                <td class="py-3 pr-4 text-primary">{{ invoice.number }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ invoice.club?.name || '-' }}</td>
+                                <td class="py-3 pr-4 text-primary">{{ invoice.title || '-' }}</td>
+                                <td class="py-3 pr-4 text-primary">{{ formatMoney(invoice.amount) }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ formatDate(invoice.due_date) }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ invoiceStatusLabel(invoice.status) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <p v-if="!billingHistory.invoices.length" class="py-6 text-sm text-secondary">
+                        Noch keine Rechnungen vorhanden.
+                    </p>
+                </div>
+            </section>
+
+            <section class="surface-card p-5">
+                <h2 class="text-lg font-semibold text-primary">Zahlungshistorie</h2>
+
+                <div class="mt-4 overflow-x-auto">
+                    <table class="min-w-full text-left text-sm">
+                        <thead class="text-xs uppercase text-secondary">
+                            <tr>
+                                <th class="py-2 pr-4">Datum</th>
+                                <th class="py-2 pr-4">Verein</th>
+                                <th class="py-2 pr-4">Rechnung</th>
+                                <th class="py-2 pr-4">Betrag</th>
+                                <th class="py-2 pr-4">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-border">
+                            <tr v-for="payment in billingHistory.payments" :key="payment.id">
+                                <td class="py-3 pr-4 text-secondary">{{ formatDate(payment.paid_at || payment.created_at) }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ payment.club?.name || '-' }}</td>
+                                <td class="py-3 pr-4 text-primary">{{ payment.invoice?.number || '-' }}</td>
+                                <td class="py-3 pr-4 text-primary">{{ formatMoney(payment.amount) }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ payment.status === 'paid' ? 'Bezahlt' : payment.status }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <p v-if="!billingHistory.payments.length" class="py-6 text-sm text-secondary">
+                        Noch keine Zahlungen markiert.
+                    </p>
+                </div>
+            </section>
         </div>
 
     </div>

@@ -183,7 +183,7 @@ const applyFilters = () => {
                                     class="rounded-lg bg-error px-3 py-2 text-sm text-white"
                                     @click="destroyPost(post)"
                                 >
-                                    Loeschen
+                                    Löschen
                                 </button>
                             </div>
                         </div>

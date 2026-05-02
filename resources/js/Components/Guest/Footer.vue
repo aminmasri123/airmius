@@ -1,4 +1,5 @@
 <script setup>
+import { Link } from '@inertiajs/vue3'
 import ApplicationLogo from '@/Components/ApplicationLogo.vue'
 
 const scrollTo = (id) => {
@@ -51,9 +52,15 @@ const scrollTo = (id) => {
                 <div>
                     <h4 class="font-heading font-600 text-sm mb-3 text-primary">Rechtliches</h4>
                     <div class="space-y-2 text-sm text-secondary">
-                        <a href="#" class="block hover:text-primary transition">Impressum</a>
-                        <a href="#" class="block hover:text-primary transition">Datenschutz</a>
-                        <a href="#" class="block hover:text-primary transition">AGB</a>
+                        <Link :href="route('legal.imprint')" class="block hover:text-primary transition">Impressum</Link>
+                        <Link :href="route('policy.show')" class="block hover:text-primary transition">Datenschutz</Link>
+                        <Link :href="route('terms.show')" class="block hover:text-primary transition">AGB</Link>
+                        <Link :href="route('legal.community')" class="block hover:text-primary transition">Community-Richtlinien</Link>
+                        <Link :href="route('legal.minors')" class="block hover:text-primary transition">Jugendschutz</Link>
+                        <Link :href="route('guardian-access.create')" class="block hover:text-primary transition">Elternbereich</Link>
+                        <Link :href="route('legal.cookies')" class="block hover:text-primary transition">Cookies</Link>
+                        <Link :href="route('legal.withdrawal')" class="block hover:text-primary transition">Widerruf</Link>
+                        <Link :href="route('legal.reporting')" class="block hover:text-primary transition">Kontakt & Melden</Link>
                     </div>
                 </div>
             </div>

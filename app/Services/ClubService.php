@@ -13,6 +13,8 @@ class ClubService
             $club = Club::create([
                 'name' => $data['name'],
                 'sport_type' => $data['sport_type'] ?? null,
+                'is_official' => (bool) ($data['is_official'] ?? false),
+                'official_club_number' => $data['official_club_number'] ?? null,
                 'country' => strtoupper($data['country']),
                 'street' => $data['street'] ?? null,
                 'house_number' => $data['house_number'] ?? null,
