@@ -1,7 +1,8 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3'
+import { Link } from '@inertiajs/vue3'
 import Nav from '@/Components/Guest/Nav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
+import SeoHead from '@/Components/Guest/SeoHead.vue'
 
 defineProps({
     canLogin: Boolean,
@@ -11,9 +12,12 @@ defineProps({
 </script>
 
 <template>
-    <Head :title="post.meta_title || post.title">
-        <meta v-if="post.meta_description || post.excerpt" name="description" :content="post.meta_description || post.excerpt" />
-    </Head>
+    <SeoHead
+        :title="post.meta_title || post.title"
+        :description="post.meta_description || post.excerpt || 'Artikel aus dem Airmius Blog zu Sport, Training, Vereinen und digitaler Organisation.'"
+        :image="post.cover_image || '/img/logo/Logo-Airmius-Quervormat.png'"
+        type="article"
+    />
 
     <div class="min-h-screen bg-bg text-primary">
         <Nav :canLogin="canLogin" />

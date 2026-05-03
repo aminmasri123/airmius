@@ -1,8 +1,8 @@
 <script setup>
-import { Head } from '@inertiajs/vue3'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
+import SeoHead from '@/Components/Guest/SeoHead.vue'
 
 defineProps({
     canLogin: Boolean,
@@ -18,7 +18,10 @@ const values = [
 </script>
 
 <template>
-    <Head :title="$t('Jobs')" />
+    <SeoHead
+        title="Jobs im Sport"
+        description="Finde Jobs, Ehrenamt und Vereinsrollen im Sport. Airmius verbindet Vereine, Organisationen und Menschen, die den Sport gestalten wollen."
+    />
 
     <div class="min-h-screen bg-bg text-primary">
         <Nav :canLogin="canLogin" />

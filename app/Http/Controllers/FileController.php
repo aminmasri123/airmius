@@ -9,6 +9,7 @@ use App\Models\Folder;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\FileService;
+use App\Services\PlanFeatureService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -19,7 +20,10 @@ class FileController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(private FileService $service) {}
+    public function __construct(
+        private FileService $service,
+        private PlanFeatureService $planFeatures,
+    ) {}
 
     public function index(Request $request)
     {
@@ -95,6 +99,11 @@ class FileController extends Controller
         ]);
 
         $scope = $this->authorizeScope($data);
+
+        if (! empty($scope['club_id'])) {
+            $club = Club::findOrFail($scope['club_id']);
+            $this->planFeatures->ensureCanStoreFile($club, $request->file('file'));
+        }
 
         if (!empty($data['folder_id'])) {
             $folder = Folder::findOrFail($data['folder_id']);

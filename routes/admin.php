@@ -10,6 +10,7 @@ use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SportAdminController;
 use App\Http\Controllers\SponsorController;
+use App\Http\Controllers\SubscriptionPlanController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -65,6 +66,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/admin/payments', [PaymentController::class, 'index'])->middleware('can:billing.manage')->name('payments.index');
     Route::post('/admin/payments', [PaymentController::class, 'store'])->middleware('can:billing.manage')->name('payments.store');
     Route::delete('/admin/payments/{payment}', [PaymentController::class, 'destroy'])->middleware('can:billing.manage')->name('payments.destroy');
+
+    // SUBSCRIPTIONS
+    Route::get('/admin/subscriptions', [SubscriptionPlanController::class, 'index'])->middleware('can:subscriptions.manage')->name('admin.subscriptions.index');
+    Route::put('/admin/subscription-plans/{subscriptionPlan}', [SubscriptionPlanController::class, 'update'])->middleware('can:subscriptions.manage')->name('admin.subscription-plans.update');
+    Route::put('/admin/clubs/{club}/subscription', [SubscriptionPlanController::class, 'assignClub'])->middleware('can:subscriptions.manage')->name('admin.clubs.subscription.update');
 
     // INVOICES
     Route::get('/admin/invoices', [InvoiceController::class, 'index'])->middleware('can:billing.manage')->name('invoices.index');

@@ -133,6 +133,10 @@ const resetClubForm = () => {
 }
 
 const openTeamModal = (club) => {
+    if (club?.subscription_capabilities?.can_create_team === false) {
+        return
+    }
+
     selectedClub.value = club
     showTeamModal.value = true
 }
@@ -462,7 +466,9 @@ const deleteJob = (job) => {
                     <button
                         v-if="can('team.store') && club.can_manage"
                         type="button"
-                        class="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-muted"
+                        class="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                        :disabled="club.subscription_capabilities?.can_create_team === false"
+                        :title="club.subscription_capabilities?.can_create_team === false ? 'Teamlimit des aktuellen Plans erreicht' : ''"
                         @click.stop="openTeamModal(club)"
                     >
                         + Team

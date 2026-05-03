@@ -20,6 +20,14 @@ class Club extends Model
             $club->users()->syncWithoutDetaching([
                 $club->owner_id => ['role' => 'owner'],
             ]);
+
+            if (! $club->currentSubscription && ($freePlan = SubscriptionPlan::free())) {
+                $club->currentSubscription()->create([
+                    'subscription_plan_id' => $freePlan->id,
+                    'status' => 'active',
+                    'trial_ends_at' => now()->addDays(30),
+                ]);
+            }
         });
     }
 
@@ -28,6 +36,9 @@ class Club extends Model
         'sport_type',
         'is_official',
         'official_club_number',
+        'sepa_creditor_id',
+        'sepa_iban',
+        'sepa_bic',
         'logo',
         'cover_image',
         'country',
@@ -75,7 +86,16 @@ class Club extends Model
                 'member_number',
                 'contribution_amount',
                 'contribution_interval',
+                'contribution_next_invoice_on',
+                'contribution_last_invoice_at',
+                'sepa_iban',
+                'sepa_bic',
+                'sepa_mandate_reference',
+                'sepa_mandate_signed_on',
+                'sepa_mandate_active',
                 'joined_on',
+                'membership_ends_on',
+                'membership_end_notified_at',
                 'membership_notes',
             ])
             ->withTimestamps();
@@ -124,5 +144,32 @@ class Club extends Model
     public function payments()
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function bankTransactions()
+    {
+        return $this->hasMany(BankTransaction::class);
+    }
+
+    public function currentSubscription()
+    {
+        return $this->hasOne(ClubSubscription::class)->with('plan');
+    }
+
+    public function subscriptionPlan(): ?SubscriptionPlan
+    {
+        return $this->currentSubscription?->plan ?? SubscriptionPlan::free();
+    }
+
+    public function memberUsageCount(): int
+    {
+        return $this->users()->count() + $this->externalMembers()->count();
+    }
+
+    public function canAddMembers(int $amount = 1): bool
+    {
+        $limit = $this->subscriptionPlan()?->member_limit;
+
+        return $limit === null || ($this->memberUsageCount() + $amount) <= $limit;
     }
 }

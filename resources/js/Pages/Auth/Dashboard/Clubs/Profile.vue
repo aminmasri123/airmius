@@ -172,7 +172,7 @@ const updateClubProfile = () => {
                             placeholder="z. B. Vereinsregister- oder Verbandsnummer"
                         >
                         <p class="mt-1 text-xs text-secondary">
-                            Pflichtfeld fuer offizielle Vereine.
+                            Pflichtfeld für offizielle Vereine.
                         </p>
                     </div>
 

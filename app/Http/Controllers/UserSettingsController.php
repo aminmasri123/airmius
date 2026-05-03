@@ -37,6 +37,22 @@ class UserSettingsController extends Controller
                     ->limit(30)
                     ->get(),
             ],
+            'socialAccounts' => $request->user()
+                ->socialAccounts()
+                ->latest('id')
+                ->get(['id', 'provider', 'email', 'name', 'avatar_url', 'created_at']),
+            'sportIntegrations' => [
+                'providers' => SportIntegrationController::PROVIDERS,
+                'accounts' => $request->user()
+                    ->connectedSportAccounts()
+                    ->latest('id')
+                    ->get(['id', 'provider', 'display_name', 'status', 'last_synced_at', 'sync_summary', 'created_at']),
+                'activities' => $request->user()
+                    ->connectedSportActivities()
+                    ->latest('started_at')
+                    ->limit(20)
+                    ->get(['id', 'provider', 'activity_type', 'title', 'started_at', 'duration_seconds', 'distance_meters', 'calories']),
+            ],
         ]);
 
     }

@@ -189,7 +189,7 @@ const clearPhotoFileInput = () => {
                     placeholder="z. B. Verbands- oder Spielerpassnummer"
                 />
                 <p class="mt-2 text-sm text-secondary">
-                    Diese Nummer kannst du selbst pflegen. Vereine koennen sie zur Zuordnung sehen, wenn dein Profil fuer sie sichtbar ist.
+                    Diese Nummer kannst du selbst pflegen. Vereine koennen sie zur Zuordnung sehen, wenn dein Profil für sie sichtbar ist.
                 </p>
                 <InputError :message="form.errors.athlete_license_number" class="mt-2" />
             </div>

@@ -187,7 +187,7 @@ class LegalPageController extends Controller
                 'body' => [
                     'Vereine und Teams können innerhalb von Airmius verwaltet werden. Berechtigte Vereinsverantwortliche können Team-Beitrittsanfragen annehmen oder ablehnen.',
                     'Eine Team-Beitrittsanfrage führt erst nach Annahme zur Teammitgliedschaft. Die Person kann anschließend im Verein als Vereinsmitglied, Nichtmitglied, in Prüfung oder ehemaliges Mitglied markiert werden.',
-                    'Sportler koennen ihre sportliche Lizenznummer selbst hinterlegen. Vereine koennen diese Nummer zur Zuordnung sehen, soweit sie fuer die Vereins- oder Teamverwaltung erforderlich ist.',
+                    'Sportler koennen ihre sportliche Lizenznummer selbst hinterlegen. Vereine koennen diese Nummer zur Zuordnung sehen, soweit sie für die Vereins- oder Teamverwaltung erforderlich ist.',
                     'Offizielle Vereine muessen ihre Vereinsnummer hinterlegen. Mitgliedsnummern koennen vom Verein manuell eingetragen oder von der Plattform generiert werden.',
                     'Vereine koennen Personen auch zunaechst nur per E-Mail als externe Mitglieder erfassen. Eine Verknuepfung mit einem Airmius-Konto entsteht erst, wenn der Verein die Einladung/Verknuepfung aktiviert und ein passendes Konto existiert oder die eingeladene Person ein Konto erstellt.',
                     'Vereinsverantwortliche sind für die Richtigkeit der von ihnen gepflegten Mitgliedsnummern, Beitragsdaten, Rechnungen, Zahlungsmarkierungen und Mahnungen verantwortlich.',

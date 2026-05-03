@@ -17,20 +17,29 @@ class Invoice extends Model
         'description',
         'amount',
         'status',
+        'source',
+        'billing_period_start',
+        'billing_period_end',
         'due_date',
         'issued_at',
         'paid_at',
         'reminder_sent_at',
+        'due_soon_notified_at',
+        'sepa_exported_at',
     ];
 
     protected function casts(): array
     {
         return [
             'amount' => 'decimal:2',
+            'billing_period_start' => 'date',
+            'billing_period_end' => 'date',
             'due_date' => 'datetime',
             'issued_at' => 'datetime',
             'paid_at' => 'datetime',
             'reminder_sent_at' => 'datetime',
+            'due_soon_notified_at' => 'datetime',
+            'sepa_exported_at' => 'datetime',
         ];
     }
 
@@ -47,5 +56,10 @@ class Invoice extends Model
     public function payments()
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function bankTransactions()
+    {
+        return $this->hasMany(BankTransaction::class);
     }
 }

@@ -1,8 +1,9 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3'
+import { Link } from '@inertiajs/vue3'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
+import SeoHead from '@/Components/Guest/SeoHead.vue'
 
 defineProps({
     canLogin: Boolean,
@@ -38,7 +39,10 @@ const articles = [
 </script>
 
 <template>
-    <Head :title="$t('Top Inhalte')" />
+    <SeoHead
+        title="Top Inhalte für Sport, Training und Vereinsarbeit"
+        description="Entdecke Inhalte rund um Trainingsplanung, Teamkommunikation, Vereinsorganisation und digitale Sportentwicklung mit Airmius."
+    />
 
     <div class="min-h-screen bg-bg text-primary">
         <Nav :canLogin="canLogin" />

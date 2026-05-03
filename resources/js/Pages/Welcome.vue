@@ -1,10 +1,11 @@
 <script setup>
-import { Head, useForm } from '@inertiajs/vue3'
+import { useForm } from '@inertiajs/vue3'
 import { ref, watch, onMounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
+import SeoHead from '@/Components/Guest/SeoHead.vue'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -77,7 +78,10 @@ const submitForm = () => {
 
 <template>
 
-    <Head title="Welcome" />
+    <SeoHead
+        title="Airmius - Sportvereine, Teams und Sportler digital vernetzen"
+        description="Airmius ist die Plattform für Sportler, Trainer, Teams und Vereine: Organisation, Kommunikation, Trainingsplanung und Vereinsverwaltung an einem Ort."
+    />
     <div id="app" class="w-full h-full bg-bg text-primary overflow-auto">
         <!-- NAV -->
         <Nav :canLogin="canLogin" />

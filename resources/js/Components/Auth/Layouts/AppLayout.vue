@@ -190,11 +190,12 @@ watch(searchTerm, () => {
 
     <Head :title="title" />
 
-    <div class="flex min-h-screen w-full overflow-hidden bg-bg text-primary">
-<Sidebar :open="sidebarOpen" @close="sidebarOpen = false" />
-        <div class="flex min-w-0 flex-1 flex-col">
+    <div class="min-h-screen w-full bg-bg text-primary">
+        <Sidebar :open="sidebarOpen" @close="sidebarOpen = false" />
+
+        <div class="flex min-w-0 flex-1 flex-col md:pl-[260px]">
             <!-- Topbar -->
-            <header class="fixed top-0 right-0 left-0 z-50 border-b border-border bg-card lg:left-64">
+            <header class="fixed top-0 right-0 left-0 z-50 border-b border-border bg-card md:left-[260px]">
                 <div class="flex h-16 items-center justify-between px-3 sm:px-4 lg:px-6">
 
                     <!-- LINKS -->
@@ -309,7 +310,7 @@ watch(searchTerm, () => {
             </Teleport>
 
             <!-- Content -->
-            <main class="flex-1 overflow-y-auto overflow-x-hidden p-3 pt-20 pb-24 sm:p-4 sm:pt-20 lg:p-6 lg:pt-20">
+            <main class="min-h-screen overflow-x-hidden p-3 pt-20 pb-24 sm:p-4 sm:pt-20 lg:p-6 lg:pt-20">
                 <slot />
             </main>
         </div>

@@ -1,8 +1,9 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3'
+import { Link } from '@inertiajs/vue3'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
+import SeoHead from '@/Components/Guest/SeoHead.vue'
 
 defineProps({
     canLogin: Boolean,
@@ -24,7 +25,10 @@ const steps = [
 </script>
 
 <template>
-    <Head :title="$t('E-Learning')" />
+    <SeoHead
+        title="E-Learning für Sportorganisation"
+        description="Lerne moderne Sportorganisation mit Airmius: Kommunikation, Trainingsplanung, Datenschutz und digitale Vereinsprozesse einfach erklaert."
+    />
 
     <div class="min-h-screen bg-bg text-primary">
         <Nav :canLogin="canLogin" />

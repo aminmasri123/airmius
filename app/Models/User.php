@@ -119,7 +119,16 @@ class User extends Authenticatable
                 'member_number',
                 'contribution_amount',
                 'contribution_interval',
+                'contribution_next_invoice_on',
+                'contribution_last_invoice_at',
+                'sepa_iban',
+                'sepa_bic',
+                'sepa_mandate_reference',
+                'sepa_mandate_signed_on',
+                'sepa_mandate_active',
                 'joined_on',
+                'membership_ends_on',
+                'membership_end_notified_at',
                 'membership_notes',
             ]);
     }
@@ -177,6 +186,31 @@ class User extends Authenticatable
     public function payments()
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function subscriptions()
+    {
+        return $this->hasMany(UserSubscription::class);
+    }
+
+    public function currentSubscription()
+    {
+        return $this->hasOne(UserSubscription::class)->latestOfMany();
+    }
+
+    public function socialAccounts()
+    {
+        return $this->hasMany(SocialAccount::class);
+    }
+
+    public function connectedSportAccounts()
+    {
+        return $this->hasMany(ConnectedSportAccount::class);
+    }
+
+    public function connectedSportActivities()
+    {
+        return $this->hasMany(ConnectedSportActivity::class);
     }
 
     public function folders()

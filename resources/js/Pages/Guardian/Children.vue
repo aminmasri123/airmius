@@ -26,7 +26,7 @@ const formatDate = (value) => {
 }
 
 const revoke = (child) => {
-    if (!confirm(`Zustimmung fuer ${child.name} wirklich widerrufen?`)) return
+    if (!confirm(`Zustimmung für ${child.name} wirklich widerrufen?`)) return
 
     router.put(route('guardian-access.children.revoke', child.id), {}, {
         preserveScroll: true,

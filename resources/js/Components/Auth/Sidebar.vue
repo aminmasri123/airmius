@@ -23,6 +23,7 @@ const canAdmin = computed(() => hasAny([
     'blog.view',
     'payments.view',
     'invoices.view',
+    'subscriptions.view',
     'sponsors.view',
     'admin.moderation.view',
     'admin.settings.view',
@@ -41,7 +42,7 @@ const closeSidebar = () => {
     <div v-if="open" class="fixed inset-0 z-[55] bg-black/50 md:hidden" @click="closeSidebar" />
 
     <aside
-        class="fixed top-0 z-[60] flex h-screen w-full md:w-[260px] flex-col border-border bg-card transition-transform duration-300 md:static md:translate-x-0"
+        class="fixed inset-y-0 top-0 z-[60] flex h-dvh w-full flex-col border-border bg-card transition-transform duration-300 md:w-[260px] md:translate-x-0"
         :class="[
             isRtl ? 'right-0 border-l' : 'left-0 border-r',
             open ? 'translate-x-0' : (isRtl ? 'translate-x-full' : '-translate-x-full')
@@ -96,6 +97,7 @@ const closeSidebar = () => {
                 <NavItem v-if="can('blog.view')" @click="closeSidebar" :href="route('blogs.index')" label="Blogs" icon="las la-pen-nib" />
                 <NavItem v-if="can('payments.view')" @click="closeSidebar" :href="route('payments.index')" label="Payments" icon="las la-credit-card" />
                 <NavItem v-if="can('invoices.view')" @click="closeSidebar" :href="route('invoices.index')" label="Invoices" icon="las la-file-invoice" />
+                <NavItem v-if="can('subscriptions.view')" @click="closeSidebar" :href="route('admin.subscriptions.index')" label="Abos" icon="las la-tags" />
                 <NavItem v-if="can('sponsors.view')" @click="closeSidebar" :href="route('sponsors.index')" label="Sponsors" icon="las la-handshake" />
                 <NavItem v-if="can('admin.moderation.view')" @click="closeSidebar" :href="route('admin.moderation.index')" label="Moderation" icon="las la-user-check" />
                 <NavItem v-if="can('system.manage')" @click="closeSidebar" :href="route('admin.sports.index')" label="Sportarten" icon="las la-running" />

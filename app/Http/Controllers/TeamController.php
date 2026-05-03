@@ -11,6 +11,7 @@ use App\Models\TeamJoinRequest;
 use App\Models\User;
 use App\Notifications\ExternalTeamInvitation;
 use App\Services\MediaOptimizer;
+use App\Services\PlanFeatureService;
 use App\Support\Roles;
 use App\Support\AppNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -29,7 +30,10 @@ class TeamController extends Controller
 
     public const CLUB_MEMBER_ROLES = ['owner', 'admin', 'manager', 'member'];
 
-    public function __construct(private MediaOptimizer $mediaOptimizer) {}
+    public function __construct(
+        private MediaOptimizer $mediaOptimizer,
+        private PlanFeatureService $planFeatures,
+    ) {}
 
     public function index()
     {
@@ -76,6 +80,7 @@ class TeamController extends Controller
             ->each(function (Club $club) use ($user) {
                 $club->setAttribute('can_manage', $user->can('update', $club));
                 $club->setAttribute('can_delete', $user->can('delete', $club));
+                $club->setAttribute('subscription_capabilities', $this->planFeatures->capabilities($club));
                 $teams = $club->can_manage
                     ? $club->teams
                     : $club->teams->filter(fn (Team $team) => $team->users->contains('id', $user->id))->values();
@@ -124,6 +129,10 @@ class TeamController extends Controller
                 || $user->can('org.manage'),
             403
         );
+
+        if (! Team::query()->where('club_id', $club->id)->where('name', $data['name'])->exists()) {
+            $this->planFeatures->ensureCanCreateTeam($club);
+        }
 
         DB::transaction(function () use ($club, $data, $user) {
             $team = Team::firstOrCreate(
@@ -315,6 +324,7 @@ class TeamController extends Controller
         }
 
         $email = strtolower($data['email']);
+        $this->planFeatures->ensureAllows($team->club, 'member_invitations');
 
         $invitation = TeamInvitation::updateOrCreate(
             ['team_id' => $team->id, 'email' => $email],
@@ -337,6 +347,12 @@ class TeamController extends Controller
     {
         abort_unless($invitation->recipient_id === $request->user()->id, 403);
         abort_unless($invitation->status === 'pending', 422);
+        abort_if(
+            ! $invitation->team->club->users()->where('users.id', $invitation->recipient_id)->exists()
+            && ! $invitation->team->club->canAddMembers(),
+            422,
+            'Das Mitgliederlimit des aktuellen Vereinsplans ist erreicht.'
+        );
 
         DB::transaction(function () use ($invitation) {
             $invitation->team->users()->syncWithoutDetaching([
@@ -368,6 +384,12 @@ class TeamController extends Controller
             ->firstOrFail();
 
         abort_unless(strtolower((string) $invitation->email) === strtolower($request->user()->email), 403);
+        abort_if(
+            ! $invitation->team->club->users()->where('users.id', $request->user()->id)->exists()
+            && ! $invitation->team->club->canAddMembers(),
+            422,
+            'Das Mitgliederlimit des aktuellen Vereinsplans ist erreicht.'
+        );
 
         DB::transaction(function () use ($invitation, $request) {
             $invitation->team->users()->syncWithoutDetaching([
@@ -426,6 +448,12 @@ class TeamController extends Controller
         $data = $request->validate([
             'role' => ['nullable', Rule::in(Team::ROLES)],
         ]);
+        abort_if(
+            ! $joinRequest->team->club->users()->where('users.id', $joinRequest->user_id)->exists()
+            && ! $joinRequest->team->club->canAddMembers(),
+            422,
+            'Das Mitgliederlimit des aktuellen Vereinsplans ist erreicht.'
+        );
 
         DB::transaction(function () use ($joinRequest, $data) {
             $joinRequest->team->users()->syncWithoutDetaching([

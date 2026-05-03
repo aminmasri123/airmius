@@ -18,8 +18,10 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrganizationJobController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PostHelpfulController;
+use App\Http\Controllers\ProfileCompletionController;
 use App\Http\Controllers\ProfileGamificationController;
 use App\Http\Controllers\RideController;
+use App\Http\Controllers\SportIntegrationController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserSettingsController;
@@ -32,6 +34,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
 
     // DASHBOARD
 
+    Route::get('/profile-completion', [ProfileCompletionController::class, 'edit'])->name('auth.profile-completion.edit');
+    Route::put('/profile-completion', [ProfileCompletionController::class, 'update'])->name('auth.profile-completion.update');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('auth.dashboard');
 
@@ -50,6 +54,14 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::get('/settings', [UserSettingsController::class, 'index'])->name('auth.settings');
     Route::put('/settings', [UserSettingsController::class, 'update'])->name('auth.settings.update');
     Route::put('/user/status', [UserStatusController::class, 'update'])->name('auth.user.status.update');
+    Route::get('/settings/sport-integrations/{provider}/connect', [SportIntegrationController::class, 'redirect'])
+        ->name('auth.sport-integrations.connect');
+    Route::get('/settings/sport-integrations/{provider}/callback', [SportIntegrationController::class, 'callback'])
+        ->name('auth.sport-integrations.callback');
+    Route::post('/settings/sport-integrations/{account}/sync', [SportIntegrationController::class, 'sync'])
+        ->name('auth.sport-integrations.sync');
+    Route::delete('/settings/sport-integrations/{account}', [SportIntegrationController::class, 'destroy'])
+        ->name('auth.sport-integrations.destroy');
     Route::get('/search', GlobalSearchController::class)->name('auth.search');
 
 
@@ -70,6 +82,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::get('/club-memberships/import-template', [ClubMembershipController::class, 'downloadImportTemplate'])->name('auth.club-memberships.import-template');
     Route::post('/clubs/{club}/membership/email-members', [ClubMembershipController::class, 'storeEmailMember'])->name('auth.club-memberships.email-members.store');
     Route::post('/clubs/{club}/membership/email-members/import', [ClubMembershipController::class, 'importEmailMembers'])->name('auth.club-memberships.email-members.import');
+    Route::put('/clubs/{club}/membership/sepa-settings', [ClubMembershipController::class, 'updateSepaSettings'])->name('auth.club-memberships.sepa-settings.update');
+    Route::get('/clubs/{club}/membership/sepa-export', [ClubMembershipController::class, 'exportSepaDebit'])->name('auth.club-memberships.sepa-export');
     Route::post('/club-external-members/{externalMember}/invite', [ClubMembershipController::class, 'inviteEmailMember'])->name('auth.club-memberships.email-members.invite');
     Route::get('/club-member-invitations/token/{token}/accept', [ClubMembershipController::class, 'acceptExternalInvitation'])->name('auth.club-member-invitations.accept');
     Route::put('/clubs/{club}/membership/{user}', [ClubMembershipController::class, 'updateMember'])->name('auth.club-memberships.members.update');
@@ -78,6 +92,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::put('/membership-invoices/{invoice}', [ClubMembershipController::class, 'updateInvoiceStatus'])->name('auth.club-memberships.invoices.update');
     Route::post('/membership-invoices/{invoice}/payments', [ClubMembershipController::class, 'recordPayment'])->name('auth.club-memberships.invoices.payments.store');
     Route::post('/membership-invoices/{invoice}/reminder', [ClubMembershipController::class, 'sendReminder'])->name('auth.club-memberships.invoices.reminder');
+    Route::post('/clubs/{club}/membership/bank-transactions/import', [ClubMembershipController::class, 'importBankTransactions'])->name('auth.club-memberships.bank-transactions.import');
+    Route::post('/membership-bank-transactions/{bankTransaction}/confirm', [ClubMembershipController::class, 'confirmBankTransaction'])->name('auth.club-memberships.bank-transactions.confirm');
 
     // TEAMS
     Route::get('/teams', [TeamController::class, 'index'])->name('auth.teams.index');

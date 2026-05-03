@@ -171,6 +171,7 @@ class HandleInertiaRequests extends Middleware
 
             'payments.view' => $user->can('billing.manage'),
             'invoices.view' => $user->can('billing.manage'),
+            'subscriptions.view' => $user->can('subscriptions.manage') || $user->can('system.manage'),
             'sponsors.view' => $user->can('finance.view') || $user->can('org.manage'),
             'system.manage' => $user->can('system.manage'),
             'admin.moderation.view' => $user->can('system.manage'),

@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 defineOptions({ layout: AppLayout })
 
@@ -11,6 +11,8 @@ const props = defineProps({
 })
 
 const editingSponsor = ref(null)
+const selectedClub = computed(() => props.clubs?.find((club) => club.id === form.club_id) || null)
+const canManageSponsors = computed(() => selectedClub.value?.capabilities?.sponsors !== false)
 
 const form = useForm({
     club_id: props.clubs?.[0]?.id || '',
@@ -61,6 +63,10 @@ const submit = () => {
             <p class="mt-1 text-sm text-secondary">Sponsor management per organization.</p>
         </div>
 
+        <div v-if="!canManageSponsors" class="rounded-lg border border-border bg-inputBg p-4 text-sm text-primary">
+            Sponsorenverwaltung ist ab dem Club-Plan verfuegbar. Waehle einen Verein mit passendem Plan oder aktualisiere den Plan in der Aboverwaltung.
+        </div>
+
         <form class="grid gap-3 rounded-lg border border-border bg-card p-4 md:grid-cols-3" @submit.prevent="submit">
             <select v-model="form.club_id" class="rounded-lg border-border bg-inputBg text-primary">
                 <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
@@ -73,7 +79,7 @@ const submit = () => {
             <input v-model="form.starts_at" class="rounded-lg border-border bg-inputBg text-primary" type="date" />
             <input v-model="form.ends_at" class="rounded-lg border-border bg-inputBg text-primary" type="date" />
             <div class="flex gap-2">
-                <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-buttonTextPrimary" :disabled="form.processing">
+                <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50" :disabled="form.processing || !canManageSponsors">
                     {{ editingSponsor ? 'Update' : 'Create' }}
                 </button>
                 <button v-if="editingSponsor" type="button" class="rounded-lg border border-border px-4 py-2 text-primary" @click="resetForm">

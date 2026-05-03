@@ -3,6 +3,7 @@
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\EnsureApplicationIsNotInMaintenance;
 use App\Http\Middleware\EnsureGuardianConsentResolved;
+use App\Http\Middleware\EnsureProfileIsComplete;
 use App\Http\Middleware\SetCurrentClub;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
@@ -29,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleInertiaRequests::class,
             EnsureApplicationIsNotInMaintenance::class,
+            EnsureProfileIsComplete::class,
             EnsureGuardianConsentResolved::class,
             AddLinkHeadersForPreloadedAssets::class,
 

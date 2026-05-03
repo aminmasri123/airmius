@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Club;
+use App\Models\BankTransaction;
 use App\Models\ClubExternalMember;
 use App\Models\Invoice;
 use App\Models\Payment;
@@ -10,6 +11,7 @@ use App\Models\Team;
 use App\Models\TeamJoinRequest;
 use App\Models\User;
 use App\Notifications\ExternalClubMembershipInvitation;
+use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
 use App\Support\Roles;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -26,6 +28,8 @@ class ClubMembershipController extends Controller
 
     public const MEMBERSHIP_STATUSES = ['active', 'non_member', 'pending', 'former'];
     public const CONTRIBUTION_INTERVALS = ['none', 'monthly', 'quarterly', 'yearly', 'once'];
+
+    public function __construct(private PlanFeatureService $planFeatures) {}
 
     public function index(Request $request)
     {
@@ -61,10 +65,15 @@ class ClubMembershipController extends Controller
                     ->with(['user:id,name,email', 'invoice:id,number,title'])
                     ->latest('id')
                     ->limit(60),
+                'bankTransactions' => fn ($query) => $query
+                    ->with(['invoice:id,number,title,amount,status', 'payment:id,amount,paid_at'])
+                    ->latest('id')
+                    ->limit(60),
                 'externalMembers' => fn ($query) => $query
                     ->with('linkedUser:id,name,email,profile_photo_path')
                     ->orderBy('name')
                     ->orderBy('email'),
+                'currentSubscription.plan',
             ])
             ->withCount(['users', 'teams'])
             ->orderBy('name')
@@ -85,8 +94,19 @@ class ClubMembershipController extends Controller
                 return [
                     'id' => $club->id,
                     'name' => $club->name,
+                    'sepa_creditor_id' => $club->sepa_creditor_id,
+                    'sepa_iban' => $club->sepa_iban,
+                    'sepa_bic' => $club->sepa_bic,
                     'users_count' => $club->users_count,
                     'teams_count' => $club->teams_count,
+                    'subscription' => [
+                        'plan' => $club->subscriptionPlan(),
+                        'member_usage' => $club->memberUsageCount(),
+                        'member_limit' => $club->subscriptionPlan()?->member_limit,
+                        'team_limit' => $club->subscriptionPlan()?->team_limit,
+                        'storage_gb' => $club->subscriptionPlan()?->storage_gb,
+                    ],
+                    'capabilities' => $this->planFeatures->capabilities($club),
                     'pending_requests' => $pendingRequests,
                     'members' => $club->users->map(fn (User $member) => [
                         'id' => $member->id,
@@ -109,7 +129,16 @@ class ClubMembershipController extends Controller
                         'athlete_license_number' => $externalMember->athlete_license_number,
                         'contribution_amount' => $externalMember->contribution_amount,
                         'contribution_interval' => $externalMember->contribution_interval,
+                        'contribution_next_invoice_on' => $externalMember->contribution_next_invoice_on,
+                        'contribution_last_invoice_at' => $externalMember->contribution_last_invoice_at,
+                        'sepa_iban' => $externalMember->sepa_iban,
+                        'sepa_bic' => $externalMember->sepa_bic,
+                        'sepa_mandate_reference' => $externalMember->sepa_mandate_reference,
+                        'sepa_mandate_signed_on' => $externalMember->sepa_mandate_signed_on,
+                        'sepa_mandate_active' => $externalMember->sepa_mandate_active,
                         'joined_on' => $externalMember->joined_on,
+                        'membership_ends_on' => $externalMember->membership_ends_on,
+                        'membership_end_notified_at' => $externalMember->membership_end_notified_at,
                         'membership_notes' => $externalMember->membership_notes,
                         'invitation_status' => $externalMember->invitation_status,
                         'invited_at' => $externalMember->invited_at,
@@ -118,6 +147,7 @@ class ClubMembershipController extends Controller
                     ])->values(),
                     'invoices' => $club->invoices,
                     'payments' => $club->payments,
+                    'bank_transactions' => $club->bankTransactions,
                 ];
             });
 
@@ -142,7 +172,14 @@ class ClubMembershipController extends Controller
             'athlete_license_number' => ['nullable', 'string', 'max:120'],
             'contribution_amount' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'contribution_interval' => ['nullable', Rule::in(self::CONTRIBUTION_INTERVALS)],
+            'contribution_next_invoice_on' => ['nullable', 'date'],
+            'sepa_iban' => ['nullable', 'string', 'max:40'],
+            'sepa_bic' => ['nullable', 'string', 'max:20'],
+            'sepa_mandate_reference' => ['nullable', 'string', 'max:255'],
+            'sepa_mandate_signed_on' => ['nullable', 'date'],
+            'sepa_mandate_active' => ['boolean'],
             'joined_on' => ['nullable', 'date'],
+            'membership_ends_on' => ['nullable', 'date'],
             'membership_notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
@@ -167,7 +204,16 @@ class ClubMembershipController extends Controller
             'member_number' => $data['member_number'] ?? null,
             'contribution_amount' => $data['contribution_amount'] ?? null,
             'contribution_interval' => $data['contribution_interval'] ?? 'none',
+            'contribution_next_invoice_on' => $this->normalizedNextInvoiceDate($data),
+            'contribution_last_invoice_at' => null,
+            'sepa_iban' => $this->normalizeIban($data['sepa_iban'] ?? null),
+            'sepa_bic' => $this->normalizeBic($data['sepa_bic'] ?? null),
+            'sepa_mandate_reference' => $data['sepa_mandate_reference'] ?? null,
+            'sepa_mandate_signed_on' => $data['sepa_mandate_signed_on'] ?? null,
+            'sepa_mandate_active' => (bool) ($data['sepa_mandate_active'] ?? false),
             'joined_on' => $data['joined_on'] ?? null,
+            'membership_ends_on' => $data['membership_ends_on'] ?? null,
+            'membership_end_notified_at' => null,
             'membership_notes' => $data['membership_notes'] ?? null,
         ]);
 
@@ -193,7 +239,18 @@ class ClubMembershipController extends Controller
                 'members.*.athlete_license_number' => ['nullable', 'string', 'max:120'],
                 'members.*.contribution_amount' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
                 'members.*.contribution_interval' => ['nullable', Rule::in(self::CONTRIBUTION_INTERVALS)],
+                'members.*.contribution_next_invoice_on' => ['nullable', 'date'],
+                'members.*.sepa_iban' => ['nullable', 'string', 'max:40'],
+                'members.*.sepa_bic' => ['nullable', 'string', 'max:20'],
+                'members.*.sepa_mandate_reference' => ['nullable', 'string', 'max:255'],
+                'members.*.sepa_mandate_signed_on' => ['nullable', 'date'],
+                'members.*.sepa_mandate_active' => ['boolean'],
+                'members.*.membership_ends_on' => ['nullable', 'date'],
             ]);
+
+            if ((bool) ($data['send_invitation'] ?? false)) {
+                $this->planFeatures->ensureAllows($club, 'member_invitations');
+            }
 
             $stats = ['stored' => 0, 'linked' => 0, 'invited' => 0];
 
@@ -217,7 +274,18 @@ class ClubMembershipController extends Controller
             'athlete_license_number' => ['nullable', 'string', 'max:120'],
             'contribution_amount' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'contribution_interval' => ['nullable', Rule::in(self::CONTRIBUTION_INTERVALS)],
+            'contribution_next_invoice_on' => ['nullable', 'date'],
+            'sepa_iban' => ['nullable', 'string', 'max:40'],
+            'sepa_bic' => ['nullable', 'string', 'max:20'],
+            'sepa_mandate_reference' => ['nullable', 'string', 'max:255'],
+            'sepa_mandate_signed_on' => ['nullable', 'date'],
+            'sepa_mandate_active' => ['boolean'],
+            'membership_ends_on' => ['nullable', 'date'],
         ]);
+
+        if ((bool) ($data['send_invitation'] ?? false)) {
+            $this->planFeatures->ensureAllows($club, 'member_invitations');
+        }
 
         $result = $this->storeEmailMemberData($club, $request->user(), $data, (bool) ($data['send_invitation'] ?? false));
 
@@ -262,7 +330,14 @@ class ClubMembershipController extends Controller
                 'athlete_license_number' => trim((string) ($row['lizenznummer'] ?? $row['athlete_license_number'] ?? '')) ?: null,
                 'contribution_amount' => $this->normalizeMoney($row['beitrag'] ?? $row['contribution_amount'] ?? null),
                 'contribution_interval' => $this->normalizeContributionInterval($row['intervall'] ?? $row['contribution_interval'] ?? 'none'),
+                'contribution_next_invoice_on' => $this->normalizeImportDate($row['naechste_rechnung'] ?? $row['nächste_rechnung'] ?? $row['contribution_next_invoice_on'] ?? null),
+                'sepa_iban' => $this->normalizeIban($row['iban'] ?? $row['sepa_iban'] ?? null),
+                'sepa_bic' => $this->normalizeBic($row['bic'] ?? $row['sepa_bic'] ?? null),
+                'sepa_mandate_reference' => trim((string) ($row['mandatsreferenz'] ?? $row['sepa_mandate_reference'] ?? '')) ?: null,
+                'sepa_mandate_signed_on' => $this->normalizeImportDate($row['mandatsdatum'] ?? $row['sepa_mandate_signed_on'] ?? null),
+                'sepa_mandate_active' => $this->normalizeBoolean($row['sepa_aktiv'] ?? $row['sepa_mandate_active'] ?? null),
                 'joined_on' => $this->normalizeImportDate($row['eintritt'] ?? $row['joined_on'] ?? null),
+                'membership_ends_on' => $this->normalizeImportDate($row['ende'] ?? $row['membership_ends_on'] ?? null),
                 'membership_notes' => trim((string) ($row['notiz'] ?? $row['membership_notes'] ?? '')) ?: null,
             ];
 
@@ -288,7 +363,16 @@ class ClubMembershipController extends Controller
                     'athlete_license_number' => $memberData['athlete_license_number'],
                     'contribution_amount' => $memberData['contribution_amount'],
                     'contribution_interval' => $memberData['contribution_interval'],
+                    'contribution_next_invoice_on' => $memberData['contribution_next_invoice_on'],
+                    'contribution_last_invoice_at' => null,
+                    'sepa_iban' => $memberData['sepa_iban'],
+                    'sepa_bic' => $memberData['sepa_bic'],
+                    'sepa_mandate_reference' => $memberData['sepa_mandate_reference'],
+                    'sepa_mandate_signed_on' => $memberData['sepa_mandate_signed_on'],
+                    'sepa_mandate_active' => $memberData['sepa_mandate_active'],
                     'joined_on' => $memberData['joined_on'] ?? now()->toDateString(),
+                    'membership_ends_on' => $memberData['membership_ends_on'],
+                    'membership_end_notified_at' => null,
                     'membership_notes' => $memberData['membership_notes'],
                     'invitation_status' => $sendInvitation ? 'pending' : 'none',
                     'invitation_token' => $sendInvitation ? Str::random(64) : null,
@@ -322,9 +406,75 @@ class ClubMembershipController extends Controller
             ->deleteFileAfterSend(true);
     }
 
+    public function updateSepaSettings(Request $request, Club $club)
+    {
+        $this->authorize('update', $club);
+        $this->planFeatures->ensureAllows($club, 'sepa_export');
+
+        $data = $request->validate([
+            'sepa_creditor_id' => ['nullable', 'string', 'max:80'],
+            'sepa_iban' => ['nullable', 'string', 'max:40'],
+            'sepa_bic' => ['nullable', 'string', 'max:20'],
+        ]);
+
+        $club->update([
+            'sepa_creditor_id' => $data['sepa_creditor_id'] ?? null,
+            'sepa_iban' => $this->normalizeIban($data['sepa_iban'] ?? null),
+            'sepa_bic' => $this->normalizeBic($data['sepa_bic'] ?? null),
+        ]);
+
+        return back()->with('success', 'SEPA-Einstellungen gespeichert.');
+    }
+
+    public function exportSepaDebit(Club $club)
+    {
+        $this->authorize('update', $club);
+        $this->planFeatures->ensureAllows($club, 'sepa_export');
+
+        abort_if(blank($club->sepa_creditor_id) || blank($club->sepa_iban), 422, 'Bitte zuerst SEPA-Glaeubiger-ID und Vereins-IBAN speichern.');
+
+        $invoices = Invoice::query()
+            ->where('club_id', $club->id)
+            ->where('status', 'open')
+            ->where('amount', '>', 0)
+            ->whereNotNull('user_id')
+            ->with('user:id,name,email')
+            ->orderBy('due_date')
+            ->get();
+
+        $memberships = DB::table('club_user')
+            ->where('club_id', $club->id)
+            ->whereIn('user_id', $invoices->pluck('user_id')->filter()->unique()->values())
+            ->get()
+            ->keyBy('user_id');
+
+        $exportable = $invoices
+            ->filter(function (Invoice $invoice) use ($memberships) {
+                $membership = $memberships->get($invoice->user_id);
+
+                return $membership
+                    && (bool) $membership->sepa_mandate_active
+                    && filled($membership->sepa_iban)
+                    && filled($membership->sepa_mandate_reference)
+                    && filled($membership->sepa_mandate_signed_on);
+            })
+            ->values();
+
+        abort_if($exportable->isEmpty(), 422, 'Keine offenen Rechnungen mit aktivem SEPA-Mandat gefunden.');
+
+        $xml = $this->buildSepaDebitXml($club, $exportable, $memberships);
+        $fileName = 'airmius-sepa-'.$club->id.'-'.now()->format('Ymd-His').'.xml';
+
+        return response($xml, 200, [
+            'Content-Type' => 'application/xml; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
+        ]);
+    }
+
     public function inviteEmailMember(Request $request, ClubExternalMember $externalMember)
     {
         $this->authorize('update', $externalMember->club);
+        $this->planFeatures->ensureAllows($externalMember->club, 'member_invitations');
 
         $existingUser = User::query()
             ->where('email', strtolower($externalMember->email))
@@ -339,7 +489,16 @@ class ClubMembershipController extends Controller
                         'member_number' => $externalMember->member_number,
                         'contribution_amount' => $externalMember->contribution_amount,
                         'contribution_interval' => $externalMember->contribution_interval ?? 'none',
+                        'contribution_next_invoice_on' => $externalMember->contribution_next_invoice_on?->toDateString(),
+                        'contribution_last_invoice_at' => null,
+                        'sepa_iban' => $externalMember->sepa_iban,
+                        'sepa_bic' => $externalMember->sepa_bic,
+                        'sepa_mandate_reference' => $externalMember->sepa_mandate_reference,
+                        'sepa_mandate_signed_on' => $externalMember->sepa_mandate_signed_on?->toDateString(),
+                        'sepa_mandate_active' => $externalMember->sepa_mandate_active,
                         'joined_on' => $externalMember->joined_on?->toDateString() ?? now()->toDateString(),
+                        'membership_ends_on' => $externalMember->membership_ends_on?->toDateString(),
+                        'membership_end_notified_at' => null,
                         'membership_notes' => $externalMember->membership_notes,
                     ],
                 ]);
@@ -392,7 +551,16 @@ class ClubMembershipController extends Controller
                     'member_number' => $externalMember->member_number,
                     'contribution_amount' => $externalMember->contribution_amount,
                     'contribution_interval' => $externalMember->contribution_interval ?? 'none',
+                    'contribution_next_invoice_on' => $externalMember->contribution_next_invoice_on?->toDateString(),
+                    'contribution_last_invoice_at' => null,
+                    'sepa_iban' => $externalMember->sepa_iban,
+                    'sepa_bic' => $externalMember->sepa_bic,
+                    'sepa_mandate_reference' => $externalMember->sepa_mandate_reference,
+                    'sepa_mandate_signed_on' => $externalMember->sepa_mandate_signed_on?->toDateString(),
+                    'sepa_mandate_active' => $externalMember->sepa_mandate_active,
                     'joined_on' => $externalMember->joined_on?->toDateString() ?? now()->toDateString(),
+                    'membership_ends_on' => $externalMember->membership_ends_on?->toDateString(),
+                    'membership_end_notified_at' => null,
                     'membership_notes' => $externalMember->membership_notes,
                 ],
             ]);
@@ -415,6 +583,7 @@ class ClubMembershipController extends Controller
     {
         $this->authorize('update', $club);
         abort_unless($club->users()->where('users.id', $user->id)->exists(), 404);
+        $this->planFeatures->ensureAllows($club, 'invoices');
 
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -431,6 +600,7 @@ class ClubMembershipController extends Controller
             'description' => $data['description'] ?? null,
             'amount' => $data['amount'],
             'status' => 'open',
+            'source' => 'manual',
             'due_date' => $data['due_date'],
             'issued_at' => now(),
         ]);
@@ -461,6 +631,7 @@ class ClubMembershipController extends Controller
     public function updateInvoiceStatus(Request $request, Invoice $invoice)
     {
         $this->authorize('update', $invoice->club);
+        $this->planFeatures->ensureAllows($invoice->club, 'payment_tracking');
 
         $data = $request->validate([
             'status' => ['required', Rule::in(['open', 'paid', 'overdue', 'cancelled'])],
@@ -517,6 +688,7 @@ class ClubMembershipController extends Controller
     {
         $this->authorize('update', $invoice->club);
         abort_if($invoice->status === 'paid', 422, 'Bezahlte Rechnungen koennen nicht gemahnt werden.');
+        $this->planFeatures->ensureAllows($invoice->club, 'payment_reminders');
 
         $invoice->update([
             'status' => 'overdue',
@@ -533,6 +705,105 @@ class ClubMembershipController extends Controller
         return back()->with('success', 'Mahnung gesendet.');
     }
 
+    public function importBankTransactions(Request $request, Club $club)
+    {
+        $this->authorize('update', $club);
+        $this->planFeatures->ensureAllows($club, 'bank_reconciliation');
+
+        $data = $request->validate([
+            'file' => ['required', 'file', 'max:10240'],
+        ]);
+
+        $rows = $this->readBankTransactionRows($data['file']->getRealPath());
+        $stats = [
+            'imported' => 0,
+            'auto_matched' => 0,
+            'suggested' => 0,
+            'unmatched' => 0,
+            'duplicates' => 0,
+            'skipped' => 0,
+        ];
+
+        foreach ($rows as $row) {
+            $transaction = $this->normalizeBankTransactionRow($row);
+
+            if (! $transaction || (float) $transaction['amount'] <= 0) {
+                $stats['skipped']++;
+                continue;
+            }
+
+            if (BankTransaction::query()
+                ->where('club_id', $club->id)
+                ->where('transaction_hash', $transaction['transaction_hash'])
+                ->exists()) {
+                $stats['duplicates']++;
+                continue;
+            }
+
+            $match = $this->findInvoiceMatchForBankTransaction($club, $transaction);
+            $status = $match['status'];
+            $payment = null;
+
+            DB::transaction(function () use ($club, $request, $transaction, $match, &$payment, &$status) {
+                if ($status === 'matched' && $match['invoice']) {
+                    $payment = $this->recordBankMatchedPayment($match['invoice'], $transaction);
+                }
+
+                BankTransaction::create([
+                    'club_id' => $club->id,
+                    'invoice_id' => $match['invoice']?->id,
+                    'payment_id' => $payment?->id,
+                    'imported_by' => $request->user()->id,
+                    'transaction_hash' => $transaction['transaction_hash'],
+                    'booking_date' => $transaction['booking_date'],
+                    'amount' => $transaction['amount'],
+                    'currency' => $transaction['currency'],
+                    'debtor_name' => $transaction['debtor_name'],
+                    'debtor_iban' => $transaction['debtor_iban'],
+                    'purpose' => $transaction['purpose'],
+                    'status' => $status,
+                    'match_confidence' => $match['confidence'],
+                    'match_reason' => $match['reason'],
+                    'raw_data' => $transaction['raw_data'],
+                ]);
+            });
+
+            $stats['imported']++;
+            $stats[$status === 'matched' ? 'auto_matched' : ($status === 'suggested' ? 'suggested' : 'unmatched')]++;
+        }
+
+        return back()->with(
+            'success',
+            "Bankabgleich fertig: {$stats['auto_matched']} automatisch bezahlt, {$stats['suggested']} Vorschlaege, {$stats['unmatched']} offen, {$stats['duplicates']} Duplikate."
+        );
+    }
+
+    public function confirmBankTransaction(BankTransaction $bankTransaction)
+    {
+        $this->authorize('update', $bankTransaction->club);
+        $this->planFeatures->ensureAllows($bankTransaction->club, 'bank_reconciliation');
+
+        abort_if($bankTransaction->status === 'matched', 422, 'Dieser Umsatz ist bereits zugeordnet.');
+        abort_unless($bankTransaction->invoice && $bankTransaction->invoice->status !== 'paid', 422, 'Es gibt keine offene Rechnung fuer diesen Umsatz.');
+
+        DB::transaction(function () use ($bankTransaction) {
+            $payment = $this->recordBankMatchedPayment($bankTransaction->invoice, [
+                'amount' => $bankTransaction->amount,
+                'booking_date' => $bankTransaction->booking_date?->toDateString(),
+                'purpose' => $bankTransaction->purpose,
+            ]);
+
+            $bankTransaction->update([
+                'payment_id' => $payment->id,
+                'status' => 'matched',
+                'match_confidence' => max((int) $bankTransaction->match_confidence, 80),
+                'match_reason' => 'Manuell bestaetigt',
+            ]);
+        });
+
+        return back()->with('success', 'Bankumsatz wurde als Zahlung verbucht.');
+    }
+
     private function attachExistingUserToClub(Club $club, User $user, array $data): void
     {
         $club->users()->syncWithoutDetaching([
@@ -542,7 +813,16 @@ class ClubMembershipController extends Controller
                 'member_number' => $data['member_number'],
                 'contribution_amount' => $data['contribution_amount'],
                 'contribution_interval' => $data['contribution_interval'] ?? 'none',
+                'contribution_next_invoice_on' => $this->normalizedNextInvoiceDate($data),
+                'contribution_last_invoice_at' => null,
+                'sepa_iban' => $this->normalizeIban($data['sepa_iban'] ?? null),
+                'sepa_bic' => $this->normalizeBic($data['sepa_bic'] ?? null),
+                'sepa_mandate_reference' => $data['sepa_mandate_reference'] ?? null,
+                'sepa_mandate_signed_on' => $data['sepa_mandate_signed_on'] ?? null,
+                'sepa_mandate_active' => (bool) ($data['sepa_mandate_active'] ?? false),
                 'joined_on' => $data['joined_on'] ?? now()->toDateString(),
+                'membership_ends_on' => $data['membership_ends_on'] ?? null,
+                'membership_end_notified_at' => null,
                 'membership_notes' => $data['membership_notes'],
             ],
         ]);
@@ -566,9 +846,194 @@ class ClubMembershipController extends Controller
         ]);
     }
 
+    private function recordBankMatchedPayment(Invoice $invoice, array $transaction): Payment
+    {
+        $payment = Payment::create([
+            'club_id' => $invoice->club_id,
+            'user_id' => $invoice->user_id,
+            'invoice_id' => $invoice->id,
+            'amount' => $transaction['amount'] ?? $invoice->amount,
+            'status' => 'paid',
+            'method' => 'bank_import',
+            'reference' => $transaction['purpose'] ?? null,
+            'paid_at' => $transaction['booking_date'] ?? now(),
+            'notes' => 'Automatisch per Bankabgleich zugeordnet.',
+        ]);
+
+        $invoice->update([
+            'status' => 'paid',
+            'paid_at' => $transaction['booking_date'] ?? now(),
+        ]);
+
+        if ($invoice->user_id) {
+            AppNotification::send((int) $invoice->user_id, 'invoice.paid', [
+                'title' => 'Zahlung eingegangen',
+                'body' => 'Deine Zahlung fuer '.$invoice->number.' wurde per Bankabgleich erkannt.',
+                'url' => route('auth.settings'),
+                'invoice_id' => $invoice->id,
+            ]);
+        }
+
+        return $payment;
+    }
+
+    private function readBankTransactionRows(string $path): array
+    {
+        $handle = fopen($path, 'r');
+
+        if (! $handle) {
+            return [];
+        }
+
+        $firstLine = fgets($handle) ?: '';
+        rewind($handle);
+        $delimiter = str_contains($firstLine, ';') ? ';' : (str_contains($firstLine, "\t") ? "\t" : ',');
+        $tableRows = [];
+
+        while (($values = fgetcsv($handle, 0, $delimiter)) !== false) {
+            if ($values === [null] || $values === false) {
+                continue;
+            }
+
+            $tableRows[] = $values;
+        }
+
+        fclose($handle);
+
+        return $this->normalizeImportTableRows($tableRows);
+    }
+
+    private function normalizeBankTransactionRow(array $row): ?array
+    {
+        $amount = $this->normalizeMoney(
+            $row['betrag'] ?? $row['amount'] ?? $row['umsatz'] ?? $row['wert'] ?? null
+        );
+
+        if ($amount === null) {
+            return null;
+        }
+
+        $purpose = trim((string) (
+            $row['verwendungszweck']
+            ?? $row['purpose']
+            ?? $row['referenz']
+            ?? $row['reference']
+            ?? $row['buchungstext']
+            ?? ''
+        ));
+        $debtorName = trim((string) (
+            $row['auftraggeber']
+            ?? $row['zahler']
+            ?? $row['name']
+            ?? $row['debtor_name']
+            ?? ''
+        ));
+        $debtorIban = $this->normalizeIban($row['iban'] ?? $row['debtor_iban'] ?? $row['konto'] ?? null);
+        $bookingDate = $this->normalizeImportDate($row['datum'] ?? $row['date'] ?? $row['buchungstag'] ?? $row['booking_date'] ?? null);
+        $currency = strtoupper(trim((string) ($row['waehrung'] ?? $row['currency'] ?? 'EUR'))) ?: 'EUR';
+
+        $hashPayload = implode('|', [
+            $bookingDate,
+            number_format((float) $amount, 2, '.', ''),
+            $currency,
+            $debtorName,
+            $debtorIban,
+            $purpose,
+        ]);
+
+        return [
+            'transaction_hash' => hash('sha256', $hashPayload),
+            'booking_date' => $bookingDate,
+            'amount' => $amount,
+            'currency' => $currency,
+            'debtor_name' => $debtorName ?: null,
+            'debtor_iban' => $debtorIban,
+            'purpose' => $purpose ?: null,
+            'raw_data' => $row,
+        ];
+    }
+
+    private function findInvoiceMatchForBankTransaction(Club $club, array $transaction): array
+    {
+        $openInvoices = Invoice::query()
+            ->where('club_id', $club->id)
+            ->where('status', 'open')
+            ->whereNotNull('user_id')
+            ->with('user:id,name,email')
+            ->get();
+
+        $purpose = strtoupper((string) ($transaction['purpose'] ?? ''));
+        $amount = round((float) $transaction['amount'], 2);
+
+        $numberMatch = $openInvoices->first(fn (Invoice $invoice) => str_contains($purpose, strtoupper($invoice->number))
+            && round((float) $invoice->amount, 2) === $amount);
+
+        if ($numberMatch) {
+            return [
+                'invoice' => $numberMatch,
+                'status' => 'matched',
+                'confidence' => 100,
+                'reason' => 'Rechnungsnummer und Betrag stimmen ueberein.',
+            ];
+        }
+
+        $sameAmountInvoices = $openInvoices
+            ->filter(fn (Invoice $invoice) => round((float) $invoice->amount, 2) === $amount)
+            ->values();
+
+        if ($sameAmountInvoices->count() === 1) {
+            $invoice = $sameAmountInvoices->first();
+            $membership = DB::table('club_user')
+                ->where('club_id', $club->id)
+                ->where('user_id', $invoice->user_id)
+                ->first();
+
+            if ($membership && $transaction['debtor_iban'] && $this->normalizeIban($membership->sepa_iban ?? null) === $transaction['debtor_iban']) {
+                return [
+                    'invoice' => $invoice,
+                    'status' => 'matched',
+                    'confidence' => 95,
+                    'reason' => 'Betrag und IBAN stimmen ueberein.',
+                ];
+            }
+
+            if ($invoice->user && $this->nameLooksSimilar($invoice->user->name, $transaction['debtor_name'] ?? '')) {
+                return [
+                    'invoice' => $invoice,
+                    'status' => 'suggested',
+                    'confidence' => 75,
+                    'reason' => 'Betrag stimmt, Name wirkt passend.',
+                ];
+            }
+        }
+
+        return [
+            'invoice' => null,
+            'status' => 'unmatched',
+            'confidence' => 0,
+            'reason' => 'Keine eindeutige offene Rechnung gefunden.',
+        ];
+    }
+
+    private function nameLooksSimilar(?string $expected, ?string $actual): bool
+    {
+        $expected = strtolower(preg_replace('/[^a-z0-9]+/i', '', (string) $expected));
+        $actual = strtolower(preg_replace('/[^a-z0-9]+/i', '', (string) $actual));
+
+        return $expected !== '' && $actual !== '' && (str_contains($actual, $expected) || str_contains($expected, $actual));
+    }
+
     private function storeEmailMemberData(Club $club, User $creator, array $data, bool $sendInvitation): string
     {
         $email = strtolower(trim((string) $data['email']));
+        $alreadyTracked = $club->users()->where('users.email', $email)->exists()
+            || $club->externalMembers()->where('email', $email)->exists();
+
+        if (! $alreadyTracked) {
+            $this->planFeatures->ensureAllows($club, 'external_members');
+            $this->ensureClubCanAddMembers($club);
+        }
+
         $memberData = [
             'name' => trim((string) ($data['name'] ?? '')) ?: null,
             'email' => $email,
@@ -577,7 +1042,14 @@ class ClubMembershipController extends Controller
             'athlete_license_number' => trim((string) ($data['athlete_license_number'] ?? '')) ?: null,
             'contribution_amount' => $data['contribution_amount'] ?? null,
             'contribution_interval' => $data['contribution_interval'] ?? 'none',
+            'contribution_next_invoice_on' => $this->normalizedNextInvoiceDate($data),
+            'sepa_iban' => $this->normalizeIban($data['sepa_iban'] ?? null),
+            'sepa_bic' => $this->normalizeBic($data['sepa_bic'] ?? null),
+            'sepa_mandate_reference' => $data['sepa_mandate_reference'] ?? null,
+            'sepa_mandate_signed_on' => $data['sepa_mandate_signed_on'] ?? null,
+            'sepa_mandate_active' => (bool) ($data['sepa_mandate_active'] ?? false),
             'joined_on' => now()->toDateString(),
+            'membership_ends_on' => $data['membership_ends_on'] ?? null,
             'membership_notes' => null,
         ];
 
@@ -603,7 +1075,16 @@ class ClubMembershipController extends Controller
                 'athlete_license_number' => $memberData['athlete_license_number'],
                 'contribution_amount' => $memberData['contribution_amount'],
                 'contribution_interval' => $memberData['contribution_interval'],
+                'contribution_next_invoice_on' => $memberData['contribution_next_invoice_on'],
+                'contribution_last_invoice_at' => null,
+                'sepa_iban' => $memberData['sepa_iban'],
+                'sepa_bic' => $memberData['sepa_bic'],
+                'sepa_mandate_reference' => $memberData['sepa_mandate_reference'],
+                'sepa_mandate_signed_on' => $memberData['sepa_mandate_signed_on'],
+                'sepa_mandate_active' => $memberData['sepa_mandate_active'],
                 'joined_on' => $memberData['joined_on'],
+                'membership_ends_on' => $memberData['membership_ends_on'],
+                'membership_end_notified_at' => null,
                 'invitation_status' => $sendInvitation ? 'pending' : 'none',
                 'invitation_token' => $sendInvitation ? Str::random(64) : null,
                 'invited_at' => $sendInvitation ? now() : null,
@@ -618,6 +1099,18 @@ class ClubMembershipController extends Controller
         }
 
         return 'stored';
+    }
+
+    private function ensureClubCanAddMembers(Club $club, int $amount = 1): void
+    {
+        $plan = $club->subscriptionPlan();
+        $limit = $plan?->member_limit;
+
+        abort_if(
+            ! $club->canAddMembers($amount),
+            422,
+            'Das Mitgliederlimit des aktuellen Plans'.($plan ? ' '.$plan->name : '').' ist erreicht'.($limit ? " ({$limit} Mitglieder)." : '.')
+        );
     }
 
     private function readMembershipImportRows(string $path, ?string $extension): array
@@ -819,10 +1312,10 @@ XML);
 
         $sheetRows = [
             ['Airmius Mitgliederimport'],
-            ['Fuellen Sie ab Zeile 5 die Mitglieder aus. Pflichtfeld ist E-Mail. Mitgliedschaft: active, non_member, pending, former. Intervall: none, monthly, quarterly, yearly, once.'],
+            ['Fuellen Sie ab Zeile 5 die Mitglieder aus. Pflichtfeld ist E-Mail. Mitgliedschaft: active, non_member, pending, former. Intervall: none, monthly, quarterly, yearly, once. SEPA aktiv: ja/nein.'],
             [],
-            ['Name', 'E-Mail', 'Mitgliedschaft', 'Mitgliedsnummer', 'Lizenznummer', 'Beitrag', 'Intervall', 'Eintritt', 'Notiz'],
-            ['Max Mustermann', 'max@example.org', 'active', 'MV-1001', 'LIC-2026-001', '12,50', 'monthly', '2026-05-02', 'Beispielzeile entfernen'],
+            ['Name', 'E-Mail', 'Mitgliedschaft', 'Mitgliedsnummer', 'Lizenznummer', 'Beitrag', 'Intervall', 'Naechste_Rechnung', 'IBAN', 'BIC', 'Mandatsreferenz', 'Mandatsdatum', 'SEPA_Aktiv', 'Eintritt', 'Ende', 'Notiz'],
+            ['Max Mustermann', 'max@example.org', 'active', 'MV-1001', 'LIC-2026-001', '12,50', 'monthly', '2026-06-01', 'DE02120300000000202051', '', 'MANDAT-1001', '2026-05-02', 'ja', '2026-05-02', '2027-05-01', 'Beispielzeile entfernen'],
         ];
 
         $sheetXml = $this->buildTemplateSheetXml($sheetRows);
@@ -871,7 +1364,7 @@ XML);
     {
         $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
         $xml .= '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">';
-        $xml .= '<cols><col min="1" max="1" width="24" customWidth="1"/><col min="2" max="2" width="30" customWidth="1"/><col min="3" max="9" width="18" customWidth="1"/></cols>';
+        $xml .= '<cols><col min="1" max="1" width="24" customWidth="1"/><col min="2" max="2" width="30" customWidth="1"/><col min="3" max="16" width="18" customWidth="1"/></cols>';
         $xml .= '<sheetData>';
 
         foreach ($rows as $rowIndex => $row) {
@@ -888,7 +1381,7 @@ XML);
             $xml .= '</row>';
         }
 
-        $xml .= '</sheetData><mergeCells count="2"><mergeCell ref="A1:I1"/><mergeCell ref="A2:I2"/></mergeCells><dataValidations count="1"><dataValidation type="list" allowBlank="1" showDropDown="0" sqref="G5:G1000"><formula1>"none,monthly,quarterly,yearly,once"</formula1></dataValidation></dataValidations><drawing r:id="rId1"/></worksheet>';
+        $xml .= '</sheetData><mergeCells count="2"><mergeCell ref="A1:P1"/><mergeCell ref="A2:P2"/></mergeCells><dataValidations count="2"><dataValidation type="list" allowBlank="1" showDropDown="0" sqref="G5:G1000"><formula1>"none,monthly,quarterly,yearly,once"</formula1></dataValidation><dataValidation type="list" allowBlank="1" showDropDown="0" sqref="M5:M1000"><formula1>"ja,nein"</formula1></dataValidation></dataValidations><drawing r:id="rId1"/></worksheet>';
 
         return $xml;
     }
@@ -961,6 +1454,166 @@ XML);
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    private function normalizedNextInvoiceDate(array $data): ?string
+    {
+        if (($data['contribution_interval'] ?? 'none') === 'none') {
+            return null;
+        }
+
+        return $data['contribution_next_invoice_on'] ?? null;
+    }
+
+    private function normalizeIban(mixed $value): ?string
+    {
+        $iban = strtoupper(preg_replace('/\s+/', '', (string) $value));
+
+        return $iban !== '' ? $iban : null;
+    }
+
+    private function normalizeBic(mixed $value): ?string
+    {
+        $bic = strtoupper(preg_replace('/\s+/', '', (string) $value));
+
+        return $bic !== '' ? $bic : null;
+    }
+
+    private function normalizeBoolean(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        return in_array(strtolower(trim((string) $value)), ['1', 'ja', 'yes', 'true', 'aktiv', 'active'], true);
+    }
+
+    private function buildSepaDebitXml(Club $club, $invoices, $memberships): string
+    {
+        $messageId = 'AIRMIUS-'.$club->id.'-'.now()->format('YmdHis');
+        $paymentId = $messageId.'-PMT';
+        $controlSum = $invoices->sum(fn (Invoice $invoice) => (float) $invoice->amount);
+        $collectionDate = now()->addDays(3)->toDateString();
+
+        $xml = new \XMLWriter();
+        $xml->openMemory();
+        $xml->startDocument('1.0', 'UTF-8');
+        $xml->startElement('Document');
+        $xml->writeAttribute('xmlns', 'urn:iso:std:iso:20022:tech:xsd:pain.008.001.02');
+        $xml->writeAttribute('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance');
+        $xml->startElement('CstmrDrctDbtInitn');
+
+        $xml->startElement('GrpHdr');
+        $xml->writeElement('MsgId', $messageId);
+        $xml->writeElement('CreDtTm', now()->toIso8601String());
+        $xml->writeElement('NbOfTxs', (string) $invoices->count());
+        $xml->writeElement('CtrlSum', number_format($controlSum, 2, '.', ''));
+        $xml->startElement('InitgPty');
+        $xml->writeElement('Nm', $club->name);
+        $xml->endElement();
+        $xml->endElement();
+
+        $xml->startElement('PmtInf');
+        $xml->writeElement('PmtInfId', $paymentId);
+        $xml->writeElement('PmtMtd', 'DD');
+        $xml->writeElement('BtchBookg', 'true');
+        $xml->writeElement('NbOfTxs', (string) $invoices->count());
+        $xml->writeElement('CtrlSum', number_format($controlSum, 2, '.', ''));
+        $xml->startElement('PmtTpInf');
+        $xml->startElement('SvcLvl');
+        $xml->writeElement('Cd', 'SEPA');
+        $xml->endElement();
+        $xml->startElement('LclInstrm');
+        $xml->writeElement('Cd', 'CORE');
+        $xml->endElement();
+        $xml->writeElement('SeqTp', 'RCUR');
+        $xml->endElement();
+        $xml->writeElement('ReqdColltnDt', $collectionDate);
+        $xml->startElement('Cdtr');
+        $xml->writeElement('Nm', $club->name);
+        $xml->endElement();
+        $xml->startElement('CdtrAcct');
+        $xml->startElement('Id');
+        $xml->writeElement('IBAN', $this->normalizeIban($club->sepa_iban));
+        $xml->endElement();
+        $xml->endElement();
+        $xml->startElement('CdtrAgt');
+        $xml->startElement('FinInstnId');
+        $this->writeSepaFinancialInstitution($xml, $club->sepa_bic);
+        $xml->endElement();
+        $xml->endElement();
+        $xml->writeElement('ChrgBr', 'SLEV');
+        $xml->startElement('CdtrSchmeId');
+        $xml->startElement('Id');
+        $xml->startElement('PrvtId');
+        $xml->startElement('Othr');
+        $xml->writeElement('Id', $club->sepa_creditor_id);
+        $xml->startElement('SchmeNm');
+        $xml->writeElement('Prtry', 'SEPA');
+        $xml->endElement();
+        $xml->endElement();
+        $xml->endElement();
+        $xml->endElement();
+        $xml->endElement();
+
+        foreach ($invoices as $invoice) {
+            $membership = $memberships->get($invoice->user_id);
+            $debtorName = $invoice->user?->name ?: $invoice->user?->email ?: 'Mitglied '.$invoice->user_id;
+
+            $xml->startElement('DrctDbtTxInf');
+            $xml->startElement('PmtId');
+            $xml->writeElement('EndToEndId', $invoice->number);
+            $xml->endElement();
+            $xml->startElement('InstdAmt');
+            $xml->writeAttribute('Ccy', 'EUR');
+            $xml->text(number_format((float) $invoice->amount, 2, '.', ''));
+            $xml->endElement();
+            $xml->startElement('DrctDbtTx');
+            $xml->startElement('MndtRltdInf');
+            $xml->writeElement('MndtId', $membership->sepa_mandate_reference);
+            $xml->writeElement('DtOfSgntr', $membership->sepa_mandate_signed_on);
+            $xml->endElement();
+            $xml->endElement();
+            $xml->startElement('DbtrAgt');
+            $xml->startElement('FinInstnId');
+            $this->writeSepaFinancialInstitution($xml, $membership->sepa_bic);
+            $xml->endElement();
+            $xml->endElement();
+            $xml->startElement('Dbtr');
+            $xml->writeElement('Nm', $debtorName);
+            $xml->endElement();
+            $xml->startElement('DbtrAcct');
+            $xml->startElement('Id');
+            $xml->writeElement('IBAN', $this->normalizeIban($membership->sepa_iban));
+            $xml->endElement();
+            $xml->endElement();
+            $xml->startElement('RmtInf');
+            $xml->writeElement('Ustrd', trim($invoice->number.' '.$invoice->title));
+            $xml->endElement();
+            $xml->endElement();
+        }
+
+        $xml->endElement();
+        $xml->endElement();
+        $xml->endElement();
+        $xml->endDocument();
+
+        return $xml->outputMemory();
+    }
+
+    private function writeSepaFinancialInstitution(\XMLWriter $xml, mixed $bic): void
+    {
+        $bic = $this->normalizeBic($bic);
+
+        if ($bic) {
+            $xml->writeElement('BIC', $bic);
+
+            return;
+        }
+
+        $xml->startElement('Othr');
+        $xml->writeElement('Id', 'NOTPROVIDED');
+        $xml->endElement();
     }
 
     private function excelColumnIndex(string $column): int

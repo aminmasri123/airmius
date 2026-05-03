@@ -1,6 +1,6 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
-import { Head, useForm } from '@inertiajs/vue3'
+import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import { useTheme } from '@/services/useTheme'
 
@@ -24,6 +24,14 @@ const props = defineProps({
     billingHistory: {
         type: Object,
         default: () => ({ invoices: [], payments: [] }),
+    },
+    socialAccounts: {
+        type: Array,
+        default: () => [],
+    },
+    sportIntegrations: {
+        type: Object,
+        default: () => ({ providers: {}, accounts: [], activities: [] }),
     },
     sessions: {
         type: Array,
@@ -84,6 +92,35 @@ const invoiceStatusLabel = (status) => ({
     overdue: 'Ueberfaellig',
     cancelled: 'Storniert',
 }[status] || status)
+
+const connectedAccountFor = (provider) =>
+    props.sportIntegrations.accounts.find((account) => account.provider === provider)
+
+const integrationStatusLabel = (status) => ({
+    connected: 'Verbunden',
+    requested: 'Vorgemerkt',
+    disconnected: 'Getrennt',
+    error: 'Fehler',
+}[status] || status)
+
+const syncIntegration = (account) => {
+    router.post(route('auth.sport-integrations.sync', account.id), {}, { preserveScroll: true })
+}
+
+const disconnectIntegration = (account) => {
+    router.delete(route('auth.sport-integrations.destroy', account.id), { preserveScroll: true })
+}
+
+const formatDuration = (seconds) => {
+    if (!seconds) return '-'
+    const minutes = Math.round(seconds / 60)
+    return `${minutes} min`
+}
+
+const formatDistance = (meters) => {
+    if (!meters) return '-'
+    return `${(meters / 1000).toFixed(2).replace('.', ',')} km`
+}
 </script>
 
 <template>
@@ -104,6 +141,7 @@ const invoiceStatusLabel = (status) => ({
             <button @click="activeTab = 'profile'" :class="tabClass('profile')">Profil</button>
             <button @click="activeTab = 'address'" :class="tabClass('address')">Adresse</button>
             <button @click="activeTab = 'billing'" :class="tabClass('billing')">Zahlungen</button>
+            <button @click="activeTab = 'integrations'" :class="tabClass('integrations')">Verknuepfungen</button>
             <button @click="activeTab = 'design'" :class="tabClass('design')">Design</button>
             <button @click="activeTab = 'security'" :class="tabClass('security')">Sicherheit</button>
         </div>
@@ -271,6 +309,134 @@ const invoiceStatusLabel = (status) => ({
 
                     <p v-if="!billingHistory.payments.length" class="py-6 text-sm text-secondary">
                         Noch keine Zahlungen markiert.
+                    </p>
+                </div>
+            </section>
+        </div>
+
+        <div v-if="activeTab === 'integrations'" class="space-y-5">
+            <section class="surface-card p-5">
+                <h2 class="text-lg font-semibold text-primary">Login-Verknuepfungen</h2>
+                <p class="mt-1 text-sm text-secondary">
+                    Nutze Google oder Facebook fuer eine schnelle Anmeldung.
+                </p>
+
+                <div class="mt-4 grid gap-3 md:grid-cols-2">
+                    <div class="rounded-lg border border-border bg-bg p-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="font-semibold text-primary">Google</p>
+                                <p class="text-sm text-secondary">
+                                    {{ socialAccounts.find((account) => account.provider === 'google')?.email || 'Noch nicht verbunden' }}
+                                </p>
+                            </div>
+                            <a :href="route('social-auth.redirect', 'google')" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary">
+                                Verbinden
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="rounded-lg border border-border bg-bg p-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="font-semibold text-primary">Outlook / Microsoft</p>
+                                <p class="text-sm text-secondary">
+                                    {{ socialAccounts.find((account) => account.provider === 'microsoft')?.email || 'Noch nicht verbunden' }}
+                                </p>
+                            </div>
+                            <a :href="route('social-auth.redirect', 'microsoft')" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary">
+                                Verbinden
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="surface-card p-5">
+                <h2 class="text-lg font-semibold text-primary">Sportprogramme synchronisieren</h2>
+                <p class="mt-1 text-sm text-secondary">
+                    Verknuepfe Sport-Apps, damit Trainingsdaten spaeter automatisch in dein Airmius Profil fliessen koennen.
+                </p>
+
+                <div class="mt-4 grid gap-3 lg:grid-cols-3">
+                    <article v-for="(provider, key) in sportIntegrations.providers" :key="key" class="rounded-lg border border-border bg-bg p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="font-semibold text-primary">{{ provider.label }}</p>
+                                <p class="mt-1 text-sm text-secondary">{{ provider.description }}</p>
+                            </div>
+                            <span
+                                v-if="connectedAccountFor(key)"
+                                class="rounded-full bg-air-blue/15 px-2 py-1 text-xs font-semibold text-air-blue"
+                            >
+                                {{ integrationStatusLabel(connectedAccountFor(key).status) }}
+                            </span>
+                        </div>
+
+                        <p v-if="connectedAccountFor(key)?.last_synced_at" class="mt-3 text-xs text-secondary">
+                            Zuletzt synchronisiert: {{ formatDate(connectedAccountFor(key).last_synced_at) }}
+                        </p>
+                        <p v-if="connectedAccountFor(key)?.sync_summary?.message" class="mt-2 text-xs text-secondary">
+                            {{ connectedAccountFor(key).sync_summary.message }}
+                        </p>
+
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <a
+                                v-if="!connectedAccountFor(key)"
+                                :href="route('auth.sport-integrations.connect', key)"
+                                class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary"
+                            >
+                                {{ provider.status === 'live_oauth' ? 'Verbinden' : 'Vormerken' }}
+                            </a>
+                            <button
+                                v-if="connectedAccountFor(key)"
+                                type="button"
+                                class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary"
+                                @click="syncIntegration(connectedAccountFor(key))"
+                            >
+                                Sync pruefen
+                            </button>
+                            <button
+                                v-if="connectedAccountFor(key)"
+                                type="button"
+                                class="rounded-lg border border-danger/40 px-3 py-2 text-sm font-semibold text-danger"
+                                @click="disconnectIntegration(connectedAccountFor(key))"
+                            >
+                                Entfernen
+                            </button>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="surface-card p-5">
+                <h2 class="text-lg font-semibold text-primary">Importierte Aktivitaeten</h2>
+                <div class="mt-4 overflow-x-auto">
+                    <table class="min-w-full text-left text-sm">
+                        <thead class="text-xs uppercase text-secondary">
+                            <tr>
+                                <th class="py-2 pr-4">Datum</th>
+                                <th class="py-2 pr-4">Quelle</th>
+                                <th class="py-2 pr-4">Aktivitaet</th>
+                                <th class="py-2 pr-4">Dauer</th>
+                                <th class="py-2 pr-4">Distanz</th>
+                                <th class="py-2 pr-4">Kalorien</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-border">
+                            <tr v-for="activity in sportIntegrations.activities" :key="activity.id">
+                                <td class="py-3 pr-4 text-secondary">{{ formatDate(activity.started_at) }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ activity.provider }}</td>
+                                <td class="py-3 pr-4 text-primary">{{ activity.title || activity.activity_type || '-' }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ formatDuration(activity.duration_seconds) }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ formatDistance(activity.distance_meters) }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ activity.calories || '-' }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <p v-if="!sportIntegrations.activities.length" class="py-6 text-sm text-secondary">
+                        Noch keine Aktivitaeten importiert.
                     </p>
                 </div>
             </section>

@@ -1,7 +1,8 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3'
+import { Link } from '@inertiajs/vue3'
 import ApplicationLogo from '@/Components/ApplicationLogo.vue'
 import Footer from '@/Components/Guest/Footer.vue'
+import SeoHead from '@/Components/Guest/SeoHead.vue'
 
 defineProps({
     title: {
@@ -31,7 +32,10 @@ const legalLinks = [
 </script>
 
 <template>
-    <Head :title="title" />
+    <SeoHead
+        :title="`${title} | Airmius`"
+        :description="`${title} von Airmius: rechtliche Informationen, Datenschutz, Nutzungsbedingungen und Hinweise für Nutzer, Vereine und Erziehungsberechtigte.`"
+    />
 
     <main class="min-h-screen bg-bg text-primary">
         <header class="border-b border-border bg-card/70">

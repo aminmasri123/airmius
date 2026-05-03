@@ -1,11 +1,12 @@
 <script setup>
-import { Head, Link, router } from '@inertiajs/vue3'
+import { Link, router } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
 import { useI18n } from 'vue-i18n'
+import SeoHead from '@/Components/Guest/SeoHead.vue'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -47,7 +48,10 @@ const search = () => {
 </script>
 
 <template>
-    <Head :title="$t('Vereine')" />
+    <SeoHead
+        title="Vereine finden"
+        description="Finde Sportvereine nach Sportart, Standort und Teamangeboten. Entdecke Vereine auf Airmius und vernetze dich digital."
+    />
 
     <div class="min-h-screen bg-bg text-primary">
         <Nav :canLogin="canLogin" />

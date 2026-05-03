@@ -27,9 +27,12 @@ use App\Policies\PostPolicy;
 use App\Policies\RidePolicy;
 use App\Policies\TeamPolicy;
 use App\Policies\UserPolicy;
+use Illuminate\Support\Facades\Event as EventFacade;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
+use SocialiteProviders\Manager\SocialiteWasCalled;
+use SocialiteProviders\Microsoft\Provider as MicrosoftProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -65,6 +68,10 @@ class AppServiceProvider extends ServiceProvider
         foreach ($this->policies as $model => $policy) {
             Gate::policy($model, $policy);
         }
+
+        EventFacade::listen(function (SocialiteWasCalled $event): void {
+            $event->extendSocialite('microsoft', MicrosoftProvider::class);
+        });
 
         Inertia::share([
             'theme' => fn () => auth()->user()?->theme ?? 'air',

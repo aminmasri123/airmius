@@ -7,6 +7,7 @@ const items = [
     ['las la-chalkboard-teacher', 'E-Learning', '/e-learning'],
     ['las la-trophy', 'Gamification', '/gamification', { hideOnMobile: true }],
     ['las la-warehouse', 'Vereine', '/vereine'],
+    ['las la-tags', 'Preise', '/preise'],
     ['las la-shopping-bag', 'Marketplace', null],
 ]
 </script>

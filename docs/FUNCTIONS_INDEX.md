@@ -1,8 +1,12 @@
 # Airmius Functions Index
 
-Stand: 2026-05-02
+Stand: 2026-05-03
 
 Diese Datei ist eine zentrale Uebersicht der vorhandenen Controller-Funktionen. Sie hilft dir schnell zu sehen, wo `index`, `store`, `update`, `destroy` und Sonderfunktionen liegen.
+
+Weitere Produkt- und Business-Planung:
+
+- `docs/BUSINESS_MODEL_USE_CASES.md` - Use Cases, Abo-Plaene, Feature-Matrix, kuenftige Erloesquellen und fehlende Funktionen.
 
 ## Wichtige neue Bereiche
 
@@ -11,7 +15,7 @@ Diese Datei ist eine zentrale Uebersicht der vorhandenen Controller-Funktionen. 
 `app/Http/Controllers/ClubMembershipController.php`
 
 - `index(Request $request)` - Verwaltungsseite fuer Vereinsmitglieder, offene Team-Anfragen, Rechnungen und Zahlungen.
-- `updateMember(Request $request, Club $club, User $user)` - Mitgliedsstatus, Mitgliedsnummer, Lizenznummer, Beitrag, Intervall, Eintritt und Notizen speichern.
+- `updateMember(Request $request, Club $club, User $user)` - Mitgliedsstatus, Mitgliedsnummer, Lizenznummer, Beitrag, Intervall, naechste automatische Rechnung, SEPA-Mandat, Eintritt, Mitgliedschaftsende und Notizen speichern.
 - `storeEmailMember(Request $request, Club $club)` - Mitglied per E-Mail erfassen, optional direkt einladen oder mit bestehendem User verknuepfen.
 - `importEmailMembers(Request $request, Club $club)` - Mitglieder per Excel/CSV importieren, optional direkt einladen oder verknuepfen.
 - `downloadImportTemplate()` - Airmius Excel-Vorlage fuer den Mitgliederimport herunterladen.
@@ -22,6 +26,27 @@ Diese Datei ist eine zentrale Uebersicht der vorhandenen Controller-Funktionen. 
 - `updateInvoiceStatus(Request $request, Invoice $invoice)` - Rechnung auf offen, bezahlt, ueberfaellig oder storniert setzen.
 - `recordPayment(Request $request, Invoice $invoice)` - Zahlung zu einer Rechnung erfassen und Rechnung als bezahlt markieren.
 - `sendReminder(Invoice $invoice)` - Zahlungserinnerung/Mahnung als Benachrichtigung senden.
+- `updateSepaSettings(Request $request, Club $club)` - SEPA-Glaeubiger-ID und Vereinskonto speichern.
+- `exportSepaDebit(Club $club)` - offene Rechnungen mit aktivem Mandat als SEPA-Lastschrift-XML exportieren.
+- `buildSepaDebitXml(Club $club, Collection $invoices, Collection $memberships)` - pain.008-XML fuer Sammellastschriften erzeugen.
+- `importBankTransactions(Request $request, Club $club)` - Bank-CSV importieren, Umsaetze speichern und sichere Treffer automatisch als Zahlung verbuchen.
+- `confirmBankTransaction(BankTransaction $bankTransaction)` - vorgeschlagenen Bankumsatz manuell als Zahlung bestaetigen.
+- `findInvoiceMatchForBankTransaction(Club $club, array $transaction)` - offene Rechnungen anhand von Rechnungsnummer, Betrag, IBAN und Name matchen.
+
+`app/Console/Commands/SendMembershipAndBillingReminders.php`
+
+- `handle()` - taeglicher Prueflauf fuer bald endende Vereinsmitgliedschaften, Airmius-Abos und faellige/offene Beitragsrechnungen.
+- `notifyExpiringClubMemberships(int $days)` - informiert Sportler sowie Vereinsverwaltung ueber bald endende Mitgliedschaften.
+- `notifyDueInvoices(int $days)` - informiert Sportler sowie Vereinsverwaltung ueber bald faellige und ueberfaellige Beitragszahlungen.
+- `notifyExpiringSubscriptions(int $days)` - informiert Vereine und Sportler ueber bald endende Airmius-Abos/Testphasen.
+
+`app/Console/Commands/GenerateRecurringContributionInvoices.php`
+
+- `handle()` - erstellt taeglich faellige automatische Beitragsrechnungen fuer Pro- und Elite-Vereine.
+- `invoiceTitle(string $interval, Carbon $periodStart)` - erzeugt passende Rechnungstitel fuer Monat, Quartal, Jahr oder einmalige Beitraege.
+- `periodEndFor(string $interval, Carbon $periodStart)` - berechnet den Abrechnungszeitraum.
+- `nextDateFor(string $interval, Carbon $date)` - setzt den naechsten Rechnungslauf je nach Intervall.
+- `nextInvoiceNumber()` - vergibt fortlaufende Rechnungsnummern fuer automatische Rechnungen.
 
 ### Teams und Beitrittsanfragen
 
@@ -112,6 +137,51 @@ Diese Datei ist eine zentrale Uebersicht der vorhandenen Controller-Funktionen. 
 - `update(Request $request)` - Einstellungen speichern, inklusive Wartungsmodus.
 - `destroy(Setting $setting)` - Standard-Resource-Action.
 
+### Abo-Plaene, Limits und Feature-Gates
+
+`app/Services/PlanFeatureService.php`
+
+- `allows(Club $club, string $feature)` - prueft, ob der aktuelle Vereinsplan eine Funktion erlaubt.
+- `ensureAllows(Club $club, string $feature, ?string $message = null)` - bricht mit Hinweis ab, wenn eine Funktion im Plan nicht enthalten ist.
+- `canCreateTeam(Club $club)` - prueft das Teamlimit des aktuellen Vereinsplans.
+- `ensureCanCreateTeam(Club $club)` - erzwingt das Teamlimit beim Erstellen neuer Teams.
+- `canStoreFile(Club $club, ?UploadedFile $file = null)` - prueft Speicherverbrauch gegen den Plan.
+- `ensureCanStoreFile(Club $club, ?UploadedFile $file = null)` - erzwingt Speicherlimit bei Uploads.
+- `capabilities(Club $club)` - liefert UI-faehige Plan-Faehigkeiten fuer Buttons und Hinweise.
+
+Enthaltene Feature-Gates:
+
+- `sepa_export` - SEPA-XML-Export ab Pro.
+- `bank_reconciliation` - Bankabgleich per CSV-Import ab Pro.
+- `recurring_invoices` - automatische Beitragsrechnungen ab Pro.
+- `api` - API-Zugang ab Elite.
+
+### Abo-Plaene und Business-Modell
+
+`app/Http/Controllers/PricingController.php`
+
+- `index()` - oeffentliche Preisseite mit aktiven Airmius Abo-Plaenen nach Zielgruppe anzeigen.
+
+`app/Http/Controllers/SubscriptionPlanController.php`
+
+- `index()` - Admin-Ansicht fuer Abo-Plaene und Vereins-Zuordnungen anzeigen.
+- `update(Request $request, SubscriptionPlan $subscriptionPlan)` - Abo-Plan-Zielgruppe, Preise, Limits, Badge, CTA und Sichtbarkeit bearbeiten.
+- `assignClub(Request $request, Club $club)` - Verein einem Abo-Plan zuordnen.
+
+### Social Login und Sport-App-Verknuepfungen
+
+`app/Http/Controllers/SocialAuthController.php`
+
+- `redirect(string $provider)` - Google/Outlook OAuth starten.
+- `callback(string $provider)` - Google/Outlook Callback verarbeiten, User erstellen oder verknuepfen und anmelden.
+
+`app/Http/Controllers/SportIntegrationController.php`
+
+- `redirect(Request $request, string $provider)` - Sport-App-Verknuepfung starten oder Anbieter vormerken.
+- `callback(Request $request, string $provider)` - Google-Fit-OAuth Callback speichern.
+- `sync(Request $request, ConnectedSportAccount $account)` - Synchronisationsstatus aktualisieren.
+- `destroy(Request $request, ConnectedSportAccount $account)` - Sport-App-Verknuepfung entfernen.
+
 ## Alle Controller-Funktionen
 
 ### ActivityController
@@ -177,6 +247,10 @@ Diese Datei ist eine zentrale Uebersicht der vorhandenen Controller-Funktionen. 
 - `updateInvoiceStatus(Request $request, Invoice $invoice)`
 - `recordPayment(Request $request, Invoice $invoice)`
 - `sendReminder(Invoice $invoice)`
+
+### SendMembershipAndBillingReminders
+
+- `handle()`
 
 ### ClubUserController
 
@@ -416,9 +490,23 @@ Diese Datei ist eine zentrale Uebersicht der vorhandenen Controller-Funktionen. 
 - `approveRecommendation(Request $request, ProfileRecommendation $profileRecommendation)`
 - `rejectRecommendation(Request $request, ProfileRecommendation $profileRecommendation)`
 
+### PlanFeatureService
+
+- `allows(Club $club, string $feature)`
+- `ensureAllows(Club $club, string $feature, ?string $message = null)`
+- `canCreateTeam(Club $club)`
+- `ensureCanCreateTeam(Club $club)`
+- `canStoreFile(Club $club, ?UploadedFile $file = null)`
+- `ensureCanStoreFile(Club $club, ?UploadedFile $file = null)`
+- `capabilities(Club $club)`
+
 ### PublicClubController
 
 - `index(Request $request)`
+
+### PricingController
+
+- `index()`
 
 ### RideController
 
@@ -470,6 +558,18 @@ Diese Datei ist eine zentrale Uebersicht der vorhandenen Controller-Funktionen. 
 - `update(Request $request, Sponsor $sponsor)`
 - `destroy(Request $request, Sponsor $sponsor)`
 
+### SocialAuthController
+
+- `redirect(string $provider)`
+- `callback(string $provider)`
+
+### SportIntegrationController
+
+- `redirect(Request $request, string $provider)`
+- `callback(Request $request, string $provider)`
+- `sync(Request $request, ConnectedSportAccount $account)`
+- `destroy(Request $request, ConnectedSportAccount $account)`
+
 ### StatisticController
 
 - `index()`
@@ -479,6 +579,12 @@ Diese Datei ist eine zentrale Uebersicht der vorhandenen Controller-Funktionen. 
 - `edit(Statistic $statistic)`
 - `update(Request $request, Statistic $statistic)`
 - `destroy(Statistic $statistic)`
+
+### SubscriptionPlanController
+
+- `index()`
+- `update(Request $request, SubscriptionPlan $subscriptionPlan)`
+- `assignClub(Request $request, Club $club)`
 
 ### TeamController
 

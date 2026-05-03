@@ -4,11 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Club;
 use App\Models\Sponsor;
+use App\Services\PlanFeatureService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class SponsorController extends Controller
 {
+    public function __construct(private PlanFeatureService $planFeatures) {}
+
     public function index(Request $request)
     {
         abort_unless($request->user()->can('org.manage'), 403);
@@ -20,9 +23,15 @@ class SponsorController extends Controller
                 ->paginate(25),
             'clubs' => Club::query()
                 ->visibleTo($request->user())
+                ->with('currentSubscription.plan')
                 ->select(['id', 'name'])
                 ->orderBy('name')
-                ->get(),
+                ->get()
+                ->map(fn (Club $club) => [
+                    'id' => $club->id,
+                    'name' => $club->name,
+                    'capabilities' => $this->planFeatures->capabilities($club),
+                ]),
         ]);
     }
 
@@ -30,7 +39,11 @@ class SponsorController extends Controller
     {
         abort_unless($request->user()->can('org.manage'), 403);
 
-        Sponsor::create($this->validated($request));
+        $data = $this->validated($request);
+        $club = Club::query()->visibleTo($request->user())->findOrFail($data['club_id']);
+        $this->planFeatures->ensureAllows($club, 'sponsors');
+
+        Sponsor::create($data);
 
         return back()->with('success', 'Sponsor erstellt.');
     }
@@ -38,6 +51,7 @@ class SponsorController extends Controller
     public function update(Request $request, Sponsor $sponsor)
     {
         abort_unless($request->user()->can('org.manage'), 403);
+        $this->planFeatures->ensureAllows($sponsor->club, 'sponsors');
 
         $sponsor->update($this->validated($request));
 

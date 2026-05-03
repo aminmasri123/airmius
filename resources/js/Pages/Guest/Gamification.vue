@@ -1,8 +1,8 @@
 <script setup>
-import { Head } from '@inertiajs/vue3'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
+import SeoHead from '@/Components/Guest/SeoHead.vue'
 
 defineProps({
     canLogin: Boolean,
@@ -85,7 +85,10 @@ const antiCheat = [
 </script>
 
 <template>
-    <Head title="Gamification System" />
+    <SeoHead
+        title="Gamification System für Sportler, Trainer und Vereine"
+        description="Das Airmius Gamification-System macht sportliche Entwicklung, Engagement und Vereinsaktivitaet sichtbar, fair und nachvollziehbar."
+    />
 
     <div class="min-h-screen bg-bg text-primary">
         <Nav :canLogin="canLogin" />
