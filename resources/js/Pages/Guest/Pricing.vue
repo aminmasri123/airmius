@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Link } from '@inertiajs/vue3'
+import { Link, router, usePage } from '@inertiajs/vue3'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
@@ -19,53 +19,55 @@ const audiences = [
         label: 'Sportler',
         icon: 'las la-running',
         title: 'Kostenlos starten, sportlich sichtbar werden.',
-        description: 'Sportler bleiben im Kern kostenlos. Pro-Funktionen kommen spaeter fuer Portfolio, Statistiken und mehr Sichtbarkeit.',
+        description: 'Sportler bleiben im Kern kostenlos. Pro-Funktionen kommen später für Portfolio, Statistiken und mehr Sichtbarkeit.',
     },
     {
         key: 'trainer',
         label: 'Trainer',
         icon: 'las la-chalkboard-teacher',
         title: 'Training organisieren, Teams begleiten, Wissen verkaufen.',
-        description: 'Trainer arbeiten kostenlos im Vereinsplan. Solo-Trainer bekommen spaeter eigene Gruppen, Camps und Kursverkauf.',
+        description: 'Trainer arbeiten kostenlos im Vereinsplan. Solo-Trainer bekommen später eigene Gruppen, Camps und Kursverkauf.',
     },
     {
         key: 'verein',
         label: 'Vereine',
         icon: 'las la-users',
         title: 'Vereinsverwaltung, Community und Kommunikation in einem System.',
-        description: 'Die Vereinsplaene sind der Hauptumsatz: Mitglieder, Teams, Beitraege, Rechnungen, Dateien und Sponsoren.',
+        description: 'Die Vereinspläne sind der Hauptumsatz: Mitglieder, Teams, Beiträge, Rechnungen, Dateien und Sponsoren.',
     },
     {
         key: 'eltern',
         label: 'Eltern',
         icon: 'las la-shield-alt',
-        title: 'Sicherheit fuer Minderjaehrige bleibt kostenlos.',
-        description: 'Elternzustimmung, Widerruf und Kinderueberblick sind Vertrauensfunktionen und werden nicht separat monetarisiert.',
+        title: 'Sicherheit für Minderjährige bleibt kostenlos.',
+        description: 'Elternzustimmung, Widerruf und Kinderüberblick sind Vertrauensfunktionen und werden nicht separat monetarisiert.',
     },
     {
         key: 'sponsor',
         label: 'Sponsoren',
         icon: 'las la-bullhorn',
         title: 'Regionale Sichtbarkeit im Sportumfeld.',
-        description: 'Sponsorprofile, Kampagnen und lokale Anzeigen kommen als B2B-Umsatzsaeule, sobald genug Aktivitaet vorhanden ist.',
+        description: 'Sponsorprofile, Kampagnen und lokale Anzeigen kommen als B2B-Umsatzsäule, sobald genug Aktivität vorhanden ist.',
     },
     {
         key: 'anbieter',
         label: 'Anbieter',
         icon: 'las la-store',
-        title: 'Marketplace fuer Produkte, Kurse und Services.',
-        description: 'Anbieter koennen spaeter Produkte, Camps, Kurse und Dienstleistungen rund um Sport verkaufen.',
+        title: 'Marketplace für Produkte, Kurse und Services.',
+        description: 'Anbieter können später Produkte, Camps, Kurse und Dienstleistungen rund um Sport verkaufen.',
     },
     {
         key: 'enterprise',
         label: 'Enterprise',
         icon: 'las la-network-wired',
-        title: 'Individuelle Loesungen fuer Verbaende und grosse Organisationen.',
-        description: 'Enterprise ist fuer Mandantenfaehigkeit, Migration, Schnittstellen, Schulung und SLA gedacht.',
+        title: 'Individuelle Lösungen für Verbände und große Organisationen.',
+        description: 'Enterprise ist für Mandantenfähigkeit, Migration, Schnittstellen, Schulung und SLA gedacht.',
     },
 ]
 
 const selectedAudience = ref(audiences.find((audience) => props.planGroups[audience.key]?.length)?.key || 'verein')
+const page = usePage()
+const couponCode = ref('')
 
 const currentAudience = computed(() => audiences.find((audience) => audience.key === selectedAudience.value) || audiences[2])
 const visiblePlans = computed(() => props.planGroups[selectedAudience.value] || [])
@@ -88,12 +90,25 @@ const priceCaption = (plan) => {
 }
 
 const ctaLabel = (plan) => plan.cta_label || (plan.monthly_price_cents ? 'Plan testen' : 'Kostenlos starten')
+
+const startCheckout = (plan, provider) => {
+    if (!page.props.auth?.user) {
+        router.visit(route('login'))
+        return
+    }
+
+    router.post(route('subscription-checkout.store', plan.id), {
+        provider,
+        billing_interval: 'monthly',
+        coupon_code: couponCode.value,
+    })
+}
 </script>
 
 <template>
     <SeoHead
-        title="Airmius Preise fuer Sportler, Trainer, Vereine und Partner"
-        description="Faire Airmius Plaene fuer Sportler, Trainer, Vereine, Eltern, Sponsoren, Anbieter und Verbaende: von kostenlos bis professioneller Vereinsverwaltung."
+        title="Airmius Preise für Sportler, Trainer, Vereine und Partner"
+        description="Faire Airmius Pläne für Sportler, Trainer, Vereine, Eltern, Sponsoren, Anbieter und Verbände: von kostenlos bis professioneller Vereinsverwaltung."
     />
 
     <div class="min-h-screen bg-bg text-primary">
@@ -104,10 +119,10 @@ const ctaLabel = (plan) => plan.cta_label || (plan.monthly_price_cents ? 'Plan t
             <section class="mx-auto max-w-6xl text-center">
                 <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">Preise</p>
                 <h1 class="mx-auto mt-3 max-w-4xl font-heading text-4xl font-900 leading-tight sm:text-5xl">
-                    Ein Preismodell fuer alle, die Sport organisieren, erleben oder unterstuetzen.
+                    Ein Preismodell für alle, die Sport organisieren, erleben oder unterstützen.
                 </h1>
                 <p class="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-secondary">
-                    Sportler und Eltern starten kostenlos. Vereine zahlen fair nach Groesse. Trainer, Sponsoren und Anbieter bekommen eigene Wege, wenn ihre Funktionen wachsen.
+                    Sportler und Eltern starten kostenlos. Vereine zahlen fair nach Größe. Trainer, Sponsoren und Anbieter bekommen eigene Wege, wenn ihre Funktionen wachsen.
                 </p>
             </section>
 
@@ -136,8 +151,18 @@ const ctaLabel = (plan) => plan.cta_label || (plan.monthly_price_cents ? 'Plan t
                         <div class="mt-6 rounded-lg border border-border bg-bg p-4 text-sm text-secondary">
                             <p class="font-semibold text-primary">Produktregel</p>
                             <p class="mt-2">
-                                Airmius bleibt fuer Sportler und Eltern niedrigschwellig. Bezahlt wird dort, wo echte Verwaltung, Reichweite, Support oder Umsatz entsteht.
+                                Airmius bleibt für Sportler und Eltern niedrigschwellig. Bezahlt wird dort, wo echte Verwaltung, Reichweite, Support oder Umsatz entsteht.
                             </p>
+                        </div>
+                        <div class="mt-4 rounded-lg border border-border bg-bg p-4">
+                            <label class="text-xs font-semibold uppercase text-secondary">Rabattcode</label>
+                            <input
+                                v-model="couponCode"
+                                type="text"
+                                class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm uppercase text-primary"
+                                placeholder="z. B. BETA50"
+                            >
+                            <p class="mt-2 text-xs text-secondary">Der Code wird beim Bezahlen automatisch berücksichtigt.</p>
                         </div>
                     </aside>
 
@@ -186,12 +211,39 @@ const ctaLabel = (plan) => plan.cta_label || (plan.monthly_price_cents ? 'Plan t
                                 </li>
                             </ul>
 
-                            <Link
-                                :href="canRegister ? route('register') : route('login')"
-                                class="mt-6 rounded-lg bg-buttonPrimary px-4 py-2 text-center text-sm font-semibold text-buttonTextPrimary"
-                            >
-                                {{ ctaLabel(plan) }}
-                            </Link>
+                            <div class="mt-6 grid gap-2">
+                                <Link
+                                    v-if="!plan.monthly_price_cents"
+                                    :href="canRegister ? route('register') : route('login')"
+                                    class="rounded-lg bg-buttonPrimary px-4 py-2 text-center text-sm font-semibold text-buttonTextPrimary"
+                                >
+                                    {{ ctaLabel(plan) }}
+                                </Link>
+
+                                <template v-else>
+                                    <button
+                                        type="button"
+                                        class="rounded-lg bg-buttonPrimary px-4 py-2 text-center text-sm font-semibold text-buttonTextPrimary"
+                                        @click="startCheckout(plan, 'stripe')"
+                                    >
+                                        Mit Stripe zahlen
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="rounded-lg border border-border px-4 py-2 text-center text-sm font-semibold text-primary hover:bg-muted"
+                                        @click="startCheckout(plan, 'paypal')"
+                                    >
+                                        Mit PayPal zahlen
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="rounded-lg border border-border px-4 py-2 text-center text-sm font-semibold text-primary hover:bg-muted"
+                                        @click="startCheckout(plan, 'bank_transfer')"
+                                    >
+                                        Per Überweisung zahlen
+                                    </button>
+                                </template>
+                            </div>
                         </article>
                     </div>
                 </div>

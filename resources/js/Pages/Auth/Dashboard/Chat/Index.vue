@@ -622,7 +622,7 @@ onUnmounted(() => {
                         <button
                             type="button"
                             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-primary hover:bg-inputBg lg:hidden"
-                            title="Zurueck"
+                            title="Zurück"
                             @click="goBackToConversations"
                         >
                             <i class="las la-arrow-left text-xl"></i>
@@ -768,7 +768,7 @@ onUnmounted(() => {
                         <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-lg bg-inputBg text-primary">
                             <i class="las la-user-lock text-3xl"></i>
                         </div>
-                        <h2 class="mt-4 text-lg font-semibold text-primary">Kein Chat geoeffnet</h2>
+                        <h2 class="mt-4 text-lg font-semibold text-primary">Kein Chat geöffnet</h2>
                         <p class="mt-2 text-sm leading-6 text-secondary">
                             Aus Datenschutzgruenden wird keine Konversation automatisch angezeigt.
                             Waehle links bewusst eine Person, ein Team oder eine Gruppe aus.
@@ -930,7 +930,7 @@ onUnmounted(() => {
                             class="mt-1 rounded border-border text-buttonPrimary focus:ring-buttonPrimary"
                         >
                         <span>
-                            Gruppe direkt loeschen, weil danach hoechstens eine Person uebrig bleibt.
+                            Gruppe direkt löschen, weil danach höchstens eine Person übrig bleibt.
                             Die Conversation wird dadurch Für alle verbleibenden Mitglieder entfernt.
                         </span>
                     </label>
@@ -950,7 +950,7 @@ onUnmounted(() => {
                         class="flex-1 rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                         @click="leaveSelectedConversation"
                     >
-                        {{ leaveConversationForm.delete_conversation ? 'Verlassen und loeschen' : 'Gruppe verlassen' }}
+                        {{ leaveConversationForm.delete_conversation ? 'Verlassen und löschen' : 'Gruppe verlassen' }}
                     </button>
                 </div>
             </div>

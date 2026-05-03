@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ClubController;
 use App\Http\Controllers\ClubMembershipController;
+use App\Http\Controllers\CommerceCheckoutController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\ContentReportController;
 use App\Http\Controllers\ConversationController;
@@ -23,6 +24,8 @@ use App\Http\Controllers\ProfileGamificationController;
 use App\Http\Controllers\RideController;
 use App\Http\Controllers\SportIntegrationController;
 use App\Http\Controllers\TeamController;
+use App\Http\Controllers\SubscriptionInvoiceController;
+use App\Http\Controllers\SubscriptionPlanController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserSettingsController;
 use App\Http\Controllers\UserStatusController;
@@ -53,7 +56,19 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     //SETTINGS
     Route::get('/settings', [UserSettingsController::class, 'index'])->name('auth.settings');
     Route::put('/settings', [UserSettingsController::class, 'update'])->name('auth.settings.update');
+    Route::get('/subscription-invoices/{subscriptionInvoice}/download', [SubscriptionInvoiceController::class, 'download'])->name('auth.subscription-invoices.download');
+    Route::post('/user-subscriptions/{subscription}/cancel', [SubscriptionPlanController::class, 'cancelOwnUserSubscription'])->name('auth.user-subscriptions.cancel');
+    Route::post('/user-subscriptions/{subscription}/provider-portal', [SubscriptionPlanController::class, 'providerPortal'])->name('auth.user-subscriptions.provider-portal');
     Route::put('/user/status', [UserStatusController::class, 'update'])->name('auth.user.status.update');
+    Route::get('/commerce', [CommerceCheckoutController::class, 'index'])->name('auth.commerce.index');
+    Route::get('/commerce/products/{product}', [CommerceCheckoutController::class, 'showProduct'])->name('auth.commerce.products.show');
+    Route::post('/commerce/addons/{addon}', [CommerceCheckoutController::class, 'storeAddon'])->name('auth.commerce.addons.checkout');
+    Route::post('/commerce/products/{product}', [CommerceCheckoutController::class, 'storeProduct'])->name('auth.commerce.products.checkout');
+    Route::post('/commerce/orders/{order}/issue', [CommerceCheckoutController::class, 'reportOrderIssue'])->name('auth.commerce.orders.issue');
+    Route::post('/commerce/products', [CommerceCheckoutController::class, 'storeOwnProduct'])->name('auth.commerce.products.store');
+    Route::post('/commerce/campaigns', [CommerceCheckoutController::class, 'storeOwnCampaign'])->name('auth.commerce.campaigns.store');
+    Route::post('/commerce/website-requests', [CommerceCheckoutController::class, 'storeWebsiteRequest'])->name('auth.commerce.website-requests.store');
+    Route::post('/commerce/payout-profile', [CommerceCheckoutController::class, 'storePayoutProfile'])->name('auth.commerce.payout-profile.store');
     Route::get('/settings/sport-integrations/{provider}/connect', [SportIntegrationController::class, 'redirect'])
         ->name('auth.sport-integrations.connect');
     Route::get('/settings/sport-integrations/{provider}/callback', [SportIntegrationController::class, 'callback'])
@@ -94,6 +109,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::post('/membership-invoices/{invoice}/reminder', [ClubMembershipController::class, 'sendReminder'])->name('auth.club-memberships.invoices.reminder');
     Route::post('/clubs/{club}/membership/bank-transactions/import', [ClubMembershipController::class, 'importBankTransactions'])->name('auth.club-memberships.bank-transactions.import');
     Route::post('/membership-bank-transactions/{bankTransaction}/confirm', [ClubMembershipController::class, 'confirmBankTransaction'])->name('auth.club-memberships.bank-transactions.confirm');
+    Route::put('/clubs/{club}/membership/datev-settings', [ClubMembershipController::class, 'updateDatevSettings'])->name('auth.club-memberships.datev-settings.update');
+    Route::get('/clubs/{club}/membership/datev-export', [ClubMembershipController::class, 'exportDatev'])->name('auth.club-memberships.datev-export');
 
     // TEAMS
     Route::get('/teams', [TeamController::class, 'index'])->name('auth.teams.index');

@@ -8,6 +8,8 @@ use App\Models\ClubSubscription;
 use App\Models\Invoice;
 use App\Models\User;
 use App\Models\UserSubscription;
+use App\Notifications\SubscriptionEndingSoon;
+use App\Notifications\SubscriptionPaymentIssue;
 use App\Support\AppNotification;
 use Carbon\CarbonInterface;
 use Illuminate\Console\Command;
@@ -21,15 +23,16 @@ class SendMembershipAndBillingReminders extends Command
         {--invoice-days=7 : Tage vor Faelligkeit einer Rechnung}
         {--subscription-days=14 : Tage vor Ablauf eines Airmius-Abos}';
 
-    protected $description = 'Benachrichtigt Vereine und Sportler ueber bald endende Mitgliedschaften, Abos und faellige Beitragszahlungen.';
+    protected $description = 'Benachrichtigt Vereine und Sportler über bald endende Mitgliedschaften, Abos und fällige Beitragszahlungen.';
 
     public function handle(): int
     {
         $membershipCount = $this->notifyExpiringClubMemberships((int) $this->option('membership-days'));
         $invoiceCount = $this->notifyDueInvoices((int) $this->option('invoice-days'));
         $subscriptionCount = $this->notifyExpiringSubscriptions((int) $this->option('subscription-days'));
+        $paymentIssueCount = $this->notifySubscriptionPaymentIssues();
 
-        $this->info("Erinnerungen: {$membershipCount} Mitgliedschaften, {$invoiceCount} Rechnungen, {$subscriptionCount} Abos.");
+        $this->info("Erinnerungen: {$membershipCount} Mitgliedschaften, {$invoiceCount} Rechnungen, {$subscriptionCount} Abos, {$paymentIssueCount} Zahlungsprobleme.");
 
         return self::SUCCESS;
     }
@@ -60,7 +63,7 @@ class SendMembershipAndBillingReminders extends Command
                 $date = $this->formatDate($membership->membership_ends_on);
 
                 AppNotification::send((int) $membership->user_id, 'club.membership_ending_soon', [
-                    'title' => 'Mitgliedschaft laeuft bald ab',
+                    'title' => 'Mitgliedschaft läuft bald ab',
                     'body' => "Deine Mitgliedschaft bei {$membership->club_name} endet am {$date}.",
                     'url' => route('auth.settings'),
                     'club_id' => $membership->club_id,
@@ -131,8 +134,8 @@ class SendMembershipAndBillingReminders extends Command
 
                     if ($invoice->user_id) {
                         AppNotification::send((int) $invoice->user_id, 'invoice.due_soon', [
-                            'title' => 'Beitragszahlung bald faellig',
-                            'body' => "{$invoice->title} von {$invoice->club?->name} ist am {$date} faellig.",
+                            'title' => 'Beitragszahlung bald fällig',
+                            'body' => "{$invoice->title} von {$invoice->club?->name} ist am {$date} fällig.",
                             'url' => route('auth.settings'),
                             'invoice_id' => $invoice->id,
                             'club_id' => $invoice->club_id,
@@ -141,8 +144,8 @@ class SendMembershipAndBillingReminders extends Command
 
                     foreach ($this->clubManagerRecipients((int) $invoice->club_id) as $recipientId) {
                         AppNotification::send($recipientId, 'club.invoice_due_soon', [
-                            'title' => 'Beitrag bald faellig',
-                            'body' => ($invoice->user?->name ?: 'Ein Mitglied')." hat {$invoice->title} am {$date} faellig.",
+                            'title' => 'Beitrag bald fällig',
+                            'body' => ($invoice->user?->name ?: 'Ein Mitglied')." hat {$invoice->title} am {$date} fällig.",
                             'url' => route('auth.club-memberships.index'),
                             'invoice_id' => $invoice->id,
                             'club_id' => $invoice->club_id,
@@ -166,8 +169,8 @@ class SendMembershipAndBillingReminders extends Command
 
                     if ($invoice->user_id) {
                         AppNotification::send((int) $invoice->user_id, 'invoice.overdue', [
-                            'title' => 'Beitragszahlung ist ueberfaellig',
-                            'body' => "{$invoice->title} von {$invoice->club?->name} war am {$date} faellig.",
+                            'title' => 'Beitragszahlung ist überfällig',
+                            'body' => "{$invoice->title} von {$invoice->club?->name} war am {$date} fällig.",
                             'url' => route('auth.settings'),
                             'invoice_id' => $invoice->id,
                             'club_id' => $invoice->club_id,
@@ -176,7 +179,7 @@ class SendMembershipAndBillingReminders extends Command
 
                     foreach ($this->clubManagerRecipients((int) $invoice->club_id) as $recipientId) {
                         AppNotification::send($recipientId, 'club.invoice_overdue', [
-                            'title' => 'Beitrag ist ueberfaellig',
+                            'title' => 'Beitrag ist überfällig',
                             'body' => ($invoice->user?->name ?: 'Ein Mitglied')." ist seit {$date} mit {$invoice->title} offen.",
                             'url' => route('auth.club-memberships.index'),
                             'invoice_id' => $invoice->id,
@@ -220,12 +223,15 @@ class SendMembershipAndBillingReminders extends Command
 
                     foreach ($this->clubManagerRecipients((int) $subscription->club_id) as $recipientId) {
                         AppNotification::send($recipientId, 'club.subscription_ending_soon', [
-                            'title' => 'Airmius Vereinsplan laeuft bald ab',
+                            'title' => 'Airmius Vereinsplan läuft bald ab',
                             'body' => "{$subscription->club?->name}: {$subscription->plan?->name} endet am {$date}.",
                             'url' => route('auth.club-memberships.index'),
                             'club_id' => $subscription->club_id,
                             'subscription_id' => $subscription->id,
                         ]);
+                    }
+                    foreach ($this->clubManagerUsers((int) $subscription->club_id) as $recipient) {
+                        $recipient->notify(new SubscriptionEndingSoon($subscription));
                     }
 
                     $subscription->forceFill(['renewal_notified_at' => now()])->save();
@@ -250,11 +256,14 @@ class SendMembershipAndBillingReminders extends Command
                     $date = $this->formatDate($endsAt);
 
                     AppNotification::send((int) $subscription->user_id, 'user.subscription_ending_soon', [
-                        'title' => 'Dein Airmius Plan laeuft bald ab',
+                        'title' => 'Dein Airmius Plan läuft bald ab',
                         'body' => "{$subscription->plan?->name} endet am {$date}.",
                         'url' => route('guest.pricing'),
                         'subscription_id' => $subscription->id,
                     ]);
+                    if ($subscription->user?->email) {
+                        $subscription->user->notify(new SubscriptionEndingSoon($subscription));
+                    }
 
                     $subscription->forceFill(['renewal_notified_at' => now()])->save();
                     $sent++;
@@ -262,6 +271,98 @@ class SendMembershipAndBillingReminders extends Command
             });
 
         return $sent;
+    }
+
+    private function notifySubscriptionPaymentIssues(): int
+    {
+        $sent = 0;
+        $today = now()->startOfDay();
+
+        ClubSubscription::query()
+            ->with(['club.owner', 'club.users', 'plan:id,name'])
+            ->where('status', 'trialing')
+            ->whereNotNull('trial_ends_at')
+            ->where('trial_ends_at', '<', $today)
+            ->chunkById(100, function ($subscriptions) use (&$sent) {
+                foreach ($subscriptions as $subscription) {
+                    $subscription->forceFill(['status' => 'past_due'])->save();
+                    $sent += $this->sendPaymentIssueForSubscription($subscription);
+                }
+            });
+
+        UserSubscription::query()
+            ->with(['user:id,name,email', 'plan:id,name'])
+            ->where('status', 'trialing')
+            ->whereNotNull('trial_ends_at')
+            ->where('trial_ends_at', '<', $today)
+            ->chunkById(100, function ($subscriptions) use (&$sent) {
+                foreach ($subscriptions as $subscription) {
+                    $subscription->forceFill(['status' => 'past_due'])->save();
+                    $sent += $this->sendPaymentIssueForSubscription($subscription);
+                }
+            });
+
+        ClubSubscription::query()
+            ->with(['club.owner', 'club.users', 'plan:id,name'])
+            ->where('status', 'past_due')
+            ->whereNull('payment_issue_email_sent_at')
+            ->chunkById(100, function ($subscriptions) use (&$sent) {
+                foreach ($subscriptions as $subscription) {
+                    $sent += $this->sendPaymentIssueForSubscription($subscription);
+                }
+            });
+
+        UserSubscription::query()
+            ->with(['user:id,name,email', 'plan:id,name'])
+            ->where('status', 'past_due')
+            ->whereNull('payment_issue_email_sent_at')
+            ->chunkById(100, function ($subscriptions) use (&$sent) {
+                foreach ($subscriptions as $subscription) {
+                    $sent += $this->sendPaymentIssueForSubscription($subscription);
+                }
+            });
+
+        return $sent;
+    }
+
+    private function sendPaymentIssueForSubscription(ClubSubscription|UserSubscription $subscription): int
+    {
+        if ($subscription->payment_issue_email_sent_at) {
+            return 0;
+        }
+
+        $recipients = $subscription instanceof UserSubscription
+            ? collect([$subscription->user])->filter()
+            : $this->clubManagerUsers((int) $subscription->club_id);
+
+        foreach ($recipients as $recipient) {
+            if ($recipient?->email) {
+                $recipient->notify(new SubscriptionPaymentIssue($subscription));
+            }
+        }
+
+        if ($subscription instanceof UserSubscription) {
+            AppNotification::send((int) $subscription->user_id, 'user.subscription_payment_issue', [
+                'title' => 'Airmius Zahlung offen',
+                'body' => "{$subscription->plan?->name}: Bitte aktualisiere deine Zahlung.",
+                'url' => route('guest.pricing'),
+                'subscription_id' => $subscription->id,
+            ]);
+        } else {
+            foreach ($this->clubManagerRecipients((int) $subscription->club_id) as $recipientId) {
+                AppNotification::send($recipientId, 'club.subscription_payment_issue', [
+                    'title' => 'Airmius Vereinsplan Zahlung offen',
+                    'body' => "{$subscription->club?->name}: {$subscription->plan?->name} braucht eine Zahlung.",
+                    'url' => route('guest.pricing'),
+                    'club_id' => $subscription->club_id,
+                    'subscription_id' => $subscription->id,
+                ]);
+            }
+        }
+
+        $subscription->forceFill(['payment_issue_email_sent_at' => now()])->save();
+
+        return 1;
     }
 
     private function clubManagerRecipients(int $clubId): array
@@ -282,6 +383,23 @@ class SendMembershipAndBillingReminders extends Command
             ->all();
 
         return array_map('intval', $recipients);
+    }
+
+    private function clubManagerUsers(int $clubId)
+    {
+        $club = Club::query()->select('id', 'owner_id')->find($clubId);
+
+        if (! $club) {
+            return collect();
+        }
+
+        return $club->users()
+            ->wherePivotIn('role', ['owner', 'admin', 'manager'])
+            ->get()
+            ->push($club->owner)
+            ->filter()
+            ->unique('id')
+            ->values();
     }
 
     private function formatDate(CarbonInterface|string|null $value): string

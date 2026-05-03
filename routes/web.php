@@ -3,6 +3,8 @@
 use App\Http\Controllers\GuardianConsentController;
 use App\Http\Controllers\GuardianAccessController;
 use App\Http\Controllers\SocialAuthController;
+use App\Http\Controllers\SubscriptionCheckoutController;
+use App\Http\Controllers\CommerceCheckoutController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])
@@ -12,6 +14,35 @@ Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'
 Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback'])
     ->whereIn('provider', ['google', 'microsoft'])
     ->name('social-auth.callback');
+
+Route::post('/webhooks/stripe', [SubscriptionCheckoutController::class, 'stripeWebhook'])
+    ->name('webhooks.stripe');
+
+Route::post('/webhooks/paypal', [SubscriptionCheckoutController::class, 'paypalWebhook'])
+    ->name('webhooks.paypal');
+Route::post('/webhooks/commerce/stripe', [CommerceCheckoutController::class, 'stripeWebhook'])
+    ->name('webhooks.commerce.stripe');
+Route::post('/webhooks/commerce/paypal', [CommerceCheckoutController::class, 'paypalWebhook'])
+    ->name('webhooks.commerce.paypal');
+Route::get('/ads/active', [CommerceCheckoutController::class, 'activeAd'])->name('ads.active');
+Route::get('/ads/{campaign}/click', [CommerceCheckoutController::class, 'clickAd'])->name('ads.click');
+
+Route::middleware(['auth:sanctum', config('jetstream.auth_session')])->group(function () {
+    Route::post('/checkout/subscriptions/{subscriptionPlan}', [SubscriptionCheckoutController::class, 'store'])
+        ->name('subscription-checkout.store');
+    Route::get('/checkout/subscriptions/{checkout}/success', [SubscriptionCheckoutController::class, 'success'])
+        ->name('subscription-checkout.success');
+    Route::get('/checkout/subscriptions/{checkout}/cancel', [SubscriptionCheckoutController::class, 'cancel'])
+        ->name('subscription-checkout.cancel');
+    Route::get('/checkout/subscriptions/{checkout}/bank-transfer', [SubscriptionCheckoutController::class, 'bankTransfer'])
+        ->name('subscription-checkout.bank-transfer.show');
+    Route::get('/checkout/commerce/{order}/success', [CommerceCheckoutController::class, 'success'])
+        ->name('commerce-checkout.success');
+    Route::get('/checkout/commerce/{order}/cancel', [CommerceCheckoutController::class, 'cancel'])
+        ->name('commerce-checkout.cancel');
+    Route::get('/checkout/commerce/{order}/bank-transfer', [CommerceCheckoutController::class, 'bankTransfer'])
+        ->name('commerce-checkout.bank-transfer.show');
+});
 
 Route::middleware(['auth:sanctum', config('jetstream.auth_session')])
     ->get('/guardian-consent/pending', [GuardianConsentController::class, 'pending'])

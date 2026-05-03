@@ -46,6 +46,9 @@ class User extends Authenticatable
         'city',
         'state',
         'status',
+        'account_status',
+        'suspended_until',
+        'suspension_reason',
         'birth_date',
         'guardian_email',
         'guardian_user_id',
@@ -91,6 +94,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'birth_date' => 'date',
+            'suspended_until' => 'datetime',
             'gamification_last_active_on' => 'date',
             'guardian_consent_requested_at' => 'datetime',
             'guardian_consent_at' => 'datetime',
@@ -191,6 +195,11 @@ class User extends Authenticatable
     public function subscriptions()
     {
         return $this->hasMany(UserSubscription::class);
+    }
+
+    public function subscriptionInvoices()
+    {
+        return $this->hasMany(SubscriptionInvoice::class);
     }
 
     public function currentSubscription()

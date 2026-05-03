@@ -18,6 +18,7 @@ class ModerationFlag extends Model
         'categories',
         'matched_terms',
         'status',
+        'automated_action',
         'reviewed_by',
         'reviewed_at',
     ];

@@ -1,6 +1,6 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
-import { Head, useForm, usePage } from '@inertiajs/vue3'
+import { Head, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 
 defineOptions({ layout: AppLayout })
@@ -8,6 +8,8 @@ defineOptions({ layout: AppLayout })
 const props = defineProps({
     plans: { type: Array, default: () => [] },
     clubs: { type: Array, default: () => [] },
+    userSubscriptions: { type: Array, default: () => [] },
+    pendingBankTransfers: { type: Array, default: () => [] },
 })
 
 const page = usePage()
@@ -15,6 +17,7 @@ const selectedActor = ref('all')
 const clubSearch = ref('')
 const editingPlanId = ref(null)
 const clubForms = ref({})
+const userForms = ref({})
 const planForms = ref({})
 
 const actorLabels = {
@@ -43,7 +46,8 @@ const statusLabels = {
     trialing: 'Testphase',
     active: 'Aktiv',
     past_due: 'Zahlung offen',
-    cancelled: 'Gekuendigt',
+    cancelled: 'Gekündigt',
+    cancels_at_period_end: 'Gekündigt zum Periodenende',
 }
 
 const actors = computed(() => [
@@ -57,6 +61,7 @@ const filteredPlans = computed(() => {
 })
 
 const clubPlans = computed(() => props.plans.filter((plan) => plan.target_actor === 'verein'))
+const userPlans = computed(() => props.plans.filter((plan) => plan.target_actor !== 'verein'))
 
 const filteredClubs = computed(() => {
     const query = clubSearch.value.trim().toLowerCase()
@@ -104,12 +109,26 @@ const formForPlan = (plan) => {
 const formForClub = (club) => {
     clubForms.value[club.id] ??= useForm({
         subscription_plan_id: club.plan?.id || clubPlans.value[0]?.id || '',
-        status: 'active',
-        trial_ends_at: '',
-        current_period_ends_at: '',
+        status: club.subscription?.status || 'active',
+        trial_ends_at: club.subscription?.trial_ends_at || '',
+        current_period_ends_at: club.subscription?.current_period_ends_at || '',
+        payment_provider: club.subscription?.payment_provider || '',
     })
 
     return clubForms.value[club.id]
+}
+
+const formForUserSubscription = (subscription) => {
+    userForms.value[subscription.id] ??= useForm({
+        user_subscription_id: subscription.id,
+        subscription_plan_id: subscription.plan?.id || userPlans.value[0]?.id || '',
+        status: subscription.status || 'active',
+        trial_ends_at: subscription.trial_ends_at || '',
+        current_period_ends_at: subscription.current_period_ends_at || '',
+        payment_provider: subscription.payment_provider || '',
+    })
+
+    return userForms.value[subscription.id]
 }
 
 const savePlan = (plan) => {
@@ -123,6 +142,36 @@ const savePlan = (plan) => {
 
 const saveClub = (club) => {
     formForClub(club).put(route('admin.clubs.subscription.update', club.id), {
+        preserveScroll: true,
+    })
+}
+
+const saveUserSubscription = (subscription) => {
+    formForUserSubscription(subscription).put(route('admin.users.subscription.update', subscription.user.id), {
+        preserveScroll: true,
+    })
+}
+
+const cancelClubSubscription = (club, mode = 'period_end') => {
+    if (!club.subscription) return
+    router.post(route('admin.club-subscriptions.cancel', club.subscription.id), { mode }, { preserveScroll: true })
+}
+
+const renewClubSubscription = (club, months = 1) => {
+    if (!club.subscription) return
+    router.post(route('admin.club-subscriptions.renew', club.subscription.id), { months }, { preserveScroll: true })
+}
+
+const cancelUserSubscription = (subscription, mode = 'period_end') => {
+    router.post(route('admin.user-subscriptions.cancel', subscription.id), { mode }, { preserveScroll: true })
+}
+
+const renewUserSubscription = (subscription, months = 1) => {
+    router.post(route('admin.user-subscriptions.renew', subscription.id), { months }, { preserveScroll: true })
+}
+
+const markTransferPaid = (checkout) => {
+    router.post(route('admin.subscription-checkouts.mark-paid', checkout.id), {}, {
         preserveScroll: true,
     })
 }
@@ -159,9 +208,9 @@ const saveClub = (club) => {
 
         <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div class="surface-card p-4">
-                <p class="text-xs font-semibold uppercase text-secondary">Plaene</p>
+                <p class="text-xs font-semibold uppercase text-secondary">Pläne</p>
                 <p class="mt-2 text-2xl font-bold text-primary">{{ summary.plans }}</p>
-                <p class="text-sm text-secondary">{{ summary.publicPlans }} aktiv und oeffentlich</p>
+                <p class="text-sm text-secondary">{{ summary.publicPlans }} aktiv und öffentlich</p>
             </div>
             <div class="surface-card p-4">
                 <p class="text-xs font-semibold uppercase text-secondary">Vereins-Abos</p>
@@ -176,7 +225,7 @@ const saveClub = (club) => {
             <div class="surface-card p-4">
                 <p class="text-xs font-semibold uppercase text-secondary">Vereine</p>
                 <p class="mt-2 text-2xl font-bold text-primary">{{ clubs.length }}</p>
-                <p class="text-sm text-secondary">fuer Plan-Zuordnung</p>
+                <p class="text-sm text-secondary">für Plan-Zuordnung</p>
             </div>
         </section>
 
@@ -240,7 +289,7 @@ const saveClub = (club) => {
                             {{ plan.is_active ? 'Aktiv' : 'Inaktiv' }}
                         </span>
                         <span class="rounded-full px-2 py-1 font-semibold" :class="plan.is_public ? 'bg-air-blue/15 text-air-blue' : 'bg-muted text-secondary'">
-                            {{ plan.is_public ? 'Oeffentlich' : 'Privat' }}
+                            {{ plan.is_public ? 'Öffentlich' : 'Privat' }}
                         </span>
                         <span class="rounded-full bg-muted px-2 py-1 font-semibold text-secondary">
                             {{ plan.club_subscriptions_count }} Vereine
@@ -304,7 +353,7 @@ const saveClub = (club) => {
                     <div class="flex flex-wrap gap-4">
                         <label class="flex items-center gap-2 text-sm text-primary">
                             <input v-model="formForPlan(plan).is_public" type="checkbox" class="rounded border-border bg-inputBg">
-                            Oeffentlich
+                            Öffentlich
                         </label>
                         <label class="flex items-center gap-2 text-sm text-primary">
                             <input v-model="formForPlan(plan).is_active" type="checkbox" class="rounded border-border bg-inputBg">
@@ -317,6 +366,61 @@ const saveClub = (club) => {
                     </button>
                 </form>
             </article>
+        </section>
+
+        <section class="surface-card overflow-hidden">
+            <div class="border-b border-border p-5">
+                <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-primary">Offene Überweisungen</h2>
+                        <p class="mt-1 text-sm text-secondary">
+                            Airmius-Abos, die per Banküberweisung gebucht wurden und noch manuell bestätigt werden müssen.
+                        </p>
+                    </div>
+                    <span class="rounded-full bg-air-blue/15 px-3 py-1 text-xs font-semibold text-air-blue">
+                        {{ pendingBankTransfers.length }} offen
+                    </span>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table v-if="pendingBankTransfers.length" class="min-w-full text-left text-sm">
+                    <thead class="bg-bg text-xs uppercase text-secondary">
+                        <tr>
+                            <th class="px-5 py-3">Referenz</th>
+                            <th class="px-5 py-3">Kunde</th>
+                            <th class="px-5 py-3">Plan</th>
+                            <th class="px-5 py-3">Betrag</th>
+                            <th class="px-5 py-3">Fällig</th>
+                            <th class="px-5 py-3 text-right">Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border">
+                        <tr v-for="checkout in pendingBankTransfers" :key="checkout.id" class="hover:bg-muted/40">
+                            <td class="px-5 py-3">
+                                <p class="font-semibold text-primary">{{ checkout.payment_reference }}</p>
+                                <p class="text-xs text-secondary">Checkout {{ checkout.id }}</p>
+                            </td>
+                            <td class="px-5 py-3">
+                                <p class="font-semibold text-primary">{{ checkout.club?.name || checkout.user?.name || '-' }}</p>
+                                <p class="text-xs text-secondary">{{ checkout.user?.email || '-' }}</p>
+                            </td>
+                            <td class="px-5 py-3 text-secondary">{{ checkout.plan?.name || '-' }}</td>
+                            <td class="px-5 py-3 font-semibold text-primary">{{ checkout.amount }}</td>
+                            <td class="px-5 py-3 text-secondary">{{ checkout.due_at || '-' }}</td>
+                            <td class="px-5 py-3 text-right">
+                                <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary" @click="markTransferPaid(checkout)">
+                                    Als bezahlt markieren
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p v-else class="px-5 py-8 text-sm text-secondary">
+                    Keine offenen Überweisungen.
+                </p>
+            </div>
         </section>
 
         <section class="surface-card overflow-hidden">
@@ -342,6 +446,7 @@ const saveClub = (club) => {
                             <th class="px-5 py-3">Aktueller Plan</th>
                             <th class="px-5 py-3">Neuer Plan</th>
                             <th class="px-5 py-3">Status</th>
+                            <th class="px-5 py-3">Laufzeit</th>
                             <th class="px-5 py-3 text-right">Aktion</th>
                         </tr>
                     </thead>
@@ -359,6 +464,7 @@ const saveClub = (club) => {
                                 <span class="rounded-full bg-air-blue/15 px-2 py-1 text-xs font-semibold text-air-blue">
                                     {{ club.plan?.name || 'Free' }}
                                 </span>
+                                <p v-if="club.subscription?.payment_provider" class="mt-1 text-xs text-secondary">{{ club.subscription.payment_provider }}</p>
                             </td>
                             <td class="px-5 py-3">
                                 <select v-model="formForClub(club).subscription_plan_id" class="min-w-40 rounded-lg border-border bg-inputBg text-sm text-primary">
@@ -370,14 +476,30 @@ const saveClub = (club) => {
                                     <option value="trialing">Testphase</option>
                                     <option value="active">Aktiv</option>
                                     <option value="past_due">Zahlung offen</option>
-                                    <option value="cancelled">Gekuendigt</option>
+                                    <option value="cancels_at_period_end">Gekündigt zum Ende</option>
+                                    <option value="cancelled">Gekündigt</option>
                                 </select>
                                 <p class="mt-1 text-xs text-secondary">{{ statusLabels[formForClub(club).status] }}</p>
                             </td>
+                            <td class="px-5 py-3">
+                                <div class="grid min-w-44 gap-2">
+                                    <input v-model="formForClub(club).trial_ends_at" type="date" class="rounded-lg border-border bg-inputBg text-xs text-primary" title="Testphase bis">
+                                    <input v-model="formForClub(club).current_period_ends_at" type="date" class="rounded-lg border-border bg-inputBg text-xs text-primary" title="Aktuelle Periode bis">
+                                </div>
+                                <p v-if="club.subscription?.cancels_at" class="mt-1 text-xs text-warning">Endet {{ club.subscription.cancels_at }}</p>
+                            </td>
                             <td class="px-5 py-3 text-right">
-                                <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="formForClub(club).processing" @click="saveClub(club)">
-                                    Speichern
-                                </button>
+                                <div class="flex justify-end gap-2">
+                                    <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted" :disabled="!club.subscription" @click="renewClubSubscription(club, 1)">
+                                        +1M
+                                    </button>
+                                    <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted" :disabled="!club.subscription" @click="cancelClubSubscription(club, 'period_end')">
+                                        Kündigen
+                                    </button>
+                                    <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="formForClub(club).processing" @click="saveClub(club)">
+                                        Speichern
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
@@ -385,6 +507,79 @@ const saveClub = (club) => {
 
                 <p v-if="!filteredClubs.length" class="px-5 py-8 text-sm text-secondary">
                     Keine Vereine gefunden.
+                </p>
+            </div>
+        </section>
+
+        <section class="surface-card overflow-hidden">
+            <div class="border-b border-border p-5">
+                <div>
+                    <h2 class="text-lg font-semibold text-primary">Nutzer-Abos</h2>
+                    <p class="mt-1 text-sm text-secondary">
+                        Persönliche Pläne für Sportler, Trainer, Sponsoren, Anbieter und weitere Rollen verwalten.
+                    </p>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-left text-sm">
+                    <thead class="bg-bg text-xs uppercase text-secondary">
+                        <tr>
+                            <th class="px-5 py-3">Nutzer</th>
+                            <th class="px-5 py-3">Plan</th>
+                            <th class="px-5 py-3">Status</th>
+                            <th class="px-5 py-3">Laufzeit</th>
+                            <th class="px-5 py-3 text-right">Aktion</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border">
+                        <tr v-for="subscription in userSubscriptions" :key="subscription.id" class="hover:bg-muted/40">
+                            <td class="px-5 py-3">
+                                <p class="font-semibold text-primary">{{ subscription.user?.name || '-' }}</p>
+                                <p class="text-xs text-secondary">{{ subscription.user?.email || '-' }}</p>
+                            </td>
+                            <td class="px-5 py-3">
+                                <select v-model="formForUserSubscription(subscription).subscription_plan_id" class="min-w-44 rounded-lg border-border bg-inputBg text-sm text-primary">
+                                    <option v-for="plan in userPlans" :key="plan.id" :value="plan.id">{{ plan.name }}</option>
+                                </select>
+                                <p class="mt-1 text-xs text-secondary">{{ subscription.plan?.target_actor || '-' }}</p>
+                            </td>
+                            <td class="px-5 py-3">
+                                <select v-model="formForUserSubscription(subscription).status" class="min-w-44 rounded-lg border-border bg-inputBg text-sm text-primary">
+                                    <option value="trialing">Testphase</option>
+                                    <option value="active">Aktiv</option>
+                                    <option value="past_due">Zahlung offen</option>
+                                    <option value="cancels_at_period_end">Gekündigt zum Ende</option>
+                                    <option value="cancelled">Gekündigt</option>
+                                </select>
+                                <input v-model="formForUserSubscription(subscription).payment_provider" class="mt-2 min-w-44 rounded-lg border-border bg-inputBg text-xs text-primary" placeholder="Zahlungsart">
+                            </td>
+                            <td class="px-5 py-3">
+                                <div class="grid min-w-44 gap-2">
+                                    <input v-model="formForUserSubscription(subscription).trial_ends_at" type="date" class="rounded-lg border-border bg-inputBg text-xs text-primary">
+                                    <input v-model="formForUserSubscription(subscription).current_period_ends_at" type="date" class="rounded-lg border-border bg-inputBg text-xs text-primary">
+                                </div>
+                                <p v-if="subscription.cancels_at" class="mt-1 text-xs text-warning">Endet {{ subscription.cancels_at }}</p>
+                            </td>
+                            <td class="px-5 py-3 text-right">
+                                <div class="flex justify-end gap-2">
+                                    <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted" @click="renewUserSubscription(subscription, 1)">
+                                        +1M
+                                    </button>
+                                    <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted" @click="cancelUserSubscription(subscription, 'period_end')">
+                                        Kündigen
+                                    </button>
+                                    <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="formForUserSubscription(subscription).processing" @click="saveUserSubscription(subscription)">
+                                        Speichern
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p v-if="!userSubscriptions.length" class="px-5 py-8 text-sm text-secondary">
+                    Noch keine Nutzer-Abos vorhanden.
                 </p>
             </div>
         </section>

@@ -37,7 +37,7 @@ const statusOptions = computed(() => {
     ]
 
     if (props.can.publish) {
-        options.splice(2, 0, ['published', 'Veroeffentlicht'])
+        options.splice(2, 0, ['published', 'Veröffentlicht'])
     }
 
     return options
@@ -81,7 +81,7 @@ const submit = () => {
 }
 
 const destroyPost = (post) => {
-    if (!confirm(`Blogbeitrag "${post.title}" wirklich loeschen?`)) {
+    if (!confirm(`Blogbeitrag "${post.title}" wirklich löschen?`)) {
         return
     }
 
@@ -108,7 +108,7 @@ const applyFilters = () => {
                 <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">Website CMS</p>
                 <h1 class="mt-1 text-3xl font-bold text-primary">Blogs</h1>
                 <p class="mt-2 max-w-2xl text-sm text-secondary">
-                    Redaktionsbereich für Websitepersonal: Entwuerfe schreiben, Reviews vorbereiten und Beitraege veroeffentlichen.
+                    Redaktionsbereich für Websitepersonal: Entwürfe schreiben, Reviews vorbereiten und Beiträge veröffentlichen.
                 </p>
             </div>
 
@@ -123,7 +123,7 @@ const applyFilters = () => {
                     <option value="all">Alle Status</option>
                     <option value="draft">Entwurf</option>
                     <option value="review">Review</option>
-                    <option value="published">Veroeffentlicht</option>
+                    <option value="published">Veröffentlicht</option>
                     <option value="archived">Archiviert</option>
                 </select>
                 <button class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:bg-muted" @click="applyFilters">
@@ -248,7 +248,7 @@ const applyFilters = () => {
                     </div>
 
                     <div v-if="can.publish">
-                        <label class="text-sm font-semibold text-primary">Veroeffentlichen am</label>
+                        <label class="text-sm font-semibold text-primary">Veröffentlichen am</label>
                         <input v-model="form.published_at" type="datetime-local" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" />
                     </div>
 

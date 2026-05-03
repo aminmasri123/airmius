@@ -14,11 +14,17 @@ const props = defineProps({
 
 const page = usePage()
 const maintenance = computed(() => props.settings.maintenance || {})
+const billing = computed(() => props.settings.billing || {})
 
 const form = useForm({
     maintenance_enabled: Boolean(maintenance.value.enabled),
     maintenance_title: maintenance.value.title || 'Airmius ist gerade im Wartemodus',
-    maintenance_message: maintenance.value.message || 'Wir verbessern gerade die Plattform. Bitte versuche es in Kürze erneut.',
+    maintenance_message: maintenance.value.message || 'Wir verbessern gerade die Plattform. Bitte versuche es in Kuerze erneut.',
+    billing_bank_account_holder: billing.value.bank_account_holder || 'Airmius',
+    billing_bank_name: billing.value.bank_name || '',
+    billing_iban: billing.value.iban || '',
+    billing_bic: billing.value.bic || '',
+    billing_payment_terms_days: billing.value.payment_terms_days || 14,
 })
 
 const save = () => {
@@ -102,6 +108,62 @@ const save = () => {
                         </div>
                     </div>
 
+                    <div class="rounded-lg border border-border bg-bg p-4">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <h2 class="text-lg font-semibold text-primary">Airmius Zahlung per Überweisung</h2>
+                                <p class="mt-1 text-sm text-secondary">
+                                    Diese Bankdaten werden bei Abo-Zahlung per Rechnung/Überweisung angezeigt.
+                                </p>
+                            </div>
+                            <span class="rounded-full bg-air-blue/15 px-3 py-1 text-xs font-semibold text-air-blue">
+                                Rechnung
+                            </span>
+                        </div>
+
+                        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <label for="billing_bank_account_holder" class="text-sm font-semibold text-primary">Kontoinhaber</label>
+                                <input id="billing_bank_account_holder" v-model="form.billing_bank_account_holder" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
+                                <p v-if="form.errors.billing_bank_account_holder" class="mt-1 text-sm text-error">
+                                    {{ form.errors.billing_bank_account_holder }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <label for="billing_bank_name" class="text-sm font-semibold text-primary">Bank</label>
+                                <input id="billing_bank_name" v-model="form.billing_bank_name" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
+                                <p v-if="form.errors.billing_bank_name" class="mt-1 text-sm text-error">
+                                    {{ form.errors.billing_bank_name }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <label for="billing_iban" class="text-sm font-semibold text-primary">IBAN</label>
+                                <input id="billing_iban" v-model="form.billing_iban" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary" placeholder="DE...">
+                                <p v-if="form.errors.billing_iban" class="mt-1 text-sm text-error">
+                                    {{ form.errors.billing_iban }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <label for="billing_bic" class="text-sm font-semibold text-primary">BIC</label>
+                                <input id="billing_bic" v-model="form.billing_bic" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
+                                <p v-if="form.errors.billing_bic" class="mt-1 text-sm text-error">
+                                    {{ form.errors.billing_bic }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <label for="billing_payment_terms_days" class="text-sm font-semibold text-primary">Zahlungsziel in Tagen</label>
+                                <input id="billing_payment_terms_days" v-model="form.billing_payment_terms_days" type="number" min="1" max="60" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
+                                <p v-if="form.errors.billing_payment_terms_days" class="mt-1 text-sm text-error">
+                                    {{ form.errors.billing_payment_terms_days }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div v-if="page.props.flash?.success" class="rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
                         {{ page.props.flash.success }}
                     </div>
@@ -140,6 +202,24 @@ const save = () => {
                     <div class="mt-4 rounded-lg border border-border bg-card p-4 text-sm text-secondary">
                         Benutzer mit der Berechtigung <span class="font-semibold text-primary">system.manage</span>
                         können Airmius weiterhin normal verwenden.
+                    </div>
+
+                    <div class="mt-4 rounded-lg border border-border bg-card p-4 text-sm text-secondary">
+                        <p class="font-semibold text-primary">Überweisungsdaten</p>
+                        <dl class="mt-3 space-y-2">
+                            <div class="flex justify-between gap-3">
+                                <dt>Kontoinhaber</dt>
+                                <dd class="text-right text-primary">{{ form.billing_bank_account_holder || '-' }}</dd>
+                            </div>
+                            <div class="flex justify-between gap-3">
+                                <dt>IBAN</dt>
+                                <dd class="text-right text-primary">{{ form.billing_iban || '-' }}</dd>
+                            </div>
+                            <div class="flex justify-between gap-3">
+                                <dt>Zahlungsziel</dt>
+                                <dd class="text-right text-primary">{{ form.billing_payment_terms_days }} Tage</dd>
+                            </div>
+                        </dl>
                     </div>
                 </aside>
             </div>

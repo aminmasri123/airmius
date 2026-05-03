@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\SubscriptionInvoice;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -36,7 +37,28 @@ class UserSettingsController extends Controller
                     ->latest('id')
                     ->limit(30)
                     ->get(),
+                'subscription_invoices' => SubscriptionInvoice::query()
+                    ->where('user_id', $request->user()->id)
+                    ->with(['club:id,name', 'plan:id,name'])
+                    ->latest('id')
+                    ->limit(30)
+                    ->get(),
             ],
+            'currentUserSubscriptions' => $request->user()
+                ->subscriptions()
+                ->with('plan:id,name,target_actor')
+                ->latest('id')
+                ->get()
+                ->map(fn ($subscription) => [
+                    'id' => $subscription->id,
+                    'status' => $subscription->status,
+                    'payment_provider' => $subscription->payment_provider,
+                    'trial_ends_at' => $subscription->trial_ends_at?->toDateString(),
+                    'current_period_ends_at' => $subscription->current_period_ends_at?->toDateString(),
+                    'cancel_at_period_end' => $subscription->cancel_at_period_end,
+                    'cancels_at' => $subscription->cancels_at?->toDateString(),
+                    'plan' => $subscription->plan,
+                ]),
             'socialAccounts' => $request->user()
                 ->socialAccounts()
                 ->latest('id')

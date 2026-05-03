@@ -313,7 +313,7 @@ const submitJob = (club) => {
 }
 
 const deleteJob = (job) => {
-    if (!confirm(`Stelle "${job.title}" wirklich loeschen?`)) return
+    if (!confirm(`Stelle "${job.title}" wirklich löschen?`)) return
 
     router.delete(route('auth.organization-jobs.destroy', job.id), {
         preserveScroll: true,

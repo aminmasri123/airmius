@@ -26,9 +26,9 @@ class ExternalClubMembershipInvitation extends Notification
         return (new MailMessage)
             ->subject('Einladung zu '.$club->name.' auf Airmius')
             ->greeting('Hallo'.($this->externalMember->name ? ' '.$this->externalMember->name : '').',')
-            ->line($club->name.' hat dich als Mitglied hinterlegt und moechte dich mit Airmius verknuepfen.')
-            ->line('Mit einem Airmius-Konto kannst du deine Vereinsdaten, Rechnungen, Zahlungshistorie, Teams und Nachrichten besser ueberblicken.')
+            ->line($club->name.' hat dich als Mitglied hinterlegt und möchte dich mit Airmius verknüpfen.')
+            ->line('Mit einem Airmius-Konto kannst du deine Vereinsdaten, Rechnungen, Zahlungshistorie, Teams und Nachrichten besser überblicken.')
             ->action('Einladung ansehen', $acceptUrl)
-            ->line('Wenn du bereits ein Konto mit dieser E-Mail hast, kannst du dich anmelden und die Verknuepfung abschliessen. Falls nicht, kannst du dich mit dieser E-Mail registrieren.');
+            ->line('Wenn du bereits ein Konto mit dieser E-Mail hast, kannst du dich anmelden und die Verknüpfung abschließen. Falls nicht, kannst du dich mit dieser E-Mail registrieren.');
     }
 }

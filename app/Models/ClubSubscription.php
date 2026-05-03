@@ -13,9 +13,19 @@ class ClubSubscription extends Model
         'club_id',
         'subscription_plan_id',
         'status',
+        'cancel_at_period_end',
+        'payment_provider',
+        'provider_subscription_id',
+        'provider_customer_id',
         'trial_ends_at',
         'current_period_ends_at',
+        'cancels_at',
+        'cancelled_at',
+        'last_renewed_at',
         'renewal_notified_at',
+        'cancellation_email_sent_at',
+        'renewal_email_sent_at',
+        'payment_issue_email_sent_at',
     ];
 
     protected function casts(): array
@@ -23,7 +33,14 @@ class ClubSubscription extends Model
         return [
             'trial_ends_at' => 'datetime',
             'current_period_ends_at' => 'datetime',
+            'cancel_at_period_end' => 'boolean',
+            'cancels_at' => 'datetime',
+            'cancelled_at' => 'datetime',
+            'last_renewed_at' => 'datetime',
             'renewal_notified_at' => 'datetime',
+            'cancellation_email_sent_at' => 'datetime',
+            'renewal_email_sent_at' => 'datetime',
+            'payment_issue_email_sent_at' => 'datetime',
         ];
     }
 

@@ -73,7 +73,7 @@ class BlogPostController extends Controller
 
         $blogPost->delete();
 
-        return back()->with('success', 'Blogbeitrag geloescht.');
+        return back()->with('success', 'Blogbeitrag gelöscht.');
     }
 
     public function publicIndex()

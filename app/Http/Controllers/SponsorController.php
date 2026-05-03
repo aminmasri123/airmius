@@ -64,7 +64,7 @@ class SponsorController extends Controller
 
         $sponsor->delete();
 
-        return back()->with('success', 'Sponsor geloescht.');
+        return back()->with('success', 'Sponsor gelöscht.');
     }
 
     private function validated(Request $request): array

@@ -131,12 +131,12 @@ class SportAdminController extends Controller
         abort_if(
             ($teamsCount + $clubsCount + $profilesCount + $postsCount) > 0,
             422,
-            'Diese Sportart wird bereits verwendet. Bitte deaktivieren statt loeschen.'
+            'Diese Sportart wird bereits verwendet. Bitte deaktivieren statt löschen.'
         );
 
         $sport->delete();
 
-        return back()->with('success', 'Sportart geloescht.');
+        return back()->with('success', 'Sportart gelöscht.');
     }
 
     private function validatedData(Request $request, ?Sport $sport = null): array

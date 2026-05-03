@@ -28,6 +28,7 @@ class PlanFeatureService
         'recurring_invoices' => 'pro',
         'sepa_export' => 'pro',
         'bank_reconciliation' => 'pro',
+        'datev_export' => 'pro',
         'api' => 'elite',
     ];
 
@@ -107,6 +108,7 @@ class PlanFeatureService
             'recurring_invoices' => $this->allows($club, 'recurring_invoices'),
             'sepa_export' => $this->allows($club, 'sepa_export'),
             'bank_reconciliation' => $this->allows($club, 'bank_reconciliation'),
+            'datev_export' => $this->allows($club, 'datev_export'),
             'api' => $this->allows($club, 'api'),
             'can_create_team' => $this->canCreateTeam($club),
             'can_store_files' => $this->canStoreFile($club),
@@ -130,6 +132,7 @@ class PlanFeatureService
             'recurring_invoices' => 'Wiederkehrende Rechnungen sind ab Pro vorgesehen.',
             'sepa_export' => 'SEPA-Export ist ab Pro vorgesehen.',
             'bank_reconciliation' => 'Bankabgleich ist ab Pro vorgesehen.',
+            'datev_export' => 'DATEV/SKR42-Export ist ab Pro vorgesehen.',
             'api' => 'API-Zugang ist im Elite-Plan vorgesehen.',
             default => 'Diese Funktion ist im aktuellen Plan nicht enthalten.',
         };

@@ -25,7 +25,7 @@ defineProps({
         <main class="px-4 pt-28">
             <article class="mx-auto max-w-4xl">
                 <Link :href="route('guest.blog.index')" class="text-sm font-semibold text-air-blue hover:underline">
-                    Zurueck zum Blog
+                    Zurück zum Blog
                 </Link>
 
                 <div class="mt-6 flex flex-wrap items-center gap-2 text-sm text-secondary">

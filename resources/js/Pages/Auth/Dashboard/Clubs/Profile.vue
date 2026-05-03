@@ -141,7 +141,7 @@ const updateClubProfile = () => {
             <section v-if="viewer.can_manage" class="rounded-lg border border-border bg-card p-5">
                 <h2 class="text-lg font-semibold text-primary">Vereinsdaten</h2>
                 <p class="mt-1 text-sm text-secondary">
-                    Offizielle Vereine muessen ihre Vereinsnummer hinterlegen. Nicht-offizielle Gruppen koennen das Feld leer lassen.
+                    Offizielle Vereine müssen ihre Vereinsnummer hinterlegen. Nicht-offizielle Gruppen können das Feld leer lassen.
                 </p>
 
                 <form class="mt-4 grid gap-4 md:grid-cols-2" @submit.prevent="updateClubProfile">

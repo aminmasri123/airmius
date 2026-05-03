@@ -9,7 +9,7 @@
 <body class="bg-gray-100 text-gray-900 antialiased">
     <main class="mx-auto flex min-h-screen w-full max-w-xl items-center px-6 py-12">
         <section class="w-full rounded-lg bg-white p-8 shadow">
-            <h1 class="text-2xl font-semibold">Registrierung pruefen</h1>
+            <h1 class="text-2xl font-semibold">Registrierung prüfen</h1>
 
             <p class="mt-4 text-sm leading-6 text-gray-700">
                 {{ $minor->name }} hat sich bei Airmius registriert und ist unter 16 Jahre alt.

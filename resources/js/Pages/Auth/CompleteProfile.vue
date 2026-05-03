@@ -51,7 +51,7 @@ const submit = () => {
         </div>
 
         <div class="mb-5 rounded-lg border border-border bg-inputBg p-4 text-sm text-secondary">
-            Bitte vervollstaendige dein Profil. Das ist wichtig fuer Jugendschutz, Elternzustimmung und faire Nutzung der Plattform.
+            Bitte vervollständige dein Profil. Das ist wichtig für Jugendschutz, Elternzustimmung und faire Nutzung der Plattform.
         </div>
 
         <form @submit.prevent="submit">

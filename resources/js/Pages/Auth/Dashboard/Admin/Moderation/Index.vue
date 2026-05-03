@@ -8,6 +8,7 @@ defineOptions({ layout: AppLayout })
 const props = defineProps({
     flags: { type: Array, default: () => [] },
     reports: { type: Array, default: () => [] },
+    warningSummary: { type: Object, default: () => ({}) },
 })
 
 const page = usePage()
@@ -60,7 +61,7 @@ const updateFlag = (flag, status, removeContent = false) => {
                     </p>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
                     <div class="rounded-lg border border-border bg-bg px-4 py-3">
                         <p class="text-xs text-secondary">Offene Meldungen</p>
                         <p class="mt-1 text-2xl font-semibold text-primary">{{ openReports.length }}</p>
@@ -68,6 +69,14 @@ const updateFlag = (flag, status, removeContent = false) => {
                     <div class="rounded-lg border border-border bg-bg px-4 py-3">
                         <p class="text-xs text-secondary">Automatische Treffer</p>
                         <p class="mt-1 text-2xl font-semibold text-primary">{{ openFlags.length }}</p>
+                    </div>
+                    <div class="rounded-lg border border-border bg-bg px-4 py-3">
+                        <p class="text-xs text-secondary">Warnungen 90 Tage</p>
+                        <p class="mt-1 text-2xl font-semibold text-primary">{{ warningSummary.warnings_90_days || 0 }}</p>
+                    </div>
+                    <div class="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3">
+                        <p class="text-xs text-secondary">Gesperrte Konten</p>
+                        <p class="mt-1 text-2xl font-semibold text-primary">{{ warningSummary.suspended_users || 0 }}</p>
                     </div>
                 </div>
             </div>
@@ -150,6 +159,9 @@ const updateFlag = (flag, status, removeContent = false) => {
                             </span>
                             <span class="rounded border border-border px-2 py-1 text-xs text-secondary">
                                 {{ flag.status }}
+                            </span>
+                            <span v-if="flag.automated_action" class="rounded border border-warning/40 bg-warning/10 px-2 py-1 text-xs text-warning">
+                                {{ flag.automated_action }}
                             </span>
                         </div>
 

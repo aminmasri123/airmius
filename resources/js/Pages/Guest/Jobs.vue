@@ -78,7 +78,7 @@ const values = [
                     </article>
 
                     <div v-if="!jobs.length" class="surface-card p-8 text-center text-sm text-secondary">
-                        Aktuell sind noch keine offenen Stellen veroeffentlicht.
+                        Aktuell sind noch keine offenen Stellen veröffentlicht.
                     </div>
                 </div>
             </section>

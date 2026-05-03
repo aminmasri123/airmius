@@ -15,7 +15,7 @@ class GenerateRecurringContributionInvoices extends Command
     protected $signature = 'airmius:generate-recurring-contribution-invoices
         {--date= : Stichtag im Format YYYY-MM-DD, Standard ist heute}';
 
-    protected $description = 'Erstellt wiederkehrende Mitgliedsbeitrags-Rechnungen fuer Pro/Elite-Vereine.';
+    protected $description = 'Erstellt wiederkehrende Mitgliedsbeitrags-Rechnungen für Pro/Elite-Vereine.';
 
     public function __construct(private PlanFeatureService $planFeatures)
     {
@@ -79,7 +79,7 @@ class GenerateRecurringContributionInvoices extends Command
                     'user_id' => $membership->user_id,
                     'number' => $this->nextInvoiceNumber($club),
                     'title' => $this->titleFor($dueDate, $membership->contribution_interval),
-                    'description' => "Automatisch erzeugter Mitgliedsbeitrag fuer {$membership->club_name}.",
+                    'description' => "Automatisch erzeugter Mitgliedsbeitrag für {$membership->club_name}.",
                     'amount' => $membership->contribution_amount,
                     'status' => 'open',
                     'source' => 'recurring_contribution',

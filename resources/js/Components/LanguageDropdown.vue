@@ -32,7 +32,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
             @click="open = !open"
             class="flex items-center gap-2 rounded-lg border border-border bg-card/80 px-4 py-2 text-sm text-primary transition hover:border-borderHover hover:bg-muted active:scale-95"
         >
-            <span v-if="!showSuccess">🌍 {{ locale.toUpperCase() }}</span>
+            <span v-if="!showSuccess">{{ locale.toUpperCase() }}</span>
             <span v-else class="text-success">{{ $t('common.saved') }}</span>
         </button>
 

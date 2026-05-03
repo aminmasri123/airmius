@@ -44,7 +44,7 @@ class OrganizationJobController extends Controller
 
         $organizationJob->delete();
 
-        return back()->with('success', 'Stelle geloescht.');
+        return back()->with('success', 'Stelle gelöscht.');
     }
 
     public function publicIndex()

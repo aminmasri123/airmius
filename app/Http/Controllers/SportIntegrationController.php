@@ -12,7 +12,7 @@ class SportIntegrationController extends Controller
         'google_fit' => [
             'label' => 'Google Fit',
             'status' => 'live_oauth',
-            'description' => 'Verknuepfung ueber Google OAuth. Aktivitaetsimport wird als naechster Schritt auf den gespeicherten Tokens aufgebaut.',
+            'description' => 'Verknüpfung über Google OAuth. Aktivitätsimport wird als nächster Schritt auf den gespeicherten Tokens aufgebaut.',
             'scopes' => [
                 'openid',
                 'profile',
@@ -24,7 +24,7 @@ class SportIntegrationController extends Controller
         'garmin' => [
             'label' => 'Garmin',
             'status' => 'partner_required',
-            'description' => 'Garmin Health API benoetigt eine Anbieterfreigabe. Nutzer koennen Interesse markieren, bis die Partnerfreigabe aktiv ist.',
+            'description' => 'Garmin Health API benötigt eine Anbieterfreigabe. Nutzer können Interesse markieren, bis die Partnerfreigabe aktiv ist.',
             'scopes' => ['activities', 'wellness'],
         ],
         'mi_fitness' => [

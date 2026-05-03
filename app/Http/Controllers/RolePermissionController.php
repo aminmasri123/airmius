@@ -103,13 +103,13 @@ class RolePermissionController extends Controller
     {
         $this->authorizeAccess($request);
 
-        abort_if(in_array($role->name, ['super_admin', 'admin', 'system_admin'], true), 422, 'Systemrollen können nicht geloescht werden.');
+        abort_if(in_array($role->name, ['super_admin', 'admin', 'system_admin'], true), 422, 'Systemrollen können nicht gelöscht werden.');
         abort_if($role->users()->exists(), 422, 'Rolle ist noch Nutzern zugewiesen.');
 
         $role->delete();
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        return back()->with('success', 'Rolle geloescht.');
+        return back()->with('success', 'Rolle gelöscht.');
     }
 
     public function storePermission(Request $request)

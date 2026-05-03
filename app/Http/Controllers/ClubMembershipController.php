@@ -97,6 +97,10 @@ class ClubMembershipController extends Controller
                     'sepa_creditor_id' => $club->sepa_creditor_id,
                     'sepa_iban' => $club->sepa_iban,
                     'sepa_bic' => $club->sepa_bic,
+                    'datev_consultant_number' => $club->datev_consultant_number,
+                    'datev_client_number' => $club->datev_client_number,
+                    'datev_revenue_account' => $club->datev_revenue_account,
+                    'datev_bank_account' => $club->datev_bank_account,
                     'users_count' => $club->users_count,
                     'teams_count' => $club->teams_count,
                     'subscription' => [
@@ -676,7 +680,7 @@ class ClubMembershipController extends Controller
 
         AppNotification::send((int) $invoice->user_id, 'invoice.paid', [
             'title' => 'Zahlung erfasst',
-            'body' => 'Deine Zahlung fuer '.$invoice->number.' wurde markiert.',
+            'body' => 'Deine Zahlung für '.$invoice->number.' wurde markiert.',
             'url' => route('auth.settings'),
             'invoice_id' => $invoice->id,
         ]);
@@ -687,7 +691,7 @@ class ClubMembershipController extends Controller
     public function sendReminder(Invoice $invoice)
     {
         $this->authorize('update', $invoice->club);
-        abort_if($invoice->status === 'paid', 422, 'Bezahlte Rechnungen koennen nicht gemahnt werden.');
+        abort_if($invoice->status === 'paid', 422, 'Bezahlte Rechnungen können nicht gemahnt werden.');
         $this->planFeatures->ensureAllows($invoice->club, 'payment_reminders');
 
         $invoice->update([
@@ -784,7 +788,7 @@ class ClubMembershipController extends Controller
         $this->planFeatures->ensureAllows($bankTransaction->club, 'bank_reconciliation');
 
         abort_if($bankTransaction->status === 'matched', 422, 'Dieser Umsatz ist bereits zugeordnet.');
-        abort_unless($bankTransaction->invoice && $bankTransaction->invoice->status !== 'paid', 422, 'Es gibt keine offene Rechnung fuer diesen Umsatz.');
+        abort_unless($bankTransaction->invoice && $bankTransaction->invoice->status !== 'paid', 422, 'Es gibt keine offene Rechnung für diesen Umsatz.');
 
         DB::transaction(function () use ($bankTransaction) {
             $payment = $this->recordBankMatchedPayment($bankTransaction->invoice, [
@@ -802,6 +806,109 @@ class ClubMembershipController extends Controller
         });
 
         return back()->with('success', 'Bankumsatz wurde als Zahlung verbucht.');
+    }
+
+    public function updateDatevSettings(Request $request, Club $club)
+    {
+        $this->authorize('update', $club);
+        $this->planFeatures->ensureAllows($club, 'datev_export');
+
+        $data = $request->validate([
+            'datev_consultant_number' => ['nullable', 'string', 'max:20'],
+            'datev_client_number' => ['nullable', 'string', 'max:20'],
+            'datev_revenue_account' => ['nullable', 'string', 'max:20'],
+            'datev_bank_account' => ['nullable', 'string', 'max:20'],
+        ]);
+
+        $club->update([
+            'datev_consultant_number' => $data['datev_consultant_number'] ?? null,
+            'datev_client_number' => $data['datev_client_number'] ?? null,
+            'datev_revenue_account' => $data['datev_revenue_account'] ?? null,
+            'datev_bank_account' => $data['datev_bank_account'] ?? null,
+        ]);
+
+        return back()->with('success', 'DATEV-Einstellungen gespeichert.');
+    }
+
+    public function exportDatev(Request $request, Club $club)
+    {
+        $this->authorize('update', $club);
+        $this->planFeatures->ensureAllows($club, 'datev_export');
+
+        $data = $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+        ]);
+
+        $from = \Carbon\Carbon::parse($data['from'] ?? now()->startOfMonth())->startOfDay();
+        $to = \Carbon\Carbon::parse($data['to'] ?? now())->endOfDay();
+        $revenueAccount = $club->datev_revenue_account ?: '2110';
+        $bankAccount = $club->datev_bank_account ?: '1200';
+
+        $payments = Payment::query()
+            ->where('club_id', $club->id)
+            ->where('status', 'paid')
+            ->whereBetween('paid_at', [$from, $to])
+            ->with(['invoice:id,number,title,description,source,billing_period_start,billing_period_end', 'user:id,name,email'])
+            ->orderBy('paid_at')
+            ->get();
+
+        abort_if($payments->isEmpty(), 422, 'Keine bezahlten Zahlungen im ausgewaehlten Zeitraum gefunden.');
+
+        $fileName = 'airmius-datev-'.$club->id.'-'.$from->format('Ymd').'-'.$to->format('Ymd').'.csv';
+
+        return response()->streamDownload(function () use ($club, $payments, $revenueAccount, $bankAccount) {
+            $handle = fopen('php://output', 'w');
+            fwrite($handle, "\xEF\xBB\xBF");
+
+            fputcsv($handle, [
+                'Umsatz (ohne Soll/Haben-Kz)',
+                'Soll/Haben-Kennzeichen',
+                'WKZ Umsatz',
+                'Konto',
+                'Gegenkonto (ohne BU-Schluessel)',
+                'BU-Schluessel',
+                'Belegdatum',
+                'Belegfeld 1',
+                'Belegfeld 2',
+                'Buchungstext',
+                'KOST1',
+                'KOST2',
+                'Mandant',
+                'Berater',
+            ], ';');
+
+            foreach ($payments as $payment) {
+                $invoice = $payment->invoice;
+                $bookingText = trim(implode(' ', array_filter([
+                    'Mitgliedsbeitrag',
+                    $invoice?->number,
+                    $invoice?->title,
+                    $payment->user?->name,
+                ])));
+
+                fputcsv($handle, [
+                    number_format((float) $payment->amount, 2, ',', ''),
+                    'S',
+                    'EUR',
+                    $bankAccount,
+                    $revenueAccount,
+                    '',
+                    $payment->paid_at?->format('dm') ?? now()->format('dm'),
+                    $invoice?->number ?? $payment->reference ?? 'PAY-'.$payment->id,
+                    $payment->paid_at?->format('Y') ?? now()->format('Y'),
+                    mb_substr($bookingText, 0, 60),
+                    '',
+                    '',
+                    $club->datev_client_number ?? '',
+                    $club->datev_consultant_number ?? '',
+                ], ';');
+            }
+
+            fclose($handle);
+        }, $fileName, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 
     private function attachExistingUserToClub(Club $club, User $user, array $data): void
@@ -868,7 +975,7 @@ class ClubMembershipController extends Controller
         if ($invoice->user_id) {
             AppNotification::send((int) $invoice->user_id, 'invoice.paid', [
                 'title' => 'Zahlung eingegangen',
-                'body' => 'Deine Zahlung fuer '.$invoice->number.' wurde per Bankabgleich erkannt.',
+                'body' => 'Deine Zahlung für '.$invoice->number.' wurde per Bankabgleich erkannt.',
                 'url' => route('auth.settings'),
                 'invoice_id' => $invoice->id,
             ]);

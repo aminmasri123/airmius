@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ContentReport;
 use App\Models\ModerationFlag;
+use App\Models\AccountWarning;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -26,6 +27,10 @@ class ModerationController extends Controller
                 ->limit(80)
                 ->get()
                 ->map(fn (ContentReport $report) => $this->reportPayload($report)),
+            'warningSummary' => [
+                'warnings_90_days' => AccountWarning::query()->where('created_at', '>=', now()->subDays(90))->count(),
+                'suspended_users' => \App\Models\User::query()->where('account_status', 'suspended')->count(),
+            ],
         ]);
     }
 
@@ -93,6 +98,7 @@ class ModerationController extends Controller
             'source' => $flag->source,
             'severity' => $flag->severity,
             'status' => $flag->status,
+            'automated_action' => $flag->automated_action,
             'categories' => $flag->categories ?: [],
             'matched_terms' => $flag->matched_terms ?: [],
             'created_at' => $flag->created_at,

@@ -15,3 +15,7 @@ Schedule::command('airmius:send-membership-billing-reminders')
 Schedule::command('airmius:generate-recurring-contribution-invoices')
     ->dailyAt('07:30')
     ->withoutOverlapping();
+
+Schedule::command('airmius:send-subscription-invoice-emails')
+    ->dailyAt('08:15')
+    ->withoutOverlapping();

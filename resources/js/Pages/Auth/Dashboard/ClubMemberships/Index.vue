@@ -21,6 +21,8 @@ const showImportModal = ref(false)
 const showBankImportModal = ref(false)
 const memberForms = ref({})
 const sepaSettingsForms = ref({})
+const datevSettingsForms = ref({})
+const datevExportForms = ref({})
 const createEmailMemberRow = () => ({
     name: '',
     email: '',
@@ -56,7 +58,7 @@ const capabilities = computed(() => selectedClub.value?.capabilities || {})
 const statusLabel = (status) => ({
     active: 'Vereinsmitglied',
     non_member: 'Kein Vereinsmitglied',
-    pending: 'In Pruefung',
+    pending: 'In Prüfung',
     former: 'Ehemalig',
 }[status] || status)
 
@@ -71,7 +73,7 @@ const intervalLabel = (interval) => ({
     none: 'Kein Beitrag',
     monthly: 'Monatlich',
     quarterly: 'Quartal',
-    yearly: 'Jaehrlich',
+    yearly: 'Jährlich',
     once: 'Einmalig',
 }[interval] || interval)
 
@@ -122,6 +124,44 @@ const saveSepaSettings = () => {
         preserveScroll: true,
     })
 }
+
+const datevSettingsFor = (club) => {
+    datevSettingsForms.value[club.id] ??= {
+        datev_consultant_number: club.datev_consultant_number || '',
+        datev_client_number: club.datev_client_number || '',
+        datev_revenue_account: club.datev_revenue_account || '2110',
+        datev_bank_account: club.datev_bank_account || '1200',
+    }
+
+    return datevSettingsForms.value[club.id]
+}
+
+const datevExportFor = (club) => {
+    const now = new Date()
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+    const today = now.toISOString().slice(0, 10)
+
+    datevExportForms.value[club.id] ??= {
+        from: firstDay,
+        to: today,
+    }
+
+    return datevExportForms.value[club.id]
+}
+
+const saveDatevSettings = () => {
+    router.put(route('auth.club-memberships.datev-settings.update', selectedClub.value.id), datevSettingsFor(selectedClub.value), {
+        preserveScroll: true,
+    })
+}
+
+const datevExportUrl = computed(() => {
+    if (!selectedClub.value) return '#'
+
+    const params = new URLSearchParams(datevExportFor(selectedClub.value)).toString()
+
+    return `${route('auth.club-memberships.datev-export', selectedClub.value.id)}?${params}`
+})
 
 const invoiceForm = useForm({
     title: 'Mitgliedsbeitrag',
@@ -255,7 +295,7 @@ const inviteExternalMember = (member) => {
                 <div>
                     <h1 class="text-2xl font-bold text-primary">Mitgliederverwaltung</h1>
                     <p class="mt-1 text-sm text-secondary">
-                        Team-Anfragen, Vereinsmitgliedschaft, Beitraege, Rechnungen und Zahlungen verwalten.
+                        Team-Anfragen, Vereinsmitgliedschaft, Beiträge, Rechnungen und Zahlungen verwalten.
                     </p>
                 </div>
 
@@ -433,7 +473,7 @@ const inviteExternalMember = (member) => {
                             <div>
                                 <p class="font-semibold text-primary">{{ request.user.name }}</p>
                                 <p class="text-sm text-secondary">
-                                    {{ request.user.email }} moechte zu {{ request.team.name }}
+                                    {{ request.user.email }} möchte zu {{ request.team.name }}
                                 </p>
                             </div>
 
@@ -458,7 +498,7 @@ const inviteExternalMember = (member) => {
                 <div class="border-b border-border p-5">
                     <h2 class="text-lg font-semibold text-primary">Mitglieder & Beitragsdaten</h2>
                     <p class="mt-1 text-sm text-secondary">
-                        Teammitglieder koennen als echte Vereinsmitglieder oder als reine Teamteilnehmer markiert werden.
+                        Teammitglieder können als echte Vereinsmitglieder oder als reine Teamteilnehmer markiert werden.
                     </p>
                 </div>
 
@@ -551,7 +591,7 @@ const inviteExternalMember = (member) => {
                             <div>
                                 <label class="text-xs font-semibold uppercase text-secondary">Naechste automatische Rechnung</label>
                                 <input v-model="formFor(member).contribution_next_invoice_on" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                                <p class="mt-1 text-xs text-secondary">Automatik wird ab Pro/Elite ausgefuehrt.</p>
+                                <p class="mt-1 text-xs text-secondary">Automatik wird ab Pro/Elite ausgeführt.</p>
                             </div>
 
                             <div>
@@ -624,7 +664,7 @@ const inviteExternalMember = (member) => {
                                 <th class="py-2 pr-4">User</th>
                                 <th class="py-2 pr-4">Titel</th>
                                 <th class="py-2 pr-4">Betrag</th>
-                                <th class="py-2 pr-4">Faellig</th>
+                                <th class="py-2 pr-4">Fällig</th>
                                 <th class="py-2 pr-4">Status</th>
                                 <th class="py-2 pr-4">Aktion</th>
                             </tr>
@@ -640,7 +680,7 @@ const inviteExternalMember = (member) => {
                                     <select :value="invoice.status" class="rounded border border-border bg-inputBg px-2 py-1 text-xs text-primary" @change="updateInvoiceStatus(invoice, $event.target.value)">
                                         <option value="open">Offen</option>
                                         <option value="paid">Bezahlt</option>
-                                        <option value="overdue">Ueberfaellig</option>
+                                        <option value="overdue">Überfällig</option>
                                         <option value="cancelled">Storniert</option>
                                     </select>
                                 </td>
@@ -735,6 +775,70 @@ const inviteExternalMember = (member) => {
                         </tbody>
                     </table>
                     <p v-if="!(selectedClub.bank_transactions || []).length" class="py-6 text-sm text-secondary">Noch keine Bankumsaetze importiert.</p>
+                </div>
+            </section>
+
+            <section class="surface-card p-5">
+                <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                    <div class="max-w-2xl">
+                        <h2 class="text-lg font-semibold text-primary">DATEV / SKR42</h2>
+                        <p class="mt-1 text-sm text-secondary">
+                            Exportiere bezahlte Mitgliedsbeitraege als CSV-Buchungsstapel. Konten bitte mit Steuerberatung abstimmen.
+                        </p>
+                    </div>
+
+                    <a
+                        :href="datevExportUrl"
+                        class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
+                        :class="{ 'pointer-events-none opacity-50': capabilities.datev_export === false }"
+                        :title="capabilities.datev_export === false ? 'DATEV-Export ist ab Pro verfuegbar' : ''"
+                    >
+                        DATEV-CSV exportieren
+                    </a>
+                </div>
+
+                <div class="mt-4 grid gap-4 xl:grid-cols-[1fr_1fr]">
+                    <form class="grid gap-3 md:grid-cols-2" @submit.prevent="saveDatevSettings">
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Beraternummer</label>
+                            <input v-model="datevSettingsFor(selectedClub).datev_consultant_number" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Optional">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Mandantennummer</label>
+                            <input v-model="datevSettingsFor(selectedClub).datev_client_number" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Optional">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Erlöskonto SKR42</label>
+                            <input v-model="datevSettingsFor(selectedClub).datev_revenue_account" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="z. B. 2110">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Bankkonto SKR42</label>
+                            <input v-model="datevSettingsFor(selectedClub).datev_bank_account" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="z. B. 1200">
+                        </div>
+                        <div class="md:col-span-2">
+                            <button
+                                class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                                :disabled="capabilities.datev_export === false"
+                                :title="capabilities.datev_export === false ? 'DATEV-Export ist ab Pro verfuegbar' : ''"
+                            >
+                                DATEV-Einstellungen speichern
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="grid gap-3 rounded-lg border border-border bg-bg p-4 md:grid-cols-2">
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Von</label>
+                            <input v-model="datevExportFor(selectedClub).from" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Bis</label>
+                            <input v-model="datevExportFor(selectedClub).to" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                        </div>
+                        <p class="text-xs text-secondary md:col-span-2">
+                            Exportiert werden bezahlte Zahlungen im Zeitraum. Der CSV-Aufbau ist für die Beta bewusst schlicht und prüfbar gehalten.
+                        </p>
+                    </div>
                 </div>
             </section>
         </template>
@@ -952,7 +1056,7 @@ const inviteExternalMember = (member) => {
                     <label class="flex items-start gap-2 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-primary">
                         <input v-model="importForm.send_invitation" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                         <span>
-                            Einladung/Verknuepfung direkt aktivieren
+                            Einladung/Verknüpfung direkt aktivieren
                             <span class="block text-xs text-secondary">
                                 Bestehende Airmius-Konten werden verbunden, sonst wird eine Einladung an die E-Mail-Adresse gesendet.
                             </span>

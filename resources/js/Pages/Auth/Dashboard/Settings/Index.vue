@@ -23,7 +23,11 @@ const props = defineProps({
     confirmsTwoFactorAuthentication: Boolean,
     billingHistory: {
         type: Object,
-        default: () => ({ invoices: [], payments: [] }),
+        default: () => ({ invoices: [], payments: [], subscription_invoices: [] }),
+    },
+    currentUserSubscriptions: {
+        type: Array,
+        default: () => [],
     },
     socialAccounts: {
         type: Array,
@@ -88,10 +92,19 @@ const formatDate = (value) => {
 
 const invoiceStatusLabel = (status) => ({
     open: 'Offen',
+    awaiting_transfer: 'Warte auf Überweisung',
     paid: 'Bezahlt',
-    overdue: 'Ueberfaellig',
+    overdue: 'Überfällig',
     cancelled: 'Storniert',
+    active: 'Aktiv',
+    trialing: 'Testphase',
+    past_due: 'Zahlung offen',
+    cancels_at_period_end: 'Gekündigt zum Periodenende',
 }[status] || status)
+
+const cancelSubscription = (subscription) => {
+    router.post(route('auth.user-subscriptions.cancel', subscription.id), {}, { preserveScroll: true })
+}
 
 const connectedAccountFor = (provider) =>
     props.sportIntegrations.accounts.find((account) => account.provider === provider)
@@ -141,7 +154,7 @@ const formatDistance = (meters) => {
             <button @click="activeTab = 'profile'" :class="tabClass('profile')">Profil</button>
             <button @click="activeTab = 'address'" :class="tabClass('address')">Adresse</button>
             <button @click="activeTab = 'billing'" :class="tabClass('billing')">Zahlungen</button>
-            <button @click="activeTab = 'integrations'" :class="tabClass('integrations')">Verknuepfungen</button>
+            <button @click="activeTab = 'integrations'" :class="tabClass('integrations')">Verknüpfungen</button>
             <button @click="activeTab = 'design'" :class="tabClass('design')">Design</button>
             <button @click="activeTab = 'security'" :class="tabClass('security')">Sicherheit</button>
         </div>
@@ -247,9 +260,95 @@ const formatDistance = (meters) => {
 
         <div v-if="activeTab === 'billing'" class="space-y-5">
             <section class="surface-card p-5">
+                <h2 class="text-lg font-semibold text-primary">Meine Airmius Abos</h2>
+                <p class="mt-1 text-sm text-secondary">
+                    Aktuelle persönliche Airmius Pläne und Laufzeiten.
+                </p>
+
+                <div class="mt-4 grid gap-3 md:grid-cols-2">
+                    <div v-for="subscription in currentUserSubscriptions" :key="subscription.id" class="rounded-lg border border-border bg-bg p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="font-semibold text-primary">{{ subscription.plan?.name || 'Airmius Abo' }}</p>
+                                <p class="mt-1 text-sm text-secondary">{{ invoiceStatusLabel(subscription.status) }}</p>
+                            </div>
+                            <button
+                                v-if="!['cancelled', 'cancels_at_period_end'].includes(subscription.status)"
+                                type="button"
+                                class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-muted"
+                                @click="cancelSubscription(subscription)"
+                            >
+                                Kündigen
+                            </button>
+                        </div>
+                        <dl class="mt-3 space-y-2 text-sm">
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-secondary">Zahlungsart</dt>
+                                <dd class="text-primary">{{ subscription.payment_provider || '-' }}</dd>
+                            </div>
+                            <div class="flex justify-between gap-3">
+                                <dt class="text-secondary">Läuft bis</dt>
+                                <dd class="text-primary">{{ formatDate(subscription.current_period_ends_at || subscription.trial_ends_at) }}</dd>
+                            </div>
+                            <div v-if="subscription.cancels_at" class="flex justify-between gap-3">
+                                <dt class="text-secondary">Gekündigt zum</dt>
+                                <dd class="text-primary">{{ formatDate(subscription.cancels_at) }}</dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+
+                <p v-if="!currentUserSubscriptions.length" class="mt-4 text-sm text-secondary">
+                    Du hast noch kein persönliches Airmius Abo.
+                </p>
+            </section>
+
+            <section class="surface-card p-5">
+                <h2 class="text-lg font-semibold text-primary">Airmius Abo-Rechnungen</h2>
+                <p class="mt-1 text-sm text-secondary">
+                    Rechnungen für Airmius Pläne und Plattform-Abos.
+                </p>
+
+                <div class="mt-4 overflow-x-auto">
+                    <table class="min-w-full text-left text-sm">
+                        <thead class="text-xs uppercase text-secondary">
+                            <tr>
+                                <th class="py-2 pr-4">Nr.</th>
+                                <th class="py-2 pr-4">Plan</th>
+                                <th class="py-2 pr-4">Verein</th>
+                                <th class="py-2 pr-4">Betrag</th>
+                                <th class="py-2 pr-4">Fällig</th>
+                                <th class="py-2 pr-4">Status</th>
+                                <th class="py-2 pr-4 text-right">PDF</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-border">
+                            <tr v-for="invoice in billingHistory.subscription_invoices" :key="invoice.id">
+                                <td class="py-3 pr-4 text-primary">{{ invoice.number }}</td>
+                                <td class="py-3 pr-4 text-primary">{{ invoice.plan?.name || invoice.title || '-' }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ invoice.club?.name || '-' }}</td>
+                                <td class="py-3 pr-4 text-primary">{{ formatMoney(Number(invoice.amount_cents || 0) / 100) }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ formatDate(invoice.due_at) }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ invoiceStatusLabel(invoice.status) }}</td>
+                                <td class="py-3 pr-4 text-right">
+                                    <Link :href="route('auth.subscription-invoices.download', invoice.id)" class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-muted">
+                                        Download
+                                    </Link>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <p v-if="!billingHistory.subscription_invoices.length" class="py-6 text-sm text-secondary">
+                        Noch keine Airmius Abo-Rechnungen vorhanden.
+                    </p>
+                </div>
+            </section>
+
+            <section class="surface-card p-5">
                 <h2 class="text-lg font-semibold text-primary">Meine Rechnungen</h2>
                 <p class="mt-1 text-sm text-secondary">
-                    Hier siehst du offene und bezahlte Vereinsbeitraege.
+                    Hier siehst du offene und bezahlte Vereinsbeiträge.
                 </p>
 
                 <div class="mt-4 overflow-x-auto">
@@ -260,7 +359,7 @@ const formatDistance = (meters) => {
                                 <th class="py-2 pr-4">Verein</th>
                                 <th class="py-2 pr-4">Titel</th>
                                 <th class="py-2 pr-4">Betrag</th>
-                                <th class="py-2 pr-4">Faellig</th>
+                                <th class="py-2 pr-4">Fällig</th>
                                 <th class="py-2 pr-4">Status</th>
                             </tr>
                         </thead>
@@ -316,9 +415,9 @@ const formatDistance = (meters) => {
 
         <div v-if="activeTab === 'integrations'" class="space-y-5">
             <section class="surface-card p-5">
-                <h2 class="text-lg font-semibold text-primary">Login-Verknuepfungen</h2>
+                <h2 class="text-lg font-semibold text-primary">Login-Verknüpfungen</h2>
                 <p class="mt-1 text-sm text-secondary">
-                    Nutze Google oder Facebook fuer eine schnelle Anmeldung.
+                    Nutze Google oder Outlook für eine schnelle Anmeldung.
                 </p>
 
                 <div class="mt-4 grid gap-3 md:grid-cols-2">
@@ -355,7 +454,7 @@ const formatDistance = (meters) => {
             <section class="surface-card p-5">
                 <h2 class="text-lg font-semibold text-primary">Sportprogramme synchronisieren</h2>
                 <p class="mt-1 text-sm text-secondary">
-                    Verknuepfe Sport-Apps, damit Trainingsdaten spaeter automatisch in dein Airmius Profil fliessen koennen.
+                    Verknüpfe Sport-Apps, damit Trainingsdaten später automatisch in dein Airmius Profil fließen können.
                 </p>
 
                 <div class="mt-4 grid gap-3 lg:grid-cols-3">
@@ -394,7 +493,7 @@ const formatDistance = (meters) => {
                                 class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary"
                                 @click="syncIntegration(connectedAccountFor(key))"
                             >
-                                Sync pruefen
+                                Sync prüfen
                             </button>
                             <button
                                 v-if="connectedAccountFor(key)"
@@ -410,14 +509,14 @@ const formatDistance = (meters) => {
             </section>
 
             <section class="surface-card p-5">
-                <h2 class="text-lg font-semibold text-primary">Importierte Aktivitaeten</h2>
+                <h2 class="text-lg font-semibold text-primary">Importierte Aktivitäten</h2>
                 <div class="mt-4 overflow-x-auto">
                     <table class="min-w-full text-left text-sm">
                         <thead class="text-xs uppercase text-secondary">
                             <tr>
                                 <th class="py-2 pr-4">Datum</th>
                                 <th class="py-2 pr-4">Quelle</th>
-                                <th class="py-2 pr-4">Aktivitaet</th>
+                                <th class="py-2 pr-4">Aktivität</th>
                                 <th class="py-2 pr-4">Dauer</th>
                                 <th class="py-2 pr-4">Distanz</th>
                                 <th class="py-2 pr-4">Kalorien</th>
@@ -436,7 +535,7 @@ const formatDistance = (meters) => {
                     </table>
 
                     <p v-if="!sportIntegrations.activities.length" class="py-6 text-sm text-secondary">
-                        Noch keine Aktivitaeten importiert.
+                        Noch keine Aktivitäten importiert.
                     </p>
                 </div>
             </section>

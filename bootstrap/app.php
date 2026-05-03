@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\EnsureApplicationIsNotInMaintenance;
+use App\Http\Middleware\EnsureAccountIsNotSuspended;
 use App\Http\Middleware\EnsureGuardianConsentResolved;
 use App\Http\Middleware\EnsureProfileIsComplete;
 use App\Http\Middleware\SetCurrentClub;
@@ -30,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleInertiaRequests::class,
             EnsureApplicationIsNotInMaintenance::class,
+            EnsureAccountIsNotSuspended::class,
             EnsureProfileIsComplete::class,
             EnsureGuardianConsentResolved::class,
             AddLinkHeadersForPreloadedAssets::class,
@@ -38,6 +40,13 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'club' => SetCurrentClub::class,
+        ]);
+
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/stripe',
+            'webhooks/paypal',
+            'webhooks/commerce/stripe',
+            'webhooks/commerce/paypal',
         ]);
 
     })

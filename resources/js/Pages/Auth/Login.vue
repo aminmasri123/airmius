@@ -81,7 +81,7 @@ const goBack = () => {
                 <div class="mb-4 rounded-lg border border-border bg-inputBg p-3 text-sm text-secondary">
                     Eltern/Erziehungsberechtigte?
                     <Link :href="route('guardian-access.create')" class="font-semibold text-primary underline">
-                        Elternbereich ohne Konto oeffnen
+                        Elternbereich ohne Konto öffnen
                     </Link>
                 </div>
 

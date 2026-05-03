@@ -39,6 +39,10 @@ class Club extends Model
         'sepa_creditor_id',
         'sepa_iban',
         'sepa_bic',
+        'datev_consultant_number',
+        'datev_client_number',
+        'datev_revenue_account',
+        'datev_bank_account',
         'logo',
         'cover_image',
         'country',
@@ -154,6 +158,11 @@ class Club extends Model
     public function currentSubscription()
     {
         return $this->hasOne(ClubSubscription::class)->with('plan');
+    }
+
+    public function subscriptionInvoices()
+    {
+        return $this->hasMany(SubscriptionInvoice::class);
     }
 
     public function subscriptionPlan(): ?SubscriptionPlan

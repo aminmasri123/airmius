@@ -212,7 +212,7 @@
         },
         "digital": {
           "title": "Digitalisierung im Breitensport",
-          "text": "Welche Prozesse zuerst digitalisiert werden sollten und wo der Nutzen sofort spuerbar ist."
+          "text": "Welche Prozesse zuerst digitalisiert werden sollten und wo der Nutzen sofort spürbar ist."
         }
       }
     },
@@ -236,7 +236,7 @@
         }
       },
       "open_roles": "Offene Rollen",
-      "open_roles_text": "Aktuelle Rollen und Bereiche, in denen wir Unterstuetzung suchen.",
+      "open_roles_text": "Aktuelle Rollen und Bereiche, in denen wir Unterstützung suchen.",
       "apply": "Interesse melden",
       "roles": {
         "frontend": "Frontend Engineer",
@@ -260,7 +260,7 @@
       "courses": {
         "organization": {
           "title": "Teamorganisation",
-          "text": "Plane Trainings, Spiele und Aufgaben mit klaren Rollen und Ablaeufen."
+          "text": "Plane Trainings, Spiele und Aufgaben mit klaren Rollen und Abläufen."
         },
         "communication": {
           "title": "Teamkommunikation",

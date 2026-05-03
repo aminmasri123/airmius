@@ -110,7 +110,7 @@ class EventController extends Controller
 
         $this->service->delete($event);
 
-        return redirect()->route('auth.events.index')->with('success', 'Event geloescht.');
+        return redirect()->route('auth.events.index')->with('success', 'Event gelöscht.');
     }
 
     public function join(Request $request, Event $event)

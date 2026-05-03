@@ -32,7 +32,7 @@ class GuardianConsentRequested extends Notification
             ->subject('Zustimmung zur Registrierung bei Airmius')
             ->greeting('Hallo,')
             ->line($this->minor->name.' hat sich bei Airmius registriert und ist unter 16 Jahre alt.')
-            ->line('Bitte pruefen Sie die Anfrage. Sie können der Registrierung zustimmen oder sie ablehnen.')
+            ->line('Bitte prüfen Sie die Anfrage. Sie können der Registrierung zustimmen oder sie ablehnen.')
             ->action('Zustimmen oder ablehnen', route('guardian-consent.show', $this->minor->guardian_consent_token))
             ->line('Wenn Sie diese Anfrage nicht erwartet haben, können Sie diese E-Mail ignorieren.');
     }

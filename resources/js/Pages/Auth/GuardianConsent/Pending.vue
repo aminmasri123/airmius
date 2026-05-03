@@ -78,9 +78,9 @@ const logout = () => {
             </div>
 
             <div class="mt-4 rounded-lg border border-border bg-inputBg p-4 text-left text-sm text-secondary">
-                Eltern koennen den Elternbereich nutzen, um später Zustimmungen zu pruefen oder zu widerrufen:
+                Eltern können den Elternbereich nutzen, um später Zustimmungen zu prüfen oder zu widerrufen:
                 <Link :href="route('guardian-access.create')" class="font-semibold text-primary underline">
-                    Elternbereich oeffnen
+                    Elternbereich öffnen
                 </Link>
             </div>
 

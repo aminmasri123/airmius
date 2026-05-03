@@ -1,19 +1,19 @@
-# Airmius Business Model & Use Cases
+﻿# Airmius Business Model & Use Cases
 
 Stand: 2026-05-03
 
-Diese Datei beschreibt moegliche Use Cases, Abo-Plaene, Preislogik, kuenftige Erloesquellen und fehlende Funktionen fuer Airmius. Sie ist eine Produkt- und Business-Arbeitsgrundlage, keine finale rechtliche oder steuerliche Beratung.
+Diese Datei beschreibt mögliche Use Cases, Abo-Pläne, Preislogik, künftige Erlösquellen und fehlende Funktionen für Airmius. Sie ist eine Produkt- und Business-Arbeitsgrundlage, keine finale rechtliche oder steuerliche Beratung.
 
 ## Positionierung
 
 Airmius sollte nicht nur als Vereinssoftware auftreten, sondern als Sport-Plattform:
 
-- fuer Sportler: Profil, Sichtbarkeit, Skills, Teams, Events, Kommunikation
-- fuer Trainer: Trainingsplanung, Anwesenheit, Feedback, Teamkommunikation
-- fuer Vereine: Mitgliederverwaltung, Beitraege, Rechnungen, Teams, Sponsoren, Dateien
-- fuer Eltern: Zustimmung, Kinderueberblick, Sicherheit, Kommunikation
-- fuer Sponsoren und Marken: regionale Sichtbarkeit, Sport-Zielgruppen, Kampagnen
-- fuer Anbieter: Produkte, Kurse, Dienstleistungen und lokale Angebote rund um Sport
+- für Sportler: Profil, Sichtbarkeit, Skills, Teams, Events, Kommunikation
+- für Trainer: Trainingsplanung, Anwesenheit, Feedback, Teamkommunikation
+- für Vereine: Mitgliederverwaltung, Beiträge, Rechnungen, Teams, Sponsoren, Dateien
+- für Eltern: Zustimmung, Kinderüberblick, Sicherheit, Kommunikation
+- für Sponsoren und Marken: regionale Sichtbarkeit, Sport-Zielgruppen, Kampagnen
+- für Anbieter: Produkte, Kurse, Dienstleistungen und lokale Angebote rund um Sport
 
 Der Kernvorteil: Airmius kombiniert Vereinsverwaltung, soziales Netzwerk, Kommunikation, Sportprofil und kuenftig Marktplatz/Ads in einem System.
 
@@ -37,9 +37,9 @@ Funktionen:
 
 Moegliche Monetarisierung:
 
-- Free fuer alle Sportler
-- optional Pro-Profil fuer Sichtbarkeit, Statistiken, Portfolio und Bewerbungen
-- spaeter Vermittlungs-/Recruiting-Funktionen fuer Talente, Trainer und Vereine
+- Free für alle Sportler
+- optional Pro-Profil für Sichtbarkeit, Statistiken, Portfolio und Bewerbungen
+- später Vermittlungs-/Recruiting-Funktionen für Talente, Trainer und Vereine
 
 ### 2. Trainer
 
@@ -52,14 +52,14 @@ Funktionen:
 - Anwesenheiten
 - Teamchat
 - Dateien und Trainingsunterlagen
-- Feedback/Empfehlungen fuer Sportler
+- Feedback/Empfehlungen für Sportler
 - Statistiken und Fortschritt
 - E-Learning und Vorlagen
 
 Moegliche Monetarisierung:
 
-- Trainer kann kostenlos als Mitglied in Vereinsplaenen arbeiten
-- Solo-Trainer-Plan fuer private Gruppen, Camps oder Personal Training
+- Trainer kann kostenlos als Mitglied in Vereinsplänen arbeiten
+- Solo-Trainer-Plan für private Gruppen, Camps oder Personal Training
 - kostenpflichtige Kurse, Vorlagen oder Trainingsplaene im Marketplace
 
 ### 3. Verein
@@ -74,7 +74,7 @@ Funktionen:
 - Import per Excel/CSV
 - Mitgliedsnummern manuell oder automatisch
 - Lizenznummern der Mitglieder
-- Beitraege, Rechnungen, Zahlungshistorie
+- Beiträge, Rechnungen, Zahlungshistorie
 - Mahnungen
 - Beitrittsanfragen
 - Dateien und Ordner
@@ -84,21 +84,21 @@ Funktionen:
 
 Moegliche Monetarisierung:
 
-- monatliche Vereins-Abos nach Vereinsgroesse
-- Add-ons fuer Finanzen, Speicher, Website, Ads, Shop, API
+- monatliche Vereins-Abos nach Vereinsgröße
+- Add-ons für Finanzen, Speicher, Website, Ads, Shop, API
 - Onboarding, Datenmigration und Schulung als Service
 
 ### 4. Eltern / Erziehungsberechtigte
 
-Ziel: Rechtssichere und transparente Nutzung fuer Minderjaehrige.
+Ziel: Rechtssichere und transparente Nutzung für Minderjaehrige.
 
 Funktionen:
 
 - Elternzustimmung per E-Mail
 - Ablehnen oder Zustimmen
-- spaeterer Widerruf
+- späterer Widerruf
 - Elternbereich per E-Mail-Code
-- Kinderueberblick
+- Kinderüberblick
 - optional eigenes Elternkonto
 
 Moegliche Monetarisierung:
@@ -117,7 +117,7 @@ Funktionen jetzt/nahe Zukunft:
 - Sponsorprofile
 - Sichtbarkeit auf Vereins-/Teamseiten
 - Kampagnen und Angebote
-- Reporting fuer Klicks, Views, Leads
+- Reporting für Klicks, Views, Leads
 
 Moegliche Monetarisierung:
 
@@ -134,7 +134,7 @@ Moegliche Produkte:
 
 - Sportausruestung
 - Vereinskleidung
-- Tickets fuer Events
+- Tickets für Events
 - Trainingsplaene
 - E-Learning-Kurse
 - Camps und Workshops
@@ -144,14 +144,14 @@ Moegliche Produkte:
 Moegliche Monetarisierung:
 
 - Verkaufsprovision
-- Shop-Abos fuer Anbieter
+- Shop-Abos für Anbieter
 - Premium-Platzierungen
-- Ads fuer Produkte
+- Ads für Produkte
 - Affiliate-Deals
 
-## Empfohlene Abo-Plaene
+## Empfohlene Abo-Pläne
 
-Die Marktpreise fuer Vereinssoftware liegen grob zwischen sehr guenstig ca. 10-20 EUR/Monat fuer kleine Vereine und 39-99 EUR/Monat fuer groessere oder umfangreichere Loesungen. Airmius sollte nicht nur billiger sein, sondern mehr Wert bieten: Verwaltung plus Community plus Sportnetzwerk.
+Die Marktpreise für Vereinssoftware liegen grob zwischen sehr günstig ca. 10-20 EUR/Monat für kleine Vereine und 39-99 EUR/Monat für größere oder umfangreichere Lösungen. Airmius sollte nicht nur billiger sein, sondern mehr Wert bieten: Verwaltung plus Community plus Sportnetzwerk.
 
 ### Free
 
@@ -186,7 +186,7 @@ Enthalten:
 Warum:
 
 - sehr niedrige Einstiegshuerde
-- viral fuer Teams und kleine Vereine
+- viral für Teams und kleine Vereine
 - Sportler bleiben kostenlos im Netzwerk
 
 ### Starter
@@ -214,7 +214,7 @@ Enthalten:
 Warum:
 
 - psychologisch sehr attraktiv
-- guenstiger Einstieg fuer kleine Vereine
+- günstiger Einstieg für kleine Vereine
 - konkurrenzfaehig gegen einfache Vereinssoftware
 
 ### Club
@@ -242,7 +242,7 @@ Enthalten:
 
 Warum:
 
-- Kernplan fuer die meisten Vereine
+- Kernplan für die meisten Vereine
 - Preis/Leistung sehr stark, weil Verwaltung und Social-Funktionen zusammenkommen
 
 ### Pro
@@ -251,7 +251,7 @@ Preisvorschlag: 39 EUR/Monat oder 390 EUR/Jahr
 
 Zielgruppe:
 
-- groessere Vereine bis ca. 500 Mitglieder
+- größere Vereine bis ca. 500 Mitglieder
 - Vereine mit mehreren Abteilungen
 
 Enthalten:
@@ -272,8 +272,8 @@ Enthalten:
 
 Warum:
 
-- guter Sweet Spot fuer professionelle Vereine
-- klarer Mehrwert fuer Kassenwart, Vorstand und Trainer
+- guter Sweet Spot für professionelle Vereine
+- klarer Mehrwert für Kassenwart, Vorstand und Trainer
 
 ### Elite
 
@@ -284,7 +284,7 @@ Zielgruppe:
 - grosse Vereine
 - Leistungszentren
 - Mehrspartenvereine
-- Verbaende oder Organisationen
+- Verbände oder Organisationen
 
 Enthalten:
 
@@ -302,8 +302,8 @@ Enthalten:
 
 Warum:
 
-- bezahlt fuer Komplexitaet, Support und Skalierung
-- wichtig fuer groessere Kunden und Verbaende
+- bezahlt für Komplexität, Support und Skalierung
+- wichtig für größere Kunden und Verbände
 
 ### Enterprise / Verband
 
@@ -318,7 +318,7 @@ Zielgruppe:
 
 Enthalten:
 
-- Mandantenfaehigkeit
+- Mandantenfähigkeit
 - Verband-Admin
 - zentrale Statistiken
 - Datenmigration
@@ -348,9 +348,10 @@ Enthalten:
 | Rechnungen | nein | Basis | ja | ja | ja |
 | Zahlungshistorie | nein | Basis | ja | ja | ja |
 | Mahnungen | nein | nein | ja | ja | ja |
-| Wiederkehrende Beitraege | nein | nein | nein | ja | ja |
+| Wiederkehrende Beiträge | nein | nein | nein | ja | ja |
 | SEPA-XML-Export | nein | nein | nein | ja | ja |
 | Bankabgleich CSV | nein | nein | nein | ja | ja |
+| DATEV/SKR42 CSV | nein | nein | nein | ja | ja |
 | Sponsorenverwaltung | nein | nein | Basis | ja | erweitert |
 | Dateien | wenig | 1 GB | 5 GB | 20 GB | 100 GB |
 | Rollen & Rechte | Basis | Basis | ja | erweitert | custom |
@@ -389,9 +390,9 @@ Funktionen:
 
 - oeffentliche Vereinsseite
 - eigene URL/Subdomain
-- SEO-Seite fuer Verein
+- SEO-Seite für Verein
 - Sponsorbanner
-- Teamuebersicht
+- Teamübersicht
 - Jobs und Events
 
 ### Zahlungs-/Finanzmodul Plus
@@ -402,18 +403,18 @@ Preisvorschlag:
 
 Aktueller Umsetzungsstand:
 
-- Wiederkehrende Beitragsrechnungen sind fuer Pro und Elite umgesetzt.
+- Wiederkehrende Beitragsrechnungen sind für Pro und Elite umgesetzt.
 - Vereine setzen pro Mitglied Beitrag, Intervall und naechstes Rechnungsdatum.
-- Der Laravel Scheduler erstellt taeglich faellige offene Rechnungen und verhindert doppelte Rechnungen fuer denselben Zeitraum.
-- SEPA-XML-Export ist fuer Pro und Elite umgesetzt.
+- Der Laravel Scheduler erstellt täglich fällige offene Rechnungen und verhindert doppelte Rechnungen für denselben Zeitraum.
+- SEPA-XML-Export ist für Pro und Elite umgesetzt.
 - Vereine speichern Glaeubiger-ID, Vereinskonto und SEPA-Mandate je Mitglied.
-- Bankabgleich per CSV-Import ist fuer Pro und Elite umgesetzt.
-- Sichere Treffer werden automatisch bezahlt markiert, unklare Treffer bleiben als Vorschlag zur manuellen Bestaetigung.
-- DATEV und Payment-Provider sind noch separate Ausbaustufen dieses Finanzmoduls.
+- Bankabgleich per CSV-Import ist für Pro und Elite umgesetzt.
+- Sichere Treffer werden automatisch bezahlt markiert, unklare Treffer bleiben als Vorschlag zur manuellen Bestätigung.
+- DATEV/SKR42-CSV-Export ist für Pro und Elite umgesetzt.
+- Payment-Provider bleibt eine separate Ausbaustufe dieses Finanzmoduls.
 
 Funktionen:
 
-- DATEV/SKR42 Export
 - Zahlungsreferenzen
 - automatische Mahnlaeufe
 
@@ -423,7 +424,7 @@ Preisvorschlag:
 
 - Vereinsinterne Sponsorplaetze: im Club/Pro enthalten
 - regionale Ads: CPC/CPM oder Monatsbudget
-- Premium-Platzierung fuer Sponsoren: ab 19 EUR/Monat
+- Premium-Platzierung für Sponsoren: ab 19 EUR/Monat
 
 ### Marketplace / Produktverkauf
 
@@ -433,7 +434,7 @@ Preisvorschlag:
 - Anbieter-Profil ab 19 EUR/Monat
 - Premium-Platzierung optional
 
-## Zukuenftige Erlösquellen
+## Zukünftige Erlösquellen
 
 ### 1. Vereins-Abos
 
@@ -448,7 +449,7 @@ Funktionen:
 - erweitertes Profil
 - Portfolio/Medien
 - Sichtbarkeitsboost
-- Bewerbungsmappe fuer Teams/Vereine
+- Bewerbungsmappe für Teams/Vereine
 - tiefere Statistiken
 - Profilbesucher
 
@@ -485,7 +486,7 @@ Wichtig:
 - keine aggressiven Ads bei Minderjaehrigen
 - klare Kennzeichnung als Werbung
 - Datenschutz/Consent beachten
-- Vereine sollten Ads kontrollieren koennen
+- Vereine sollten Ads kontrollieren können
 
 ### 5. Marketplace
 
@@ -498,7 +499,7 @@ Moegliche Kategorien:
 - Kurse
 - Camps
 - Sponsoring
-- Dienstleistungen fuer Vereine
+- Dienstleistungen für Vereine
 
 Erlös:
 
@@ -520,7 +521,7 @@ Preisvorschlag:
 
 - Jobanzeige: 19-49 EUR
 - Top-Platzierung: 9-29 EUR extra
-- Recruiting-Paket fuer Vereine: im Pro/Elite enthalten oder Add-on
+- Recruiting-Paket für Vereine: im Pro/Elite enthalten oder Add-on
 
 ### 7. E-Learning
 
@@ -530,7 +531,7 @@ Moegliche Produkte:
 - Premium-Kurse
 - Vereins-Schulungen
 - Trainer-Zertifikate
-- Datenschutz-/Jugendschutzkurse fuer Vereine
+- Datenschutz-/Jugendschutzkurse für Vereine
 
 Preisvorschlag:
 
@@ -547,30 +548,29 @@ Preisvorschlag:
 - Standard: 249 EUR
 - Premium: 499+ EUR
 
-## Funktionen, die noch fehlen oder spaeter wichtig werden
+## Funktionen, die noch fehlen oder später wichtig werden
 
-### Fuer Vereinsverwaltung
+### Für Vereinsverwaltung
 
 - Zahlungsreferenzen
-- DATEV/SKR42 Export
 - Beitragsgruppen, Familienbeitraege, Ermaessigungen
 - Mitgliedsantraege mit Formular
 - digitale Unterschrift oder Checkbox-Zustimmung
 - Austrittsverwaltung
 - Dokumentvorlagen
 - Rollenmatrix pro Verein
-- Audit-Logs fuer sensible Aenderungen
+- Audit-Logs für sensible Änderungen
 
-### Fuer Kommunikation
+### Für Kommunikation
 
 - Push-Benachrichtigungen
 - E-Mail-Digests
 - Ankuendigungen pro Verein/Team
 - Umfragen
-- Lesebestaetigungen fuer wichtige Vereinsinfos
-- Eltern-Kommunikationskanal fuer Minderjaehrige
+- Lesebestaetigungen für wichtige Vereinsinfos
+- Eltern-Kommunikationskanal für Minderjaehrige
 
-### Fuer Trainings und Sport
+### Für Trainings und Sport
 
 - wiederkehrende Trainingsserien
 - Check-in per QR-Code
@@ -581,31 +581,31 @@ Preisvorschlag:
 - Trainingsplan-Vorlagen
 - Verletzungs-/Pause-Status
 
-### Fuer Community und Sicherheit
+### Für Community und Sicherheit
 
 - bessere automatische Moderation
 - Meldesystem mit SLA
 - Blockieren/Stummschalten
 - Altersgerechte Sichtbarkeit
-- Content-Freigabe fuer Minderjaehrige
+- Content-Freigabe für Minderjaehrige
 - Anti-Spam und Rate Limits
 - Vertrauensscore
 
-### Fuer SEO und Wachstum
+### Für SEO und Wachstum
 
 - oeffentliche Vereinsseiten
 - oeffentliche Sportlerprofile optional
 - oeffentliche Eventseiten
 - strukturierte Daten Schema.org
 - Inertia SSR
-- Landingpages fuer Sportarten und Staedte
+- Landingpages für Sportarten und Städte
 - Blog-Kategorien
 - Programmatic SEO: "Fussballverein in Berlin", "Laufgruppe in Koeln" usw.
 
-### Fuer Business
+### Für Business
 
-- Stripe oder anderer Payment Provider
-- Rechnungsstellung fuer Airmius-Abos
+- Stripe-, PayPal- und Überweisungs-Checkout für Airmius-Abos
+- Rechnungsstellung für Airmius-Abos
 - Aboverwaltung
 - Trial-Logik
 - Coupon-/Rabattcodes
@@ -623,8 +623,8 @@ Preisvorschlag:
 Preis:
 
 - Free
-- Club Beta fuer 9 EUR/Monat
-- Pro Beta fuer 19 EUR/Monat
+- Club Beta für 9 EUR/Monat
+- Pro Beta für 19 EUR/Monat
 
 Ziel:
 
@@ -667,32 +667,32 @@ Wichtig:
 
 ## Wichtigste Produktregel
 
-Sportler und Eltern muessen Airmius als hilfreich und sicher empfinden.
+Sportler und Eltern müssen Airmius als hilfreich und sicher empfinden.
 
-Vereine muessen Airmius als Entlastung wahrnehmen.
+Vereine müssen Airmius als Entlastung wahrnehmen.
 
-Sponsoren und Anbieter duerfen erst spaeter sichtbar monetarisiert werden, wenn genug echte Aktivitaet vorhanden ist.
+Sponsoren und Anbieter dürfen erst später sichtbar monetarisiert werden, wenn genug echte Aktivität vorhanden ist.
 
 ## Kurzfazit
 
 Der beste Weg ist ein Freemium-Modell:
 
 - Sportler kostenlos
-- kleine Vereine sehr guenstig
+- kleine Vereine sehr günstig
 - professionelle Vereinsverwaltung bezahlt
-- Add-ons fuer Finanzen, Speicher, Website, Migration
-- spaeter Ads, Marketplace, Jobs und E-Learning
+- Add-ons für Finanzen, Speicher, Website, Migration
+- später Ads, Marketplace, Jobs und E-Learning
 
-Damit bleibt das Preis-/Leistungsverhaeltnis stark und Airmius kann trotzdem mehrere Umsatzsaeulen aufbauen.
+Damit bleibt das Preis-/Leistungsverhaeltnis stark und Airmius kann trotzdem mehrere Umsatzsäulen aufbauen.
 
 ## Umsetzungsstand im Programm
 
 Gestartet:
 
-- Abo-Plaene als Datenmodell
+- Abo-Pläne als Datenmodell
 - Vereins-Abos als Datenmodell
 - Zielgruppen pro Abo-Plan: Sportler, Trainer, Verein, Eltern, Sponsor, Anbieter, Enterprise
-- persoenliche Nutzer-Abos als Datenmodell fuer Sportler Pro, Trainer Pro, Sponsoren und Anbieter
+- persönliche Nutzer-Abos als Datenmodell für Sportler Pro, Trainer Pro, Sponsoren und Anbieter
 - Free, Starter, Club, Pro und Elite als Standardplaene
 - zusaetzliche Standardplaene: Sportler Free, Sportler Pro, Trainer im Verein, Trainer Pro, Elternbereich, Sponsor Local, Anbieter Marketplace, Enterprise / Verband
 - oeffentliche Preisseite `/preise`
@@ -702,29 +702,52 @@ Gestartet:
 - Plan-Zuordnung pro Verein
 - Mitgliederlimit wird bei neuen Vereinsmitgliedern, externen Mitgliedern und Team-Beitritten beruecksichtigt
 - Mitgliederverwaltung zeigt aktuellen Vereinsplan und Nutzung
-- Plan-Gates fuer aktive Vereinsfunktionen:
+- Plan-Gates für aktive Vereinsfunktionen:
   - Free ist bei Mitgliedern, Teams und Speicher begrenzt
   - Starter schaltet Excel/CSV-Import, externe Mitglieder, E-Mail-Einladungen, Rechnungen und Zahlungsverfolgung frei
   - Club schaltet Mahnungen und Sponsorenverwaltung frei
-  - Pro/Elite sind fuer wiederkehrende Rechnungen/API vorbereitet
+  - Pro/Elite sind für wiederkehrende Rechnungen/API vorbereitet
 - Teamlimit wird beim Erstellen neuer Teams erzwungen
 - Speicherlimit wird bei Vereins-/Team-/Event-Dateien gegen den Vereinsplan geprueft
 - Google/Outlook Login als Social-Login-Grundlage
-- Social-Account-Verknuepfungen im Nutzerkonto
-- Sport-App-Verknuepfungen fuer Google Fit, Garmin und Mi Fitness als Beta-Grundlage
-- Datenmodell fuer importierte Sportaktivitaeten
-- Einstellungsbereich fuer Login- und Sportprogramm-Verknuepfungen
+- Social-Account-Verknüpfungen im Nutzerkonto
+- Sport-App-Verknüpfungen für Google Fit, Garmin und Mi Fitness als Beta-Grundlage
+- Datenmodell für importierte Sportaktivitaeten
+- Einstellungsbereich für Login- und Sportprogramm-Verknüpfungen
+- Stripe- und PayPal-Checkout für kostenpflichtige Airmius-Pläne
+- Zahlungsanbieter-Webhooks für abgeschlossene Stripe-Checkout-Sessions und PayPal-Orders
+- Zahlungs-Checkouts werden als eigene Datensaetze gespeichert und aktivieren danach Vereins- oder Nutzer-Abos
+- Überweisung/Rechnung als dritte Zahlungsart mit Verwendungszweck, Zahlungsziel und manueller Admin-Bestätigung
+- Airmius Abo-Rechnungen als eigene Rechnungstabelle mit PDF-Download für Nutzer und Admins
+- Admin-Übersicht für Airmius Abo-Rechnungen inklusive offener, bezahlter und überfälliger Summen
+- Abo-Lebenszyklus für Vereins- und Nutzer-Abos: Planwechsel, Laufzeitpflege, manuelle Verlängerung und Kündigung zum Periodenende
+- Nutzer können eigene persönliche Abos zum Periodenende kündigen
+- E-Mail-Kommunikation für Airmius Abo-Rechnungen: Überweisungsanweisung, Zahlungsbestaetigung und automatische Erinnerung bei überfälligen Rechnungen
+- Abo-Lifecycle-E-Mails: Ablaufwarnung/Testphase endet bald, Kündigungsbestaetigung, Verlängerungsbestaetigung und Zahlung-offen-Hinweis
+- Trial-Logik: Testphasen werden vor Ablauf erinnert und nach Ablauf automatisch auf `past_due` gesetzt, bis ein bezahlter Plan aktiv ist
+- Coupon-/Rabattcodes als Datenmodell und Adminbereich, inklusive Checkout-Beruecksichtigung auf der Preisseite
+- Add-on-Grundlage für Speicher, Website Plus und Finanzmodul Plus
+- Umsatzdashboard in der Commerce-Zentrale mit bezahlten/offenen Airmius-Rechnungen
+- Provider-Portal-Grundlage für Stripe-Kundenportale bei persönlichen Nutzer-Abos
+- Marketplace-Produktdatenmodell und Ads-Kampagnenmodell als Beta-Grundlage
+- Add-on-Self-Service unter `/commerce` für Vereine, inklusive Stripe, PayPal und Überweisung
+- Marketplace-Bestellungen unter `/commerce`, inklusive Bestellstatus und Provisionsberechnung
+- Commerce-Orders als gemeinsamer Zahlungsfluss für Add-ons und Marketplace-Produkte
+- Ads-Ausspielung mit `/ads/active` und Klicktracking über `/ads/{campaign}/click`
+- Commerce-Webhooks für Stripe und PayPal unter `/webhooks/commerce/stripe` und `/webhooks/commerce/paypal`, damit bezahlte Add-ons und Marketplace-Bestellungen auch ohne Rückkehrseite aktiviert werden.
+- E-Mail-Bestätigungen für abgeschlossene Commerce-Bestellungen.
+- Anbieter-/Sponsor-Self-Service unter `/commerce`: eigene Marketplace-Angebote einreichen, eigene Ads-Kampagnen vorbereiten und Status verfolgen.
+- Commerce-Zentrale `/admin/commerce` mit Bestellungen, Provisionssumme, Auszahlungssumme, Marketplace-Produkten, Ads-Kampagnen und Website-Anfragen.
+- Vereinswebsite-Service: Vereine können unter `/commerce` eine Website-/Domain-Anfrage an Airmius stellen, Admins können diese im Commerce-Bereich bearbeiten.
 
-Noch offen fuer spaetere Ausbaustufen:
+Noch offen für spätere Ausbaustufen:
 
-- echter Payment Provider fuer Airmius-Abos
-- automatische Rechnungen fuer Airmius-Abos
-- Trial-/Kuendigungslogik mit E-Mail-Kommunikation
-- Add-on-Kaeufe fuer Speicher, Website und Finanzmodul
-- Marketplace-Produktdatenmodell
-- Ads Manager und Kampagnenreporting
-- Anbieter-/Sponsor-Self-Service
-- DATEV/SKR42
-- Inertia SSR und programmatic SEO fuer Sportarten/Staedte
-- echte Provider-Freigaben/API-Schluessel fuer Garmin und Mi Fitness
-- konkretes Aktivitaets-Mapping fuer Google Fit/Garmin/Mi Fitness nach finaler API-Freigabe
+- echte automatisch wiederkehrende Provider-Abos mit Kündigung, Planwechsel, Rueckerstattung und Provider-Portal
+- Provider-seitige Trial-/Kündigungslogik für echte wiederkehrende Stripe/PayPal-Abos
+- echte Auszahlungen an Marketplace-Anbieter inklusive Zahlungsdatei/Provider-Payout
+- erweitertes Ads-Reporting nach Zeitraum, Zielgruppe und Platzierung
+- Anbieter-/Sponsor-Onboarding mit Verifizierung, Steuerdaten und Auszahlungskonto
+- Inertia SSR und programmatic SEO für Sportarten/Städte
+- echte Provider-Freigaben/API-Schluessel für Garmin und Mi Fitness
+- konkretes Aktivitäts-Mapping für Google Fit/Garmin/Mi Fitness nach finaler API-Freigabe
+

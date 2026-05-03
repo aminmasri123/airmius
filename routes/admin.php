@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BlogPostController;
+use App\Http\Controllers\AdminCommerceController;
 use App\Http\Controllers\GamificationRuleController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MemberController;
@@ -10,6 +11,8 @@ use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SportAdminController;
 use App\Http\Controllers\SponsorController;
+use App\Http\Controllers\SubscriptionCheckoutController;
+use App\Http\Controllers\SubscriptionInvoiceController;
 use App\Http\Controllers\SubscriptionPlanController;
 use Illuminate\Support\Facades\Route;
 
@@ -71,6 +74,29 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/admin/subscriptions', [SubscriptionPlanController::class, 'index'])->middleware('can:subscriptions.manage')->name('admin.subscriptions.index');
     Route::put('/admin/subscription-plans/{subscriptionPlan}', [SubscriptionPlanController::class, 'update'])->middleware('can:subscriptions.manage')->name('admin.subscription-plans.update');
     Route::put('/admin/clubs/{club}/subscription', [SubscriptionPlanController::class, 'assignClub'])->middleware('can:subscriptions.manage')->name('admin.clubs.subscription.update');
+    Route::put('/admin/users/{user}/subscription', [SubscriptionPlanController::class, 'assignUser'])->middleware('can:subscriptions.manage')->name('admin.users.subscription.update');
+    Route::post('/admin/club-subscriptions/{subscription}/cancel', [SubscriptionPlanController::class, 'cancelClub'])->middleware('can:subscriptions.manage')->name('admin.club-subscriptions.cancel');
+    Route::post('/admin/club-subscriptions/{subscription}/renew', [SubscriptionPlanController::class, 'renewClub'])->middleware('can:subscriptions.manage')->name('admin.club-subscriptions.renew');
+    Route::post('/admin/user-subscriptions/{subscription}/cancel', [SubscriptionPlanController::class, 'cancelUser'])->middleware('can:subscriptions.manage')->name('admin.user-subscriptions.cancel');
+    Route::post('/admin/user-subscriptions/{subscription}/renew', [SubscriptionPlanController::class, 'renewUser'])->middleware('can:subscriptions.manage')->name('admin.user-subscriptions.renew');
+    Route::post('/admin/subscription-checkouts/{checkout}/mark-paid', [SubscriptionCheckoutController::class, 'markBankTransferPaid'])->middleware('can:subscriptions.manage')->name('admin.subscription-checkouts.mark-paid');
+    Route::get('/admin/subscription-invoices', [SubscriptionInvoiceController::class, 'index'])->middleware('can:subscriptions.manage')->name('admin.subscription-invoices.index');
+    Route::get('/admin/subscription-invoices/{subscriptionInvoice}/download', [SubscriptionInvoiceController::class, 'download'])->middleware('can:subscriptions.manage')->name('admin.subscription-invoices.download');
+    Route::get('/admin/commerce', [AdminCommerceController::class, 'index'])->middleware('can:subscriptions.manage')->name('admin.commerce.index');
+    Route::post('/admin/commerce/coupons', [AdminCommerceController::class, 'storeCoupon'])->middleware('can:subscriptions.manage')->name('admin.commerce.coupons.store');
+    Route::put('/admin/commerce/coupons/{coupon}', [AdminCommerceController::class, 'updateCoupon'])->middleware('can:subscriptions.manage')->name('admin.commerce.coupons.update');
+    Route::post('/admin/commerce/addons', [AdminCommerceController::class, 'storeAddon'])->middleware('can:subscriptions.manage')->name('admin.commerce.addons.store');
+    Route::put('/admin/commerce/addons/{addon}', [AdminCommerceController::class, 'updateAddon'])->middleware('can:subscriptions.manage')->name('admin.commerce.addons.update');
+    Route::post('/admin/commerce/products', [AdminCommerceController::class, 'storeProduct'])->middleware('can:subscriptions.manage')->name('admin.commerce.products.store');
+    Route::put('/admin/commerce/products/{product}', [AdminCommerceController::class, 'updateProduct'])->middleware('can:subscriptions.manage')->name('admin.commerce.products.update');
+    Route::post('/admin/commerce/campaigns', [AdminCommerceController::class, 'storeCampaign'])->middleware('can:subscriptions.manage')->name('admin.commerce.campaigns.store');
+    Route::put('/admin/commerce/campaigns/{campaign}', [AdminCommerceController::class, 'updateCampaign'])->middleware('can:subscriptions.manage')->name('admin.commerce.campaigns.update');
+    Route::post('/admin/commerce/orders/{order}/mark-paid', [AdminCommerceController::class, 'markOrderPaid'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.mark-paid');
+    Route::put('/admin/commerce/orders/{order}/issue', [AdminCommerceController::class, 'updateOrderIssue'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.issue');
+    Route::put('/admin/commerce/website-requests/{websiteRequest}', [AdminCommerceController::class, 'updateWebsiteRequest'])->middleware('can:subscriptions.manage')->name('admin.commerce.website-requests.update');
+    Route::post('/admin/commerce/payouts/{user}', [AdminCommerceController::class, 'createPayout'])->middleware('can:subscriptions.manage')->name('admin.commerce.payouts.create');
+    Route::put('/admin/commerce/payouts/{payout}/paid', [AdminCommerceController::class, 'markPayoutPaid'])->middleware('can:subscriptions.manage')->name('admin.commerce.payouts.paid');
+    Route::put('/admin/commerce/payout-profiles/{profile}', [AdminCommerceController::class, 'updatePayoutProfile'])->middleware('can:subscriptions.manage')->name('admin.commerce.payout-profiles.update');
 
     // INVOICES
     Route::get('/admin/invoices', [InvoiceController::class, 'index'])->middleware('can:billing.manage')->name('invoices.index');

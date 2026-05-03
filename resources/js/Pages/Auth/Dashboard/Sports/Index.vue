@@ -91,7 +91,7 @@ const createSport = () => {
 
 const deleteSport = () => {
     if (!selectedSport.value || selectedSport.value.usage_count > 0) return
-    if (!window.confirm(`Sportart "${selectedSport.value.name}" wirklich loeschen?`)) return
+    if (!window.confirm(`Sportart "${selectedSport.value.name}" wirklich löschen?`)) return
 
     router.delete(route('admin.sports.destroy', selectedSport.value.id), {
         preserveScroll: true,
@@ -103,7 +103,7 @@ const usageLabel = (sport) => {
         `${sport.teams_count} Teams`,
         `${sport.clubs_count} Vereine`,
         `${sport.profiles_count} Profile`,
-        `${sport.posts_count} Beitraege`,
+        `${sport.posts_count} Beiträge`,
     ]
 
     return parts.join(' · ')
@@ -129,7 +129,7 @@ const usageLabel = (sport) => {
 
                     <p class="mt-2 max-w-3xl text-sm leading-relaxed text-secondary">
                         Pflege zentrale Sportarten, Aktivstatus und Sortierung. Die Nutzungszahlen zeigen dir,
-                        wie viele Teams, Vereine, Profile und Beitraege je Sportart existieren.
+                        wie viele Teams, Vereine, Profile und Beiträge je Sportart existieren.
                     </p>
                 </div>
 
@@ -281,7 +281,7 @@ const usageLabel = (sport) => {
                                 <button type="button"
                                     class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
                                     :disabled="selectedSport.usage_count > 0"
-                                    :title="selectedSport.usage_count > 0 ? 'Genutzte Sportarten bitte deaktivieren statt loeschen.' : 'Sportart loeschen'"
+                                    :title="selectedSport.usage_count > 0 ? 'Genutzte Sportarten bitte deaktivieren statt löschen.' : 'Sportart löschen'"
                                     @click="deleteSport">
                                     Löschen
                                 </button>

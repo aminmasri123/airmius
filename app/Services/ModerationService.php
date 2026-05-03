@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\ModerationFlag;
+use App\Models\AccountWarning;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 class ModerationService
@@ -64,6 +66,12 @@ class ModerationService
     private const SEVERITY_SCORE = [
         'low' => 1,
         'medium' => 2,
+        'high' => 3,
+    ];
+
+    private const WARNING_POINTS = [
+        'low' => 0,
+        'medium' => 1,
         'high' => 3,
     ];
 
@@ -131,13 +139,15 @@ class ModerationService
             return null;
         }
 
+        $automatedAction = $result['severity'] === 'high' ? 'content_held_warning' : 'review_warning';
+
         if ($model->isFillable('moderation_status')) {
             $model->forceFill([
-                'moderation_status' => $result['severity'] === 'high' ? 'flagged_high' : 'flagged',
+                'moderation_status' => $result['severity'] === 'high' ? 'removed' : 'flagged',
             ])->save();
         }
 
-        return ModerationFlag::create([
+        $flag = ModerationFlag::create([
             'flaggable_type' => $model::class,
             'flaggable_id' => $model->getKey(),
             'user_id' => $userId,
@@ -145,7 +155,62 @@ class ModerationService
             'severity' => $result['severity'],
             'categories' => $result['categories'],
             'matched_terms' => $result['matched_terms'],
+            'automated_action' => $automatedAction,
         ]);
+
+        $this->warnAndSuspendIfNeeded($flag);
+
+        return $flag;
+    }
+
+    private function warnAndSuspendIfNeeded(ModerationFlag $flag): void
+    {
+        if (! $flag->user_id) {
+            return;
+        }
+
+        $points = self::WARNING_POINTS[$flag->severity] ?? 0;
+
+        if ($points <= 0) {
+            return;
+        }
+
+        AccountWarning::create([
+            'user_id' => $flag->user_id,
+            'moderation_flag_id' => $flag->id,
+            'severity' => $flag->severity,
+            'points' => $points,
+            'reason' => 'Automatische Moderation: '.implode(', ', $flag->categories ?: []),
+        ]);
+
+        $this->suspendIfThresholdReached($flag->user_id);
+    }
+
+    private function suspendIfThresholdReached(int $userId): void
+    {
+        $since = now()->subDays(90);
+        $warnings = AccountWarning::query()
+            ->where('user_id', $userId)
+            ->where('created_at', '>=', $since)
+            ->get();
+
+        $points = $warnings->sum('points');
+        $highCount = $warnings->where('severity', 'high')->count();
+
+        if ($points < 5 && $highCount < 2) {
+            return;
+        }
+
+        User::query()
+            ->whereKey($userId)
+            ->where('account_status', '!=', 'suspended')
+            ->update([
+                'account_status' => 'suspended',
+                'suspended_until' => now()->addDays($highCount >= 2 ? 14 : 7),
+                'suspension_reason' => $highCount >= 2
+                    ? 'Automatische Sperre nach zwei schweren Moderationsverstoessen.'
+                    : 'Automatische Sperre nach wiederholten Moderationsverstoessen.',
+            ]);
     }
 
     private function normalize(string $text): string

@@ -135,7 +135,7 @@ class FileController extends Controller
 
         $this->service->delete($file);
 
-        return back()->with('success', 'Datei gelÃ¶scht.');
+        return back()->with('success', 'Datei gelöscht.');
     }
 
     public function share(Request $request, File $file)

@@ -276,7 +276,7 @@ class TeamController extends Controller
 
         $team->delete();
 
-        return back()->with('success', 'Team geloescht');
+        return back()->with('success', 'Team gelöscht');
     }
 
     public function invite(Request $request, Team $team)
@@ -431,7 +431,7 @@ class TeamController extends Controller
             ->filter(fn (User $member) => in_array($member->pivot?->role, ['owner', 'admin', 'manager'], true))
             ->each(fn (User $member) => AppNotification::send($member, 'team.join_request', [
                 'title' => 'Neue Team-Anfrage',
-                'body' => $request->user()->name.' moechte '.$team->name.' beitreten.',
+                'body' => $request->user()->name.' möchte '.$team->name.' beitreten.',
                 'url' => route('auth.club-memberships.index'),
                 'team_id' => $team->id,
                 'join_request_id' => $joinRequest->id,

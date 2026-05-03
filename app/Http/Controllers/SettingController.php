@@ -24,6 +24,13 @@ class SettingController extends Controller
                         'Wir verbessern gerade die Plattform. Bitte versuche es in Kürze erneut.'
                     ),
                 ],
+                'billing' => [
+                    'bank_account_holder' => Setting::valueFor('billing_bank_account_holder', 'Airmius'),
+                    'bank_name' => Setting::valueFor('billing_bank_name', ''),
+                    'iban' => Setting::valueFor('billing_iban', ''),
+                    'bic' => Setting::valueFor('billing_bic', ''),
+                    'payment_terms_days' => (int) Setting::valueFor('billing_payment_terms_days', 14),
+                ],
             ],
         ]);
     }
@@ -69,11 +76,21 @@ class SettingController extends Controller
             'maintenance_enabled' => ['required', 'boolean'],
             'maintenance_title' => ['required', 'string', 'max:120'],
             'maintenance_message' => ['required', 'string', 'max:500'],
+            'billing_bank_account_holder' => ['nullable', 'string', 'max:120'],
+            'billing_bank_name' => ['nullable', 'string', 'max:120'],
+            'billing_iban' => ['nullable', 'string', 'max:40'],
+            'billing_bic' => ['nullable', 'string', 'max:20'],
+            'billing_payment_terms_days' => ['required', 'integer', 'min:1', 'max:60'],
         ]);
 
         Setting::setValue('maintenance_mode', (bool) $data['maintenance_enabled']);
         Setting::setValue('maintenance_title', $data['maintenance_title']);
         Setting::setValue('maintenance_message', $data['maintenance_message']);
+        Setting::setValue('billing_bank_account_holder', $data['billing_bank_account_holder'] ?? '');
+        Setting::setValue('billing_bank_name', $data['billing_bank_name'] ?? '');
+        Setting::setValue('billing_iban', strtoupper(str_replace(' ', '', $data['billing_iban'] ?? '')));
+        Setting::setValue('billing_bic', strtoupper(str_replace(' ', '', $data['billing_bic'] ?? '')));
+        Setting::setValue('billing_payment_terms_days', (int) $data['billing_payment_terms_days']);
 
         return back()->with('success', $data['maintenance_enabled']
             ? 'Wartemodus wurde aktiviert.'
