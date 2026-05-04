@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -15,6 +16,14 @@ class EnsureAccountIsNotSuspended
 
         if (! $user || $user->can('system.manage')) {
             return $next($request);
+        }
+
+        if ($user->privacy_status === 'anonymized') {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login');
         }
 
         if ($user->account_status !== 'suspended') {

@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 
 class ChatService
 {
+    public function __construct(private MediaOptimizer $mediaOptimizer) {}
+
     public function sendMessage($user, $conversationId, ?string $text, array $attachments = [])
     {
         return DB::transaction(function () use ($user, $conversationId, $text, $attachments) {
@@ -23,15 +25,14 @@ class ChatService
             $event = $conversation->event;
 
             foreach ($attachments as $attachment) {
-                $path = $attachment->store($this->directoryFor($user->id, $conversation, $event), 'public');
+                $optimized = $this->mediaOptimizer->store($attachment, $this->directoryFor($user->id, $conversation, $event));
+
                 $file = File::create([
                     'club_id' => $conversation->club_id,
                     'team_id' => $conversation->team_id,
                     'event_id' => $event?->id,
                     'user_id' => $user->id,
-                    'path' => $path,
-                    'type' => $attachment->getMimeType() ?: 'application/octet-stream',
-                    'size' => $attachment->getSize(),
+                    ...$optimized,
                 ]);
 
                 $message->attachments()->create(['file_id' => $file->id]);

@@ -17,6 +17,7 @@ use App\Http\Controllers\LikeController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrganizationJobController;
+use App\Http\Controllers\OutfitSubscriptionController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\PostHelpfulController;
 use App\Http\Controllers\ProfileCompletionController;
@@ -69,6 +70,12 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::post('/commerce/campaigns', [CommerceCheckoutController::class, 'storeOwnCampaign'])->name('auth.commerce.campaigns.store');
     Route::post('/commerce/website-requests', [CommerceCheckoutController::class, 'storeWebsiteRequest'])->name('auth.commerce.website-requests.store');
     Route::post('/commerce/payout-profile', [CommerceCheckoutController::class, 'storePayoutProfile'])->name('auth.commerce.payout-profile.store');
+    Route::get('/outfit-subscriptions', [OutfitSubscriptionController::class, 'index'])->name('auth.outfit-subscriptions.index');
+    Route::put('/outfit-subscriptions/style-profile', [OutfitSubscriptionController::class, 'updateProfile'])->name('auth.outfit-subscriptions.profile.update');
+    Route::post('/outfit-subscriptions/plans/{plan}', [OutfitSubscriptionController::class, 'store'])->name('auth.outfit-subscriptions.store');
+    Route::post('/outfit-subscriptions/{subscription}/pause', [OutfitSubscriptionController::class, 'pause'])->name('auth.outfit-subscriptions.pause');
+    Route::post('/outfit-subscriptions/{subscription}/resume', [OutfitSubscriptionController::class, 'resume'])->name('auth.outfit-subscriptions.resume');
+    Route::post('/outfit-subscriptions/{subscription}/cancel', [OutfitSubscriptionController::class, 'cancel'])->name('auth.outfit-subscriptions.cancel');
     Route::get('/settings/sport-integrations/{provider}/connect', [SportIntegrationController::class, 'redirect'])
         ->name('auth.sport-integrations.connect');
     Route::get('/settings/sport-integrations/{provider}/callback', [SportIntegrationController::class, 'callback'])

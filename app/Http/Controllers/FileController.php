@@ -10,6 +10,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Services\FileService;
 use App\Services\PlanFeatureService;
+use App\Support\UploadStorage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -124,9 +125,9 @@ class FileController extends Controller
     {
         $this->authorize('view', $file);
 
-        abort_unless(Storage::disk('public')->exists($file->path), 404);
+        abort_unless(Storage::disk(UploadStorage::disk())->exists($file->path), 404);
 
-        return Storage::disk('public')->download($file->path);
+        return Storage::disk(UploadStorage::disk())->download($file->path);
     }
 
     public function destroy(File $file)

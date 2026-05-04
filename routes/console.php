@@ -19,3 +19,11 @@ Schedule::command('airmius:generate-recurring-contribution-invoices')
 Schedule::command('airmius:send-subscription-invoice-emails')
     ->dailyAt('08:15')
     ->withoutOverlapping();
+
+Schedule::command('airmius:prepare-outfit-deliveries')
+    ->dailyAt('08:30')
+    ->withoutOverlapping();
+
+Schedule::command('airmius:process-inactive-accounts')
+    ->dailyAt('03:30')
+    ->withoutOverlapping();

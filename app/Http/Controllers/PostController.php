@@ -12,6 +12,7 @@ use App\Services\GamificationService;
 use App\Services\MediaOptimizer;
 use App\Services\ModerationService;
 use App\Services\PostService;
+use App\Support\UploadStorage;
 use App\Support\Roles;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -200,7 +201,7 @@ class PostController extends Controller
 
         if ($request->hasFile('image')) {
             if ($post->image) {
-                Storage::disk('public')->delete($post->image);
+                Storage::disk(UploadStorage::disk())->delete($post->image);
             }
 
             $data['image'] = $this->mediaOptimizer->store($request->file('image'), 'posts')['path'];
@@ -231,7 +232,10 @@ class PostController extends Controller
 
         foreach ($post->attachments as $attachment) {
             if ($attachment->file) {
-                Storage::disk('public')->delete($attachment->file->path);
+                Storage::disk(UploadStorage::disk())->delete(array_filter([
+                    $attachment->file->path,
+                    $attachment->file->thumbnail_path,
+                ]));
                 $attachment->file->delete();
             }
         }

@@ -18,6 +18,8 @@ Use Cases:
 - Vereine öffentlich suchen.
 - Blog lesen.
 - Jobs ansehen.
+- Marketplace ansehen.
+- Werbeagentur für Vereine ansehen.
 - E-Learning-Infoseite ansehen.
 - Gamification-Infoseite ansehen.
 - Top-Inhalte ansehen.
@@ -37,6 +39,8 @@ Relevante Routen:
 - `/blog`
 - `/blog/{slug}`
 - `/jobs`
+- `/marketplace`
+- `/werbeagentur-fuer-vereine`
 - `/e-learning`
 - `/gamification`
 - `/top-inhalte`
@@ -72,6 +76,9 @@ Use Cases:
 - Google/Outlook Social Login nutzen.
 - Sportprogramm-Verknüpfungen verwalten.
 - Konto kann bei Moderationsverstößen gesperrt werden.
+- Bei längerer Inaktivität Warnungen per E-Mail erhalten.
+- Durch erneute Anmeldung die geplante Inaktivitäts-Anonymisierung stoppen.
+- Konto kann nach sehr langer Inaktivität anonymisiert werden.
 
 Relevante Routen:
 
@@ -119,8 +126,11 @@ Use Cases:
 - Teams beitreten.
 - Events ansehen und teilnehmen.
 - Fahrgemeinschaften nutzen.
+- Marketplace als Gast ansehen.
 - Marketplace kaufen.
 - Zahlungs- und Bestellprobleme melden.
+- Sportkleidung-Abo mit Style-Profil nutzen.
+- Monatliche Outfit-Lieferungen verfolgen.
 
 Relevante Routen:
 
@@ -144,6 +154,7 @@ Relevante Routen:
 - `/events`
 - `/rides`
 - `/commerce`
+- `/outfit-subscriptions`
 
 ### 1.4 Minderjähriger Nutzer unter 16
 
@@ -270,7 +281,7 @@ Use Cases:
 - Jobs veröffentlichen.
 - Sponsorendaten verwalten.
 - Add-ons buchen.
-- Vereinswebsite-Service anfragen.
+- Werbeagentur-/Vereinswebsite-Service anfragen.
 - Vereins-Abo verwalten.
 
 Relevante Routen:
@@ -451,7 +462,7 @@ Use Cases:
 - Marketplace-Produkte verwalten.
 - Ads-Kampagnen verwalten.
 - Commerce-Bestellungen verwalten.
-- Website-Anfragen verwalten.
+- Werbeagentur-/Website-Anfragen verwalten.
 - Auszahlungsprofile prüfen.
 - Auszahlungen vorbereiten.
 - Auszahlungen als bezahlt markieren.
@@ -810,6 +821,29 @@ Use Cases:
 - Admin markiert erstattet.
 - Admin markiert gelöst.
 
+### 2.18a Sportkleidung-Abos
+
+Use Cases:
+
+- Nutzer öffnet Outfit-Abo-Dashboard.
+- Nutzer pflegt Style-Profil mit Sportfokus, Größen, Passform, Farben und No-Gos.
+- Nutzer sieht öffentliche Outfit-Abo-Pläne.
+- Nutzer sieht Sponsor-Subventionen direkt im Preis.
+- Nutzer wählt monatliches Sportkleidung-Abo.
+- System erstellt erste geplante Lieferung.
+- Nutzer pausiert Abo.
+- Nutzer setzt pausiertes Abo fort.
+- Nutzer kündigt Abo.
+- Nutzer sieht Lieferübersicht und Tracking-Daten, sobald vorhanden.
+- Scheduler plant fällige Monatslieferungen automatisch.
+- Nutzer wird über geplante Lieferung benachrichtigt.
+- Admin verwaltet Outfit-Abo-Pläne separat.
+- Admin verknüpft Sponsor mit Outfit-Abo-Plan.
+- Admin definiert Branding-Regel wie Sponsor-Logo, Vereinslogo oder individuell.
+- Kaufen und Nutzen ist für eingeloggte Nutzer offen.
+- Öffentliches Marketplace-Listing zeigt Outfit-Abos auch Gästen.
+- Admin-Angebotserstellung und Planverwaltung laufen über eigene Permissions.
+
 ### 2.19 Marketplace-Anbieter und Auszahlungen
 
 Use Cases:
@@ -850,11 +884,12 @@ Use Cases:
 - Sponsor-Reporting anzeigen.
 - Sponsoren im Adminbereich verwalten.
 
-### 2.21 Website-Service
+### 2.21 Werbeagentur- und Website-Service
 
 Use Cases:
 
-- Verein fragt Website an.
+- Gast sieht die öffentliche Werbeagentur-Seite.
+- Verein fragt Website, Landingpage oder Kampagne an.
 - Domainwunsch erfassen.
 - Ziele erfassen.
 - Notizen erfassen.
@@ -866,7 +901,7 @@ Use Cases:
   - in_progress
   - done
   - cancelled
-- Website-Service ist rechtlich nur Anfrage, bis ein Angebot angenommen wird.
+- Werbeagentur-/Website-Service ist rechtlich nur Anfrage, bis ein Angebot angenommen wird.
 
 ### 2.22 Blog und CMS
 
@@ -914,8 +949,13 @@ Use Cases:
   - Zahlungen.
   - Marketplace.
   - Ads.
-  - Website-Service.
+  - Werbeagentur-/Website-Service.
   - Moderation.
+  - Inaktivität, Löschung, Anonymisierung und gesetzliche Aufbewahrungspflichten.
+- AVV/DPA-Nachweise für Hostinger und Cloudflare intern ablegen.
+- Cloudflare als US-Anbieter mit DPA, SCCs und DPF dokumentieren.
+- EU-only Aussagen nur verwenden, wenn Cloudflare-Datenlokalisierung tatsächlich gebucht und aktiviert ist.
+- VVT-Einträge und Subprocessor-Prüfprotokoll pflegen.
 
 ### 2.25 Moderation, Meldungen und Sperren
 
@@ -1029,6 +1069,10 @@ Use Cases:
 - Abo-Ende und Trial-Ende prüfen.
 - Offene Abo-Rechnungen erinnern.
 - Überfällige Rechnungen markieren.
+- Inaktive Konten prüfen.
+- Inaktivitätswarnungen nach ca. 12 und 18 Monaten senden.
+- Konten nach ca. 24 Monaten zur Anonymisierung vormerken.
+- Vorgemerkte Konten nach ca. 30 Tagen ohne Reaktion anonymisieren.
 
 ### 2.32 Broadcast und Echtzeit
 
@@ -1161,6 +1205,12 @@ Use Cases:
 - Eltern können über E-Mail-Code zugreifen.
 - Elternkonto ist optional.
 - Minderjährige sollen besonders vor Ads, Kontaktmissbrauch und problematischen Inhalten geschützt werden.
+- Personenbezogene Daten werden nach Zweckbindung und Speicherbegrenzung nur so lange aktiv gehalten, wie sie für Nutzung, Vertrag, Sicherheit oder gesetzliche Pflichten erforderlich sind.
+- Inaktive Konten werden gestuft behandelt: erste Warnung nach ca. 12 Monaten, zweite Warnung nach ca. 18 Monaten, Vormerkung zur Anonymisierung nach ca. 24 Monaten.
+- Nach Vormerkung erhalten Nutzer eine letzte Reaktionsfrist von ca. 30 Tagen.
+- Eine erneute Anmeldung setzt die Inaktivitätswarnungen und geplante Anonymisierung zurück.
+- Bei Anonymisierung werden Profilangaben, Tokens, Social-/Sport-Verknüpfungen, Profilbilder, persönliche Medien und persönliche Inhalte soweit möglich entfernt oder anonymisiert.
+- Rechnungs-, Zahlungs-, Bestell-, Vereins- und Nachweisdaten bleiben erhalten, soweit gesetzliche Aufbewahrungspflichten oder berechtigte Nachweisinteressen bestehen.
 
 ### 4.3 Plan- und Limitregeln
 
@@ -1187,7 +1237,7 @@ Use Cases:
 - Airmius kann Provision abziehen.
 - Problemfälle können gemeldet und adminseitig gelöst/erstattet werden.
 
-### 4.6 Website-Service-Regeln
+### 4.6 Werbeagentur-/Website-Service-Regeln
 
 - Anfrage ist noch kein Vertrag.
 - Verbindlicher Auftrag erst nach Angebot/Annahme.
@@ -1199,6 +1249,7 @@ Use Cases:
 
 - Startseite
 - Preise
+- Marketplace
 - Vereine
 - Blogliste
 - Blogdetail
@@ -1310,7 +1361,7 @@ Diese Fälle sind im Produktbild vorhanden, aber noch nicht vollständig produkt
 - Digitale Unterschriften.
 - Erweiterte Elternsteuerung.
 - Erweiterte Content-Freigabe für Minderjährige.
-- Echte Website-Service-Angebotserstellung mit Rechnung/Checkout.
+- Echte Werbeagentur-/Website-Service-Angebotserstellung mit Rechnung/Checkout.
 
 ## 7. Pflegehinweis
 

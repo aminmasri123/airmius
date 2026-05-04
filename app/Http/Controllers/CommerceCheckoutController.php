@@ -7,6 +7,7 @@ use App\Models\AdCampaignStat;
 use App\Models\Club;
 use App\Models\CommerceOrder;
 use App\Models\MarketplaceProduct;
+use App\Models\OutfitSubscriptionPlan;
 use App\Models\PayoutProfile;
 use App\Models\Setting;
 use App\Models\SubscriptionAddon;
@@ -17,6 +18,7 @@ use App\Services\ModerationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -39,6 +41,26 @@ class CommerceCheckoutController extends Controller
                 ->where('status', 'published')
                 ->latest('id')
                 ->get(),
+            'outfitPlans' => OutfitSubscriptionPlan::query()
+                ->with('sponsor:id,name,logo,website')
+                ->where('is_active', true)
+                ->where('is_public', true)
+                ->orderBy('sort_order')
+                ->orderBy('monthly_price_cents')
+                ->get()
+                ->map(fn (OutfitSubscriptionPlan $plan) => [
+                    'id' => $plan->id,
+                    'name' => $plan->name,
+                    'description' => $plan->description,
+                    'monthly_price_cents' => $plan->monthly_price_cents,
+                    'sponsor_discount_cents' => $plan->sponsor_discount_cents,
+                    'effective_monthly_price_cents' => $plan->effectiveMonthlyPriceCents(),
+                    'currency' => $plan->currency,
+                    'items_per_box' => $plan->items_per_box,
+                    'sports' => $plan->sports ?: [],
+                    'branding_type' => $plan->branding_type,
+                    'sponsor' => $plan->sponsor,
+                ]),
             'orders' => CommerceOrder::query()
                 ->with(['orderable', 'club:id,name'])
                 ->where('user_id', $request->user()->id)
@@ -298,6 +320,46 @@ class CommerceCheckoutController extends Controller
         ]);
     }
 
+    public function guestSuccess(Request $request, CommerceOrder $order, string $token)
+    {
+        $this->authorizeGuestOrder($order, $token);
+
+        if ($order->provider === 'stripe' && $order->status === 'pending') {
+            $this->syncStripeOrder($order);
+        }
+
+        if ($order->provider === 'paypal' && $order->status === 'pending') {
+            $this->capturePayPalOrder($order);
+        }
+
+        return inertia('Guest/MarketplaceOrderStatus', [
+            'status' => 'success',
+            'order' => $this->orderResource($order->refresh()->load('orderable')),
+        ]);
+    }
+
+    public function guestCancel(Request $request, CommerceOrder $order, string $token)
+    {
+        $this->authorizeGuestOrder($order, $token);
+
+        $order->update(['status' => 'cancelled']);
+
+        return inertia('Guest/MarketplaceOrderStatus', [
+            'status' => 'cancelled',
+            'order' => $this->orderResource($order->load('orderable')),
+        ]);
+    }
+
+    public function guestBankTransfer(Request $request, CommerceOrder $order, string $token)
+    {
+        $this->authorizeGuestOrder($order, $token);
+
+        return inertia('Guest/MarketplaceBankTransfer', [
+            'order' => $this->orderResource($order->load('orderable')),
+            'bank' => $this->bankTransferSettings(),
+        ]);
+    }
+
     public function activeAd()
     {
         $campaign = AdCampaign::query()
@@ -445,6 +507,11 @@ class CommerceCheckoutController extends Controller
         ];
     }
 
+    public function startPublicCheckout(CommerceOrder $order)
+    {
+        return $this->startCheckout($order);
+    }
+
     private function startCheckout(CommerceOrder $order)
     {
         abort_if($order->amount_cents <= 0, 422, 'Kostenlose Bestellungen können aktuell nicht per Checkout verarbeitet werden.');
@@ -452,7 +519,7 @@ class CommerceCheckoutController extends Controller
         if ($order->provider === 'bank_transfer') {
             $this->prepareBankTransfer($order);
 
-            return redirect()->route('commerce-checkout.bank-transfer.show', $order);
+            return redirect()->to($this->orderRoute($order, 'bank-transfer'));
         }
 
         $url = $order->provider === 'stripe'
@@ -472,10 +539,10 @@ class CommerceCheckoutController extends Controller
             ->withToken(config('services.stripe.secret'))
             ->post('https://api.stripe.com/v1/checkout/sessions', [
                 'mode' => 'payment',
-                'success_url' => route('commerce-checkout.success', $order).'?session_id={CHECKOUT_SESSION_ID}',
-                'cancel_url' => route('commerce-checkout.cancel', $order),
+                'success_url' => $this->orderRoute($order, 'success').'?session_id={CHECKOUT_SESSION_ID}',
+                'cancel_url' => $this->orderRoute($order, 'cancel'),
                 'client_reference_id' => (string) $order->id,
-                'customer_email' => $order->user->email,
+                'customer_email' => $this->buyerEmail($order),
                 'line_items[0][price_data][currency]' => strtolower($order->currency),
                 'line_items[0][price_data][product_data][name]' => 'Airmius '.($order->orderable?->name ?? $order->orderable?->title ?? 'Bestellung'),
                 'line_items[0][price_data][unit_amount]' => $order->amount_cents,
@@ -511,8 +578,8 @@ class CommerceCheckoutController extends Controller
             'application_context' => [
                 'brand_name' => 'Airmius',
                 'user_action' => 'PAY_NOW',
-                'return_url' => route('commerce-checkout.success', $order),
-                'cancel_url' => route('commerce-checkout.cancel', $order),
+                'return_url' => $this->orderRoute($order, 'success'),
+                'cancel_url' => $this->orderRoute($order, 'cancel'),
             ],
         ]);
 
@@ -606,12 +673,45 @@ class CommerceCheckoutController extends Controller
 
     private function sendConfirmationEmail(CommerceOrder $order): void
     {
-        if ($order->confirmation_email_sent_at || ! $order->user?->email) {
+        if ($order->confirmation_email_sent_at || ! $this->buyerEmail($order)) {
             return;
         }
 
-        $order->user->notify(new CommerceOrderCompleted($order));
+        if ($order->user?->email) {
+            $order->user->notify(new CommerceOrderCompleted($order));
+        } else {
+            Notification::route('mail', $order->guest_email)
+                ->notify(new CommerceOrderCompleted($order));
+        }
+
         $order->forceFill(['confirmation_email_sent_at' => now()])->save();
+    }
+
+    private function authorizeGuestOrder(CommerceOrder $order, string $token): void
+    {
+        abort_unless($order->access_token && hash_equals($order->access_token, $token), 403);
+    }
+
+    private function buyerEmail(CommerceOrder $order): ?string
+    {
+        return $order->user?->email ?: $order->guest_email;
+    }
+
+    private function orderRoute(CommerceOrder $order, string $type): string
+    {
+        if ($order->access_token) {
+            return match ($type) {
+                'success' => route('commerce-checkout.guest.success', [$order, $order->access_token]),
+                'cancel' => route('commerce-checkout.guest.cancel', [$order, $order->access_token]),
+                'bank-transfer' => route('commerce-checkout.guest.bank-transfer.show', [$order, $order->access_token]),
+            };
+        }
+
+        return match ($type) {
+            'success' => route('commerce-checkout.success', $order),
+            'cancel' => route('commerce-checkout.cancel', $order),
+            'bank-transfer' => route('commerce-checkout.bank-transfer.show', $order),
+        };
     }
 
     private function isValidStripeSignature(string $payload, ?string $signature): bool

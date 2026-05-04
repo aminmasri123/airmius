@@ -256,8 +256,8 @@ const markTransferPaid = (checkout) => {
                             </div>
                             <p class="mt-1 text-xs text-secondary">{{ actorLabels[plan.target_actor] || plan.target_actor }} - {{ plan.slug }}</p>
                         </div>
-                        <button type="button" class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:border-borderHover" @click="editingPlanId = editingPlanId === plan.id ? null : plan.id">
-                            {{ editingPlanId === plan.id ? 'Schliessen' : 'Bearbeiten' }}
+                        <button type="button" class="min-h-10 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:border-borderHover" @click="editingPlanId = editingPlanId === plan.id ? null : plan.id">
+                            {{ editingPlanId === plan.id ? 'Schließen' : 'Bearbeiten' }}
                         </button>
                     </div>
                 </div>
@@ -383,7 +383,7 @@ const markTransferPaid = (checkout) => {
                 </div>
             </div>
 
-            <div class="overflow-x-auto">
+            <div class="custom-scrollbar overflow-x-auto">
                 <table v-if="pendingBankTransfers.length" class="min-w-full text-left text-sm">
                     <thead class="bg-bg text-xs uppercase text-secondary">
                         <tr>
@@ -437,7 +437,7 @@ const markTransferPaid = (checkout) => {
                 </div>
             </div>
 
-            <div class="overflow-x-auto">
+            <div class="custom-scrollbar overflow-x-auto">
                 <table class="min-w-full text-left text-sm">
                     <thead class="bg-bg text-xs uppercase text-secondary">
                         <tr>
@@ -521,7 +521,7 @@ const markTransferPaid = (checkout) => {
                 </div>
             </div>
 
-            <div class="overflow-x-auto">
+            <div class="custom-scrollbar overflow-x-auto">
                 <table class="min-w-full text-left text-sm">
                     <thead class="bg-bg text-xs uppercase text-secondary">
                         <tr>

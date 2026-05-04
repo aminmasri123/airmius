@@ -26,6 +26,12 @@ Route::post('/webhooks/commerce/paypal', [CommerceCheckoutController::class, 'pa
     ->name('webhooks.commerce.paypal');
 Route::get('/ads/active', [CommerceCheckoutController::class, 'activeAd'])->name('ads.active');
 Route::get('/ads/{campaign}/click', [CommerceCheckoutController::class, 'clickAd'])->name('ads.click');
+Route::get('/checkout/guest-commerce/{order}/{token}/success', [CommerceCheckoutController::class, 'guestSuccess'])
+    ->name('commerce-checkout.guest.success');
+Route::get('/checkout/guest-commerce/{order}/{token}/cancel', [CommerceCheckoutController::class, 'guestCancel'])
+    ->name('commerce-checkout.guest.cancel');
+Route::get('/checkout/guest-commerce/{order}/{token}/bank-transfer', [CommerceCheckoutController::class, 'guestBankTransfer'])
+    ->name('commerce-checkout.guest.bank-transfer.show');
 
 Route::middleware(['auth:sanctum', config('jetstream.auth_session')])->group(function () {
     Route::post('/checkout/subscriptions/{subscriptionPlan}', [SubscriptionCheckoutController::class, 'store'])

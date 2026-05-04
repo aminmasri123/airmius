@@ -11,6 +11,9 @@ class CommerceOrder extends Model
 
     protected $fillable = [
         'user_id',
+        'guest_name',
+        'guest_email',
+        'access_token',
         'club_id',
         'orderable_type',
         'orderable_id',

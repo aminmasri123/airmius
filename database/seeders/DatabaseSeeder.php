@@ -31,6 +31,7 @@ class DatabaseSeeder extends Seeder
               RolesPermissionsSeeder::class,
               ClubsTeamsUsersSeeder::class,
               FeedChatSeeder::class,
+              MarketplaceDemoSeeder::class,
         ]);
 }
 }

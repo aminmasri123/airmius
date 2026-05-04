@@ -165,6 +165,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+    document.body.style.overflow = ''
+
     if (markOfflineOnUnload) {
         window.removeEventListener('beforeunload', markOfflineOnUnload)
     }
@@ -184,25 +186,31 @@ watch(searchTerm, () => {
     window.clearTimeout(searchTimeout)
     searchTimeout = window.setTimeout(runSearch, 250)
 })
+
+watch([sidebarOpen, searchOpen], ([isSidebarOpen, isSearchOpen]) => {
+    if (typeof document === 'undefined') return
+
+    document.body.style.overflow = isSidebarOpen || isSearchOpen ? 'hidden' : ''
+})
 </script>
 
 <template>
 
     <Head :title="title" />
 
-    <div class="min-h-screen w-full bg-bg text-primary">
+    <div class="h-dvh w-full overflow-hidden bg-bg text-primary">
         <Sidebar :open="sidebarOpen" @close="sidebarOpen = false" />
 
-        <div class="flex min-w-0 flex-1 flex-col md:pl-[260px]">
+        <div class="flex h-dvh min-w-0 flex-1 flex-col md:pl-[260px]">
             <!-- Topbar -->
-            <header class="fixed top-0 right-0 left-0 z-50 border-b border-border bg-card md:left-[260px]">
+            <header class="sticky top-0 z-40 shrink-0 border-b border-border bg-card/95 backdrop-blur">
                 <div class="flex h-16 items-center justify-between px-3 sm:px-4 lg:px-6">
 
                     <!-- LINKS -->
                     <div class="flex items-center gap-2 min-w-0">
 
                         <!-- ☰ MOBILE MENU BUTTON -->
-                        <button type="button" class="rounded-lg p-2 hover:bg-muted lg:hidden"
+                        <button type="button" class="rounded-lg p-2 hover:bg-muted md:hidden"
                             @click="sidebarOpen = !sidebarOpen">
                             <i class="las la-bars text-xl"></i>
                         </button>
@@ -255,7 +263,7 @@ watch(searchTerm, () => {
 
             <!-- Mobile Search Overlay -->
             <Teleport to="body">
-                <div v-if="searchOpen" class="fixed inset-0 z-50 bg-black/60 p-3 sm:hidden">
+                <div v-if="searchOpen" class="fixed inset-0 z-[70] bg-black/60 p-3 sm:hidden">
                     <div class="overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
                         <div class="flex items-center gap-2 border-b border-border p-3">
                             <div class="relative min-w-0 flex-1">
@@ -310,7 +318,7 @@ watch(searchTerm, () => {
             </Teleport>
 
             <!-- Content -->
-            <main class="min-h-screen overflow-x-hidden p-3 pt-20 pb-24 sm:p-4 sm:pt-20 lg:p-6 lg:pt-20">
+            <main class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-3 pb-24 sm:p-4 lg:p-6">
                 <slot />
             </main>
         </div>

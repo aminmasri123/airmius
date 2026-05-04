@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\UploadStorage;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
@@ -19,7 +20,7 @@ $image = $manager->read($file)
     ->resize($config['width'], null)
     ->toJpeg($config['quality']);
 
-Storage::disk('r2')->put($path, (string) $image);
+Storage::disk(UploadStorage::disk())->put($path, (string) $image, 'public');
 
 // Thumbnail
 if (isset($config['thumb'])) {
@@ -30,7 +31,7 @@ if (isset($config['thumb'])) {
         ->cover($config['thumb'], $config['thumb']) // ✅ FIX
         ->toJpeg($config['quality']);
 
-    Storage::disk('r2')->put($thumbPath, (string) $thumbnail);
+    Storage::disk(UploadStorage::disk())->put($thumbPath, (string) $thumbnail, 'public');
 }
 
 return $path;

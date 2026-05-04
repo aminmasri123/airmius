@@ -127,6 +127,8 @@ class RolesPermissionsSeeder extends Seeder
             ['name' => 'finance.edit', 'description' => 'Finanzen bearbeiten'],
             ['name' => 'billing.manage', 'description' => 'Abrechnung verwalten'],
             ['name' => 'subscriptions.manage', 'description' => 'Abonnements verwalten'],
+            ['name' => 'outfit-subscriptions.view', 'description' => 'Sportkleidung-Abos verwenden'],
+            ['name' => 'outfit-subscriptions.manage', 'description' => 'Sportkleidung-Abo-Modul verwalten'],
 
             // CONTENT / MEDIA
             ['name' => 'content.create', 'description' => 'Inhalte erstellen'],

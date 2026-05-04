@@ -8,7 +8,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Features;
-use Laravel\Jetstream\Jetstream;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -47,18 +46,20 @@ class RegistrationTest extends TestCase
         Mail::fake();
 
         $response = $this->post('/register', [
-            'name' => 'Test User',
+            'first_name' => 'Test',
+            'last_name' => 'User',
             'email' => 'test@example.com',
+            'country' => 'DE',
             'birth_date' => now()->subYears(16)->subDay()->toDateString(),
             'password' => 'password',
             'password_confirmation' => 'password',
-            'terms' => Jetstream::hasTermsAndPrivacyPolicyFeature(),
+            'terms' => true,
         ]);
 
         $this->assertAuthenticated();
         $this->assertTrue(auth()->user()->hasRole('player'));
         Mail::assertNothingSent();
-        $response->assertRedirect(route('auth.dashboard', absolute: false));
+        $response->assertRedirect(config('fortify.home'));
     }
 
     public function test_minor_users_need_guardian_email(): void
@@ -71,12 +72,14 @@ class RegistrationTest extends TestCase
         Mail::fake();
 
         $response = $this->post('/register', [
-            'name' => 'Minor User',
+            'first_name' => 'Minor',
+            'last_name' => 'User',
             'email' => 'minor@example.com',
+            'country' => 'DE',
             'birth_date' => now()->subYears(15)->toDateString(),
             'password' => 'password',
             'password_confirmation' => 'password',
-            'terms' => Jetstream::hasTermsAndPrivacyPolicyFeature(),
+            'terms' => true,
         ]);
 
         $response->assertSessionHasErrors('guardian_email');
@@ -92,13 +95,15 @@ class RegistrationTest extends TestCase
         $this->seed(RolesPermissionsSeeder::class);
 
         $response = $this->post('/register', [
-            'name' => 'Minor User',
+            'first_name' => 'Minor',
+            'last_name' => 'User',
             'email' => 'minor@example.com',
+            'country' => 'DE',
             'birth_date' => now()->subYears(15)->toDateString(),
             'guardian_email' => 'parent@example.com',
             'password' => 'password',
             'password_confirmation' => 'password',
-            'terms' => Jetstream::hasTermsAndPrivacyPolicyFeature(),
+            'terms' => true,
         ]);
 
         $this->assertAuthenticated();
@@ -108,7 +113,7 @@ class RegistrationTest extends TestCase
             'guardian_email' => 'parent@example.com',
         ]);
         $this->assertNotNull(auth()->user()->guardian_consent_token);
-        $response->assertRedirect(route('auth.dashboard', absolute: false));
+        $response->assertRedirect(config('fortify.home'));
     }
 
     public function test_guardian_can_approve_minor_registration(): void

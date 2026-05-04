@@ -401,8 +401,11 @@ const statusIconFor = (message) => {
 
 const isOwnMessage = (message) => message.sender_id === authUser?.id
 
-const fileUrl = (file) => file?.path ? `/storage/${file.path}` : '#'
+const fileUrl = (file) => file?.url || (file?.path ? `${page.props.uploads?.url || '/storage'}/${file.path}` : '#')
+const fileThumbnailUrl = (file) => file?.thumbnail_url || (file?.thumbnail_path ? `${page.props.uploads?.url || '/storage'}/${file.thumbnail_path}` : null)
 const attachmentLabel = (attachment) => attachment.file?.path?.split('/').pop() || 'Datei'
+const isImageMime = (type) => type?.startsWith('image/')
+const isVideoMime = (type) => type?.startsWith('video/')
 
 const reactionCounts = (message) => {
     return (message.reactions || []).reduce((counts, reaction) => {
@@ -674,16 +677,37 @@ onUnmounted(() => {
                             <p v-if="message.message" class="whitespace-pre-line text-sm leading-6">{{ message.message }}</p>
 
                             <div v-if="message.attachments?.length" class="mt-2 space-y-1">
-                                <a
+                                <div
                                     v-for="attachment in message.attachments"
                                     :key="attachment.id"
-                                    :href="fileUrl(attachment.file)"
-                                    target="_blank"
-                                    class="flex items-center gap-2 rounded border border-border/50 px-2 py-1 text-xs underline-offset-2 hover:underline"
+                                    class="overflow-hidden rounded border border-border/50"
                                 >
-                                    <i class="las la-paperclip"></i>
-                                    <span class="truncate">{{ attachmentLabel(attachment) }}</span>
-                                </a>
+                                    <video
+                                        v-if="attachment.file && isVideoMime(attachment.file.type)"
+                                        :src="fileUrl(attachment.file)"
+                                        :poster="fileThumbnailUrl(attachment.file)"
+                                        controls
+                                        preload="metadata"
+                                        class="max-h-72 w-full bg-black"
+                                    ></video>
+
+                                    <img
+                                        v-else-if="attachment.file && isImageMime(attachment.file.type)"
+                                        :src="fileUrl(attachment.file)"
+                                        :alt="attachmentLabel(attachment)"
+                                        class="max-h-72 w-full object-cover"
+                                    />
+
+                                    <a
+                                        v-else
+                                        :href="fileUrl(attachment.file)"
+                                        target="_blank"
+                                        class="flex items-center gap-2 px-2 py-1 text-xs underline-offset-2 hover:underline"
+                                    >
+                                        <i class="las la-paperclip"></i>
+                                        <span class="truncate">{{ attachmentLabel(attachment) }}</span>
+                                    </a>
+                                </div>
                             </div>
 
                             <div class="mt-2 flex flex-wrap items-center gap-1 text-xs">

@@ -3,15 +3,18 @@
 namespace App\Services;
 
 use App\Models\File;
+use App\Support\UploadStorage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
 class FileService
 {
+    public function __construct(private MediaOptimizer $mediaOptimizer) {}
+
     public function upload($user, UploadedFile $file, array $data): File
     {
         $data['user_id'] = $user->id;
-        $path = $file->store($this->directoryFor($data), 'public');
+        $optimized = $this->mediaOptimizer->store($file, $this->directoryFor($data));
 
         return File::create([
             'user_id' => $user->id,
@@ -19,19 +22,19 @@ class FileService
             'team_id' => $data['team_id'] ?? null,
             'event_id' => $data['event_id'] ?? null,
             'folder_id' => $data['folder_id'] ?? null,
-            'path' => $path,
-            'type' => $file->getClientMimeType(),
-            'size' => $file->getSize(),
+            ...$optimized,
         ]);
     }
 
     public function delete(File $file): void
     {
-        $path = $file->path;
+        $paths = array_filter([$file->path, $file->thumbnail_path]);
         $file->delete();
 
-        if (! File::where('path', $path)->exists()) {
-            Storage::disk('public')->delete($path);
+        foreach ($paths as $path) {
+            if (! File::where('path', $path)->orWhere('thumbnail_path', $path)->exists()) {
+                Storage::disk(UploadStorage::disk())->delete($path);
+            }
         }
     }
 

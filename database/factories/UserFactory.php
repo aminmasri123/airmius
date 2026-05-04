@@ -35,6 +35,8 @@ class UserFactory extends Factory
             'last_name' => $lastName,
             'email' => fake()->unique(true)->safeEmail(),
             'email_verified_at' => now(),
+            'country' => 'DE',
+            'birth_date' => now()->subYears(18)->toDateString(),
             'password' => static::$password ??= Hash::make('password'),
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,

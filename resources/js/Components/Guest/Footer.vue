@@ -37,6 +37,8 @@ const scrollTo = (id) => {
                         <button @click="scrollTo('funktionen')" class="block hover:text-primary transition">Funktionen</button>
                         <button @click="scrollTo('vorteile')" class="block hover:text-primary transition">Vorteile</button>
                         <button @click="scrollTo('sportarten')" class="block hover:text-primary transition">Sportarten</button>
+                        <Link :href="route('guest.werbeagentur')" class="block hover:text-primary transition">Werbeagentur für Vereine</Link>
+                        <Link :href="route('guest.marketplace')" class="block hover:text-primary transition">Marketplace</Link>
                     </div>
                 </div>
 
@@ -46,6 +48,7 @@ const scrollTo = (id) => {
                         <button @click="scrollTo('ueber')" class="block hover:text-primary transition">Über uns</button>
                         <button @click="scrollTo('blog')" class="block hover:text-primary transition">Blog</button>
                         <button @click="scrollTo('kontakt')" class="block hover:text-primary transition">Kontakt</button>
+                        <Link :href="route('guest.jobs')" class="block hover:text-primary transition">Jobs</Link>
                     </div>
                 </div>
 

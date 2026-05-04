@@ -30,7 +30,7 @@ class CommerceOrderCompleted extends Notification
             ->line('Bestellung: '.$title)
             ->line('Betrag: '.number_format($order->amount_cents / 100, 2, ',', '.').' '.$order->currency)
             ->line('Status: bezahlt')
-            ->action('Marketplace ansehen', route('auth.commerce.index'))
+            ->action('Marketplace ansehen', route('guest.marketplace'))
             ->line('Danke, dass du Airmius nutzt.');
     }
 }

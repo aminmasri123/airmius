@@ -5,6 +5,7 @@ use App\Http\Controllers\KontaktController;
 use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\OrganizationJobController;
 use App\Http\Controllers\PricingController;
+use App\Http\Controllers\PublicMarketplaceController;
 use App\Http\Controllers\PublicClubController;
 use App\Models\BlogPost;
 use Illuminate\Foundation\Application;
@@ -37,14 +38,19 @@ Route::get('/sitemap.xml', function () {
         ['loc' => route('guest.pricing'), 'priority' => '0.8', 'changefreq' => 'monthly'],
         ['loc' => route('guest.blog.index'), 'priority' => '0.8', 'changefreq' => 'weekly'],
         ['loc' => route('guest.jobs'), 'priority' => '0.7', 'changefreq' => 'weekly'],
+        ['loc' => route('guest.werbeagentur'), 'priority' => '0.7', 'changefreq' => 'monthly'],
         ['loc' => route('guest.e-learning'), 'priority' => '0.6', 'changefreq' => 'monthly'],
         ['loc' => route('guest.gamification'), 'priority' => '0.6', 'changefreq' => 'monthly'],
         ['loc' => route('guest.top-inhalte'), 'priority' => '0.6', 'changefreq' => 'monthly'],
+        ['loc' => route('guest.marketplace'), 'priority' => '0.7', 'changefreq' => 'daily'],
         ['loc' => route('legal.imprint'), 'priority' => '0.3', 'changefreq' => 'yearly'],
         ['loc' => route('policy.show'), 'priority' => '0.3', 'changefreq' => 'yearly'],
         ['loc' => route('terms.show'), 'priority' => '0.3', 'changefreq' => 'yearly'],
         ['loc' => route('legal.community'), 'priority' => '0.3', 'changefreq' => 'yearly'],
         ['loc' => route('legal.minors'), 'priority' => '0.3', 'changefreq' => 'yearly'],
+        ['loc' => route('legal.cookies'), 'priority' => '0.3', 'changefreq' => 'yearly'],
+        ['loc' => route('legal.withdrawal'), 'priority' => '0.3', 'changefreq' => 'yearly'],
+        ['loc' => route('legal.reporting'), 'priority' => '0.3', 'changefreq' => 'yearly'],
     ];
 
     $blogRoutes = BlogPost::query()
@@ -89,6 +95,11 @@ Route::get('/preise', [PricingController::class, 'index'])->name('guest.pricing'
 
 Route::get('/jobs', [OrganizationJobController::class, 'publicIndex'])->name('guest.jobs');
 
+Route::get('/werbeagentur-fuer-vereine', fn () => Inertia::render('Guest/Werbeagentur', [
+    'canLogin' => Route::has('login'),
+    'canRegister' => Route::has('register'),
+]))->name('guest.werbeagentur');
+
 Route::get('/e-learning', fn () => Inertia::render('Guest/E-Learning', [
     'canLogin' => Route::has('login'),
     'canRegister' => Route::has('register'),
@@ -100,6 +111,9 @@ Route::get('/gamification', fn () => Inertia::render('Guest/Gamification', [
 ]))->name('guest.gamification');
 
 Route::get('/vereine', [PublicClubController::class, 'index'])->name('guest.vereine');
+Route::get('/marketplace', [PublicMarketplaceController::class, 'index'])->name('guest.marketplace');
+Route::get('/marketplace/products/{product}', [PublicMarketplaceController::class, 'show'])->name('guest.marketplace.products.show');
+Route::post('/marketplace/products/{product}/checkout', [PublicMarketplaceController::class, 'checkout'])->name('guest.marketplace.products.checkout');
 
 Route::get('/blog', [BlogPostController::class, 'publicIndex'])->name('guest.blog.index');
 Route::get('/blog/{blogPost:slug}', [BlogPostController::class, 'publicShow'])->name('guest.blog.show');

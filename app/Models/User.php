@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Notifications\MyCustomResetPassword;
+use App\Support\UploadStorage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -40,6 +41,12 @@ class User extends Authenticatable
         'theme',
         'country',
         'athlete_license_number',
+        'last_seen_at',
+        'privacy_status',
+        'inactivity_first_warning_sent_at',
+        'inactivity_second_warning_sent_at',
+        'deletion_scheduled_at',
+        'anonymized_at',
         'street',
         'house_number',
         'postal_code',
@@ -94,6 +101,11 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'birth_date' => 'date',
+            'last_seen_at' => 'datetime',
+            'inactivity_first_warning_sent_at' => 'datetime',
+            'inactivity_second_warning_sent_at' => 'datetime',
+            'deletion_scheduled_at' => 'datetime',
+            'anonymized_at' => 'datetime',
             'suspended_until' => 'datetime',
             'gamification_last_active_on' => 'date',
             'guardian_consent_requested_at' => 'datetime',
@@ -195,6 +207,16 @@ class User extends Authenticatable
     public function subscriptions()
     {
         return $this->hasMany(UserSubscription::class);
+    }
+
+    public function outfitStyleProfile()
+    {
+        return $this->hasOne(OutfitStyleProfile::class);
+    }
+
+    public function outfitSubscriptions()
+    {
+        return $this->hasMany(OutfitSubscription::class);
     }
 
     public function subscriptionInvoices()
@@ -321,16 +343,16 @@ class User extends Authenticatable
             $paths[] = substr($path, 0, -4).'_thumb.jpg';
         }
 
-        Storage::disk('r2')->delete(array_unique($paths));
+        Storage::disk(UploadStorage::disk())->delete(array_unique($paths));
     }
 
     public function getProfilePhotoUrlAttribute()
     {
         if ($this->profile_photo_path) {
-            return 'https://cdn.airmius.com/'.$this->profile_photo_path.'?v='.$this->profilePhotoVersion();
+            return UploadStorage::url($this->profile_photo_path).'?v='.$this->profilePhotoVersion();
         }
 
-        //return 'https://cdn.airmius.com/system/defaults/avatar.png';
+        return null;
     }
 
     public function getProfilePhotoThumbAttribute()
@@ -340,11 +362,11 @@ class User extends Authenticatable
             return str_replace(
                 '.jpg',
                 '_thumb.jpg',
-                'https://cdn.airmius.com/'.$this->profile_photo_path
+                UploadStorage::url($this->profile_photo_path)
             ).'?v='.$this->profilePhotoVersion();
         }
 
-        //return 'https://cdn.airmius.com/system/defaults/avatar.png';
+        return null;
     }
 
     private function profilePhotoVersion(): string

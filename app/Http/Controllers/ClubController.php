@@ -8,6 +8,7 @@ use App\Models\Sport;
 use App\Models\User;
 use App\Services\ClubService;
 use App\Services\MediaOptimizer;
+use App\Support\UploadStorage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -219,7 +220,7 @@ class ClubController extends Controller
 
         if ($request->hasFile('logo')) {
             if ($club->logo) {
-                Storage::disk('public')->delete($club->logo);
+                Storage::disk(UploadStorage::disk())->delete($club->logo);
             }
 
             $updates['logo'] = $this->mediaOptimizer->store($request->file('logo'), 'clubs/'.$club->id.'/profile')['path'];
@@ -227,7 +228,7 @@ class ClubController extends Controller
 
         if ($request->hasFile('cover_image')) {
             if ($club->cover_image) {
-                Storage::disk('public')->delete($club->cover_image);
+                Storage::disk(UploadStorage::disk())->delete($club->cover_image);
             }
 
             $updates['cover_image'] = $this->mediaOptimizer->store($request->file('cover_image'), 'clubs/'.$club->id.'/profile')['path'];

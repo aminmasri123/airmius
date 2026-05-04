@@ -15,6 +15,17 @@ return [
 
     'default' => env('FILESYSTEM_DISK', 'local'),
 
+    'uploads_disk' => env('UPLOAD_DISK', env('FILESYSTEM_DISK', 'public')),
+
+    'uploads_url' => rtrim(
+        env('UPLOAD_URL')
+            ?: env('R2_PUBLIC_URL')
+            ?: env('CLOUDFLARE_R2_PUBLIC_URL')
+            ?: env('AWS_URL')
+            ?: rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+        '/',
+    ),
+
     /*
     |--------------------------------------------------------------------------
     | Filesystem Disks
@@ -66,8 +77,12 @@ return [
             'secret' => env('R2_SECRET_ACCESS_KEY'),
             'region' => 'auto',
             'bucket' => env('R2_BUCKET'),
+            'url' => env('R2_PUBLIC_URL') ?: env('CLOUDFLARE_R2_PUBLIC_URL'),
             'endpoint' => env('R2_ENDPOINT'),
             'use_path_style_endpoint' => true,
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
         ],
 
     ],

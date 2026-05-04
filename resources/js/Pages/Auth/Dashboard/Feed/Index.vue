@@ -18,7 +18,8 @@ const props = defineProps({
 
 const { can } = usePermissions()
 const { t, te } = useI18n()
-const user = usePage().props.auth?.user
+const page = usePage()
+const user = page.props.auth?.user
 const imageInput = ref(null)
 const showPostModal = ref(false)
 
@@ -63,7 +64,7 @@ const reportReasons = [
 
 const initials = (name) => (name || '?').split(' ').slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase()
 const formatDate = (value) => new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
-const storageUrl = (path) => path?.startsWith('http') ? path : `/storage/${path}`
+const storageUrl = (path) => path?.startsWith('http') ? path : `${page.props.uploads?.url || '/storage'}/${path}`
 const fileName = (path) => (path || '').split('/').pop()
 const isImageMime = (type) => type?.startsWith('image/')
 const isVideoMime = (type) => type?.startsWith('video/')
@@ -774,6 +775,7 @@ const visitPage = (url) => url && router.visit(url, {
                             <video
                                 v-if="attachment.file && isVideoMime(attachment.file.type)"
                                 :src="storageUrl(attachment.file.path)"
+                                :poster="attachment.file.thumbnail_url || (attachment.file.thumbnail_path ? storageUrl(attachment.file.thumbnail_path) : null)"
                                 controls
                                 preload="metadata"
                                 class="max-h-[70vh] w-full rounded-xl border border-border bg-black"

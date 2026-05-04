@@ -9,6 +9,7 @@ const props = defineProps({
     clubs: { type: Array, default: () => [] },
     addons: { type: Array, default: () => [] },
     products: { type: Array, default: () => [] },
+    outfitPlans: { type: Array, default: () => [] },
     orders: { type: Array, default: () => [] },
     myProducts: { type: Array, default: () => [] },
     myCampaigns: { type: Array, default: () => [] },
@@ -82,6 +83,10 @@ const checkoutProduct = (product) => {
         provider: provider.value,
         accepted_terms: acceptedTerms.value,
     })
+}
+
+const subscribeOutfitPlan = (plan) => {
+    router.post(route('auth.outfit-subscriptions.store', plan.id), {}, { preserveScroll: true })
 }
 
 const activeOrders = computed(() => props.orders.filter((order) => ['pending', 'awaiting_transfer', 'completed'].includes(order.status)))
@@ -201,6 +206,31 @@ const reportIssue = (order) => {
                     </div>
                 </article>
                 <p v-if="!products.length" class="text-sm text-secondary">Noch keine öffentlichen Marketplace-Produkte.</p>
+            </div>
+        </section>
+
+        <section class="surface-card overflow-hidden">
+            <div class="border-b border-border p-5">
+                <h2 class="text-lg font-semibold text-primary">Sportkleidung-Abos</h2>
+                <p class="mt-1 text-sm text-secondary">Monatliche Outfit-Boxen mit Style-Profil, Lieferuebersicht und optionalem Sponsor-Rabatt.</p>
+            </div>
+            <div class="grid gap-4 p-5 lg:grid-cols-3">
+                <article v-for="plan in outfitPlans" :key="plan.id" class="rounded-lg border border-border bg-bg p-4">
+                    <p class="text-xs uppercase text-secondary">{{ plan.items_per_box }} Teile pro Box</p>
+                    <h3 class="mt-1 font-semibold text-primary">{{ plan.name }}</h3>
+                    <p class="mt-2 min-h-12 text-sm text-secondary">{{ plan.description }}</p>
+                    <p v-if="plan.sponsor" class="mt-2 text-xs font-semibold text-air-blue">Subventioniert von {{ plan.sponsor.name }}</p>
+                    <div class="mt-4 flex items-center justify-between gap-3">
+                        <div>
+                            <span class="text-lg font-bold text-primary">{{ formatMoney(plan.effective_monthly_price_cents, plan.currency) }}</span>
+                            <p v-if="plan.sponsor_discount_cents" class="text-xs text-secondary">statt {{ formatMoney(plan.monthly_price_cents, plan.currency) }}</p>
+                        </div>
+                        <button class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary" @click="subscribeOutfitPlan(plan)">
+                            Abo starten
+                        </button>
+                    </div>
+                </article>
+                <p v-if="!outfitPlans.length" class="text-sm text-secondary">Noch keine Outfit-Abos freigegeben.</p>
             </div>
         </section>
 

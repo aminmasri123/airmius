@@ -34,4 +34,14 @@ class Sponsor extends Model
     {
         return $this->belongsTo(Club::class);
     }
+
+    public function outfitSubscriptionPlans()
+    {
+        return $this->hasMany(OutfitSubscriptionPlan::class);
+    }
+
+    public function outfitSubscriptions()
+    {
+        return $this->hasMany(OutfitSubscription::class);
+    }
 }

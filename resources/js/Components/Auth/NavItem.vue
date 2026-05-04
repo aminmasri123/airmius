@@ -36,27 +36,31 @@ const isActive = computed(() => {
             v-if="hasSubitems"
             type="button"
             @click="isOpen = !isOpen"
-            class="w-full flex items-center justify-between px-4 py-2 rounded text-primary hover:bg-muted hover:text-card transition-colors duration-200"
-            :class="{ 'bg-white/10 text-white': isActive, 'bg-card': !isActive }"
+            class="flex min-h-11 w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium text-primary transition-colors duration-200 hover:bg-muted"
+            :class="{ 'bg-muted text-primary': isActive, 'bg-card': !isActive }"
         >
-            <span class="flex items-center">
-                <i :class="icon" class="mr-3 la-lg"></i>
+            <span class="flex min-w-0 items-center gap-3">
+                <i :class="icon" class="la-lg shrink-0"></i>
+                <span class="truncate">
                 {{ $t(label) }}
+                </span>
             </span>
-            <i :class="isOpen ? 'las la-chevron-up' : 'las la-chevron-down'" class="la-lg"></i>
+            <i :class="isOpen ? 'las la-chevron-up' : 'las la-chevron-down'" class="la-lg shrink-0"></i>
         </button>
 
         <Link
             v-else
             :href="href"
-            class="block px-4 py-2 rounded text-primary hover:bg-muted hover:text-secondary transition-colors duration-200"
-            :class="{ 'bg-white/10 text-white': isActive }"
+            class="flex min-h-11 items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium text-primary transition-colors duration-200 hover:bg-muted"
+            :class="{ 'bg-muted text-primary': isActive }"
         >
-            <span>
-                <i :class="icon" class="mr-3 la-lg"></i>
+            <span class="flex min-w-0 items-center gap-3">
+                <i :class="icon" class="la-lg shrink-0"></i>
+                <span class="truncate">
                 {{ $t(label) }}
+                </span>
             </span>
-            <span v-if="badge" class="rounded-full bg-buttonPrimary px-2 py-0.5 text-xs font-semibold text-buttonTextPrimary">
+            <span v-if="badge" class="shrink-0 rounded-full bg-buttonPrimary px-2 py-0.5 text-xs font-semibold text-buttonTextPrimary">
                 {{ badge }}
             </span>
         </Link>
@@ -66,8 +70,8 @@ const isActive = computed(() => {
                 v-for="sub in subitems"
                 :key="sub.label"
                 :href="sub.href"
-                class="block px-4 py-2 rounded text-secondary hover:bg-muted hover:text-card transition-colors duration-200"
-                :class="{ 'bg-white/10 text-white': page.url === sub.href }"
+                class="block min-h-10 rounded-lg px-3 py-2 text-sm text-secondary transition-colors duration-200 hover:bg-muted hover:text-primary"
+                :class="{ 'bg-muted text-primary': page.url === sub.href }"
             >
                 {{ $t(sub.label) }}
             </Link>

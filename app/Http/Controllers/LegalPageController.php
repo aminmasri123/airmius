@@ -72,8 +72,8 @@ class LegalPageController extends Controller
                     'Abrechnungsdaten: Rechnungsnummer, Rechnungstitel, Beschreibung, Betrag, Fälligkeitsdatum, Zahlungsstatus, Zahlungsdatum, Zahlungshistorie, Zahlungsreferenzen und Mahn-/Erinnerungsstatus.',
                     'Commerce- und Marketplace-Daten: Bestellungen, Add-ons, Marketplace-Angebote, Anbieterangaben, Provisionswerte, Auszahlungsstatus, Zahlungsanbieter, Checkout-Status und Zahlungsreferenzen.',
                     'Werbe- und Sponsoringdaten: Ads-Kampagnen, Ziel-URL, Budget, Laufzeit, Status, Impressionen, Klicks, CTR und technisch erforderliche Ereignisdaten zur Kampagnenmessung.',
-                    'Website-Service-Daten: Website-Anfragen von Vereinen, gewünschte Domain, Ziele, Notizen, Angebotsstatus und Kommunikationsstand.',
-                    'Datei- und Mediendaten: hochgeladene Bilder, Anhänge, Dateityp, Dateigröße, Speicherpfad und technische Auslieferungsdaten über Cloudflare R2/CDN.',
+                    'Werbeagentur- und Website-Service-Daten: Website-Anfragen von Vereinen, gewünschte Domain, Ziele, Notizen, Angebotsstatus und Kommunikationsstand.',
+                    'Datei- und Mediendaten: hochgeladene Bilder, Videos, Anhänge, Dateityp, Dateigröße, Speicherpfad, komprimierte Medienversionen, automatisch erzeugte Video-Vorschaubilder und technische Auslieferungsdaten über Cloudflare R2/CDN.',
                     'Technische Daten: IP-Adresse, Browserdaten, Logdaten, Sitzungsdaten, Sprache, Zeitzone und Sicherheitsereignisse.',
                 ],
             ],
@@ -89,7 +89,7 @@ class LegalPageController extends Controller
                     'Eltern-/Erziehungsberechtigtenzustimmung bei minderjährigen Nutzern.',
                     'Bereitstellung eines Elternbereichs zur Prüfung verknüpfter Kinder, zum Widerruf der Zustimmung und zur optionalen Erstellung eines Elternkontos.',
                     'Benachrichtigungen, Support, Fehleranalyse und Verbesserung der Plattform.',
-                    'Abwicklung von Airmius-Abos, Add-ons, Marketplace-Bestellungen, Anbieterprovisionen und Website-Service-Anfragen.',
+                    'Abwicklung von Airmius-Abos, Add-ons, Marketplace-Bestellungen, Anbieterprovisionen und Werbeagentur-/Website-Service-Anfragen.',
                     'Ausspielung und Messung von klar gekennzeichneten Sponsor- und Ads-Kampagnen, soweit dies für Betrieb, Abrechnung und Betrugsschutz erforderlich ist.',
                     'Erfüllung gesetzlicher Pflichten und Verteidigung gegen Ansprüche.',
                 ],
@@ -102,7 +102,7 @@ class LegalPageController extends Controller
                     'Art. 6 Abs. 1 lit. f DSGVO: berechtigtes Interesse an Sicherheit, Missbrauchsprävention, Moderation und Plattformbetrieb.',
                     'Art. 6 Abs. 1 lit. f DSGVO: berechtigte Interessen von Airmius und berechtigten Vereinsverantwortlichen an nachvollziehbarer Vereins-, Beitrags- und Zahlungsverwaltung.',
                     'Art. 6 Abs. 1 lit. c DSGVO: gesetzliche Pflichten.',
-                    'Art. 6 Abs. 1 lit. b DSGVO: Zahlungsabwicklung, Add-on-Buchungen, Marketplace-Bestellungen und Website-Service-Anfragen.',
+                    'Art. 6 Abs. 1 lit. b DSGVO: Zahlungsabwicklung, Add-on-Buchungen, Marketplace-Bestellungen und Werbeagentur-/Website-Service-Anfragen.',
                     'Art. 6 Abs. 1 lit. f DSGVO: berechtigtes Interesse an Kampagnenmessung, Missbrauchsvermeidung, Abrechnung von Provisionen und wirtschaftlichem Plattformbetrieb.',
                     'Art. 6 Abs. 1 lit. a DSGVO und Art. 8 DSGVO: Einwilligung, insbesondere bei zustimmungspflichtigen Minderjährigen.',
                 ],
@@ -121,12 +121,13 @@ class LegalPageController extends Controller
             [
                 'title' => '6. Empfänger und Dienstleister',
                 'body' => [
-                    'Airmius nutzt Hostinger als Hosting-Anbieter für den Betrieb der Plattform. Nach aktueller Konfiguration sollen die Plattformdaten innerhalb Europas verarbeitet und gespeichert werden.',
-                    'Airmius nutzt Cloudflare für Objektspeicher und Medienauslieferung, insbesondere Cloudflare R2 und Cloudflare CDN. Cloudflare R2 wird für europäische Datenhaltung mit EU-Jurisdiction bzw. europäischer Region konfiguriert.',
-                    'Cloudflare CDN kann für die schnelle und sichere Auslieferung von Medien und statischen Inhalten eingesetzt werden. Soweit personenbezogene Daten betroffen sind, wird die Konfiguration auf europäische Datenhaltung und DSGVO-konforme Verarbeitung ausgerichtet.',
+                    'Airmius nutzt Hostinger als Hosting-Anbieter für den Betrieb der Plattform. Mit Hostinger gilt nach Anbieterangabe ein Vertrag zur Auftragsverarbeitung nach Art. 28 DSGVO über die Konto- bzw. Vertragsannahme als abgeschlossen.',
+                    'Airmius nutzt Cloudflare für Objektspeicher und Medienauslieferung, insbesondere Cloudflare R2 und Cloudflare CDN. Nach Anbieterangabe ist der Cloudflare Customer DPA für Self-Serve-Kunden Bestandteil der Cloudflare Self-Serve Subscription Agreement und umfasst unter anderem EU-Standardvertragsklauseln sowie Data-Privacy-Framework-Bezüge.',
+                    'Cloudflare ist ein US-Anbieter. Internationale Datenübermittlungen können daher nicht pauschal ausgeschlossen werden; sie werden nach Anbieterangabe über DPA, SCCs und DPF abgesichert.',
+                    'Soweit möglich wird die Konfiguration auf europäische Datenhaltung und DSGVO-konforme Verarbeitung ausgerichtet. Eine verbindliche Zusicherung, dass alle Cloudflare-Daten und Metadaten ausschließlich in der EU verbleiben, besteht nur, wenn passende Cloudflare-Datenlokalisierungsfunktionen wie Regional Services, Metadata Boundary oder Geo Key Manager tatsächlich gebucht und aktiviert sind.',
                     'Airmius kann außerdem technische Dienstleister für E-Mail-Versand, Sicherheit, Fehleranalyse und Zahlungsabwicklung einsetzen, wenn dies für den Plattformbetrieb erforderlich ist.',
                     'Für Zahlungen können Stripe, PayPal und Banküberweisung eingesetzt werden. Dabei werden die für Zahlung, Betrugsschutz, Rechnung und Nachweis erforderlichen Daten an den jeweiligen Zahlungsdienstleister übermittelt oder von diesem verarbeitet.',
-                    'Marketplace-Anbieter, Sponsoren und Website-Service-Anfragende erhalten nur die Daten, die für Angebot, Vertragserfüllung, Kommunikation, Abrechnung oder gesetzliche Pflichten erforderlich sind.',
+                    'Marketplace-Anbieter, Sponsoren und Werbeagentur-/Website-Service-Anfragende erhalten nur die Daten, die für Angebot, Vertragserfüllung, Kommunikation, Abrechnung oder gesetzliche Pflichten erforderlich sind.',
                     'Vereinsverantwortliche wie Owner, Admins und Manager können im Rahmen ihrer Berechtigungen Mitglieder-, Beitrags-, Rechnungs- und Zahlungsdaten ihres Vereins einsehen und bearbeiten.',
                     'Mit Auftragsverarbeitern werden Verträge nach Art. 28 DSGVO geschlossen.',
                     'Daten werden nur weitergegeben, wenn dies für den Plattformbetrieb erforderlich ist, eine Rechtsgrundlage besteht oder eine gesetzliche Pflicht vorliegt.',
@@ -137,8 +138,12 @@ class LegalPageController extends Controller
                 'body' => [
                     'Daten werden gelöscht oder anonymisiert, sobald sie für die genannten Zwecke nicht mehr erforderlich sind.',
                     'Accountdaten werden grundsätzlich bis zur Löschung des Kontos gespeichert, soweit keine gesetzlichen Aufbewahrungspflichten oder berechtigten Interessen entgegenstehen.',
+                    'Bei längerer Inaktivität nutzt Airmius ein gestuftes Verfahren: Nach etwa 12 Monaten ohne Nutzung kann eine erste Erinnerung versendet werden, nach etwa 18 Monaten eine zweite Erinnerung und nach etwa 24 Monaten kann das Konto zur Anonymisierung vorgemerkt werden.',
+                    'Vor der Anonymisierung wird grundsätzlich eine letzte Benachrichtigung mit einer Reaktionsfrist von etwa 30 Tagen versendet. Eine erneute Anmeldung setzt die Inaktivitätsprüfung zurück.',
+                    'Bei der Anonymisierung werden personenbezogene Profilangaben, Social-Login-Verknüpfungen, Sport-App-Verknüpfungen, Tokens, Profilbilder, private Medien und persönliche Inhalte soweit möglich entfernt oder anonymisiert.',
+                    'Rechnungs-, Zahlungs-, Bestell-, Vereins- und Nachweisdaten können weiter gespeichert bleiben, soweit gesetzliche Aufbewahrungspflichten, Vertragsnachweise, steuerliche Pflichten, Missbrauchsprävention oder berechtigte Interessen entgegenstehen.',
                     'Rechnungs-, Zahlungs- und Beitragsdaten können aufgrund handels-, steuer- oder vereinsrechtlicher Nachweis- und Aufbewahrungspflichten länger gespeichert werden.',
-                    'Commerce-, Provisions-, Ads- und Website-Service-Daten werden solange gespeichert, wie dies für Vertrag, Abrechnung, Nachweis, Support, Missbrauchsprävention oder gesetzliche Aufbewahrungspflichten erforderlich ist.',
+                    'Commerce-, Provisions-, Ads- und Werbeagentur-/Website-Service-Daten werden solange gespeichert, wie dies für Vertrag, Abrechnung, Nachweis, Support, Missbrauchsprävention oder gesetzliche Aufbewahrungspflichten erforderlich ist.',
                     'Hochgeladene Medien und Dateien werden grundsätzlich solange gespeichert, wie sie für Profil, Feed, Chat, Verein, Team, Event oder Dateiablage erforderlich sind.',
                     'Moderations- und Sicherheitsdaten können zur Nachvollziehbarkeit und Missbrauchsvermeidung länger gespeichert werden.',
                 ],
@@ -160,7 +165,7 @@ class LegalPageController extends Controller
                     'Analyse- oder Marketing-Technologien werden nur eingesetzt, wenn sie in der Cookie-Seite genannt werden und eine erforderliche Einwilligung vorliegt.',
                 ],
             ],
-        ], 'Hostinger und Cloudflare sind als Dienstleister ergänzt. Bitte prüfe vor Livegang, ob Cloudflare R2 tatsächlich mit EU-Jurisdiction/Europa konfiguriert ist und ob CDN-Logs/Caches entsprechend deiner Aussage in Europa bleiben.');
+        ], 'Hostinger und Cloudflare sind als Dienstleister ergänzt. Bitte lege die aktuellen AVV/DPA-PDFs intern ab und prüfe vor Livegang, ob Cloudflare-Datenlokalisierung tatsächlich gebucht und aktiv ist, falls du EU-only verbindlich zusichern möchtest.');
     }
 
     public function terms(): Response
@@ -235,9 +240,9 @@ class LegalPageController extends Controller
                 ],
             ],
             [
-                'title' => '5c. Website-Service für Vereine',
+                'title' => '5c. Werbeagentur- und Website-Service für Vereine',
                 'body' => [
-                    'Vereine können Airmius mit der Erstellung oder Vorbereitung einer Vereinswebsite anfragen.',
+                    'Vereine können Airmius als Werbeagentur mit der Erstellung oder Vorbereitung einer Vereinswebsite, Landingpage oder digitalen Kampagne anfragen.',
                     'Eine Anfrage ist noch kein verbindlicher Auftrag. Ein verbindlicher Auftrag entsteht erst durch ausdrückliche Annahme eines Angebots oder eine separate Vereinbarung.',
                     'Der Verein ist für bereitgestellte Inhalte, Logos, Bilder, Texte, Rechteklärung, Impressumsdaten und Datenschutzangaben seiner Website verantwortlich, soweit nicht etwas anderes vereinbart wird.',
                     'Domainregistrierung, Hosting, Pflege, Support, Zahlungsweise, Laufzeit und Kündigung werden im konkreten Angebot oder Vertrag geregelt.',
@@ -284,6 +289,9 @@ class LegalPageController extends Controller
                 'title' => '10. Kündigung und Kontolöschung',
                 'body' => [
                     'Nutzer können ihr Konto nach den verfügbaren Plattformfunktionen löschen oder die Löschung über den Support anfragen.',
+                    'Airmius kann dauerhaft inaktive Konten nach vorheriger Benachrichtigung deaktivieren und anonymisieren, wenn keine erneute Nutzung erfolgt.',
+                    'Eine erneute Anmeldung vor der angekündigten Anonymisierung hält das Konto aktiv und setzt die Inaktivitätsprüfung zurück.',
+                    'Gesetzlich aufzubewahrende Rechnungs-, Zahlungs-, Bestell- und Nachweisdaten können trotz Kontolöschung oder Anonymisierung weiter gespeichert bleiben.',
                     'Airmius kann Konten bei schweren oder wiederholten Verstößen sperren oder kündigen.',
                 ],
             ],
@@ -416,7 +424,7 @@ class LegalPageController extends Controller
                 'title' => 'Hinweis',
                 'body' => [
                     'Diese Seite ist relevant, wenn Airmius kostenpflichtige Verträge mit Verbrauchern anbietet, zum Beispiel Premium-Funktionen, digitale Dienste oder Mitgliedschaften.',
-                    'Sie kann auch für kostenpflichtige Add-ons, Marketplace-Käufe, digitale Inhalte, Website-Services oder vergleichbare Fernabsatzverträge relevant sein.',
+                    'Sie kann auch für kostenpflichtige Add-ons, Marketplace-Käufe, digitale Inhalte, Werbeagentur-/Website-Services oder vergleichbare Fernabsatzverträge relevant sein.',
                     'Solange Airmius ausschließlich kostenlos genutzt wird, kann diese Seite als vorsorgliche Verbraucherinformation dienen.',
                 ],
             ],
@@ -440,10 +448,10 @@ class LegalPageController extends Controller
                 'body' => [
                     'Im Fall eines wirksamen Widerrufs werden erhaltene Zahlungen nach den gesetzlichen Vorgaben zurückgewährt.',
                     'Bei digitalen Diensten oder Inhalten können besondere Regeln gelten, insbesondere wenn mit ausdrücklicher Zustimmung vor Ablauf der Widerrufsfrist begonnen wurde.',
-                    'Bei individuell erstellten Website-Leistungen, digitalen Leistungen oder sofort aktivierten Add-ons können besondere gesetzliche Ausnahmen oder Wertersatzregeln gelten. Diese müssen vor produktivem Verkauf final rechtlich geprüft und im Checkout sauber bestätigt werden.',
+                    'Bei individuell erstellten Werbeagentur-/Website-Leistungen, digitalen Leistungen oder sofort aktivierten Add-ons können besondere gesetzliche Ausnahmen oder Wertersatzregeln gelten. Diese müssen vor produktivem Verkauf final rechtlich geprüft und im Checkout sauber bestätigt werden.',
                 ],
             ],
-        ], 'Kostenpflichtige Funktionen, Marketplace, Ads und Website-Service sind jetzt berücksichtigt. Vor Livegang bitte mit echten Anbieter-, Zahlungs- und Widerrufsdaten rechtlich final prüfen.');
+        ], 'Kostenpflichtige Funktionen, Marketplace, Ads und Werbeagentur-/Website-Service sind jetzt berücksichtigt. Vor Livegang bitte mit echten Anbieter-, Zahlungs- und Widerrufsdaten rechtlich final prüfen.');
     }
 
     public function reporting(): Response

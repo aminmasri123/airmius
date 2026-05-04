@@ -90,6 +90,11 @@ class HandleInertiaRequests extends Middleware
 
             'unreadChatsCount' => $unreadChatsCount,
 
+            'uploads' => [
+                'disk' => config('filesystems.uploads_disk'),
+                'url' => config('filesystems.uploads_url'),
+            ],
+
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
@@ -172,6 +177,8 @@ class HandleInertiaRequests extends Middleware
             'payments.view' => $user->can('billing.manage'),
             'invoices.view' => $user->can('billing.manage'),
             'subscriptions.view' => $user->can('subscriptions.manage') || $user->can('system.manage'),
+            'outfit-subscriptions.view' => true,
+            'outfit-subscriptions.manage' => $user->can('outfit-subscriptions.manage'),
             'sponsors.view' => $user->can('finance.view') || $user->can('org.manage'),
             'system.manage' => $user->can('system.manage'),
             'admin.moderation.view' => $user->can('system.manage'),

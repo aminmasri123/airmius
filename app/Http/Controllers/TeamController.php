@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Notifications\ExternalTeamInvitation;
 use App\Services\MediaOptimizer;
 use App\Services\PlanFeatureService;
+use App\Support\UploadStorage;
 use App\Support\Roles;
 use App\Support\AppNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -251,7 +252,7 @@ class TeamController extends Controller
 
         if ($request->hasFile('logo')) {
             if ($team->logo) {
-                Storage::disk('public')->delete($team->logo);
+                Storage::disk(UploadStorage::disk())->delete($team->logo);
             }
 
             $updates['logo'] = $this->mediaOptimizer->store($request->file('logo'), 'teams/'.$team->id.'/profile')['path'];
@@ -259,7 +260,7 @@ class TeamController extends Controller
 
         if ($request->hasFile('cover_image')) {
             if ($team->cover_image) {
-                Storage::disk('public')->delete($team->cover_image);
+                Storage::disk(UploadStorage::disk())->delete($team->cover_image);
             }
 
             $updates['cover_image'] = $this->mediaOptimizer->store($request->file('cover_image'), 'teams/'.$team->id.'/profile')['path'];

@@ -11,7 +11,7 @@ import TextInput from '@/Components/TextInput.vue';
 const props = defineProps({
     user: Object,
 });
-console.log(props.user.profile_photo_url);
+
 const initials = (name) => (name || '?')
     .split(' ')
     .slice(0, 2)

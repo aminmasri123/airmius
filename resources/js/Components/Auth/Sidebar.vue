@@ -24,6 +24,7 @@ const canAdmin = computed(() => hasAny([
     'payments.view',
     'invoices.view',
     'subscriptions.view',
+    'outfit-subscriptions.manage',
     'sponsors.view',
     'admin.moderation.view',
     'admin.settings.view',
@@ -39,10 +40,10 @@ const closeSidebar = () => {
 
 <template>
     <!-- Overlay Mobile -->
-    <div v-if="open" class="fixed inset-0 z-[55] bg-black/50 md:hidden" @click="closeSidebar" />
+    <div v-if="open" class="fixed inset-0 z-[55] bg-black/55 backdrop-blur-[2px] md:hidden" @click="closeSidebar" />
 
     <aside
-        class="fixed inset-y-0 top-0 z-[60] flex h-dvh w-full flex-col border-border bg-card transition-transform duration-300 md:w-[260px] md:translate-x-0"
+        class="fixed inset-y-0 top-0 z-[60] flex h-dvh w-full flex-col border-border bg-card shadow-2xl transition-transform duration-300 md:w-[260px] md:translate-x-0 md:shadow-none"
         :class="[
             isRtl ? 'right-0 border-l' : 'left-0 border-r',
             open ? 'translate-x-0' : (isRtl ? 'translate-x-full' : '-translate-x-full')
@@ -63,7 +64,7 @@ const closeSidebar = () => {
 
         <Link
             :href="route('auth.feed.index')"
-            class="w-48 py-4"
+            class="block w-48 shrink-0 px-4 py-4"
             @click="closeSidebar"
         >
             <ApplicationMark />
@@ -71,7 +72,7 @@ const closeSidebar = () => {
 
         <!-- <TeamSwitcher /> -->
 
-        <nav class="custom-scrollbar mt-4 flex-1 space-y-1 overflow-y-auto px-3">
+        <nav class="custom-scrollbar mt-2 flex-1 space-y-1 overflow-y-auto px-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             <NavItem v-if="can('dashboard.view')" @click="closeSidebar" :href="route('auth.dashboard')" label="Dashboard" icon="las la-th-large" />
             <NavItem v-if="can('team.index')" @click="closeSidebar" :href="route('auth.teams.index')" label="Teams" icon="las la-users" />
             <NavItem v-if="can('club-memberships.view')" @click="closeSidebar" :href="route('auth.club-memberships.index')" label="Mitglieder" icon="las la-id-card" />
@@ -91,6 +92,7 @@ const closeSidebar = () => {
             />
             <NavItem v-if="can('settings.view')" @click="closeSidebar" :href="route('auth.settings')" label="Einstellungen" icon="las la-cog" />
             <NavItem @click="closeSidebar" :href="route('auth.commerce.index')" label="Marketplace" icon="las la-store" />
+            <NavItem @click="closeSidebar" :href="route('auth.outfit-subscriptions.index')" label="Outfit-Abo" icon="las la-tshirt" />
 
             <NavGroup v-if="canAdmin" label="Admin" icon="las la-shield-alt">
                 <NavItem v-if="can('users.view')" @click="closeSidebar" :href="route('members.index')" label="Users" icon="las la-user" />
@@ -101,6 +103,7 @@ const closeSidebar = () => {
                 <NavItem v-if="can('subscriptions.view')" @click="closeSidebar" :href="route('admin.subscriptions.index')" label="Abos" icon="las la-tags" />
                 <NavItem v-if="can('subscriptions.view')" @click="closeSidebar" :href="route('admin.subscription-invoices.index')" label="Abo-Rechnungen" icon="las la-receipt" />
                 <NavItem v-if="can('subscriptions.view')" @click="closeSidebar" :href="route('admin.commerce.index')" label="Commerce" icon="las la-chart-line" />
+                <NavItem v-if="can('outfit-subscriptions.manage')" @click="closeSidebar" :href="route('admin.outfit-subscriptions.index')" label="Outfit-Abos" icon="las la-tshirt" />
                 <NavItem v-if="can('sponsors.view')" @click="closeSidebar" :href="route('sponsors.index')" label="Sponsors" icon="las la-handshake" />
                 <NavItem v-if="can('admin.moderation.view')" @click="closeSidebar" :href="route('admin.moderation.index')" label="Moderation" icon="las la-user-check" />
                 <NavItem v-if="can('system.manage')" @click="closeSidebar" :href="route('admin.sports.index')" label="Sportarten" icon="las la-running" />

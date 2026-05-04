@@ -139,6 +139,42 @@ Weitere Produkt- und Business-Planung:
 - `update(Request $request)` - Einstellungen speichern, inklusive Wartungsmodus.
 - `destroy(Setting $setting)` - Standard-Resource-Action.
 
+### Datenschutz, Inaktivität und Anonymisierung
+
+`app/Console/Commands/ProcessInactiveAccounts.php`
+
+- `handle(UserPrivacyRetentionService $retentionService)` - inaktive Konten prüfen, Warnungen senden, Anonymisierung vormerken und fällige Konten anonymisieren.
+
+`app/Services/UserPrivacyRetentionService.php`
+
+- `anonymize(User $user)` - personenbezogene Profil-, Social-, Sport-App-, Token-, Medien- und Inhaltsdaten eines inaktiven Kontos entfernen oder anonymisieren, Nachweisdaten aber erhalten.
+
+`app/Http/Middleware/TrackUserActivity.php`
+
+- `handle(Request $request, Closure $next)` - `last_seen_at` aktualisieren und geplante Inaktivitäts-Anonymisierung bei erneuter Nutzung zurücksetzen.
+
+### Sportkleidung-Abos
+
+`app/Http/Controllers/OutfitSubscriptionController.php`
+
+- `index(Request $request)` - Nutzer-Dashboard fuer Outfit-Abos, Style-Profil und Lieferuebersicht.
+- `updateProfile(Request $request)` - persoenliches Style-Profil speichern.
+- `store(Request $request, OutfitSubscriptionPlan $plan)` - Outfit-Abo fuer einen Plan aktivieren.
+- `pause(Request $request, OutfitSubscription $subscription)` - eigenes Outfit-Abo pausieren.
+- `resume(Request $request, OutfitSubscription $subscription)` - eigenes Outfit-Abo fortsetzen.
+- `cancel(Request $request, OutfitSubscription $subscription)` - eigenes Outfit-Abo kuendigen.
+
+`app/Http/Controllers/AdminOutfitSubscriptionPlanController.php`
+
+- `index()` - separate Admin-Verwaltung fuer Outfit-Abo-Plaene, Sponsorenrabatte und Modulstatistik.
+- `store(Request $request)` - Outfit-Abo-Plan erstellen.
+- `update(Request $request, OutfitSubscriptionPlan $plan)` - Outfit-Abo-Plan bearbeiten.
+- `destroy(OutfitSubscriptionPlan $plan)` - Plan loeschen oder bei Historie deaktivieren.
+
+`app/Console/Commands/PrepareOutfitDeliveries.php`
+
+- `handle()` - faellige monatliche Outfit-Lieferungen planen und Nutzer benachrichtigen.
+
 ### Airmius Abo-Rechnungen und Zahlungs-E-Mails
 
 `app/Http/Controllers/SubscriptionCheckoutController.php`
@@ -467,6 +503,13 @@ Enthaltene Feature-Gates:
 
 - `__invoke(Request $request)`
 
+### AdminOutfitSubscriptionPlanController
+
+- `index()`
+- `store(Request $request)`
+- `update(Request $request, OutfitSubscriptionPlan $plan)`
+- `destroy(OutfitSubscriptionPlan $plan)`
+
 ### GuardianAccessController
 
 - `create()`
@@ -557,6 +600,15 @@ Enthaltene Feature-Gates:
 - `destroy(Request $request, OrganizationJob $organizationJob)`
 - `publicIndex()`
 
+### OutfitSubscriptionController
+
+- `index(Request $request)`
+- `updateProfile(Request $request)`
+- `store(Request $request, OutfitSubscriptionPlan $plan)`
+- `pause(Request $request, OutfitSubscription $subscription)`
+- `resume(Request $request, OutfitSubscription $subscription)`
+- `cancel(Request $request, OutfitSubscription $subscription)`
+
 ### PaymentController
 
 - `index()`
@@ -598,6 +650,10 @@ Enthaltene Feature-Gates:
 - `capabilities(Club $club)`
 
 ### PublicClubController
+
+- `index(Request $request)`
+
+### PublicMarketplaceController
 
 - `index(Request $request)`
 
@@ -781,10 +837,11 @@ Diese Datei listet die Controller-Funktionen. Die konkrete URL-Zuordnung steht i
 
 - `routes/auth.php` - eingeloggte Plattformfunktionen.
 - `routes/admin.php` - Adminfunktionen.
-- `routes/guest.php` - oeffentliche Seiten.
+- `routes/guest.php` - oeffentliche Seiten, inklusive `/werbeagentur-fuer-vereine`.
 - `routes/web.php` - Web-Routen und rechtliche/Eltern-Routen.
 - `routes/api.php` - API-Routen.
 - `routes/channels.php` - Broadcast-Kanaele.
+- `docs/DATA_PROCESSING_PROVIDERS.md` - AVV/DPA-Nachweise, VVT-Bausteine und Subprocessor-Prüfprotokoll.
 
 Zur technischen Kontrolle kannst du jederzeit ausfuehren:
 

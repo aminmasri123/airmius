@@ -1,6 +1,6 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
-import { Head, Link, router, useForm } from '@inertiajs/vue3'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { ref } from 'vue'
 
 const props = defineProps({
@@ -12,7 +12,8 @@ const props = defineProps({
 
 const initials = (name) => (name || '?').split(' ').slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase()
 const formatDate = (value) => new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
-const storageUrl = (path) => path?.startsWith('http') ? path : `/storage/${path}`
+const page = usePage()
+const storageUrl = (path) => path?.startsWith('http') ? path : `${page.props.uploads?.url || '/storage'}/${path}`
 const clubRoleLabel = (role) => ({
     owner: 'Owner',
     admin: 'Verein-Admin',

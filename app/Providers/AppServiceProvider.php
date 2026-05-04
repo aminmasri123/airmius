@@ -14,6 +14,8 @@ use App\Models\Post;
 use App\Models\Ride;
 use App\Models\Team;
 use App\Models\User;
+use App\Notifications\LoginLockoutNotification;
+use App\Notifications\LoginSuccessfulNotification;
 use App\Policies\ClubPolicy;
 use App\Policies\CommentPolicy;
 use App\Policies\ConversationPolicy;
@@ -27,6 +29,9 @@ use App\Policies\PostPolicy;
 use App\Policies\RidePolicy;
 use App\Policies\TeamPolicy;
 use App\Policies\UserPolicy;
+use Illuminate\Auth\Events\Failed;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event as EventFacade;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -73,10 +78,63 @@ class AppServiceProvider extends ServiceProvider
             $event->extendSocialite('microsoft', MicrosoftProvider::class);
         });
 
+        EventFacade::listen(Login::class, function (Login $event): void {
+            if (! $event->user instanceof User) {
+                return;
+            }
+
+            $request = request();
+
+            $event->user->notify(new LoginSuccessfulNotification(
+                $request->ip(),
+                substr((string) $request->userAgent(), 0, 500),
+                now()->format('d.m.Y H:i')
+            ));
+
+            Cache::forget($this->failedLoginNotificationKey($event->user->email, $request->ip()));
+        });
+
+        EventFacade::listen(Failed::class, function (Failed $event): void {
+            $request = request();
+            $email = strtolower((string) ($event->credentials['email'] ?? $request->input('email')));
+
+            if ($email === '') {
+                return;
+            }
+
+            $key = $this->failedLoginNotificationKey($email, $request->ip());
+            $attempts = Cache::increment($key);
+
+            if ($attempts === 1) {
+                Cache::put($key, 1, now()->addMinutes(15));
+            }
+
+            if ($attempts !== 5) {
+                return;
+            }
+
+            $user = User::where('email', $email)->first();
+
+            if (! $user) {
+                return;
+            }
+
+            $user->notify(new LoginLockoutNotification(
+                $request->ip(),
+                substr((string) $request->userAgent(), 0, 500),
+                now()->format('d.m.Y H:i')
+            ));
+        });
+
         Inertia::share([
             'theme' => fn () => auth()->user()?->theme ?? 'air',
 
             
         ]);
+    }
+
+    private function failedLoginNotificationKey(string $email, ?string $ipAddress): string
+    {
+        return 'login-failed-notification:'.sha1(strtolower($email).'|'.($ipAddress ?: 'unknown'));
     }
 }

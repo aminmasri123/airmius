@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\UploadStorage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -9,7 +10,19 @@ class File extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['club_id','team_id','event_id','user_id','folder_id','path','type','size'];
+    protected $fillable = ['club_id','team_id','event_id','user_id','folder_id','path','thumbnail_path','type','size'];
+
+    protected $appends = ['url', 'thumbnail_url'];
+
+    public function getUrlAttribute(): ?string
+    {
+        return UploadStorage::url($this->path);
+    }
+
+    public function getThumbnailUrlAttribute(): ?string
+    {
+        return UploadStorage::url($this->thumbnail_path);
+    }
 
     public function club()
     {

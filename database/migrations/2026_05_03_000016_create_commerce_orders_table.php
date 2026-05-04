@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('commerce_orders', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('club_id')->nullable()->constrained()->nullOnDelete();
             $table->nullableMorphs('orderable');
             $table->string('type', 40);
@@ -29,6 +29,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['provider', 'provider_checkout_id']);
+            $table->index(['user_id', 'status']);
             $table->index(['type', 'status']);
         });
 

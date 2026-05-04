@@ -4,11 +4,12 @@ import { Link } from '@inertiajs/vue3'
 const items = [
     ['las la-bullhorn', 'Top Inhalte', '/top-inhalte'],
     ['las la-briefcase', 'Jobs', '/jobs'],
+    ['las la-laptop-code', 'Werbeagentur', '/werbeagentur-fuer-vereine'],
     ['las la-chalkboard-teacher', 'E-Learning', '/e-learning'],
     ['las la-trophy', 'Gamification', '/gamification', { hideOnMobile: true }],
     ['las la-warehouse', 'Vereine', '/vereine'],
     ['las la-tags', 'Preise', '/preise'],
-    ['las la-shopping-bag', 'Marketplace', null],
+    ['las la-shopping-bag', 'Marketplace', '/marketplace'],
 ]
 </script>
 

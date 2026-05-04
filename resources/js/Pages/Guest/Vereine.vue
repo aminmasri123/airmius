@@ -1,5 +1,5 @@
 <script setup>
-import { Link, router } from '@inertiajs/vue3'
+import { Link, router, usePage } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
@@ -24,7 +24,8 @@ const form = ref({
 
 const { t, te } = useI18n()
 const initials = (name) => (name || '?').split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
-const storageUrl = (path) => path?.startsWith('http') ? path : `/storage/${path}`
+const page = usePage()
+const storageUrl = (path) => path?.startsWith('http') ? path : `${page.props.uploads?.url || '/storage'}/${path}`
 const sportLabel = (value) => {
     if (!value) return 'Sportart offen'
 

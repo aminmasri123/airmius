@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Support\UploadStorage;
 
 class MediaOptimizer
 {
@@ -13,6 +14,7 @@ class MediaOptimizer
     private const IMAGE_WEBP_QUALITY = 82;
     private const VIDEO_MAX_HEIGHT = 720;
     private const VIDEO_CRF = 28;
+    private const VIDEO_THUMBNAIL_WIDTH = 640;
 
     public function store(UploadedFile $file, string $directory): array
     {
@@ -47,21 +49,22 @@ class MediaOptimizer
         imagecopyresampled($target, $source, 0, 0, 0, 0, $targetWidth, $targetHeight, $width, $height);
 
         $path = trim($directory, '/').'/'.Str::uuid().'.webp';
-        $absolutePath = Storage::disk('public')->path($path);
+        $temporaryPath = $this->temporaryPath('webp');
 
-        if (! is_dir(dirname($absolutePath))) {
-            mkdir(dirname($absolutePath), 0775, true);
-        }
-
-        imagewebp($target, $absolutePath, self::IMAGE_WEBP_QUALITY);
+        imagewebp($target, $temporaryPath, self::IMAGE_WEBP_QUALITY);
 
         imagedestroy($source);
         imagedestroy($target);
 
+        $size = filesize($temporaryPath) ?: $file->getSize();
+        Storage::disk($this->disk())->put($path, fopen($temporaryPath, 'rb'), 'public');
+        @unlink($temporaryPath);
+
         return [
             'path' => $path,
+            'thumbnail_path' => null,
             'type' => 'image/webp',
-            'size' => filesize($absolutePath) ?: $file->getSize(),
+            'size' => $size,
         ];
     }
 
@@ -74,11 +77,7 @@ class MediaOptimizer
         }
 
         $path = trim($directory, '/').'/'.Str::uuid().'.mp4';
-        $absolutePath = Storage::disk('public')->path($path);
-
-        if (! is_dir(dirname($absolutePath))) {
-            mkdir(dirname($absolutePath), 0775, true);
-        }
+        $temporaryPath = $this->temporaryPath('mp4');
 
         $command = [
             $ffmpeg,
@@ -99,33 +98,79 @@ class MediaOptimizer
             '128k',
             '-movflags',
             '+faststart',
-            $absolutePath,
+            $temporaryPath,
         ];
 
-        if (! $this->runProcess($command, 300) || ! file_exists($absolutePath) || filesize($absolutePath) === 0) {
-            if (file_exists($absolutePath)) {
-                unlink($absolutePath);
+        if (! $this->runProcess($command, 300) || ! file_exists($temporaryPath) || filesize($temporaryPath) === 0) {
+            if (file_exists($temporaryPath)) {
+                unlink($temporaryPath);
             }
 
             return $this->storeOriginal($file, $directory);
         }
 
+        $size = filesize($temporaryPath) ?: $file->getSize();
+        Storage::disk($this->disk())->put($path, fopen($temporaryPath, 'rb'), 'public');
+        $thumbnailPath = $this->storeVideoThumbnail($ffmpeg, $file, $directory);
+        @unlink($temporaryPath);
+
         return [
             'path' => $path,
+            'thumbnail_path' => $thumbnailPath,
             'type' => 'video/mp4',
-            'size' => filesize($absolutePath) ?: $file->getSize(),
+            'size' => $size,
         ];
     }
 
     private function storeOriginal(UploadedFile $file, string $directory): array
     {
-        $path = $file->store($directory, 'public');
+        $path = $file->store($directory, [
+            'disk' => $this->disk(),
+            'visibility' => 'public',
+        ]);
 
         return [
             'path' => $path,
+            'thumbnail_path' => null,
             'type' => $file->getClientMimeType(),
             'size' => $file->getSize(),
         ];
+    }
+
+    private function storeVideoThumbnail(string $ffmpeg, UploadedFile $file, string $directory): ?string
+    {
+        foreach (['00:00:01.000', '00:00:00.100'] as $timestamp) {
+            $temporaryPath = $this->temporaryPath('jpg');
+            $command = [
+                $ffmpeg,
+                '-y',
+                '-ss',
+                $timestamp,
+                '-i',
+                $file->getRealPath(),
+                '-frames:v',
+                '1',
+                '-vf',
+                'scale='.self::VIDEO_THUMBNAIL_WIDTH.':-2',
+                '-q:v',
+                '4',
+                $temporaryPath,
+            ];
+
+            if ($this->runProcess($command, 60) && file_exists($temporaryPath) && filesize($temporaryPath) > 0) {
+                $path = trim($directory, '/').'/thumbnails/'.Str::uuid().'.jpg';
+                Storage::disk($this->disk())->put($path, fopen($temporaryPath, 'rb'), 'public');
+                @unlink($temporaryPath);
+
+                return $path;
+            }
+
+            if (file_exists($temporaryPath)) {
+                @unlink($temporaryPath);
+            }
+        }
+
+        return null;
     }
 
     private function isCompressibleImage(?string $mime): bool
@@ -214,5 +259,20 @@ class MediaOptimizer
         fclose($pipes[2]);
 
         return proc_close($process) === 0;
+    }
+
+    private function disk(): string
+    {
+        return UploadStorage::disk();
+    }
+
+    private function temporaryPath(string $extension): string
+    {
+        $path = tempnam(sys_get_temp_dir(), 'airmius-upload-');
+        $target = $path.'.'.$extension;
+
+        @rename($path, $target);
+
+        return $target;
     }
 }

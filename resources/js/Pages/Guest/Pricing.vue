@@ -57,6 +57,13 @@ const audiences = [
         description: 'Anbieter können später Produkte, Camps, Kurse und Dienstleistungen rund um Sport verkaufen.',
     },
     {
+        key: 'werbeagentur',
+        label: 'Werbeagentur',
+        icon: 'las la-laptop-code',
+        title: 'Websites, Kampagnen und digitale Sichtbarkeit für Vereine.',
+        description: 'Airmius bietet Vereinen Website-Erstellung, Landingpages und digitale Kampagnen als Angebotsservice nach Anfrage.',
+    },
+    {
         key: 'enterprise',
         label: 'Enterprise',
         icon: 'las la-network-wired',
@@ -107,8 +114,8 @@ const startCheckout = (plan, provider) => {
 
 <template>
     <SeoHead
-        title="Airmius Preise für Sportler, Trainer, Vereine und Partner"
-        description="Faire Airmius Pläne für Sportler, Trainer, Vereine, Eltern, Sponsoren, Anbieter und Verbände: von kostenlos bis professioneller Vereinsverwaltung."
+        title="Airmius Preise für Sportler, Trainer, Vereine, Partner und Werbeagentur"
+        description="Faire Airmius Pläne für Sportler, Trainer, Vereine, Eltern, Sponsoren, Anbieter, Verbände und Website-Services für Vereine."
     />
 
     <div class="min-h-screen bg-bg text-primary">
@@ -154,6 +161,15 @@ const startCheckout = (plan, provider) => {
                                 Airmius bleibt für Sportler und Eltern niedrigschwellig. Bezahlt wird dort, wo echte Verwaltung, Reichweite, Support oder Umsatz entsteht.
                             </p>
                         </div>
+                        <div v-if="selectedAudience === 'werbeagentur'" class="mt-4 rounded-lg border border-air-blue/40 bg-air-blue/10 p-4 text-sm text-secondary">
+                            <p class="font-semibold text-primary">Website-Service</p>
+                            <p class="mt-2">
+                                Der Preis hängt vom Umfang ab. Vereine stellen zuerst eine Anfrage und erhalten danach ein klares Angebot.
+                            </p>
+                            <Link :href="route('guest.werbeagentur')" class="mt-3 inline-flex rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">
+                                Werbeagentur ansehen
+                            </Link>
+                        </div>
                         <div class="mt-4 rounded-lg border border-border bg-bg p-4">
                             <label class="text-xs font-semibold uppercase text-secondary">Rabattcode</label>
                             <input
@@ -167,6 +183,44 @@ const startCheckout = (plan, provider) => {
                     </aside>
 
                     <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                        <article
+                            v-if="selectedAudience === 'werbeagentur' && !visiblePlans.length"
+                            class="surface-card flex flex-col p-5 md:col-span-2 xl:col-span-3"
+                        >
+                            <div class="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
+                                <div>
+                                    <h3 class="text-xl font-bold text-primary">Individuelles Angebot</h3>
+                                    <p class="mt-3 text-sm leading-relaxed text-secondary">
+                                        Websites und Kampagnen hängen stark von Umfang, Inhalten, Domain, Seitenanzahl und gewünschter Betreuung ab. Deshalb arbeitet Airmius hier mit Anfrage und Angebot.
+                                    </p>
+                                    <Link
+                                        :href="route('guest.werbeagentur')"
+                                        class="mt-5 inline-flex rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
+                                    >
+                                        Zur Werbeagentur-Seite
+                                    </Link>
+                                </div>
+                                <ul class="grid gap-3 text-sm text-secondary sm:grid-cols-2">
+                                    <li class="rounded-lg bg-bg p-4">
+                                        <p class="font-semibold text-primary">Website</p>
+                                        <p class="mt-1">Vereinsseite, Landingpage oder Kampagnenseite.</p>
+                                    </li>
+                                    <li class="rounded-lg bg-bg p-4">
+                                        <p class="font-semibold text-primary">Sichtbarkeit</p>
+                                        <p class="mt-1">SEO-Grundlage, Texte, Struktur und lokale Auffindbarkeit.</p>
+                                    </li>
+                                    <li class="rounded-lg bg-bg p-4">
+                                        <p class="font-semibold text-primary">Sponsoren</p>
+                                        <p class="mt-1">Sponsorenbereiche, Angebotsseiten und digitale Pakete.</p>
+                                    </li>
+                                    <li class="rounded-lg bg-bg p-4">
+                                        <p class="font-semibold text-primary">Prozess</p>
+                                        <p class="mt-1">Anfrage, klares Angebot, Annahme, Umsetzung.</p>
+                                    </li>
+                                </ul>
+                            </div>
+                        </article>
+
                         <article
                             v-for="plan in visiblePlans"
                             :key="plan.id"

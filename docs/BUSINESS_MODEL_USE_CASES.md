@@ -380,7 +380,7 @@ Preisvorschlag:
 - +50 GB: 15 EUR/Monat
 - +100 GB: 25 EUR/Monat
 
-### Website/Profil Plus
+### Werbeagentur / Website Plus
 
 Preisvorschlag:
 
@@ -737,7 +737,8 @@ Gestartet:
 - Commerce-Webhooks für Stripe und PayPal unter `/webhooks/commerce/stripe` und `/webhooks/commerce/paypal`, damit bezahlte Add-ons und Marketplace-Bestellungen auch ohne Rückkehrseite aktiviert werden.
 - E-Mail-Bestätigungen für abgeschlossene Commerce-Bestellungen.
 - Anbieter-/Sponsor-Self-Service unter `/commerce`: eigene Marketplace-Angebote einreichen, eigene Ads-Kampagnen vorbereiten und Status verfolgen.
-- Commerce-Zentrale `/admin/commerce` mit Bestellungen, Provisionssumme, Auszahlungssumme, Marketplace-Produkten, Ads-Kampagnen und Website-Anfragen.
+- Commerce-Zentrale `/admin/commerce` mit Bestellungen, Provisionssumme, Auszahlungssumme, Marketplace-Produkten, Ads-Kampagnen und Werbeagentur-/Website-Anfragen.
+- Öffentliche Werbeagentur-Seite `/werbeagentur-fuer-vereine`: Gäste sehen Website-, Kampagnen- und Sichtbarkeitsangebote für Vereine.
 - Vereinswebsite-Service: Vereine können unter `/commerce` eine Website-/Domain-Anfrage an Airmius stellen, Admins können diese im Commerce-Bereich bearbeiten.
 
 Noch offen für spätere Ausbaustufen:

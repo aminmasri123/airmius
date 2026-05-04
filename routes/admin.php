@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BlogPostController;
 use App\Http\Controllers\AdminCommerceController;
+use App\Http\Controllers\AdminOutfitSubscriptionPlanController;
 use App\Http\Controllers\GamificationRuleController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MemberController;
@@ -97,6 +98,12 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/admin/commerce/payouts/{user}', [AdminCommerceController::class, 'createPayout'])->middleware('can:subscriptions.manage')->name('admin.commerce.payouts.create');
     Route::put('/admin/commerce/payouts/{payout}/paid', [AdminCommerceController::class, 'markPayoutPaid'])->middleware('can:subscriptions.manage')->name('admin.commerce.payouts.paid');
     Route::put('/admin/commerce/payout-profiles/{profile}', [AdminCommerceController::class, 'updatePayoutProfile'])->middleware('can:subscriptions.manage')->name('admin.commerce.payout-profiles.update');
+
+    // SPORT CLOTHING SUBSCRIPTIONS
+    Route::get('/admin/outfit-subscriptions', [AdminOutfitSubscriptionPlanController::class, 'index'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscriptions.index');
+    Route::post('/admin/outfit-subscription-plans', [AdminOutfitSubscriptionPlanController::class, 'store'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscription-plans.store');
+    Route::put('/admin/outfit-subscription-plans/{plan}', [AdminOutfitSubscriptionPlanController::class, 'update'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscription-plans.update');
+    Route::delete('/admin/outfit-subscription-plans/{plan}', [AdminOutfitSubscriptionPlanController::class, 'destroy'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscription-plans.destroy');
 
     // INVOICES
     Route::get('/admin/invoices', [InvoiceController::class, 'index'])->middleware('can:billing.manage')->name('invoices.index');
