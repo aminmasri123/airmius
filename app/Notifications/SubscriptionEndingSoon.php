@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\ClubSubscription;
 use App\Models\UserSubscription;
+use App\Support\EmailTemplate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -25,16 +26,14 @@ class SubscriptionEndingSoon extends Notification
         $isTrial = $subscription->status === 'trialing';
         $endsAt = $subscription->current_period_ends_at ?? $subscription->trial_ends_at;
 
-        return (new MailMessage)
-            ->subject($isTrial ? 'Deine Airmius Testphase endet bald' : 'Dein Airmius Abo endet bald')
-            ->greeting('Hallo '.$this->recipientName($notifiable).',')
-            ->line($isTrial
-                ? 'deine Airmius Testphase läuft bald ab.'
-                : 'dein Airmius Abo läuft bald ab.')
-            ->line('Plan: '.($subscription->plan?->name ?? 'Airmius Plan'))
-            ->line('Enddatum: '.$this->date($endsAt))
-            ->action('Pläne ansehen', route('guest.pricing'))
-            ->line('Wenn du Airmius weiter nutzen möchtest, kannst du rechtzeitig einen passenden Plan wählen.');
+        return EmailTemplate::mail('subscription_ending_soon', [
+            'name' => $this->recipientName($notifiable),
+            'plan_name' => $subscription->plan?->name ?? 'Airmius Plan',
+            'end_date' => $this->date($endsAt),
+            'ending_message' => $isTrial
+                ? 'deine Airmius Testphase laeuft bald ab.'
+                : 'dein Airmius Abo laeuft bald ab.',
+        ], route('guest.pricing'));
     }
 
     private function date($value): string

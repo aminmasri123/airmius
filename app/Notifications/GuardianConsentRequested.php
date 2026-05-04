@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\User;
+use App\Support\EmailTemplate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -16,11 +17,6 @@ class GuardianConsentRequested extends Notification
     ) {
     }
 
-    /**
-     * Get the notification's delivery channels.
-     *
-     * @return array<int, string>
-     */
     public function via(object $notifiable): array
     {
         return ['mail'];
@@ -28,12 +24,8 @@ class GuardianConsentRequested extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject('Zustimmung zur Registrierung bei Airmius')
-            ->greeting('Hallo,')
-            ->line($this->minor->name.' hat sich bei Airmius registriert und ist unter 16 Jahre alt.')
-            ->line('Bitte prüfen Sie die Anfrage. Sie können der Registrierung zustimmen oder sie ablehnen.')
-            ->action('Zustimmen oder ablehnen', route('guardian-consent.show', $this->minor->guardian_consent_token))
-            ->line('Wenn Sie diese Anfrage nicht erwartet haben, können Sie diese E-Mail ignorieren.');
+        return EmailTemplate::mail('guardian_consent_requested', [
+            'minor_name' => $this->minor->name,
+        ], route('guardian-consent.show', $this->minor->guardian_consent_token));
     }
 }

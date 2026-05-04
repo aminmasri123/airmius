@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\EmailTemplate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 
@@ -40,9 +41,15 @@ class KontaktController extends Controller
 
         // 3. OPTIONAL: E-Mail senden
 
-        Mail::raw($validated['message'], function ($mail) use ($validated) {
+        $content = EmailTemplate::content('contact_form_admin', [
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'message' => $validated['message'],
+        ]);
+
+        Mail::raw($content['body'], function ($mail) use ($validated, $content) {
             $mail->to('contact@airmius.com')
-                 ->subject('Neue Kontaktanfrage von Kontaktformular - Anfrage von ' . $validated['name'])
+                 ->subject($content['subject'])
                  ->replyTo($validated['email']);
         });
 

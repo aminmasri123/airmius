@@ -56,6 +56,7 @@ const tabClass = (tab) =>
 
 // Theme
 const { setTheme } = useTheme()
+const addressNotice = ref(null)
 
 // Form
 const form = useForm({
@@ -69,16 +70,36 @@ const form = useForm({
 })
 
 // Actions
-const saveAddress = () => {
+const saveAddress = (showFeedback = true) => {
+    if (showFeedback) {
+        addressNotice.value = null
+    }
+
     form.put(route('auth.settings.update'), {
         preserveScroll: true,
+        onSuccess: () => {
+            if (showFeedback) {
+                addressNotice.value = {
+                    type: 'success',
+                    message: 'Adresse wurde erfolgreich gespeichert.',
+                }
+            }
+        },
+        onError: () => {
+            if (showFeedback) {
+                addressNotice.value = {
+                    type: 'error',
+                    message: 'Adresse konnte nicht gespeichert werden. Bitte pruefe die Eingaben.',
+                }
+            }
+        },
     })
 }
 
 const updateTheme = (theme) => {
     setTheme(theme)
     form.theme = theme
-    saveAddress()
+    saveAddress(false)
 }
 
 const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
@@ -222,6 +243,16 @@ const formatDistance = (meters) => {
                     </p>
                 </div>
 
+                <div
+                    v-if="addressNotice"
+                    class="md:col-span-2 rounded-lg border px-4 py-3 text-sm"
+                    :class="addressNotice.type === 'success'
+                        ? 'border-success/30 bg-success/10 text-success'
+                        : 'border-error/30 bg-error/10 text-error'"
+                >
+                    {{ addressNotice.message }}
+                </div>
+
                 <div>
                     <label class="text-sm font-semibold text-primary">Land</label>
                     <select v-model="form.country" required class="input">
@@ -234,31 +265,37 @@ const formatDistance = (meters) => {
                         <option value="TR">Türkei</option>
                         <option value="US">USA</option>
                     </select>
+                    <p v-if="form.errors.country" class="mt-1 text-sm text-error">{{ form.errors.country }}</p>
                 </div>
 
                 <div>
                     <label class="text-sm font-semibold text-primary">Stadt</label>
                     <input v-model="form.city" class="input" />
+                    <p v-if="form.errors.city" class="mt-1 text-sm text-error">{{ form.errors.city }}</p>
                 </div>
 
                 <div>
                     <label class="text-sm font-semibold text-primary">PLZ</label>
                     <input v-model="form.postal_code" class="input" />
+                    <p v-if="form.errors.postal_code" class="mt-1 text-sm text-error">{{ form.errors.postal_code }}</p>
                 </div>
 
                 <div>
                     <label class="text-sm font-semibold text-primary">Bundesland</label>
                     <input v-model="form.state" class="input" />
+                    <p v-if="form.errors.state" class="mt-1 text-sm text-error">{{ form.errors.state }}</p>
                 </div>
 
                 <div>
                     <label class="text-sm font-semibold text-primary">Straße</label>
                     <input v-model="form.street" class="input" />
+                    <p v-if="form.errors.street" class="mt-1 text-sm text-error">{{ form.errors.street }}</p>
                 </div>
 
                 <div>
                     <label class="text-sm font-semibold text-primary">Hausnummer</label>
                     <input v-model="form.house_number" class="input" />
+                    <p v-if="form.errors.house_number" class="mt-1 text-sm text-error">{{ form.errors.house_number }}</p>
                 </div>
 
                 <div class="md:col-span-2">

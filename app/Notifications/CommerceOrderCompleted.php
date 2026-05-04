@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\CommerceOrder;
+use App\Support\EmailTemplate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -23,14 +24,10 @@ class CommerceOrderCompleted extends Notification
         $order = $this->order->loadMissing('orderable');
         $title = $order->orderable?->name ?? $order->orderable?->title ?? 'Airmius Bestellung';
 
-        return (new MailMessage)
-            ->subject('Airmius Bestellung bestaetigt')
-            ->greeting('Hallo '.(trim((string) ($notifiable->name ?? '')) ?: 'zusammen').',')
-            ->line('deine Bestellung wurde erfolgreich bestaetigt.')
-            ->line('Bestellung: '.$title)
-            ->line('Betrag: '.number_format($order->amount_cents / 100, 2, ',', '.').' '.$order->currency)
-            ->line('Status: bezahlt')
-            ->action('Marketplace ansehen', route('guest.marketplace'))
-            ->line('Danke, dass du Airmius nutzt.');
+        return EmailTemplate::mail('commerce_order_completed', [
+            'name' => trim((string) ($notifiable->name ?? '')) ?: 'zusammen',
+            'order_title' => $title,
+            'amount' => number_format($order->amount_cents / 100, 2, ',', '.').' '.$order->currency,
+        ], route('guest.marketplace'));
     }
 }

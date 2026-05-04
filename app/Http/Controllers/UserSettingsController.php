@@ -135,7 +135,7 @@ class UserSettingsController extends Controller
                 'country' => strtoupper($data['country']),
             ]);
 
-            return back(); // oder Inertia redirect
+            return back()->with('success', 'Einstellungen wurden gespeichert.');
     }
 
 

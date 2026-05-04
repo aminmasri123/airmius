@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Support\EmailTemplate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -22,11 +23,8 @@ class AccountDeletionCompleted extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject('Dein Airmius-Konto wurde geloescht')
-            ->greeting('Hallo'.($this->name ? ' '.$this->name : '').',')
-            ->line('dein Airmius-Konto wurde erfolgreich geloescht.')
-            ->line('Diese E-Mail bestaetigt, dass die Kontoloeschung abgeschlossen wurde.')
-            ->line('Falls du diese Loeschung nicht selbst ausgeloest hast, kontaktiere bitte den Airmius-Support.');
+        return EmailTemplate::mail('account_deletion_completed', [
+            'name' => $this->name ?: 'zusammen',
+        ]);
     }
 }

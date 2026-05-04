@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\SubscriptionInvoice;
+use App\Support\EmailTemplate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -22,17 +23,14 @@ class SubscriptionInvoicePaid extends Notification
     {
         $invoice = $this->invoice->loadMissing(['plan:id,name', 'club:id,name']);
 
-        return (new MailMessage)
-            ->subject('Zahlung für Airmius Rechnung '.$invoice->number.' bestätigt')
-            ->greeting('Hallo '.$this->recipientName($notifiable).',')
-            ->line('deine Zahlung wurde bestaetigt. Dein Airmius Abo ist aktiv.')
-            ->line('Rechnung: '.$invoice->number)
-            ->line('Plan: '.($invoice->plan?->name ?? $invoice->title))
-            ->line('Betrag: '.$this->amount($invoice))
-            ->line('Bezahlt am: '.$this->date($invoice->paid_at))
-            ->line('Zahlungsart: '.$this->paymentMethod($invoice->payment_method))
-            ->action('Rechnung herunterladen', route('auth.subscription-invoices.download', $invoice))
-            ->line('Danke, dass du Airmius nutzt.');
+        return EmailTemplate::mail('subscription_invoice_paid', [
+            'name' => $this->recipientName($notifiable),
+            'invoice_number' => $invoice->number,
+            'plan_name' => $invoice->plan?->name ?? $invoice->title,
+            'amount' => $this->amount($invoice),
+            'paid_date' => $this->date($invoice->paid_at),
+            'payment_method' => $this->paymentMethod($invoice->payment_method),
+        ], route('auth.subscription-invoices.download', $invoice));
     }
 
     private function amount(SubscriptionInvoice $invoice): string

@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\ClubSubscription;
 use App\Models\UserSubscription;
+use App\Support\EmailTemplate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -23,14 +24,11 @@ class SubscriptionRenewed extends Notification
     {
         $subscription = $this->subscription->loadMissing(['plan']);
 
-        return (new MailMessage)
-            ->subject('Airmius Abo wurde verlaengert')
-            ->greeting('Hallo '.$this->recipientName($notifiable).',')
-            ->line('dein Airmius Abo wurde verlaengert.')
-            ->line('Plan: '.($subscription->plan?->name ?? 'Airmius Plan'))
-            ->line('Neue Laufzeit bis: '.$this->date($subscription->current_period_ends_at))
-            ->action('Plaene ansehen', route('guest.pricing'))
-            ->line('Danke, dass du Airmius nutzt.');
+        return EmailTemplate::mail('subscription_renewed', [
+            'name' => $this->recipientName($notifiable),
+            'plan_name' => $subscription->plan?->name ?? 'Airmius Plan',
+            'end_date' => $this->date($subscription->current_period_ends_at),
+        ], route('guest.pricing'));
     }
 
     private function date($value): string

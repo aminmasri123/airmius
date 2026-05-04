@@ -1,27 +1,23 @@
 <?php
+
 namespace App\Notifications;
 
+use App\Support\EmailTemplate;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Notifications\Messages\MailMessage;
 
-class MyCustomResetPassword  extends ResetPassword
+class MyCustomResetPassword extends ResetPassword
 {
-    public function toMail($notifiable)
+    public function toMail($notifiable): MailMessage
     {
-        // Hier baust du die URL für den Button
         $url = url(route('password.reset', [
             'token' => $this->token,
             'email' => $notifiable->getEmailForPasswordReset(),
         ], false));
 
-        return (new MailMessage)
-            ->subject(__('Passwort zurücksetzen'))
-            ->greeting(__('Hallo!'))
-            ->line(__('Du erhältst diese E-Mail, weil wir eine Anfrage zum Zurücksetzen des Passworts für dein Konto erhalten haben.'))
-            ->action(__('Passwort zurücksetzen'), $url)
-            ->line(__('Dieser Link läuft in 60 Minuten ab.'))
-            ->salutation(__('Beste Grüße, dein Airmius Team'));
-
+        return EmailTemplate::mail('password_reset', [
+            'reset_url' => $url,
+            'expires_minutes' => config('auth.passwords.users.expire', 60),
+        ], $url)->salutation('Beste Gruesse, dein Airmius Team');
     }
 }
-

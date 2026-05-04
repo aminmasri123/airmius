@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Setting;
 use App\Models\SubscriptionInvoice;
+use App\Support\EmailTemplate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -24,21 +25,18 @@ class SubscriptionInvoiceAwaitingTransfer extends Notification
         $invoice = $this->invoice->loadMissing(['plan:id,name', 'club:id,name']);
         $bank = $this->bankSettings();
 
-        return (new MailMessage)
-            ->subject('Airmius Rechnung '.$invoice->number.' wartet auf Ueberweisung')
-            ->greeting('Hallo '.$this->recipientName($notifiable).',')
-            ->line('deine Airmius Rechnung wurde erstellt und wartet auf Zahlung per Ueberweisung.')
-            ->line('Rechnung: '.$invoice->number)
-            ->line('Plan: '.($invoice->plan?->name ?? $invoice->title))
-            ->line('Betrag: '.$this->amount($invoice))
-            ->line('Fällig bis: '.$this->date($invoice->due_at))
-            ->line('Verwendungszweck: '.($invoice->payment_reference ?: $invoice->number))
-            ->line('Kontoinhaber: '.$bank['bank_account_holder'])
-            ->line('Bank: '.($bank['bank_name'] ?: '-'))
-            ->line('IBAN: '.($bank['iban'] ?: '-'))
-            ->line('BIC: '.($bank['bic'] ?: '-'))
-            ->action('Rechnung herunterladen', route('auth.subscription-invoices.download', $invoice))
-            ->line('Sobald die Zahlung eingegangen ist, bestaetigen wir sie in Airmius.');
+        return EmailTemplate::mail('subscription_invoice_awaiting_transfer', [
+            'name' => $this->recipientName($notifiable),
+            'invoice_number' => $invoice->number,
+            'plan_name' => $invoice->plan?->name ?? $invoice->title,
+            'amount' => $this->amount($invoice),
+            'due_date' => $this->date($invoice->due_at),
+            'payment_reference' => $invoice->payment_reference ?: $invoice->number,
+            'bank_account_holder' => $bank['bank_account_holder'],
+            'bank_name' => $bank['bank_name'] ?: '-',
+            'iban' => $bank['iban'] ?: '-',
+            'bic' => $bank['bic'] ?: '-',
+        ], route('auth.subscription-invoices.download', $invoice));
     }
 
     private function bankSettings(): array

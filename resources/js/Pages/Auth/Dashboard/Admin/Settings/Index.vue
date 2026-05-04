@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, useForm, usePage } from '@inertiajs/vue3'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 defineOptions({ layout: AppLayout })
 
@@ -15,6 +15,21 @@ const props = defineProps({
 const page = usePage()
 const maintenance = computed(() => props.settings.maintenance || {})
 const billing = computed(() => props.settings.billing || {})
+const emailTemplates = computed(() => props.settings.email_templates || [])
+const activeEmailKey = ref(emailTemplates.value[0]?.key || null)
+const activeEmailTemplate = computed(() => emailTemplates.value.find((template) => template.key === activeEmailKey.value) || emailTemplates.value[0])
+
+const initialEmailTemplates = () => Object.fromEntries(emailTemplates.value.map((template) => [
+    template.key,
+    {
+        subject: template.template.subject || '',
+        greeting: template.template.greeting || '',
+        body: template.template.body || '',
+        action_label: template.template.action_label || '',
+    },
+]))
+
+const placeholderFor = (variable) => `{{ ${variable} }}`
 
 const form = useForm({
     maintenance_enabled: Boolean(maintenance.value.enabled),
@@ -25,6 +40,7 @@ const form = useForm({
     billing_iban: billing.value.iban || '',
     billing_bic: billing.value.bic || '',
     billing_payment_terms_days: billing.value.payment_terms_days || 14,
+    email_templates: initialEmailTemplates(),
 })
 
 const save = () => {
@@ -160,6 +176,99 @@ const save = () => {
                                 <p v-if="form.errors.billing_payment_terms_days" class="mt-1 text-sm text-error">
                                     {{ form.errors.billing_payment_terms_days }}
                                 </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-lg border border-border bg-bg p-4">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <h2 class="text-lg font-semibold text-primary">E-Mail-Vorlagen</h2>
+                                <p class="mt-1 text-sm text-secondary">
+                                    Bearbeite Betreff, Anrede, Inhalt und Buttontexte aller System-E-Mails.
+                                </p>
+                            </div>
+                            <span class="rounded-full bg-air-blue/15 px-3 py-1 text-xs font-semibold text-air-blue">
+                                {{ emailTemplates.length }} Vorlagen
+                            </span>
+                        </div>
+
+                        <div class="mt-4 grid gap-4 xl:grid-cols-[18rem_1fr]">
+                            <div class="max-h-[34rem] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+                                <button
+                                    v-for="template in emailTemplates"
+                                    :key="template.key"
+                                    type="button"
+                                    class="w-full rounded-lg border px-3 py-2 text-left transition"
+                                    :class="activeEmailKey === template.key ? 'border-buttonPrimary bg-buttonPrimary/10 text-primary' : 'border-border bg-card text-secondary hover:border-borderHover'"
+                                    @click="activeEmailKey = template.key"
+                                >
+                                    <span class="block text-sm font-semibold">{{ template.label }}</span>
+                                    <span class="mt-1 block text-xs leading-5">{{ template.description }}</span>
+                                </button>
+                            </div>
+
+                            <div v-if="activeEmailTemplate && form.email_templates[activeEmailTemplate.key]" class="space-y-4 rounded-lg border border-border bg-card p-4">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Aktive Vorlage</p>
+                                    <h3 class="mt-1 text-lg font-semibold text-primary">{{ activeEmailTemplate.label }}</h3>
+                                    <p class="mt-1 text-sm text-secondary">{{ activeEmailTemplate.description }}</p>
+                                </div>
+
+                                <div class="grid gap-4 md:grid-cols-2">
+                                    <div>
+                                        <label class="text-sm font-semibold text-primary">Betreff</label>
+                                        <input
+                                            v-model="form.email_templates[activeEmailTemplate.key].subject"
+                                            type="text"
+                                            class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary"
+                                        >
+                                    </div>
+
+                                    <div>
+                                        <label class="text-sm font-semibold text-primary">Anrede</label>
+                                        <input
+                                            v-model="form.email_templates[activeEmailTemplate.key].greeting"
+                                            type="text"
+                                            class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary"
+                                        >
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="text-sm font-semibold text-primary">Inhalt</label>
+                                    <textarea
+                                        v-model="form.email_templates[activeEmailTemplate.key].body"
+                                        rows="10"
+                                        class="mt-1 block w-full rounded-lg border-border bg-inputBg font-mono text-sm text-primary"
+                                    />
+                                    <p class="mt-1 text-xs text-secondary">
+                                        Jede neue Zeile wird als eigener Absatz in der E-Mail ausgegeben.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label class="text-sm font-semibold text-primary">Buttontext</label>
+                                    <input
+                                        v-model="form.email_templates[activeEmailTemplate.key].action_label"
+                                        type="text"
+                                        class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary"
+                                        placeholder="Leer lassen, wenn diese E-Mail keinen Button hat"
+                                    >
+                                </div>
+
+                                <div class="rounded-lg border border-border bg-bg p-3">
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Platzhalter</p>
+                                    <div class="mt-2 flex flex-wrap gap-2">
+                                        <span
+                                            v-for="variable in activeEmailTemplate.variables"
+                                            :key="variable"
+                                            class="rounded-lg border border-border bg-card px-2 py-1 font-mono text-xs text-primary"
+                                        >
+                                            {{ placeholderFor(variable) }}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

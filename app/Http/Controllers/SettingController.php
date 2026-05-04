@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Setting;
+use App\Support\EmailTemplate;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -31,6 +32,7 @@ class SettingController extends Controller
                     'bic' => Setting::valueFor('billing_bic', ''),
                     'payment_terms_days' => (int) Setting::valueFor('billing_payment_terms_days', 14),
                 ],
+                'email_templates' => EmailTemplate::forAdmin(),
             ],
         ]);
     }
@@ -81,6 +83,11 @@ class SettingController extends Controller
             'billing_iban' => ['nullable', 'string', 'max:40'],
             'billing_bic' => ['nullable', 'string', 'max:20'],
             'billing_payment_terms_days' => ['required', 'integer', 'min:1', 'max:60'],
+            'email_templates' => ['required', 'array'],
+            'email_templates.*.subject' => ['required', 'string', 'max:180'],
+            'email_templates.*.greeting' => ['required', 'string', 'max:180'],
+            'email_templates.*.body' => ['required', 'string', 'max:5000'],
+            'email_templates.*.action_label' => ['nullable', 'string', 'max:120'],
         ]);
 
         Setting::setValue('maintenance_mode', (bool) $data['maintenance_enabled']);
@@ -91,10 +98,9 @@ class SettingController extends Controller
         Setting::setValue('billing_iban', strtoupper(str_replace(' ', '', $data['billing_iban'] ?? '')));
         Setting::setValue('billing_bic', strtoupper(str_replace(' ', '', $data['billing_bic'] ?? '')));
         Setting::setValue('billing_payment_terms_days', (int) $data['billing_payment_terms_days']);
+        EmailTemplate::save($data['email_templates']);
 
-        return back()->with('success', $data['maintenance_enabled']
-            ? 'Wartemodus wurde aktiviert.'
-            : 'Wartemodus wurde deaktiviert.');
+        return back()->with('success', 'Systemeinstellungen wurden gespeichert.');
     }
 
     /**

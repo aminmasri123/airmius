@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\ClubSubscription;
 use App\Models\UserSubscription;
+use App\Support\EmailTemplate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -29,16 +30,14 @@ class SubscriptionCancelled extends Notification
             ? $subscription->cancelled_at
             : ($subscription->cancels_at ?? $subscription->current_period_ends_at);
 
-        return (new MailMessage)
-            ->subject('Airmius Abo-Kuendigung bestaetigt')
-            ->greeting('Hallo '.$this->recipientName($notifiable).',')
-            ->line($this->mode === 'now'
+        return EmailTemplate::mail('subscription_cancelled', [
+            'name' => $this->recipientName($notifiable),
+            'plan_name' => $subscription->plan?->name ?? 'Airmius Plan',
+            'end_date' => $this->date($endsAt),
+            'cancel_message' => $this->mode === 'now'
                 ? 'dein Airmius Abo wurde beendet.'
-                : 'deine Airmius Abo-Kuendigung wurde zum Periodenende vorgemerkt.')
-            ->line('Plan: '.($subscription->plan?->name ?? 'Airmius Plan'))
-            ->line('Endet am: '.$this->date($endsAt))
-            ->action('Plaene ansehen', route('guest.pricing'))
-            ->line('Du kannst später jederzeit wieder einen passenden Plan aktivieren.');
+                : 'deine Airmius Abo-Kuendigung wurde zum Periodenende vorgemerkt.',
+        ], route('guest.pricing'));
     }
 
     private function date($value): string

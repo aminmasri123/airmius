@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\ClubSubscription;
 use App\Models\UserSubscription;
+use App\Support\EmailTemplate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -23,14 +24,10 @@ class SubscriptionPaymentIssue extends Notification
     {
         $subscription = $this->subscription->loadMissing(['plan']);
 
-        return (new MailMessage)
-            ->subject('Zahlung für dein Airmius Abo ist offen')
-            ->greeting('Hallo '.$this->recipientName($notifiable).',')
-            ->line('für dein Airmius Abo ist eine Zahlung offen oder deine Testphase ist abgelaufen.')
-            ->line('Plan: '.($subscription->plan?->name ?? 'Airmius Plan'))
-            ->line('Status: Zahlung offen')
-            ->action('Plan verlängern', route('guest.pricing'))
-            ->line('Bitte aktualisiere die Zahlung, damit alle gebuchten Funktionen aktiv bleiben.');
+        return EmailTemplate::mail('subscription_payment_issue', [
+            'name' => $this->recipientName($notifiable),
+            'plan_name' => $subscription->plan?->name ?? 'Airmius Plan',
+        ], route('guest.pricing'));
     }
 
     private function recipientName(object $notifiable): string
