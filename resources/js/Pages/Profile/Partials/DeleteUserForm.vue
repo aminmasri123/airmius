@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
 import ActionSection from '@/Components/ActionSection.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import DialogModal from '@/Components/DialogModal.vue';
@@ -10,6 +10,8 @@ import TextInput from '@/Components/TextInput.vue';
 
 const confirmingUserDeletion = ref(false);
 const passwordInput = ref(null);
+const page = usePage();
+const confirmsWithEmail = page.props.auth.user?.has_social_login;
 
 const form = useForm({
     password: '',
@@ -18,14 +20,14 @@ const form = useForm({
 const confirmUserDeletion = () => {
     confirmingUserDeletion.value = true;
 
-    setTimeout(() => passwordInput.value.focus(), 250);
+    setTimeout(() => passwordInput.value?.focus(), 250);
 };
 
 const deleteUser = () => {
     form.delete(route('current-user.destroy'), {
         preserveScroll: true,
         onSuccess: () => closeModal(),
-        onError: () => passwordInput.value.focus(),
+        onError: () => passwordInput.value?.focus(),
         onFinish: () => form.reset(),
     });
 };
@@ -65,16 +67,21 @@ const closeModal = () => {
                 </template>
 
                 <template #content>
-                    Are you sure you want to delete your account? Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.
+                    <span v-if="confirmsWithEmail">
+                        Are you sure you want to delete your account? Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your email address to confirm you would like to permanently delete your account.
+                    </span>
+                    <span v-else>
+                        Are you sure you want to delete your account? Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.
+                    </span>
 
                     <div class="mt-4">
                         <TextInput
                             ref="passwordInput"
                             v-model="form.password"
-                            type="password"
+                            :type="confirmsWithEmail ? 'email' : 'password'"
                             class="mt-1 block w-3/4"
-                            placeholder="Password"
-                            autocomplete="current-password"
+                            :placeholder="confirmsWithEmail ? page.props.auth.user.email : 'Password'"
+                            :autocomplete="confirmsWithEmail ? 'email' : 'current-password'"
                             @keyup.enter="deleteUser"
                         />
 

@@ -35,7 +35,7 @@ const checkout = () => {
     />
 
     <div class="min-h-screen bg-bg text-primary">
-        <Nav :canLogin="canLogin" />
+        <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
         <main class="px-4 pb-24 pt-36 md:pb-12 md:pt-44">

@@ -75,7 +75,7 @@ const searchCategory = (category) => {
     />
 
     <div class="min-h-screen bg-bg text-primary">
-        <Nav :canLogin="canLogin" />
+        <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
         <main class="pb-24 pt-32 md:pb-12 md:pt-40">

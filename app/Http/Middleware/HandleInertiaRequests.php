@@ -56,6 +56,7 @@ class HandleInertiaRequests extends Middleware
                     'profile_photo_path' => $user->profile_photo_path,
                     'profile_photo_url' => $user->profile_photo_url,
                     'profile_photo_thumb' => $user->profile_photo_thumb,
+                    'has_social_login' => $user->socialAccounts()->exists(),
 
 
                     // 🔥 HIER IST DER FIX

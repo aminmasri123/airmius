@@ -96,7 +96,7 @@ const clearPhotoFileInput = () => {
 
         <template #form>
             <!-- Profile Photo -->
-            <div v-if="$page.props.jetstream.managesProfilePhotos" class="col-span-6 sm:col-span-4">
+            <div v-if="$page.props.jetstream.managesProfilePhotos" class="col-span-6">
                 <!-- Profile Photo File Input -->
                 <input id="photo" ref="photoInput" type="file" class="hidden" @change="updatePhotoPreview">
 
@@ -130,14 +130,14 @@ const clearPhotoFileInput = () => {
             </div>
 
             <!-- Name -->
-            <div class="col-span-6 sm:col-span-2">
+            <div class="col-span-6 sm:col-span-3">
                 <InputLabel for="first_name" value="Vorname" />
                 <TextInput id="first_name" v-model="form.first_name" type="text" class="mt-1 block w-full" required
                     autocomplete="given-name" />
                 <InputError :message="form.errors.first_name" class="mt-2" />
             </div>
 
-            <div class="col-span-6 sm:col-span-2">
+            <div class="col-span-6 sm:col-span-3">
                 <InputLabel for="last_name" value="Nachname" />
                 <TextInput id="last_name" v-model="form.last_name" type="text" class="mt-1 block w-full" required
                     autocomplete="family-name" />
@@ -145,7 +145,7 @@ const clearPhotoFileInput = () => {
             </div>
 
             <!-- Email -->
-            <div class="col-span-6 sm:col-span-4">
+            <div class="col-span-6">
                 <InputLabel for="email" value="Email" />
                 <TextInput id="email" v-model="form.email" type="email" class="mt-1 block w-full" required
                     autocomplete="username" />
@@ -168,7 +168,7 @@ const clearPhotoFileInput = () => {
                 </div>
             </div>
 
-            <div class="col-span-6 sm:col-span-4">
+            <div class="col-span-6">
                 <InputLabel for="profile_visibility" value="Profile visibility" />
                 <select id="profile_visibility" v-model="form.profile_visibility"
                     class="mt-1 block w-full rounded-md border-border bg-inputBg text-primary shadow-sm focus:border-borderHover focus:ring-borderHover">
@@ -178,7 +178,7 @@ const clearPhotoFileInput = () => {
                 <InputError :message="form.errors.profile_visibility" class="mt-2" />
             </div>
 
-            <div class="col-span-6 sm:col-span-4">
+            <div class="col-span-6">
                 <InputLabel for="athlete_license_number" value="Lizenznummer" />
                 <TextInput
                     id="athlete_license_number"
@@ -194,7 +194,7 @@ const clearPhotoFileInput = () => {
                 <InputError :message="form.errors.athlete_license_number" class="mt-2" />
             </div>
 
-            <div class="col-span-6 sm:col-span-4">
+            <div class="col-span-6">
                 <InputLabel for="bio" value="Bio" />
                 <textarea id="bio" v-model="form.bio" rows="4"
                     class="mt-1 block w-full rounded-md border-border bg-inputBg text-primary shadow-sm focus:border-borderHover focus:ring-borderHover" />

@@ -119,7 +119,7 @@ const startCheckout = (plan, provider) => {
     />
 
     <div class="min-h-screen bg-bg text-primary">
-        <Nav :canLogin="canLogin" />
+        <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
         <main class="px-4 mb-8 pt-36 md:pt-44">

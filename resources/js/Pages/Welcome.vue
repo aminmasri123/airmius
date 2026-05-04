@@ -84,7 +84,7 @@ const submitForm = () => {
     />
     <div id="app" class="w-full h-full bg-bg text-primary overflow-auto">
         <!-- NAV -->
-        <Nav :canLogin="canLogin" />
+        <Nav :canLogin="canLogin" :canRegister="canRegister" />
 
         <!-- SUB NAV -->
          <Subnav />

@@ -157,6 +157,7 @@ const formatDistance = (meters) => {
             <button @click="activeTab = 'billing'" :class="tabClass('billing')">Zahlungen</button>
             <button @click="activeTab = 'integrations'" :class="tabClass('integrations')">Verknüpfungen</button>
             <button @click="activeTab = 'design'" :class="tabClass('design')">Design</button>
+            <button @click="activeTab = 'language'" :class="tabClass('language')">Sprache</button>
             <button @click="activeTab = 'security'" :class="tabClass('security')">Sicherheit</button>
         </div>
 
@@ -196,13 +197,15 @@ const formatDistance = (meters) => {
                 <button class="btn" @click="updateTheme('womanly')">Womanly</button>
             </div>
 
-            <div class="mt-6 border-t border-border pt-5">
-                <h2 class="text-sm font-semibold text-secondary mb-3">Sprache</h2>
-                <p class="mb-3 text-sm text-secondary">
-                    Wähle die Sprache für Navigation, Seiten und Bedienelemente.
-                </p>
-                <LanguageDropdown />
-            </div>
+        </div>
+
+        <!-- SPRACHE -->
+        <div v-if="activeTab === 'language'" class="surface-card p-5">
+            <h2 class="text-sm font-semibold text-secondary mb-3">Sprache</h2>
+            <p class="mb-3 text-sm text-secondary">
+                Wähle die Sprache für Navigation, Seiten und Bedienelemente.
+            </p>
+            <LanguageDropdown />
         </div>
 
         <!-- ADRESSE -->

@@ -16,7 +16,7 @@ const title = props.status === 'success' ? 'Bestellung verarbeitet' : 'Bestellun
     <Head :title="title" />
 
     <div class="min-h-screen bg-bg text-primary">
-        <Nav :canLogin="true" />
+        <Nav :canLogin="true" :canRegister="true" />
         <Subnav />
 
         <main class="px-4 pb-24 pt-36 md:pb-12 md:pt-44">
