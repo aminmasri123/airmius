@@ -10,11 +10,14 @@ import TextInput from '@/Components/TextInput.vue';
 
 const confirmingUserDeletion = ref(false);
 const passwordInput = ref(null);
+const codeInput = ref(null);
+const step = ref('identity');
 const page = usePage();
 const confirmsWithEmail = page.props.auth.user?.has_social_login;
 
 const form = useForm({
     password: '',
+    code: '',
 });
 
 const confirmUserDeletion = () => {
@@ -23,19 +26,39 @@ const confirmUserDeletion = () => {
     setTimeout(() => passwordInput.value?.focus(), 250);
 };
 
+const requestDeletionCode = () => {
+    form.post(route('current-user.deletion-code'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            step.value = 'code';
+            form.reset('password');
+            setTimeout(() => codeInput.value?.focus(), 250);
+        },
+        onError: () => passwordInput.value?.focus(),
+    });
+};
+
 const deleteUser = () => {
     form.delete(route('current-user.destroy'), {
         preserveScroll: true,
         onSuccess: () => closeModal(),
-        onError: () => passwordInput.value?.focus(),
-        onFinish: () => form.reset(),
+        onError: () => codeInput.value?.focus(),
     });
+};
+
+const returnToIdentityStep = () => {
+    step.value = 'identity';
+    form.reset('code');
+    form.clearErrors();
+    setTimeout(() => passwordInput.value?.focus(), 250);
 };
 
 const closeModal = () => {
     confirmingUserDeletion.value = false;
+    step.value = 'identity';
 
     form.reset();
+    form.clearErrors();
 };
 </script>
 
@@ -67,14 +90,19 @@ const closeModal = () => {
                 </template>
 
                 <template #content>
-                    <span v-if="confirmsWithEmail">
-                        Are you sure you want to delete your account? Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your email address to confirm you would like to permanently delete your account.
-                    </span>
-                    <span v-else>
-                        Are you sure you want to delete your account? Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.
-                    </span>
+                    <template v-if="step === 'identity'">
+                        <span v-if="confirmsWithEmail">
+                            Are you sure you want to delete your account? Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your email address. We will then send you a confirmation code.
+                        </span>
+                        <span v-else>
+                            Are you sure you want to delete your account? Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password. We will then send you a confirmation code by email.
+                        </span>
+                    </template>
+                    <template v-else>
+                        We sent a confirmation code to your email address. Please enter the code to permanently delete your account.
+                    </template>
 
-                    <div class="mt-4">
+                    <div v-if="step === 'identity'" class="mt-4">
                         <TextInput
                             ref="passwordInput"
                             v-model="form.password"
@@ -82,25 +110,40 @@ const closeModal = () => {
                             class="mt-1 block w-3/4"
                             :placeholder="confirmsWithEmail ? page.props.auth.user.email : 'Password'"
                             :autocomplete="confirmsWithEmail ? 'email' : 'current-password'"
-                            @keyup.enter="deleteUser"
+                            @keyup.enter="requestDeletionCode"
                         />
 
                         <InputError :message="form.errors.password" class="mt-2" />
                     </div>
+
+                    <div v-else class="mt-4">
+                        <TextInput
+                            ref="codeInput"
+                            v-model="form.code"
+                            type="text"
+                            inputmode="numeric"
+                            class="mt-1 block w-3/4"
+                            placeholder="Confirmation code"
+                            autocomplete="one-time-code"
+                            @keyup.enter="deleteUser"
+                        />
+
+                        <InputError :message="form.errors.code" class="mt-2" />
+                    </div>
                 </template>
 
                 <template #footer>
-                    <SecondaryButton @click="closeModal">
-                        Cancel
+                    <SecondaryButton @click="step === 'identity' ? closeModal() : returnToIdentityStep()">
+                        {{ step === 'identity' ? 'Cancel' : 'Back' }}
                     </SecondaryButton>
 
                     <DangerButton
                         class="ms-3"
                         :class="{ 'opacity-25': form.processing }"
                         :disabled="form.processing"
-                        @click="deleteUser"
+                        @click="step === 'identity' ? requestDeletionCode() : deleteUser()"
                     >
-                        Delete Account
+                        {{ step === 'identity' ? 'Send code' : 'Delete Account' }}
                     </DangerButton>
                 </template>
             </DialogModal>

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\GuardianConsentController;
 use App\Http\Controllers\GuardianAccessController;
+use App\Http\Controllers\AccountDeletionController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\CommerceCheckoutController;
@@ -34,6 +35,11 @@ Route::get('/checkout/guest-commerce/{order}/{token}/bank-transfer', [CommerceCh
     ->name('commerce-checkout.guest.bank-transfer.show');
 
 Route::middleware(['auth:sanctum', config('jetstream.auth_session')])->group(function () {
+    Route::post('/user/deletion-code', [AccountDeletionController::class, 'sendCode'])
+        ->name('current-user.deletion-code');
+    Route::delete('/user', [AccountDeletionController::class, 'destroy'])
+        ->name('current-user.destroy');
+
     Route::post('/checkout/subscriptions/{subscriptionPlan}', [SubscriptionCheckoutController::class, 'store'])
         ->name('subscription-checkout.store');
     Route::get('/checkout/subscriptions/{checkout}/success', [SubscriptionCheckoutController::class, 'success'])
