@@ -13,6 +13,8 @@ const page = usePage()
 
 const notificationOpen = ref(false)
 const searchOpen = ref(false)
+const searchBox = ref(null)
+const isSmallScreen = ref(false)
 const searchTerm = ref('')
 const searchResults = ref([])
 const searchLoading = ref(false)
@@ -72,6 +74,20 @@ const closeSearch = () => {
     searchResults.value = []
 }
 
+const updateScreenSize = () => {
+    if (typeof window === 'undefined') return
+
+    isSmallScreen.value = window.matchMedia('(max-width: 639px)').matches
+}
+
+const closeSearchOnOutsideClick = (event) => {
+    if (isSmallScreen.value || !searchOpen.value || !searchBox.value) return
+
+    if (!searchBox.value.contains(event.target)) {
+        closeSearch()
+    }
+}
+
 const runSearch = () => {
     const term = searchTerm.value.trim()
 
@@ -85,6 +101,7 @@ const runSearch = () => {
 
     window.axios.get(route('auth.search'), { params: { q: term } })
         .then((response) => searchResults.value = response.data.results || [])
+        .catch(() => searchResults.value = [])
         .finally(() => searchLoading.value = false)
 }
 
@@ -150,6 +167,8 @@ const unbindRealtime = () => {
 }
 
 onMounted(() => {
+    updateScreenSize()
+
     setStatus(currentStatus.value === 'offline' ? 'online' : currentStatus.value)
 
     bindRealtime()
@@ -159,6 +178,8 @@ onMounted(() => {
     }
 
     window.addEventListener('beforeunload', markOfflineOnUnload)
+    window.addEventListener('resize', updateScreenSize)
+    document.addEventListener('pointerdown', closeSearchOnOutsideClick)
 
     notificationInterval = window.setInterval(refreshNotifications, 8000)
 })
@@ -169,6 +190,9 @@ onUnmounted(() => {
     if (markOfflineOnUnload) {
         window.removeEventListener('beforeunload', markOfflineOnUnload)
     }
+
+    window.removeEventListener('resize', updateScreenSize)
+    document.removeEventListener('pointerdown', closeSearchOnOutsideClick)
 
     unbindRealtime()
 
@@ -186,10 +210,10 @@ watch(searchTerm, () => {
     searchTimeout = window.setTimeout(runSearch, 250)
 })
 
-watch([sidebarOpen, searchOpen], ([isSidebarOpen, isSearchOpen]) => {
+watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, isMobile]) => {
     if (typeof document === 'undefined') return
 
-    document.body.style.overflow = isSidebarOpen || isSearchOpen ? 'hidden' : ''
+    document.body.style.overflow = isSidebarOpen || (isSearchOpen && isMobile) ? 'hidden' : ''
 })
 </script>
 
@@ -230,12 +254,50 @@ watch([sidebarOpen, searchOpen], ([isSidebarOpen, isSearchOpen]) => {
                         </button>
 
                         <!-- Search Desktop -->
-                        <div class="relative hidden sm:block w-48 lg:w-72">
+                        <div ref="searchBox" class="relative hidden sm:block w-48 lg:w-72">
                             <i class="las la-search absolute left-3 top-1/2 -translate-y-1/2 text-secondary"></i>
 
                             <input v-model="searchTerm" @focus="searchOpen = true"
                                 class="w-full rounded-lg border border-border bg-inputBg py-2 pl-9 pr-3 text-sm"
                                 :placeholder="$t('search.placeholder')">
+
+                            <div
+                                v-if="searchOpen"
+                                class="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-border bg-card shadow-xl"
+                            >
+                                <div class="max-h-96 overflow-y-auto">
+                                    <div v-if="searchTerm.trim().length < 2" class="p-4 text-sm text-secondary">
+                                        Mindestens 2 Zeichen eingeben.
+                                    </div>
+
+                                    <div v-else-if="searchLoading" class="p-4 text-sm text-secondary">
+                                        Suche lÃ¤uft...
+                                    </div>
+
+                                    <div v-else-if="searchResults.length">
+                                        <div v-for="result in searchResults" :key="`${result.type}-${result.id}`"
+                                            class="flex items-center gap-3 border-b border-border px-3 py-3 last:border-b-0">
+                                            <Link :href="result.url" class="min-w-0 flex-1" @click="closeSearch">
+                                                <p class="truncate text-sm font-semibold text-primary">
+                                                    {{ result.title }}
+                                                </p>
+                                                <p class="truncate text-xs text-secondary">
+                                                    {{ result.subtitle }}
+                                                </p>
+                                            </Link>
+
+                                            <button v-if="result.join_url" type="button" @click="requestJoin(result)"
+                                                class="shrink-0 rounded-lg border border-border px-2 py-2 text-xs hover:bg-inputBg">
+                                                Beitreten
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div v-else class="p-4 text-center text-sm text-secondary">
+                                        Keine passenden Ergebnisse.
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Chats -->

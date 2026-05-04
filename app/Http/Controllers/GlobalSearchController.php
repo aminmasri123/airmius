@@ -13,7 +13,7 @@ class GlobalSearchController extends Controller
     {
         $term = trim((string) $request->input('q'));
 
-        if (mb_strlen($term) < 5) {
+        if (mb_strlen($term) < 2) {
             return response()->json(['results' => []]);
         }
 
