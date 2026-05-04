@@ -275,8 +275,135 @@
           "text": "Verstehe die Grundlagen für sichere und vertrauensvolle digitale Prozesse."
         }
       }
+    },
+    "nav": {
+      "benefits": "Vorteile",
+      "features": "Funktionen",
+      "sports": "Sportarten",
+      "about": "Über uns",
+      "contact": "Kontakt",
+      "menu": "Menü"
+    },
+    "footer": {
+      "description": "Das soziale Netzwerk für deinen Sport. Für Sportler, Teams und Vereine. Organisation, Kommunikation und Vernetzung in einer App.",
+      "product": "Produkt",
+      "agency_for_clubs": "Werbeagentur für Vereine",
+      "company": "Unternehmen",
+      "legal": "Rechtliches",
+      "imprint": "Impressum",
+      "privacy": "Datenschutz",
+      "terms": "AGB",
+      "community": "Community-Richtlinien",
+      "minors": "Jugendschutz",
+      "guardian": "Elternbereich",
+      "cookies": "Cookies",
+      "withdrawal": "Widerruf",
+      "reporting": "Kontakt & Melden",
+      "copyright": "© 2026 AIRMIUS. Alle Rechte vorbehalten.",
+      "made": "Made with care in Germany"
+    },
+    "agency": {
+      "meta": {
+        "title": "Airmius Werbeagentur für Vereine",
+        "description": "Websites, Landingpages, SEO-Grundlagen und Kampagnen für Sportvereine: Airmius unterstützt Vereine mit digitaler Sichtbarkeit und professionellem Auftritt."
+      },
+      "eyebrow": "Werbeagentur für Vereine",
+      "hero": {
+        "title": "Eine starke Website für euren Verein, ohne Agentur-Chaos.",
+        "subtitle": "Airmius hilft Sportvereinen beim professionellen Online-Auftritt: Website, lokale Sichtbarkeit, Kampagnen, Sponsorenseiten und klare Wege für neue Mitglieder."
+      },
+      "cta": {
+        "start": "Anfrage starten",
+        "prices": "Preise ansehen"
+      },
+      "notice": "Hinweis: Eine Anfrage ist noch kein Auftrag. Ein verbindlicher Auftrag entsteht erst nach Angebot und Annahme.",
+      "preview": {
+        "label": "Probetraining",
+        "title": "Neue Mitglieder für die Saison gewinnen",
+        "text": "Klare Vereinsseite, gute mobile Bedienung, schnelle Kontaktwege und Inhalte, die Eltern, Sportler und Sponsoren verstehen.",
+        "requests": "Anfragen"
+      },
+      "services": {
+        "title": "Was wir für Vereine übernehmen",
+        "subtitle": "Fokus auf Ergebnisse: seriös auftreten, gefunden werden, Anfragen bekommen und den Verein digital einfacher erklären.",
+        "website": {
+          "title": "Vereinswebsite",
+          "text": "Moderne Website mit Startseite, Abteilungen, Teams, Kontakt, Datenschutz und Impressum."
+        },
+        "brand": {
+          "title": "Design & Marke",
+          "text": "Farben, Schrift, Bilder und Struktur passend zum Verein, damit alles vertrauenswürdig wirkt."
+        },
+        "seo": {
+          "title": "SEO-Grundlage",
+          "text": "Saubere Titel, Beschreibungen, lokale Suchbegriffe und technische Basis für bessere Auffindbarkeit."
+        },
+        "campaigns": {
+          "title": "Kampagnen",
+          "text": "Landingpages für Probetraining, Sponsoren, Turniere, Feriencamps oder neue Mitglieder."
+        },
+        "content": {
+          "title": "Content-Paket",
+          "text": "Unterstützung bei Texten, Bildern, Vereinsvorstellung, Angeboten und klaren Handlungsaufrufen."
+        },
+        "legal": {
+          "title": "Recht & Sicherheit",
+          "text": "Hinweise zu Impressum, Datenschutz, Bildrechten und Verantwortlichkeiten sauber im Prozess mitdenken."
+        }
+      },
+      "packages": {
+        "popular": "Beliebt",
+        "start": {
+          "name": "Start",
+          "price": "ab Anfrage",
+          "text": "Für kleine Vereine, die schnell professionell sichtbar werden möchten.",
+          "items": {
+            "onepage": "Onepage oder kleine Vereinsseite",
+            "cta": "Kontakt- und Probetraining-CTA",
+            "seo": "Basis-SEO",
+            "responsive": "Responsive Umsetzung"
+          }
+        },
+        "plus": {
+          "name": "Verein Plus",
+          "price": "individuell",
+          "text": "Für Vereine mit mehreren Teams, Abteilungen oder Sponsoren.",
+          "items": {
+            "pages": "Mehrere Inhaltsseiten",
+            "teams": "Team- und Abteilungsstruktur",
+            "sponsors": "Sponsorenbereiche",
+            "news": "Blog oder Newsbereich"
+          }
+        },
+        "campaign": {
+          "name": "Kampagne",
+          "price": "projektbasiert",
+          "text": "Für Aktionen wie Mitgliedergewinnung, Camps, Turniere oder Sponsoring.",
+          "items": {
+            "landingpage": "Landingpage",
+            "form": "Anmelde- oder Kontaktstrecke",
+            "copy": "Kampagnentexte",
+            "reporting": "Auswertung der Anfragen"
+          }
+        }
+      },
+      "steps": {
+        "eyebrow": "Ablauf",
+        "title": "Sauberer Prozess statt blindem Auftrag.",
+        "subtitle": "Der Website-Service bleibt transparent: Erst Bedarf klären, dann Angebot, dann Umsetzung.",
+        "step": "Schritt {number}",
+        "items": {
+          "goal": "Verein schildert Ziel, Domainwunsch und aktuelle Situation.",
+          "scope": "Airmius prüft Bedarf, Umfang und rechtliche Pflichtangaben.",
+          "offer": "Der Verein erhält ein klares Angebot mit Leistung, Zeitplan und Preis.",
+          "start": "Erst nach Annahme startet die Umsetzung."
+        }
+      }
     }
   },
   "Verwalte Teams, Mitglieder und Rollen": "Verwalte Teams, Mitglieder und Rollen",
-  "Verein beitreten": "Verein beitreten"
+  "Verein beitreten": "Verein beitreten",
+  "Blog": "Blog",
+  "Werbeagentur": "Werbeagentur",
+  "Preise": "Preise"
 }

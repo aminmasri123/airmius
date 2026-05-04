@@ -4,7 +4,6 @@ import Sidebar from '@/Components/Auth/Sidebar.vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import UserCard from '@/Components/Auth/UserCard.vue'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import LanguageDropdown from '@/Components/LanguageDropdown.vue'
 
 defineProps({
     title: String
@@ -238,8 +237,6 @@ watch([sidebarOpen, searchOpen], ([isSidebarOpen, isSearchOpen]) => {
                                 class="w-full rounded-lg border border-border bg-inputBg py-2 pl-9 pr-3 text-sm"
                                 :placeholder="$t('search.placeholder')">
                         </div>
-
-                        <LanguageDropdown />
 
                         <!-- Chats -->
                         <Link href="/conversations" class="relative rounded-lg p-2 hover:bg-muted">

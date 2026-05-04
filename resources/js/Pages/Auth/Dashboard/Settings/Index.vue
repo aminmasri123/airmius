@@ -3,6 +3,7 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import { useTheme } from '@/services/useTheme'
+import LanguageDropdown from '@/Components/LanguageDropdown.vue'
 
 // Jetstream Components
 import DeleteUserForm from '@/Pages/Profile/Partials/DeleteUserForm.vue'
@@ -193,6 +194,14 @@ const formatDistance = (meters) => {
                 <button class="btn" @click="updateTheme('air')">Air</button>
                 <button class="btn" @click="updateTheme('dark')">Dark</button>
                 <button class="btn" @click="updateTheme('womanly')">Womanly</button>
+            </div>
+
+            <div class="mt-6 border-t border-border pt-5">
+                <h2 class="text-sm font-semibold text-secondary mb-3">Sprache</h2>
+                <p class="mb-3 text-sm text-secondary">
+                    Wähle die Sprache für Navigation, Seiten und Bedienelemente.
+                </p>
+                <LanguageDropdown />
             </div>
         </div>
 

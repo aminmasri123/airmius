@@ -6,6 +6,7 @@ import ApplicationLogo from '@/Components/ApplicationLogo.vue'
 
 const props = defineProps({
     canLogin: Boolean,
+    canRegister: Boolean,
     toggleMobile: Function,
 })
 
@@ -42,11 +43,11 @@ watch(mobileOpen, (val) => {
 })
 
 const navItems = [
-    ['vorteile', 'Vorteile'],
-    ['funktionen', 'Funktionen'],
-    ['sportarten', 'Sportarten'],
-    ['ueber', 'Über uns'],
-    ['kontakt', 'Kontakt'],
+    ['vorteile', 'guest.nav.benefits'],
+    ['funktionen', 'guest.nav.features'],
+    ['sportarten', 'guest.nav.sports'],
+    ['ueber', 'guest.nav.about'],
+    ['kontakt', 'guest.nav.contact'],
 ]
 </script>
 
@@ -65,14 +66,11 @@ const navItems = [
                     @click="scrollTo(id)"
                     class="hover:text-primary transition"
                 >
-                    {{ label }}
+                    {{ $t(label) }}
                 </button>
                 <Link :href="route('guest.blog.index')" class="hover:text-primary transition">
-                    Blog
+                    {{ $t('Blog') }}
                 </Link>
-                <!-- <Link :href="route('guest.werbeagentur')" class="hover:text-primary transition">
-                    Werbeagentur
-                </Link> -->
             </div>
 
             <div class="flex items-center gap-3">
@@ -84,6 +82,14 @@ const navItems = [
                     class="hidden lg:inline-block text-sm font-semibold text-air-blue hover:text-borderHover transition"
                 >
                     {{ $t('Anmelden') }}
+                </Link>
+
+                <Link
+                    v-if="props.canRegister && !$page.props.auth.user"
+                    :href="route('register')"
+                    class="hidden rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover lg:inline-flex"
+                >
+                    {{ $t('Registrieren') }}
                 </Link>
 
                 <Link
@@ -123,7 +129,7 @@ const navItems = [
                 >
                     <div v-if="mobileOpen" class="absolute right-0 top-0 h-full w-full bg-card border-l border-border flex flex-col">
                         <div class="flex justify-between items-center p-5 border-b border-border">
-                            <span class="text-primary font-bold text-lg">Menü</span>
+                            <span class="text-primary font-bold text-lg">{{ $t('guest.nav.menu') }}</span>
                             <button @click="mobileOpen = false" class="text-primary text-2xl p-1">&times;</button>
                         </div>
 
@@ -134,7 +140,7 @@ const navItems = [
                                 @click="scrollTo(id)"
                                 class="text-left py-3 text-lg text-secondary hover:text-primary transition"
                             >
-                                {{ label }}
+                                {{ $t(label) }}
                             </button>
 
                             <Link
@@ -142,7 +148,7 @@ const navItems = [
                                 @click="mobileOpen = false"
                                 class="text-left py-3 text-lg text-secondary hover:text-primary transition"
                             >
-                                Blog
+                                {{ $t('Blog') }}
                             </Link>
 
                             <Link
@@ -150,7 +156,7 @@ const navItems = [
                                 @click="mobileOpen = false"
                                 class="text-left py-3 text-lg text-secondary hover:text-primary transition"
                             >
-                                Werbeagentur
+                                {{ $t('Werbeagentur') }}
                             </Link>
 
                             <div class="border-t border-border my-4"></div>
@@ -162,6 +168,15 @@ const navItems = [
                                 class="text-left py-3 text-lg text-air-blue hover:text-borderHover transition"
                             >
                                 {{ $t('Anmelden') }}
+                            </Link>
+
+                            <Link
+                                v-if="props.canRegister && !$page.props.auth.user"
+                                :href="route('register')"
+                                @click="mobileOpen = false"
+                                class="text-left py-3 text-lg font-semibold text-air-blue hover:text-borderHover transition"
+                            >
+                                {{ $t('Registrieren') }}
                             </Link>
                         </div>
                     </div>

@@ -276,7 +276,134 @@
           "text": "Comprenez les bases de processus numériques fiables."
         }
       }
+    },
+    "nav": {
+      "benefits": "Avantages",
+      "features": "Fonctionnalités",
+      "sports": "Sports",
+      "about": "À propos",
+      "contact": "Contact",
+      "menu": "Menu"
+    },
+    "footer": {
+      "description": "Le réseau social pour votre sport. Pour sportifs, équipes et clubs. Organisation, communication et réseau dans une seule application.",
+      "product": "Produit",
+      "agency_for_clubs": "Agence pour clubs",
+      "company": "Entreprise",
+      "legal": "Mentions légales",
+      "imprint": "Mentions légales",
+      "privacy": "Confidentialité",
+      "terms": "CGU",
+      "community": "Règles de la communauté",
+      "minors": "Protection des mineurs",
+      "guardian": "Espace parents",
+      "cookies": "Cookies",
+      "withdrawal": "Rétractation",
+      "reporting": "Contact & signalement",
+      "copyright": "© 2026 AIRMIUS. Tous droits réservés.",
+      "made": "Créé avec soin en Allemagne"
+    },
+    "agency": {
+      "meta": {
+        "title": "Agence Airmius pour clubs",
+        "description": "Sites web, landing pages, bases SEO et campagnes pour clubs sportifs : Airmius aide les clubs à gagner en visibilité numérique et en professionnalisme."
+      },
+      "eyebrow": "Agence pour clubs",
+      "hero": {
+        "title": "Un site fort pour votre club, sans chaos d’agence.",
+        "subtitle": "Airmius aide les clubs sportifs avec leur présence en ligne : site web, visibilité locale, campagnes, pages sponsors et chemins clairs pour les nouveaux membres."
+      },
+      "cta": {
+        "start": "Démarrer une demande",
+        "prices": "Voir les tarifs"
+      },
+      "notice": "Remarque : une demande n’est pas encore une commande. Une commande ferme naît seulement après offre et acceptation.",
+      "preview": {
+        "label": "Essai sportif",
+        "title": "Gagner de nouveaux membres pour la saison",
+        "text": "Un site de club clair, une bonne expérience mobile, des contacts rapides et des contenus compréhensibles pour parents, sportifs et sponsors.",
+        "requests": "Demandes"
+      },
+      "services": {
+        "title": "Ce que nous prenons en charge pour les clubs",
+        "subtitle": "Objectif résultats : paraître sérieux, être trouvé, recevoir des demandes et expliquer le club plus simplement en ligne.",
+        "website": {
+          "title": "Site de club",
+          "text": "Site moderne avec accueil, sections, équipes, contact, confidentialité et mentions légales."
+        },
+        "brand": {
+          "title": "Design & marque",
+          "text": "Couleurs, typographies, images et structure adaptées au club pour inspirer confiance."
+        },
+        "seo": {
+          "title": "Base SEO",
+          "text": "Titres, descriptions, mots-clés locaux et base technique propres pour une meilleure visibilité."
+        },
+        "campaigns": {
+          "title": "Campagnes",
+          "text": "Landing pages pour essais, sponsors, tournois, stages ou nouveaux membres."
+        },
+        "content": {
+          "title": "Pack contenu",
+          "text": "Aide pour textes, images, présentation du club, offres et appels à l’action clairs."
+        },
+        "legal": {
+          "title": "Droit & sécurité",
+          "text": "Mentions légales, confidentialité, droits à l’image et responsabilités sont intégrés au processus."
+        }
+      },
+      "packages": {
+        "popular": "Populaire",
+        "start": {
+          "name": "Start",
+          "price": "sur demande",
+          "text": "Pour les petits clubs qui veulent être visibles rapidement et professionnellement.",
+          "items": {
+            "onepage": "Onepage ou petit site de club",
+            "cta": "CTA contact et essai",
+            "seo": "SEO de base",
+            "responsive": "Réalisation responsive"
+          }
+        },
+        "plus": {
+          "name": "Club Plus",
+          "price": "individuel",
+          "text": "Pour les clubs avec plusieurs équipes, sections ou sponsors.",
+          "items": {
+            "pages": "Plusieurs pages de contenu",
+            "teams": "Structure équipes et sections",
+            "sponsors": "Espaces sponsors",
+            "news": "Blog ou actualités"
+          }
+        },
+        "campaign": {
+          "name": "Campagne",
+          "price": "par projet",
+          "text": "Pour recrutement de membres, stages, tournois ou sponsoring.",
+          "items": {
+            "landingpage": "Landing page",
+            "form": "Parcours inscription ou contact",
+            "copy": "Textes de campagne",
+            "reporting": "Analyse des demandes"
+          }
+        }
+      },
+      "steps": {
+        "eyebrow": "Processus",
+        "title": "Un processus clair au lieu d’une commande à l’aveugle.",
+        "subtitle": "Le service web reste transparent : d’abord les besoins, puis l’offre, puis la réalisation.",
+        "step": "Étape {number}",
+        "items": {
+          "goal": "Le club décrit son objectif, son souhait de domaine et sa situation actuelle.",
+          "scope": "Airmius examine le besoin, le périmètre et les mentions obligatoires.",
+          "offer": "Le club reçoit une offre claire avec prestation, calendrier et prix.",
+          "start": "La réalisation commence seulement après acceptation."
+        }
+      }
     }
   },
-  "Verwalte Teams": "Gérer les équipes"
+  "Verwalte Teams": "Gérer les équipes",
+  "Blog": "Blog",
+  "Werbeagentur": "Agence",
+  "Preise": "Tarifs"
 }

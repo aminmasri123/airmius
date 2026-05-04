@@ -276,7 +276,134 @@
           "text": "Understand the basics for secure and trustworthy digital processes."
         }
       }
+    },
+    "nav": {
+      "benefits": "Benefits",
+      "features": "Features",
+      "sports": "Sports",
+      "about": "About us",
+      "contact": "Contact",
+      "menu": "Menu"
+    },
+    "footer": {
+      "description": "The social network for your sport. For athletes, teams and clubs. Organization, communication and networking in one app.",
+      "product": "Product",
+      "agency_for_clubs": "Agency for clubs",
+      "company": "Company",
+      "legal": "Legal",
+      "imprint": "Imprint",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "community": "Community guidelines",
+      "minors": "Youth protection",
+      "guardian": "Parent area",
+      "cookies": "Cookies",
+      "withdrawal": "Withdrawal",
+      "reporting": "Contact & reporting",
+      "copyright": "© 2026 AIRMIUS. All rights reserved.",
+      "made": "Made with care in Germany"
+    },
+    "agency": {
+      "meta": {
+        "title": "Airmius Agency for Clubs",
+        "description": "Websites, landing pages, SEO foundations and campaigns for sports clubs: Airmius helps clubs build digital visibility and a professional presence."
+      },
+      "eyebrow": "Agency for clubs",
+      "hero": {
+        "title": "A strong website for your club, without agency chaos.",
+        "subtitle": "Airmius helps sports clubs with a professional online presence: websites, local visibility, campaigns, sponsor pages and clear paths for new members."
+      },
+      "cta": {
+        "start": "Start request",
+        "prices": "View pricing"
+      },
+      "notice": "Note: A request is not an order yet. A binding order is only created after an offer and acceptance.",
+      "preview": {
+        "label": "Trial training",
+        "title": "Win new members for the season",
+        "text": "A clear club website, good mobile usability, fast contact paths and content that parents, athletes and sponsors understand.",
+        "requests": "Requests"
+      },
+      "services": {
+        "title": "What we handle for clubs",
+        "subtitle": "Focused on results: look professional, get found, receive inquiries and explain the club more clearly online.",
+        "website": {
+          "title": "Club website",
+          "text": "Modern website with homepage, departments, teams, contact, privacy and imprint."
+        },
+        "brand": {
+          "title": "Design & brand",
+          "text": "Colors, typography, imagery and structure matched to the club so everything feels trustworthy."
+        },
+        "seo": {
+          "title": "SEO foundation",
+          "text": "Clean titles, descriptions, local search terms and technical basics for better discoverability."
+        },
+        "campaigns": {
+          "title": "Campaigns",
+          "text": "Landing pages for trial training, sponsors, tournaments, holiday camps or new members."
+        },
+        "content": {
+          "title": "Content package",
+          "text": "Support with copy, images, club presentation, offers and clear calls to action."
+        },
+        "legal": {
+          "title": "Legal & safety",
+          "text": "We keep imprint, privacy, image rights and responsibilities in mind throughout the process."
+        }
+      },
+      "packages": {
+        "popular": "Popular",
+        "start": {
+          "name": "Start",
+          "price": "on request",
+          "text": "For small clubs that want to become professionally visible quickly.",
+          "items": {
+            "onepage": "One-page or small club website",
+            "cta": "Contact and trial training CTA",
+            "seo": "Basic SEO",
+            "responsive": "Responsive implementation"
+          }
+        },
+        "plus": {
+          "name": "Club Plus",
+          "price": "individual",
+          "text": "For clubs with multiple teams, departments or sponsors.",
+          "items": {
+            "pages": "Multiple content pages",
+            "teams": "Team and department structure",
+            "sponsors": "Sponsor areas",
+            "news": "Blog or news section"
+          }
+        },
+        "campaign": {
+          "name": "Campaign",
+          "price": "project-based",
+          "text": "For member acquisition, camps, tournaments or sponsorship campaigns.",
+          "items": {
+            "landingpage": "Landing page",
+            "form": "Registration or contact flow",
+            "copy": "Campaign copy",
+            "reporting": "Inquiry analysis"
+          }
+        }
+      },
+      "steps": {
+        "eyebrow": "Process",
+        "title": "A clear process instead of a blind order.",
+        "subtitle": "The website service stays transparent: first clarify needs, then offer, then implementation.",
+        "step": "Step {number}",
+        "items": {
+          "goal": "The club explains its goal, domain wish and current situation.",
+          "scope": "Airmius reviews needs, scope and required legal details.",
+          "offer": "The club receives a clear offer with services, timeline and price.",
+          "start": "Implementation starts only after acceptance."
+        }
+      }
     }
   },
-  "Verwalte Teams": "Manage teams"
+  "Verwalte Teams": "Manage teams",
+  "Blog": "Blog",
+  "Werbeagentur": "Agency",
+  "Preise": "Pricing"
 }
