@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Notifications\MyCustomResetPassword;
+use App\Support\UploadStorage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -373,7 +374,7 @@ class User extends Authenticatable
 
     private function profilePhotoUrlFor(string $path): string
     {
-        return Storage::disk($this->profilePhotoDisk())->url($path).'?v='.$this->profilePhotoVersion();
+        return UploadStorage::url($path).'?v='.$this->profilePhotoVersion();
     }
 
     private function profilePhotoDisk(): string
