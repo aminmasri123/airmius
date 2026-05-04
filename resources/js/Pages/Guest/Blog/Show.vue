@@ -1,6 +1,7 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
 import Nav from '@/Components/Guest/Nav.vue'
+import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
 
@@ -21,8 +22,9 @@ defineProps({
 
     <div class="min-h-screen bg-bg text-primary">
         <Nav :canLogin="canLogin" />
+        <Subnav />
 
-        <main class="px-4 pt-28">
+        <main class="px-4 pt-36 md:pt-44">
             <article class="mx-auto max-w-4xl">
                 <Link :href="route('guest.blog.index')" class="text-sm font-semibold text-air-blue hover:underline">
                     Zurück zum Blog

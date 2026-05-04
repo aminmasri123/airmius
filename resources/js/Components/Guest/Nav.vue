@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch } from 'vue'
-import { Link } from '@inertiajs/vue3'
+import { Link, router } from '@inertiajs/vue3'
 import LanguageDropdown from '@/Components/LanguageDropdown.vue'
 import ApplicationLogo from '@/Components/ApplicationLogo.vue'
 
@@ -16,6 +16,7 @@ const scrollTo = (id) => {
 
     if (!el) {
         mobileOpen.value = false
+        router.visit(`${route('welcome')}#${id}`)
         return
     }
 

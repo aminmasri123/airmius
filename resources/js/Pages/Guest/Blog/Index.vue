@@ -1,6 +1,7 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
 import Nav from '@/Components/Guest/Nav.vue'
+import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
 
@@ -19,8 +20,9 @@ defineProps({
 
     <div class="min-h-screen bg-bg text-primary">
         <Nav :canLogin="canLogin" />
+        <Subnav />
 
-        <main class="px-4 pt-28">
+        <main class="px-4 pt-36 md:pt-44">
             <section class="mx-auto max-w-7xl">
                 <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">Airmius Blog</p>
                 <h1 class="mt-3 max-w-3xl font-heading text-4xl font-900 leading-tight sm:text-5xl">
