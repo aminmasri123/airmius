@@ -200,12 +200,12 @@ const formatDistance = (meters) => {
         </div>
 
         <!-- SPRACHE -->
-        <div v-if="activeTab === 'language'" class="surface-card p-5">
+        <div v-if="activeTab === 'language'" class="surface-card relative z-20 overflow-visible p-5">
             <h2 class="text-sm font-semibold text-secondary mb-3">Sprache</h2>
             <p class="mb-3 text-sm text-secondary">
                 Wähle die Sprache für Navigation, Seiten und Bedienelemente.
             </p>
-            <LanguageDropdown />
+            <LanguageDropdown align="start" />
         </div>
 
         <!-- ADRESSE -->

@@ -2,6 +2,14 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useLanguage } from '@/services/i18nService'
 
+const props = defineProps({
+    align: {
+        type: String,
+        default: 'end',
+        validator: (value) => ['start', 'end'].includes(value),
+    },
+})
+
 const open = ref(false)
 const dropdownRef = ref(null)
 const showSuccess = ref(false)
@@ -46,7 +54,8 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
         >
             <div
                 v-if="open"
-                class="absolute end-0 z-50 mt-2 w-44 overflow-hidden rounded-xl border border-border bg-card text-primary shadow-xl"
+                class="absolute z-50 mt-2 w-44 overflow-hidden rounded-xl border border-border bg-card text-primary shadow-xl"
+                :class="props.align === 'start' ? 'start-0' : 'end-0'"
             >
                 <div class="py-1">
                     <button
