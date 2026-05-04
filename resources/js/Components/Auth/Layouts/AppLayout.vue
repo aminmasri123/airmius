@@ -12,6 +12,7 @@ defineProps({
 const page = usePage()
 
 const notificationOpen = ref(false)
+const notificationBox = ref(null)
 const searchOpen = ref(false)
 const searchBox = ref(null)
 const isSmallScreen = ref(false)
@@ -45,12 +46,40 @@ const iconFor = (type) => ({
     'friend.accepted': 'las la-user-check',
 }[type] || 'las la-bell')
 
+const formatNotificationDate = (value) => {
+    if (!value) return ''
+
+    return new Intl.DateTimeFormat('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(new Date(value))
+}
+
+const closeNotifications = () => {
+    notificationOpen.value = false
+}
+
+const closeNotificationOnOutsideClick = (event) => {
+    if (!notificationOpen.value || !notificationBox.value) return
+
+    if (!notificationBox.value.contains(event.target)) {
+        closeNotifications()
+    }
+}
+
 const markAsRead = (notification) => {
     if (notification.read) return
 
     router.post(route('auth.notifications.read', notification.id), {}, {
         preserveScroll: true,
     })
+}
+
+const openNotification = (notification) => {
+    markAsRead(notification)
+    closeNotifications()
 }
 
 const refreshNotifications = () => {
@@ -180,6 +209,7 @@ onMounted(() => {
     window.addEventListener('beforeunload', markOfflineOnUnload)
     window.addEventListener('resize', updateScreenSize)
     document.addEventListener('pointerdown', closeSearchOnOutsideClick)
+    document.addEventListener('pointerdown', closeNotificationOnOutsideClick)
 
     notificationInterval = window.setInterval(refreshNotifications, 8000)
 })
@@ -193,6 +223,7 @@ onUnmounted(() => {
 
     window.removeEventListener('resize', updateScreenSize)
     document.removeEventListener('pointerdown', closeSearchOnOutsideClick)
+    document.removeEventListener('pointerdown', closeNotificationOnOutsideClick)
 
     unbindRealtime()
 
@@ -306,10 +337,98 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                         </Link>
 
                         <!-- Notifications -->
-                        <button @click="notificationOpen = !notificationOpen"
-                            class="relative rounded-lg p-2 hover:bg-muted">
-                            <i class="las la-bell text-xl"></i>
-                        </button>
+                        <div ref="notificationBox" class="relative">
+                            <button
+                                type="button"
+                                class="relative rounded-lg p-2 hover:bg-muted"
+                                :class="{ 'bg-muted': notificationOpen }"
+                                @click="notificationOpen = !notificationOpen"
+                            >
+                                <i class="las la-bell text-xl"></i>
+                                <span
+                                    v-if="unreadCount"
+                                    class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white"
+                                >
+                                    {{ unreadCount > 99 ? '99+' : unreadCount }}
+                                </span>
+                            </button>
+
+                            <div
+                                v-if="notificationOpen"
+                                class="absolute right-0 top-full z-50 mt-2 w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-border bg-card shadow-xl"
+                            >
+                                <div class="flex items-center justify-between border-b border-border px-4 py-3">
+                                    <div>
+                                        <p class="text-sm font-semibold text-primary">Benachrichtigungen</p>
+                                        <p class="text-xs text-secondary">
+                                            {{ unreadCount ? `${unreadCount} ungelesen` : 'Alles gelesen' }}
+                                        </p>
+                                    </div>
+
+                                    <Link
+                                        :href="route('auth.notifications.index')"
+                                        class="rounded-lg px-2 py-1 text-xs font-semibold text-secondary hover:bg-muted hover:text-primary"
+                                        @click="closeNotifications"
+                                    >
+                                        Alle
+                                    </Link>
+                                </div>
+
+                                <div v-if="latestNotifications.length" class="max-h-96 overflow-y-auto">
+                                    <div
+                                        v-for="notification in latestNotifications"
+                                        :key="notification.id"
+                                        class="flex gap-3 border-b border-border px-4 py-3 last:border-b-0 hover:bg-muted/60"
+                                        :class="notification.read ? 'opacity-75' : ''"
+                                    >
+                                        <div
+                                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+                                            :class="notification.read ? 'bg-inputBg text-secondary' : 'bg-buttonPrimary text-buttonTextPrimary'"
+                                        >
+                                            <i :class="[iconFor(notification.type), 'text-lg']"></i>
+                                        </div>
+
+                                        <div class="min-w-0 flex-1">
+                                            <p class="truncate text-sm font-semibold text-primary">
+                                                {{ notification.data?.title || 'Neue Benachrichtigung' }}
+                                            </p>
+                                            <p v-if="notification.data?.body" class="mt-0.5 line-clamp-2 text-xs text-secondary">
+                                                {{ notification.data.body }}
+                                            </p>
+                                            <p class="mt-1 text-[11px] text-secondary">
+                                                {{ formatNotificationDate(notification.created_at) }}
+                                            </p>
+                                        </div>
+
+                                        <Link
+                                            v-if="notification.data?.url"
+                                            :href="notification.data.url"
+                                            class="self-center rounded-lg border border-border px-2 py-1 text-xs font-semibold hover:bg-inputBg"
+                                            @click="openNotification(notification)"
+                                        >
+                                            Öffnen
+                                        </Link>
+
+                                        <button
+                                            v-else-if="!notification.read"
+                                            type="button"
+                                            class="self-center rounded-lg border border-border px-2 py-1 text-xs font-semibold hover:bg-inputBg"
+                                            @click="markAsRead(notification)"
+                                        >
+                                            Gelesen
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div v-else class="px-4 py-8 text-center">
+                                    <div class="mx-auto flex h-11 w-11 items-center justify-center rounded-lg bg-muted text-secondary">
+                                        <i class="las la-bell-slash text-xl"></i>
+                                    </div>
+                                    <p class="mt-3 text-sm font-semibold text-primary">Keine Benachrichtigungen</p>
+                                    <p class="mt-1 text-xs text-secondary">Neue Anfragen und Updates erscheinen hier.</p>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- User -->
                         <div class="hidden sm:block">
