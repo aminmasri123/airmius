@@ -11,8 +11,9 @@ class Post extends Model
 
     public const VISIBILITIES = ['team', 'organization', 'public'];
     public const TYPES = ['normal', 'question', 'knowledge', 'training_drill', 'tactic', 'analysis', 'experience', 'club_update'];
+    public const CONTENT_ORIGINS = ['self', 'ai'];
 
-    protected $fillable = ['moderation_status','club_id','team_id','user_id','sport_id','post_type','content','image','visibility'];
+    protected $fillable = ['moderation_status','club_id','team_id','user_id','sport_id','post_type','content_origin','content','image','visibility'];
 
     public function user()
     {

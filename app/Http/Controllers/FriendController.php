@@ -62,11 +62,14 @@ class FriendController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'email' => ['required', 'email', 'exists:users,email'],
+            'email' => ['nullable', 'required_without:user_id', 'email', 'exists:users,email'],
+            'user_id' => ['nullable', 'required_without:email', 'integer', 'exists:users,id'],
         ]);
 
         $sender = $request->user();
-        $recipient = User::where('email', $data['email'])->firstOrFail();
+        $recipient = ! empty($data['user_id'])
+            ? User::findOrFail($data['user_id'])
+            : User::where('email', $data['email'])->firstOrFail();
 
         abort_if($recipient->is($sender), 422, 'Du kannst dich nicht selbst einladen.');
 

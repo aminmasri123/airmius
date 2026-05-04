@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\FriendInvitation;
+use App\Models\Friendship;
 use App\Models\Post;
 use App\Models\Sport;
 use App\Models\UserSportSkill;
@@ -71,6 +73,39 @@ class UserController extends Controller
         $viewer = $request->user();
         $canManageRoles = $viewer->can('assignRoles', $user);
         $profileVisible = $user->isProfileVisibleTo($viewer);
+        $friendship = null;
+        $pendingFriendInvitation = null;
+
+        if (! $viewer->is($user)) {
+            $friendship = Friendship::query()
+                ->where('user_id', $viewer->id)
+                ->where('friend_id', $user->id)
+                ->first();
+
+            $pendingFriendInvitation = FriendInvitation::query()
+                ->where('status', 'pending')
+                ->where(function ($query) use ($viewer, $user) {
+                    $query->where(function ($query) use ($viewer, $user) {
+                        $query->where('sender_id', $viewer->id)
+                            ->where('recipient_id', $user->id);
+                    })->orWhere(function ($query) use ($viewer, $user) {
+                        $query->where('sender_id', $user->id)
+                            ->where('recipient_id', $viewer->id);
+                    });
+                })
+                ->first();
+        }
+
+        $friendshipStatus = 'none';
+
+        if ($friendship) {
+            $friendshipStatus = 'friends';
+        } elseif ($pendingFriendInvitation?->sender_id === $viewer->id) {
+            $friendshipStatus = 'sent';
+        } elseif ($pendingFriendInvitation?->recipient_id === $viewer->id) {
+            $friendshipStatus = 'received';
+        }
+
         $user->loadCount(['followers', 'following', 'posts']);
         $user->load([
             'clubs' => fn ($query) => $query->select('clubs.id', 'name')->orderBy('name')->limit(8),
@@ -188,6 +223,9 @@ class UserController extends Controller
                 'is_self' => $viewer->is($user),
                 'is_following' => $user->isFollowedBy($viewer),
                 'can_follow' => ! $viewer->is($user) && $viewer->can('follow.user'),
+                'friendship_status' => $friendshipStatus,
+                'friend_invitation_id' => $pendingFriendInvitation?->id,
+                'can_send_friend_request' => ! $viewer->is($user) && $friendshipStatus === 'none',
                 'can_manage_roles' => $canManageRoles,
                 'can_view_private_profile' => $profileVisible,
             ],

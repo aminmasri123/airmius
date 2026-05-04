@@ -22,6 +22,18 @@ const unfollow = () => {
     router.delete(route('auth.users.unfollow', props.profileUser.id), { preserveScroll: true })
 }
 
+const sendFriendRequest = () => {
+    router.post(route('auth.friends.invitations.store'), {
+        user_id: props.profileUser.id,
+    }, { preserveScroll: true })
+}
+
+const acceptFriendRequest = () => {
+    if (!props.viewer.friend_invitation_id) return
+
+    router.post(route('auth.friends.invitations.accept', props.viewer.friend_invitation_id), {}, { preserveScroll: true })
+}
+
 const formatDate = (value) => new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
 const initials = (name) => (name || '?').split(' ').slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase()
 
@@ -158,10 +170,17 @@ const rejectRecommendation = (recommendation) => {
                 <div class="-mt-11 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                     <div class="flex items-center gap-4">
                         <img
+                            v-if="profileUser.profile_photo_url"
                             :src="profileUser.profile_photo_url"
                             :alt="profileUser.name"
                             class="size-24 rounded-full border-4 border-card object-cover"
                         />
+                        <div
+                            v-else
+                            class="flex size-24 items-center justify-center rounded-full border-4 border-card bg-buttonPrimary text-2xl font-semibold text-buttonTextPrimary"
+                        >
+                            {{ initials(profileUser.name) }}
+                        </div>
                         <div>
                             <h1 class="text-2xl font-semibold text-primary">{{ profileUser.name }}</h1>
                         <p v-if="profileUser.email" class="text-sm text-secondary">{{ profileUser.email }}</p>
@@ -182,22 +201,53 @@ const rejectRecommendation = (recommendation) => {
                         >
                             Profil bearbeiten
                         </Link>
-                        <button
-                            v-else-if="viewer.can_follow && !viewer.is_following"
-                            type="button"
-                            class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm text-buttonTextPrimary hover:bg-buttonPrimaryHover"
-                            @click="follow"
-                        >
-                            Folgen
-                        </button>
-                        <button
-                            v-else-if="viewer.can_follow"
-                            type="button"
-                            class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:border-borderHover"
-                            @click="unfollow"
-                        >
-                            Entfolgen
-                        </button>
+                        <template v-else>
+                            <button
+                                v-if="viewer.can_follow && !viewer.is_following"
+                                type="button"
+                                class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm text-buttonTextPrimary hover:bg-buttonPrimaryHover"
+                                @click="follow"
+                            >
+                                Folgen
+                            </button>
+                            <button
+                                v-else-if="viewer.can_follow"
+                                type="button"
+                                class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:border-borderHover"
+                                @click="unfollow"
+                            >
+                                Entfolgen
+                            </button>
+
+                            <button
+                                v-if="viewer.can_send_friend_request"
+                                type="button"
+                                class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:border-borderHover"
+                                @click="sendFriendRequest"
+                            >
+                                Freundschaft anfragen
+                            </button>
+                            <button
+                                v-else-if="viewer.friendship_status === 'received'"
+                                type="button"
+                                class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm text-buttonTextPrimary hover:bg-buttonPrimaryHover"
+                                @click="acceptFriendRequest"
+                            >
+                                Anfrage annehmen
+                            </button>
+                            <span
+                                v-else-if="viewer.friendship_status === 'sent'"
+                                class="rounded-lg border border-border px-4 py-2 text-sm text-secondary"
+                            >
+                                Anfrage gesendet
+                            </span>
+                            <span
+                                v-else-if="viewer.friendship_status === 'friends'"
+                                class="rounded-lg border border-border px-4 py-2 text-sm text-secondary"
+                            >
+                                Befreundet
+                            </span>
+                        </template>
                     </div>
                 </div>
                 </div>

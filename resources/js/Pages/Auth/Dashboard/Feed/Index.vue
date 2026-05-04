@@ -39,6 +39,7 @@ const postForm = useForm({
     team_id: '',
     visibility: 'public',
     post_type: 'normal',
+    content_origin: 'self',
     sport_id: '',
     sport_skill_ids: [],
     content: '',
@@ -90,6 +91,10 @@ const postTypeLabel = (type) => ({
     experience: 'Erfahrung',
     club_update: 'Vereinsinfo',
 }[type] || type)
+const contentOriginLabel = (origin) => ({
+    self: 'Selbst erstellt',
+    ai: 'Mit KI erstellt',
+}[origin] || 'Selbst erstellt')
 const selectedCreateSport = computed(() => props.sports.find((sport) => String(sport.id) === String(postForm.sport_id)))
 const createSportSkills = computed(() => selectedCreateSport.value?.skills || [])
 const skillsForSport = (sportId) => props.sports.find((sport) => String(sport.id) === String(sportId))?.skills || []
@@ -115,6 +120,7 @@ const resetCreateForm = () => {
     if (imageInput.value) imageInput.value.value = null
     if (attachmentInput.value) attachmentInput.value.value = null
     postForm.reset('content', 'image', 'attachments')
+    postForm.content_origin = 'self'
     postForm.sport_skill_ids = []
 }
 
@@ -147,6 +153,7 @@ const editFormFor = (post) => {
         team_id: post.team_id || '',
         visibility: post.visibility || 'organization',
         post_type: post.post_type || 'normal',
+        content_origin: post.content_origin || 'self',
         sport_id: post.sport_id || '',
         sport_skill_ids: post.sport_skills?.map((skill) => skill.id) || [],
         content: post.content || '',
@@ -349,6 +356,14 @@ const visitPage = (url) => url && router.visit(url, {
                                     >
                                         {{ postTypeLabel(type) }}
                                     </option>
+                                </select>
+
+                                <select
+                                    v-model="postForm.content_origin"
+                                    class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
+                                >
+                                    <option value="self">Von mir selbst erstellt</option>
+                                    <option value="ai">Mit KI erstellt</option>
                                 </select>
 
                                 <select
@@ -634,6 +649,14 @@ const visitPage = (url) => url && router.visit(url, {
                         </select>
 
                         <select
+                            v-model="editFormFor(post).content_origin"
+                            class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
+                        >
+                            <option value="self">Von mir selbst erstellt</option>
+                            <option value="ai">Mit KI erstellt</option>
+                        </select>
+
+                        <select
                             v-model="editFormFor(post).club_id"
                             class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                         >
@@ -735,6 +758,15 @@ const visitPage = (url) => url && router.visit(url, {
                     <div class="mb-3 flex flex-wrap gap-2 text-xs">
                         <span class="rounded-full bg-inputBg px-3 py-1 font-semibold text-secondary">
                             {{ postTypeLabel(post.post_type) }}
+                        </span>
+
+                        <span
+                            class="rounded-full border px-3 py-1 font-semibold"
+                            :class="post.content_origin === 'ai'
+                                ? 'border-air-blue/40 bg-air-blue/10 text-air-blue'
+                                : 'border-border text-secondary'"
+                        >
+                            {{ contentOriginLabel(post.content_origin) }}
                         </span>
 
                         <span

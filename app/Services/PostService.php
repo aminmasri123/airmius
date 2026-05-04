@@ -19,6 +19,7 @@ class PostService
             'team_id' => $data['team_id'] ?? null,
             'sport_id' => $data['sport_id'] ?? null,
             'post_type' => $data['post_type'] ?? 'normal',
+            'content_origin' => $data['content_origin'] ?? 'self',
             'visibility' => $data['visibility'] ?? 'organization',
             'content' => $data['content'],
             'image' => $data['image'] ?? null,
