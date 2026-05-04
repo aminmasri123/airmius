@@ -1,5 +1,24 @@
 {
-    "welcome": "Bienvenue",
-    "login": "Se connecter",
-    "cta": "Commencer maintenant"
+  "welcome": "Bienvenue",
+  "login": "Se connecter",
+  "cta": "Commencer maintenant",
+  "Anmelden": "Se connecter",
+  "Anmeldeseite": "Page de connexion",
+  "Email": "E-mail",
+  "Passwort": "Mot de passe",
+  "Passwort Zurücksetzen": "Envoyer le lien de réinitialisation du mot de passe",
+  "Passwort vergessen? Kein Problem. Teilen Sie uns einfach Ihre E-Mail-Adresse mit und wir senden Ihnen per E-Mail einen Link zum Zurücksetzen des Passworts, über den Sie eine neue auswählen können.": "Mot de passe oublié ? Aucun problème. Indiquez simplement votre adresse e-mail et nous vous enverrons un lien de réinitialisation qui vous permettra d’en choisir un nouveau.",
+  "Angemeldet bleiben": "Se souvenir de moi",
+  "Sport Plattform": "Plateforme sportive",
+  "Team Management · Kommunikation · Events": "Gestion d’équipe · Communication · Événements",
+  "Passwort zurücksetzen": "Réinitialiser le mot de passe",
+  "Hallo!": "Bonjour !",
+  "Du erhältst diese E-Mail, weil wir eine Anfrage zum Zurücksetzen des Passworts für dein Konto erhalten haben.": "Vous recevez cet e-mail parce que nous avons reçu une demande de réinitialisation du mot de passe pour votre compte.",
+  "Dieser Link läuft in 60 Minuten ab.": "Ce lien de réinitialisation du mot de passe expirera dans 60 minutes.",
+  "Beste Grüße, dein Airmius Team": "Cordialement, votre équipe Airmius",
+  "Feed": "Fil",
+  "E-Learning": "E-Learning",
+  "Alle": "Tous",
+  "Willkommen bei Airmius": "Bienvenue chez Airmius",
+  "Entdecke die Welt der Luftfahrt": "Découvrez le monde de l’aviation"
 }

@@ -88,7 +88,8 @@
       "end": "النهاية",
       "reminder": "تذكير",
       "recurrence": "التكرار",
-      "recurrence_end": "التكرار حتى"
+      "recurrence_end": "التكرار حتى",
+      "recurrence_days": "أيام التدريب"
     },
     "placeholders": {
       "title": "مثال: تدريب تحت 17",
@@ -117,6 +118,31 @@
       "weekly": "أسبوعي",
       "biweekly": "كل أسبوعين",
       "monthly": "شهري"
+    },
+    "training_days": "أيام التدريب",
+    "next_occurrence": "الموعد التالي",
+    "rsvp": {
+      "yes": "سأحضر",
+      "maybe": "ربما",
+      "no": "اعتذار"
+    },
+    "weekdays": {
+      "monday": "الاثنين",
+      "tuesday": "الثلاثاء",
+      "wednesday": "الأربعاء",
+      "thursday": "الخميس",
+      "friday": "الجمعة",
+      "saturday": "السبت",
+      "sunday": "الأحد"
+    },
+    "weekdays_short": {
+      "monday": "اثنين",
+      "tuesday": "ثلاثاء",
+      "wednesday": "أربعاء",
+      "thursday": "خميس",
+      "friday": "جمعة",
+      "saturday": "سبت",
+      "sunday": "أحد"
     }
   },
   "roles": {
@@ -240,5 +266,17 @@
         }
       }
     }
-  }
+  },
+  "Gamification": "التحفيز",
+  "Profile Information": "معلومات الملف الشخصي",
+  "Suchen": "بحث",
+  "Verein erstellen": "إنشاء ناد",
+  "Ort, Stadt, PLZ oder Land": "المكان أو المدينة أو الرمز البريدي أو البلد",
+  "Verein beitreten": "الانضمام إلى ناد",
+  "Verein suchen": "البحث عن ناد",
+  "Sportart suchen": "البحث عن رياضة",
+  "TN": "المشاركون",
+  "Vereine & Teams": "الأندية والفرق",
+  "Verwalte Teams": "إدارة الفرق",
+  "Verwalte Teams, Mitglieder und Rollen": "إدارة الفرق والأعضاء والأدوار"
 }

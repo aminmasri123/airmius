@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
@@ -16,6 +16,7 @@ const emit = defineEmits(['update:modelValue'])
 const { t, te, locale } = useI18n()
 const open = ref(false)
 const query = ref(props.modelValue || '')
+const selectRef = ref(null)
 
 const optionLabel = (option) => {
     const key = props.translationPrefix && option.slug ? `${props.translationPrefix}.${option.slug}` : null
@@ -100,10 +101,24 @@ const clear = () => {
     emit('update:modelValue', '')
     open.value = false
 }
+
+const closeOnOutsideClick = (event) => {
+    if (!selectRef.value?.contains(event.target)) {
+        open.value = false
+    }
+}
+
+onMounted(() => {
+    document.addEventListener('pointerdown', closeOnOutsideClick)
+})
+
+onBeforeUnmount(() => {
+    document.removeEventListener('pointerdown', closeOnOutsideClick)
+})
 </script>
 
 <template>
-    <div class="relative">
+    <div ref="selectRef" class="relative">
         <div class="flex rounded-lg border border-border bg-inputBg focus-within:border-borderHover">
             <input
                 :value="query"

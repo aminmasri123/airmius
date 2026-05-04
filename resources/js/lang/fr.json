@@ -34,26 +34,25 @@
   "Vereine": "Clubs",
   "Marketplace": "Marketplace",
   "TN": "Participants",
-    "Suchen": "Rechercher",
-    "Verein erstellen": "Créer un club",
-    "Ort, Stadt, PLZ oder Land": "Lieu, ville, code postal ou pays",
-    "Verein beitreten": "Rejoindre un club",
-    "Verein suchen": "Rechercher un club",
-    "Sportart suchen": "Rechercher un sport",
-    "Vereine & Teams": "Clubs & équipes",
-    "Verwalte Teams, Mitglieder und Rollen": "Gérer les équipes, les membres et les rôles",
-    "Anmelden": "Se connecter",
-    "Passwort": "Mot de passe",
-    "Email": "E-mail",
-    "Passwort vergessen?": "Mot de passe oublié ?",
-    "Registrieren": "S'inscrire",
-    "Angemeldet bleiben": "Se souvenir de moi",
-    "Sport Plattform": "Plateforme de sport",
-    "Team Management · Kommunikation · Events": "Gestion des équipes · Communication · Événements",
-    "Passwort Zurücksetzen": "Réinitialiser le mot de passe",
-    "Passwort zurücksetzen": "Réinitialiser le mot de passe",
-
-    "cta": "Commencer",
+  "Suchen": "Rechercher",
+  "Verein erstellen": "Créer un club",
+  "Ort, Stadt, PLZ oder Land": "Lieu, ville, code postal ou pays",
+  "Verein beitreten": "Rejoindre un club",
+  "Verein suchen": "Rechercher un club",
+  "Sportart suchen": "Rechercher un sport",
+  "Vereine & Teams": "Clubs & équipes",
+  "Verwalte Teams, Mitglieder und Rollen": "Gérer les équipes, les membres et les rôles",
+  "Anmelden": "Se connecter",
+  "Passwort": "Mot de passe",
+  "Email": "E-mail",
+  "Passwort vergessen?": "Mot de passe oublié ?",
+  "Registrieren": "S'inscrire",
+  "Angemeldet bleiben": "Se souvenir de moi",
+  "Sport Plattform": "Plateforme de sport",
+  "Team Management · Kommunikation · Events": "Gestion des équipes · Communication · Événements",
+  "Passwort Zurücksetzen": "Réinitialiser le mot de passe",
+  "Passwort zurücksetzen": "Réinitialiser le mot de passe",
+  "cta": "Commencer",
   "common": {
     "all": "Tout",
     "none": "Aucun",
@@ -100,7 +99,8 @@
       "end": "Fin",
       "reminder": "Rappel",
       "recurrence": "Récurrence",
-      "recurrence_end": "Répéter jusqu'à"
+      "recurrence_end": "Répéter jusqu'à",
+      "recurrence_days": "Jours d'entraînement"
     },
     "placeholders": {
       "title": "p. ex. entraînement U17",
@@ -129,6 +129,31 @@
       "weekly": "Hebdomadaire",
       "biweekly": "Toutes les 2 semaines",
       "monthly": "Mensuel"
+    },
+    "training_days": "Jours d'entraînement",
+    "next_occurrence": "Prochaine session",
+    "rsvp": {
+      "yes": "Présent",
+      "maybe": "Peut-être",
+      "no": "Refuser"
+    },
+    "weekdays": {
+      "monday": "Lundi",
+      "tuesday": "Mardi",
+      "wednesday": "Mercredi",
+      "thursday": "Jeudi",
+      "friday": "Vendredi",
+      "saturday": "Samedi",
+      "sunday": "Dimanche"
+    },
+    "weekdays_short": {
+      "monday": "Lun",
+      "tuesday": "Mar",
+      "wednesday": "Mer",
+      "thursday": "Jeu",
+      "friday": "Ven",
+      "saturday": "Sam",
+      "sunday": "Dim"
     }
   },
   "roles": {
@@ -252,5 +277,6 @@
         }
       }
     }
-  }
+  },
+  "Verwalte Teams": "Gérer les équipes"
 }

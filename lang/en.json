@@ -1,28 +1,24 @@
 {
-
-
-
-    "Anmelden": "Login",
-    "Email": "Email",
-    "Passwort": "Password",
-
-
-    "Passwort Zurücksetzen": "Email Password Reset Link",
-
-    "Passwort vergessen? Kein Problem. Teilen Sie uns einfach Ihre E-Mail-Adresse mit und wir senden Ihnen per E-Mail einen Link zum Zurücksetzen des Passworts, über den Sie eine neue auswählen können.": "Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.",
-
-
-    "Angemeldet bleiben": "Remember me",
-    "Sport Plattform": "Sports Platform",
-    "Team Management · Kommunikation · Events": "Team Management · Communication · Events",
-
-
-    "Passwort zurücksetzen": "Reset Password",
-    "Hallo!": "Hello!",
-    "Du erhältst diese E-Mail, weil wir eine Anfrage zum Zurücksetzen des Passworts für dein Konto erhalten haben.": "You are receiving this email because we received a password reset request for your account.",
-    "Dieser Link läuft in 60 Minuten ab.": "This password reset link will expire in 60 minutes.",
-    "Beste Grüße, dein Airmius Team": "Best regards, your Airmius Team",
-
-
-    "cta": "Get Started"
+  "welcome": "Welcome",
+  "login": "Login",
+  "cta": "Get Started",
+  "Anmelden": "Login",
+  "Anmeldeseite": "Login page",
+  "Email": "Email",
+  "Passwort": "Password",
+  "Passwort Zurücksetzen": "Email Password Reset Link",
+  "Passwort vergessen? Kein Problem. Teilen Sie uns einfach Ihre E-Mail-Adresse mit und wir senden Ihnen per E-Mail einen Link zum Zurücksetzen des Passworts, über den Sie eine neue auswählen können.": "Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.",
+  "Angemeldet bleiben": "Remember me",
+  "Sport Plattform": "Sports Platform",
+  "Team Management · Kommunikation · Events": "Team Management · Communication · Events",
+  "Passwort zurücksetzen": "Reset Password",
+  "Hallo!": "Hello!",
+  "Du erhältst diese E-Mail, weil wir eine Anfrage zum Zurücksetzen des Passworts für dein Konto erhalten haben.": "You are receiving this email because we received a password reset request for your account.",
+  "Dieser Link läuft in 60 Minuten ab.": "This password reset link will expire in 60 minutes.",
+  "Beste Grüße, dein Airmius Team": "Best regards, your Airmius Team",
+  "Feed": "Feed",
+  "E-Learning": "E-Learning",
+  "Alle": "All",
+  "Willkommen bei Airmius": "Welcome to Airmius",
+  "Entdecke die Welt der Luftfahrt": "Discover the world of aviation"
 }

@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 $root = (Resolve-Path ".").Path
 $sourcePath = Join-Path $root $Source
 $destinationPath = Join-Path $root $Destination
-$workDir = Join-Path $root "storage\app\generated-pptx\use-case-checklist"
+$workDir = Join-Path $root ("storage\app\generated-pptx\use-case-checklist-" + (Get-Date -Format "yyyyMMddHHmmss"))
 $logoPath = Join-Path $root "public\img\logo\Logo-Airmius-mit-Schrift.png"
 
 function XmlEscape([string] $value) {

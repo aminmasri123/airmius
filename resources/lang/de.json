@@ -1,24 +1,24 @@
 {
-    "Anmelden": "Anmelden",
-    "Anmeldeseite": "Anmeldeseite",
-    "Feed": "Feed",
-    "E-Learning": "E-Learning",
-    "Alle": "Alle",
-    "Willkommen bei Airmius": "Willkommen bei Airmius",
-    "Entdecke die Welt der Luftfahrt": "Entdecke die Welt der Luftfahrt"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  "welcome": "Willkommen",
+  "login": "Anmelden",
+  "cta": "Loslegen",
+  "Anmelden": "Anmelden",
+  "Anmeldeseite": "Anmeldeseite",
+  "Email": "E-Mail",
+  "Passwort": "Passwort",
+  "Passwort Zurücksetzen": "Link zum Zurücksetzen des Passworts senden",
+  "Passwort vergessen? Kein Problem. Teilen Sie uns einfach Ihre E-Mail-Adresse mit und wir senden Ihnen per E-Mail einen Link zum Zurücksetzen des Passworts, über den Sie eine neue auswählen können.": "Passwort vergessen? Kein Problem. Teilen Sie uns einfach Ihre E-Mail-Adresse mit und wir senden Ihnen per E-Mail einen Link zum Zurücksetzen des Passworts, über den Sie ein neues auswählen können.",
+  "Angemeldet bleiben": "Angemeldet bleiben",
+  "Sport Plattform": "Sportplattform",
+  "Team Management · Kommunikation · Events": "Teammanagement · Kommunikation · Events",
+  "Passwort zurücksetzen": "Passwort zurücksetzen",
+  "Hallo!": "Hallo!",
+  "Du erhältst diese E-Mail, weil wir eine Anfrage zum Zurücksetzen des Passworts für dein Konto erhalten haben.": "Du erhältst diese E-Mail, weil wir eine Anfrage zum Zurücksetzen des Passworts für dein Konto erhalten haben.",
+  "Dieser Link läuft in 60 Minuten ab.": "Dieser Link läuft in 60 Minuten ab.",
+  "Beste Grüße, dein Airmius Team": "Beste Grüße, dein Airmius Team",
+  "Feed": "Feed",
+  "E-Learning": "E-Learning",
+  "Alle": "Alle",
+  "Willkommen bei Airmius": "Willkommen bei Airmius",
+  "Entdecke die Welt der Luftfahrt": "Entdecke die Welt der Luftfahrt"
 }
