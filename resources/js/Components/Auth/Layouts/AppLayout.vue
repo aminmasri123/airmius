@@ -44,6 +44,7 @@ const iconFor = (type) => ({
     'post.like': 'las la-heart',
     'friend.invite': 'las la-user-plus',
     'friend.accepted': 'las la-user-check',
+    'user.followed': 'las la-user-plus',
 }[type] || 'las la-bell')
 
 const formatNotificationDate = (value) => {

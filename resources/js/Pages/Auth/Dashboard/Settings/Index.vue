@@ -238,9 +238,6 @@ const formatDistance = (meters) => {
                     <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">
                         Adresse
                     </h2>
-                    <p class="mt-1 text-sm text-secondary">
-                        Land ist Pflicht. Rest optional.
-                    </p>
                 </div>
 
                 <div
@@ -254,7 +251,9 @@ const formatDistance = (meters) => {
                 </div>
 
                 <div>
-                    <label class="text-sm font-semibold text-primary">Land</label>
+                    <label class="text-sm font-semibold text-primary">
+                        Land <span class="text-error">*</span>
+                    </label>
                     <select v-model="form.country" required class="input">
                         <option value="DE">Deutschland</option>
                         <option value="AT">Österreich</option>
