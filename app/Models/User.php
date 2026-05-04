@@ -4,7 +4,6 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Notifications\MyCustomResetPassword;
-use App\Support\UploadStorage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -343,13 +342,13 @@ class User extends Authenticatable
             $paths[] = substr($path, 0, -4).'_thumb.jpg';
         }
 
-        Storage::disk(UploadStorage::disk())->delete(array_unique($paths));
+        Storage::disk($this->profilePhotoDisk())->delete(array_unique($paths));
     }
 
     public function getProfilePhotoUrlAttribute()
     {
         if ($this->profile_photo_path) {
-            return UploadStorage::url($this->profile_photo_path).'?v='.$this->profilePhotoVersion();
+            return $this->profilePhotoUrlFor($this->profile_photo_path);
         }
 
         return null;
@@ -357,16 +356,29 @@ class User extends Authenticatable
 
     public function getProfilePhotoThumbAttribute()
     {
-        if ($this->profile_photo_path) {
-
-            return str_replace(
-                '.jpg',
-                '_thumb.jpg',
-                UploadStorage::url($this->profile_photo_path)
-            ).'?v='.$this->profilePhotoVersion();
+        if (! $this->profile_photo_path) {
+            return null;
         }
 
-        return null;
+        if (str_ends_with(strtolower($this->profile_photo_path), '.jpg')) {
+            $thumbPath = substr($this->profile_photo_path, 0, -4).'_thumb.jpg';
+
+            if (Storage::disk($this->profilePhotoDisk())->exists($thumbPath)) {
+                return $this->profilePhotoUrlFor($thumbPath);
+            }
+        }
+
+        return $this->profile_photo_url;
+    }
+
+    private function profilePhotoUrlFor(string $path): string
+    {
+        return Storage::disk($this->profilePhotoDisk())->url($path).'?v='.$this->profilePhotoVersion();
+    }
+
+    private function profilePhotoDisk(): string
+    {
+        return config('jetstream.profile_photo_disk', 'public');
     }
 
     private function profilePhotoVersion(): string

@@ -128,6 +128,10 @@ const cancelSubscription = (subscription) => {
     router.post(route('auth.user-subscriptions.cancel', subscription.id), {}, { preserveScroll: true })
 }
 
+const openProviderPortal = (subscription) => {
+    router.post(route('auth.user-subscriptions.provider-portal', subscription.id), {}, { preserveScroll: true })
+}
+
 const connectedAccountFor = (provider) =>
     props.sportIntegrations.accounts.find((account) => account.provider === provider)
 
@@ -320,14 +324,25 @@ const formatDistance = (meters) => {
                                 <p class="font-semibold text-primary">{{ subscription.plan?.name || 'Airmius Abo' }}</p>
                                 <p class="mt-1 text-sm text-secondary">{{ invoiceStatusLabel(subscription.status) }}</p>
                             </div>
-                            <button
-                                v-if="!['cancelled', 'cancels_at_period_end'].includes(subscription.status)"
-                                type="button"
-                                class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-muted"
-                                @click="cancelSubscription(subscription)"
-                            >
-                                Kündigen
-                            </button>
+                            <div class="flex shrink-0 flex-wrap justify-end gap-2">
+                                <button
+                                    v-if="subscription.payment_provider === 'stripe'"
+                                    type="button"
+                                    class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-muted"
+                                    @click="openProviderPortal(subscription)"
+                                >
+                                    Zahlungsportal
+                                </button>
+
+                                <button
+                                    v-if="!['cancelled', 'cancels_at_period_end'].includes(subscription.status)"
+                                    type="button"
+                                    class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-muted"
+                                    @click="cancelSubscription(subscription)"
+                                >
+                                    Kündigen
+                                </button>
+                            </div>
                         </div>
                         <dl class="mt-3 space-y-2 text-sm">
                             <div class="flex justify-between gap-3">
