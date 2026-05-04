@@ -70,9 +70,9 @@ const navItems = [
                 <Link :href="route('guest.blog.index')" class="hover:text-primary transition">
                     Blog
                 </Link>
-                <Link :href="route('guest.werbeagentur')" class="hover:text-primary transition">
+                <!-- <Link :href="route('guest.werbeagentur')" class="hover:text-primary transition">
                     Werbeagentur
-                </Link>
+                </Link> -->
             </div>
 
             <div class="flex items-center gap-3">
