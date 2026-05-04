@@ -47,6 +47,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::get('/users/{user}', [UserController::class, 'show'])->name('auth.users.show');
     Route::post('/users/{user}/follow', [FollowController::class, 'store'])->name('auth.users.follow');
     Route::delete('/users/{user}/follow', [FollowController::class, 'destroy'])->name('auth.users.unfollow');
+    Route::post('/users/{user}/block', [UserController::class, 'block'])->name('auth.users.block');
+    Route::delete('/users/{user}/block', [UserController::class, 'unblock'])->name('auth.users.unblock');
     Route::post('/profile/sports', [ProfileGamificationController::class, 'storeSport'])->name('auth.profile.sports.store');
     Route::put('/profile/skills/{userSportSkill}', [ProfileGamificationController::class, 'updateSkill'])->name('auth.profile.skills.update');
     Route::post('/users/{user}/skills/{userSportSkill}/endorse', [ProfileGamificationController::class, 'endorse'])->name('auth.users.skills.endorse');

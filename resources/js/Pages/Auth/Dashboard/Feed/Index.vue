@@ -26,8 +26,11 @@ const showPostModal = ref(false)
 const attachmentInput = ref(null)
 const imagePreview = ref(null)
 const commentForms = reactive({})
+const commentEditForms = reactive({})
 const editForms = reactive({})
 const reportTarget = ref(null)
+const deleteTarget = ref(null)
+const deleteConfirmText = ref('')
 const reportForm = useForm({
     type: '',
     id: null,
@@ -51,6 +54,8 @@ const canPost = computed(() => Boolean(postForm.content.trim() || postForm.image
 const canCreatePost = computed(() => can('post.store'))
 const canEditPost = (post) => post.user_id === user?.id || can('post.update')
 const canDeletePost = (post) => post.user_id === user?.id || can('post.delete')
+const canEditComment = (comment) => comment.user_id === user?.id
+const canDeleteComment = (post, comment) => comment.user_id === user?.id || post.user_id === user?.id || can('comment.delete')
 const reportReasons = [
     { value: 'insult', label: 'Beleidigung' },
     { value: 'bullying', label: 'Mobbing' },
@@ -146,6 +151,14 @@ const commentFormFor = (postId) => {
     return commentForms[postId]
 }
 
+const commentEditFormFor = (comment) => {
+    commentEditForms[comment.id] ??= useForm({
+        content: comment.content || '',
+        editing: false,
+    })
+    return commentEditForms[comment.id]
+}
+
 const editFormFor = (post) => {
     editForms[post.id] ??= useForm({
         _method: 'PUT',
@@ -177,7 +190,25 @@ const updatePost = (post) => {
     })
 }
 
-const deletePost = (post) => router.delete(route('auth.posts.destroy', post.id), { preserveScroll: true, only: ['posts', 'activities', 'notificationCenter', 'auth'] })
+const openDeletePost = (post) => {
+    deleteTarget.value = post
+    deleteConfirmText.value = ''
+}
+
+const closeDeletePost = () => {
+    deleteTarget.value = null
+    deleteConfirmText.value = ''
+}
+
+const deletePost = () => {
+    if (!deleteTarget.value || deleteConfirmText.value !== 'delete') return
+
+    router.delete(route('auth.posts.destroy', deleteTarget.value.id), {
+        preserveScroll: true,
+        only: ['posts', 'activities', 'notificationCenter', 'auth', 'flash'],
+        onSuccess: closeDeletePost,
+    })
+}
 
 const openReport = (type, item) => {
     reportTarget.value = { type, item }
@@ -238,6 +269,42 @@ const createComment = (post) => {
         preserveScroll: true,
         only: ['posts', 'activities', 'notificationCenter', 'auth'],
         onSuccess: () => form.reset(),
+    })
+}
+
+const startEditComment = (comment) => {
+    const form = commentEditFormFor(comment)
+    form.content = comment.content || ''
+    form.editing = true
+    form.clearErrors()
+}
+
+const cancelEditComment = (comment) => {
+    const form = commentEditFormFor(comment)
+    form.content = comment.content || ''
+    form.editing = false
+    form.clearErrors()
+}
+
+const updateComment = (comment) => {
+    const form = commentEditFormFor(comment)
+    if (!form.content.trim()) return
+
+    form.put(route('auth.comments.update', comment.id), {
+        preserveScroll: true,
+        only: ['posts', 'activities', 'notificationCenter', 'auth', 'flash', 'errors'],
+        onSuccess: () => {
+            form.editing = false
+        },
+    })
+}
+
+const deleteComment = (comment) => {
+    if (!window.confirm('Kommentar wirklich löschen?')) return
+
+    router.delete(route('auth.comments.destroy', comment.id), {
+        preserveScroll: true,
+        only: ['posts', 'activities', 'notificationCenter', 'auth', 'flash'],
     })
 }
 
@@ -609,7 +676,7 @@ const visitPage = (url) => url && router.visit(url, {
                         <button
                             v-if="canDeletePost(post)"
                             class="rounded p-2 text-secondary hover:bg-error/10 hover:text-error"
-                            @click="deletePost(post)"
+                            @click="openDeletePost(post)"
                         >
                             <i class="las la-trash"></i>
                         </button>
@@ -860,7 +927,6 @@ const visitPage = (url) => url && router.visit(url, {
                         type="button"
                         class="flex flex-col items-center justify-center gap-1 px-2 py-3 font-medium hover:bg-muted sm:flex-row sm:gap-2 sm:px-4"
                         :class="post.helpful_by_me ? 'text-air-green' : 'text-primary'"
-                        :disabled="post.user_id === user?.id"
                         @click="toggleHelpful(post)"
                     >
                         <i :class="post.helpful_by_me ? 'las la-check-circle' : 'lar la-check-circle'"></i>
@@ -911,18 +977,69 @@ const visitPage = (url) => url && router.visit(url, {
                                     {{ comment.user?.name }}
                                 </Link>
 
-                                <button
-                                    v-if="comment.user_id !== user?.id"
-                                    type="button"
-                                    class="rounded px-1 text-xs text-secondary hover:bg-muted hover:text-primary"
-                                    title="Kommentar melden"
-                                    @click="openReport('comment', comment)"
-                                >
-                                    <i class="las la-flag"></i>
-                                </button>
+                                <div class="flex shrink-0 items-center gap-1">
+                                    <button
+                                        v-if="canEditComment(comment)"
+                                        type="button"
+                                        class="rounded px-1 text-xs text-secondary hover:bg-muted hover:text-primary"
+                                        title="Kommentar bearbeiten"
+                                        @click="startEditComment(comment)"
+                                    >
+                                        <i class="las la-edit"></i>
+                                    </button>
+                                    <button
+                                        v-if="canDeleteComment(post, comment)"
+                                        type="button"
+                                        class="rounded px-1 text-xs text-secondary hover:bg-error/10 hover:text-error"
+                                        title="Kommentar löschen"
+                                        @click="deleteComment(comment)"
+                                    >
+                                        <i class="las la-trash"></i>
+                                    </button>
+                                    <button
+                                        v-if="comment.user_id !== user?.id"
+                                        type="button"
+                                        class="rounded px-1 text-xs text-secondary hover:bg-muted hover:text-primary"
+                                        title="Kommentar melden"
+                                        @click="openReport('comment', comment)"
+                                    >
+                                        <i class="las la-flag"></i>
+                                    </button>
+                                </div>
                             </div>
 
-                            <p class="mt-1 whitespace-pre-line break-words text-sm text-primary">
+                            <form
+                                v-if="commentEditFormFor(comment).editing"
+                                class="mt-2 space-y-2"
+                                @submit.prevent="updateComment(comment)"
+                            >
+                                <textarea
+                                    v-model="commentEditFormFor(comment).content"
+                                    rows="3"
+                                    class="w-full resize-none rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
+                                />
+                                <p v-if="commentEditFormFor(comment).errors.content" class="text-xs text-error">
+                                    {{ commentEditFormFor(comment).errors.content }}
+                                </p>
+                                <div class="flex flex-wrap gap-2">
+                                    <button
+                                        type="submit"
+                                        class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary"
+                                        :disabled="commentEditFormFor(comment).processing || !commentEditFormFor(comment).content.trim()"
+                                    >
+                                        Speichern
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary"
+                                        @click="cancelEditComment(comment)"
+                                    >
+                                        Abbrechen
+                                    </button>
+                                </div>
+                            </form>
+
+                            <p v-else class="mt-1 whitespace-pre-line break-words text-sm text-primary">
                                 {{ comment.content }}
                             </p>
                         </div>
@@ -1031,6 +1148,46 @@ const visitPage = (url) => url && router.visit(url, {
             </div>
         </aside>
     </div>
+
+        <div
+            v-if="deleteTarget"
+            class="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
+            @click.self="closeDeletePost"
+        >
+            <form class="w-full max-w-md rounded-lg border border-border bg-card p-5 shadow-xl" @submit.prevent="deletePost">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-error">Beitrag löschen</p>
+                        <h2 class="mt-1 text-xl font-semibold text-primary">Bist du sicher?</h2>
+                        <p class="mt-2 text-sm leading-6 text-secondary">
+                            Dieser Beitrag und seine Anhänge werden gelöscht. Gib <span class="font-semibold text-primary">delete</span> ein, um fortzufahren.
+                        </p>
+                    </div>
+                    <button type="button" class="rounded p-2 text-secondary hover:bg-muted" @click="closeDeletePost">
+                        <i class="las la-times"></i>
+                    </button>
+                </div>
+
+                <input
+                    v-model="deleteConfirmText"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="delete"
+                    class="mt-5 w-full rounded-lg border-border bg-inputBg text-primary"
+                />
+
+                <div class="mt-5 flex justify-end gap-2">
+                    <button type="button" class="btn" @click="closeDeletePost">Abbrechen</button>
+                    <button
+                        type="submit"
+                        class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        :disabled="deleteConfirmText !== 'delete'"
+                    >
+                        Löschen
+                    </button>
+                </div>
+            </form>
+        </div>
 
         <div
             v-if="reportTarget"

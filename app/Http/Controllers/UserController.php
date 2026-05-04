@@ -7,6 +7,7 @@ use App\Models\FriendInvitation;
 use App\Models\Friendship;
 use App\Models\Post;
 use App\Models\Sport;
+use App\Models\UserBlock;
 use App\Models\UserSportSkill;
 use App\Services\GamificationService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -75,8 +76,13 @@ class UserController extends Controller
         $profileVisible = $user->isProfileVisibleTo($viewer);
         $friendship = null;
         $pendingFriendInvitation = null;
+        $viewerHasBlocked = false;
+        $viewerIsBlocked = false;
 
         if (! $viewer->is($user)) {
+            $viewerHasBlocked = $viewer->hasBlocked($user);
+            $viewerIsBlocked = $user->hasBlocked($viewer);
+
             $friendship = Friendship::query()
                 ->where('user_id', $viewer->id)
                 ->where('friend_id', $user->id)
@@ -166,6 +172,8 @@ class UserController extends Controller
                 'bio' => $profileVisible ? $user->bio : null,
                 'profile_visibility' => $user->profile_visibility,
                 'profile_photo_url' => $user->profile_photo_url,
+                'direct_message_privacy' => $user->direct_message_privacy ?? 'everyone',
+                'friend_request_privacy' => $user->friend_request_privacy ?? 'everyone',
                 'followers_count' => $user->followers_count,
                 'following_count' => $user->following_count,
                 'posts_count' => $user->posts_count,
@@ -225,7 +233,17 @@ class UserController extends Controller
                 'can_follow' => ! $viewer->is($user) && $viewer->can('follow.user'),
                 'friendship_status' => $friendshipStatus,
                 'friend_invitation_id' => $pendingFriendInvitation?->id,
-                'can_send_friend_request' => ! $viewer->is($user) && $friendshipStatus === 'none',
+                'can_send_friend_request' => ! $viewer->is($user)
+                    && $friendshipStatus === 'none'
+                    && ! $viewerHasBlocked
+                    && ! $viewerIsBlocked
+                    && $user->allowsFriendRequestsFrom($viewer),
+                'can_send_message' => ! $viewer->is($user)
+                    && ! $viewerHasBlocked
+                    && ! $viewerIsBlocked
+                    && $user->allowsDirectMessagesFrom($viewer),
+                'has_blocked' => $viewerHasBlocked,
+                'is_blocked' => $viewerIsBlocked,
                 'can_manage_roles' => $canManageRoles,
                 'can_view_private_profile' => $profileVisible,
             ],
@@ -235,6 +253,55 @@ class UserController extends Controller
                 ->orderBy('sort_order')
                 ->get(),
         ]);
+    }
+
+    public function block(Request $request, User $user)
+    {
+        abort_if($request->user()->is($user), 422, 'Du kannst dich nicht selbst blockieren.');
+
+        UserBlock::firstOrCreate([
+            'user_id' => $request->user()->id,
+            'blocked_user_id' => $user->id,
+        ]);
+
+        Friendship::query()
+            ->where(function ($query) use ($request, $user) {
+                $query->where('user_id', $request->user()->id)
+                    ->where('friend_id', $user->id);
+            })
+            ->orWhere(function ($query) use ($request, $user) {
+                $query->where('user_id', $user->id)
+                    ->where('friend_id', $request->user()->id);
+            })
+            ->delete();
+
+        FriendInvitation::query()
+            ->where('status', 'pending')
+            ->where(function ($query) use ($request, $user) {
+                $query->where(function ($query) use ($request, $user) {
+                    $query->where('sender_id', $request->user()->id)
+                        ->where('recipient_id', $user->id);
+                })->orWhere(function ($query) use ($request, $user) {
+                    $query->where('sender_id', $user->id)
+                        ->where('recipient_id', $request->user()->id);
+                });
+            })
+            ->update([
+                'status' => 'declined',
+                'responded_at' => now(),
+            ]);
+
+        return back()->with('success', 'Person wurde blockiert.');
+    }
+
+    public function unblock(Request $request, User $user)
+    {
+        UserBlock::query()
+            ->where('user_id', $request->user()->id)
+            ->where('blocked_user_id', $user->id)
+            ->delete();
+
+        return back()->with('success', 'Blockierung wurde aufgehoben.');
     }
 
     /**

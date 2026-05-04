@@ -35,6 +35,14 @@ class MessageController extends Controller
 
         abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
 
+        if ($conversation->type === 'direct') {
+            $recipient = $conversation->users()
+                ->where('users.id', '!=', auth()->id())
+                ->first();
+
+            abort_unless($recipient?->allowsDirectMessagesFrom($request->user()), 403, 'Diese Person erlaubt keine Nachrichten von dir.');
+        }
+
         $message = $this->service->sendMessage(
             auth()->user(),
             $data['conversation_id'],

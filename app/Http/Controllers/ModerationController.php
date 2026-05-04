@@ -137,9 +137,22 @@ class ModerationController extends Controller
         return [
             'type' => class_basename($model),
             'id' => $model->getKey(),
-            'text' => str($model->content ?? $model->message ?? 'Datei oder gelöschter Inhalt')->limit(500)->toString(),
+            'text' => str($model->content ?? $model->message ?? $this->fallbackContentText($model))->limit(500)->toString(),
             'moderation_status' => $model->moderation_status ?? null,
             'author' => $model->user?->name ?? $model->sender?->name ?? null,
         ];
+    }
+
+    private function fallbackContentText(Model $model): string
+    {
+        if ($model instanceof \App\Models\User) {
+            return trim(implode("\n", array_filter([
+                'Profil: '.$model->name,
+                'E-Mail: '.$model->email,
+                $model->bio ? 'Bio: '.$model->bio : null,
+            ])));
+        }
+
+        return 'Datei oder geloeschter Inhalt';
     }
 }

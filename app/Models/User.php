@@ -66,6 +66,8 @@ class User extends Authenticatable
         'guardian_consent_revoked_by_email',
         'guardian_consent_token',
         'profile_visibility',
+        'direct_message_privacy',
+        'friend_request_privacy',
         'bio',
     ];
 
@@ -297,6 +299,63 @@ class User extends Authenticatable
     public function followers()
     {
         return $this->hasMany(Follow::class, 'followed_id');
+    }
+
+    public function blockedUsers()
+    {
+        return $this->hasMany(UserBlock::class);
+    }
+
+    public function blockedByUsers()
+    {
+        return $this->hasMany(UserBlock::class, 'blocked_user_id');
+    }
+
+    public function hasBlocked(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $this->blockedUsers()
+            ->where('blocked_user_id', $user->id)
+            ->exists();
+    }
+
+    public function isBlockedBy(?User $user): bool
+    {
+        return $user?->hasBlocked($this) ?? false;
+    }
+
+    public function isFriendsWith(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return $this->friendships()
+            ->where('friend_id', $user->id)
+            ->exists();
+    }
+
+    public function allowsDirectMessagesFrom(?User $user): bool
+    {
+        if (! $user || $this->hasBlocked($user) || $this->isBlockedBy($user)) {
+            return false;
+        }
+
+        return ($this->direct_message_privacy ?? 'everyone') === 'everyone'
+            || $this->isFriendsWith($user);
+    }
+
+    public function allowsFriendRequestsFrom(?User $user): bool
+    {
+        if (! $user || $this->hasBlocked($user) || $this->isBlockedBy($user)) {
+            return false;
+        }
+
+        return ($this->friend_request_privacy ?? 'everyone') === 'everyone'
+            || $this->isFriendsWith($user);
     }
 
     public function isFollowedBy(?User $user): bool

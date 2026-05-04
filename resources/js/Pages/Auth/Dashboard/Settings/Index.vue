@@ -21,6 +21,10 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
+    privacySettings: {
+        type: Object,
+        default: () => ({}),
+    },
     confirmsTwoFactorAuthentication: Boolean,
     billingHistory: {
         type: Object,
@@ -67,6 +71,8 @@ const form = useForm({
     postal_code: props.profileAddress.postal_code || '',
     city: props.profileAddress.city || '',
     state: props.profileAddress.state || '',
+    direct_message_privacy: props.privacySettings.direct_message_privacy || 'everyone',
+    friend_request_privacy: props.privacySettings.friend_request_privacy || 'everyone',
 })
 
 // Actions
@@ -183,6 +189,7 @@ const formatDistance = (meters) => {
             <button @click="activeTab = 'integrations'" :class="tabClass('integrations')">Verknüpfungen</button>
             <button @click="activeTab = 'design'" :class="tabClass('design')">Design</button>
             <button @click="activeTab = 'language'" :class="tabClass('language')">Sprache</button>
+            <button @click="activeTab = 'privacy'" :class="tabClass('privacy')">Privatsphäre</button>
             <button @click="activeTab = 'security'" :class="tabClass('security')">Sicherheit</button>
         </div>
 
@@ -307,6 +314,40 @@ const formatDistance = (meters) => {
                     </button>
                 </div>
 
+            </form>
+        </div>
+
+        <!-- PRIVATSPHAERE -->
+        <div v-if="activeTab === 'privacy'" class="surface-card p-5">
+            <form class="space-y-5" @submit.prevent="saveAddress">
+                <div>
+                    <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Privatsphäre</h2>
+                    <p class="mt-1 text-sm text-secondary">
+                        Lege fest, wer dich direkt kontaktieren oder dir Freundschaftsanfragen senden darf.
+                    </p>
+                </div>
+
+                <label class="block">
+                    <span class="text-sm font-semibold text-primary">Nachrichten erhalten</span>
+                    <select v-model="form.direct_message_privacy" class="input">
+                        <option value="everyone">Alle angemeldeten Personen</option>
+                        <option value="friends">Nur Freunde</option>
+                    </select>
+                    <p v-if="form.errors.direct_message_privacy" class="mt-1 text-sm text-error">{{ form.errors.direct_message_privacy }}</p>
+                </label>
+
+                <label class="block">
+                    <span class="text-sm font-semibold text-primary">Freundschaftsanfragen erhalten</span>
+                    <select v-model="form.friend_request_privacy" class="input">
+                        <option value="everyone">Alle angemeldeten Personen</option>
+                        <option value="friends">Nur Freunde</option>
+                    </select>
+                    <p v-if="form.errors.friend_request_privacy" class="mt-1 text-sm text-error">{{ form.errors.friend_request_privacy }}</p>
+                </label>
+
+                <button class="btn-primary" :disabled="form.processing">
+                    Privatsphaere speichern
+                </button>
             </form>
         </div>
 

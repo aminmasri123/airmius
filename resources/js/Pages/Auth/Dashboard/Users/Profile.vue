@@ -28,6 +28,25 @@ const sendFriendRequest = () => {
     }, { preserveScroll: true })
 }
 
+const sendMessage = () => {
+    router.post(route('auth.conversations.store'), {
+        type: 'direct',
+        participant_ids: [props.profileUser.id],
+    })
+}
+
+const blockUser = () => {
+    if (!window.confirm(`${props.profileUser.name} blockieren? Bestehende Freundschaften und offene Anfragen werden entfernt.`)) {
+        return
+    }
+
+    router.post(route('auth.users.block', props.profileUser.id), {}, { preserveScroll: true })
+}
+
+const unblockUser = () => {
+    router.delete(route('auth.users.unblock', props.profileUser.id), { preserveScroll: true })
+}
+
 const acceptFriendRequest = () => {
     if (!props.viewer.friend_invitation_id) return
 
@@ -47,6 +66,35 @@ const recommendationForm = useForm({
     relationship: 'team_member',
     body: '',
 })
+
+const reportTargetOpen = ref(false)
+const reportForm = useForm({
+    type: 'user',
+    id: props.profileUser.id,
+    reason: 'other',
+    details: '',
+})
+
+const openProfileReport = () => {
+    reportForm.type = 'user'
+    reportForm.id = props.profileUser.id
+    reportForm.reason = 'other'
+    reportForm.details = ''
+    reportForm.clearErrors()
+    reportTargetOpen.value = true
+}
+
+const closeProfileReport = () => {
+    reportTargetOpen.value = false
+    reportForm.reset()
+}
+
+const submitProfileReport = () => {
+    reportForm.post(route('auth.reports.store'), {
+        preserveScroll: true,
+        onSuccess: closeProfileReport,
+    })
+}
 
 const skillForms = ref({})
 
@@ -193,7 +241,7 @@ const rejectRecommendation = (recommendation) => {
                         </div>
                     </div>
 
-                    <div class="flex gap-2">
+                    <div class="flex flex-wrap justify-end gap-2">
                         <Link
                             v-if="viewer.is_self"
                             :href="route('profile.show')"
@@ -202,6 +250,21 @@ const rejectRecommendation = (recommendation) => {
                             Profil bearbeiten
                         </Link>
                         <template v-else>
+                            <button
+                                v-if="viewer.can_send_message"
+                                type="button"
+                                class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm text-buttonTextPrimary hover:bg-buttonPrimaryHover"
+                                @click="sendMessage"
+                            >
+                                Nachricht senden
+                            </button>
+                            <span
+                                v-else-if="viewer.is_blocked"
+                                class="rounded-lg border border-border px-4 py-2 text-sm text-secondary"
+                            >
+                                Nachrichten blockiert
+                            </span>
+
                             <button
                                 v-if="viewer.can_follow && !viewer.is_following"
                                 type="button"
@@ -247,6 +310,29 @@ const rejectRecommendation = (recommendation) => {
                             >
                                 Befreundet
                             </span>
+                            <button
+                                type="button"
+                                class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:border-borderHover"
+                                @click="openProfileReport"
+                            >
+                                Profil melden
+                            </button>
+                            <button
+                                v-if="viewer.has_blocked"
+                                type="button"
+                                class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:border-borderHover"
+                                @click="unblockUser"
+                            >
+                                Entblockieren
+                            </button>
+                            <button
+                                v-else
+                                type="button"
+                                class="rounded-lg border border-error/40 px-4 py-2 text-sm text-error hover:bg-error/10"
+                                @click="blockUser"
+                            >
+                                Blockieren
+                            </button>
                         </template>
                     </div>
                 </div>
@@ -552,6 +638,54 @@ const rejectRecommendation = (recommendation) => {
                     </div>
                 </div>
             </section>
+
+            <div
+                v-if="reportTargetOpen"
+                class="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
+                @click.self="closeProfileReport"
+            >
+                <form class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-xl" @submit.prevent="submitProfileReport">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Profil melden</p>
+                            <h2 class="mt-1 text-xl font-semibold text-primary">Warum soll dieses Profil geprüft werden?</h2>
+                        </div>
+                        <button type="button" class="rounded p-2 text-secondary hover:bg-muted" @click="closeProfileReport">
+                            <i class="las la-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="mt-4 space-y-4">
+                        <select v-model="reportForm.reason" class="w-full rounded-lg border-border bg-inputBg text-primary">
+                            <option value="insult">Beleidigung</option>
+                            <option value="bullying">Mobbing</option>
+                            <option value="hate">Hassrede</option>
+                            <option value="sexual">Sexueller Inhalt</option>
+                            <option value="violence">Gewalt</option>
+                            <option value="threat">Drohung</option>
+                            <option value="image_rights">Bild ohne Zustimmung</option>
+                            <option value="spam">Spam</option>
+                            <option value="other">Sonstiges</option>
+                        </select>
+                        <p v-if="reportForm.errors.reason" class="text-sm text-error">{{ reportForm.errors.reason }}</p>
+
+                        <textarea
+                            v-model="reportForm.details"
+                            rows="4"
+                            class="w-full rounded-lg border-border bg-inputBg text-primary"
+                            placeholder="Details optional"
+                        />
+                        <p v-if="reportForm.errors.details" class="text-sm text-error">{{ reportForm.errors.details }}</p>
+                    </div>
+
+                    <div class="mt-5 flex justify-end gap-2">
+                        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:border-borderHover" @click="closeProfileReport">Abbrechen</button>
+                        <button type="submit" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="reportForm.processing">
+                            Meldung senden
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </AppLayout>
 </template>

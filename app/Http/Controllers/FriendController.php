@@ -72,6 +72,7 @@ class FriendController extends Controller
             : User::where('email', $data['email'])->firstOrFail();
 
         abort_if($recipient->is($sender), 422, 'Du kannst dich nicht selbst einladen.');
+        abort_unless($recipient->allowsFriendRequestsFrom($sender), 403, 'Diese Person erlaubt keine Freundschaftsanfragen von dir.');
 
         $alreadyFriends = Friendship::query()
             ->where('user_id', $sender->id)

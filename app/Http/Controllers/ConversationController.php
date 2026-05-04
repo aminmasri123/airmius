@@ -77,10 +77,14 @@ class ConversationController extends Controller
             );
             $conversation->users()->syncWithoutDetaching($team->users()->pluck('users.id')->push(auth()->id())->unique());
         } elseif ($data['type'] === 'direct') {
+            $recipient = User::findOrFail($participantIds->first(fn ($id) => $id !== auth()->id()));
+
+            abort_unless($recipient->allowsDirectMessagesFrom($request->user()), 403, 'Diese Person erlaubt keine Nachrichten von dir.');
+
             $conversation = Conversation::query()
                 ->where('type', 'direct')
                 ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()))
-                ->whereHas('users', fn ($query) => $query->where('users.id', $participantIds->first(fn ($id) => $id !== auth()->id())))
+                ->whereHas('users', fn ($query) => $query->where('users.id', $recipient->id))
                 ->first();
 
             if (!$conversation) {
@@ -234,6 +238,8 @@ class ConversationController extends Controller
             'selectedConversation' => $selectedConversation,
             'users' => User::query()
                 ->whereKeyNot(auth()->id())
+                ->whereDoesntHave('blockedUsers', fn ($query) => $query->where('blocked_user_id', auth()->id()))
+                ->whereDoesntHave('blockedByUsers', fn ($query) => $query->where('user_id', auth()->id()))
                 ->where(function ($query) {
                     $query->whereHas('friendships', function ($q) {
                         $q->where('friend_id', auth()->id());
