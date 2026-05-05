@@ -21,59 +21,59 @@ const scrollTo = (id) => {
 </script>
 
 <template>
-    <footer class="border-t border-border py-12 px-4 bg-card/40">
-        <div class="max-w-6xl mx-auto">
-            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
-                <div>
-                    <button @click="scrollTo('hero')" class="font-heading font-900 text-xl tracking-tight text-left">
-                        <ApplicationLogo class="w-16 h-16" />
-                        <span class="text-primary font-[--ubuntu]">AIRMIUS</span>
+    <footer class="border-t border-border bg-card/40 px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+        <div class="mx-auto max-w-6xl">
+            <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:gap-10 xl:grid-cols-4">
+                <div class="sm:col-span-2 xl:col-span-1">
+                    <button @click="scrollTo('hero')" class="inline-flex items-center gap-3 font-heading text-xl font-900 tracking-tight text-left sm:block">
+                        <ApplicationLogo class="h-12 w-12 shrink-0 sm:h-16 sm:w-16" />
+                        <span class="font-[--ubuntu] text-primary">AIRMIUS</span>
                     </button>
-                    <p class="text-sm text-secondary mt-3 leading-relaxed">
+                    <p class="mt-4 max-w-xl text-sm leading-6 text-secondary xl:max-w-none">
                         {{ $t('guest.footer.description') }}
                     </p>
                 </div>
 
                 <div>
-                    <h4 class="font-heading font-600 text-sm mb-3 text-primary">{{ $t('guest.footer.product') }}</h4>
-                    <div class="space-y-2 text-sm text-secondary">
-                        <button @click="scrollTo('funktionen')" class="block hover:text-primary transition">{{ $t('guest.nav.features') }}</button>
-                        <button @click="scrollTo('vorteile')" class="block hover:text-primary transition">{{ $t('guest.nav.benefits') }}</button>
-                        <button @click="scrollTo('sportarten')" class="block hover:text-primary transition">{{ $t('guest.nav.sports') }}</button>
-                        <Link :href="route('guest.werbeagentur')" class="block hover:text-primary transition">{{ $t('guest.footer.agency_for_clubs') }}</Link>
-                        <Link :href="route('guest.marketplace')" class="block hover:text-primary transition">{{ $t('Marketplace') }}</Link>
+                    <h4 class="mb-3 font-heading text-sm font-600 text-primary">{{ $t('guest.footer.product') }}</h4>
+                    <div class="grid grid-cols-1 gap-1 text-sm text-secondary">
+                        <button @click="scrollTo('funktionen')" class="min-h-9 text-left transition hover:text-primary">{{ $t('guest.nav.features') }}</button>
+                        <button @click="scrollTo('vorteile')" class="min-h-9 text-left transition hover:text-primary">{{ $t('guest.nav.benefits') }}</button>
+                        <button @click="scrollTo('sportarten')" class="min-h-9 text-left transition hover:text-primary">{{ $t('guest.nav.sports') }}</button>
+                        <Link :href="route('guest.werbeagentur')" class="flex min-h-9 items-center transition hover:text-primary">{{ $t('guest.footer.agency_for_clubs') }}</Link>
+                        <Link :href="route('guest.marketplace')" class="flex min-h-9 items-center transition hover:text-primary">{{ $t('Marketplace') }}</Link>
                     </div>
                 </div>
 
                 <div>
-                    <h4 class="font-heading font-600 text-sm mb-3 text-primary">{{ $t('guest.footer.company') }}</h4>
-                    <div class="space-y-2 text-sm text-secondary">
-                        <button @click="scrollTo('ueber')" class="block hover:text-primary transition">{{ $t('guest.nav.about') }}</button>
-                        <Link :href="route('guest.blog.index')" class="block hover:text-primary transition">{{ $t('Blog') }}</Link>
-                        <button @click="scrollTo('kontakt')" class="block hover:text-primary transition">{{ $t('guest.nav.contact') }}</button>
-                        <Link :href="route('guest.jobs')" class="block hover:text-primary transition">{{ $t('Jobs') }}</Link>
+                    <h4 class="mb-3 font-heading text-sm font-600 text-primary">{{ $t('guest.footer.company') }}</h4>
+                    <div class="grid grid-cols-1 gap-1 text-sm text-secondary">
+                        <button @click="scrollTo('ueber')" class="min-h-9 text-left transition hover:text-primary">{{ $t('guest.nav.about') }}</button>
+                        <Link :href="route('guest.blog.index')" class="flex min-h-9 items-center transition hover:text-primary">{{ $t('Blog') }}</Link>
+                        <button @click="scrollTo('kontakt')" class="min-h-9 text-left transition hover:text-primary">{{ $t('guest.nav.contact') }}</button>
+                        <Link :href="route('guest.jobs')" class="flex min-h-9 items-center transition hover:text-primary">{{ $t('Jobs') }}</Link>
                     </div>
                 </div>
 
-                <div>
-                    <h4 class="font-heading font-600 text-sm mb-3 text-primary">{{ $t('guest.footer.legal') }}</h4>
-                    <div class="space-y-2 text-sm text-secondary">
-                        <Link :href="route('legal.imprint')" class="block hover:text-primary transition">{{ $t('guest.footer.imprint') }}</Link>
-                        <Link :href="route('policy.show')" class="block hover:text-primary transition">{{ $t('guest.footer.privacy') }}</Link>
-                        <Link :href="route('terms.show')" class="block hover:text-primary transition">{{ $t('guest.footer.terms') }}</Link>
-                        <Link :href="route('legal.community')" class="block hover:text-primary transition">{{ $t('guest.footer.community') }}</Link>
-                        <Link :href="route('legal.minors')" class="block hover:text-primary transition">{{ $t('guest.footer.minors') }}</Link>
-                        <Link :href="route('guardian-access.create')" class="block hover:text-primary transition">{{ $t('guest.footer.guardian') }}</Link>
-                        <Link :href="route('legal.cookies')" class="block hover:text-primary transition">{{ $t('guest.footer.cookies') }}</Link>
-                        <Link :href="route('legal.withdrawal')" class="block hover:text-primary transition">{{ $t('guest.footer.withdrawal') }}</Link>
-                        <Link :href="route('legal.reporting')" class="block hover:text-primary transition">{{ $t('guest.footer.reporting') }}</Link>
+                <div class="sm:col-span-2 xl:col-span-1">
+                    <h4 class="mb-3 font-heading text-sm font-600 text-primary">{{ $t('guest.footer.legal') }}</h4>
+                    <div class="grid grid-cols-1 gap-x-4 gap-y-1 text-sm text-secondary min-[420px]:grid-cols-2 sm:grid-cols-3 xl:grid-cols-1">
+                        <Link :href="route('legal.imprint')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.imprint') }}</Link>
+                        <Link :href="route('policy.show')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.privacy') }}</Link>
+                        <Link :href="route('terms.show')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.terms') }}</Link>
+                        <Link :href="route('legal.community')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.community') }}</Link>
+                        <Link :href="route('legal.minors')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.minors') }}</Link>
+                        <Link :href="route('guardian-access.create')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.guardian') }}</Link>
+                        <Link :href="route('legal.cookies')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.cookies') }}</Link>
+                        <Link :href="route('legal.withdrawal')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.withdrawal') }}</Link>
+                        <Link :href="route('legal.reporting')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.reporting') }}</Link>
                     </div>
                 </div>
             </div>
 
-            <div class="border-t border-border pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-secondary">
-                <span>{{ $t('guest.footer.copyright') }}</span>
-                <span>{{ $t('guest.footer.made') }}</span>
+            <div class="mt-8 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-xs leading-5 text-secondary sm:flex-row sm:items-center">
+                <span class="max-w-full break-words">{{ $t('guest.footer.copyright') }}</span>
+                <span class="max-w-full break-words sm:text-right">{{ $t('guest.footer.made') }}</span>
             </div>
         </div>
     </footer>

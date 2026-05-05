@@ -79,11 +79,11 @@ const summary = computed(() => ({
     userSubscriptions: props.plans.reduce((total, plan) => total + Number(plan.user_subscriptions_count || 0), 0),
 }))
 
-const formatPrice = (cents) => {
+const formatPrice = (cents, currency = 'EUR') => {
     const value = Number(cents || 0) / 100
     return value
-        ? new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value)
-        : '0 EUR'
+        ? new Intl.NumberFormat('de-DE', { style: 'currency', currency }).format(value)
+        : `0 ${currency}`
 }
 
 const limitLabel = (value, suffix = '') => value ? `${value}${suffix}` : 'Unbegrenzt'
@@ -101,9 +101,30 @@ const formForPlan = (plan) => {
         badge: plan.badge || '',
         is_public: Boolean(plan.is_public),
         is_active: Boolean(plan.is_active),
+        country_prices: (plan.country_prices || []).map((price) => ({
+            country_code: price.country_code || 'DE',
+            currency: price.currency || plan.currency || 'EUR',
+            monthly_price_cents: price.monthly_price_cents ?? plan.monthly_price_cents,
+            yearly_price_cents: price.yearly_price_cents ?? plan.yearly_price_cents,
+            is_active: Boolean(price.is_active),
+        })),
     })
 
     return planForms.value[plan.id]
+}
+
+const addCountryPrice = (plan) => {
+    formForPlan(plan).country_prices.push({
+        country_code: 'CH',
+        currency: 'CHF',
+        monthly_price_cents: plan.monthly_price_cents,
+        yearly_price_cents: plan.yearly_price_cents,
+        is_active: true,
+    })
+}
+
+const removeCountryPrice = (plan, index) => {
+    formForPlan(plan).country_prices.splice(index, 1)
 }
 
 const formForClub = (club) => {
@@ -268,11 +289,11 @@ const markTransferPaid = (checkout) => {
                     <div class="grid grid-cols-2 gap-3 text-sm">
                         <div class="rounded-lg bg-bg p-3">
                             <p class="text-xs uppercase text-secondary">Monat</p>
-                            <p class="mt-1 font-bold text-primary">{{ formatPrice(plan.monthly_price_cents) }}</p>
+                            <p class="mt-1 font-bold text-primary">{{ formatPrice(plan.monthly_price_cents, plan.currency) }}</p>
                         </div>
                         <div class="rounded-lg bg-bg p-3">
                             <p class="text-xs uppercase text-secondary">Jahr</p>
-                            <p class="mt-1 font-bold text-primary">{{ formatPrice(plan.yearly_price_cents) }}</p>
+                            <p class="mt-1 font-bold text-primary">{{ formatPrice(plan.yearly_price_cents, plan.currency) }}</p>
                         </div>
                         <div class="rounded-lg bg-bg p-3">
                             <p class="text-xs uppercase text-secondary">Mitglieder</p>
@@ -296,6 +317,9 @@ const markTransferPaid = (checkout) => {
                         </span>
                         <span class="rounded-full bg-muted px-2 py-1 font-semibold text-secondary">
                             {{ plan.user_subscriptions_count }} Nutzer
+                        </span>
+                        <span class="rounded-full bg-muted px-2 py-1 font-semibold text-secondary">
+                            {{ plan.country_prices?.length || 0 }} LÃ¤nderpreise
                         </span>
                     </div>
                 </div>
@@ -359,6 +383,43 @@ const markTransferPaid = (checkout) => {
                             <input v-model="formForPlan(plan).is_active" type="checkbox" class="rounded border-border bg-inputBg">
                             Aktiv
                         </label>
+                    </div>
+
+                    <div class="rounded-lg border border-border bg-bg p-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-xs font-semibold uppercase text-secondary">LÃ¤nderpreise</p>
+                                <p class="mt-1 text-xs text-secondary">Land, WÃ¤hrung und Preis pro Plan steuern.</p>
+                            </div>
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted" @click="addCountryPrice(plan)">
+                                + Land
+                            </button>
+                        </div>
+
+                        <div class="mt-3 space-y-3">
+                            <div
+                                v-for="(price, index) in formForPlan(plan).country_prices"
+                                :key="`${plan.id}-${index}`"
+                                class="grid gap-2 rounded-lg border border-border p-3 sm:grid-cols-[4rem_5rem_1fr_1fr_auto]"
+                            >
+                                <input v-model="price.country_code" maxlength="2" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="DE">
+                                <input v-model="price.currency" maxlength="3" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="EUR">
+                                <input v-model="price.monthly_price_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Monat Cent">
+                                <input v-model="price.yearly_price_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Jahr Cent">
+                                <div class="flex items-center gap-2">
+                                    <label class="flex items-center gap-1 text-xs text-primary">
+                                        <input v-model="price.is_active" type="checkbox" class="rounded border-border bg-inputBg">
+                                        Aktiv
+                                    </label>
+                                    <button type="button" class="rounded-lg border border-border px-2 py-1 text-xs text-primary hover:bg-muted" @click="removeCountryPrice(plan, index)">
+                                        Entfernen
+                                    </button>
+                                </div>
+                            </div>
+                            <p v-if="!formForPlan(plan).country_prices.length" class="text-xs text-secondary">
+                                Ohne LÃ¤nderpreis wird der Standardpreis des Plans verwendet.
+                            </p>
+                        </div>
                     </div>
 
                     <button class="w-full rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="formForPlan(plan).processing">

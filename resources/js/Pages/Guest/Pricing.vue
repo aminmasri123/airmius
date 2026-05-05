@@ -11,6 +11,8 @@ const props = defineProps({
     canRegister: Boolean,
     plans: { type: Array, default: () => [] },
     planGroups: { type: Object, default: () => ({}) },
+    pricingCountry: { type: String, default: 'DE' },
+    pricingCountrySource: { type: String, default: 'fallback' },
 })
 
 const audiences = [
@@ -79,12 +81,12 @@ const couponCode = ref('')
 const currentAudience = computed(() => audiences.find((audience) => audience.key === selectedAudience.value) || audiences[2])
 const visiblePlans = computed(() => props.planGroups[selectedAudience.value] || [])
 
-const formatPrice = (cents) => {
-    if (!cents) return '0 EUR'
+const formatPrice = (cents, currency = 'EUR') => {
+    if (!cents) return `0 ${currency}`
 
     return new Intl.NumberFormat('de-DE', {
         style: 'currency',
-        currency: 'EUR',
+        currency,
         maximumFractionDigits: 0,
     }).format(cents / 100)
 }
@@ -180,6 +182,13 @@ const startCheckout = (plan, provider) => {
                             >
                             <p class="mt-2 text-xs text-secondary">Der Code wird beim Bezahlen automatisch berücksichtigt.</p>
                         </div>
+                        <div class="mt-4 rounded-lg border border-border bg-bg p-4 text-sm text-secondary">
+                            <p class="font-semibold text-primary">Land & WÃ¤hrung</p>
+                            <p class="mt-2">
+                                Preise fÃ¼r {{ pricingCountry }} erkannt
+                                <span class="text-xs">({{ pricingCountrySource }})</span>.
+                            </p>
+                        </div>
                     </aside>
 
                     <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -236,10 +245,13 @@ const startCheckout = (plan, provider) => {
                             </div>
 
                             <div class="mt-5">
-                                <p class="text-3xl font-900 text-primary">{{ formatPrice(plan.monthly_price_cents) }}</p>
+                                <p class="text-3xl font-900 text-primary">{{ formatPrice(plan.monthly_price_cents, plan.currency) }}</p>
                                 <p class="text-sm text-secondary">{{ priceCaption(plan) }}</p>
                                 <p v-if="plan.yearly_price_cents" class="mt-1 text-xs text-secondary">
-                                    {{ formatPrice(plan.yearly_price_cents) }} pro Jahr
+                                    {{ formatPrice(plan.yearly_price_cents, plan.currency) }} pro Jahr
+                                </p>
+                                <p v-if="plan.localized_price" class="mt-1 text-xs text-air-blue">
+                                    Lokaler Preis fÃ¼r {{ plan.pricing_country }}
                                 </p>
                             </div>
 

@@ -11,6 +11,7 @@ use App\Models\SubscriptionPlan;
 use App\Notifications\SubscriptionInvoiceAwaitingTransfer;
 use App\Notifications\SubscriptionInvoicePaid;
 use App\Support\AppNotification;
+use App\Support\VisitorCountry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -19,9 +20,10 @@ use Illuminate\Validation\Rule;
 
 class SubscriptionCheckoutController extends Controller
 {
-    public function store(Request $request, SubscriptionPlan $subscriptionPlan)
+    public function store(Request $request, SubscriptionPlan $subscriptionPlan, VisitorCountry $visitorCountry)
     {
         abort_unless($subscriptionPlan->is_active, 404);
+        $subscriptionPlan->loadMissing('countryPrices');
 
         $data = $request->validate([
             'provider' => ['required', Rule::in(['stripe', 'paypal', 'bank_transfer'])],
@@ -30,9 +32,15 @@ class SubscriptionCheckoutController extends Controller
             'coupon_code' => ['nullable', 'string', 'max:80'],
         ]);
 
+        $club = $this->resolveClub($request, $subscriptionPlan, $data['club_id'] ?? null);
+        $country = $visitorCountry->resolve($request, $club?->country ?: $request->user()->country);
+        $price = $subscriptionPlan->priceForCountry($country['country']);
+
+        abort_unless($price['available'], 422, 'Dieser Abo-Plan ist in deinem Land aktuell nicht verfuegbar.');
+
         $amountCents = $data['billing_interval'] === 'yearly'
-            ? (int) $subscriptionPlan->yearly_price_cents
-            : (int) $subscriptionPlan->monthly_price_cents;
+            ? (int) $price['yearly_price_cents']
+            : (int) $price['monthly_price_cents'];
 
         abort_if($amountCents <= 0, 422, 'Kostenlose Plaene brauchen keinen Checkout.');
 
@@ -42,7 +50,6 @@ class SubscriptionCheckoutController extends Controller
 
         abort_if($payableCents <= 0, 422, 'Der Rabatt deckt den gesamten Betrag. Kostenlose Aktivierung folgt in einer spaeteren Ausbaustufe.');
 
-        $club = $this->resolveClub($request, $subscriptionPlan, $data['club_id'] ?? null);
         $checkout = PaymentCheckout::create([
             'user_id' => $request->user()->id,
             'club_id' => $club?->id,
@@ -53,8 +60,16 @@ class SubscriptionCheckoutController extends Controller
             'original_amount_cents' => $amountCents,
             'discount_cents' => $discountCents,
             'amount_cents' => $payableCents,
-            'currency' => $subscriptionPlan->currency ?: 'EUR',
+            'currency' => $price['currency'] ?: 'EUR',
             'status' => 'pending',
+            'payload' => [
+                'pricing_country' => $country['country'],
+                'pricing_country_source' => $country['source'],
+                'localized_price' => $price['localized'],
+                'base_currency' => $subscriptionPlan->currency,
+                'base_monthly_price_cents' => $subscriptionPlan->monthly_price_cents,
+                'base_yearly_price_cents' => $subscriptionPlan->yearly_price_cents,
+            ],
         ]);
         $this->createSubscriptionInvoice($checkout);
 
@@ -188,7 +203,7 @@ class SubscriptionCheckoutController extends Controller
                 $checkout->update([
                     'provider_customer_id' => $object['customer'] ?? null,
                     'provider_subscription_id' => $object['subscription'] ?? null,
-                    'payload' => $event,
+                    'payload' => array_merge($checkout->payload ?? [], ['stripe_webhook' => $event]),
                 ]);
                 $this->activateCheckout($checkout);
             }
@@ -215,7 +230,7 @@ class SubscriptionCheckoutController extends Controller
                 ->first();
 
             if ($checkout) {
-                $checkout->update(['payload' => $event]);
+                $checkout->update(['payload' => array_merge($checkout->payload ?? [], ['paypal_webhook' => $event])]);
                 $this->activateCheckout($checkout);
             }
         }
@@ -278,7 +293,7 @@ class SubscriptionCheckoutController extends Controller
         $payload = $response->json();
         $checkout->update([
             'provider_checkout_id' => $payload['id'] ?? null,
-            'payload' => $payload,
+            'payload' => array_merge($checkout->payload ?? [], ['stripe' => $payload]),
         ]);
 
         return $payload['url'];
@@ -294,13 +309,13 @@ class SubscriptionCheckoutController extends Controller
             'status' => 'awaiting_transfer',
             'payment_reference' => $this->paymentReference($checkout),
             'due_at' => now()->addDays((int) $bank['payment_terms_days'])->endOfDay(),
-            'payload' => [
+            'payload' => array_merge($checkout->payload ?? [], [
                 'bank_account_holder' => $bank['bank_account_holder'],
                 'bank_name' => $bank['bank_name'],
                 'iban' => $bank['iban'],
                 'bic' => $bank['bic'],
                 'payment_terms_days' => $bank['payment_terms_days'],
-            ],
+            ]),
         ]);
     }
 
@@ -320,7 +335,7 @@ class SubscriptionCheckoutController extends Controller
                 'provider_checkout_id' => $response->json('id'),
                 'provider_customer_id' => $response->json('customer'),
                 'provider_subscription_id' => $response->json('subscription'),
-                'payload' => $response->json(),
+                'payload' => array_merge($checkout->payload ?? [], ['stripe_sync' => $response->json()]),
             ]);
             $this->activateCheckout($checkout);
         }
@@ -357,7 +372,7 @@ class SubscriptionCheckoutController extends Controller
         $payload = $response->json();
         $checkout->update([
             'provider_checkout_id' => $payload['id'] ?? null,
-            'payload' => $payload,
+            'payload' => array_merge($checkout->payload ?? [], ['paypal' => $payload]),
         ]);
 
         $approveLink = collect($payload['links'] ?? [])->firstWhere('rel', 'approve');
@@ -378,7 +393,7 @@ class SubscriptionCheckoutController extends Controller
             ->post($this->paypalBaseUrl().'/v2/checkout/orders/'.$checkout->provider_checkout_id.'/capture');
 
         if ($response->ok() && in_array($response->json('status'), ['COMPLETED', 'APPROVED'], true)) {
-            $checkout->update(['payload' => $response->json()]);
+            $checkout->update(['payload' => array_merge($checkout->payload ?? [], ['paypal_capture' => $response->json()])]);
             $this->activateCheckout($checkout);
         }
     }
@@ -545,6 +560,9 @@ class SubscriptionCheckoutController extends Controller
                     'original_amount_cents' => $checkout->original_amount_cents,
                     'discount_cents' => $checkout->discount_cents,
                     'coupon_code' => $checkout->coupon?->code,
+                    'pricing_country' => $checkout->payload['pricing_country'] ?? null,
+                    'pricing_country_source' => $checkout->payload['pricing_country_source'] ?? null,
+                    'localized_price' => $checkout->payload['localized_price'] ?? false,
                 ],
             ],
         );

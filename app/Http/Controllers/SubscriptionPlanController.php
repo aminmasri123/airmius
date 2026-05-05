@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Club;
 use App\Models\ClubSubscription;
 use App\Models\PaymentCheckout;
+use App\Models\SubscriptionPlanPrice;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Models\UserSubscription;
@@ -23,6 +24,7 @@ class SubscriptionPlanController extends Controller
     {
         return Inertia::render('Auth/Dashboard/Admin/Subscriptions/Index', [
             'plans' => SubscriptionPlan::query()
+                ->with('countryPrices')
                 ->withCount(['clubSubscriptions', 'userSubscriptions'])
                 ->orderBy('sort_order')
                 ->get(),
@@ -87,11 +89,52 @@ class SubscriptionPlanController extends Controller
             'badge' => ['nullable', 'string', 'max:80'],
             'is_public' => ['boolean'],
             'is_active' => ['boolean'],
+            'country_prices' => ['array'],
+            'country_prices.*.country_code' => ['required', 'string', 'size:2'],
+            'country_prices.*.currency' => ['required', 'string', 'size:3'],
+            'country_prices.*.monthly_price_cents' => ['required', 'integer', 'min:0', 'max:99999900'],
+            'country_prices.*.yearly_price_cents' => ['required', 'integer', 'min:0', 'max:99999900'],
+            'country_prices.*.is_active' => ['boolean'],
         ]);
 
+        $countryPrices = $data['country_prices'] ?? [];
+        unset($data['country_prices']);
+
         $subscriptionPlan->update($data);
+        $this->syncCountryPrices($subscriptionPlan, $countryPrices);
 
         return back()->with('success', 'Abo-Plan aktualisiert.');
+    }
+
+    private function syncCountryPrices(SubscriptionPlan $plan, array $prices): void
+    {
+        $seen = [];
+
+        if ($prices === []) {
+            $plan->countryPrices()->delete();
+
+            return;
+        }
+
+        foreach ($prices as $price) {
+            $country = strtoupper($price['country_code']);
+            $seen[] = $country;
+
+            SubscriptionPlanPrice::query()->updateOrCreate(
+                [
+                    'subscription_plan_id' => $plan->id,
+                    'country_code' => $country,
+                ],
+                [
+                    'currency' => strtoupper($price['currency']),
+                    'monthly_price_cents' => (int) $price['monthly_price_cents'],
+                    'yearly_price_cents' => (int) $price['yearly_price_cents'],
+                    'is_active' => (bool) ($price['is_active'] ?? false),
+                ],
+            );
+        }
+
+        $plan->countryPrices()->whereNotIn('country_code', $seen)->delete();
     }
 
     public function assignClub(Request $request, Club $club)

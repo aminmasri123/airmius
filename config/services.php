@@ -64,4 +64,8 @@ return [
         'mode' => env('PAYPAL_MODE', 'sandbox'),
     ],
 
+    'geoip' => [
+        'url' => env('GEOIP_API_URL'),
+    ],
+
 ];

@@ -14,6 +14,11 @@ const props = defineProps({
 })
 
 const selectedClubId = ref(props.clubs[0]?.id || null)
+const activeTab = ref('members')
+const memberSearch = ref('')
+const memberStatusFilter = ref('all')
+const invoiceStatusFilter = ref('all')
+const transactionStatusFilter = ref('all')
 const editingMemberId = ref(null)
 const invoiceMemberId = ref(null)
 const showAddMemberModal = ref(false)
@@ -54,6 +59,68 @@ const bankImportForm = useForm({
 const selectedClub = computed(() => props.clubs.find((club) => club.id === selectedClubId.value) || props.clubs[0] || null)
 const pendingRequests = computed(() => selectedClub.value?.pending_requests || [])
 const capabilities = computed(() => selectedClub.value?.capabilities || {})
+const members = computed(() => selectedClub.value?.members || [])
+const externalMembers = computed(() => selectedClub.value?.external_members || [])
+const invoices = computed(() => selectedClub.value?.invoices || [])
+const bankTransactions = computed(() => selectedClub.value?.bank_transactions || [])
+
+const activeMembersCount = computed(() => members.value.filter((member) => formFor(member).membership_status === 'active').length)
+const openInvoices = computed(() => invoices.value.filter((invoice) => ['open', 'overdue'].includes(invoice.status)))
+const openInvoiceTotal = computed(() => openInvoices.value.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0))
+const sepaReadyMembersCount = computed(() => members.value.filter((member) => {
+    const form = formFor(member)
+
+    return form.sepa_mandate_active && form.sepa_iban && form.sepa_mandate_reference && form.sepa_mandate_signed_on
+}).length)
+const memberUsagePercent = computed(() => {
+    const limit = Number(selectedClub.value?.subscription?.member_limit || 0)
+
+    if (!limit) return 0
+
+    return Math.min(100, Math.round(((selectedClub.value?.subscription?.member_usage || members.value.length) / limit) * 100))
+})
+const recurringContributionTotal = computed(() => members.value.reduce((sum, member) => {
+    const form = formFor(member)
+
+    return form.membership_status === 'active' && form.contribution_interval !== 'none'
+        ? sum + Number(form.contribution_amount || 0)
+        : sum
+}, 0))
+
+const filteredMembers = computed(() => {
+    const search = memberSearch.value.trim().toLowerCase()
+
+    return members.value.filter((member) => {
+        const form = formFor(member)
+        const matchesStatus = memberStatusFilter.value === 'all' || form.membership_status === memberStatusFilter.value
+
+        if (!matchesStatus) return false
+        if (!search) return true
+
+        return [
+            member.name,
+            member.email,
+            form.member_number,
+            form.athlete_license_number,
+        ].filter(Boolean).join(' ').toLowerCase().includes(search)
+    })
+})
+
+const filteredInvoices = computed(() => invoices.value.filter((invoice) => (
+    invoiceStatusFilter.value === 'all' || invoice.status === invoiceStatusFilter.value
+)))
+
+const filteredBankTransactions = computed(() => bankTransactions.value.filter((transaction) => (
+    transactionStatusFilter.value === 'all' || transaction.status === transactionStatusFilter.value
+)))
+
+const tabs = computed(() => [
+    { key: 'members', label: 'Mitglieder', count: members.value.length + externalMembers.value.length, icon: 'las la-users' },
+    { key: 'requests', label: 'Anfragen', count: pendingRequests.value.length, icon: 'las la-user-plus' },
+    { key: 'invoices', label: 'Rechnungen', count: openInvoices.value.length, icon: 'las la-file-invoice' },
+    { key: 'payments', label: 'Zahlungen', count: bankTransactions.value.length, icon: 'las la-university' },
+    { key: 'exports', label: 'SEPA & DATEV', count: sepaReadyMembersCount.value, icon: 'las la-file-export' },
+])
 
 const statusLabel = (status) => ({
     active: 'Vereinsmitglied',
@@ -290,20 +357,24 @@ const inviteExternalMember = (member) => {
     <Head title="Mitgliederverwaltung" />
 
     <div class="space-y-6">
-        <section class="surface-card p-5">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <section class="surface-card overflow-hidden">
+            <div class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-end">
                 <div>
-                    <h1 class="text-2xl font-bold text-primary">Mitgliederverwaltung</h1>
-                    <p class="mt-1 text-sm text-secondary">
-                        Team-Anfragen, Vereinsmitgliedschaft, Beiträge, Rechnungen und Zahlungen verwalten.
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Vereinsverwaltung</p>
+                    <h1 class="mt-1 text-2xl font-bold text-primary">Mitglieder & Beiträge</h1>
+                    <p class="mt-2 max-w-2xl text-sm leading-6 text-secondary">
+                        Mitglieder pflegen, Anfragen prüfen, Beiträge abrechnen und Zahlungen abgleichen.
                     </p>
                 </div>
 
-                <select v-if="clubs.length" v-model="selectedClubId" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                    <option v-for="club in clubs" :key="club.id" :value="club.id">
-                        {{ club.name }}
-                    </option>
-                </select>
+                <label v-if="clubs.length" class="block">
+                    <span class="text-xs font-semibold uppercase text-secondary">Aktiver Verein</span>
+                    <select v-model="selectedClubId" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm font-semibold text-primary">
+                        <option v-for="club in clubs" :key="club.id" :value="club.id">
+                            {{ club.name }}
+                        </option>
+                    </select>
+                </label>
             </div>
         </section>
 
@@ -312,43 +383,44 @@ const inviteExternalMember = (member) => {
         </section>
 
         <template v-else-if="selectedClub">
-            <section class="grid gap-4 md:grid-cols-3">
+            <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <div class="surface-card p-4">
-                    <div class="text-2xl font-bold text-primary">{{ selectedClub.members.length }}</div>
-                    <div class="text-sm text-secondary">Personen im Verein</div>
+                    <div class="text-xs font-semibold uppercase text-secondary">Aktive Mitglieder</div>
+                    <div class="mt-2 text-2xl font-bold text-primary">{{ activeMembersCount }}</div>
+                    <div class="mt-1 text-xs text-secondary">von {{ members.length }} verknüpften Personen</div>
                 </div>
                 <div class="surface-card p-4">
-                    <div class="text-2xl font-bold text-primary">{{ pendingRequests.length }}</div>
-                    <div class="text-sm text-secondary">Offene Team-Anfragen</div>
+                    <div class="text-xs font-semibold uppercase text-secondary">Offen</div>
+                    <div class="mt-2 text-2xl font-bold text-primary">{{ formatMoney(openInvoiceTotal) }}</div>
+                    <div class="mt-1 text-xs text-secondary">{{ openInvoices.length }} offene Rechnung(en)</div>
                 </div>
                 <div class="surface-card p-4">
-                    <div class="text-2xl font-bold text-primary">{{ selectedClub.invoices.length }}</div>
-                    <div class="text-sm text-secondary">Letzte Rechnungen</div>
+                    <div class="text-xs font-semibold uppercase text-secondary">SEPA bereit</div>
+                    <div class="mt-2 text-2xl font-bold text-primary">{{ sepaReadyMembersCount }}</div>
+                    <div class="mt-1 text-xs text-secondary">Mandate mit IBAN und Referenz</div>
                 </div>
-                <div class="surface-card p-4 md:col-span-3">
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <div class="text-sm font-semibold text-secondary">Aktueller Vereinsplan</div>
-                            <div class="text-xl font-bold text-primary">{{ selectedClub.subscription?.plan?.name || 'Free' }}</div>
-                        </div>
-                        <div class="text-sm text-secondary">
-                            Mitglieder: {{ selectedClub.subscription?.member_usage || selectedClub.members.length }}
-                            / {{ selectedClub.subscription?.member_limit || 'unbegrenzt' }}
-                        </div>
-                    </div>
+                <div class="surface-card p-4">
+                    <div class="text-xs font-semibold uppercase text-secondary">Wiederkehrende Beiträge</div>
+                    <div class="mt-2 text-2xl font-bold text-primary">{{ formatMoney(recurringContributionTotal) }}</div>
+                    <div class="mt-1 text-xs text-secondary">Summe aktiver Beitragssätze</div>
                 </div>
             </section>
 
-            <section class="surface-card p-5">
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <section class="surface-card overflow-hidden">
+                <div class="grid gap-4 border-b border-border p-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
                     <div>
-                        <h2 class="text-lg font-semibold text-primary">Mitglieder hinzufuegen</h2>
-                        <p class="mt-1 text-sm text-secondary">
-                            Einzelne Personen per E-Mail erfassen oder bestehende Vereinslisten per Excel/CSV importieren.
+                        <p class="text-xs font-semibold uppercase text-secondary">Aktueller Vereinsplan</p>
+                        <h2 class="mt-1 text-xl font-semibold text-primary">{{ selectedClub.subscription?.plan?.name || 'Free' }}</h2>
+                        <div class="mt-3 h-2 max-w-xl overflow-hidden rounded-full bg-inputBg">
+                            <div class="h-full rounded-full bg-buttonPrimary" :style="{ width: `${memberUsagePercent}%` }"></div>
+                        </div>
+                        <p class="mt-2 text-xs text-secondary">
+                            Mitglieder: {{ selectedClub.subscription?.member_usage || members.length }}
+                            / {{ selectedClub.subscription?.member_limit || 'unbegrenzt' }}
                         </p>
                     </div>
 
-                    <div class="flex flex-wrap gap-2">
+                    <div class="flex flex-wrap gap-2 xl:justify-end">
                         <a
                             :href="route('auth.club-memberships.import-template')"
                             class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-inputBg"
@@ -371,13 +443,30 @@ const inviteExternalMember = (member) => {
                             :title="capabilities.external_members === false ? 'Externe Mitglieder sind ab Starter verfuegbar' : ''"
                             @click="showAddMemberModal = true"
                         >
-                            Mitglied hinzufuegen
+                            Mitglied hinzufügen
                         </button>
                     </div>
                 </div>
+
+                <div class="flex gap-2 overflow-x-auto p-3">
+                    <button
+                        v-for="tab in tabs"
+                        :key="tab.key"
+                        type="button"
+                        class="inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition"
+                        :class="activeTab === tab.key
+                            ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary'
+                            : 'border-border bg-card text-secondary hover:bg-inputBg hover:text-primary'"
+                        @click="activeTab = tab.key"
+                    >
+                        <i :class="tab.icon"></i>
+                        <span>{{ tab.label }}</span>
+                        <span class="rounded bg-black/10 px-1.5 py-0.5 text-xs">{{ tab.count }}</span>
+                    </button>
+                </div>
             </section>
 
-            <section class="surface-card p-5">
+            <section v-if="activeTab === 'exports'" class="surface-card p-5">
                 <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div class="max-w-2xl">
                         <h2 class="text-lg font-semibold text-primary">SEPA-Lastschrift</h2>
@@ -421,14 +510,14 @@ const inviteExternalMember = (member) => {
                 </form>
             </section>
 
-            <section v-if="selectedClub.external_members?.length" class="surface-card p-5">
+            <section v-if="activeTab === 'members' && externalMembers.length" class="surface-card p-5">
                 <h2 class="text-lg font-semibold text-primary">Externe Mitglieder ohne Verknüpfung</h2>
                 <p class="mt-1 text-sm text-secondary">
                     Diese Personen sind im Verein hinterlegt, aber noch nicht mit einem Airmius-Konto verbunden.
                 </p>
 
                 <div class="mt-4 grid gap-3 lg:grid-cols-2">
-                    <article v-for="member in selectedClub.external_members" :key="member.id" class="rounded-lg border border-border bg-bg p-4">
+                    <article v-for="member in externalMembers" :key="member.id" class="rounded-lg border border-border bg-bg p-4">
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                                 <h3 class="font-semibold text-primary">{{ member.name || member.email }}</h3>
@@ -457,7 +546,7 @@ const inviteExternalMember = (member) => {
                 </div>
             </section>
 
-            <section class="surface-card p-5">
+            <section v-if="activeTab === 'requests'" class="surface-card p-5">
                 <div class="flex items-center justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-semibold text-primary">Offene Beitrittsanfragen</h2>
@@ -494,16 +583,36 @@ const inviteExternalMember = (member) => {
                 </div>
             </section>
 
-            <section class="surface-card overflow-hidden">
+            <section v-if="activeTab === 'members'" class="surface-card overflow-hidden">
                 <div class="border-b border-border p-5">
-                    <h2 class="text-lg font-semibold text-primary">Mitglieder & Beitragsdaten</h2>
-                    <p class="mt-1 text-sm text-secondary">
-                        Teammitglieder können als echte Vereinsmitglieder oder als reine Teamteilnehmer markiert werden.
-                    </p>
+                    <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                        <div>
+                            <h2 class="text-lg font-semibold text-primary">Mitglieder & Beitragsdaten</h2>
+                            <p class="mt-1 text-sm text-secondary">
+                                Teammitglieder können als echte Vereinsmitglieder oder als reine Teamteilnehmer markiert werden.
+                            </p>
+                        </div>
+
+                        <div class="grid gap-2 sm:grid-cols-[minmax(13rem,1fr)_12rem]">
+                            <label class="flex items-center gap-2 rounded-lg border border-border bg-inputBg px-3 py-2">
+                                <i class="las la-search text-lg text-secondary"></i>
+                                <input
+                                    v-model="memberSearch"
+                                    type="search"
+                                    class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-primary placeholder-secondary focus:ring-0"
+                                    placeholder="Mitglied suchen"
+                                >
+                            </label>
+                            <select v-model="memberStatusFilter" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                <option value="all">Alle Status</option>
+                                <option v-for="status in membershipStatuses" :key="status" :value="status">{{ statusLabel(status) }}</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="divide-y divide-border">
-                    <article v-for="member in selectedClub.members" :key="member.id" class="p-5">
+                    <article v-for="member in filteredMembers" :key="member.id" class="p-5">
                         <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                             <div class="min-w-0">
                                 <div class="flex flex-wrap items-center gap-2">
@@ -651,11 +760,24 @@ const inviteExternalMember = (member) => {
                             <textarea v-model="invoiceForm.description" rows="2" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary md:col-span-4" placeholder="Beschreibung optional"></textarea>
                         </form>
                     </article>
+                    <p v-if="!filteredMembers.length" class="p-6 text-sm text-secondary">
+                        Keine Mitglieder passen zu deiner Suche.
+                    </p>
                 </div>
             </section>
 
-            <section class="surface-card p-5">
+            <section v-if="activeTab === 'invoices'" class="surface-card p-5">
                 <h2 class="text-lg font-semibold text-primary">Rechnungen</h2>
+                <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="text-sm text-secondary">{{ filteredInvoices.length }} von {{ invoices.length }} Rechnungen sichtbar.</p>
+                    <select v-model="invoiceStatusFilter" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                        <option value="all">Alle Status</option>
+                        <option value="open">Offen</option>
+                        <option value="paid">Bezahlt</option>
+                        <option value="overdue">Überfällig</option>
+                        <option value="cancelled">Storniert</option>
+                    </select>
+                </div>
                 <div class="mt-4 overflow-x-auto">
                     <table class="min-w-full text-left text-sm">
                         <thead class="text-xs uppercase text-secondary">
@@ -670,7 +792,7 @@ const inviteExternalMember = (member) => {
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border">
-                            <tr v-for="invoice in selectedClub.invoices" :key="invoice.id">
+                            <tr v-for="invoice in filteredInvoices" :key="invoice.id">
                                 <td class="py-3 pr-4 text-primary">{{ invoice.number }}</td>
                                 <td class="py-3 pr-4 text-secondary">{{ invoice.user?.name || '-' }}</td>
                                 <td class="py-3 pr-4 text-primary">{{ invoice.title || '-' }}</td>
@@ -704,11 +826,11 @@ const inviteExternalMember = (member) => {
                             </tr>
                         </tbody>
                     </table>
-                    <p v-if="!selectedClub.invoices.length" class="py-6 text-sm text-secondary">Noch keine Rechnungen.</p>
+                    <p v-if="!filteredInvoices.length" class="py-6 text-sm text-secondary">Keine passenden Rechnungen.</p>
                 </div>
             </section>
 
-            <section class="surface-card p-5">
+            <section v-if="activeTab === 'payments'" class="surface-card p-5">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                         <h2 class="text-lg font-semibold text-primary">Bankabgleich</h2>
@@ -727,6 +849,16 @@ const inviteExternalMember = (member) => {
                     </button>
                 </div>
 
+                <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="text-sm text-secondary">{{ filteredBankTransactions.length }} von {{ bankTransactions.length }} Umsätzen sichtbar.</p>
+                    <select v-model="transactionStatusFilter" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                        <option value="all">Alle Status</option>
+                        <option value="matched">Verbucht</option>
+                        <option value="suggested">Vorschlag</option>
+                        <option value="unmatched">Offen</option>
+                    </select>
+                </div>
+
                 <div class="mt-4 overflow-x-auto">
                     <table class="min-w-full text-left text-sm">
                         <thead class="text-xs uppercase text-secondary">
@@ -740,7 +872,7 @@ const inviteExternalMember = (member) => {
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border">
-                            <tr v-for="transaction in selectedClub.bank_transactions || []" :key="transaction.id">
+                            <tr v-for="transaction in filteredBankTransactions" :key="transaction.id">
                                 <td class="py-3 pr-4 text-secondary">{{ formatDate(transaction.booking_date) }}</td>
                                 <td class="py-3 pr-4">
                                     <div class="text-primary">{{ transaction.debtor_name || '-' }}</div>
@@ -774,11 +906,11 @@ const inviteExternalMember = (member) => {
                             </tr>
                         </tbody>
                     </table>
-                    <p v-if="!(selectedClub.bank_transactions || []).length" class="py-6 text-sm text-secondary">Noch keine Bankumsaetze importiert.</p>
+                    <p v-if="!filteredBankTransactions.length" class="py-6 text-sm text-secondary">Keine passenden Bankumsätze.</p>
                 </div>
             </section>
 
-            <section class="surface-card p-5">
+            <section v-if="activeTab === 'exports'" class="surface-card p-5">
                 <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div class="max-w-2xl">
                         <h2 class="text-lg font-semibold text-primary">DATEV / SKR42</h2>

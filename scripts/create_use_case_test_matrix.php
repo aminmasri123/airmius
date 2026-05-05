@@ -79,7 +79,13 @@ function parseSections(string $markdown): array
         }
 
         if ($captureUseCases && preg_match('/^\s*-\s+(.+)$/u', $line, $matches)) {
-            $current['items'][] = cleanText($matches[1]);
+            $item = cleanText($matches[1]);
+
+            if (! isChecklistItem($item)) {
+                continue;
+            }
+
+            $current['items'][] = $item;
             continue;
         }
 
@@ -112,14 +118,23 @@ function buildRows(array $sections): array
         $routes = implode("\n", array_unique($section['routes']));
 
         foreach ($section['items'] as $item) {
+            $phase = testPhaseFor($section['title'], $item);
+            $account = testAccountFor($section['title'], $item, $phase);
+
             $rows[] = [
                 'ID' => 'UC-' . str_pad((string) $counter, 4, '0', STR_PAD_LEFT),
+                'Testphase' => $phase,
+                'Testkonto / Plan' => $account,
                 'Bereich' => $area,
                 'Akteur' => $actor,
                 'Priorität' => priorityFor($section['title'], $item),
                 'Funktion' => $item,
-                'Testschritte' => testStepsFor($item),
+                'Voraussetzung' => prerequisiteFor($section['title'], $item, $phase),
+                'Testdaten' => testDataFor($section['title'], $item, $phase),
+                'Testschritte' => testStepsFor($section['title'], $item, $phase),
                 'Erwartetes Ergebnis' => expectedFor($item),
+                'Free-Test' => freeExpectationFor($section['title'], $item),
+                'Premium-Test' => premiumExpectationFor($section['title'], $item),
                 'Relevante Routen' => $routes !== '' ? $routes : '-',
                 'Status' => 'Offen',
                 'Tester' => '',
@@ -130,7 +145,182 @@ function buildRows(array $sections): array
         }
     }
 
+    usort($rows, static function (array $a, array $b): int {
+        return phaseOrder($a['Testphase']) <=> phaseOrder($b['Testphase'])
+            ?: strcmp($a['Bereich'], $b['Bereich'])
+            ?: strcmp($a['ID'], $b['ID']);
+    });
+
     return $rows;
+}
+
+function phaseOrder(string $phase): int
+{
+    return [
+        '1 - Free: Gast & Registrierung' => 10,
+        '2 - Free: Nutzerkonto testen' => 20,
+        '3 - Free: Verein/Team testen' => 30,
+        '4 - Premium: Nutzerfunktionen testen' => 40,
+        '5 - Premium: Verein/Team testen' => 50,
+        '6 - Admin & System testen' => 60,
+    ][$phase] ?? 99;
+}
+
+function testPhaseFor(string $sectionTitle, string $item): string
+{
+    $text = mb_strtolower($sectionTitle . ' ' . $item);
+
+    if (str_contains($text, 'admin') || str_contains($text, 'moderation') || str_contains($text, 'webhook') || str_contains($text, 'scheduler') || str_contains($text, 'cron') || str_contains($text, 'wartungsmodus')) {
+        return '6 - Admin & System testen';
+    }
+
+    if (str_contains($text, 'blog und cms blogbeitrag') || str_contains($text, 'blog und cms status setzen')) {
+        return '6 - Admin & System testen';
+    }
+
+    if (isPremiumFeature($text)) {
+        if (str_contains($text, 'verein') || str_contains($text, 'club') || str_contains($text, 'team') || str_contains($text, 'mitglied') || str_contains($text, 'sepa') || str_contains($text, 'datev')) {
+            return '5 - Premium: Verein/Team testen';
+        }
+
+        return '4 - Premium: Nutzerfunktionen testen';
+    }
+
+    if (str_contains($text, 'oeffentlicher') || str_contains($text, 'öffentlich') || str_contains($text, 'preise') || str_contains($text, 'blog') || str_contains($text, 'jobs') || str_contains($text, 'registr') || str_contains($text, 'login')) {
+        return '1 - Free: Gast & Registrierung';
+    }
+
+    if (str_contains($text, 'verein') || str_contains($text, 'club') || str_contains($text, 'team')) {
+        return '3 - Free: Verein/Team testen';
+    }
+
+    return '2 - Free: Nutzerkonto testen';
+}
+
+function isPremiumFeature(string $text): bool
+{
+    $premiumNeedles = [
+        'abo',
+        'premium',
+        'subscription',
+        'checkout',
+        'zahlung',
+        'rechnung',
+        'sepa',
+        'datev',
+        'bank',
+        'import',
+        'export',
+        'sponsor',
+        'marketplace-anbieter',
+        'provider',
+        'outfit',
+        'werbeagentur',
+        'add-on',
+        'limit',
+        'feature-gate',
+    ];
+
+    foreach ($premiumNeedles as $needle) {
+        if (str_contains($text, $needle)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function testAccountFor(string $sectionTitle, string $item, string $phase): string
+{
+    $text = mb_strtolower($sectionTitle . ' ' . $item);
+
+    if (str_starts_with($phase, '1 - Free: Gast')) {
+        return str_contains($text, 'registr') || str_contains($text, 'login')
+            ? 'Gast + neues Free-Nutzerkonto'
+            : 'Gast ohne Login';
+    }
+
+    if (str_starts_with($phase, '2 - Free')) {
+        return 'Free-Nutzerkonto';
+    }
+
+    if (str_starts_with($phase, '3 - Free')) {
+        return 'Free-Nutzerkonto + Free-Verein/Team';
+    }
+
+    if (str_starts_with($phase, '4 - Premium')) {
+        return 'Premium-Nutzerkonto';
+    }
+
+    if (str_starts_with($phase, '5 - Premium')) {
+        return 'Vereinsadmin mit Premium-Vereinsplan';
+    }
+
+    return 'Admin-Konto oder Systemprozess';
+}
+
+function prerequisiteFor(string $sectionTitle, string $item, string $phase): string
+{
+    $text = mb_strtolower($sectionTitle . ' ' . $item);
+
+    if (str_starts_with($phase, '1 - Free: Gast')) {
+        return 'Browser im privaten Fenster oeffnen; fuer Registrierung eine neue Test-E-Mail verwenden.';
+    }
+
+    if (str_contains($text, 'mitglied') || str_contains($text, 'team') || str_contains($text, 'verein')) {
+        return str_contains($phase, 'Premium')
+            ? 'Testverein mit Premium-Plan, mindestens 2 Mitglieder, 1 Team und 1 offene Einladung vorbereiten.'
+            : 'Free-Konto mit Testverein/Team vorbereiten; Plan-Limits bewusst nicht umgehen.';
+    }
+
+    if (str_contains($text, 'rechnung') || str_contains($text, 'zahlung') || str_contains($text, 'checkout')) {
+        return 'Testplan, Testrechnung und Test-Zahlungsmethode oder Ueberweisung vorbereiten.';
+    }
+
+    if (str_contains($text, 'benachrichtigung') || str_contains($text, 'e-mail') || str_contains($text, 'email')) {
+        return 'Zwei Testkonten nutzen und Mail-Log oder Mailbox offen halten.';
+    }
+
+    if (str_contains($text, 'admin') || str_starts_with($phase, '6 - Admin')) {
+        return 'Admin-Konto nutzen; vorher pruefen, dass Testdaten wieder loeschbar oder eindeutig markiert sind.';
+    }
+
+    return 'Passendes Testkonto anmelden und Ausgangszustand notieren.';
+}
+
+function testDataFor(string $sectionTitle, string $item, string $phase): string
+{
+    $text = mb_strtolower($sectionTitle . ' ' . $item);
+
+    if (str_contains($text, 'profil')) {
+        return 'Name, Bio, Sportart, Sichtbarkeit, optional Profilbild.';
+    }
+
+    if (str_contains($text, 'adresse')) {
+        return 'Land als Pflichtfeld; Strasse, PLZ, Ort als optionale Testwerte.';
+    }
+
+    if (str_contains($text, 'mitglied')) {
+        return 'Mitgliedsnummer, Beitrag, Status aktiv/passiv, optional Lizenznummer.';
+    }
+
+    if (str_contains($text, 'rechnung') || str_contains($text, 'zahlung')) {
+        return 'Betrag 10,00 EUR; Status offen/bezahlt; eindeutige Rechnungsnummer.';
+    }
+
+    if (str_contains($text, 'import')) {
+        return 'Gueltige Beispiel-Datei und zweite Datei mit bewusst fehlenden Pflichtfeldern.';
+    }
+
+    if (str_contains($text, 'nachricht') || str_contains($text, 'chat')) {
+        return 'Absender, Empfaenger, kurzer Text, optional Anhang.';
+    }
+
+    if (str_starts_with($phase, '1 - Free')) {
+        return 'Keine bestehenden Daten voraussetzen; nur oeffentliche Seiten und neue Registrierung.';
+    }
+
+    return 'Normale Eingabe + ein negativer Fall mit fehlenden Pflichtdaten.';
 }
 
 function cleanText(string $value): string
@@ -143,6 +333,33 @@ function cleanText(string $value): string
     }
 
     return $value;
+}
+
+function isChecklistItem(string $item): bool
+{
+    $lower = mb_strtolower(trim($item, " \t\n\r\0\x0B:"));
+
+    if ($lower === '') {
+        return false;
+    }
+
+    $metadataValues = [
+        'draft',
+        'review',
+        'published',
+        'archived',
+        'new',
+        'contacted',
+        'quoted',
+        'in_progress',
+        'done',
+        'cancelled',
+        'low',
+        'medium',
+        'high',
+    ];
+
+    return ! in_array($lower, $metadataValues, true);
 }
 
 function sectionArea(string $title): string
@@ -235,10 +452,14 @@ function priorityFor(string $sectionTitle, string $item): string
     return 'Normal';
 }
 
-function testStepsFor(string $item): string
+function testStepsFor(string $sectionTitle, string $item, string $phase): string
 {
     $action = lcfirst($item);
     $text = mb_strtolower($item);
+
+    if (str_starts_with($phase, '1 - Free: Gast')) {
+        return "1. Privates Browserfenster oeffnen.\n2. Zielseite ohne Login aufrufen.\n3. Navigation, Texte, Ladezustand und Mobilansicht pruefen.\n4. Falls Registrierung/Login betroffen ist: neues Free-Konto anlegen und Weiterleitung pruefen.";
+    }
 
     if (str_contains($text, 'löschen') || str_contains($text, 'loeschen')) {
         return "1. Passenden Datensatz anlegen oder auswählen.\n2. Löschaktion ausführen.\n3. Sicherheitsabfrage bestätigen.\n4. Liste und Detailseite neu laden.";
@@ -296,6 +517,36 @@ function expectedFor(string $item): string
     }
 
     return 'Die Funktion ist sichtbar, ausführbar, speichert korrekt und respektiert Rollen, Limits und Datenschutz.';
+}
+
+function freeExpectationFor(string $sectionTitle, string $item): string
+{
+    $text = mb_strtolower($sectionTitle . ' ' . $item);
+
+    if (isPremiumFeature($text)) {
+        return 'Im Free-Plan sichtbar als Hinweis/Upgrade oder sauber gesperrt; keine kaputte Seite und keine unerlaubte Speicherung.';
+    }
+
+    if (str_contains($text, 'admin') || str_contains($text, 'moderation') || str_contains($text, 'webhook') || str_contains($text, 'scheduler') || str_contains($text, 'cron')) {
+        return 'Fuer Free-Nutzer nicht sichtbar oder mit 403/Weiterleitung geschuetzt.';
+    }
+
+    return 'Mit Free-Konto bzw. ohne Login testbar und ohne Premium-Zwang nutzbar.';
+}
+
+function premiumExpectationFor(string $sectionTitle, string $item): string
+{
+    $text = mb_strtolower($sectionTitle . ' ' . $item);
+
+    if (str_contains($text, 'admin') || str_contains($text, 'moderation') || str_contains($text, 'webhook') || str_contains($text, 'scheduler') || str_contains($text, 'cron')) {
+        return 'Nur fuer Admin/System ausfuehrbar; Premium-Konto allein reicht nicht.';
+    }
+
+    if (isPremiumFeature($text)) {
+        return 'Mit aktivem Premium-Plan voll nutzbar; Limits, Rechnungen, E-Mails und Berechtigungen stimmen.';
+    }
+
+    return 'Muss weiterhin funktionieren wie im Free-Test; keine Regression durch aktiven Premium-Plan.';
 }
 
 function writeCsv(string $path, array $rows): void
@@ -378,15 +629,18 @@ function buildSheetXml(array $rows): string
     $dimension = 'A1:' . columnName(count($rows[0] ?? [])) . count($rows);
     $columns = [
         [1, 1, 14],
-        [2, 2, 28],
-        [3, 3, 22],
-        [4, 4, 12],
-        [5, 5, 46],
-        [6, 6, 62],
-        [7, 7, 58],
-        [8, 8, 42],
-        [9, 9, 14],
-        [10, 12, 18],
+        [2, 2, 30],
+        [3, 3, 30],
+        [4, 4, 28],
+        [5, 5, 22],
+        [6, 6, 12],
+        [7, 7, 46],
+        [8, 8, 48],
+        [9, 9, 42],
+        [10, 10, 62],
+        [11, 13, 58],
+        [14, 14, 42],
+        [15, 18, 18],
     ];
     $colsXml = '';
 
