@@ -2,16 +2,46 @@
 
 namespace App\Http\Middleware;
 
+use Closure;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Symfony\Component\HttpFoundation\Response;
 
 class HandleInertiaRequests extends Middleware
 {
     protected $rootView = 'app';
 
+    public function handle(Request $request, Closure $next): Response
+    {
+        $response = parent::handle($request, $next);
+
+        $response->headers->set('Vary', $this->appendVaryHeader($response->headers->get('Vary')));
+
+        if ($request->headers->has('X-Inertia') || $response->headers->has('X-Inertia')) {
+            $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+            $response->headers->set('Pragma', 'no-cache');
+            $response->headers->set('Expires', '0');
+            $response->headers->set('X-LiteSpeed-Cache-Control', 'no-cache');
+        }
+
+        return $response;
+    }
+
     public function version(Request $request): ?string
     {
         return parent::version($request);
+    }
+
+    private function appendVaryHeader(?string $vary): string
+    {
+        $values = collect(explode(',', (string) $vary))
+            ->map(fn ($value) => trim($value))
+            ->filter()
+            ->push('X-Inertia')
+            ->unique()
+            ->values();
+
+        return $values->implode(', ');
     }
 
     public function share(Request $request): array
