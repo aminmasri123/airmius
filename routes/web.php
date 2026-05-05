@@ -60,6 +60,10 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session')])
     ->get('/guardian-consent/pending', [GuardianConsentController::class, 'pending'])
     ->name('guardian-consent.pending');
 
+Route::middleware(['auth:sanctum', config('jetstream.auth_session')])
+    ->post('/guardian-consent/resend', [GuardianConsentController::class, 'resend'])
+    ->name('guardian-consent.resend');
+
 Route::get('/guardian-consent/{token}', [GuardianConsentController::class, 'show'])
     ->name('guardian-consent.show');
 

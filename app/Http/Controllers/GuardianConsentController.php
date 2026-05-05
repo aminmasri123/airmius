@@ -3,8 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Notifications\GuardianConsentRequested;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\View\View;
@@ -80,7 +84,54 @@ class GuardianConsentController extends Controller
             'requestedAt' => $user->guardian_consent_requested_at,
             'rejectedAt' => $user->guardian_consent_rejected_at,
             'approvedAt' => $user->guardian_consent_at,
+            'resendAvailableIn' => $user->guardian_consent_requested_at
+                ? max(0, 60 - $user->guardian_consent_requested_at->diffInSeconds(now()))
+                : 0,
         ]);
+    }
+
+    public function resend(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+
+        abort_unless($user->hasRole('minor_pending_consent'), 403);
+        abort_if($user->guardian_consent_at, 422, 'Die Zustimmung wurde bereits erteilt.');
+        abort_if(empty($user->guardian_email), 422, 'Es ist keine E-Mail eines Erziehungsberechtigten hinterlegt.');
+
+        $availableIn = $user->guardian_consent_requested_at
+            ? max(0, 60 - $user->guardian_consent_requested_at->diffInSeconds(now()))
+            : 0;
+
+        if ($availableIn > 0) {
+            return back()->withErrors([
+                'resend' => "Bitte warte noch {$availableIn} Sekunden, bevor du die E-Mail erneut sendest.",
+            ]);
+        }
+
+        $user->forceFill([
+            'guardian_consent_requested_at' => now(),
+            'guardian_consent_rejected_at' => null,
+            'guardian_consent_token' => $user->guardian_consent_token ?: Str::random(64),
+        ])->save();
+
+        try {
+            Notification::send(
+                Notification::route('mail', $user->guardian_email),
+                new GuardianConsentRequested($user)
+            );
+        } catch (\Throwable $exception) {
+            Log::warning('Guardian consent notification could not be resent.', [
+                'user_id' => $user->id,
+                'guardian_email' => $user->guardian_email,
+                'exception' => $exception->getMessage(),
+            ]);
+
+            return back()->withErrors([
+                'resend' => 'Die E-Mail konnte gerade nicht gesendet werden. Bitte versuche es spaeter erneut.',
+            ]);
+        }
+
+        return back()->with('success', 'Die E-Mail wurde erneut gesendet.');
     }
 
     private function findMinorByToken(string $token): User

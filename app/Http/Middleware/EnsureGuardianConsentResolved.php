@@ -27,6 +27,7 @@ class EnsureGuardianConsentResolved
     {
         return $request->routeIs(
             'guardian-consent.pending',
+            'guardian-consent.resend',
             'guardian-access.*',
             'logout',
             'verification.*',

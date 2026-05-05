@@ -1,14 +1,29 @@
 <script setup>
-import { Head, Link, router } from '@inertiajs/vue3'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import AuthenticationCard from '@/Components/AuthenticationCard.vue'
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const props = defineProps({
     guardianEmail: { type: String, default: '' },
     requestedAt: { type: String, default: null },
     rejectedAt: { type: String, default: null },
     approvedAt: { type: String, default: null },
+    resendAvailableIn: { type: Number, default: 0 },
+})
+
+const page = usePage()
+const resendForm = useForm({})
+const resendCooldown = ref(props.resendAvailableIn || 0)
+let resendTimer = null
+
+const resendDisabled = computed(() => resendForm.processing || resendCooldown.value > 0 || Boolean(props.approvedAt))
+const resendLabel = computed(() => {
+    if (resendForm.processing) return 'E-Mail wird gesendet...'
+    if (resendCooldown.value > 0) return `Erneut senden in ${resendCooldown.value}s`
+
+    return 'E-Mail erneut senden'
 })
 
 const formatDateTime = (value) => {
@@ -26,6 +41,35 @@ const formatDateTime = (value) => {
 const logout = () => {
     router.post(route('logout'))
 }
+
+const resendGuardianEmail = () => {
+    if (resendDisabled.value) return
+
+    resendForm.post(route('guardian-consent.resend'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            resendCooldown.value = 60
+        },
+    })
+}
+
+watch(() => props.resendAvailableIn, (value) => {
+    resendCooldown.value = value || 0
+})
+
+onMounted(() => {
+    resendTimer = window.setInterval(() => {
+        if (resendCooldown.value > 0) {
+            resendCooldown.value -= 1
+        }
+    }, 1000)
+})
+
+onUnmounted(() => {
+    if (resendTimer) {
+        window.clearInterval(resendTimer)
+    }
+})
 </script>
 
 <template>
@@ -84,7 +128,25 @@ const logout = () => {
                 </Link>
             </div>
 
-            <PrimaryButton class="mt-6" @click="logout">
+            <div v-if="!approvedAt" class="mt-5 space-y-2">
+                <PrimaryButton
+                    type="button"
+                    class="w-full justify-center"
+                    :disabled="resendDisabled"
+                    @click="resendGuardianEmail"
+                >
+                    {{ resendLabel }}
+                </PrimaryButton>
+
+                <p v-if="page.props.errors?.resend" class="text-sm text-error">
+                    {{ page.props.errors.resend }}
+                </p>
+                <p v-else class="text-xs text-secondary">
+                    Du kannst die E-Mail einmal pro Minute erneut senden.
+                </p>
+            </div>
+
+            <PrimaryButton class="mt-4" @click="logout">
                 Abmelden
             </PrimaryButton>
         </div>
