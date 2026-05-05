@@ -34,6 +34,7 @@ const selectedJobClub = ref(null)
 const openClubId = ref(null)
 const editingClubId = ref(null)
 const actionNotice = ref(null)
+const jobModalNotice = ref(null)
 const deleteTarget = ref(null)
 const deleteConfirmation = ref('')
 const errors = computed(() => page.props.errors || {})
@@ -410,6 +411,7 @@ const resetJobForm = (club) => {
 
 const openJobModal = (club) => {
     selectedJobClub.value = club
+    jobModalNotice.value = null
     resetJobForm(club)
     showJobModal.value = true
 }
@@ -417,11 +419,13 @@ const openJobModal = (club) => {
 const closeJobModal = () => {
     showJobModal.value = false
     selectedJobClub.value = null
+    jobModalNotice.value = null
     editingJobId.value = null
 }
 
 const editJob = (club, job) => {
     selectedJobClub.value = club
+    jobModalNotice.value = null
     editingJobId.value = job.id
 
     jobForms.value[club.id] = {
@@ -441,6 +445,7 @@ const editJob = (club, job) => {
 
 const submitJob = (club) => {
     actionNotice.value = null
+    jobModalNotice.value = null
     const isEditing = Boolean(editingJobId.value)
 
     const options = {
@@ -450,7 +455,12 @@ const submitJob = (club) => {
             closeJobModal()
             setActionNotice('success', isEditing ? 'Eintrag wurde aktualisiert.' : 'Eintrag wurde erstellt.')
         },
-        onError: () => setActionNotice('error', 'Eintrag konnte nicht gespeichert werden. Bitte pruefe die Eingaben.'),
+        onError: () => {
+            jobModalNotice.value = {
+                type: 'error',
+                message: 'Eintrag konnte nicht gespeichert werden. Bitte pruefe die markierten Felder.',
+            }
+        },
     }
 
     editingJobId.value
@@ -1017,7 +1027,7 @@ const deleteJob = (job) => {
                     <input
                         v-model="jobFormFor(club).application_url"
                         class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary md:col-span-2"
-                        placeholder="Bewerbungslink, optional"
+                        placeholder="Externer Bewerbungslink optional"
                     >
 
                     <textarea
@@ -1490,6 +1500,16 @@ const deleteJob = (job) => {
                 </p>
             </div>
 
+            <div
+                v-if="jobModalNotice"
+                class="rounded-lg border px-4 py-3 text-sm"
+                :class="jobModalNotice.type === 'success'
+                    ? 'border-success/30 bg-success/10 text-success'
+                    : 'border-error/30 bg-error/10 text-error'"
+            >
+                {{ jobModalNotice.message }}
+            </div>
+
             <section class="space-y-3">
                 <h3 class="text-sm font-semibold text-primary">Was wird gesucht?</h3>
 
@@ -1502,6 +1522,7 @@ const deleteJob = (job) => {
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                             placeholder="z.B. Jugendtrainer U15"
                         >
+                        <span v-if="errors.title" class="mt-1 block text-xs text-error">{{ errors.title }}</span>
                     </label>
 
                     <label class="block">
@@ -1513,6 +1534,7 @@ const deleteJob = (job) => {
                             <option value="volunteer">Ehrenamt</option>
                             <option value="professional">Beruf / bezahlte Stelle</option>
                         </select>
+                        <span v-if="errors.type" class="mt-1 block text-xs text-error">{{ errors.type }}</span>
                     </label>
 
                     <label class="block">
@@ -1522,6 +1544,7 @@ const deleteJob = (job) => {
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                             placeholder="Teilzeit, Minijob, Ehrenamt"
                         >
+                        <span v-if="errors.employment_type" class="mt-1 block text-xs text-error">{{ errors.employment_type }}</span>
                     </label>
                 </div>
             </section>
@@ -1537,6 +1560,7 @@ const deleteJob = (job) => {
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                             placeholder="Sportanlage, Adresse, Stadt oder Remote"
                         >
+                        <span v-if="errors.location" class="mt-1 block text-xs text-error">{{ errors.location }}</span>
                     </label>
 
                     <label class="block">
@@ -1546,6 +1570,7 @@ const deleteJob = (job) => {
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                             placeholder="z.B. 6 Std./Woche"
                         >
+                        <span v-if="errors.workload" class="mt-1 block text-xs text-error">{{ errors.workload }}</span>
                     </label>
                 </div>
             </section>
@@ -1562,6 +1587,7 @@ const deleteJob = (job) => {
                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                         placeholder="Aufgaben, Voraussetzungen, Zeitraum und was die Person wissen sollte."
                     ></textarea>
+                    <span v-if="errors.description" class="mt-1 block text-xs text-error">{{ errors.description }}</span>
                 </label>
 
                 <div class="grid gap-3 sm:grid-cols-2">
@@ -1573,15 +1599,20 @@ const deleteJob = (job) => {
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                             placeholder="kontakt@verein.de"
                         >
+                        <span v-if="errors.contact_email" class="mt-1 block text-xs text-error">{{ errors.contact_email }}</span>
                     </label>
 
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">Bewerbungslink</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">Externer Bewerbungslink optional</span>
                         <input
                             v-model="jobFormFor(selectedJobClub).application_url"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                            placeholder="https://..."
+                            placeholder="https://formular.verein.de"
                         >
+                        <span v-if="errors.application_url" class="mt-1 block text-xs text-error">{{ errors.application_url }}</span>
+                        <span class="mt-1 block text-xs text-secondary">
+                            Nur ausfuellen, wenn Interessierte zusaetzlich auf ein externes Formular weitergeleitet werden sollen.
+                        </span>
                     </label>
                 </div>
             </section>

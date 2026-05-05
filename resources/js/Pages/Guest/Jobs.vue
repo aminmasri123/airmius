@@ -271,6 +271,24 @@ const submitInterest = () => {
                     </span>
                 </div>
 
+                <div
+                    v-if="selectedJob.application_url"
+                    class="rounded-lg border border-air-blue/30 bg-air-blue/10 p-3 text-sm text-secondary"
+                >
+                    <span class="block font-semibold text-primary">Externe Bewerbung vorhanden</span>
+                    <span class="mt-1 block">
+                        Du kannst dein Interesse hier senden oder dich direkt ueber das externe Formular bewerben.
+                    </span>
+                    <a
+                        :href="selectedJob.application_url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="mt-3 inline-flex rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
+                    >
+                        Extern bewerben
+                    </a>
+                </div>
+
                 <div class="grid gap-3 sm:grid-cols-2">
                     <label class="block">
                         <span class="text-xs font-semibold uppercase text-secondary">Name *</span>
