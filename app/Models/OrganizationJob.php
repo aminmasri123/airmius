@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OrganizationJob extends Model
 {
@@ -41,6 +42,11 @@ class OrganizationJob extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function interests(): HasMany
+    {
+        return $this->hasMany(OrganizationJobInterest::class);
     }
 
     public function scopePublished($query)

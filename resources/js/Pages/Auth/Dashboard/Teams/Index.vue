@@ -959,7 +959,7 @@ const deleteJob = (job) => {
                             {{ club.jobs?.length || 0 }} Eintraege
                         </span>
                         <button
-                            v-if="club.can_manage"
+                            v-if="club.can_manage_jobs"
                             type="button"
                             class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
                             @click="openJobModal(club)"
@@ -1091,7 +1091,7 @@ const deleteJob = (job) => {
                             {{ job.description }}
                         </p>
 
-                        <div v-if="club.can_manage" class="mt-4 grid grid-cols-2 gap-2 sm:flex">
+                        <div v-if="club.can_manage_jobs" class="mt-4 grid grid-cols-2 gap-2 sm:flex">
                             <button
                                 class="rounded border border-border px-3 py-2 text-sm text-primary hover:bg-muted"
                                 @click="editJob(club, job)"
@@ -1531,11 +1531,11 @@ const deleteJob = (job) => {
 
                 <div class="grid gap-3 sm:grid-cols-2">
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">Ort</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">Adresse / Ort</span>
                         <input
                             v-model="jobFormFor(selectedJobClub).location"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                            placeholder="Vereinsheim, Platz, Remote"
+                            placeholder="Sportanlage, Adresse, Stadt oder Remote"
                         >
                     </label>
 

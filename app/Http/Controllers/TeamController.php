@@ -83,6 +83,7 @@ class TeamController extends Controller
             ->get()
             ->each(function (Club $club) use ($user) {
                 $club->setAttribute('can_manage', $user->can('update', $club));
+                $club->setAttribute('can_manage_jobs', $club->can_manage && $user->can('club.jobs.manage'));
                 $club->setAttribute('can_delete', $user->can('delete', $club));
                 $club->setAttribute('subscription_capabilities', $this->planFeatures->capabilities($club));
                 $teams = $club->can_manage

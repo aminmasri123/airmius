@@ -94,6 +94,7 @@ Route::get('/top-inhalte', fn () => Inertia::render('Guest/Top-Inhalte', [
 Route::get('/preise', [PricingController::class, 'index'])->name('guest.pricing');
 
 Route::get('/jobs', [OrganizationJobController::class, 'publicIndex'])->name('guest.jobs');
+Route::post('/jobs/{organizationJob}/interest', [OrganizationJobController::class, 'submitInterest'])->name('guest.jobs.interest');
 
 Route::get('/werbeagentur-fuer-vereine', fn () => Inertia::render('Guest/Werbeagentur', [
     'canLogin' => Route::has('login'),
