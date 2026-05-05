@@ -243,14 +243,11 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                     :key="role.id"
                     class="rounded-lg border border-border bg-bg p-4"
                 >
-                    <div class="flex items-start justify-between gap-3">
+                    <div>
                         <div class="min-w-0">
                             <p class="break-words font-semibold text-primary">{{ role.name }}</p>
                             <p class="mt-1 text-sm text-secondary">{{ role.description || 'Keine Beschreibung vorhanden.' }}</p>
                         </div>
-                        <span class="shrink-0 rounded bg-inputBg px-2 py-1 text-xs font-semibold text-secondary">
-                            {{ role.permissions_count }} Rechte
-                        </span>
                     </div>
                 </article>
             </div>

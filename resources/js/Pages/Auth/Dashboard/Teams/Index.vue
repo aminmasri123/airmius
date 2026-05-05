@@ -26,10 +26,14 @@ const user = page.props.auth?.user
 const showClubModal = ref(false)
 const showTeamModal = ref(false)
 const showFilterModal = ref(false)
+const showDeleteModal = ref(false)
 
 const selectedClub = ref(null)
 const openClubId = ref(null)
 const editingClubId = ref(null)
+const actionNotice = ref(null)
+const deleteTarget = ref(null)
+const deleteConfirmation = ref('')
 const errors = computed(() => page.props.errors || {})
 
 const clubCreateStep = ref(1)
@@ -171,13 +175,49 @@ const inviteFormFor = (team) => {
     return inviteForms.value[team.id]
 }
 
+const setActionNotice = (type, message) => {
+    actionNotice.value = { type, message }
+}
+
+const openDeleteModal = (target) => {
+    deleteTarget.value = target
+    deleteConfirmation.value = ''
+    showDeleteModal.value = true
+}
+
+const closeDeleteModal = () => {
+    showDeleteModal.value = false
+    deleteTarget.value = null
+    deleteConfirmation.value = ''
+}
+
+const confirmDelete = () => {
+    if (!deleteTarget.value || deleteConfirmation.value !== 'delete') return
+
+    const target = deleteTarget.value
+    actionNotice.value = null
+
+    router.delete(route(target.route, target.params), {
+        preserveScroll: true,
+        onSuccess: () => {
+            setActionNotice('success', target.successMessage)
+            closeDeleteModal()
+        },
+        onError: () => setActionNotice('error', target.errorMessage),
+    })
+}
+
 const createClub = () => {
+    actionNotice.value = null
+
     router.post('/clubs', clubForm.value, {
         preserveScroll: true,
         onSuccess: () => {
             resetClubForm()
             closeClubModal()
+            setActionNotice('success', 'Verein wurde registriert.')
         },
+        onError: () => setActionNotice('error', 'Verein konnte nicht registriert werden. Bitte pruefe die Eingaben.'),
     })
 }
 
@@ -210,6 +250,7 @@ const createTeam = () => {
     if (!selectedClub.value?.id) return
 
     const clubId = selectedClub.value.id
+    actionNotice.value = null
 
     router.post(route('auth.teams.store'), teamFormFor(selectedClub.value), {
         onSuccess: () => {
@@ -220,7 +261,9 @@ const createTeam = () => {
             }
 
             closeTeamModal()
+            setActionNotice('success', 'Team wurde erstellt.')
         },
+        onError: () => setActionNotice('error', 'Team konnte nicht erstellt werden. Bitte pruefe die Eingaben.'),
         preserveScroll: true,
     })
 }
@@ -232,10 +275,14 @@ const inviteUser = (team) => {
 }
 
 const updateClubMemberRole = (club, member) => {
+    actionNotice.value = null
+
     router.put(route('auth.clubs.members.update', [club.id, member.id]), {
         role: member.pivot.role,
     }, {
         preserveScroll: true,
+        onSuccess: () => setActionNotice('success', 'Vereinsrolle wurde gespeichert.'),
+        onError: () => setActionNotice('error', 'Vereinsrolle konnte nicht gespeichert werden.'),
     })
 }
 
@@ -277,23 +324,40 @@ const cancelClubEdit = () => {
 }
 
 const updateClub = (club) => {
+    actionNotice.value = null
+
     router.put(route('auth.clubs.update', club.id), clubEditFormFor(club), {
         preserveScroll: true,
         onSuccess: () => {
             editingClubId.value = null
+            setActionNotice('success', 'Vereinsdaten wurden gespeichert.')
         },
+        onError: () => setActionNotice('error', 'Vereinsdaten konnten nicht gespeichert werden. Bitte pruefe die Eingaben.'),
     })
 }
 
 const updateTeamMemberRole = (team, member) => {
+    actionNotice.value = null
+
     router.put(route('auth.teams.members.update', [team.id, member.id]), {
         role: member.pivot.role,
     }, {
         preserveScroll: true,
+        onSuccess: () => setActionNotice('success', 'Teamrolle wurde gespeichert.'),
+        onError: () => setActionNotice('error', 'Teamrolle konnte nicht gespeichert werden.'),
     })
 }
 
 const deleteClub = (club) => {
+    openDeleteModal({
+        title: `Verein "${club.name}" loeschen`,
+        description: 'Dadurch werden auch alle Teams dieses Vereins geloescht. Diese Aktion kann nicht rueckgaengig gemacht werden.',
+        route: 'auth.clubs.destroy',
+        params: club.id,
+        successMessage: 'Verein wurde geloescht.',
+        errorMessage: 'Verein konnte nicht geloescht werden.',
+    })
+    return
     const message = `Verein "${club.name}" wirklich löschen? Dadurch werden auch alle Teams dieses Vereins gelöscht.`
 
     if (!confirm(message)) return
@@ -304,6 +368,15 @@ const deleteClub = (club) => {
 }
 
 const deleteTeam = (team) => {
+    openDeleteModal({
+        title: `Team "${team.name}" loeschen`,
+        description: 'Das Team und seine Zuordnungen werden entfernt. Diese Aktion kann nicht rueckgaengig gemacht werden.',
+        route: 'auth.teams.destroy',
+        params: team.id,
+        successMessage: 'Team wurde geloescht.',
+        errorMessage: 'Team konnte nicht geloescht werden.',
+    })
+    return
     if (!confirm(`Team "${team.name}" wirklich löschen?`)) return
 
     router.delete(route('auth.teams.destroy', team.id), {
@@ -350,9 +423,16 @@ const editJob = (club, job) => {
 }
 
 const submitJob = (club) => {
+    actionNotice.value = null
+    const isEditing = Boolean(editingJobId.value)
+
     const options = {
         preserveScroll: true,
-        onSuccess: () => resetJobForm(club),
+        onSuccess: () => {
+            resetJobForm(club)
+            setActionNotice('success', isEditing ? 'Eintrag wurde aktualisiert.' : 'Eintrag wurde erstellt.')
+        },
+        onError: () => setActionNotice('error', 'Eintrag konnte nicht gespeichert werden. Bitte pruefe die Eingaben.'),
     }
 
     editingJobId.value
@@ -361,6 +441,15 @@ const submitJob = (club) => {
 }
 
 const deleteJob = (job) => {
+    openDeleteModal({
+        title: `Eintrag "${job.title}" loeschen`,
+        description: 'Der Ehrenamt- oder Berufs-Eintrag wird dauerhaft entfernt.',
+        route: 'auth.organization-jobs.destroy',
+        params: job.id,
+        successMessage: 'Eintrag wurde geloescht.',
+        errorMessage: 'Eintrag konnte nicht geloescht werden.',
+    })
+    return
     if (!confirm(`Stelle "${job.title}" wirklich löschen?`)) return
 
     router.delete(route('auth.organization-jobs.destroy', job.id), {
@@ -405,6 +494,16 @@ const deleteJob = (job) => {
             >
                 + {{ $t('Verein registrieren') }}
             </button>
+        </div>
+
+        <div
+            v-if="actionNotice"
+            class="rounded-lg border px-4 py-3 text-sm"
+            :class="actionNotice.type === 'success'
+                ? 'border-success/30 bg-success/10 text-success'
+                : 'border-error/30 bg-error/10 text-error'"
+        >
+            {{ actionNotice.message }}
         </div>
 
         <!-- MOBILE FILTER SHORT BAR -->
@@ -1345,6 +1444,47 @@ const deleteJob = (job) => {
             >
                 Erstellen
             </button>
+        </div>
+    </Modal>
+
+    <Modal :show="showDeleteModal" max-width="md" @close="closeDeleteModal">
+        <div v-if="deleteTarget" class="space-y-4">
+            <div>
+                <h2 class="text-lg font-bold text-primary">{{ deleteTarget.title }}</h2>
+                <p class="mt-2 text-sm text-secondary">{{ deleteTarget.description }}</p>
+            </div>
+
+            <div class="rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error">
+                Bitte gib <strong>delete</strong> ein, um das Loeschen zu bestaetigen.
+            </div>
+
+            <label class="block">
+                <span class="text-sm font-semibold text-primary">Bestaetigung</span>
+                <input
+                    v-model="deleteConfirmation"
+                    class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                    placeholder="delete"
+                    autocomplete="off"
+                >
+            </label>
+
+            <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                    type="button"
+                    class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
+                    @click="closeDeleteModal"
+                >
+                    Abbrechen
+                </button>
+                <button
+                    type="button"
+                    class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    :disabled="deleteConfirmation !== 'delete'"
+                    @click="confirmDelete"
+                >
+                    Endgueltig loeschen
+                </button>
+            </div>
         </div>
     </Modal>
 </template>

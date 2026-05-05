@@ -1,12 +1,13 @@
 <!-- Components/UserCard.vue -->
 <script setup>
 import { Link, router, usePage } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 
 const page = usePage()
 const user = page.props.auth.user
 
 const open = ref(false)
+const dropdownRef = ref(null)
 const initials = (name) => (name || '?')
     .split(' ')
     .slice(0, 2)
@@ -19,10 +20,26 @@ const logout = () => {
     localStorage.setItem('logout', Date.now())
     router.post(route('logout'))
 }
+
+const closeOnOutsideClick = (event) => {
+    if (!open.value || !dropdownRef.value) return
+
+    if (!dropdownRef.value.contains(event.target)) {
+        open.value = false
+    }
+}
+
+onMounted(() => {
+    document.addEventListener('click', closeOnOutsideClick)
+})
+
+onBeforeUnmount(() => {
+    document.removeEventListener('click', closeOnOutsideClick)
+})
 </script>
 
 <template>
-    <div class="relative">
+    <div ref="dropdownRef" class="relative">
         <!-- Button -->
         <button
             @click="open = !open"
