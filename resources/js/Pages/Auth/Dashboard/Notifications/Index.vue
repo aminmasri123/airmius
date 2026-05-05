@@ -45,6 +45,13 @@ const markAllAsRead = () => {
     })
 }
 
+const deleteNotification = (notification) => {
+    router.delete(route('auth.notifications.destroy', notification.id), {
+        preserveScroll: true,
+        only: ['notifications', 'notificationCenter', 'auth', 'flash'],
+    })
+}
+
 const visitPage = (url) => {
     if (!url) return
 
@@ -144,6 +151,16 @@ onUnmounted(() => {
                                     @click="markAsRead(notification)"
                                 >
                                     Gelesen
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-secondary transition hover:border-error/40 hover:bg-error/10 hover:text-error"
+                                    :aria-label="`Benachrichtigung ${notification.data?.title || notification.id} loeschen`"
+                                    title="Benachrichtigung loeschen"
+                                    @click="deleteNotification(notification)"
+                                >
+                                    <i class="las la-times text-lg"></i>
                                 </button>
                             </div>
                         </div>

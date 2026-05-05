@@ -63,6 +63,14 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session')])
 Route::get('/guardian-consent/{token}', [GuardianConsentController::class, 'show'])
     ->name('guardian-consent.show');
 
+Route::get('/guardian-consent/{token}/approve', [GuardianConsentController::class, 'approveDirect'])
+    ->middleware('signed')
+    ->name('guardian-consent.approve-direct');
+
+Route::get('/guardian-consent/{token}/reject', [GuardianConsentController::class, 'rejectDirect'])
+    ->middleware('signed')
+    ->name('guardian-consent.reject-direct');
+
 Route::post('/guardian-consent/{token}', [GuardianConsentController::class, 'approve'])
     ->name('guardian-consent.approve');
 

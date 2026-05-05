@@ -13,10 +13,7 @@ class UserPolicy extends BasePolicy
 
     public function view(User $user, User $model): bool
     {
-        return $user->is($model)
-            || $model->isProfileVisibleTo($user)
-            || $user->can('user.manage')
-            || $user->can('users.view');
+        return true;
     }
 
     public function create(User $user): bool

@@ -215,6 +215,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::get('/notifications', [NotificationController::class, 'index'])->name('auth.notifications.index');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('auth.notifications.read-all');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('auth.notifications.read');
+    Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy'])->name('auth.notifications.destroy');
 
 
 });

@@ -31,24 +31,18 @@ class GuardianConsentController extends Controller
             'guardian_confirmation.accepted' => 'Bitte bestaetigen Sie, dass Sie erziehungsberechtigt sind.',
         ]);
 
-        $minor->forceFill([
-            'guardian_user_id' => $request->user()?->id,
-            'guardian_consent_at' => now(),
-            'guardian_consent_rejected_at' => null,
-            'guardian_consent_token' => null,
-        ])->save();
+        $this->approveMinor($request, $minor);
 
-        if ($minor->hasRole('minor_pending_consent')) {
-            $minor->removeRole('minor_pending_consent');
-        }
+        return redirect()
+            ->route('login')
+            ->with('status', 'Die Registrierung wurde bestaetigt.');
+    }
 
-        if (! $minor->hasRole('minor_player')) {
-            $minor->assignRole('minor_player');
-        }
+    public function approveDirect(Request $request, string $token): RedirectResponse
+    {
+        $minor = $this->findMinorByToken($token);
 
-        if ($request->user() && ! $request->user()->hasAnyRole(['guardian', 'parent'])) {
-            $request->user()->assignRole('guardian');
-        }
+        $this->approveMinor($request, $minor);
 
         return redirect()
             ->route('login')
@@ -59,11 +53,18 @@ class GuardianConsentController extends Controller
     {
         $minor = $this->findMinorByToken($token);
 
-        $minor->forceFill([
-            'guardian_user_id' => $request->user()?->id,
-            'guardian_consent_rejected_at' => now(),
-            'guardian_consent_token' => null,
-        ])->save();
+        $this->rejectMinor($request, $minor);
+
+        return redirect()
+            ->route('login')
+            ->with('status', 'Die Registrierung wurde abgelehnt.');
+    }
+
+    public function rejectDirect(Request $request, string $token): RedirectResponse
+    {
+        $minor = $this->findMinorByToken($token);
+
+        $this->rejectMinor($request, $minor);
 
         return redirect()
             ->route('login')
@@ -88,5 +89,36 @@ class GuardianConsentController extends Controller
             ->whereNull('guardian_consent_at')
             ->whereNull('guardian_consent_rejected_at')
             ->firstOrFail();
+    }
+
+    private function approveMinor(Request $request, User $minor): void
+    {
+        $minor->forceFill([
+            'guardian_user_id' => $request->user()?->id,
+            'guardian_consent_at' => now(),
+            'guardian_consent_rejected_at' => null,
+            'guardian_consent_token' => null,
+        ])->save();
+
+        if ($minor->hasRole('minor_pending_consent')) {
+            $minor->removeRole('minor_pending_consent');
+        }
+
+        if (! $minor->hasRole('minor_player')) {
+            $minor->assignRole('minor_player');
+        }
+
+        if ($request->user() && ! $request->user()->hasAnyRole(['guardian', 'parent'])) {
+            $request->user()->assignRole('guardian');
+        }
+    }
+
+    private function rejectMinor(Request $request, User $minor): void
+    {
+        $minor->forceFill([
+            'guardian_user_id' => $request->user()?->id,
+            'guardian_consent_rejected_at' => now(),
+            'guardian_consent_token' => null,
+        ])->save();
     }
 }
