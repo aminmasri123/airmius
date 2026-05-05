@@ -1,13 +1,16 @@
 import { ref } from 'vue'
 
 const isDark = ref(false)
+const themes = ['air', 'dark', 'womanly', 'champion', 'sprint', 'arena', 'pulse', 'trail']
 
 const setTheme = (theme) => {
-    document.documentElement.classList.remove('theme-air', 'theme-dark', 'theme-womanly')
-    document.documentElement.classList.add(`theme-${theme}`)
+    const nextTheme = themes.includes(theme) ? theme : 'dark'
 
-    isDark.value = theme === 'dark'
-    localStorage.setItem('theme', theme)
+    document.documentElement.classList.remove(...themes.map((theme) => `theme-${theme}`))
+    document.documentElement.classList.add(`theme-${nextTheme}`)
+
+    isDark.value = nextTheme === 'dark'
+    localStorage.setItem('theme', nextTheme)
 }
 
 const initTheme = (initialTheme) => {

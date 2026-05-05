@@ -32,16 +32,31 @@ const form = useForm({
 const verificationLinkSent = ref(null);
 const photoPreview = ref(null);
 const photoInput = ref(null);
+const notice = ref(null);
 
 const updateProfileInformation = () => {
     if (photoInput.value) {
         form.photo = photoInput.value.files[0];
     }
 
+    notice.value = null;
+
     form.post(route('user-profile-information.update'), {
         errorBag: 'updateProfileInformation',
         preserveScroll: true,
-        onSuccess: () => clearPhotoFileInput(),
+        onSuccess: () => {
+            clearPhotoFileInput();
+            notice.value = {
+                type: 'success',
+                message: 'Profilinformationen wurden gespeichert.',
+            };
+        },
+        onError: () => {
+            notice.value = {
+                type: 'error',
+                message: 'Profilinformationen konnten nicht gespeichert werden. Bitte pruefe die Eingaben.',
+            };
+        },
     });
 };
 
@@ -95,6 +110,16 @@ const clearPhotoFileInput = () => {
         </template>
 
         <template #form>
+            <div
+                v-if="notice"
+                class="col-span-6 rounded-lg border px-4 py-3 text-sm"
+                :class="notice.type === 'success'
+                    ? 'border-success/30 bg-success/10 text-success'
+                    : 'border-error/30 bg-error/10 text-error'"
+            >
+                {{ notice.message }}
+            </div>
+
             <!-- Profile Photo -->
             <div v-if="$page.props.jetstream.managesProfilePhotos" class="col-span-6">
                 <!-- Profile Photo File Input -->
@@ -204,11 +229,11 @@ const clearPhotoFileInput = () => {
 
         <template #actions>
             <ActionMessage :on="form.recentlySuccessful" class="me-3">
-                Saved.
+                Gespeichert.
             </ActionMessage>
 
             <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                Save
+                Speichern
             </PrimaryButton>
         </template>
     </FormSection>

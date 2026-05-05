@@ -185,6 +185,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::delete('/conversations/{conversation}/leave', [ConversationController::class, 'leave'])->name('auth.conversations.leave');
     Route::post('/conversations/{conversation}/typing', [ConversationController::class, 'typing'])->name('auth.conversations.typing');
 
+    Route::get('/messages', fn () => redirect()->route('auth.conversations.index'))->name('auth.messages.index');
     Route::post('/messages', [MessageController::class, 'store'])->name('auth.messages.store');
     Route::post('/messages/read', [MessageController::class, 'markAsRead'])->name('auth.messages.read');
     Route::delete('/messages/{message}', [MessageController::class, 'destroy'])->name('auth.messages.destroy');

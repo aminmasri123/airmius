@@ -89,6 +89,141 @@
     --card-gradient: linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,240,247,.9));
   }
 
+  .theme-champion {
+    --bg: theme('colors.champion.bg');
+    --card: theme('colors.champion.card');
+    --primary: theme('colors.champion.primary');
+    --secondary: theme('colors.champion.secondary');
+    --success: theme('colors.champion.success');
+    --error: theme('colors.champion.error');
+    --border: theme('colors.champion.border');
+    --muted: theme('colors.champion.muted');
+    --buttonPrimary: theme('colors.champion.buttonPrimary');
+    --inputBg: theme('colors.champion.inputBg');
+    --borderHover: theme('colors.champion.borderHover');
+    --table: theme('colors.champion.table');
+    --buttonTextPrimary: theme('colors.champion.buttonTextPrimary');
+    --buttonTextSecondary: theme('colors.champion.buttonTextSecondary');
+    --buttonPrimaryHover: theme('colors.champion.buttonPrimaryHover');
+    --buttonTextPrimaryHover: theme('colors.champion.buttonTextPrimaryHover');
+    --buttonTextSecondaryHover: theme('colors.champion.buttonTextSecondaryHover');
+    --progress: theme('colors.champion.progress');
+    --accent: #d97706;
+    --accent-2: #16a34a;
+    --accent-3: #f59e0b;
+    --surface-strong: #fff1c2;
+    --soft-shadow: 0 18px 50px rgba(146, 64, 14, .14);
+    --card-gradient: linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,246,216,.9));
+  }
+
+  .theme-sprint {
+    --bg: theme('colors.sprint.bg');
+    --card: theme('colors.sprint.card');
+    --primary: theme('colors.sprint.primary');
+    --secondary: theme('colors.sprint.secondary');
+    --success: theme('colors.sprint.success');
+    --error: theme('colors.sprint.error');
+    --border: theme('colors.sprint.border');
+    --muted: theme('colors.sprint.muted');
+    --buttonPrimary: theme('colors.sprint.buttonPrimary');
+    --inputBg: theme('colors.sprint.inputBg');
+    --borderHover: theme('colors.sprint.borderHover');
+    --table: theme('colors.sprint.table');
+    --buttonTextPrimary: theme('colors.sprint.buttonTextPrimary');
+    --buttonTextSecondary: theme('colors.sprint.buttonTextSecondary');
+    --buttonPrimaryHover: theme('colors.sprint.buttonPrimaryHover');
+    --buttonTextPrimaryHover: theme('colors.sprint.buttonTextPrimaryHover');
+    --buttonTextSecondaryHover: theme('colors.sprint.buttonTextSecondaryHover');
+    --progress: theme('colors.sprint.progress');
+    --accent: #10b981;
+    --accent-2: #0ea5e9;
+    --accent-3: #f59e0b;
+    --surface-strong: #dcfce7;
+    --soft-shadow: 0 18px 50px rgba(5, 150, 105, .13);
+    --card-gradient: linear-gradient(180deg, rgba(255,255,255,.96), rgba(236,253,245,.9));
+  }
+
+  .theme-arena {
+    --bg: theme('colors.arena.bg');
+    --card: theme('colors.arena.card');
+    --primary: theme('colors.arena.primary');
+    --secondary: theme('colors.arena.secondary');
+    --success: theme('colors.arena.success');
+    --error: theme('colors.arena.error');
+    --border: theme('colors.arena.border');
+    --muted: theme('colors.arena.muted');
+    --buttonPrimary: theme('colors.arena.buttonPrimary');
+    --inputBg: theme('colors.arena.inputBg');
+    --borderHover: theme('colors.arena.borderHover');
+    --table: theme('colors.arena.table');
+    --buttonTextPrimary: theme('colors.arena.buttonTextPrimary');
+    --buttonTextSecondary: theme('colors.arena.buttonTextSecondary');
+    --buttonPrimaryHover: theme('colors.arena.buttonPrimaryHover');
+    --buttonTextPrimaryHover: theme('colors.arena.buttonTextPrimaryHover');
+    --buttonTextSecondaryHover: theme('colors.arena.buttonTextSecondaryHover');
+    --progress: theme('colors.arena.progress');
+    --accent: #475569;
+    --accent-2: #16a34a;
+    --accent-3: #f97316;
+    --surface-strong: #e2e8f0;
+    --soft-shadow: 0 18px 50px rgba(51, 65, 85, .12);
+    --card-gradient: linear-gradient(180deg, rgba(255,255,255,.96), rgba(241,245,249,.92));
+  }
+
+  .theme-pulse {
+    --bg: theme('colors.pulse.bg');
+    --card: theme('colors.pulse.card');
+    --primary: theme('colors.pulse.primary');
+    --secondary: theme('colors.pulse.secondary');
+    --success: theme('colors.pulse.success');
+    --error: theme('colors.pulse.error');
+    --border: theme('colors.pulse.border');
+    --muted: theme('colors.pulse.muted');
+    --buttonPrimary: theme('colors.pulse.buttonPrimary');
+    --inputBg: theme('colors.pulse.inputBg');
+    --borderHover: theme('colors.pulse.borderHover');
+    --table: theme('colors.pulse.table');
+    --buttonTextPrimary: theme('colors.pulse.buttonTextPrimary');
+    --buttonTextSecondary: theme('colors.pulse.buttonTextSecondary');
+    --buttonPrimaryHover: theme('colors.pulse.buttonPrimaryHover');
+    --buttonTextPrimaryHover: theme('colors.pulse.buttonTextPrimaryHover');
+    --buttonTextSecondaryHover: theme('colors.pulse.buttonTextSecondaryHover');
+    --progress: theme('colors.pulse.progress');
+    --accent: #ea580c;
+    --accent-2: #0891b2;
+    --accent-3: #f59e0b;
+    --surface-strong: #ffedd5;
+    --soft-shadow: 0 18px 50px rgba(234, 88, 12, .14);
+    --card-gradient: linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,237,213,.9));
+  }
+
+  .theme-trail {
+    --bg: theme('colors.trail.bg');
+    --card: theme('colors.trail.card');
+    --primary: theme('colors.trail.primary');
+    --secondary: theme('colors.trail.secondary');
+    --success: theme('colors.trail.success');
+    --error: theme('colors.trail.error');
+    --border: theme('colors.trail.border');
+    --muted: theme('colors.trail.muted');
+    --buttonPrimary: theme('colors.trail.buttonPrimary');
+    --inputBg: theme('colors.trail.inputBg');
+    --borderHover: theme('colors.trail.borderHover');
+    --table: theme('colors.trail.table');
+    --buttonTextPrimary: theme('colors.trail.buttonTextPrimary');
+    --buttonTextSecondary: theme('colors.trail.buttonTextSecondary');
+    --buttonPrimaryHover: theme('colors.trail.buttonPrimaryHover');
+    --buttonTextPrimaryHover: theme('colors.trail.buttonTextPrimaryHover');
+    --buttonTextSecondaryHover: theme('colors.trail.buttonTextSecondaryHover');
+    --progress: theme('colors.trail.progress');
+    --accent: #4d7c0f;
+    --accent-2: #0f766e;
+    --accent-3: #d97706;
+    --surface-strong: #edf5df;
+    --soft-shadow: 0 18px 50px rgba(77, 124, 15, .13);
+    --card-gradient: linear-gradient(180deg, rgba(255,255,255,.96), rgba(238,246,226,.9));
+  }
+
   html {
     background: var(--bg);
     color: var(--primary);

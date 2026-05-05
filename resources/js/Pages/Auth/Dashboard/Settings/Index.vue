@@ -69,6 +69,16 @@ const tabClass = (tab) =>
 // Theme
 const { setTheme } = useTheme()
 const addressNotice = ref(null)
+const themeOptions = [
+    { key: 'air', label: 'Air', description: 'Klar, leicht und fokussiert.', colors: ['#0ea5e9', '#10b981', '#f7fbff'] },
+    { key: 'dark', label: 'Dark', description: 'Konzentriert fuer spaete Sessions.', colors: ['#0c1016', '#60a5fa', '#34d399'] },
+    { key: 'womanly', label: 'Womanly', description: 'Warm, stark und elegant.', colors: ['#be185d', '#fde8f2', '#0f9f6e'] },
+    { key: 'champion', label: 'Champion', description: 'Goldene Energie fuer Gewinner.', colors: ['#b45309', '#f59e0b', '#fffaf0'] },
+    { key: 'sprint', label: 'Sprint', description: 'Frisch, schnell und aktiv.', colors: ['#059669', '#10b981', '#f5fff9'] },
+    { key: 'arena', label: 'Arena', description: 'Ruhig, robust und professionell.', colors: ['#334155', '#64748b', '#f8fafc'] },
+    { key: 'pulse', label: 'Pulse', description: 'Dynamisch und motivierend.', colors: ['#ea580c', '#f97316', '#fff7ed'] },
+    { key: 'trail', label: 'Trail', description: 'Natuerlich, ausdauernd und bodenstaendig.', colors: ['#4d7c0f', '#65a30d', '#f6f8f2'] },
+]
 
 // Form
 const form = useForm({
@@ -321,10 +331,25 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
         <div v-if="activeTab === 'design'" class="surface-card p-5">
             <h2 class="text-sm font-semibold text-secondary mb-3">Design</h2>
 
-            <div class="flex flex-wrap gap-3">
-                <button class="btn" @click="updateTheme('air')">Air</button>
-                <button class="btn" @click="updateTheme('dark')">Dark</button>
-                <button class="btn" @click="updateTheme('womanly')">Womanly</button>
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <button
+                    v-for="themeOption in themeOptions"
+                    :key="themeOption.key"
+                    type="button"
+                    class="rounded-lg border border-border bg-bg p-4 text-left transition hover:border-borderHover hover:bg-muted"
+                    @click="updateTheme(themeOption.key)"
+                >
+                    <span class="flex items-center gap-2">
+                        <span
+                            v-for="color in themeOption.colors"
+                            :key="color"
+                            class="h-5 w-5 rounded-full border border-border"
+                            :style="{ backgroundColor: color }"
+                        ></span>
+                    </span>
+                    <span class="mt-3 block font-semibold text-primary">{{ themeOption.label }}</span>
+                    <span class="mt-1 block text-xs text-secondary">{{ themeOption.description }}</span>
+                </button>
             </div>
 
         </div>
