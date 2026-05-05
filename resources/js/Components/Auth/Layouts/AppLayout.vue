@@ -87,7 +87,7 @@ const refreshNotifications = () => {
     if (document.hidden) return
 
     router.reload({
-        only: ['notificationCenter', 'unreadChatsCount'],
+        only: ['notificationCenter', 'unreadChatsCount', 'friendCenter'],
         preserveScroll: true,
         preserveState: true,
     })

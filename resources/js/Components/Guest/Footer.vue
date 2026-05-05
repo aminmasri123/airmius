@@ -23,8 +23,8 @@ const scrollTo = (id) => {
 <template>
     <footer class="border-t border-border bg-card/40 px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
         <div class="mx-auto max-w-6xl">
-            <div class="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:gap-10 xl:grid-cols-4">
-                <div class="sm:col-span-2 xl:col-span-1">
+            <div class="grid grid-cols-1 gap-8 min-[420px]:grid-cols-2 lg:gap-10 xl:grid-cols-4">
+                <div class="min-[420px]:col-span-2 xl:col-span-1">
                     <button @click="scrollTo('hero')" class="inline-flex items-center gap-3 font-heading text-xl font-900 tracking-tight text-left sm:block">
                         <ApplicationLogo class="h-12 w-12 shrink-0 sm:h-16 sm:w-16" />
                         <span class="font-[--ubuntu] text-primary">AIRMIUS</span>
@@ -55,9 +55,9 @@ const scrollTo = (id) => {
                     </div>
                 </div>
 
-                <div class="sm:col-span-2 xl:col-span-1">
+                <div class="min-[420px]:col-span-2 xl:col-span-1">
                     <h4 class="mb-3 font-heading text-sm font-600 text-primary">{{ $t('guest.footer.legal') }}</h4>
-                    <div class="grid grid-cols-1 gap-x-4 gap-y-1 text-sm text-secondary min-[420px]:grid-cols-2 sm:grid-cols-3 xl:grid-cols-1">
+                    <div class="grid grid-cols-1 gap-x-4 gap-y-1 text-sm text-secondary min-[420px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-1">
                         <Link :href="route('legal.imprint')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.imprint') }}</Link>
                         <Link :href="route('policy.show')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.privacy') }}</Link>
                         <Link :href="route('terms.show')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.terms') }}</Link>

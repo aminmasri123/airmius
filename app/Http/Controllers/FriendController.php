@@ -160,4 +160,42 @@ class FriendController extends Controller
 
         return back()->with('success', 'Einladung abgelehnt.');
     }
+
+    public function destroy(Request $request, User $user)
+    {
+        $viewer = $request->user();
+
+        abort_if($viewer->is($user), 422, 'Du kannst dich nicht selbst entfernen.');
+
+        $deleted = Friendship::query()
+            ->where(function ($query) use ($viewer, $user) {
+                $query->where('user_id', $viewer->id)
+                    ->where('friend_id', $user->id);
+            })
+            ->orWhere(function ($query) use ($viewer, $user) {
+                $query->where('user_id', $user->id)
+                    ->where('friend_id', $viewer->id);
+            })
+            ->delete();
+
+        abort_if($deleted === 0, 422, 'Ihr seid aktuell nicht befreundet.');
+
+        FriendInvitation::query()
+            ->where(function ($query) use ($viewer, $user) {
+                $query->where(function ($query) use ($viewer, $user) {
+                    $query->where('sender_id', $viewer->id)
+                        ->where('recipient_id', $user->id);
+                })->orWhere(function ($query) use ($viewer, $user) {
+                    $query->where('sender_id', $user->id)
+                        ->where('recipient_id', $viewer->id);
+                });
+            })
+            ->where('status', 'pending')
+            ->update([
+                'status' => 'declined',
+                'responded_at' => now(),
+            ]);
+
+        return back()->with('success', 'Freundschaft wurde beendet.');
+    }
 }

@@ -14,7 +14,8 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 const page = usePage()
-const unreadNotificationsCount = page.props.notificationCenter?.unread_count || 0
+const unreadNotificationsCount = computed(() => page.props.notificationCenter?.unread_count || 0)
+const pendingFriendInvitationsCount = computed(() => page.props.friendCenter?.pending_received_count || 0)
 const { can, hasAny } = usePermissions()
 
 const canAdmin = computed(() => hasAny([
@@ -80,7 +81,14 @@ const closeSidebar = () => {
             <NavItem v-if="can('feed.view')" @click="closeSidebar" :href="route('auth.feed.index')" label="Feed" icon="las la-newspaper" />
             <NavItem v-if="can('file.index')" @click="closeSidebar" :href="route('auth.files.index')" label="Dateien" icon="las la-folder-open" />
             <NavItem v-if="can('event.index')" @click="closeSidebar" :href="route('auth.events.index')" label="Events & Training" icon="las la-calendar" />
-            <NavItem v-if="can('friends.view')" @click="closeSidebar" :href="route('auth.friends.index')" label="Freunde" icon="las la-user-plus" />
+            <NavItem
+                v-if="can('friends.view')"
+                @click="closeSidebar"
+                :href="route('auth.friends.index')"
+                label="Freunde"
+                icon="las la-user-plus"
+                :badge="pendingFriendInvitationsCount || null"
+            />
             <NavItem v-if="can('rides.view')" @click="closeSidebar" :href="route('auth.rides.index')" label="Fahrgemeinschaften" icon="las la-car" />
             <NavItem
                 v-if="can('notifications.view')"

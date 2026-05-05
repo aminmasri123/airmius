@@ -53,6 +53,14 @@ const acceptFriendRequest = () => {
     router.post(route('auth.friends.invitations.accept', props.viewer.friend_invitation_id), {}, { preserveScroll: true })
 }
 
+const removeFriend = () => {
+    if (!window.confirm(`Freundschaft mit ${props.profileUser.name} beenden?`)) {
+        return
+    }
+
+    router.delete(route('auth.friends.destroy', props.profileUser.id), { preserveScroll: true })
+}
+
 const formatDate = (value) => new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
 const initials = (name) => (name || '?').split(' ').slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase()
 
@@ -304,12 +312,18 @@ const rejectRecommendation = (recommendation) => {
                             >
                                 Anfrage gesendet
                             </span>
-                            <span
-                                v-else-if="viewer.friendship_status === 'friends'"
-                                class="rounded-lg border border-border px-4 py-2 text-sm text-secondary"
-                            >
-                                Befreundet
-                            </span>
+                            <template v-else-if="viewer.friendship_status === 'friends'">
+                                <span class="rounded-lg border border-border px-4 py-2 text-sm text-secondary">
+                                    Befreundet
+                                </span>
+                                <button
+                                    type="button"
+                                    class="rounded-lg border border-error/40 px-4 py-2 text-sm text-error hover:bg-error/10"
+                                    @click="removeFriend"
+                                >
+                                    Freundschaft beenden
+                                </button>
+                            </template>
                             <button
                                 type="button"
                                 class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:border-borderHover"

@@ -56,6 +56,11 @@ class HandleInertiaRequests extends Middleware
                 ->whereNull('delivered_at')
                 ->count()
             : 0;
+        $pendingFriendInvitationsCount = $user
+            ? $user->receivedFriendInvitations()
+                ->where('status', 'pending')
+                ->count()
+            : 0;
         $latestNotifications = $user
             ? $user->appNotifications()
                 ->latest()
@@ -120,6 +125,9 @@ class HandleInertiaRequests extends Middleware
             ],
 
             'unreadChatsCount' => $unreadChatsCount,
+            'friendCenter' => [
+                'pending_received_count' => $pendingFriendInvitationsCount,
+            ],
 
             'uploads' => [
                 'disk' => config('filesystems.uploads_disk'),

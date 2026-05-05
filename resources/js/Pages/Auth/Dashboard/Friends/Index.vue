@@ -1,6 +1,6 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
-import { Head, useForm } from '@inertiajs/vue3'
+import { Head, Link, router, useForm } from '@inertiajs/vue3'
 
 defineOptions({ layout: AppLayout })
 
@@ -41,6 +41,16 @@ const accept = (invitation) => {
 
 const decline = (invitation) => {
     declineForm.post(route('auth.friends.invitations.decline', invitation.id), {
+        preserveScroll: true,
+    })
+}
+
+const removeFriend = (friend) => {
+    if (!window.confirm(`Freundschaft mit ${friend.name} beenden?`)) {
+        return
+    }
+
+    router.delete(route('auth.friends.destroy', friend.id), {
         preserveScroll: true,
     })
 }
@@ -146,21 +156,33 @@ const initials = (name) => (name || '?')
                     <div
                         v-for="friend in friends"
                         :key="friend.id"
-                        class="flex items-center gap-3 rounded-lg border border-border bg-inputBg p-4"
+                        class="flex flex-col gap-3 rounded-lg border border-border bg-inputBg p-4 sm:flex-row sm:items-center sm:justify-between"
                     >
-                        <img
-                            v-if="friend.profile_photo_url"
-                            :src="friend.profile_photo_url"
-                            :alt="friend.name"
-                            class="h-11 w-11 rounded-full object-cover"
-                        />
-                        <div v-else class="flex h-11 w-11 items-center justify-center rounded-full bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary">
-                            {{ initials(friend.name) }}
-                        </div>
-                        <div class="min-w-0">
-                            <div class="truncate font-semibold text-primary">{{ friend.name }}</div>
-                            <div class="truncate text-sm text-secondary">{{ friend.email }}</div>
-                        </div>
+                        <Link
+                            :href="route('auth.users.show', friend.id)"
+                            class="flex min-w-0 flex-1 items-center gap-3 rounded-lg transition hover:bg-bg focus:outline-none focus:ring-2 focus:ring-borderHover"
+                        >
+                            <img
+                                v-if="friend.profile_photo_url"
+                                :src="friend.profile_photo_url"
+                                :alt="friend.name"
+                                class="h-11 w-11 rounded-full object-cover"
+                            />
+                            <div v-else class="flex h-11 w-11 items-center justify-center rounded-full bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary">
+                                {{ initials(friend.name) }}
+                            </div>
+                            <div class="min-w-0">
+                                <div class="truncate font-semibold text-primary">{{ friend.name }}</div>
+                                <div class="truncate text-sm text-secondary">{{ friend.email }}</div>
+                            </div>
+                        </Link>
+                        <button
+                            type="button"
+                            class="inline-flex items-center justify-center rounded-lg border border-error/40 px-3 py-2 text-sm font-semibold text-error transition hover:bg-error/10"
+                            @click="removeFriend(friend)"
+                        >
+                            Freundschaft beenden
+                        </button>
                     </div>
                 </div>
 
