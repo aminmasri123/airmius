@@ -72,7 +72,13 @@ class PostController extends Controller
             ])
             ->latest('id')
             ->paginate(10)
-            ->withQueryString();
+            ->withQueryString()
+            ->through(function (Post $post) use ($user) {
+                $post->setAttribute('can_update', $user->can('update', $post));
+                $post->setAttribute('can_delete', $user->can('delete', $post));
+
+                return $post;
+            });
 
         return Inertia::render('Auth/Dashboard/Feed/Index', [
             'posts' => $posts,

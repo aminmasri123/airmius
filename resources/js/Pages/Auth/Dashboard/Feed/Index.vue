@@ -52,8 +52,8 @@ const postForm = useForm({
 
 const canPost = computed(() => Boolean(postForm.content.trim() || postForm.image || postForm.attachments.length))
 const canCreatePost = computed(() => can('post.store'))
-const canEditPost = (post) => post.user_id === user?.id || can('post.update')
-const canDeletePost = (post) => post.user_id === user?.id || can('post.delete')
+const canEditPost = (post) => Boolean(post.can_update)
+const canDeletePost = (post) => Boolean(post.can_delete)
 const canEditComment = (comment) => comment.user_id === user?.id
 const canDeleteComment = (post, comment) => comment.user_id === user?.id || post.user_id === user?.id || can('comment.delete')
 const reportReasons = [

@@ -21,6 +21,7 @@ const searchResults = ref([])
 const searchLoading = ref(false)
 const currentStatus = ref(page.props.auth?.user?.status || 'online')
 const sidebarOpen = ref(false)
+const notificationsMarkedReadLocally = ref(false)
 
 let notificationInterval = null
 let notificationChannel = null
@@ -28,8 +29,20 @@ let statusChannel = null
 let markOfflineOnUnload = null
 let searchTimeout = null
 
-const unreadCount = computed(() => page.props.notificationCenter?.unread_count || 0)
-const latestNotifications = computed(() => page.props.notificationCenter?.latest || [])
+const serverUnreadCount = computed(() => page.props.notificationCenter?.unread_count || 0)
+const unreadCount = computed(() => notificationsMarkedReadLocally.value ? 0 : serverUnreadCount.value)
+const latestNotifications = computed(() => {
+    const notifications = page.props.notificationCenter?.latest || []
+
+    if (!notificationsMarkedReadLocally.value) {
+        return notifications
+    }
+
+    return notifications.map((notification) => ({
+        ...notification,
+        read: true,
+    }))
+})
 
 const statusOptions = [
     { value: 'online', label: 'status.online' },
@@ -60,6 +73,23 @@ const formatNotificationDate = (value) => {
 
 const closeNotifications = () => {
     notificationOpen.value = false
+}
+
+const markAllNotificationsAsRead = () => {
+    if (!serverUnreadCount.value) return
+
+    notificationsMarkedReadLocally.value = true
+
+    router.post(route('auth.notifications.read-all'), {}, {
+        preserveScroll: true,
+        preserveState: true,
+        only: ['notificationCenter', 'auth'],
+    })
+}
+
+const toggleNotifications = () => {
+    notificationOpen.value = !notificationOpen.value
+    markAllNotificationsAsRead()
 }
 
 const closeNotificationOnOutsideClick = (event) => {
@@ -242,6 +272,12 @@ watch(searchTerm, () => {
     searchTimeout = window.setTimeout(runSearch, 250)
 })
 
+watch(serverUnreadCount, (count) => {
+    if (count > 0) {
+        notificationsMarkedReadLocally.value = false
+    }
+})
+
 watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, isMobile]) => {
     if (typeof document === 'undefined') return
 
@@ -343,7 +379,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                                 type="button"
                                 class="relative rounded-lg p-2 hover:bg-muted"
                                 :class="{ 'bg-muted': notificationOpen }"
-                                @click="notificationOpen = !notificationOpen"
+                                @click="toggleNotifications"
                             >
                                 <i class="las la-bell text-xl"></i>
                                 <span

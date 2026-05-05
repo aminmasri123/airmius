@@ -45,4 +45,13 @@ class NotificationController extends Controller
 
         return back();
     }
+
+    public function destroy(Request $request, Notification $notification)
+    {
+        abort_unless($notification->user_id === $request->user()->id, 403);
+
+        $notification->delete();
+
+        return back()->with('success', 'Benachrichtigung wurde geloescht.');
+    }
 }

@@ -71,6 +71,7 @@ const form = useForm({
     postal_code: props.profileAddress.postal_code || '',
     city: props.profileAddress.city || '',
     state: props.profileAddress.state || '',
+    profile_visibility: props.privacySettings.profile_visibility || 'public',
     direct_message_privacy: props.privacySettings.direct_message_privacy || 'everyone',
     friend_request_privacy: props.privacySettings.friend_request_privacy || 'everyone',
 })
@@ -323,9 +324,21 @@ const formatDistance = (meters) => {
                 <div>
                     <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Privatsphäre</h2>
                     <p class="mt-1 text-sm text-secondary">
-                        Lege fest, wer dich direkt kontaktieren oder dir Freundschaftsanfragen senden darf.
+                        Lege fest, wer dein Profil sehen, dich direkt kontaktieren oder dir Freundschaftsanfragen senden darf.
                     </p>
                 </div>
+
+                <label class="block">
+                    <span class="text-sm font-semibold text-primary">Profil-Sichtbarkeit</span>
+                    <select v-model="form.profile_visibility" class="input">
+                        <option value="public">Alle angemeldeten Personen</option>
+                        <option value="private">Nur ich, Freunde und Follower</option>
+                    </select>
+                    <p class="mt-1 text-xs text-secondary">
+                        Diese Einstellung steuert, ob andere dein Profil und deine Profilinhalte sehen können.
+                    </p>
+                    <p v-if="form.errors.profile_visibility" class="mt-1 text-sm text-error">{{ form.errors.profile_visibility }}</p>
+                </label>
 
                 <label class="block">
                     <span class="text-sm font-semibold text-primary">Nachrichten erhalten</span>

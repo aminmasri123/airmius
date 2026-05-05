@@ -1,4 +1,5 @@
 <script setup>
+import { ref } from 'vue'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 
@@ -32,6 +33,7 @@ const invite = () => {
 
 const acceptForm = useForm({})
 const declineForm = useForm({})
+const openFriendMenuId = ref(null)
 
 const accept = (invitation) => {
     acceptForm.post(route('auth.friends.invitations.accept', invitation.id), {
@@ -50,7 +52,30 @@ const removeFriend = (friend) => {
         return
     }
 
+    openFriendMenuId.value = null
+
     router.delete(route('auth.friends.destroy', friend.id), {
+        preserveScroll: true,
+    })
+}
+
+const toggleFriendMenu = (friend) => {
+    openFriendMenuId.value = openFriendMenuId.value === friend.id ? null : friend.id
+}
+
+const reportFriend = (friend) => {
+    if (!window.confirm(`${friend.name} melden? Die Meldung wird an die Moderation gesendet.`)) {
+        return
+    }
+
+    openFriendMenuId.value = null
+
+    router.post(route('auth.reports.store'), {
+        type: 'user',
+        id: friend.id,
+        reason: 'other',
+        details: 'Meldung aus der Freunde-Liste.',
+    }, {
         preserveScroll: true,
     })
 }
@@ -156,7 +181,7 @@ const initials = (name) => (name || '?')
                     <div
                         v-for="friend in friends"
                         :key="friend.id"
-                        class="flex flex-col gap-3 rounded-lg border border-border bg-inputBg p-4 sm:flex-row sm:items-center sm:justify-between"
+                        class="relative flex flex-col gap-3 rounded-lg border border-border bg-inputBg p-4 sm:flex-row sm:items-center sm:justify-between"
                     >
                         <Link
                             :href="route('auth.users.show', friend.id)"
@@ -176,13 +201,39 @@ const initials = (name) => (name || '?')
                                 <div class="truncate text-sm text-secondary">{{ friend.email }}</div>
                             </div>
                         </Link>
-                        <button
-                            type="button"
-                            class="inline-flex items-center justify-center rounded-lg border border-error/40 px-3 py-2 text-sm font-semibold text-error transition hover:bg-error/10"
-                            @click="removeFriend(friend)"
-                        >
-                            Freundschaft beenden
-                        </button>
+                        <div class="relative self-end sm:self-auto">
+                            <button
+                                type="button"
+                                class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border text-secondary transition hover:border-borderHover hover:bg-bg hover:text-primary"
+                                :aria-expanded="openFriendMenuId === friend.id"
+                                :aria-label="`Aktionen fuer ${friend.name}`"
+                                @click.stop="toggleFriendMenu(friend)"
+                            >
+                                <i class="las la-ellipsis-v text-xl"></i>
+                            </button>
+
+                            <div
+                                v-if="openFriendMenuId === friend.id"
+                                class="absolute right-0 top-11 z-20 w-56 overflow-hidden rounded-lg border border-border bg-card py-1 shadow-xl"
+                            >
+                                <button
+                                    type="button"
+                                    class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-primary transition hover:bg-inputBg"
+                                    @click="removeFriend(friend)"
+                                >
+                                    <i class="las la-user-minus text-lg"></i>
+                                    Freundschaft beenden
+                                </button>
+                                <button
+                                    type="button"
+                                    class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-error transition hover:bg-error/10"
+                                    @click="reportFriend(friend)"
+                                >
+                                    <i class="las la-flag text-lg"></i>
+                                    Freund melden
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

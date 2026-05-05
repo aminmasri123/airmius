@@ -25,6 +25,7 @@ class UserSettingsController extends Controller
                 'state',
             ]),
             'privacySettings' => $request->user()->only([
+                'profile_visibility',
                 'direct_message_privacy',
                 'friend_request_privacy',
             ]),
@@ -128,6 +129,7 @@ class UserSettingsController extends Controller
                 'postal_code' => ['nullable', 'string', 'max:30'],
                 'city' => ['nullable', 'string', 'max:255'],
                 'state' => ['nullable', 'string', 'max:255'],
+                'profile_visibility' => ['nullable', 'in:public,private'],
                 'direct_message_privacy' => ['nullable', 'in:everyone,friends'],
                 'friend_request_privacy' => ['nullable', 'in:everyone,friends'],
             ]);
@@ -139,6 +141,7 @@ class UserSettingsController extends Controller
             $request->user()->update([
                 ...$data,
                 'country' => strtoupper($data['country']),
+                'profile_visibility' => $data['profile_visibility'] ?? $request->user()->profile_visibility ?? 'public',
                 'direct_message_privacy' => $data['direct_message_privacy'] ?? $request->user()->direct_message_privacy ?? 'everyone',
                 'friend_request_privacy' => $data['friend_request_privacy'] ?? $request->user()->friend_request_privacy ?? 'everyone',
             ]);

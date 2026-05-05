@@ -374,6 +374,7 @@ class User extends Authenticatable
         return $this->profile_visibility !== 'private'
             || $user?->id === $this->id
             || $user?->can('user.manage')
+            || $this->isFriendsWith($user)
             || $this->isFollowedBy($user);
     }
 

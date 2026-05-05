@@ -34,15 +34,11 @@ class PostPolicy extends BasePolicy
 
     public function update(User $user, Post $post)
     {
-        return $post->user_id === $user->id
-            || ($post->club && $user->can('post.update') && $this->managesClub($user, $post->club))
-            || ($post->team && $user->can('post.update') && $this->managesTeam($user, $post->team));
+        return $post->user_id === $user->id;
     }
 
     public function delete(User $user, Post $post)
     {
-        return $post->user_id === $user->id
-            || ($post->club && $user->can('post.delete') && $this->managesClub($user, $post->club))
-            || ($post->team && $user->can('post.delete') && $this->managesTeam($user, $post->team));
+        return $post->user_id === $user->id;
     }
 }
