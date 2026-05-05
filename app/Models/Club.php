@@ -36,6 +36,13 @@ class Club extends Model
         'sport_type',
         'is_official',
         'official_club_number',
+        'verification_status',
+        'requested_official_club_number',
+        'verification_notes',
+        'verification_requested_at',
+        'verified_at',
+        'rejected_at',
+        'verified_by',
         'sepa_creditor_id',
         'sepa_iban',
         'sepa_bic',
@@ -58,7 +65,15 @@ class Club extends Model
     {
         return [
             'is_official' => 'boolean',
+            'verification_requested_at' => 'datetime',
+            'verified_at' => 'datetime',
+            'rejected_at' => 'datetime',
         ];
+    }
+
+    public function scopeVerified($query)
+    {
+        return $query->where('verification_status', 'verified');
     }
 
     public function scopeVisibleTo($query, $user)
@@ -79,6 +94,11 @@ class Club extends Model
     public function owner()
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    public function verifiedBy()
+    {
+        return $this->belongsTo(User::class, 'verified_by');
     }
 
     public function users()

@@ -8,6 +8,7 @@ use App\Models\Friendship;
 use App\Models\Post;
 use App\Models\Sport;
 use App\Models\UserBlock;
+use App\Models\UserBadge;
 use App\Models\UserSportSkill;
 use App\Services\GamificationService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -221,6 +222,15 @@ class UserController extends Controller
                     'trust_multiplier' => $gamification['trust_multiplier'],
                     'streak_days' => $gamification['streak_days'],
                 ],
+                'badges' => UserBadge::query()
+                    ->where('awardable_type', User::class)
+                    ->where('awardable_id', $user->id)
+                    ->with('badge:id,key,name,description,icon')
+                    ->latest('id')
+                    ->limit(12)
+                    ->get()
+                    ->pluck('badge')
+                    ->values(),
                 'roles' => $canManageRoles ? $user->getRoleNames()->values()->all() : [],
                 'permissions' => $canManageRoles
                     ? $user->getAllPermissions()->pluck('name')->values()->all()

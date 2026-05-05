@@ -11,6 +11,7 @@ use App\Models\Team;
 use App\Models\TeamJoinRequest;
 use App\Models\User;
 use App\Notifications\ExternalClubMembershipInvitation;
+use App\Services\ClubService;
 use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
 use App\Support\Roles;
@@ -29,7 +30,10 @@ class ClubMembershipController extends Controller
     public const MEMBERSHIP_STATUSES = ['active', 'non_member', 'pending', 'former'];
     public const CONTRIBUTION_INTERVALS = ['none', 'monthly', 'quarterly', 'yearly', 'once'];
 
-    public function __construct(private PlanFeatureService $planFeatures) {}
+    public function __construct(
+        private PlanFeatureService $planFeatures,
+        private ClubService $clubService,
+    ) {}
 
     public function index(Request $request)
     {
@@ -202,24 +206,46 @@ class ClubMembershipController extends Controller
 
         abort_if($duplicateNumber, 422, 'Diese Mitgliedsnummer ist in diesem Verein bereits vergeben.');
 
-        $club->users()->updateExistingPivot($user->id, [
-            'role' => $data['role'],
-            'membership_status' => $data['membership_status'],
-            'member_number' => $data['member_number'] ?? null,
-            'contribution_amount' => $data['contribution_amount'] ?? null,
-            'contribution_interval' => $data['contribution_interval'] ?? 'none',
-            'contribution_next_invoice_on' => $this->normalizedNextInvoiceDate($data),
-            'contribution_last_invoice_at' => null,
-            'sepa_iban' => $this->normalizeIban($data['sepa_iban'] ?? null),
-            'sepa_bic' => $this->normalizeBic($data['sepa_bic'] ?? null),
-            'sepa_mandate_reference' => $data['sepa_mandate_reference'] ?? null,
-            'sepa_mandate_signed_on' => $data['sepa_mandate_signed_on'] ?? null,
-            'sepa_mandate_active' => (bool) ($data['sepa_mandate_active'] ?? false),
-            'joined_on' => $data['joined_on'] ?? null,
-            'membership_ends_on' => $data['membership_ends_on'] ?? null,
-            'membership_end_notified_at' => null,
-            'membership_notes' => $data['membership_notes'] ?? null,
-        ]);
+        DB::transaction(function () use ($club, $user, $data) {
+            $previousOwner = null;
+
+            if ($data['role'] === 'owner') {
+                $previousOwnerId = $club->owner_id;
+                $club->forceFill(['owner_id' => $user->id])->save();
+
+                if ($previousOwnerId && $previousOwnerId !== $user->id) {
+                    $club->users()->updateExistingPivot($previousOwnerId, ['role' => 'admin']);
+                    $previousOwner = User::find($previousOwnerId);
+                }
+            }
+
+            $club->users()->updateExistingPivot($user->id, [
+                'role' => $data['role'],
+                'membership_status' => $data['membership_status'],
+                'member_number' => $data['member_number'] ?? null,
+                'contribution_amount' => $data['contribution_amount'] ?? null,
+                'contribution_interval' => $data['contribution_interval'] ?? 'none',
+                'contribution_next_invoice_on' => $this->normalizedNextInvoiceDate($data),
+                'contribution_last_invoice_at' => null,
+                'sepa_iban' => $this->normalizeIban($data['sepa_iban'] ?? null),
+                'sepa_bic' => $this->normalizeBic($data['sepa_bic'] ?? null),
+                'sepa_mandate_reference' => $data['sepa_mandate_reference'] ?? null,
+                'sepa_mandate_signed_on' => $data['sepa_mandate_signed_on'] ?? null,
+                'sepa_mandate_active' => (bool) ($data['sepa_mandate_active'] ?? false),
+                'joined_on' => $data['joined_on'] ?? null,
+                'membership_ends_on' => $data['membership_ends_on'] ?? null,
+                'membership_end_notified_at' => null,
+                'membership_notes' => $data['membership_notes'] ?? null,
+            ]);
+
+            if ($data['role'] === 'owner') {
+                $this->clubService->assignClubOwnerRole($user);
+
+                if ($previousOwner) {
+                    $this->clubService->refreshClubOwnerRole($previousOwner);
+                }
+            }
+        });
 
         $user->forceFill([
             'athlete_license_number' => $data['athlete_license_number'] ?? null,

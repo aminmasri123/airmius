@@ -153,6 +153,7 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             'dashboard.view' => true,
+            'workspaces.view' => true,
             'settings.view' => true,
             'notifications.view' => true,
             'friends.view' => true,

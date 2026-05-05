@@ -7,6 +7,7 @@ use App\Models\Conversation;
 use App\Models\Event;
 use App\Models\Team;
 use App\Services\EventService;
+use App\Services\GamificationService;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -18,7 +19,10 @@ class EventController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct(private EventService $service) {}
+    public function __construct(
+        private EventService $service,
+        private GamificationService $gamification,
+    ) {}
 
     public function index(Request $request)
     {
@@ -91,6 +95,7 @@ class EventController extends Controller
         $this->authorize('create', Event::class);
 
         $event = $this->service->create($this->validated($request));
+        $this->grantGamificationForEvent($request, $event);
 
         return redirect()->route('auth.events.show', $event)->with('success', 'Event erstellt.');
     }
@@ -124,6 +129,13 @@ class EventController extends Controller
         $event->participants()->syncWithoutDetaching([
             $request->user()->id => ['status' => $data['status']],
         ]);
+
+        if ($data['status'] === 'yes') {
+            $this->gamification->grant($request->user(), 'training_accepted', $event, [
+                'event_id' => $event->id,
+                'event_type' => $event->type,
+            ]);
+        }
 
         return back()->with('success', 'Teilnahmestatus gespeichert.');
     }
@@ -218,5 +230,33 @@ class EventController extends Controller
         abort_if($data['visibility'] === 'organization' && empty($data['club_id']), 422, 'Organization Events brauchen eine Organization.');
 
         return $data;
+    }
+
+    private function grantGamificationForEvent(Request $request, Event $event): void
+    {
+        $actor = $request->user();
+        $event->loadMissing(['club', 'team.club']);
+        $reason = $event->type === 'training' ? 'training_created' : 'event_created';
+
+        if ($event->club) {
+            $this->gamification->grantToClub($actor, $event->club, $reason, $event, [
+                'event_id' => $event->id,
+                'event_type' => $event->type,
+            ]);
+        }
+
+        if ($event->team) {
+            $this->gamification->grantToTeam($actor, $event->team, $reason, $event, [
+                'event_id' => $event->id,
+                'event_type' => $event->type,
+            ]);
+        }
+
+        if ($actor->hasAnyRole(['coach', 'assistant_coach', 'performance_coach', 'fitness_coach'])) {
+            $this->gamification->grantToTrainer($actor, 'training_plan_created', $event, [
+                'event_id' => $event->id,
+                'event_type' => $event->type,
+            ]);
+        }
     }
 }

@@ -29,6 +29,7 @@ const showFilterModal = ref(false)
 
 const selectedClub = ref(null)
 const openClubId = ref(null)
+const editingClubId = ref(null)
 const errors = computed(() => page.props.errors || {})
 
 const clubCreateStep = ref(1)
@@ -60,6 +61,7 @@ const clubForm = ref({
 
 const inviteForms = ref({})
 const teamForms = ref({})
+const clubEditForms = ref({})
 const jobForms = ref({})
 const editingJobId = ref(null)
 
@@ -237,6 +239,52 @@ const updateClubMemberRole = (club, member) => {
     })
 }
 
+const clubEditFormFor = (club) => {
+    clubEditForms.value[club.id] ??= {
+        name: club.name || '',
+        sport_type: club.sport_type || '',
+        country: club.country || user?.country || 'DE',
+        street: club.street || '',
+        house_number: club.house_number || '',
+        postal_code: club.postal_code || '',
+        city: club.city || '',
+        state: club.state || '',
+    }
+
+    return clubEditForms.value[club.id]
+}
+
+const editClub = (club) => {
+    editingClubId.value = club.id
+    clubEditForms.value[club.id] = {
+        name: club.name || '',
+        sport_type: club.sport_type || '',
+        country: club.country || user?.country || 'DE',
+        street: club.street || '',
+        house_number: club.house_number || '',
+        postal_code: club.postal_code || '',
+        city: club.city || '',
+        state: club.state || '',
+    }
+
+    if (openClubId.value !== club.id) {
+        openClubId.value = club.id
+    }
+}
+
+const cancelClubEdit = () => {
+    editingClubId.value = null
+}
+
+const updateClub = (club) => {
+    router.put(route('auth.clubs.update', club.id), clubEditFormFor(club), {
+        preserveScroll: true,
+        onSuccess: () => {
+            editingClubId.value = null
+        },
+    })
+}
+
 const updateTeamMemberRole = (team, member) => {
     router.put(route('auth.teams.members.update', [team.id, member.id]), {
         role: member.pivot.role,
@@ -343,7 +391,7 @@ const deleteJob = (job) => {
                 type="button"
                 class="flex h-11 w-11 shrink-0 items-center justify-center rounded bg-buttonPrimary text-buttonTextPrimary shadow sm:hidden"
                 @click="openClubModal"
-                :aria-label="$t('Verein erstellen')"
+                :aria-label="$t('Verein registrieren')"
             >
                 <i class="las la-plus text-2xl"></i>
             </button>
@@ -355,7 +403,7 @@ const deleteJob = (job) => {
                 class="hidden rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover sm:inline-flex"
                 @click="openClubModal"
             >
-                + {{ $t('Verein erstellen') }}
+                + {{ $t('Verein registrieren') }}
             </button>
         </div>
 
@@ -464,6 +512,15 @@ const deleteJob = (job) => {
 
                 <div class="flex flex-wrap items-center gap-2 sm:justify-end">
                     <button
+                        v-if="club.can_manage"
+                        type="button"
+                        class="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-muted"
+                        @click.stop="editClub(club)"
+                    >
+                        Daten bearbeiten
+                    </button>
+
+                    <button
                         v-if="can('team.store') && club.can_manage"
                         type="button"
                         class="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
@@ -484,6 +541,100 @@ const deleteJob = (job) => {
                     </button>
                 </div>
             </div>
+
+            <!-- CLUB EDIT -->
+            <form
+                v-if="openClubId === club.id && editingClubId === club.id"
+                class="rounded-xl border border-border bg-bg p-4"
+                @submit.prevent="updateClub(club)"
+            >
+                <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <h2 class="font-semibold text-primary">Vereinsdaten bearbeiten</h2>
+                        <p class="text-xs text-secondary">
+                            Basisdaten, Adresse und Sportart pflegen. Offizielle Pruefung laeuft separat ueber Admin.
+                        </p>
+                    </div>
+                    <span
+                        class="w-fit rounded-full px-3 py-1 text-xs font-semibold"
+                        :class="club.verification_status === 'verified'
+                            ? 'bg-success/10 text-success'
+                            : club.verification_status === 'rejected'
+                                ? 'bg-error/10 text-error'
+                                : 'bg-warning/10 text-warning'"
+                    >
+                        {{ club.verification_status === 'verified' ? 'Freigegeben' : club.verification_status === 'rejected' ? 'Abgelehnt' : 'Wartet auf Pruefung' }}
+                    </span>
+                </div>
+
+                <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <label class="block xl:col-span-2">
+                        <span class="text-xs font-semibold uppercase text-secondary">Vereinsname</span>
+                        <input v-model="clubEditFormFor(club).name" required class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </label>
+
+                    <label class="block">
+                        <span class="text-xs font-semibold uppercase text-secondary">Sportart</span>
+                        <SearchableSelect
+                            v-model="clubEditFormFor(club).sport_type"
+                            class="mt-1 w-full"
+                            :options="sports"
+                            value-key="slug"
+                            translation-prefix="sports"
+                            category-translation-prefix="sport_categories"
+                            placeholder="Sportart suchen"
+                        />
+                    </label>
+
+                    <label class="block">
+                        <span class="text-xs font-semibold uppercase text-secondary">Land</span>
+                        <select v-model="clubEditFormFor(club).country" required class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                            <option value="DE">Deutschland</option>
+                            <option value="AT">Oesterreich</option>
+                            <option value="CH">Schweiz</option>
+                            <option value="FR">Frankreich</option>
+                            <option value="NL">Niederlande</option>
+                            <option value="BE">Belgien</option>
+                            <option value="TR">Tuerkei</option>
+                            <option value="US">USA</option>
+                        </select>
+                    </label>
+
+                    <label class="block">
+                        <span class="text-xs font-semibold uppercase text-secondary">Stadt</span>
+                        <input v-model="clubEditFormFor(club).city" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </label>
+
+                    <label class="block">
+                        <span class="text-xs font-semibold uppercase text-secondary">PLZ</span>
+                        <input v-model="clubEditFormFor(club).postal_code" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </label>
+
+                    <label class="block">
+                        <span class="text-xs font-semibold uppercase text-secondary">Region</span>
+                        <input v-model="clubEditFormFor(club).state" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </label>
+
+                    <label class="block">
+                        <span class="text-xs font-semibold uppercase text-secondary">Strasse</span>
+                        <input v-model="clubEditFormFor(club).street" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </label>
+
+                    <label class="block">
+                        <span class="text-xs font-semibold uppercase text-secondary">Hausnummer</span>
+                        <input v-model="clubEditFormFor(club).house_number" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                    </label>
+                </div>
+
+                <div class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="cancelClubEdit">
+                        Abbrechen
+                    </button>
+                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">
+                        Speichern
+                    </button>
+                </div>
+            </form>
 
             <!-- TEAMS GRID -->
             <div
@@ -947,7 +1098,7 @@ const deleteJob = (job) => {
                     <div class="flex items-start justify-between gap-4">
                         <div class="min-w-0">
                             <h2 class="truncate text-lg font-semibold text-primary">
-                                {{ $t('Verein erstellen') }}
+                                {{ $t('Verein registrieren') }}
                             </h2>
 
                             <p class="mt-1 text-sm text-secondary">
@@ -990,7 +1141,7 @@ const deleteJob = (job) => {
                             </h3>
 
                             <p class="mt-1 text-sm text-secondary">
-                                Name, Sportart und Land des Vereins.
+                                Name, Sportart und Land des Vereins. Nach dem Absenden prueft Airmius den Antrag.
                             </p>
                         </div>
 
@@ -1029,14 +1180,14 @@ const deleteJob = (job) => {
                                 class="mt-1 rounded border-border bg-inputBg"
                             >
                             <span>
-                                <span class="block font-semibold">Offizieller Verein</span>
-                                <span class="block text-secondary">Offizielle Vereine muessen ihre Vereinsnummer eintragen.</span>
+                                <span class="block font-semibold">Offizielle Pruefung beantragen</span>
+                                <span class="block text-secondary">Der Verein wird erst nach Admin-Freigabe oeffentlich sichtbar und als offiziell markiert.</span>
                             </span>
                         </label>
 
                         <div v-if="clubForm.is_official">
                             <label class="block text-sm font-semibold text-primary">
-                                Vereinsnummer
+                                Vereinsnummer zur Pruefung
                             </label>
 
                             <input
@@ -1095,7 +1246,7 @@ const deleteJob = (job) => {
                             </h3>
 
                             <p class="mt-1 text-sm text-secondary">
-                                Kontrolliere die Angaben vor dem Speichern.
+                                Kontrolliere die Angaben vor dem Absenden. Der Verein wird als Antrag gespeichert.
                             </p>
                         </div>
 
@@ -1103,8 +1254,9 @@ const deleteJob = (job) => {
                             <div class="space-y-3 text-sm">
                                 <p><strong>Verein:</strong> {{ clubForm.name || '-' }}</p>
                                 <p><strong>Sportart:</strong> {{ sportLabel(clubForm.sport_type) }}</p>
-                                <p><strong>Offiziell:</strong> {{ clubForm.is_official ? 'Ja' : 'Nein' }}</p>
-                                <p v-if="clubForm.is_official"><strong>Vereinsnummer:</strong> {{ clubForm.official_club_number || '-' }}</p>
+                                <p><strong>Offizielle Pruefung:</strong> {{ clubForm.is_official ? 'Beantragt' : 'Nicht beantragt' }}</p>
+                                <p v-if="clubForm.is_official"><strong>Vereinsnummer zur Pruefung:</strong> {{ clubForm.official_club_number || '-' }}</p>
+                                <p><strong>Status nach Absenden:</strong> Wartet auf Pruefung</p>
                                 <p><strong>Land:</strong> {{ clubForm.country || '-' }}</p>
                                 <p>
                                     <strong>Adresse:</strong>

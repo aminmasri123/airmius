@@ -186,6 +186,11 @@ class User extends Authenticatable
         return $this->hasMany(GamificationXpEvent::class);
     }
 
+    public function badgeAwards()
+    {
+        return $this->hasMany(UserBadge::class);
+    }
+
     public function posts()
     {
         return $this->hasMany(Post::class);

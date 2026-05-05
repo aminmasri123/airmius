@@ -4,7 +4,11 @@ namespace App\Services;
 
 use App\Models\GamificationXpEvent;
 use App\Models\GamificationRule;
+use App\Models\Badge;
+use App\Models\Club;
+use App\Models\Team;
 use App\Models\User;
+use App\Models\UserBadge;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -56,26 +60,58 @@ class GamificationService
         ?Model $source = null,
         array $meta = [],
         string $actorType = 'sportler',
+        ?Model $owner = null,
     ): ?GamificationXpEvent {
+        $owner ??= $user;
         $rule = $this->ruleFor($reason, $actorType);
         $baseAmount = $rule?->xp_amount ?? self::PLAYER_ACTIONS[$reason] ?? 0;
 
         if (! ($rule?->is_active ?? true) || $baseAmount <= 0 || $this->dailyLimitReached($user, $reason, $actorType)) {
-            return $this->recordLimitedEvent($user, $reason, $source, $meta, $actorType, $baseAmount);
+            return $this->recordLimitedEvent($user, $reason, $source, $meta, $actorType, $baseAmount, $owner);
         }
 
         $multiplier = $this->trustMultiplier($user);
         $amount = max(1, (int) round($baseAmount * $multiplier));
 
-        $event = $this->recordEvent($user, $reason, $amount, $source, $meta, $actorType, $baseAmount, $multiplier);
+        $event = $this->recordEvent($user, $reason, $amount, $source, $meta, $actorType, $baseAmount, $multiplier, false, $owner);
 
-        if ($reason !== 'daily_meaningful_activity') {
+        if ($reason !== 'daily_meaningful_activity' && $owner instanceof User) {
             $this->recordDailyActivity($user, $event);
         }
 
         $this->adjustTrust($user, $rule?->trust_delta ?? 1);
+        $this->awardEligibleBadges($user, $owner, $actorType, $reason);
 
         return $event;
+    }
+
+    public function grantToClub(
+        User $actor,
+        Club $club,
+        string $reason,
+        ?Model $source = null,
+        array $meta = [],
+    ): ?GamificationXpEvent {
+        return $this->grant($actor, $reason, $source, $meta, 'verein', $club);
+    }
+
+    public function grantToTeam(
+        User $actor,
+        Team $team,
+        string $reason,
+        ?Model $source = null,
+        array $meta = [],
+    ): ?GamificationXpEvent {
+        return $this->grant($actor, $reason, $source, $meta, 'team', $team);
+    }
+
+    public function grantToTrainer(
+        User $trainer,
+        string $reason,
+        ?Model $source = null,
+        array $meta = [],
+    ): ?GamificationXpEvent {
+        return $this->grant($trainer, $reason, $source, $meta, 'trainer', $trainer);
     }
 
     public function penalize(
@@ -84,32 +120,35 @@ class GamificationService
         ?Model $source = null,
         array $meta = [],
         string $actorType = 'sportler',
+        ?Model $owner = null,
     ): GamificationXpEvent {
+        $owner ??= $user;
         $rule = $this->ruleFor($reason, $actorType);
         $amount = $rule?->xp_amount ?? self::PENALTIES[$reason] ?? -5;
 
-        $event = $this->recordEvent($user, $reason, $amount, $source, $meta, $actorType, $amount, 1);
+        $event = $this->recordEvent($user, $reason, $amount, $source, $meta, $actorType, $amount, 1, false, $owner);
         $this->adjustTrust($user, $rule?->trust_delta ?? $this->trustPenaltyFor($reason));
 
         return $event;
     }
 
-    public function summaryFor(User $user): array
+    public function summaryFor(Model $owner, ?string $actorType = null): array
     {
-        $xp = (int) $user->xpEvents()->sum('amount');
+        $actorType ??= $this->actorTypeForOwner($owner);
+        $xp = (int) $this->xpQueryForOwner($owner, $actorType)->sum('amount');
         $level = $this->levelForXp($xp);
 
         return [
             'xp' => $xp,
             'level' => $level['level'],
-            'rank' => $this->rankFor('sportler', $level['level']),
-            'title' => $level['title'],
+            'rank' => $this->rankFor($actorType, $level['level']),
+            'title' => $this->rankFor($actorType, $level['level']),
             'next_level_xp' => $level['next_level_xp'],
             'current_level_xp' => $level['current_level_xp'],
             'progress' => $level['progress'],
-            'trust_score' => (int) ($user->trust_score ?? 100),
-            'trust_multiplier' => $this->trustMultiplier($user),
-            'streak_days' => (int) ($user->gamification_streak_days ?? 0),
+            'trust_score' => $owner instanceof User ? (int) ($owner->trust_score ?? 100) : null,
+            'trust_multiplier' => $owner instanceof User ? $this->trustMultiplier($owner) : 1,
+            'streak_days' => $owner instanceof User ? (int) ($owner->gamification_streak_days ?? 0) : 0,
         ];
     }
 
@@ -204,6 +243,8 @@ class GamificationService
             $sourceEvent->actor_type,
             self::PLAYER_ACTIONS['daily_meaningful_activity'],
             1,
+            false,
+            $user,
         );
 
         $lastActive = $user->gamification_last_active_on
@@ -229,8 +270,12 @@ class GamificationService
                 $sourceEvent->actor_type,
                 self::STREAK_BONUSES[$streak],
                 1,
+                false,
+                $user,
             );
         }
+
+        $this->awardEligibleBadges($user, $user, $sourceEvent->actor_type, 'daily_meaningful_activity');
     }
 
     private function dailyLimitReached(User $user, string $reason, string $actorType = 'sportler'): bool
@@ -262,12 +307,13 @@ class GamificationService
         array $meta,
         string $actorType,
         int $baseAmount,
+        Model $owner,
     ): ?GamificationXpEvent {
         if (! array_key_exists($reason, self::DAILY_LIMITS) && ! $this->ruleFor($reason, $actorType)?->daily_limit) {
             return null;
         }
 
-        return $this->recordEvent($user, $reason, 0, $source, $meta, $actorType, $baseAmount, 1, true);
+        return $this->recordEvent($user, $reason, 0, $source, $meta, $actorType, $baseAmount, 1, true, $owner);
     }
 
     private function recordEvent(
@@ -280,10 +326,15 @@ class GamificationService
         ?int $baseAmount,
         float $trustMultiplier,
         bool $limited = false,
+        ?Model $owner = null,
     ): GamificationXpEvent {
+        $owner ??= $user;
+
         return GamificationXpEvent::create([
             'user_id' => $user->id,
             'actor_type' => $actorType,
+            'owner_type' => $owner::class,
+            'owner_id' => $owner->id,
             'source_type' => $source ? $source::class : null,
             'source_id' => $source->id ?? null,
             'amount' => $amount,
@@ -329,5 +380,86 @@ class GamificationService
             ->where('key', $reason)
             ->where('actor_type', $actorType)
             ->first();
+    }
+
+    private function xpQueryForOwner(Model $owner, ?string $actorType = null)
+    {
+        $query = GamificationXpEvent::query();
+
+        if ($owner instanceof User) {
+            $query->where(function ($query) use ($owner) {
+                $query->where(function ($query) use ($owner) {
+                    $query->where('owner_type', User::class)
+                        ->where('owner_id', $owner->id);
+                })->orWhere(function ($query) use ($owner) {
+                    $query->whereNull('owner_type')
+                        ->where('user_id', $owner->id);
+                });
+            });
+        } else {
+            $query
+                ->where('owner_type', $owner::class)
+                ->where('owner_id', $owner->id);
+        }
+
+        return $query->when($actorType, fn ($query) => $query->where('actor_type', $actorType));
+    }
+
+    private function actorTypeForOwner(Model $owner): string
+    {
+        return match (true) {
+            $owner instanceof Club => 'verein',
+            $owner instanceof Team => 'team',
+            $owner instanceof User && $owner->hasAnyRole(['coach', 'assistant_coach', 'performance_coach', 'fitness_coach']) => 'trainer',
+            default => 'sportler',
+        };
+    }
+
+    private function awardEligibleBadges(User $actor, Model $owner, string $actorType, string $reason): void
+    {
+        $summary = $this->summaryFor($owner, $actorType);
+
+        Badge::query()
+            ->where('actor_type', $actorType)
+            ->get()
+            ->each(function (Badge $badge) use ($actor, $owner, $reason, $summary) {
+                if (! $this->badgeMatches($badge, $reason, $summary)) {
+                    return;
+                }
+
+                $exists = UserBadge::query()
+                    ->where('badge_id', $badge->id)
+                    ->where('awardable_type', $owner::class)
+                    ->where('awardable_id', $owner->id)
+                    ->exists();
+
+                if ($exists) {
+                    return;
+                }
+
+                UserBadge::create([
+                    'user_id' => $actor->id,
+                    'badge_id' => $badge->id,
+                    'awardable_type' => $owner::class,
+                    'awardable_id' => $owner->id,
+                    'reason' => $reason,
+                    'meta' => [
+                        'xp' => $summary['xp'],
+                        'level' => $summary['level'],
+                        'streak_days' => $summary['streak_days'],
+                    ],
+                ]);
+            });
+    }
+
+    private function badgeMatches(Badge $badge, string $reason, array $summary): bool
+    {
+        return match ($badge->trigger) {
+            'xp' => $summary['xp'] >= $badge->threshold,
+            'level' => $summary['level'] >= $badge->threshold,
+            'streak' => $summary['streak_days'] >= $badge->threshold,
+            'reason' => ($badge->meta['reason'] ?? null) === $reason,
+            default => false,
+        };
     }
 }

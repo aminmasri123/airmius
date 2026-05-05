@@ -3,6 +3,8 @@
 use App\Http\Controllers\BlogPostController;
 use App\Http\Controllers\AdminCommerceController;
 use App\Http\Controllers\AdminOutfitSubscriptionPlanController;
+use App\Http\Controllers\BadgeController;
+use App\Http\Controllers\ClubVerificationController;
 use App\Http\Controllers\GamificationRuleController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MemberController;
@@ -48,12 +50,21 @@ Route::middleware(['auth'])->group(function () {
     // GAMIFICATION
     Route::get('/admin/gamification', [GamificationRuleController::class, 'index'])->middleware('can:system.manage')->name('gamification-rules.index');
     Route::put('/admin/gamification', [GamificationRuleController::class, 'update'])->middleware('can:system.manage')->name('gamification-rules.update');
+    Route::get('/admin/badges', [BadgeController::class, 'index'])->middleware('can:system.manage')->name('admin.badges.index');
+    Route::post('/admin/badges', [BadgeController::class, 'store'])->middleware('can:system.manage')->name('admin.badges.store');
+    Route::put('/admin/badges/{badge}', [BadgeController::class, 'update'])->middleware('can:system.manage')->name('admin.badges.update');
+    Route::delete('/admin/badges/{badge}', [BadgeController::class, 'destroy'])->middleware('can:system.manage')->name('admin.badges.destroy');
 
     // SPORTS
     Route::get('/admin/sports', [SportAdminController::class, 'index'])->middleware('can:system.manage')->name('admin.sports.index');
     Route::post('/admin/sports', [SportAdminController::class, 'store'])->middleware('can:system.manage')->name('admin.sports.store');
     Route::put('/admin/sports/{sport}', [SportAdminController::class, 'update'])->middleware('can:system.manage')->name('admin.sports.update');
     Route::delete('/admin/sports/{sport}', [SportAdminController::class, 'destroy'])->middleware('can:system.manage')->name('admin.sports.destroy');
+
+    // CLUB VERIFICATION
+    Route::get('/admin/club-verifications', [ClubVerificationController::class, 'index'])->middleware('can:system.manage')->name('admin.club-verifications.index');
+    Route::put('/admin/club-verifications/{club}/approve', [ClubVerificationController::class, 'approve'])->middleware('can:system.manage')->name('admin.club-verifications.approve');
+    Route::put('/admin/club-verifications/{club}/reject', [ClubVerificationController::class, 'reject'])->middleware('can:system.manage')->name('admin.club-verifications.reject');
 
     // MODERATION
     Route::get('/admin/moderation', [ModerationController::class, 'index'])->middleware('can:system.manage')->name('admin.moderation.index');

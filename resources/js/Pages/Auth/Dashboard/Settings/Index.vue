@@ -42,6 +42,14 @@ const props = defineProps({
         type: Object,
         default: () => ({ providers: {}, accounts: [], activities: [] }),
     },
+    userRoles: {
+        type: Array,
+        default: () => [],
+    },
+    activities: {
+        type: Array,
+        default: () => [],
+    },
     sessions: {
         type: Array,
         default: () => [], // FIX gegen undefined
@@ -167,6 +175,22 @@ const formatDistance = (meters) => {
     if (!meters) return '-'
     return `${(meters / 1000).toFixed(2).replace('.', ',')} km`
 }
+
+const activityLabel = (type) => ({
+    'post.created': 'Beitrag erstellt',
+    'post.updated': 'Beitrag aktualisiert',
+    'post.deleted': 'Beitrag geloescht',
+    'user.followed': 'Person gefolgt',
+    'friend.requested': 'Freundschaftsanfrage gesendet',
+    'friend.accepted': 'Freundschaft akzeptiert',
+    'comment.created': 'Kommentar geschrieben',
+    'comment.updated': 'Kommentar bearbeitet',
+    'comment.deleted': 'Kommentar geloescht',
+}[type] || type)
+
+const activityScope = (activity) => activity.team?.name || activity.club?.name || 'Persoenlich'
+
+const activityDescription = (activity) => activity.data?.title || activity.data?.content || activity.data?.message || ''
 </script>
 
 <template>
@@ -187,6 +211,8 @@ const formatDistance = (meters) => {
             <button @click="activeTab = 'profile'" :class="tabClass('profile')">Profil</button>
             <button @click="activeTab = 'address'" :class="tabClass('address')">Adresse</button>
             <button @click="activeTab = 'billing'" :class="tabClass('billing')">Zahlungen</button>
+            <button @click="activeTab = 'roles'" :class="tabClass('roles')">Rollen</button>
+            <button @click="activeTab = 'activities'" :class="tabClass('activities')">Aktivitaeten</button>
             <button @click="activeTab = 'integrations'" :class="tabClass('integrations')">Verknüpfungen</button>
             <button @click="activeTab = 'design'" :class="tabClass('design')">Design</button>
             <button @click="activeTab = 'language'" :class="tabClass('language')">Sprache</button>
@@ -197,6 +223,80 @@ const formatDistance = (meters) => {
         <!-- PROFIL -->
         <div v-if="activeTab === 'profile'" class="surface-card p-5 space-y-6">
             <UpdateProfileInformationForm :user="$page.props.auth.user" />
+        </div>
+
+        <!-- ROLLEN -->
+        <div v-if="activeTab === 'roles'" class="surface-card p-5">
+            <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-primary">Meine Rollen</h2>
+                    <p class="mt-1 text-sm text-secondary">
+                        Hier siehst du, welche Plattform-Rollen deinem Konto aktuell zugeordnet sind.
+                    </p>
+                </div>
+                <span class="text-sm font-semibold text-secondary">{{ userRoles.length }} Rollen</span>
+            </div>
+
+            <div v-if="userRoles.length" class="mt-5 grid gap-3 md:grid-cols-2">
+                <article
+                    v-for="role in userRoles"
+                    :key="role.id"
+                    class="rounded-lg border border-border bg-bg p-4"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="break-words font-semibold text-primary">{{ role.name }}</p>
+                            <p class="mt-1 text-sm text-secondary">{{ role.description || 'Keine Beschreibung vorhanden.' }}</p>
+                        </div>
+                        <span class="shrink-0 rounded bg-inputBg px-2 py-1 text-xs font-semibold text-secondary">
+                            {{ role.permissions_count }} Rechte
+                        </span>
+                    </div>
+                </article>
+            </div>
+
+            <div v-else class="mt-5 rounded-lg border border-dashed border-border bg-bg p-6 text-sm text-secondary">
+                Deinem Konto ist noch keine Rolle zugewiesen.
+            </div>
+        </div>
+
+        <!-- AKTIVITAETEN -->
+        <div v-if="activeTab === 'activities'" class="surface-card p-5">
+            <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-primary">Meine Aktivitaeten</h2>
+                    <p class="mt-1 text-sm text-secondary">
+                        Hier erscheinen nur Aktionen, die von deinem eigenen Konto erstellt wurden.
+                    </p>
+                </div>
+                <span class="text-sm font-semibold text-secondary">{{ activities.length }} Eintraege</span>
+            </div>
+
+            <div v-if="activities.length" class="mt-5 divide-y divide-border rounded-lg border border-border bg-bg">
+                <article
+                    v-for="activity in activities"
+                    :key="activity.id"
+                    class="flex gap-3 p-4"
+                >
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-buttonPrimary text-buttonTextPrimary">
+                        <i class="las la-history text-lg"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                            <p class="font-semibold text-primary">{{ activityLabel(activity.type) }}</p>
+                            <time class="text-xs text-secondary">{{ formatDate(activity.created_at) }}</time>
+                        </div>
+                        <p class="mt-1 text-sm text-secondary">{{ activityScope(activity) }}</p>
+                        <p v-if="activityDescription(activity)" class="mt-2 line-clamp-2 text-sm text-primary">
+                            {{ activityDescription(activity) }}
+                        </p>
+                    </div>
+                </article>
+            </div>
+
+            <div v-else class="mt-5 rounded-lg border border-dashed border-border bg-bg p-6 text-sm text-secondary">
+                Noch keine eigenen Aktivitaeten vorhanden.
+            </div>
         </div>
 
         <!-- SICHERHEIT -->

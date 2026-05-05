@@ -23,11 +23,13 @@ use App\Http\Controllers\PostHelpfulController;
 use App\Http\Controllers\ProfileCompletionController;
 use App\Http\Controllers\ProfileGamificationController;
 use App\Http\Controllers\RideController;
+use App\Http\Controllers\RoleWorkspaceController;
 use App\Http\Controllers\SportIntegrationController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\SubscriptionInvoiceController;
 use App\Http\Controllers\SubscriptionPlanController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserBadgeController;
 use App\Http\Controllers\UserSettingsController;
 use App\Http\Controllers\UserStatusController;
 use Illuminate\Http\Request;
@@ -42,6 +44,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::put('/profile-completion', [ProfileCompletionController::class, 'update'])->name('auth.profile-completion.update');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('auth.dashboard');
+    Route::get('/workspaces', [RoleWorkspaceController::class, 'index'])->name('auth.workspaces.index');
 
     // PROFILE
     Route::get('/users/{user}', [UserController::class, 'show'])->name('auth.users.show');
@@ -59,6 +62,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     //SETTINGS
     Route::get('/settings', [UserSettingsController::class, 'index'])->name('auth.settings');
     Route::put('/settings', [UserSettingsController::class, 'update'])->name('auth.settings.update');
+    Route::get('/badges', [UserBadgeController::class, 'index'])->name('auth.badges.index');
+    Route::get('/badges/{userBadge}', [UserBadgeController::class, 'show'])->name('auth.badges.show');
     Route::get('/subscription-invoices/{subscriptionInvoice}/download', [SubscriptionInvoiceController::class, 'download'])->name('auth.subscription-invoices.download');
     Route::post('/user-subscriptions/{subscription}/cancel', [SubscriptionPlanController::class, 'cancelOwnUserSubscription'])->name('auth.user-subscriptions.cancel');
     Route::post('/user-subscriptions/{subscription}/provider-portal', [SubscriptionPlanController::class, 'providerPortal'])->name('auth.user-subscriptions.provider-portal');

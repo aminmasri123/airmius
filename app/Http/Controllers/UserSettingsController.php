@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Activity;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\SubscriptionInvoice;
@@ -80,6 +81,26 @@ class UserSettingsController extends Controller
                     ->limit(20)
                     ->get(['id', 'provider', 'activity_type', 'title', 'started_at', 'duration_seconds', 'distance_meters', 'calories']),
             ],
+            'userRoles' => $request->user()
+                ->roles()
+                ->withCount('permissions')
+                ->orderBy('name')
+                ->get(['id', 'name', 'description'])
+                ->map(fn ($role) => [
+                    'id' => $role->id,
+                    'name' => $role->name,
+                    'description' => $role->description,
+                    'permissions_count' => $role->permissions_count,
+                ]),
+            'activities' => Activity::query()
+                ->where('user_id', $request->user()->id)
+                ->with([
+                    'club:id,name',
+                    'team:id,name',
+                ])
+                ->latest('id')
+                ->limit(50)
+                ->get(['id', 'user_id', 'club_id', 'team_id', 'type', 'data', 'created_at']),
         ]);
 
     }

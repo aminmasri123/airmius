@@ -75,6 +75,7 @@ const closeSidebar = () => {
 
         <nav class="custom-scrollbar mt-2 flex-1 space-y-1 overflow-y-auto px-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             <NavItem v-if="can('dashboard.view')" @click="closeSidebar" :href="route('auth.dashboard')" label="Dashboard" icon="las la-th-large" />
+            <NavItem v-if="can('workspaces.view')" @click="closeSidebar" :href="route('auth.workspaces.index')" label="Arbeitsbereiche" icon="las la-compass" />
             <NavItem v-if="can('team.index')" @click="closeSidebar" :href="route('auth.teams.index')" label="Teams" icon="las la-users" />
             <NavItem v-if="can('club-memberships.view')" @click="closeSidebar" :href="route('auth.club-memberships.index')" label="Mitglieder" icon="las la-id-card" />
             <NavItem v-if="can('chat.view')" @click="closeSidebar" :href="route('auth.conversations.index')" label="Chat" icon="las la-comments" />
@@ -98,6 +99,7 @@ const closeSidebar = () => {
                 icon="las la-bell"
                 :badge="unreadNotificationsCount || null"
             />
+            <NavItem v-if="can('profile.view')" @click="closeSidebar" :href="route('auth.badges.index')" label="Meine Badges" icon="las la-medal" />
             <NavItem v-if="can('settings.view')" @click="closeSidebar" :href="route('auth.settings')" label="Einstellungen" icon="las la-cog" />
             <NavItem @click="closeSidebar" :href="route('auth.commerce.index')" label="Marketplace" icon="las la-store" />
             <NavItem @click="closeSidebar" :href="route('auth.outfit-subscriptions.index')" label="Outfit-Abo" icon="las la-tshirt" />
@@ -115,7 +117,9 @@ const closeSidebar = () => {
                 <NavItem v-if="can('sponsors.view')" @click="closeSidebar" :href="route('sponsors.index')" label="Sponsors" icon="las la-handshake" />
                 <NavItem v-if="can('admin.moderation.view')" @click="closeSidebar" :href="route('admin.moderation.index')" label="Moderation" icon="las la-user-check" />
                 <NavItem v-if="can('system.manage')" @click="closeSidebar" :href="route('admin.sports.index')" label="Sportarten" icon="las la-running" />
+                <NavItem v-if="can('system.manage')" @click="closeSidebar" :href="route('admin.club-verifications.index')" label="Vereinspruefung" icon="las la-clipboard-check" />
                 <NavItem v-if="can('system.manage')" @click="closeSidebar" :href="route('gamification-rules.index')" label="Gamification" icon="las la-trophy" />
+                <NavItem v-if="can('system.manage')" @click="closeSidebar" :href="route('admin.badges.index')" label="Badges" icon="las la-medal" />
                 <NavItem v-if="can('admin.settings.view')" @click="closeSidebar" :href="route('admin.settings.index')" label="Settings" icon="las la-cog" />
             </NavGroup>
         </nav>

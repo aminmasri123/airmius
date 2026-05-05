@@ -18,6 +18,11 @@ const props = defineProps({
 const { t } = useI18n()
 
 const selectedRoleId = ref(props.roles[0]?.id || null)
+const notice = ref(null)
+
+const setNotice = (type, message) => {
+    notice.value = { type, message }
+}
 
 const selectedRole = computed(() => {
     return props.roles.find((role) => role.id === selectedRoleId.value) || props.roles[0] || null
@@ -53,20 +58,30 @@ const saveRole = () => {
 
     roleForm.put(route('roles.update', selectedRole.value.id), {
         preserveScroll: true,
+        onSuccess: () => setNotice('success', 'Rolle wurde gespeichert.'),
+        onError: () => setNotice('error', 'Rolle konnte nicht gespeichert werden. Bitte pruefe die Eingaben.'),
     })
 }
 
 const createRole = () => {
     createRoleForm.post(route('roles.store'), {
         preserveScroll: true,
-        onSuccess: () => createRoleForm.reset(),
+        onSuccess: () => {
+            createRoleForm.reset()
+            setNotice('success', 'Rolle wurde erstellt.')
+        },
+        onError: () => setNotice('error', 'Rolle konnte nicht erstellt werden. Bitte pruefe die Eingaben.'),
     })
 }
 
 const createPermission = () => {
     createPermissionForm.post(route('permissions.store'), {
         preserveScroll: true,
-        onSuccess: () => createPermissionForm.reset(),
+        onSuccess: () => {
+            createPermissionForm.reset()
+            setNotice('success', 'Berechtigung wurde erstellt.')
+        },
+        onError: () => setNotice('error', 'Berechtigung konnte nicht erstellt werden. Bitte pruefe die Eingaben.'),
     })
 }
 
@@ -77,6 +92,8 @@ const deleteRole = () => {
 
     router.delete(route('roles.destroy', selectedRole.value.id), {
         preserveScroll: true,
+        onSuccess: () => setNotice('success', 'Rolle wurde geloescht.'),
+        onError: () => setNotice('error', 'Rolle konnte nicht geloescht werden.'),
     })
 }
 
@@ -128,6 +145,16 @@ const selectedCountForGroup = (group) => {
                 <p class="mt-2 text-sm text-secondary">
                     {{ $t('roles.subtitle') }}
                 </p>
+            </div>
+
+            <div
+                v-if="notice"
+                class="rounded-lg border px-4 py-3 text-sm"
+                :class="notice.type === 'success'
+                    ? 'border-success/30 bg-success/10 text-success'
+                    : 'border-error/30 bg-error/10 text-error'"
+            >
+                {{ notice.message }}
             </div>
 
             <div class="grid gap-6 xl:grid-cols-[320px_1fr]">

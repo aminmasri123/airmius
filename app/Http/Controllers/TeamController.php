@@ -9,8 +9,10 @@ use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\TeamJoinRequest;
 use App\Models\User;
+use App\Models\UserBadge;
 use App\Notifications\ExternalTeamInvitation;
 use App\Services\MediaOptimizer;
+use App\Services\GamificationService;
 use App\Services\PlanFeatureService;
 use App\Support\UploadStorage;
 use App\Support\Roles;
@@ -34,6 +36,7 @@ class TeamController extends Controller
     public function __construct(
         private MediaOptimizer $mediaOptimizer,
         private PlanFeatureService $planFeatures,
+        private GamificationService $gamification,
     ) {}
 
     public function index()
@@ -135,7 +138,7 @@ class TeamController extends Controller
             $this->planFeatures->ensureCanCreateTeam($club);
         }
 
-        DB::transaction(function () use ($club, $data, $user) {
+        $team = DB::transaction(function () use ($club, $data, $user) {
             $team = Team::firstOrCreate(
                 [
                     'club_id' => $club->id,
@@ -155,7 +158,14 @@ class TeamController extends Controller
             $team->users()->syncWithoutDetaching([
                 $user->id => ['role' => 'Coach'],
             ]);
+
+            return $team;
         });
+
+        $this->gamification->grantToTeam($user, $team, 'team_member_joined', $team, [
+            'member_id' => $user->id,
+            'role' => 'Coach',
+        ]);
 
         return back()->with('success', 'Team erstellt');
     }
@@ -227,6 +237,16 @@ class TeamController extends Controller
                 'events_count' => $team->events_count,
                 'files_count' => $team->files_count,
                 'members' => $team->users,
+                'gamification' => $this->gamification->summaryFor($team, 'team'),
+                'badges' => UserBadge::query()
+                    ->where('awardable_type', Team::class)
+                    ->where('awardable_id', $team->id)
+                    ->with('badge:id,key,name,description,icon')
+                    ->latest('id')
+                    ->limit(12)
+                    ->get()
+                    ->pluck('badge')
+                    ->values(),
             ],
             'posts' => $posts,
             'viewer' => [
@@ -374,6 +394,11 @@ class TeamController extends Controller
             ]);
         });
 
+        $this->gamification->grantToTeam($request->user(), $invitation->team, 'team_member_joined', $invitation, [
+            'member_id' => $request->user()->id,
+            'role' => $invitation->role,
+        ]);
+
         return back()->with('success', 'Einladung angenommen.');
     }
 
@@ -411,6 +436,11 @@ class TeamController extends Controller
                 'responded_at' => now(),
             ]);
         });
+
+        $this->gamification->grantToTeam($request->user(), $invitation->team, 'team_member_joined', $invitation, [
+            'member_id' => $request->user()->id,
+            'role' => $invitation->role,
+        ]);
 
         return redirect()->route('auth.teams.index')->with('success', 'Einladung angenommen.');
     }
@@ -474,6 +504,11 @@ class TeamController extends Controller
                 'responded_at' => now(),
             ]);
         });
+
+        $this->gamification->grantToTeam($request->user(), $joinRequest->team, 'team_member_joined', $joinRequest, [
+            'member_id' => $joinRequest->user_id,
+            'role' => $data['role'] ?? 'Player',
+        ]);
 
         return back()->with('success', 'Beitrittsanfrage angenommen.');
     }

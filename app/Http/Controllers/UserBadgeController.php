@@ -4,62 +4,27 @@ namespace App\Http\Controllers;
 
 use App\Models\UserBadge;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class UserBadgeController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        //
+        return Inertia::render('Auth/Dashboard/Badges/UserIndex', [
+            'awards' => $request->user()
+                ->badgeAwards()
+                ->with('badge:id,key,name,description,icon,actor_type,trigger,threshold')
+                ->latest('id')
+                ->get(),
+        ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
     public function show(UserBadge $userBadge)
     {
-        //
-    }
+        abort_unless($userBadge->user_id === request()->user()->id || request()->user()->can('system.manage'), 403);
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(UserBadge $userBadge)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, UserBadge $userBadge)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(UserBadge $userBadge)
-    {
-        //
+        return Inertia::render('Auth/Dashboard/Badges/Show', [
+            'award' => $userBadge->load('badge'),
+        ]);
     }
 }

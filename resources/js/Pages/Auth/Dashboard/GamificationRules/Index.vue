@@ -5,7 +5,7 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 
 const props = defineProps({
     rules: { type: Object, default: () => ({}) },
-    actorTypes: { type: Array, default: () => ['sportler', 'trainer', 'verein'] },
+    actorTypes: { type: Array, default: () => ['sportler', 'trainer', 'verein', 'team'] },
 })
 
 const selectedActor = ref(props.actorTypes[0] || 'sportler')
@@ -32,6 +32,7 @@ const actorLabel = (actor) => ({
     sportler: 'Sportler',
     trainer: 'Trainer',
     verein: 'Vereine',
+    team: 'Teams',
 }[actor] || actor)
 
 const save = () => {

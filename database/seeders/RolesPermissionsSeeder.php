@@ -261,6 +261,12 @@ class RolesPermissionsSeeder extends Seeder
             'blog.update',
         ]);
 
+        Role::findByName('support')->givePermissionTo([
+            'users.view',
+            'support.tickets',
+            'community.moderate',
+        ]);
+
         Role::findByName('club_owner')->givePermissionTo([
             'org.create','org.manage',
             'team.create','team.update','team.delete','team.invite','team.kick',

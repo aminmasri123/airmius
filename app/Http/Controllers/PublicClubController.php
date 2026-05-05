@@ -24,6 +24,7 @@ class PublicClubController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name', 'slug', 'category']),
             'clubs' => Club::query()
+                ->verified()
                 ->withCount('teams')
                 ->when($filters['search'] ?? null, fn ($query, $search) => $query->where('name', 'like', "%{$search}%"))
                 ->when($filters['sport_type'] ?? null, fn ($query, $sport) => $query->where(function ($query) use ($sport) {
@@ -37,7 +38,7 @@ class PublicClubController extends Controller
                 }))
                 ->orderBy('name')
                 ->limit(60)
-                ->get(['id', 'name', 'sport_type', 'logo', 'country', 'postal_code', 'city', 'state']),
+                ->get(['id', 'name', 'sport_type', 'logo', 'country', 'postal_code', 'city', 'state', 'is_official', 'official_club_number']),
         ]);
     }
 }

@@ -13,7 +13,6 @@ const props = defineProps({
     visibilities: { type: Array, default: () => ['team', 'organization', 'public'] },
     postTypes: { type: Array, default: () => ['normal'] },
     sports: { type: Array, default: () => [] },
-    activities: { type: Array, default: () => [] },
 })
 
 const { can } = usePermissions()
@@ -141,7 +140,7 @@ const createPost = () => {
     postForm.post(route('auth.posts.store'), {
         forceFormData: true,
         preserveScroll: true,
-        only: ['posts', 'clubs', 'teams', 'activities', 'notificationCenter', 'auth', 'errors'],
+        only: ['posts', 'clubs', 'teams', 'notificationCenter', 'auth', 'errors'],
         onSuccess: resetCreateForm,
     })
 }
@@ -182,7 +181,7 @@ const updatePost = (post) => {
     form.post(route('auth.posts.update', post.id), {
         forceFormData: true,
         preserveScroll: true,
-        only: ['posts', 'clubs', 'teams', 'activities', 'notificationCenter', 'auth', 'errors'],
+        only: ['posts', 'clubs', 'teams', 'notificationCenter', 'auth', 'errors'],
         onSuccess: () => {
             form.editing = false
             form.reset('image', 'attachments')
@@ -205,7 +204,7 @@ const deletePost = () => {
 
     router.delete(route('auth.posts.destroy', deleteTarget.value.id), {
         preserveScroll: true,
-        only: ['posts', 'activities', 'notificationCenter', 'auth', 'flash'],
+        only: ['posts', 'notificationCenter', 'auth', 'flash'],
         onSuccess: closeDeletePost,
     })
 }
@@ -227,7 +226,7 @@ const closeReport = () => {
 const submitReport = () => {
     reportForm.post(route('auth.reports.store'), {
         preserveScroll: true,
-        only: ['posts', 'activities', 'notificationCenter', 'auth', 'flash', 'errors'],
+        only: ['posts', 'notificationCenter', 'auth', 'flash', 'errors'],
         onSuccess: closeReport,
     })
 }
@@ -239,7 +238,7 @@ const toggleLike = (post) => {
 
     router.post(route('auth.posts.like', post.id), {}, {
         preserveScroll: true,
-        only: ['posts', 'activities', 'notificationCenter', 'auth'],
+        only: ['posts', 'notificationCenter', 'auth'],
         onError: () => {
             post.liked_by_me = wasLiked
             post.likes_count += wasLiked ? 1 : -1
@@ -254,7 +253,7 @@ const toggleHelpful = (post) => {
 
     router.post(route('auth.posts.helpful', post.id), {}, {
         preserveScroll: true,
-        only: ['posts', 'activities', 'notificationCenter', 'auth'],
+        only: ['posts', 'notificationCenter', 'auth'],
         onError: () => {
             post.helpful_by_me = wasHelpful
             post.helpfuls_count += wasHelpful ? 1 : -1
@@ -267,7 +266,7 @@ const createComment = (post) => {
     if (!form.content.trim()) return
     form.post(route('auth.comments.store', post.id), {
         preserveScroll: true,
-        only: ['posts', 'activities', 'notificationCenter', 'auth'],
+        only: ['posts', 'notificationCenter', 'auth'],
         onSuccess: () => form.reset(),
     })
 }
@@ -292,7 +291,7 @@ const updateComment = (comment) => {
 
     form.put(route('auth.comments.update', comment.id), {
         preserveScroll: true,
-        only: ['posts', 'activities', 'notificationCenter', 'auth', 'flash', 'errors'],
+        only: ['posts', 'notificationCenter', 'auth', 'flash', 'errors'],
         onSuccess: () => {
             form.editing = false
         },
@@ -304,14 +303,14 @@ const deleteComment = (comment) => {
 
     router.delete(route('auth.comments.destroy', comment.id), {
         preserveScroll: true,
-        only: ['posts', 'activities', 'notificationCenter', 'auth', 'flash'],
+        only: ['posts', 'notificationCenter', 'auth', 'flash'],
     })
 }
 
 const visitPage = (url) => url && router.visit(url, {
     preserveScroll: true,
     preserveState: true,
-    only: ['posts', 'clubs', 'teams', 'activities', 'notificationCenter', 'auth'],
+    only: ['posts', 'clubs', 'teams', 'notificationCenter', 'auth'],
 })
 </script>
 
@@ -1121,31 +1120,6 @@ const visitPage = (url) => url && router.visit(url, {
                 </div>
             </div>
 
-            <div class="surface-card p-4">
-                <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">
-                    Activity Feed
-                </h2>
-
-                <div class="mt-4 space-y-3">
-                    <div
-                        v-for="activity in activities"
-                        :key="activity.id"
-                        class="rounded-lg border border-border bg-inputBg p-3"
-                    >
-                        <div class="break-words text-sm font-medium text-primary">
-                            {{ activity.user?.name || 'System' }}
-                        </div>
-
-                        <div class="break-words text-xs text-secondary">
-                            {{ activity.type }} · {{ formatDate(activity.created_at) }}
-                        </div>
-                    </div>
-
-                    <div v-if="!activities.length" class="text-sm text-secondary">
-                        No activity yet.
-                    </div>
-                </div>
-            </div>
         </aside>
     </div>
 

@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Club;
 use App\Models\Post;
 use App\Models\Sport;
+use App\Models\UserBadge;
 use App\Models\User;
 use App\Services\ClubService;
+use App\Services\GamificationService;
 use App\Services\MediaOptimizer;
 use App\Support\UploadStorage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -26,6 +28,7 @@ class ClubController extends Controller
     public function __construct(
         private ClubService $service,
         private MediaOptimizer $mediaOptimizer,
+        private GamificationService $gamification,
     ) {}
 
     public function index()
@@ -67,7 +70,7 @@ class ClubController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'sport_type' => ['nullable', 'string', 'max:120'],
             'is_official' => ['boolean'],
-            'official_club_number' => ['nullable', 'required_if:is_official,true,1', 'string', 'max:120'],
+            'official_club_number' => ['nullable', 'string', 'max:120'],
             'country' => ['required', 'string', 'size:2'],
             'street' => ['nullable', 'string', 'max:255'],
             'house_number' => ['nullable', 'string', 'max:40'],
@@ -78,7 +81,7 @@ class ClubController extends Controller
 
         session(['club_id' => $club->id]);
 
-        return back()->with('success', 'Club erstellt');
+        return back()->with('success', 'Verein registriert. Der Antrag wartet jetzt auf Pruefung.');
     }
 
     public function show(Request $request, Club $club)
@@ -125,6 +128,9 @@ class ClubController extends Controller
                 'sport_type' => $club->sport_type,
                 'is_official' => (bool) $club->is_official,
                 'official_club_number' => $club->official_club_number,
+                'verification_status' => $club->verification_status,
+                'requested_official_club_number' => $club->requested_official_club_number,
+                'verification_notes' => $club->verification_notes,
                 'logo' => $club->logo,
                 'cover_image' => $club->cover_image,
                 'country' => $club->country,
@@ -139,6 +145,16 @@ class ClubController extends Controller
                 'admins' => $club->admins,
                 'members' => $club->users,
                 'teams' => $club->teams,
+                'gamification' => $this->gamification->summaryFor($club, 'verein'),
+                'badges' => UserBadge::query()
+                    ->where('awardable_type', Club::class)
+                    ->where('awardable_id', $club->id)
+                    ->with('badge:id,key,name,description,icon')
+                    ->latest('id')
+                    ->limit(12)
+                    ->get()
+                    ->pluck('badge')
+                    ->values(),
             ],
             'clubRoles' => self::MEMBER_ROLES,
             'posts' => $posts,
@@ -156,8 +172,6 @@ class ClubController extends Controller
         $this->service->update($club, $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'sport_type' => ['nullable', 'string', 'max:120'],
-            'is_official' => ['boolean'],
-            'official_club_number' => ['nullable', 'required_if:is_official,true,1', 'string', 'max:120'],
             'logo' => ['nullable', 'string', 'max:255'],
             'country' => ['required', 'string', 'size:2'],
             'street' => ['nullable', 'string', 'max:255'],
@@ -187,6 +201,8 @@ class ClubController extends Controller
         );
 
         DB::transaction(function () use ($club, $user, $data) {
+            $previousOwner = null;
+
             if ($data['role'] === 'owner') {
                 $previousOwnerId = $club->owner_id;
 
@@ -194,12 +210,21 @@ class ClubController extends Controller
 
                 if ($previousOwnerId && $previousOwnerId !== $user->id) {
                     $club->users()->updateExistingPivot($previousOwnerId, ['role' => 'admin']);
+                    $previousOwner = User::find($previousOwnerId);
                 }
             }
 
             $club->users()->updateExistingPivot($user->id, [
                 'role' => $data['role'],
             ]);
+
+            if ($data['role'] === 'owner') {
+                $this->service->assignClubOwnerRole($user);
+
+                if ($previousOwner) {
+                    $this->service->refreshClubOwnerRole($previousOwner);
+                }
+            }
         });
 
         return back()->with('success', 'Vereinsrolle aktualisiert.');

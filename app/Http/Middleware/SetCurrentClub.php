@@ -10,7 +10,13 @@ class SetCurrentClub
 {
     public function handle(Request $request, Closure $next)
     {
-        $clubId = $request->route('club')
+        $routeClub = $request->route('club');
+
+        $clubId = $routeClub instanceof Club
+            ? $routeClub->id
+            : $routeClub;
+
+        $clubId = $clubId
             ?? $request->header('X-Club-ID')
             ?? session('club_id');
 

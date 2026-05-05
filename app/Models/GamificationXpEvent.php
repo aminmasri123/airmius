@@ -9,9 +9,14 @@ class GamificationXpEvent extends Model
     protected $fillable = [
         'user_id',
         'actor_type',
+        'owner_type',
+        'owner_id',
         'source_type',
         'source_id',
         'amount',
+        'base_amount',
+        'trust_multiplier',
+        'limited_by_daily_cap',
         'reason',
         'meta',
     ];
@@ -19,7 +24,9 @@ class GamificationXpEvent extends Model
     protected function casts(): array
     {
         return [
+            'limited_by_daily_cap' => 'boolean',
             'meta' => 'array',
+            'trust_multiplier' => 'decimal:2',
         ];
     }
 
@@ -29,6 +36,11 @@ class GamificationXpEvent extends Model
     }
 
     public function source()
+    {
+        return $this->morphTo();
+    }
+
+    public function owner()
     {
         return $this->morphTo();
     }

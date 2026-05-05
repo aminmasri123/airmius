@@ -23,7 +23,7 @@ class GamificationRuleController extends Controller
 
         return Inertia::render('Auth/Dashboard/GamificationRules/Index', [
             'rules' => $rules,
-            'actorTypes' => ['sportler', 'trainer', 'verein'],
+            'actorTypes' => ['sportler', 'trainer', 'verein', 'team'],
         ]);
     }
 
@@ -38,7 +38,7 @@ class GamificationRuleController extends Controller
             'rules.*.daily_limit' => ['nullable', 'integer', 'min:1', 'max:100'],
             'rules.*.trust_delta' => ['required', 'integer', 'min:-50', 'max:50'],
             'rules.*.is_active' => ['boolean'],
-            'rules.*.actor_type' => ['required', Rule::in(['sportler', 'trainer', 'verein'])],
+            'rules.*.actor_type' => ['required', Rule::in(['sportler', 'trainer', 'verein', 'team'])],
         ]);
 
         foreach ($data['rules'] as $ruleData) {

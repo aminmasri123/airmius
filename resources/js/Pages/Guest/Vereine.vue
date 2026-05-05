@@ -61,9 +61,17 @@ const search = () => {
         <main class="px-4 pt-36 md:pt-44">
             <section class="mx-auto max-w-6xl">
                 <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">{{ $t('Vereine') }}</p>
-                <h1 class="mt-3 max-w-3xl font-heading text-4xl font-900 leading-tight sm:text-5xl">
-                    Finde Vereine nach Sportart und Standort.
-                </h1>
+                <div class="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                    <h1 class="max-w-3xl font-heading text-4xl font-900 leading-tight sm:text-5xl">
+                        Finde Vereine nach Sportart und Standort.
+                    </h1>
+                    <Link
+                        :href="page.props.auth?.user ? route('auth.teams.index') : (canRegister ? route('register') : route('login'))"
+                        class="inline-flex w-fit items-center justify-center rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
+                    >
+                        Verein registrieren
+                    </Link>
+                </div>
 
                 <form class="mt-8 grid gap-3 rounded-xl border border-border bg-card p-4 md:grid-cols-4" @submit.prevent="search">
                     <input v-model="form.search" class="rounded-lg border-border bg-inputBg text-primary" placeholder="Verein" />
@@ -81,7 +89,10 @@ const search = () => {
                             <span v-else>{{ initials(club.name) }}</span>
                         </div>
                         <div class="min-w-0">
-                            <h2 class="truncate text-lg font-bold text-primary">{{ club.name }}</h2>
+                            <div class="flex min-w-0 items-center gap-2">
+                                <h2 class="truncate text-lg font-bold text-primary">{{ club.name }}</h2>
+                                <span v-if="club.is_official" class="shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">Offiziell</span>
+                            </div>
                             <p class="text-sm text-secondary">{{ sportLabel(club.sport_type) }}</p>
                             <p class="mt-1 text-xs text-secondary">{{ club.postal_code }} {{ club.city }} · {{ club.country || 'Land offen' }}</p>
                         </div>

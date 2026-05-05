@@ -39,6 +39,10 @@ class GlobalSearchController extends Controller
 
         $clubs = Club::query()
             ->visibleTo($user)
+            ->where(function ($query) use ($user) {
+                $query->verified()
+                    ->orWhereHas('users', fn ($memberQuery) => $memberQuery->where('users.id', $user->id));
+            })
             ->where('name', 'like', $like)
             ->orderBy('name')
             ->limit(5)

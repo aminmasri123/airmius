@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Club;
-use App\Models\Activity;
 use App\Models\Post;
 use App\Models\Sport;
 use App\Models\SportSkill;
@@ -34,11 +33,21 @@ class PostController extends Controller
     public function index()
     {
         $user = auth()->user();
+        $feedUserIds = collect([$user->id])
+            ->merge($user->friendships()->pluck('friend_id'))
+            ->merge($user->following()->pluck('followed_id'))
+            ->unique()
+            ->values()
+            ->all();
 
         $posts = Post::query()
             ->where('moderation_status', '!=', 'removed')
-            ->where(function ($query) use ($user) {
-                $query->where('visibility', 'public')
+            ->where(function ($query) use ($user, $feedUserIds) {
+                $query->where('user_id', $user->id)
+                    ->orWhere(function ($query) use ($feedUserIds) {
+                        $query->where('visibility', 'public')
+                            ->whereIn('user_id', $feedUserIds);
+                    })
                     ->orWhere(function ($query) use ($user) {
                         $query->where('visibility', 'organization')
                             ->whereHas('club.users', fn ($q) => $q->where('users.id', $user->id));
@@ -46,8 +55,7 @@ class PostController extends Controller
                     ->orWhere(function ($query) use ($user) {
                         $query->where('visibility', 'team')
                             ->whereHas('team.users', fn ($q) => $q->where('users.id', $user->id));
-                    })
-                    ->orWhere('user_id', $user->id);
+                    });
             })
             ->with([
                 'user:id,name,profile_photo_path',
@@ -104,17 +112,6 @@ class PostController extends Controller
                 ->select(['id', 'name', 'slug', 'category'])
                 ->orderBy('sort_order')
                 ->get(),
-            'activities' => Activity::query()
-                ->with('user:id,name')
-                ->where(function ($query) use ($user) {
-                    $query->whereNull('club_id')
-                        ->whereNull('team_id')
-                        ->orWhereHas('club.users', fn ($q) => $q->where('users.id', $user->id))
-                        ->orWhereHas('team.users', fn ($q) => $q->where('users.id', $user->id));
-                })
-                ->latest('id')
-                ->limit(12)
-                ->get(),
         ]);
     }
 
@@ -167,6 +164,22 @@ class PostController extends Controller
 
         if (in_array($post->post_type, ['knowledge', 'training_drill', 'tactic', 'analysis', 'experience'], true)) {
             $this->gamification->grant(auth()->user(), 'content_created', $post, [
+                'post_type' => $post->post_type,
+                'sport_id' => $post->sport_id,
+            ]);
+        }
+
+        if ($post->club_id && in_array($post->post_type, ['knowledge', 'training_drill', 'tactic', 'analysis', 'experience', 'club_update'], true)) {
+            $this->gamification->grantToClub(auth()->user(), $post->club, 'club_informative_post', $post, [
+                'post_type' => $post->post_type,
+                'sport_id' => $post->sport_id,
+            ]);
+        }
+
+        if (auth()->user()->hasAnyRole(['coach', 'assistant_coach', 'performance_coach', 'fitness_coach'])
+            && in_array($post->post_type, ['knowledge', 'training_drill', 'tactic', 'analysis'], true)
+        ) {
+            $this->gamification->grantToTrainer(auth()->user(), 'coach_knowledge_shared', $post, [
                 'post_type' => $post->post_type,
                 'sport_id' => $post->sport_id,
             ]);

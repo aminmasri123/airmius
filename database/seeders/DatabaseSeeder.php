@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
               SportsSeeder::class,
               SportSkillSeeder::class,
               GamificationRuleSeeder::class,
+              GamificationBadgeSeeder::class,
               RolesPermissionsSeeder::class,
               ClubsTeamsUsersSeeder::class,
               FeedChatSeeder::class,
