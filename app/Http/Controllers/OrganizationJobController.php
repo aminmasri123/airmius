@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Club;
 use App\Models\OrganizationJob;
+use App\Support\Roles;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
@@ -11,9 +13,11 @@ use Inertia\Inertia;
 
 class OrganizationJobController extends Controller
 {
+    use AuthorizesRequests;
+
     public function store(Request $request, Club $club)
     {
-        $this->authorize('update', $club);
+        $this->authorizeManageJobs($request, $club);
 
         $data = $this->validated($request);
         $data['created_by'] = $request->user()->id;
@@ -26,7 +30,7 @@ class OrganizationJobController extends Controller
 
     public function update(Request $request, OrganizationJob $organizationJob)
     {
-        $this->authorize('update', $organizationJob->club);
+        $this->authorizeManageJobs($request, $organizationJob->club);
 
         $data = $this->validated($request);
         $data['published_at'] = $data['is_published']
@@ -40,7 +44,7 @@ class OrganizationJobController extends Controller
 
     public function destroy(Request $request, OrganizationJob $organizationJob)
     {
-        $this->authorize('update', $organizationJob->club);
+        $this->authorizeManageJobs($request, $organizationJob->club);
 
         $organizationJob->delete();
 
@@ -73,5 +77,17 @@ class OrganizationJobController extends Controller
             'application_url' => ['nullable', 'url', 'max:2048'],
             'is_published' => ['boolean'],
         ]);
+    }
+
+    private function authorizeManageJobs(Request $request, Club $club): void
+    {
+        $this->authorize('update', $club);
+
+        $user = $request->user();
+
+        abort_unless(
+            $user?->can('club.jobs.manage') || $user?->hasAnyRole(Roles::FULL_ACCESS),
+            403
+        );
     }
 }

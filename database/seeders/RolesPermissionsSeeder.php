@@ -71,6 +71,7 @@ class RolesPermissionsSeeder extends Seeder
             ['name' => 'clubs.delete', 'description' => 'Clubs löschen'],
             ['name' => 'clubs.manage_members', 'description' => 'Club Mitglieder verwalten'],
             ['name' => 'clubs.manage_settings', 'description' => 'Club Einstellungen verwalten'],
+            ['name' => 'club.jobs.manage', 'description' => 'Ehrenamt und Stellen im Club verwalten'],
 
             // TEAMS
             ['name' => 'teams.view', 'description' => 'Teams anzeigen'],
@@ -246,7 +247,7 @@ class RolesPermissionsSeeder extends Seeder
             'file.upload','file.delete','file.view',
             'follow.user',
             'users.view','users.create','users.edit','users.delete','users.assign_roles',
-            'clubs.view','clubs.create','clubs.edit','clubs.delete','clubs.manage_members','clubs.manage_settings',
+            'clubs.view','clubs.create','clubs.edit','clubs.delete','clubs.manage_members','clubs.manage_settings','club.jobs.manage',
             'teams.view','teams.create','teams.edit','teams.delete','teams.manage_players',
             'training.view','training.create','training.edit','training.delete',
             'matches.view','matches.create','matches.edit','matches.delete','matches.manage_lineup','matches.report',
@@ -274,7 +275,7 @@ class RolesPermissionsSeeder extends Seeder
             'post.create','post.update','post.delete',
             'file.upload','file.delete','file.view',
             'follow.user',
-            'clubs.view','clubs.create','clubs.edit','clubs.delete','clubs.manage_members','clubs.manage_settings',
+            'clubs.view','clubs.create','clubs.edit','clubs.delete','clubs.manage_members','clubs.manage_settings','club.jobs.manage',
             'teams.view','teams.manage_players',
             'training.view','training.create','training.edit',
             'matches.view','matches.create','matches.edit',
@@ -288,7 +289,7 @@ class RolesPermissionsSeeder extends Seeder
             'post.create','post.update','post.delete',
             'file.upload','file.delete','file.view',
             'follow.user',
-            'clubs.manage_members','clubs.manage_settings',
+            'clubs.manage_members','clubs.manage_settings','club.jobs.manage',
             'teams.view','teams.edit','teams.manage_players',
             'training.view','training.edit',
             'matches.view','matches.edit',
@@ -302,7 +303,7 @@ class RolesPermissionsSeeder extends Seeder
             'post.create','post.update',
             'file.upload','file.view',
             'follow.user',
-            'clubs.view','teams.view',
+            'clubs.view','teams.view','club.jobs.manage',
         ]);
 
         Role::findByName('academy_manager')->givePermissionTo([
@@ -312,7 +313,7 @@ class RolesPermissionsSeeder extends Seeder
             'post.create','post.update',
             'file.upload','file.view',
             'follow.user',
-            'clubs.view','teams.view',
+            'clubs.view','teams.view','club.jobs.manage',
         ]);
 
         Role::findByName('coach')->givePermissionTo([

@@ -27,8 +27,10 @@ const showClubModal = ref(false)
 const showTeamModal = ref(false)
 const showFilterModal = ref(false)
 const showDeleteModal = ref(false)
+const showJobModal = ref(false)
 
 const selectedClub = ref(null)
+const selectedJobClub = ref(null)
 const openClubId = ref(null)
 const editingClubId = ref(null)
 const actionNotice = ref(null)
@@ -406,7 +408,20 @@ const resetJobForm = (club) => {
     editingJobId.value = null
 }
 
+const openJobModal = (club) => {
+    selectedJobClub.value = club
+    resetJobForm(club)
+    showJobModal.value = true
+}
+
+const closeJobModal = () => {
+    showJobModal.value = false
+    selectedJobClub.value = null
+    editingJobId.value = null
+}
+
 const editJob = (club, job) => {
+    selectedJobClub.value = club
     editingJobId.value = job.id
 
     jobForms.value[club.id] = {
@@ -420,6 +435,8 @@ const editJob = (club, job) => {
         application_url: job.application_url || '',
         is_published: Boolean(job.is_published),
     }
+
+    showJobModal.value = true
 }
 
 const submitJob = (club) => {
@@ -430,6 +447,7 @@ const submitJob = (club) => {
         preserveScroll: true,
         onSuccess: () => {
             resetJobForm(club)
+            closeJobModal()
             setActionNotice('success', isEditing ? 'Eintrag wurde aktualisiert.' : 'Eintrag wurde erstellt.')
         },
         onError: () => setActionNotice('error', 'Eintrag konnte nicht gespeichert werden. Bitte pruefe die Eingaben.'),
@@ -644,7 +662,7 @@ const deleteJob = (job) => {
             <!-- CLUB EDIT -->
             <form
                 v-if="openClubId === club.id && editingClubId === club.id"
-                class="rounded-xl border border-border bg-bg p-4"
+                class="rounded-xl border border-border bg-bg p-4 sm:p-5"
                 @submit.prevent="updateClub(club)"
             >
                 <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -848,7 +866,7 @@ const deleteJob = (job) => {
                 v-if="openClubId === club.id"
                 class="rounded-xl border border-border bg-bg p-4"
             >
-                <div class="mb-4 flex items-center justify-between gap-3">
+                <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                         <h2 class="font-semibold text-primary">
                             Vereinsmitglieder
@@ -926,7 +944,8 @@ const deleteJob = (job) => {
             >
                 <div class="mb-4 flex items-center justify-between gap-3">
                     <div>
-                        <h2 class="font-semibold text-primary">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Engagement</p>
+                        <h2 class="mt-1 text-lg font-semibold text-primary">
                             Ehrenamt & Berufe
                         </h2>
 
@@ -935,13 +954,23 @@ const deleteJob = (job) => {
                         </p>
                     </div>
 
-                    <span class="rounded-full bg-muted px-3 py-1 text-xs text-secondary">
-                        {{ club.jobs?.length || 0 }} Stellen
-                    </span>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="rounded-full bg-muted px-3 py-1 text-xs text-secondary">
+                            {{ club.jobs?.length || 0 }} Eintraege
+                        </span>
+                        <button
+                            v-if="club.can_manage"
+                            type="button"
+                            class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
+                            @click="openJobModal(club)"
+                        >
+                            + Eintrag
+                        </button>
+                    </div>
                 </div>
 
                 <form
-                    v-if="club.can_manage"
+                    v-if="false"
                     class="grid gap-3 rounded-lg border border-border bg-card p-4 md:grid-cols-2"
                     @submit.prevent="submitJob(club)"
                 >
@@ -1024,14 +1053,14 @@ const deleteJob = (job) => {
                     </div>
                 </form>
 
-                <div class="mt-4 grid gap-3 md:grid-cols-2">
+                <div class="mt-4 grid gap-3 lg:grid-cols-2">
                     <article
                         v-for="job in club.jobs"
                         :key="job.id"
                         class="rounded-lg border border-border bg-card p-4"
                     >
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div class="min-w-0">
                                 <span
                                     class="rounded-full px-2 py-1 text-xs"
                                     :class="job.type === 'volunteer'
@@ -1045,7 +1074,7 @@ const deleteJob = (job) => {
                                     {{ job.title }}
                                 </h3>
 
-                                <p class="mt-1 text-xs text-secondary">
+                                <p class="mt-1 break-words text-xs text-secondary">
                                     {{ job.location || 'Ort offen' }} · {{ job.workload || 'Umfang offen' }}
                                 </p>
                             </div>
@@ -1062,16 +1091,16 @@ const deleteJob = (job) => {
                             {{ job.description }}
                         </p>
 
-                        <div v-if="club.can_manage" class="mt-4 flex gap-2">
+                        <div v-if="club.can_manage" class="mt-4 grid grid-cols-2 gap-2 sm:flex">
                             <button
-                                class="rounded border border-border px-3 py-1 text-sm text-primary"
+                                class="rounded border border-border px-3 py-2 text-sm text-primary hover:bg-muted"
                                 @click="editJob(club, job)"
                             >
                                 Bearbeiten
                             </button>
 
                             <button
-                                class="rounded bg-error px-3 py-1 text-sm text-white"
+                                class="rounded bg-error px-3 py-2 text-sm text-white"
                                 @click="deleteJob(job)"
                             >
                                 Löschen
@@ -1081,7 +1110,7 @@ const deleteJob = (job) => {
 
                     <div
                         v-if="!club.jobs?.length"
-                        class="rounded-lg border border-border bg-card p-4 text-sm text-secondary"
+                        class="rounded-lg border border-dashed border-border bg-card p-5 text-sm text-secondary lg:col-span-2"
                     >
                         Noch keine Stellen für diese Organisation.
                     </div>
@@ -1445,6 +1474,143 @@ const deleteJob = (job) => {
                 Erstellen
             </button>
         </div>
+    </Modal>
+
+    <Modal :show="showJobModal" max-width="xl" @close="closeJobModal">
+        <form v-if="selectedJobClub" class="space-y-5" @submit.prevent="submitJob(selectedJobClub)">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                    {{ selectedJobClub.name }}
+                </p>
+                <h2 class="mt-1 text-lg font-bold text-primary">
+                    {{ editingJobId ? 'Eintrag bearbeiten' : 'Ehrenamt oder Beruf erstellen' }}
+                </h2>
+                <p class="mt-2 text-sm text-secondary">
+                    Beschreibe kurz, wobei der Verein Hilfe braucht und wie Interessierte Kontakt aufnehmen koennen.
+                </p>
+            </div>
+
+            <section class="space-y-3">
+                <h3 class="text-sm font-semibold text-primary">Was wird gesucht?</h3>
+
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <label class="block sm:col-span-2">
+                        <span class="text-xs font-semibold uppercase text-secondary">Titel *</span>
+                        <input
+                            v-model="jobFormFor(selectedJobClub).title"
+                            required
+                            class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
+                            placeholder="z.B. Jugendtrainer U15"
+                        >
+                    </label>
+
+                    <label class="block">
+                        <span class="text-xs font-semibold uppercase text-secondary">Kategorie</span>
+                        <select
+                            v-model="jobFormFor(selectedJobClub).type"
+                            class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
+                        >
+                            <option value="volunteer">Ehrenamt</option>
+                            <option value="professional">Beruf / bezahlte Stelle</option>
+                        </select>
+                    </label>
+
+                    <label class="block">
+                        <span class="text-xs font-semibold uppercase text-secondary">Art</span>
+                        <input
+                            v-model="jobFormFor(selectedJobClub).employment_type"
+                            class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
+                            placeholder="Teilzeit, Minijob, Ehrenamt"
+                        >
+                    </label>
+                </div>
+            </section>
+
+            <section class="space-y-3">
+                <h3 class="text-sm font-semibold text-primary">Rahmen</h3>
+
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <label class="block">
+                        <span class="text-xs font-semibold uppercase text-secondary">Ort</span>
+                        <input
+                            v-model="jobFormFor(selectedJobClub).location"
+                            class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
+                            placeholder="Vereinsheim, Platz, Remote"
+                        >
+                    </label>
+
+                    <label class="block">
+                        <span class="text-xs font-semibold uppercase text-secondary">Umfang</span>
+                        <input
+                            v-model="jobFormFor(selectedJobClub).workload"
+                            class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
+                            placeholder="z.B. 6 Std./Woche"
+                        >
+                    </label>
+                </div>
+            </section>
+
+            <section class="space-y-3">
+                <h3 class="text-sm font-semibold text-primary">Beschreibung & Kontakt</h3>
+
+                <label class="block">
+                    <span class="text-xs font-semibold uppercase text-secondary">Beschreibung *</span>
+                    <textarea
+                        v-model="jobFormFor(selectedJobClub).description"
+                        required
+                        rows="5"
+                        class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
+                        placeholder="Aufgaben, Voraussetzungen, Zeitraum und was die Person wissen sollte."
+                    ></textarea>
+                </label>
+
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <label class="block">
+                        <span class="text-xs font-semibold uppercase text-secondary">Kontakt E-Mail</span>
+                        <input
+                            v-model="jobFormFor(selectedJobClub).contact_email"
+                            type="email"
+                            class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
+                            placeholder="kontakt@verein.de"
+                        >
+                    </label>
+
+                    <label class="block">
+                        <span class="text-xs font-semibold uppercase text-secondary">Bewerbungslink</span>
+                        <input
+                            v-model="jobFormFor(selectedJobClub).application_url"
+                            class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
+                            placeholder="https://..."
+                        >
+                    </label>
+                </div>
+            </section>
+
+            <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
+                <input
+                    v-model="jobFormFor(selectedJobClub).is_published"
+                    type="checkbox"
+                    class="mt-1 rounded border-border bg-inputBg"
+                >
+                <span>
+                    <span class="block font-semibold">Auf Webseite veroeffentlichen</span>
+                    <span class="block text-xs text-secondary">Wenn deaktiviert, bleibt der Eintrag als Entwurf im Dashboard.</span>
+                </span>
+            </label>
+
+            <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                    type="button"
+                    class="rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted"
+                    @click="closeJobModal"
+                >
+                    Abbrechen
+                </button>
+                <button class="rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary">
+                    {{ editingJobId ? 'Aktualisieren' : 'Eintrag erstellen' }}
+                </button>
+            </div>
+        </form>
     </Modal>
 
     <Modal :show="showDeleteModal" max-width="md" @close="closeDeleteModal">
