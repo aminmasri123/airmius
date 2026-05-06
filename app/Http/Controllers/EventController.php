@@ -54,7 +54,7 @@ class EventController extends Controller
         return Inertia::render('Auth/Dashboard/Events/Index', [
             'events' => $events,
             'clubs' => Club::query()
-                ->visibleTo($request->user())
+                ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
                 ->select(['id', 'name'])
                 ->orderBy('name')
                 ->get(),
@@ -225,7 +225,9 @@ class EventController extends Controller
         }
 
         if (! empty($data['club_id'])) {
-            $this->authorize('view', Club::findOrFail($data['club_id']));
+            Club::query()
+                ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
+                ->findOrFail($data['club_id']);
         }
 
         abort_if($data['visibility'] === 'private' && empty($data['team_id']), 422, 'Private Events brauchen ein Team.');
