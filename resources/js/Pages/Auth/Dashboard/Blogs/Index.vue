@@ -14,6 +14,7 @@ const props = defineProps({
 const editingPost = ref(null)
 const filterStatus = ref(props.filters?.status || 'all')
 const search = ref(props.filters?.search || '')
+const coverUploadInput = ref(null)
 
 const form = useForm({
     title: '',
@@ -21,12 +22,14 @@ const form = useForm({
     excerpt: '',
     content: '',
     cover_image: '',
+    cover_image_upload: null,
     category: '',
     tags: '',
     meta_title: '',
     meta_description: '',
     status: 'draft',
     published_at: '',
+    _method: '',
 })
 
 const statusOptions = computed(() => {
@@ -55,6 +58,8 @@ const resetForm = () => {
     form.reset()
     form.clearErrors()
     form.status = 'draft'
+    form._method = ''
+    if (coverUploadInput.value) coverUploadInput.value.value = null
 }
 
 const edit = (post) => {
@@ -64,20 +69,40 @@ const edit = (post) => {
     form.excerpt = post.excerpt || ''
     form.content = post.content || ''
     form.cover_image = post.cover_image || ''
+    form.cover_image_upload = null
     form.category = post.category || ''
     form.tags = (post.tags || []).join(', ')
     form.meta_title = post.meta_title || ''
     form.meta_description = post.meta_description || ''
     form.status = props.can.publish ? post.status : (post.status === 'published' ? 'review' : post.status)
     form.published_at = post.published_at ? post.published_at.slice(0, 16) : ''
+    form._method = ''
+    if (coverUploadInput.value) coverUploadInput.value.value = null
+}
+
+const selectCoverUpload = (event) => {
+    form.cover_image_upload = event.target.files?.[0] || null
 }
 
 const submit = () => {
-    const options = { preserveScroll: true, onSuccess: resetForm }
+    const options = {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: resetForm,
+        onFinish: () => {
+            form._method = ''
+            if (coverUploadInput.value) coverUploadInput.value.value = null
+        },
+    }
 
-    editingPost.value
-        ? form.put(route('blogs.update', editingPost.value.id), options)
-        : form.post(route('blogs.store'), options)
+    if (editingPost.value) {
+        form._method = 'put'
+        form.post(route('blogs.update', editingPost.value.id), options)
+
+        return
+    }
+
+    form.post(route('blogs.store'), options)
 }
 
 const destroyPost = (post) => {
@@ -264,9 +289,20 @@ const applyFilters = () => {
                     </div>
 
                     <div>
-                        <label class="text-sm font-semibold text-primary">Cover Bild URL</label>
+                        <label class="text-sm font-semibold text-primary">Cover Bild</label>
                         <input v-model="form.cover_image" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="https://..." />
+                        <input
+                            ref="coverUploadInput"
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            class="mt-2 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:mr-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-2 file:text-sm file:font-semibold file:text-buttonTextPrimary"
+                            @change="selectCoverUpload"
+                        />
+                        <p class="mt-1 text-xs text-secondary">
+                            Empfohlenes Format: 1600 x 900 px im Querformat. Link einfuegen oder Bild hochladen. Wenn beides gesetzt ist, wird der Upload verwendet.
+                        </p>
                         <p v-if="form.errors.cover_image" class="mt-1 text-sm text-error">{{ form.errors.cover_image }}</p>
+                        <p v-if="form.errors.cover_image_upload" class="mt-1 text-sm text-error">{{ form.errors.cover_image_upload }}</p>
                     </div>
 
                     <div>

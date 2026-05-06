@@ -15,6 +15,7 @@ const emit = defineEmits(['close'])
 
 const page = usePage()
 const unreadNotificationsCount = computed(() => page.props.notificationCenter?.unread_count || 0)
+const unreadChatsCount = computed(() => page.props.unreadChatsCount || 0)
 const pendingFriendInvitationsCount = computed(() => page.props.friendCenter?.pending_received_count || 0)
 const { can, hasAny } = usePermissions()
 
@@ -78,7 +79,14 @@ const closeSidebar = () => {
             <NavItem v-if="can('workspaces.view')" @click="closeSidebar" :href="route('auth.workspaces.index')" label="Arbeitsbereiche" icon="las la-compass" />
             <NavItem v-if="can('team.index')" @click="closeSidebar" :href="route('auth.teams.index')" label="Teams" icon="las la-users" />
             <NavItem v-if="can('club-memberships.view')" @click="closeSidebar" :href="route('auth.club-memberships.index')" label="Mitglieder" icon="las la-id-card" />
-            <NavItem v-if="can('chat.view')" @click="closeSidebar" :href="route('auth.conversations.index')" label="Chat" icon="las la-comments" />
+            <NavItem
+                v-if="can('chat.view')"
+                @click="closeSidebar"
+                :href="route('auth.conversations.index')"
+                label="Chat"
+                icon="las la-comments"
+                :badge="unreadChatsCount || null"
+            />
             <NavItem v-if="can('feed.view')" @click="closeSidebar" :href="route('auth.feed.index')" label="Feed" icon="las la-newspaper" />
             <NavItem v-if="can('file.index')" @click="closeSidebar" :href="route('auth.files.index')" label="Dateien" icon="las la-folder-open" />
             <NavItem v-if="can('event.index')" @click="closeSidebar" :href="route('auth.events.index')" label="Events & Training" icon="las la-calendar" />
@@ -108,6 +116,7 @@ const closeSidebar = () => {
                 <NavItem v-if="can('users.view')" @click="closeSidebar" :href="route('members.index')" label="Users" icon="las la-user" />
                 <NavItem v-if="can('roles.manage')" @click="closeSidebar" :href="route('roles-permissions.index')" label="Rollen & Rechte" icon="las la-user-shield" />
                 <NavItem v-if="can('blog.view')" @click="closeSidebar" :href="route('blogs.index')" label="Blogs" icon="las la-pen-nib" />
+                <NavItem v-if="can('blog.view')" @click="closeSidebar" :href="route('admin.media-guidelines.index')" label="Bildmasse" icon="las la-ruler-combined" />
                 <NavItem v-if="can('payments.view')" @click="closeSidebar" :href="route('payments.index')" label="Payments" icon="las la-credit-card" />
                 <NavItem v-if="can('invoices.view')" @click="closeSidebar" :href="route('invoices.index')" label="Invoices" icon="las la-file-invoice" />
                 <NavItem v-if="can('subscriptions.view')" @click="closeSidebar" :href="route('admin.subscriptions.index')" label="Abos" icon="las la-tags" />

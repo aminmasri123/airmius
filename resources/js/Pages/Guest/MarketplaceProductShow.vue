@@ -46,6 +46,12 @@ const checkout = () => {
 
                 <div class="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
                     <article class="surface-card p-6">
+                        <div class="mb-6 overflow-hidden rounded-xl border border-border bg-inputBg">
+                            <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="aspect-[16/10] w-full object-cover" />
+                            <div v-else class="flex aspect-[16/10] items-center justify-center">
+                                <i class="las la-store text-7xl text-air-blue"></i>
+                            </div>
+                        </div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ product.category }}</p>
                         <h1 class="mt-2 font-heading text-4xl font-900 leading-tight text-primary">{{ product.title }}</h1>
                         <p class="mt-5 whitespace-pre-line text-sm leading-7 text-secondary">

@@ -7,6 +7,7 @@ use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\ClubVerificationController;
 use App\Http\Controllers\GamificationRuleController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\MediaGuidelineController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\ModerationController;
 use App\Http\Controllers\PaymentController;
@@ -76,6 +77,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/admin/blogs', [BlogPostController::class, 'store'])->middleware('can:blog.create')->name('blogs.store');
     Route::put('/admin/blogs/{blogPost}', [BlogPostController::class, 'update'])->middleware('can:blog.update')->name('blogs.update');
     Route::delete('/admin/blogs/{blogPost}', [BlogPostController::class, 'destroy'])->middleware('can:blog.delete')->name('blogs.destroy');
+    Route::get('/admin/media-guidelines', [MediaGuidelineController::class, 'index'])->middleware('can:blog.view')->name('admin.media-guidelines.index');
 
     // PAYMENTS
     Route::get('/admin/payments', [PaymentController::class, 'index'])->middleware('can:billing.manage')->name('payments.index');

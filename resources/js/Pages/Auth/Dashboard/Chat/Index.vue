@@ -400,6 +400,13 @@ const statusIconFor = (message) => {
 }
 
 const isOwnMessage = (message) => message.sender_id === authUser?.id
+const canDeleteMessage = (message) => {
+    if (!isOwnMessage(message) || !message.id || String(message.id).startsWith('local-')) {
+        return false
+    }
+
+    return !(message.receipts || []).some((receipt) => receipt.read_at)
+}
 
 const fileUrl = (file) => file?.url || (file?.path ? `${page.props.uploads?.url || '/storage'}/${file.path}` : '#')
 const fileThumbnailUrl = (file) => file?.thumbnail_url || (file?.thumbnail_path ? `${page.props.uploads?.url || '/storage'}/${file.thumbnail_path}` : null)
@@ -432,7 +439,7 @@ const markMessageDeleted = (messageId) => {
 }
 
 const deleteMessage = (message) => {
-    if (!message.id || String(message.id).startsWith('local-')) return
+    if (!canDeleteMessage(message)) return
 
     window.axios.delete(route('auth.messages.destroy', message.id))
         .then(() => markMessageDeleted(message.id))
@@ -722,13 +729,20 @@ onUnmounted(() => {
                                     {{ reaction }} {{ reactionCounts(message)[reaction] || '' }}
                                 </button>
                                 <button
-                                    v-if="isOwnMessage(message) && !String(message.id).startsWith('local-')"
+                                    v-if="canDeleteMessage(message)"
                                     type="button"
                                     class="ml-auto rounded border border-border/50 px-2 py-1 opacity-80"
                                     @click="deleteMessage(message)"
                                 >
                                     <i class="las la-trash"></i>
                                 </button>
+                                <span
+                                    v-else-if="isOwnMessage(message) && !String(message.id).startsWith('local-')"
+                                    class="ml-auto rounded border border-transparent px-2 py-1 text-secondary opacity-80"
+                                    title="Bereits gelesen - nicht mehr löschbar"
+                                >
+                                    <i class="las la-lock"></i>
+                                </span>
                                 <button
                                     v-else-if="!String(message.id).startsWith('local-')"
                                     type="button"

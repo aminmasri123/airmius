@@ -95,6 +95,8 @@ class MessageController extends Controller
                 'read_at' => now(),
             ]);
 
+        $this->markChatNotificationsAsRead($request, (int) $data['conversation_id']);
+
         return response()->json(['success' => true]);
     }
 
@@ -102,6 +104,11 @@ class MessageController extends Controller
     {
         abort_unless($message->conversation->users()->where('users.id', auth()->id())->exists(), 403);
         abort_unless($message->sender_id === auth()->id() || auth()->user()->can('user.manage'), 403);
+        abort_if(
+            $message->receipts()->whereNotNull('read_at')->exists(),
+            422,
+            'Diese Nachricht wurde bereits gelesen und kann nicht mehr gelöscht werden.'
+        );
 
         $message->load('attachments.file');
 
@@ -154,5 +161,15 @@ class MessageController extends Controller
             'success' => true,
             'reactions' => $message->reactions,
         ]);
+    }
+
+    private function markChatNotificationsAsRead(Request $request, int $conversationId): void
+    {
+        $request->user()
+            ->appNotifications()
+            ->where('type', 'chat.message')
+            ->where('read', false)
+            ->where('data->conversation_id', $conversationId)
+            ->update(['read' => true]);
     }
 }

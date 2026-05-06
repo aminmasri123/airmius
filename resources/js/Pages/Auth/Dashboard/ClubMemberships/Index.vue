@@ -28,6 +28,7 @@ const memberForms = ref({})
 const sepaSettingsForms = ref({})
 const datevSettingsForms = ref({})
 const datevExportForms = ref({})
+const membershipSettingsForms = ref({})
 const createEmailMemberRow = () => ({
     name: '',
     email: '',
@@ -55,9 +56,35 @@ const importForm = useForm({
 const bankImportForm = useForm({
     file: null,
 })
+const membershipTypeForm = useForm({
+    name: '',
+    slug: '',
+    description: '',
+    is_public: true,
+    is_active: true,
+    sort_order: 0,
+})
+const contributionRuleForm = useForm({
+    club_membership_type_id: '',
+    name: '',
+    valid_from: new Date().toISOString().slice(0, 10),
+    valid_until: '',
+    billing_interval: 'monthly',
+    amount: '',
+    age_min: '',
+    age_max: '',
+    factor_key: '',
+    factor_operator: '',
+    factor_value: '',
+    is_active: true,
+    notes: '',
+})
 
 const selectedClub = computed(() => props.clubs.find((club) => club.id === selectedClubId.value) || props.clubs[0] || null)
 const pendingRequests = computed(() => selectedClub.value?.pending_requests || [])
+const clubRequests = computed(() => selectedClub.value?.club_requests || [])
+const membershipTypes = computed(() => selectedClub.value?.membership_types || [])
+const contributionRules = computed(() => selectedClub.value?.contribution_rules || [])
 const capabilities = computed(() => selectedClub.value?.capabilities || {})
 const members = computed(() => selectedClub.value?.members || [])
 const externalMembers = computed(() => selectedClub.value?.external_members || [])
@@ -116,7 +143,8 @@ const filteredBankTransactions = computed(() => bankTransactions.value.filter((t
 
 const tabs = computed(() => [
     { key: 'members', label: 'Mitglieder', count: members.value.length + externalMembers.value.length, icon: 'las la-users' },
-    { key: 'requests', label: 'Anfragen', count: pendingRequests.value.length, icon: 'las la-user-plus' },
+    { key: 'requests', label: 'Anfragen', count: pendingRequests.value.length + clubRequests.value.length, icon: 'las la-user-plus' },
+    { key: 'rules', label: 'Beitragsregeln', count: contributionRules.value.length, icon: 'las la-sliders-h' },
     { key: 'invoices', label: 'Rechnungen', count: openInvoices.value.length, icon: 'las la-file-invoice' },
     { key: 'payments', label: 'Zahlungen', count: bankTransactions.value.length, icon: 'las la-university' },
     { key: 'exports', label: 'SEPA & DATEV', count: sepaReadyMembersCount.value, icon: 'las la-file-export' },
@@ -126,6 +154,7 @@ const statusLabel = (status) => ({
     active: 'Vereinsmitglied',
     non_member: 'Kein Vereinsmitglied',
     pending: 'In Prüfung',
+    paused: 'Pausiert',
     former: 'Ehemalig',
 }[status] || status)
 
@@ -133,6 +162,7 @@ const statusClass = (status) => ({
     active: 'bg-air-green/15 text-air-green',
     non_member: 'bg-muted text-secondary',
     pending: 'bg-air-blue/15 text-air-blue',
+    paused: 'bg-warning/10 text-warning',
     former: 'bg-error/10 text-error',
 }[status] || 'bg-muted text-secondary')
 
@@ -158,6 +188,7 @@ const formFor = (member) => {
     memberForms.value[member.id] ??= {
         role: member.pivot.role || 'member',
         membership_status: member.pivot.membership_status || 'non_member',
+        club_membership_type_id: member.pivot.club_membership_type_id || '',
         member_number: member.pivot.member_number || '',
         athlete_license_number: member.athlete_license_number || '',
         contribution_amount: member.pivot.contribution_amount || '',
@@ -222,6 +253,21 @@ const saveDatevSettings = () => {
     })
 }
 
+const membershipSettingsFor = (club) => {
+    membershipSettingsForms.value[club.id] ??= {
+        membership_requests_enabled: Boolean(club.membership_requests_enabled),
+        member_pause_requests_enabled: Boolean(club.member_pause_requests_enabled),
+    }
+
+    return membershipSettingsForms.value[club.id]
+}
+
+const saveMembershipSettings = () => {
+    router.put(route('auth.club-memberships.settings.update', selectedClub.value.id), membershipSettingsFor(selectedClub.value), {
+        preserveScroll: true,
+    })
+}
+
 const datevExportUrl = computed(() => {
     if (!selectedClub.value) return '#'
 
@@ -245,6 +291,28 @@ const approveRequest = (request) => {
 
 const declineRequest = (request) => {
     router.post(route('auth.team-join-requests.decline', request.id), {}, { preserveScroll: true })
+}
+
+const approveClubRequest = (request) => {
+    router.post(route('auth.club-membership-requests.approve', request.id), {}, { preserveScroll: true })
+}
+
+const declineClubRequest = (request) => {
+    router.post(route('auth.club-membership-requests.decline', request.id), {}, { preserveScroll: true })
+}
+
+const storeMembershipType = () => {
+    membershipTypeForm.post(route('auth.club-memberships.types.store', selectedClub.value.id), {
+        preserveScroll: true,
+        onSuccess: () => membershipTypeForm.reset('name', 'slug', 'description'),
+    })
+}
+
+const storeContributionRule = () => {
+    contributionRuleForm.post(route('auth.club-memberships.contribution-rules.store', selectedClub.value.id), {
+        preserveScroll: true,
+        onSuccess: () => contributionRuleForm.reset('name', 'amount', 'valid_until', 'age_min', 'age_max', 'factor_key', 'factor_operator', 'factor_value', 'notes'),
+    })
 }
 
 const saveMember = (member) => {
@@ -557,6 +625,35 @@ const inviteExternalMember = (member) => {
                 </div>
 
                 <div class="mt-4 space-y-3">
+                    <article v-for="request in clubRequests" :key="`club-${request.id}`" class="rounded-lg border border-air-blue/30 bg-air-blue/5 p-4">
+                        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <p class="font-semibold text-primary">{{ request.user.name }}</p>
+                                <p class="text-sm text-secondary">
+                                    {{ request.user.email }}
+                                    <span v-if="request.type === 'pause'">moechte die Mitgliedschaft pausieren</span>
+                                    <span v-else>moechte Vereinsmitglied werden</span>
+                                </p>
+                                <p v-if="request.membership_type" class="mt-1 text-xs text-secondary">
+                                    Typ: {{ request.membership_type.name }} · Vorschau {{ formatMoney(request.preview_amount) }} / {{ intervalLabel(request.preview_interval) }}
+                                </p>
+                                <p v-if="request.requested_pause_from" class="mt-1 text-xs text-secondary">
+                                    Pause: {{ formatDate(request.requested_pause_from) }} bis {{ formatDate(request.requested_pause_until) }}
+                                </p>
+                                <p v-if="request.message" class="mt-2 text-sm text-secondary">{{ request.message }}</p>
+                            </div>
+
+                            <div class="flex gap-2">
+                                <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="approveClubRequest(request)">
+                                    Annehmen
+                                </button>
+                                <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="declineClubRequest(request)">
+                                    Ablehnen
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+
                     <article v-for="request in pendingRequests" :key="request.id" class="rounded-lg border border-border bg-bg p-4">
                         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                             <div>
@@ -577,10 +674,102 @@ const inviteExternalMember = (member) => {
                         </div>
                     </article>
 
-                    <p v-if="!pendingRequests.length" class="rounded-lg border border-border bg-bg p-4 text-sm text-secondary">
+                    <p v-if="!pendingRequests.length && !clubRequests.length" class="rounded-lg border border-border bg-bg p-4 text-sm text-secondary">
                         Keine offenen Anfragen.
                     </p>
                 </div>
+            </section>
+
+            <section v-if="activeTab === 'rules'" class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+                <div class="space-y-6">
+                    <section class="surface-card p-5">
+                        <h2 class="text-lg font-semibold text-primary">Online-Anfragen</h2>
+                        <form class="mt-4 grid gap-3 md:grid-cols-3" @submit.prevent="saveMembershipSettings">
+                            <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
+                                <input v-model="membershipSettingsFor(selectedClub).membership_requests_enabled" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                                <span>
+                                    <span class="block font-semibold">Mitgliedsanfragen erlauben</span>
+                                    <span class="block text-secondary">Interessenten sehen die Beitragstypen und koennen eine Anfrage stellen.</span>
+                                </span>
+                            </label>
+                            <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
+                                <input v-model="membershipSettingsFor(selectedClub).member_pause_requests_enabled" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                                <span>
+                                    <span class="block font-semibold">Pausen-Anfragen erlauben</span>
+                                    <span class="block text-secondary">Mitglieder koennen eine Pause beantragen; der Verein entscheidet.</span>
+                                </span>
+                            </label>
+                            <div class="flex items-end">
+                                <button class="w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary">Speichern</button>
+                            </div>
+                        </form>
+                    </section>
+
+                    <section class="surface-card p-5">
+                        <h2 class="text-lg font-semibold text-primary">Historische Beitragsregeln</h2>
+                        <div class="mt-4 space-y-3">
+                            <article v-for="rule in contributionRules" :key="rule.id" class="rounded-lg border border-border bg-bg p-4">
+                                <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                                    <div>
+                                        <p class="font-semibold text-primary">{{ rule.name }}</p>
+                                        <p class="text-sm text-secondary">
+                                            {{ rule.membership_type_name || 'Alle Typen' }} · {{ formatMoney(rule.amount) }} / {{ intervalLabel(rule.billing_interval) }}
+                                        </p>
+                                        <p class="mt-1 text-xs text-secondary">
+                                            Gilt {{ formatDate(rule.valid_from) }} bis {{ formatDate(rule.valid_until) }}
+                                            <span v-if="rule.age_min || rule.age_max"> · Alter {{ rule.age_min || 0 }}-{{ rule.age_max || 'offen' }}</span>
+                                        </p>
+                                    </div>
+                                    <span class="rounded-full px-2 py-1 text-xs font-semibold" :class="rule.is_active ? 'bg-air-green/15 text-air-green' : 'bg-muted text-secondary'">
+                                        {{ rule.is_active ? 'aktiv' : 'inaktiv' }}
+                                    </span>
+                                </div>
+                            </article>
+                            <p v-if="!contributionRules.length" class="rounded-lg border border-border bg-bg p-4 text-sm text-secondary">Noch keine Beitragsregeln.</p>
+                        </div>
+                    </section>
+                </div>
+
+                <aside class="space-y-6">
+                    <section class="surface-card p-5">
+                        <h2 class="text-lg font-semibold text-primary">Mitgliedschaftstyp</h2>
+                        <form class="mt-4 grid gap-3" @submit.prevent="storeMembershipType">
+                            <input v-model="membershipTypeForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="z. B. Jugendmitglied" required>
+                            <input v-model="membershipTypeForm.slug" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="slug optional">
+                            <textarea v-model="membershipTypeForm.description" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung"></textarea>
+                            <label class="flex items-center gap-2 text-sm text-primary"><input v-model="membershipTypeForm.is_public" type="checkbox" class="rounded border-border bg-inputBg"> Oeffentlich sichtbar</label>
+                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Typ speichern</button>
+                        </form>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <span v-for="type in membershipTypes" :key="type.id" class="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-secondary">{{ type.name }}</span>
+                        </div>
+                    </section>
+
+                    <section class="surface-card p-5">
+                        <h2 class="text-lg font-semibold text-primary">Neue Beitragsregel</h2>
+                        <form class="mt-4 grid gap-3" @submit.prevent="storeContributionRule">
+                            <select v-model="contributionRuleForm.club_membership_type_id" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                                <option value="">Alle Typen</option>
+                                <option v-for="type in membershipTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
+                            </select>
+                            <input v-model="contributionRuleForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Regelname" required>
+                            <input v-model="contributionRuleForm.amount" type="number" min="0" step="0.01" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beitrag EUR" required>
+                            <select v-model="contributionRuleForm.billing_interval" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                                <option v-for="interval in contributionIntervals" :key="interval" :value="interval">{{ intervalLabel(interval) }}</option>
+                            </select>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input v-model="contributionRuleForm.valid_from" type="date" class="rounded-lg border-border bg-inputBg text-sm text-primary" required>
+                                <input v-model="contributionRuleForm.valid_until" type="date" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input v-model="contributionRuleForm.age_min" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter von">
+                                <input v-model="contributionRuleForm.age_max" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter bis">
+                            </div>
+                            <textarea v-model="contributionRuleForm.notes" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Notiz"></textarea>
+                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Regel speichern</button>
+                        </form>
+                    </section>
+                </aside>
             </section>
 
             <section v-if="activeTab === 'members'" class="surface-card overflow-hidden">
@@ -663,6 +852,14 @@ const inviteExternalMember = (member) => {
                                 <label class="text-xs font-semibold uppercase text-secondary">Mitgliedschaft</label>
                                 <select v-model="formFor(member).membership_status" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                                     <option v-for="status in membershipStatuses" :key="status" :value="status">{{ statusLabel(status) }}</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-semibold uppercase text-secondary">Mitgliedschaftstyp</label>
+                                <select v-model="formFor(member).club_membership_type_id" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                    <option value="">Kein Typ</option>
+                                    <option v-for="type in membershipTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
                                 </select>
                             </div>
 

@@ -267,6 +267,7 @@ class AdminCommerceController extends Controller
         return $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
+            'image_url' => ['nullable', 'url', 'max:2048'],
             'category' => ['required', 'string', 'max:50'],
             'price_cents' => ['required', 'integer', 'min:0'],
             'currency' => ['required', 'string', 'size:3'],

@@ -177,6 +177,7 @@ class CommerceCheckoutController extends Controller
             'club_id' => ['nullable', Rule::exists('clubs', 'id')],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
+            'image_url' => ['nullable', 'url', 'max:2048'],
             'category' => ['required', Rule::in(['product', 'course', 'camp', 'service'])],
             'price_cents' => ['required', 'integer', 'min:0'],
         ]);

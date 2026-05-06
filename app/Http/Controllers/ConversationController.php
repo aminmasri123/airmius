@@ -215,6 +215,13 @@ class ConversationController extends Controller
                     'delivered_at' => now(),
                     'read_at' => now(),
                 ]);
+
+            auth()->user()
+                ->appNotifications()
+                ->where('type', 'chat.message')
+                ->where('read', false)
+                ->where('data->conversation_id', $selectedConversation->id)
+                ->update(['read' => true]);
         }
 
         $selectedConversation?->load([

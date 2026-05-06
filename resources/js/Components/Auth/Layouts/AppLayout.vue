@@ -31,6 +31,7 @@ let searchTimeout = null
 
 const serverUnreadCount = computed(() => page.props.notificationCenter?.unread_count || 0)
 const unreadCount = computed(() => notificationsMarkedReadLocally.value ? 0 : serverUnreadCount.value)
+const unreadChatsCount = computed(() => page.props.unreadChatsCount || 0)
 const latestNotifications = computed(() => {
     const notifications = page.props.notificationCenter?.latest || []
 
@@ -371,6 +372,12 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                         <!-- Chats -->
                         <Link href="/conversations" class="relative rounded-lg p-2 hover:bg-muted">
                             <i class="las la-comments text-xl"></i>
+                            <span
+                                v-if="unreadChatsCount"
+                                class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white"
+                            >
+                                {{ unreadChatsCount > 99 ? '99+' : unreadChatsCount }}
+                            </span>
                         </Link>
 
                         <!-- Notifications -->

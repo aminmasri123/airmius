@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\BlogPost;
+use App\Services\MediaOptimizer;
+use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
@@ -10,6 +12,10 @@ use Inertia\Inertia;
 
 class BlogPostController extends Controller
 {
+    public function __construct(private MediaOptimizer $mediaOptimizer)
+    {
+    }
+
     public function index(Request $request)
     {
         $this->authorizeBlog($request, 'blog.view');
@@ -48,6 +54,7 @@ class BlogPostController extends Controller
 
         $data = $this->validated($request);
         $data['author_id'] = $request->user()->id;
+        $data = $this->prepareCoverImage($request, $data);
         $data = $this->preparePublishingData($request, $data);
 
         BlogPost::create($data);
@@ -60,6 +67,7 @@ class BlogPostController extends Controller
         $this->authorizeBlog($request, 'blog.update');
 
         $data = $this->validated($request, $blogPost);
+        $data = $this->prepareCoverImage($request, $data);
         $data = $this->preparePublishingData($request, $data, $blogPost);
 
         $blogPost->update($data);
@@ -114,6 +122,7 @@ class BlogPostController extends Controller
             'excerpt' => ['nullable', 'string', 'max:500'],
             'content' => ['required', 'string'],
             'cover_image' => ['nullable', 'url', 'max:2048'],
+            'cover_image_upload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
             'category' => ['nullable', 'string', 'max:120'],
             'tags' => ['nullable', 'string', 'max:500'],
             'meta_title' => ['nullable', 'string', 'max:255'],
@@ -129,6 +138,20 @@ class BlogPostController extends Controller
             ->unique()
             ->values()
             ->all();
+
+        return $data;
+    }
+
+    private function prepareCoverImage(Request $request, array $data): array
+    {
+        unset($data['cover_image_upload']);
+
+        if (! $request->hasFile('cover_image_upload')) {
+            return $data;
+        }
+
+        $stored = $this->mediaOptimizer->store($request->file('cover_image_upload'), 'blog/covers');
+        $data['cover_image'] = UploadStorage::url($stored['path']);
 
         return $data;
     }

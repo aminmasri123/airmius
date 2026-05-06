@@ -27,6 +27,7 @@ const productForm = useForm({
     club_id: '',
     title: '',
     description: '',
+    image_url: '',
     category: 'product',
     price_cents: 0,
 })
@@ -93,7 +94,7 @@ const activeOrders = computed(() => props.orders.filter((order) => ['pending', '
 
 const storeProduct = () => productForm.post(route('auth.commerce.products.store'), {
     preserveScroll: true,
-    onSuccess: () => productForm.reset('title', 'description'),
+    onSuccess: () => productForm.reset('title', 'description', 'image_url'),
 })
 
 const storeCampaign = () => campaignForm.post(route('auth.commerce.campaigns.store'), {
@@ -191,7 +192,14 @@ const reportIssue = (order) => {
                 <p class="mt-1 text-sm text-secondary">Produkte, Kurse, Camps und Services kaufen oder reservieren.</p>
             </div>
             <div class="grid gap-4 p-5 lg:grid-cols-3">
-                <article v-for="product in products" :key="product.id" class="rounded-lg border border-border bg-bg p-4">
+                <article v-for="product in products" :key="product.id" class="overflow-hidden rounded-lg border border-border bg-bg">
+                    <div class="aspect-[4/3] bg-inputBg">
+                        <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover" />
+                        <div v-else class="flex h-full items-center justify-center">
+                            <i class="las la-store text-5xl text-air-blue"></i>
+                        </div>
+                    </div>
+                    <div class="p-4">
                     <p class="text-xs uppercase text-secondary">{{ product.category }}</p>
                     <h3 class="mt-1 font-semibold text-primary">{{ product.title }}</h3>
                     <p class="mt-2 min-h-12 text-sm text-secondary">{{ product.description }}</p>
@@ -203,6 +211,7 @@ const reportIssue = (order) => {
                                 Kaufen
                             </button>
                         </div>
+                    </div>
                     </div>
                 </article>
                 <p v-if="!products.length" class="text-sm text-secondary">Noch keine öffentlichen Marketplace-Produkte.</p>
@@ -243,6 +252,7 @@ const reportIssue = (order) => {
                         <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
                     </select>
                     <input v-model="productForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Titel">
+                    <input v-model="productForm.image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Produktbild URL, empfohlen 1200 x 1200 px">
                     <select v-model="productForm.category" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                         <option value="product">Produkt</option>
                         <option value="course">Kurs</option>

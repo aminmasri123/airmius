@@ -1,5 +1,5 @@
 <script setup>
-import { Link, router, usePage } from '@inertiajs/vue3'
+import { Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
@@ -25,6 +25,11 @@ const form = ref({
 const { t, te } = useI18n()
 const initials = (name) => (name || '?').split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
 const page = usePage()
+const selectedClub = ref(null)
+const requestForm = useForm({
+    club_membership_type_id: '',
+    message: '',
+})
 const storageUrl = (path) => path?.startsWith('http') ? path : `${page.props.uploads?.url || '/storage'}/${path}`
 const sportLabel = (value) => {
     if (!value) return 'Sportart offen'
@@ -44,6 +49,40 @@ const search = () => {
     }, {
         preserveState: true,
         replace: true,
+    })
+}
+
+const intervalLabel = (interval) => ({
+    monthly: 'Monat',
+    quarterly: 'Quartal',
+    yearly: 'Jahr',
+    once: 'einmalig',
+    none: 'kein Beitrag',
+}[interval] || interval)
+
+const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: 'EUR',
+}).format(Number(value || 0))
+
+const openMembershipRequest = (club) => {
+    if (!page.props.auth?.user) {
+        router.visit(route('login'))
+        return
+    }
+
+    selectedClub.value = club
+    requestForm.club_membership_type_id = club.membership_types?.[0]?.id || ''
+    requestForm.message = ''
+}
+
+const submitMembershipRequest = () => {
+    requestForm.post(route('auth.club-membership-requests.store', selectedClub.value.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            selectedClub.value = null
+            requestForm.reset()
+        },
     })
 }
 </script>
@@ -99,9 +138,19 @@ const search = () => {
                     </div>
                     <div class="mt-4 flex items-center justify-between">
                         <span class="text-sm text-secondary">{{ club.teams_count }} Teams</span>
-                        <Link :href="route('login')" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted">
-                            Ansehen
-                        </Link>
+                        <div class="flex gap-2">
+                            <button
+                                v-if="club.membership_requests_enabled"
+                                type="button"
+                                class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary"
+                                @click="openMembershipRequest(club)"
+                            >
+                                Mitgliedschaft anfragen
+                            </button>
+                            <Link :href="route('login')" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted">
+                                Ansehen
+                            </Link>
+                        </div>
                     </div>
                 </article>
 
@@ -110,6 +159,52 @@ const search = () => {
                 </div>
             </section>
         </main>
+
+        <div v-if="selectedClub" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 px-4">
+            <form class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-2xl" @submit.prevent="submitMembershipRequest">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Mitgliedsantrag</p>
+                        <h2 class="mt-1 text-xl font-bold text-primary">{{ selectedClub.name }}</h2>
+                    </div>
+                    <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted" @click="selectedClub = null">
+                        <i class="las la-times text-xl"></i>
+                    </button>
+                </div>
+
+                <div class="mt-4 space-y-3">
+                    <label class="block">
+                        <span class="text-sm font-semibold text-primary">Mitgliedschaftstyp</span>
+                        <select v-model="requestForm.club_membership_type_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                            <option value="">Allgemeine Anfrage</option>
+                            <option v-for="type in selectedClub.membership_types" :key="type.id" :value="type.id">
+                                {{ type.name }}
+                                <template v-if="type.amount !== null && type.amount !== undefined">
+                                    - {{ formatMoney(type.amount) }} / {{ intervalLabel(type.billing_interval) }}
+                                </template>
+                            </option>
+                        </select>
+                    </label>
+
+                    <div v-if="selectedClub.membership_types?.length" class="rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
+                        <p v-for="type in selectedClub.membership_types" :key="type.id" class="py-1">
+                            <span class="font-semibold text-primary">{{ type.name }}:</span>
+                            <span v-if="type.amount !== null && type.amount !== undefined">{{ formatMoney(type.amount) }} / {{ intervalLabel(type.billing_interval) }}</span>
+                            <span v-else>Beitrag nach Ruecksprache</span>
+                        </p>
+                    </div>
+
+                    <label class="block">
+                        <span class="text-sm font-semibold text-primary">Nachricht</span>
+                        <textarea v-model="requestForm.message" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Warum moechtest du Mitglied werden?"></textarea>
+                    </label>
+                </div>
+
+                <button class="mt-5 w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary" :disabled="requestForm.processing">
+                    Anfrage senden
+                </button>
+            </form>
+        </div>
 
         <Footer />
     </div>

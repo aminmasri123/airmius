@@ -50,6 +50,8 @@ class Club extends Model
         'datev_client_number',
         'datev_revenue_account',
         'datev_bank_account',
+        'membership_requests_enabled',
+        'member_pause_requests_enabled',
         'logo',
         'cover_image',
         'country',
@@ -65,6 +67,8 @@ class Club extends Model
     {
         return [
             'is_official' => 'boolean',
+            'membership_requests_enabled' => 'boolean',
+            'member_pause_requests_enabled' => 'boolean',
             'verification_requested_at' => 'datetime',
             'verified_at' => 'datetime',
             'rejected_at' => 'datetime',
@@ -107,6 +111,7 @@ class Club extends Model
             ->withPivot([
                 'role',
                 'membership_status',
+                'club_membership_type_id',
                 'member_number',
                 'contribution_amount',
                 'contribution_interval',
@@ -119,6 +124,9 @@ class Club extends Model
                 'sepa_mandate_active',
                 'joined_on',
                 'membership_ends_on',
+                'pause_requested_at',
+                'paused_from',
+                'paused_until',
                 'membership_end_notified_at',
                 'membership_notes',
             ])
@@ -133,6 +141,21 @@ class Club extends Model
     public function teams()
     {
         return $this->hasMany(Team::class);
+    }
+
+    public function membershipTypes()
+    {
+        return $this->hasMany(ClubMembershipType::class);
+    }
+
+    public function contributionRules()
+    {
+        return $this->hasMany(ClubContributionRule::class);
+    }
+
+    public function membershipRequests()
+    {
+        return $this->hasMany(ClubMembershipRequest::class);
     }
 
     public function sponsors()

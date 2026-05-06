@@ -142,6 +142,7 @@ class ClubController extends Controller
                 'users_count' => $club->users_count,
                 'teams_count' => $club->teams_count,
                 'posts_count' => $club->posts_count,
+                'member_pause_requests_enabled' => $club->member_pause_requests_enabled,
                 'admins' => $club->admins,
                 'members' => $club->users,
                 'teams' => $club->teams,

@@ -112,6 +112,13 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::post('/clubs/{club}/membership/email-members', [ClubMembershipController::class, 'storeEmailMember'])->name('auth.club-memberships.email-members.store');
     Route::post('/clubs/{club}/membership/email-members/import', [ClubMembershipController::class, 'importEmailMembers'])->name('auth.club-memberships.email-members.import');
     Route::put('/clubs/{club}/membership/sepa-settings', [ClubMembershipController::class, 'updateSepaSettings'])->name('auth.club-memberships.sepa-settings.update');
+    Route::put('/clubs/{club}/membership/settings', [ClubMembershipController::class, 'updateMembershipSettings'])->name('auth.club-memberships.settings.update');
+    Route::post('/clubs/{club}/membership/types', [ClubMembershipController::class, 'storeMembershipType'])->name('auth.club-memberships.types.store');
+    Route::post('/clubs/{club}/membership/contribution-rules', [ClubMembershipController::class, 'storeContributionRule'])->name('auth.club-memberships.contribution-rules.store');
+    Route::post('/clubs/{club}/membership-requests', [ClubMembershipController::class, 'storeMembershipRequest'])->name('auth.club-membership-requests.store');
+    Route::post('/clubs/{club}/membership-pause-requests', [ClubMembershipController::class, 'storePauseRequest'])->name('auth.club-membership-pause-requests.store');
+    Route::post('/club-membership-requests/{membershipRequest}/approve', [ClubMembershipController::class, 'approveClubRequest'])->name('auth.club-membership-requests.approve');
+    Route::post('/club-membership-requests/{membershipRequest}/decline', [ClubMembershipController::class, 'declineClubRequest'])->name('auth.club-membership-requests.decline');
     Route::get('/clubs/{club}/membership/sepa-export', [ClubMembershipController::class, 'exportSepaDebit'])->name('auth.club-memberships.sepa-export');
     Route::post('/club-external-members/{externalMember}/invite', [ClubMembershipController::class, 'inviteEmailMember'])->name('auth.club-memberships.email-members.invite');
     Route::get('/club-member-invitations/token/{token}/accept', [ClubMembershipController::class, 'acceptExternalInvitation'])->name('auth.club-member-invitations.accept');

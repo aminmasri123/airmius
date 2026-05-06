@@ -46,6 +46,7 @@ const addonForm = useForm({
 const productForm = useForm({
     title: '',
     description: '',
+    image_url: '',
     category: 'product',
     price_cents: 0,
     currency: 'EUR',
@@ -101,7 +102,7 @@ const storeAddon = () => addonForm.post(route('admin.commerce.addons.store'), {
 
 const storeProduct = () => productForm.post(route('admin.commerce.products.store'), {
     preserveScroll: true,
-    onSuccess: () => productForm.reset('title', 'description'),
+    onSuccess: () => productForm.reset('title', 'description', 'image_url'),
 })
 
 const updateProductStatus = (product, status) => {
@@ -116,6 +117,7 @@ const updateProductStatus = (product, status) => {
     router.put(route('admin.commerce.products.update', product.id), {
         title: product.title,
         description: product.description,
+        image_url: product.image_url,
         category: product.category,
         price_cents: product.price_cents,
         currency: product.currency,
@@ -262,6 +264,7 @@ const updatePayoutProfile = (profile, status) => {
                 <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeProduct">
                     <input v-model="productForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Titel">
                     <input v-model="productForm.price_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis Cent">
+                    <input v-model="productForm.image_url" type="url" class="md:col-span-2 rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Produktbild URL, empfohlen 1200 x 1200 px">
                     <select v-model="productForm.category" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                         <option value="product">Produkt</option>
                         <option value="course">Kurs</option>
@@ -279,6 +282,12 @@ const updatePayoutProfile = (profile, status) => {
                 <div class="mt-5 space-y-3">
                     <div v-for="product in products" :key="product.id" class="rounded-lg border border-border p-3">
                         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                            <div class="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-inputBg">
+                                <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover" />
+                                <div v-else class="flex h-full items-center justify-center">
+                                    <i class="las la-store text-2xl text-air-blue"></i>
+                                </div>
+                            </div>
                             <div>
                                 <p class="font-semibold text-primary">{{ product.title }}</p>
                                 <p class="text-xs text-secondary">{{ product.status }} · {{ product.moderation_status }} · {{ formatMoney(product.price_cents) }}</p>

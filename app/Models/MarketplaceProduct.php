@@ -14,6 +14,7 @@ class MarketplaceProduct extends Model
         'club_id',
         'title',
         'description',
+        'image_url',
         'category',
         'price_cents',
         'currency',

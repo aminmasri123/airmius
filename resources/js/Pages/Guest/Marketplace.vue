@@ -142,8 +142,11 @@ const searchCategory = (category) => {
                             :href="heroProduct.show_url"
                             class="flex flex-col justify-between border-l border-white/10 bg-black/20 p-5 text-white transition hover:bg-black/30"
                         >
-                            <div class="flex h-28 items-center justify-center rounded-xl bg-white/10">
-                                <i :class="[heroProduct.visual_icon, 'text-6xl text-white']"></i>
+                            <div class="h-36 overflow-hidden rounded-xl bg-white/10">
+                                <img v-if="heroProduct.image_url" :src="heroProduct.image_url" :alt="heroProduct.title" class="h-full w-full object-cover" />
+                                <div v-else class="flex h-full items-center justify-center">
+                                    <i :class="[heroProduct.visual_icon, 'text-6xl text-white']"></i>
+                                </div>
                             </div>
                             <div>
                                 <p class="mt-4 text-xs font-bold uppercase tracking-wide text-cyan-100">{{ heroProduct.badge }}</p>
@@ -165,8 +168,11 @@ const searchCategory = (category) => {
                                 :href="product.show_url"
                                 class="flex gap-3 rounded-lg p-2 transition hover:bg-muted"
                             >
-                                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-inputBg">
-                                    <i :class="[product.visual_icon, 'text-2xl text-air-blue']"></i>
+                                <div class="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-inputBg">
+                                    <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover" />
+                                    <div v-else class="flex h-full items-center justify-center">
+                                        <i :class="[product.visual_icon, 'text-2xl text-air-blue']"></i>
+                                    </div>
                                 </div>
                                 <div class="min-w-0">
                                     <p class="truncate text-sm font-semibold text-primary">{{ product.title }}</p>
@@ -203,8 +209,11 @@ const searchCategory = (category) => {
                         :href="product.show_url"
                         class="rounded-xl border border-border bg-card p-4 transition hover:-translate-y-0.5 hover:border-air-blue/60"
                     >
-                        <div class="flex h-24 items-center justify-center rounded-lg bg-inputBg">
-                            <i :class="[product.visual_icon, 'text-5xl text-air-blue']"></i>
+                        <div class="h-32 overflow-hidden rounded-lg bg-inputBg">
+                            <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition duration-300 hover:scale-105" />
+                            <div v-else class="flex h-full items-center justify-center">
+                                <i :class="[product.visual_icon, 'text-5xl text-air-blue']"></i>
+                            </div>
                         </div>
                         <p class="mt-3 text-xs font-semibold uppercase tracking-wide text-air-blue">{{ product.badge }}</p>
                         <h3 class="mt-1 line-clamp-2 min-h-[2.5rem] text-sm font-bold text-primary">{{ product.title }}</h3>
@@ -265,10 +274,16 @@ const searchCategory = (category) => {
                         class="group overflow-hidden rounded-xl border border-border bg-card transition hover:-translate-y-0.5 hover:border-air-blue/60"
                     >
                         <Link :href="product.show_url" class="block">
-                            <div class="relative flex aspect-square items-center justify-center bg-inputBg">
-                                <i :class="[product.visual_icon, 'text-6xl text-air-blue']"></i>
+                            <div class="relative aspect-square overflow-hidden bg-inputBg">
+                                <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                                <div v-else class="flex h-full items-center justify-center">
+                                    <i :class="[product.visual_icon, 'text-6xl text-air-blue']"></i>
+                                </div>
                                 <span class="absolute left-2 top-2 rounded-full bg-card/90 px-2 py-1 text-[11px] font-bold text-air-blue">
                                     {{ product.badge }}
+                                </span>
+                                <span class="absolute bottom-2 right-2 rounded-full bg-black/65 px-2 py-1 text-[11px] font-semibold text-white">
+                                    {{ categoryLabels[product.category] || product.category }}
                                 </span>
                             </div>
 
