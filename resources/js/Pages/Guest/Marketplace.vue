@@ -18,12 +18,14 @@ const props = defineProps({
     sportCategories: { type: Array, default: () => [] },
     officialStores: { type: Array, default: () => [] },
     categories: { type: Array, default: () => [] },
+    segments: { type: Array, default: () => [] },
     filters: { type: Object, default: () => ({}) },
 })
 
 const form = ref({
     search: props.filters.search || '',
     category: props.filters.category || '',
+    segment: props.filters.segment || '',
 })
 
 const categoryLabels = {
@@ -40,6 +42,28 @@ const totalProducts = computed(() => props.products?.total || productItems.value
 const heroProduct = computed(() => props.featuredProducts[0] || props.flashDeals[0] || productItems.value[0] || null)
 const heroSideProducts = computed(() => (props.featuredProducts.length ? props.featuredProducts : props.flashDeals).slice(1, 4))
 const sideBannerUrl = '/images/marketplace/airmius-marketplace-side-banner.png'
+const activeSegment = computed(() => props.segments.find((segment) => segment.value === form.value.segment) || props.segments[0] || null)
+const segmentLookup = computed(() => Object.fromEntries(props.segments.map((segment) => [segment.value || 'all', segment])))
+const productGroups = computed(() => {
+    const groups = productItems.value.reduce((carry, product) => {
+        const key = product.segment || 'equipment'
+
+        if (!carry[key]) {
+            carry[key] = []
+        }
+
+        carry[key].push(product)
+
+        return carry
+    }, {})
+
+    return Object.entries(groups).map(([key, items]) => ({
+        key,
+        label: segmentLookup.value[key]?.label || categoryLabels[items[0]?.category] || 'Angebote',
+        icon: segmentLookup.value[key]?.icon || 'las la-shopping-bag',
+        items,
+    }))
+})
 
 const quickTiles = computed(() => [
     { label: 'Flash Deals', hint: 'Heute beliebt', icon: 'las la-bolt', category: '', search: '' },
@@ -66,6 +90,7 @@ const search = () => {
     router.get(route('guest.marketplace'), {
         search: form.value.search || undefined,
         category: form.value.category || undefined,
+        segment: form.value.segment || undefined,
     }, {
         preserveScroll: true,
         preserveState: true,
@@ -76,18 +101,26 @@ const search = () => {
 const reset = () => {
     form.value.search = ''
     form.value.category = ''
+    form.value.segment = ''
     search()
 }
 
 const searchCategory = (category) => {
     form.value.search = category.query || ''
     form.value.category = ''
+    form.value.segment = ''
     search()
 }
 
 const selectQuickTile = (tile) => {
     form.value.search = tile.search || ''
     form.value.category = tile.category || ''
+    form.value.segment = tile.segment || ''
+    search()
+}
+
+const selectSegment = (segment) => {
+    form.value.segment = segment.value || ''
     search()
 }
 </script>
@@ -119,7 +152,7 @@ const selectQuickTile = (tile) => {
             </div>
         </aside>
 
-        <main class="relative z-10 pb-24 pt-0 md:pb-14 xl:pr-24">
+        <main class="relative z-10 pb-24 pt-0 md:pb-14 xl:mx-[16vw] xl:pr-24">
             <section class="border-b border-border bg-card px-4 py-3 shadow-sm">
                 <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 overflow-hidden rounded-lg bg-buttonPrimary px-5 py-3 text-buttonTextPrimary">
                     <div class="flex min-w-0 items-center gap-3">
@@ -142,10 +175,15 @@ const selectQuickTile = (tile) => {
             </section>
 
             <section class="bg-card px-4 py-4 shadow-sm">
-                <form class="mx-auto grid max-w-7xl gap-3 md:grid-cols-[13rem_1fr_8rem_6rem]" @submit.prevent="search">
+                <form class="mx-auto grid max-w-7xl gap-3 md:grid-cols-[13rem_12rem_1fr_8rem_6rem]" @submit.prevent="search">
                     <select v-model="form.category" class="h-12 rounded-md border-border bg-inputBg text-sm text-primary">
                         <option v-for="category in categories" :key="category.value" :value="category.value">
                             {{ category.label }}
+                        </option>
+                    </select>
+                    <select v-model="form.segment" class="h-12 rounded-md border-border bg-inputBg text-sm text-primary">
+                        <option v-for="segment in segments" :key="segment.value || 'all'" :value="segment.value">
+                            {{ segment.label }}
                         </option>
                     </select>
                     <div class="relative">
@@ -257,6 +295,31 @@ const selectQuickTile = (tile) => {
                             <span class="block truncate text-xs text-secondary">{{ tile.hint }}</span>
                         </span>
                     </button>
+                </div>
+            </section>
+
+            <section class="mx-auto mt-4 max-w-7xl px-4">
+                <div class="rounded bg-card p-3 shadow-sm">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-sm font-black text-primary">Produktbereiche</h2>
+                            <p class="text-xs text-secondary">Aktiv: {{ activeSegment?.label || 'Alle Bereiche' }}</p>
+                        </div>
+                        <button class="text-xs font-bold text-buttonPrimary" @click="selectSegment({ value: '' })">Alle anzeigen</button>
+                    </div>
+                    <div class="mt-3 flex gap-2 overflow-x-auto pb-1">
+                        <button
+                            v-for="segment in segments"
+                            :key="segment.value || 'all'"
+                            type="button"
+                            class="flex shrink-0 items-center gap-2 rounded border px-3 py-2 text-xs font-bold transition"
+                            :class="form.segment === segment.value ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary' : 'border-border bg-inputBg text-primary hover:border-borderHover'"
+                            @click="selectSegment(segment)"
+                        >
+                            <i :class="[segment.icon, 'text-base']"></i>
+                            {{ segment.label }}
+                        </button>
+                    </div>
                 </div>
             </section>
 
@@ -392,42 +455,54 @@ const selectQuickTile = (tile) => {
                         </Link>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-2 p-3 md:grid-cols-4 xl:grid-cols-5">
-                        <article
-                            v-for="product in productItems"
-                            :key="product.id"
-                            class="group overflow-hidden rounded border border-border bg-card transition hover:border-borderHover"
-                        >
-                            <Link :href="product.show_url" class="block">
-                                <div class="relative aspect-square overflow-hidden bg-inputBg">
-                                    <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition group-hover:scale-105" />
-                                    <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-6xl text-buttonPrimary']"></i>
-                                    <span class="absolute left-2 top-2 rounded bg-card/90 px-2 py-1 text-[11px] font-black text-buttonPrimary">{{ product.badge }}</span>
-                                </div>
-                                <div class="p-3">
-                                    <p class="text-[11px] font-bold uppercase tracking-wide text-secondary">
-                                        {{ categoryLabels[product.category] || product.category }}
-                                    </p>
-                                    <h3 class="mt-1 line-clamp-2 min-h-[2.5rem] text-sm font-bold text-primary group-hover:text-buttonPrimary">
-                                        {{ product.title }}
-                                    </h3>
-                                    <p class="mt-1 hidden text-xs leading-5 text-secondary sm:line-clamp-2">
-                                        {{ shortDescription(product.description, 78) }}
-                                    </p>
-                                    <div class="mt-3">
-                                        <p class="text-lg font-black text-primary">{{ formatPrice(product.price_cents, product.currency) }}</p>
-                                        <p v-if="product.old_price_cents" class="text-xs text-secondary line-through">{{ formatPrice(product.old_price_cents, product.currency) }}</p>
-                                    </div>
-                                    <div class="mt-2 flex items-center justify-between text-xs text-secondary">
-                                        <span>{{ product.rating }} / 5</span>
-                                        <span>{{ product.sold_count }} verkauft</span>
-                                    </div>
-                                    <p class="mt-2 truncate text-xs text-secondary">{{ product.provider_name || 'Airmius Marketplace' }}</p>
-                                </div>
-                            </Link>
-                        </article>
+                    <div class="space-y-5 p-3">
+                        <div v-for="group in productGroups" :key="group.key" class="rounded border border-border bg-bg/40 p-3">
+                            <div class="mb-3 flex items-center justify-between gap-3">
+                                <h3 class="flex items-center gap-2 text-base font-black text-primary">
+                                    <i :class="[group.icon, 'text-xl text-buttonPrimary']"></i>
+                                    {{ group.label }}
+                                </h3>
+                                <span class="rounded bg-muted px-2 py-1 text-xs font-bold text-secondary">{{ group.items.length }} Angebote</span>
+                            </div>
 
-                        <div v-if="!productItems.length" class="col-span-2 rounded border border-border bg-muted p-8 text-center md:col-span-4 xl:col-span-5">
+                            <div class="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-5">
+                                <article
+                                    v-for="product in group.items"
+                                    :key="product.id"
+                                    class="group overflow-hidden rounded border border-border bg-card transition hover:border-borderHover"
+                                >
+                                    <Link :href="product.show_url" class="block">
+                                        <div class="relative aspect-square overflow-hidden bg-inputBg">
+                                            <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition group-hover:scale-105" />
+                                            <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-6xl text-buttonPrimary']"></i>
+                                            <span class="absolute left-2 top-2 rounded bg-card/90 px-2 py-1 text-[11px] font-black text-buttonPrimary">{{ product.badge }}</span>
+                                        </div>
+                                        <div class="p-3">
+                                            <p class="text-[11px] font-bold uppercase tracking-wide text-secondary">
+                                                {{ categoryLabels[product.category] || product.category }}
+                                            </p>
+                                            <h3 class="mt-1 line-clamp-2 min-h-[2.5rem] text-sm font-bold text-primary group-hover:text-buttonPrimary">
+                                                {{ product.title }}
+                                            </h3>
+                                            <p class="mt-1 hidden text-xs leading-5 text-secondary sm:line-clamp-2">
+                                                {{ shortDescription(product.description, 78) }}
+                                            </p>
+                                            <div class="mt-3">
+                                                <p class="text-lg font-black text-primary">{{ formatPrice(product.price_cents, product.currency) }}</p>
+                                                <p v-if="product.old_price_cents" class="text-xs text-secondary line-through">{{ formatPrice(product.old_price_cents, product.currency) }}</p>
+                                            </div>
+                                            <div class="mt-2 flex items-center justify-between text-xs text-secondary">
+                                                <span>{{ product.rating }} / 5</span>
+                                                <span>{{ product.sold_count }} verkauft</span>
+                                            </div>
+                                            <p class="mt-2 truncate text-xs text-secondary">{{ product.provider_name || 'Airmius Marketplace' }}</p>
+                                        </div>
+                                    </Link>
+                                </article>
+                            </div>
+                        </div>
+
+                        <div v-if="!productItems.length" class="rounded border border-border bg-muted p-8 text-center">
                             <p class="text-lg font-bold text-primary">Keine passenden Angebote gefunden.</p>
                             <p class="mt-2 text-sm text-secondary">Passe Suche oder Kategorie an, dann werden wieder Angebote angezeigt.</p>
                         </div>

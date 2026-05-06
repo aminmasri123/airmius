@@ -18,6 +18,7 @@ class PublicMarketplaceController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'in:product,course,camp,service,outfit_subscription'],
+            'segment' => ['nullable', 'in:shoes,apparel,equipment,recovery,analysis,nutrition,plans,camps,team'],
         ]);
 
         $products = $this->marketplaceProductQuery($filters)
@@ -102,6 +103,7 @@ class PublicMarketplaceController extends Controller
                 ['value' => 'camp', 'label' => 'Camps'],
                 ['value' => 'service', 'label' => 'Services'],
             ],
+            'segments' => $this->segments(),
         ]);
     }
 
@@ -112,6 +114,7 @@ class PublicMarketplaceController extends Controller
             ->where('status', 'published')
             ->when(($filters['category'] ?? null) && $filters['category'] !== 'outfit_subscription', fn ($query, $category) => $query->where('category', $category))
             ->when(($filters['category'] ?? null) === 'outfit_subscription', fn ($query) => $query->whereRaw('1 = 0'))
+            ->when($filters['segment'] ?? null, fn ($query, $segment) => $this->applySegmentFilter($query, $segment))
             ->when($filters['search'] ?? null, function ($query, $search) {
                 $query->where(function ($query) use ($search) {
                     $query
@@ -204,6 +207,7 @@ class PublicMarketplaceController extends Controller
             'currency' => $product->currency,
             'provider_name' => $product->club?->name ?: $product->user?->name,
             'show_url' => route('guest.marketplace.products.show', $product),
+            'segment' => $this->productSegment($product),
             'rating' => number_format($rating / 10, 1, ',', '.'),
             'sold_count' => 12 + ($product->id * 7 % 240),
             'badge' => match ($product->category) {
@@ -241,6 +245,80 @@ class PublicMarketplaceController extends Controller
             'visual_icon' => 'las la-tshirt',
             'items_per_box' => $plan->items_per_box,
             'sports' => $plan->sports ?: [],
+            'segment' => 'apparel',
+        ];
+    }
+
+    private function segments(): array
+    {
+        return [
+            ['value' => '', 'label' => 'Alle Bereiche', 'icon' => 'las la-border-all'],
+            ['value' => 'shoes', 'label' => 'Schuhe', 'icon' => 'las la-shoe-prints'],
+            ['value' => 'apparel', 'label' => 'Bekleidung', 'icon' => 'las la-tshirt'],
+            ['value' => 'equipment', 'label' => 'Equipment', 'icon' => 'las la-dumbbell'],
+            ['value' => 'recovery', 'label' => 'Recovery', 'icon' => 'las la-heartbeat'],
+            ['value' => 'analysis', 'label' => 'Analyse', 'icon' => 'las la-chart-line'],
+            ['value' => 'nutrition', 'label' => 'Ernaehrung', 'icon' => 'las la-apple-alt'],
+            ['value' => 'plans', 'label' => 'Plaene & Kurse', 'icon' => 'las la-chalkboard-teacher'],
+            ['value' => 'camps', 'label' => 'Camps', 'icon' => 'las la-campground'],
+            ['value' => 'team', 'label' => 'Team & Verein', 'icon' => 'las la-users'],
+        ];
+    }
+
+    private function applySegmentFilter($query, string $segment)
+    {
+        $keywords = $this->segmentKeywords($segment);
+
+        if ($keywords === []) {
+            return $query;
+        }
+
+        return $query->where(function ($query) use ($keywords) {
+            foreach ($keywords as $keyword) {
+                $query
+                    ->orWhere('title', 'like', '%'.$keyword.'%')
+                    ->orWhere('description', 'like', '%'.$keyword.'%');
+            }
+        });
+    }
+
+    private function productSegment(MarketplaceProduct $product): string
+    {
+        $text = Str::lower($product->title.' '.$product->description);
+
+        foreach (array_keys($this->segmentKeywordMap()) as $segment) {
+            foreach ($this->segmentKeywords($segment) as $keyword) {
+                if (Str::contains($text, Str::lower($keyword))) {
+                    return $segment;
+                }
+            }
+        }
+
+        return match ($product->category) {
+            'course' => 'plans',
+            'camp' => 'camps',
+            'service' => 'analysis',
+            default => 'equipment',
+        };
+    }
+
+    private function segmentKeywords(string $segment): array
+    {
+        return $this->segmentKeywordMap()[$segment] ?? [];
+    }
+
+    private function segmentKeywordMap(): array
+    {
+        return [
+            'shoes' => ['schuh', 'schuhe'],
+            'apparel' => ['shirt', 'trikot', 'bekleidung', 'outfit', 'kleidung'],
+            'recovery' => ['recovery', 'regeneration', 'mobility', 'faszien', 'erholung'],
+            'analysis' => ['analyse', 'check-up', 'sensorik', 'technik', 'feedback'],
+            'nutrition' => ['ernaehrung', 'wettkampfplanung'],
+            'plans' => ['trainingsplan', 'kurs', 'playbook', 'fortbildung'],
+            'camps' => ['camp', 'clinic', 'workshop'],
+            'team' => ['team', 'verein', 'club'],
+            'equipment' => ['set', 'kit', 'paket', 'bundle', 'ausstattung', 'material'],
         ];
     }
 
