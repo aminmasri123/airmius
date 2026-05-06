@@ -9,10 +9,15 @@ import SeoHead from '@/Components/Guest/SeoHead.vue'
 const props = defineProps({
     canLogin: Boolean,
     canRegister: Boolean,
-    products: { type: Array, default: () => [] },
+    products: { type: Object, default: () => ({ data: [], links: [], total: 0, per_page: 40 }) },
     featuredProducts: { type: Array, default: () => [] },
+    flashDeals: { type: Array, default: () => [] },
+    essentialDeals: { type: Array, default: () => [] },
+    learningDeals: { type: Array, default: () => [] },
+    serviceDeals: { type: Array, default: () => [] },
     outfitPlans: { type: Array, default: () => [] },
     sportCategories: { type: Array, default: () => [] },
+    officialStores: { type: Array, default: () => [] },
     categories: { type: Array, default: () => [] },
     filters: { type: Object, default: () => ({}) },
 })
@@ -30,15 +35,27 @@ const categoryLabels = {
     outfit_subscription: 'Outfit-Abo',
 }
 
-const heroProduct = computed(() => props.featuredProducts[0] || props.products[0] || null)
-const dealProducts = computed(() => (props.featuredProducts.length ? props.featuredProducts : props.products).slice(0, 4))
+const productItems = computed(() => props.products?.data || [])
+const paginationLinks = computed(() => (props.products?.links || []).filter((link) => link.url))
+const totalProducts = computed(() => props.products?.total || productItems.value.length)
+const heroProduct = computed(() => props.featuredProducts[0] || props.flashDeals[0] || productItems.value[0] || null)
+const heroSideProducts = computed(() => (props.featuredProducts.length ? props.featuredProducts : props.flashDeals).slice(1, 4))
+
+const quickTiles = computed(() => [
+    { label: 'Flash Deals', hint: 'Heute beliebt', icon: 'las la-bolt', category: '', search: '' },
+    { label: 'Produkte', hint: 'Equipment', icon: 'las la-shopping-bag', category: 'product', search: '' },
+    { label: 'Kurse', hint: 'Online & vor Ort', icon: 'las la-video', category: 'course', search: '' },
+    { label: 'Camps', hint: 'Events & Training', icon: 'las la-campground', category: 'camp', search: '' },
+    { label: 'Services', hint: 'Analyse & Beratung', icon: 'las la-hands-helping', category: 'service', search: '' },
+    { label: 'Outfit-Abo', hint: 'Sportkleidung', icon: 'las la-tshirt', category: 'outfit_subscription', search: '' },
+])
 
 const formatPrice = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
     style: 'currency',
     currency: currency || 'EUR',
 }).format((cents || 0) / 100)
 
-const shortDescription = (text, length = 105) => {
+const shortDescription = (text, length = 92) => {
     if (!text) return 'Sportangebot aus dem Airmius Marketplace.'
     if (text.length <= length) return text
 
@@ -50,6 +67,7 @@ const search = () => {
         search: form.value.search || undefined,
         category: form.value.category || undefined,
     }, {
+        preserveScroll: true,
         preserveState: true,
         replace: true,
     })
@@ -62,8 +80,14 @@ const reset = () => {
 }
 
 const searchCategory = (category) => {
-    form.value.search = category.query
+    form.value.search = category.query || ''
     form.value.category = ''
+    search()
+}
+
+const selectQuickTile = (tile) => {
+    form.value.search = tile.search || ''
+    form.value.category = tile.category || ''
     search()
 }
 </script>
@@ -74,252 +98,317 @@ const searchCategory = (category) => {
         description="Sportfokussierter Marketplace fuer Produkte, Kurse, Camps und Services. Gaeste koennen direkt ohne Konto bestellen."
     />
 
-    <div class="min-h-screen bg-bg text-primary">
+    <div class="min-h-screen bg-[#69c8d5] text-primary">
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
         <Subnav />
 
-        <main class="pb-24 pt-32 md:pb-12 md:pt-40">
-            <section class="border-b border-border bg-card/70 px-4 py-4">
-                <form class="mx-auto grid max-w-7xl gap-3 md:grid-cols-[13rem_1fr_9rem_7rem]" @submit.prevent="search">
-                    <select v-model="form.category" class="h-12 rounded-lg border-border bg-inputBg text-primary">
+        <main class="pb-24 pt-28 md:pb-14 md:pt-36">
+            <section class="border-y border-white/40 bg-[#f59e0b] px-4 py-2 text-center text-sm font-black text-white">
+                Sport Deals, Kurse, Camps und Services direkt im Airmius Marketplace entdecken
+            </section>
+
+            <section class="bg-white px-4 py-4 shadow-sm">
+                <form class="mx-auto grid max-w-7xl gap-3 md:grid-cols-[13rem_1fr_8rem_6rem]" @submit.prevent="search">
+                    <select v-model="form.category" class="h-12 rounded-md border-border bg-inputBg text-sm text-primary">
                         <option v-for="category in categories" :key="category.value" :value="category.value">
                             {{ category.label }}
                         </option>
                     </select>
-                    <input
-                        v-model="form.search"
-                        class="h-12 rounded-lg border-border bg-inputBg text-primary"
-                        placeholder="Suche nach Laufschuhen, Trainingsplaenen, Camps, Trikots..."
-                    />
-                    <button class="h-12 rounded-lg bg-buttonPrimary px-4 font-semibold text-buttonTextPrimary">
+                    <div class="relative">
+                        <i class="las la-search absolute left-4 top-1/2 -translate-y-1/2 text-xl text-secondary"></i>
+                        <input
+                            v-model="form.search"
+                            class="h-12 w-full rounded-md border-border bg-inputBg pl-11 text-sm text-primary"
+                            placeholder="Suche nach Laufschuhen, Trainingsplan, Fussballcamp, Analyse..."
+                        />
+                    </div>
+                    <button class="h-12 rounded-md bg-[#f59e0b] px-4 text-sm font-black text-white hover:bg-[#ea8a00]">
                         Suchen
                     </button>
-                    <button type="button" class="h-12 rounded-lg border border-border px-4 font-semibold text-primary hover:bg-muted" @click="reset">
+                    <button type="button" class="h-12 rounded-md border border-border px-4 text-sm font-bold text-primary hover:bg-muted" @click="reset">
                         Reset
                     </button>
                 </form>
             </section>
 
-            <section class="mx-auto grid max-w-7xl gap-4 px-4 py-5 lg:grid-cols-[16rem_1fr_18rem]">
-                <aside class="surface-card p-3">
-                    <p class="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Sportkategorien</p>
+            <section class="mx-auto grid max-w-7xl gap-4 px-4 py-4 lg:grid-cols-[13rem_1fr_13rem]">
+                <aside class="rounded bg-white p-2 shadow-sm">
                     <button
                         v-for="category in sportCategories"
                         :key="category.label"
-                        class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-primary transition hover:bg-muted"
+                        class="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-xs font-semibold text-primary transition hover:bg-orange-50 hover:text-[#f59e0b]"
                         @click="searchCategory(category)"
                     >
-                        <i :class="[category.icon, 'text-xl text-air-blue']"></i>
-                        <span>{{ category.label }}</span>
+                        <i :class="[category.icon, 'text-lg text-[#f59e0b]']"></i>
+                        <span class="truncate">{{ category.label }}</span>
                     </button>
                 </aside>
 
-                <section class="overflow-hidden rounded-xl border border-border bg-card">
-                    <div class="grid min-h-[24rem] gap-0 lg:grid-cols-[1fr_18rem]">
-                        <div class="flex flex-col justify-between bg-gradient-to-br from-[#082f49] via-[#0f766e] to-[#111827] p-6 text-white md:p-8">
-                            <div>
-                                <p class="text-sm font-semibold uppercase tracking-wide text-cyan-100">Sport Marketplace</p>
-                                <h1 class="mt-3 max-w-xl font-heading text-4xl font-900 leading-tight md:text-5xl">
-                                    Alles fuer Training, Team und Wettkampf.
-                                </h1>
-                                <p class="mt-4 max-w-xl text-sm leading-7 text-cyan-50">
-                                    Sportprodukte, Kurse, Camps und Services. Gaeste koennen direkt bestellen, Mitglieder koennen spaeter selbst Angebote einstellen.
-                                </p>
-                            </div>
-
-                            <div class="mt-6 flex flex-wrap gap-3">
-                                <Link :href="heroProduct?.show_url || route('guest.marketplace')" class="rounded-lg bg-white px-4 py-3 text-sm font-bold text-slate-950">
-                                    Top-Angebot ansehen
-                                </Link>
-                                <Link :href="route('login')" class="rounded-lg border border-white/40 px-4 py-3 text-sm font-bold text-white">
-                                    Anbieter werden
-                                </Link>
-                            </div>
+                <section class="grid gap-4 md:grid-cols-[1fr_15rem]">
+                    <Link
+                        :href="heroProduct?.show_url || route('guest.marketplace')"
+                        class="relative min-h-[19rem] overflow-hidden rounded bg-[#14b8c8] shadow-sm"
+                    >
+                        <img
+                            v-if="heroProduct?.image_url"
+                            :src="heroProduct.image_url"
+                            :alt="heroProduct.title"
+                            class="absolute inset-0 h-full w-full object-cover"
+                        />
+                        <div class="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent"></div>
+                        <div class="relative flex min-h-[19rem] max-w-lg flex-col justify-center p-6 text-white">
+                            <p class="text-xs font-black uppercase tracking-wide text-orange-200">Airmius Marketplace</p>
+                            <h1 class="mt-2 font-heading text-4xl font-900 leading-tight md:text-5xl">
+                                Sport Deals fuer Training, Team und Wettkampf
+                            </h1>
+                            <p class="mt-4 text-sm leading-6 text-white/90">
+                                Weniger scrollen, schneller finden: Kategorien, Aktionen und kuratierte Reihen statt alle Produkte auf einmal.
+                            </p>
+                            <span class="mt-5 inline-flex w-fit rounded bg-[#f59e0b] px-4 py-3 text-sm font-black text-white">
+                                Jetzt entdecken
+                            </span>
                         </div>
+                    </Link>
 
+                    <div class="grid gap-4">
+                        <div class="rounded bg-white p-4 shadow-sm">
+                            <p class="text-sm font-black text-primary">Hilfe & Bestellung</p>
+                            <p class="mt-1 text-xs leading-5 text-secondary">Gastbestellung, Login-Bestellung und Anbieterangebote sind vorbereitet.</p>
+                        </div>
+                        <Link :href="route('login')" class="rounded bg-white p-4 shadow-sm transition hover:bg-orange-50">
+                            <p class="text-sm font-black text-primary">Anbieter werden</p>
+                            <p class="mt-1 text-xs leading-5 text-secondary">Vereine, Trainer und Shops koennen Angebote einstellen.</p>
+                        </Link>
                         <Link
-                            v-if="heroProduct"
-                            :href="heroProduct.show_url"
-                            class="flex flex-col justify-between border-l border-white/10 bg-black/20 p-5 text-white transition hover:bg-black/30"
+                            v-for="product in heroSideProducts"
+                            :key="product.id"
+                            :href="product.show_url"
+                            class="flex gap-3 rounded bg-white p-3 shadow-sm transition hover:bg-orange-50"
                         >
-                            <div class="h-36 overflow-hidden rounded-xl bg-white/10">
-                                <img v-if="heroProduct.image_url" :src="heroProduct.image_url" :alt="heroProduct.title" class="h-full w-full object-cover" />
-                                <div v-else class="flex h-full items-center justify-center">
-                                    <i :class="[heroProduct.visual_icon, 'text-6xl text-white']"></i>
-                                </div>
+                            <div class="h-12 w-12 shrink-0 overflow-hidden rounded bg-inputBg">
+                                <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover" />
+                                <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-2xl text-[#f59e0b]']"></i>
                             </div>
-                            <div>
-                                <p class="mt-4 text-xs font-bold uppercase tracking-wide text-cyan-100">{{ heroProduct.badge }}</p>
-                                <h2 class="mt-1 text-xl font-bold">{{ heroProduct.title }}</h2>
-                                <p class="mt-2 text-sm text-cyan-50">{{ shortDescription(heroProduct.description, 78) }}</p>
-                                <p class="mt-4 text-2xl font-black">{{ formatPrice(heroProduct.price_cents, heroProduct.currency) }}</p>
+                            <div class="min-w-0">
+                                <p class="truncate text-xs font-black text-primary">{{ product.title }}</p>
+                                <p class="text-xs font-bold text-[#f59e0b]">{{ formatPrice(product.price_cents, product.currency) }}</p>
                             </div>
                         </Link>
                     </div>
                 </section>
 
-                <aside class="grid gap-4">
-                    <div class="surface-card p-4">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Heute beliebt</p>
-                        <div class="mt-3 space-y-3">
-                            <Link
-                                v-for="product in dealProducts.slice(0, 3)"
-                                :key="product.id"
-                                :href="product.show_url"
-                                class="flex gap-3 rounded-lg p-2 transition hover:bg-muted"
-                            >
-                                <div class="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-inputBg">
-                                    <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover" />
-                                    <div v-else class="flex h-full items-center justify-center">
-                                        <i :class="[product.visual_icon, 'text-2xl text-air-blue']"></i>
-                                    </div>
-                                </div>
-                                <div class="min-w-0">
-                                    <p class="truncate text-sm font-semibold text-primary">{{ product.title }}</p>
-                                    <p class="text-xs text-secondary">{{ formatPrice(product.price_cents, product.currency) }}</p>
-                                </div>
-                            </Link>
-                        </div>
-                    </div>
-
-                    <div class="rounded-xl border border-air-blue/30 bg-air-blue/10 p-4">
-                        <p class="text-sm font-bold text-primary">Gastbestellung aktiv</p>
-                        <p class="mt-1 text-sm leading-6 text-secondary">
-                            Kaufen funktioniert ohne Konto. Fuer Anbieter, Favoriten und Bestellhistorie lohnt sich ein Login.
-                        </p>
+                <aside class="hidden rounded bg-[#f59e0b] p-5 text-white shadow-sm lg:block">
+                    <p class="font-heading text-3xl font-900 leading-tight">Sport Sale</p>
+                    <p class="mt-2 text-sm font-semibold">Produkte, Camps, Kurse und Services aus deinem Sportnetzwerk.</p>
+                    <div class="mt-8 rounded-full bg-white/20 p-6 text-center">
+                        <i class="las la-bolt text-6xl"></i>
+                        <p class="mt-2 text-2xl font-black">bis -40%</p>
                     </div>
                 </aside>
             </section>
 
             <section class="mx-auto max-w-7xl px-4">
-                <div class="flex items-end justify-between gap-4">
-                    <div>
-                        <p class="text-sm font-semibold uppercase tracking-wide text-air-blue">Flash Deals</p>
-                        <h2 class="mt-1 text-2xl font-bold text-primary">Sportangebote fuer den Beta-Test</h2>
-                    </div>
-                    <Link :href="route('login')" class="hidden rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted sm:inline-flex">
-                        Angebot einstellen
-                    </Link>
+                <div class="grid gap-3 rounded bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-6">
+                    <button
+                        v-for="tile in quickTiles"
+                        :key="tile.label"
+                        class="flex items-center gap-3 rounded bg-orange-50 p-3 text-left transition hover:bg-orange-100"
+                        @click="selectQuickTile(tile)"
+                    >
+                        <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f59e0b] text-white">
+                            <i :class="[tile.icon, 'text-2xl']"></i>
+                        </span>
+                        <span class="min-w-0">
+                            <span class="block truncate text-sm font-black text-primary">{{ tile.label }}</span>
+                            <span class="block truncate text-xs text-secondary">{{ tile.hint }}</span>
+                        </span>
+                    </button>
                 </div>
+            </section>
 
-                <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <section class="mx-auto mt-4 max-w-7xl px-4">
+                <div class="rounded bg-red-600 px-4 py-3 text-white shadow-sm">
+                    <div class="flex items-center justify-between gap-4">
+                        <h2 class="flex items-center gap-2 text-lg font-black">
+                            <i class="las la-bolt text-2xl"></i>
+                            Flash Deals
+                        </h2>
+                        <span class="text-sm font-bold">Limitierte Demo-Angebote</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 rounded-b bg-white p-3 shadow-sm md:grid-cols-4 xl:grid-cols-6">
                     <Link
-                        v-for="product in dealProducts"
+                        v-for="product in flashDeals"
                         :key="product.id"
                         :href="product.show_url"
-                        class="rounded-xl border border-border bg-card p-4 transition hover:-translate-y-0.5 hover:border-air-blue/60"
+                        class="group overflow-hidden rounded border border-border bg-white transition hover:border-[#f59e0b]"
                     >
-                        <div class="h-32 overflow-hidden rounded-lg bg-inputBg">
-                            <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition duration-300 hover:scale-105" />
-                            <div v-else class="flex h-full items-center justify-center">
-                                <i :class="[product.visual_icon, 'text-5xl text-air-blue']"></i>
-                            </div>
+                        <div class="relative aspect-[4/3] overflow-hidden bg-inputBg">
+                            <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition group-hover:scale-105" />
+                            <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-5xl text-[#f59e0b]']"></i>
+                            <span class="absolute right-2 top-2 rounded bg-orange-100 px-2 py-1 text-[11px] font-black text-red-600">-{{ 12 + (product.id % 38) }}%</span>
                         </div>
-                        <p class="mt-3 text-xs font-semibold uppercase tracking-wide text-air-blue">{{ product.badge }}</p>
-                        <h3 class="mt-1 line-clamp-2 min-h-[2.5rem] text-sm font-bold text-primary">{{ product.title }}</h3>
-                        <div class="mt-2 flex items-end gap-2">
-                            <span class="text-lg font-black text-primary">{{ formatPrice(product.price_cents, product.currency) }}</span>
-                            <span v-if="product.old_price_cents" class="text-xs text-secondary line-through">{{ formatPrice(product.old_price_cents, product.currency) }}</span>
+                        <div class="p-2">
+                            <h3 class="line-clamp-2 min-h-[2.25rem] text-xs font-semibold text-primary">{{ product.title }}</h3>
+                            <p class="mt-1 text-sm font-black text-primary">{{ formatPrice(product.price_cents, product.currency) }}</p>
+                            <p v-if="product.old_price_cents" class="text-[11px] text-secondary line-through">{{ formatPrice(product.old_price_cents, product.currency) }}</p>
                         </div>
                     </Link>
                 </div>
             </section>
 
-            <section class="mx-auto mt-10 max-w-7xl px-4">
-                <div v-if="outfitPlans.length" class="mb-10">
-                    <div class="flex items-end justify-between gap-4">
-                        <div>
-                            <p class="text-sm font-semibold uppercase tracking-wide text-air-blue">Outfit-Abos</p>
-                            <h2 class="mt-1 text-2xl font-bold text-primary">Monatliche Sportkleidung passend zu deinem Stil</h2>
-                        </div>
-                        <Link :href="route('login')" class="hidden rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted sm:inline-flex">
-                            Style-Profil starten
-                        </Link>
-                    </div>
-
-                    <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <section class="mx-auto mt-4 grid max-w-7xl gap-4 px-4 xl:grid-cols-[1fr_20rem]">
+                <div class="rounded bg-white p-4 shadow-sm">
+                    <h2 class="text-center text-lg font-black text-primary">Alles fuer deinen Sportalltag</h2>
+                    <div class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
                         <Link
-                            v-for="plan in outfitPlans"
-                            :key="plan.id"
-                            :href="route('login')"
-                            class="rounded-xl border border-air-blue/30 bg-card p-4 transition hover:-translate-y-0.5 hover:border-air-blue"
+                            v-for="product in essentialDeals"
+                            :key="product.id"
+                            :href="product.show_url"
+                            class="text-center"
                         >
-                            <div class="flex h-24 items-center justify-center rounded-lg bg-air-blue/10">
-                                <i class="las la-tshirt text-5xl text-air-blue"></i>
+                            <div class="mx-auto aspect-square max-w-[8rem] overflow-hidden rounded-full bg-[#ffc107]">
+                                <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover" />
+                                <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-5xl text-white']"></i>
                             </div>
-                            <p class="mt-3 text-xs font-semibold uppercase tracking-wide text-air-blue">{{ plan.badge }}</p>
-                            <h3 class="mt-1 line-clamp-2 min-h-[2.5rem] text-sm font-bold text-primary">{{ plan.title }}</h3>
-                            <p class="mt-1 line-clamp-2 text-xs leading-5 text-secondary">{{ shortDescription(plan.description, 88) }}</p>
-                            <div class="mt-3 flex items-end gap-2">
-                                <span class="text-lg font-black text-primary">{{ formatPrice(plan.price_cents, plan.currency) }}</span>
-                                <span v-if="plan.old_price_cents" class="text-xs text-secondary line-through">{{ formatPrice(plan.old_price_cents, plan.currency) }}</span>
-                            </div>
-                            <p class="mt-2 text-xs text-secondary">{{ plan.provider_name }}</p>
+                            <p class="mt-2 line-clamp-2 text-xs font-semibold text-primary">{{ product.title }}</p>
                         </Link>
                     </div>
                 </div>
 
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-semibold uppercase tracking-wide text-air-blue">Alle Angebote</p>
-                        <h2 class="mt-1 text-2xl font-bold text-primary">Sportfokussierter Marketplace</h2>
+                <div class="rounded bg-white p-4 shadow-sm">
+                    <h2 class="text-lg font-black text-primary">Offizielle Stores</h2>
+                    <div class="mt-3 grid grid-cols-2 gap-2">
+                        <div
+                            v-for="store in officialStores"
+                            :key="store.name"
+                            class="rounded border border-orange-100 bg-orange-50 p-3 text-center"
+                        >
+                            <i :class="[store.icon, 'text-3xl text-[#f59e0b]']"></i>
+                            <p class="mt-1 truncate text-xs font-black text-primary">{{ store.name }}</p>
+                            <p class="text-xs font-bold text-red-600">{{ store.discount }}</p>
+                        </div>
                     </div>
-                    <p class="hidden text-sm text-secondary sm:block">{{ products.length }} Angebote</p>
+                </div>
+            </section>
+
+            <section class="mx-auto mt-4 max-w-7xl space-y-4 px-4">
+                <div v-if="learningDeals.length" class="rounded bg-white shadow-sm">
+                    <div class="flex items-center justify-between border-b border-border px-4 py-3">
+                        <h2 class="text-lg font-black text-primary">Kurse & Camps</h2>
+                        <button class="text-sm font-bold text-[#f59e0b]" @click="selectQuickTile({ category: 'course' })">Mehr sehen</button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 p-3 md:grid-cols-5">
+                        <Link v-for="product in learningDeals" :key="product.id" :href="product.show_url" class="group">
+                            <div class="aspect-[4/3] overflow-hidden rounded bg-inputBg">
+                                <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition group-hover:scale-105" />
+                                <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-5xl text-[#f59e0b]']"></i>
+                            </div>
+                            <p class="mt-2 line-clamp-2 text-xs font-semibold text-primary">{{ product.title }}</p>
+                            <p class="text-sm font-black text-primary">{{ formatPrice(product.price_cents, product.currency) }}</p>
+                        </Link>
+                    </div>
                 </div>
 
-                <div class="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-                    <article
-                        v-for="product in products"
-                        :key="product.id"
-                        class="group overflow-hidden rounded-xl border border-border bg-card transition hover:-translate-y-0.5 hover:border-air-blue/60"
-                    >
-                        <Link :href="product.show_url" class="block">
-                            <div class="relative aspect-square overflow-hidden bg-inputBg">
-                                <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
-                                <div v-else class="flex h-full items-center justify-center">
-                                    <i :class="[product.visual_icon, 'text-6xl text-air-blue']"></i>
-                                </div>
-                                <span class="absolute left-2 top-2 rounded-full bg-card/90 px-2 py-1 text-[11px] font-bold text-air-blue">
-                                    {{ product.badge }}
-                                </span>
-                                <span class="absolute bottom-2 right-2 rounded-full bg-black/65 px-2 py-1 text-[11px] font-semibold text-white">
-                                    {{ categoryLabels[product.category] || product.category }}
-                                </span>
+                <div v-if="serviceDeals.length" class="rounded bg-white shadow-sm">
+                    <div class="flex items-center justify-between border-b border-border px-4 py-3">
+                        <h2 class="text-lg font-black text-primary">Services & Analysen</h2>
+                        <button class="text-sm font-bold text-[#f59e0b]" @click="selectQuickTile({ category: 'service' })">Mehr sehen</button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 p-3 md:grid-cols-5">
+                        <Link v-for="product in serviceDeals" :key="product.id" :href="product.show_url" class="group">
+                            <div class="aspect-[4/3] overflow-hidden rounded bg-inputBg">
+                                <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition group-hover:scale-105" />
+                                <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-5xl text-[#f59e0b]']"></i>
                             </div>
-
-                            <div class="p-3">
-                                <p class="text-[11px] font-semibold uppercase tracking-wide text-secondary">
-                                    {{ categoryLabels[product.category] || product.category }}
-                                </p>
-                                <h3 class="mt-1 line-clamp-2 min-h-[2.5rem] text-sm font-bold text-primary group-hover:text-air-blue">
-                                    {{ product.title }}
-                                </h3>
-                                <p class="mt-1 hidden text-xs leading-5 text-secondary sm:line-clamp-2">
-                                    {{ shortDescription(product.description, 82) }}
-                                </p>
-
-                                <div class="mt-3">
-                                    <p class="text-lg font-black text-primary">{{ formatPrice(product.price_cents, product.currency) }}</p>
-                                    <p v-if="product.old_price_cents" class="text-xs text-secondary line-through">{{ formatPrice(product.old_price_cents, product.currency) }}</p>
-                                </div>
-
-                                <div class="mt-3 flex items-center justify-between text-xs text-secondary">
-                                    <span>{{ product.rating }} / 5</span>
-                                    <span>{{ product.sold_count }} verkauft</span>
-                                </div>
-
-                                <p class="mt-2 truncate text-xs text-secondary">
-                                    {{ product.provider_name || 'Airmius Marketplace' }}
-                                </p>
-                            </div>
+                            <p class="mt-2 line-clamp-2 text-xs font-semibold text-primary">{{ product.title }}</p>
+                            <p class="text-sm font-black text-primary">{{ formatPrice(product.price_cents, product.currency) }}</p>
                         </Link>
-                    </article>
+                    </div>
+                </div>
 
-                    <div v-if="!products.length" class="surface-card col-span-2 p-8 text-center md:col-span-3 xl:col-span-5">
-                        <p class="text-lg font-semibold text-primary">Noch keine passenden Marketplace-Angebote.</p>
-                        <p class="mt-2 text-sm text-secondary">
-                            Sobald Produkte, Kurse oder Services freigegeben sind, erscheinen sie hier fuer Gaeste und Mitglieder.
-                        </p>
+                <div v-if="outfitPlans.length" class="rounded bg-white shadow-sm">
+                    <div class="flex items-center justify-between border-b border-border px-4 py-3">
+                        <h2 class="text-lg font-black text-primary">Outfit-Abos</h2>
+                        <button class="text-sm font-bold text-[#f59e0b]" @click="selectQuickTile({ category: 'outfit_subscription' })">Mehr sehen</button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 p-3 md:grid-cols-4">
+                        <Link v-for="plan in outfitPlans" :key="plan.id" :href="route('login')" class="rounded border border-border p-3 transition hover:border-[#f59e0b]">
+                            <div class="flex h-24 items-center justify-center rounded bg-orange-50">
+                                <i class="las la-tshirt text-5xl text-[#f59e0b]"></i>
+                            </div>
+                            <p class="mt-2 line-clamp-2 text-xs font-semibold text-primary">{{ plan.title }}</p>
+                            <p class="text-sm font-black text-primary">{{ formatPrice(plan.price_cents, plan.currency) }}</p>
+                        </Link>
+                    </div>
+                </div>
+            </section>
+
+            <section class="mx-auto mt-4 max-w-7xl px-4">
+                <div class="rounded bg-white shadow-sm">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+                        <div>
+                            <h2 class="text-lg font-black text-primary">Alle Angebote</h2>
+                            <p class="text-xs text-secondary">
+                                {{ totalProducts }} Treffer, angezeigt werden maximal {{ products.per_page || 40 }} pro Seite.
+                            </p>
+                        </div>
+                        <Link :href="route('login')" class="rounded bg-[#f59e0b] px-4 py-2 text-sm font-black text-white hover:bg-[#ea8a00]">
+                            Angebot einstellen
+                        </Link>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 p-3 md:grid-cols-4 xl:grid-cols-5">
+                        <article
+                            v-for="product in productItems"
+                            :key="product.id"
+                            class="group overflow-hidden rounded border border-border bg-white transition hover:border-[#f59e0b]"
+                        >
+                            <Link :href="product.show_url" class="block">
+                                <div class="relative aspect-square overflow-hidden bg-inputBg">
+                                    <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition group-hover:scale-105" />
+                                    <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-6xl text-[#f59e0b]']"></i>
+                                    <span class="absolute left-2 top-2 rounded bg-white/90 px-2 py-1 text-[11px] font-black text-[#f59e0b]">{{ product.badge }}</span>
+                                </div>
+                                <div class="p-3">
+                                    <p class="text-[11px] font-bold uppercase tracking-wide text-secondary">
+                                        {{ categoryLabels[product.category] || product.category }}
+                                    </p>
+                                    <h3 class="mt-1 line-clamp-2 min-h-[2.5rem] text-sm font-bold text-primary group-hover:text-[#f59e0b]">
+                                        {{ product.title }}
+                                    </h3>
+                                    <p class="mt-1 hidden text-xs leading-5 text-secondary sm:line-clamp-2">
+                                        {{ shortDescription(product.description, 78) }}
+                                    </p>
+                                    <div class="mt-3">
+                                        <p class="text-lg font-black text-primary">{{ formatPrice(product.price_cents, product.currency) }}</p>
+                                        <p v-if="product.old_price_cents" class="text-xs text-secondary line-through">{{ formatPrice(product.old_price_cents, product.currency) }}</p>
+                                    </div>
+                                    <div class="mt-2 flex items-center justify-between text-xs text-secondary">
+                                        <span>{{ product.rating }} / 5</span>
+                                        <span>{{ product.sold_count }} verkauft</span>
+                                    </div>
+                                    <p class="mt-2 truncate text-xs text-secondary">{{ product.provider_name || 'Airmius Marketplace' }}</p>
+                                </div>
+                            </Link>
+                        </article>
+
+                        <div v-if="!productItems.length" class="col-span-2 rounded border border-border bg-muted p-8 text-center md:col-span-4 xl:col-span-5">
+                            <p class="text-lg font-bold text-primary">Keine passenden Angebote gefunden.</p>
+                            <p class="mt-2 text-sm text-secondary">Passe Suche oder Kategorie an, dann werden wieder Angebote angezeigt.</p>
+                        </div>
+                    </div>
+
+                    <div v-if="paginationLinks.length > 1" class="flex flex-wrap justify-center gap-2 border-t border-border px-4 py-4">
+                        <Link
+                            v-for="link in paginationLinks"
+                            :key="`${link.label}-${link.url}`"
+                            :href="link.url"
+                            preserve-scroll
+                            class="rounded border px-3 py-2 text-sm font-bold"
+                            :class="link.active ? 'border-[#f59e0b] bg-[#f59e0b] text-white' : 'border-border bg-white text-primary hover:bg-orange-50'"
+                            v-html="link.label"
+                        />
                     </div>
                 </div>
             </section>

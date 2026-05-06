@@ -20,30 +20,43 @@ class PublicMarketplaceController extends Controller
             'category' => ['nullable', 'in:product,course,camp,service,outfit_subscription'],
         ]);
 
-        $products = collect();
-
-        if (($filters['category'] ?? null) !== 'outfit_subscription') {
-            $products = MarketplaceProduct::query()
-            ->with(['user:id,name', 'club:id,name'])
-            ->where('status', 'published')
-            ->when($filters['category'] ?? null, fn ($query, $category) => $query->where('category', $category))
-            ->when($filters['search'] ?? null, function ($query, $search) {
-                $query->where(function ($query) use ($search) {
-                    $query
-                        ->where('title', 'like', '%'.$search.'%')
-                        ->orWhere('description', 'like', '%'.$search.'%');
-                });
-            })
+        $products = $this->marketplaceProductQuery($filters)
             ->latest('id')
-            ->get()
-            ->map(fn (MarketplaceProduct $product) => $this->productCard($product));
-        }
+            ->paginate(40)
+            ->withQueryString()
+            ->through(fn (MarketplaceProduct $product) => $this->productCard($product));
 
         $featuredProducts = MarketplaceProduct::query()
             ->with(['user:id,name', 'club:id,name'])
             ->where('status', 'published')
             ->latest('id')
-            ->limit(4)
+            ->limit(8)
+            ->get()
+            ->map(fn (MarketplaceProduct $product) => $this->productCard($product));
+
+        $flashDeals = $this->marketplaceProductQuery()
+            ->latest('id')
+            ->limit(12)
+            ->get()
+            ->map(fn (MarketplaceProduct $product) => $this->productCard($product));
+
+        $essentialDeals = $this->marketplaceProductQuery(['category' => 'product'])
+            ->latest('id')
+            ->skip(12)
+            ->limit(12)
+            ->get()
+            ->map(fn (MarketplaceProduct $product) => $this->productCard($product));
+
+        $learningDeals = $this->marketplaceProductQuery()
+            ->whereIn('category', ['course', 'camp'])
+            ->latest('id')
+            ->limit(10)
+            ->get()
+            ->map(fn (MarketplaceProduct $product) => $this->productCard($product));
+
+        $serviceDeals = $this->marketplaceProductQuery(['category' => 'service'])
+            ->latest('id')
+            ->limit(10)
             ->get()
             ->map(fn (MarketplaceProduct $product) => $this->productCard($product));
 
@@ -63,6 +76,7 @@ class PublicMarketplaceController extends Controller
                 })
                 ->orderBy('sort_order')
                 ->orderBy('monthly_price_cents')
+                ->limit(8)
                 ->get()
                 ->map(fn (OutfitSubscriptionPlan $plan) => $this->outfitPlanCard($plan));
         }
@@ -73,8 +87,13 @@ class PublicMarketplaceController extends Controller
             'filters' => $filters,
             'products' => $products,
             'featuredProducts' => $featuredProducts,
+            'flashDeals' => $flashDeals,
+            'essentialDeals' => $essentialDeals,
+            'learningDeals' => $learningDeals,
+            'serviceDeals' => $serviceDeals,
             'outfitPlans' => $outfitPlans,
             'sportCategories' => $this->sportCategories(),
+            'officialStores' => $this->officialStores(),
             'categories' => [
                 ['value' => '', 'label' => 'Alle'],
                 ['value' => 'product', 'label' => 'Produkte'],
@@ -84,6 +103,22 @@ class PublicMarketplaceController extends Controller
                 ['value' => 'service', 'label' => 'Services'],
             ],
         ]);
+    }
+
+    private function marketplaceProductQuery(array $filters = [])
+    {
+        return MarketplaceProduct::query()
+            ->with(['user:id,name', 'club:id,name'])
+            ->where('status', 'published')
+            ->when(($filters['category'] ?? null) && $filters['category'] !== 'outfit_subscription', fn ($query, $category) => $query->where('category', $category))
+            ->when(($filters['category'] ?? null) === 'outfit_subscription', fn ($query) => $query->whereRaw('1 = 0'))
+            ->when($filters['search'] ?? null, function ($query, $search) {
+                $query->where(function ($query) use ($search) {
+                    $query
+                        ->where('title', 'like', '%'.$search.'%')
+                        ->orWhere('description', 'like', '%'.$search.'%');
+                });
+            });
     }
 
     public function show(MarketplaceProduct $product)
@@ -220,6 +255,20 @@ class PublicMarketplaceController extends Controller
             ['label' => 'Camps', 'icon' => 'las la-campground', 'query' => 'camp'],
             ['label' => 'Kurse', 'icon' => 'las la-video', 'query' => 'kurs'],
             ['label' => 'Services', 'icon' => 'las la-hands-helping', 'query' => 'analyse'],
+        ];
+    }
+
+    private function officialStores(): array
+    {
+        return [
+            ['name' => 'Airmius Teamsport', 'discount' => 'bis -40%', 'icon' => 'las la-tshirt'],
+            ['name' => 'RunLab', 'discount' => 'bis -30%', 'icon' => 'las la-running'],
+            ['name' => 'Club Gear', 'discount' => 'bis -35%', 'icon' => 'las la-shield-alt'],
+            ['name' => 'Recovery Pro', 'discount' => 'bis -25%', 'icon' => 'las la-heartbeat'],
+            ['name' => 'Coach Campus', 'discount' => 'Top Kurse', 'icon' => 'las la-chalkboard-teacher'],
+            ['name' => 'FitMarket', 'discount' => 'Neuheiten', 'icon' => 'las la-dumbbell'],
+            ['name' => 'MatchDay', 'discount' => 'Camps', 'icon' => 'las la-futbol'],
+            ['name' => 'SwimTech', 'discount' => 'Analyse', 'icon' => 'las la-swimmer'],
         ];
     }
 }
