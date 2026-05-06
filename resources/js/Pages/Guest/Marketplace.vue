@@ -1,7 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
-import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
@@ -40,6 +39,7 @@ const paginationLinks = computed(() => (props.products?.links || []).filter((lin
 const totalProducts = computed(() => props.products?.total || productItems.value.length)
 const heroProduct = computed(() => props.featuredProducts[0] || props.flashDeals[0] || productItems.value[0] || null)
 const heroSideProducts = computed(() => (props.featuredProducts.length ? props.featuredProducts : props.flashDeals).slice(1, 4))
+const sideBannerUrl = '/images/marketplace/airmius-marketplace-side-banner.png'
 
 const quickTiles = computed(() => [
     { label: 'Flash Deals', hint: 'Heute beliebt', icon: 'las la-bolt', category: '', search: '' },
@@ -99,12 +99,46 @@ const selectQuickTile = (tile) => {
     />
 
     <div class="min-h-screen bg-bg text-primary">
-        <Nav :canLogin="canLogin" :canRegister="canRegister" />
-        <Subnav />
+        <Subnav vertical />
 
-        <main class="pb-24 pt-28 md:pb-14 md:pt-36">
-            <section class="border-y border-border bg-air-orange px-4 py-2 text-center text-sm font-black text-buttonTextPrimary">
-                Sport Deals, Kurse, Camps und Services direkt im Airmius Marketplace entdecken
+        <aside class="pointer-events-none fixed left-0 top-0 z-0 hidden h-screen w-[16vw] min-w-[13rem] max-w-[18rem] overflow-hidden bg-buttonPrimary/10 xl:block">
+            <img :src="sideBannerUrl" alt="" class="h-full w-full object-cover opacity-95" />
+            <div class="absolute inset-0 bg-gradient-to-b from-bg/10 via-transparent to-bg/70"></div>
+            <div class="absolute inset-x-4 top-14 text-center text-buttonTextPrimary drop-shadow">
+                <p class="font-heading text-3xl font-900 leading-none">AIRMIUS</p>
+                <p class="mt-2 text-sm font-black uppercase tracking-wide">Sport Deals</p>
+            </div>
+        </aside>
+
+        <aside class="pointer-events-none fixed right-0 top-0 z-0 hidden h-screen w-[16vw] min-w-[13rem] max-w-[18rem] overflow-hidden bg-buttonPrimary/10 xl:block">
+            <img :src="sideBannerUrl" alt="" class="h-full w-full scale-x-[-1] object-cover opacity-95" />
+            <div class="absolute inset-0 bg-gradient-to-b from-bg/10 via-transparent to-bg/70"></div>
+            <div class="absolute inset-x-4 top-14 text-center text-buttonTextPrimary drop-shadow">
+                <p class="font-heading text-3xl font-900 leading-none">AIRMIUS</p>
+                <p class="mt-2 text-sm font-black uppercase tracking-wide">Marketplace</p>
+            </div>
+        </aside>
+
+        <main class="relative z-10 pb-24 pt-0 md:pb-14 xl:pr-24">
+            <section class="border-b border-border bg-card px-4 py-3 shadow-sm">
+                <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 overflow-hidden rounded-lg bg-buttonPrimary px-5 py-3 text-buttonTextPrimary">
+                    <div class="flex min-w-0 items-center gap-3">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-card/20">
+                            <i class="las la-running text-2xl"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="font-heading text-lg font-900 leading-tight sm:text-2xl">AIRMIUS Marketplace</p>
+                            <p class="truncate text-xs font-semibold opacity-90 sm:text-sm">
+                                Sport Deals, Kurse, Camps und Services passend zu deinem Design
+                            </p>
+                        </div>
+                    </div>
+                    <div class="hidden items-center gap-2 text-sm font-black sm:flex">
+                        <span class="rounded-full bg-card/20 px-3 py-1">Teams</span>
+                        <span class="rounded-full bg-card/20 px-3 py-1">Vereine</span>
+                        <span class="rounded-full bg-card/20 px-3 py-1">Athleten</span>
+                    </div>
+                </div>
             </section>
 
             <section class="bg-card px-4 py-4 shadow-sm">
@@ -136,10 +170,10 @@ const selectQuickTile = (tile) => {
                     <button
                         v-for="category in sportCategories"
                         :key="category.label"
-                        class="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-xs font-semibold text-primary transition hover:bg-muted hover:text-air-orange"
+                        class="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-xs font-semibold text-primary transition hover:bg-muted hover:text-buttonPrimary"
                         @click="searchCategory(category)"
                     >
-                        <i :class="[category.icon, 'text-lg text-air-orange']"></i>
+                        <i :class="[category.icon, 'text-lg text-buttonPrimary']"></i>
                         <span class="truncate">{{ category.label }}</span>
                     </button>
                 </aside>
@@ -147,7 +181,7 @@ const selectQuickTile = (tile) => {
                 <section class="grid gap-4 md:grid-cols-[1fr_15rem]">
                     <Link
                         :href="heroProduct?.show_url || route('guest.marketplace')"
-                        class="relative min-h-[19rem] overflow-hidden rounded bg-air-blue shadow-sm"
+                        class="relative min-h-[19rem] overflow-hidden rounded bg-buttonPrimary shadow-sm"
                     >
                         <img
                             v-if="heroProduct?.image_url"
@@ -187,17 +221,17 @@ const selectQuickTile = (tile) => {
                         >
                             <div class="h-12 w-12 shrink-0 overflow-hidden rounded bg-inputBg">
                                 <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover" />
-                                <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-2xl text-air-orange']"></i>
+                                <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-2xl text-buttonPrimary']"></i>
                             </div>
                             <div class="min-w-0">
                                 <p class="truncate text-xs font-black text-primary">{{ product.title }}</p>
-                                <p class="text-xs font-bold text-air-orange">{{ formatPrice(product.price_cents, product.currency) }}</p>
+                                <p class="text-xs font-bold text-buttonPrimary">{{ formatPrice(product.price_cents, product.currency) }}</p>
                             </div>
                         </Link>
                     </div>
                 </section>
 
-                <aside class="hidden rounded bg-air-orange p-5 text-buttonTextPrimary shadow-sm lg:block">
+                <aside class="hidden rounded bg-buttonPrimary p-5 text-buttonTextPrimary shadow-sm lg:block">
                     <p class="font-heading text-3xl font-900 leading-tight">Sport Sale</p>
                     <p class="mt-2 text-sm font-semibold">Produkte, Camps, Kurse und Services aus deinem Sportnetzwerk.</p>
                     <div class="mt-8 rounded-full bg-white/20 p-6 text-center">
@@ -227,7 +261,7 @@ const selectQuickTile = (tile) => {
             </section>
 
             <section class="mx-auto mt-4 max-w-7xl px-4">
-                <div class="rounded bg-air-orange px-4 py-3 text-buttonTextPrimary shadow-sm">
+                <div class="rounded bg-buttonPrimary px-4 py-3 text-buttonTextPrimary shadow-sm">
                     <div class="flex items-center justify-between gap-4">
                         <h2 class="flex items-center gap-2 text-lg font-black">
                             <i class="las la-bolt text-2xl"></i>
@@ -241,11 +275,11 @@ const selectQuickTile = (tile) => {
                         v-for="product in flashDeals"
                         :key="product.id"
                         :href="product.show_url"
-                        class="group overflow-hidden rounded border border-border bg-card transition hover:border-air-orange"
+                        class="group overflow-hidden rounded border border-border bg-card transition hover:border-borderHover"
                     >
                         <div class="relative aspect-[4/3] overflow-hidden bg-inputBg">
                             <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition group-hover:scale-105" />
-                            <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-5xl text-air-orange']"></i>
+                            <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-5xl text-buttonPrimary']"></i>
                             <span class="absolute right-2 top-2 rounded bg-muted px-2 py-1 text-[11px] font-black text-error">-{{ 12 + (product.id % 38) }}%</span>
                         </div>
                         <div class="p-2">
@@ -267,7 +301,7 @@ const selectQuickTile = (tile) => {
                             :href="product.show_url"
                             class="text-center"
                         >
-                            <div class="mx-auto aspect-square max-w-[8rem] overflow-hidden rounded-full bg-air-orange/20">
+                            <div class="mx-auto aspect-square max-w-[8rem] overflow-hidden rounded-full bg-buttonPrimary/20">
                                 <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover" />
                                 <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-5xl text-white']"></i>
                             </div>
@@ -284,7 +318,7 @@ const selectQuickTile = (tile) => {
                             :key="store.name"
                             class="rounded border border-border bg-muted p-3 text-center"
                         >
-                            <i :class="[store.icon, 'text-3xl text-air-orange']"></i>
+                            <i :class="[store.icon, 'text-3xl text-buttonPrimary']"></i>
                             <p class="mt-1 truncate text-xs font-black text-primary">{{ store.name }}</p>
                             <p class="text-xs font-bold text-error">{{ store.discount }}</p>
                         </div>
@@ -296,13 +330,13 @@ const selectQuickTile = (tile) => {
                 <div v-if="learningDeals.length" class="rounded bg-card shadow-sm">
                     <div class="flex items-center justify-between border-b border-border px-4 py-3">
                         <h2 class="text-lg font-black text-primary">Kurse & Camps</h2>
-                        <button class="text-sm font-bold text-air-orange" @click="selectQuickTile({ category: 'course' })">Mehr sehen</button>
+                        <button class="text-sm font-bold text-buttonPrimary" @click="selectQuickTile({ category: 'course' })">Mehr sehen</button>
                     </div>
                     <div class="grid grid-cols-2 gap-2 p-3 md:grid-cols-5">
                         <Link v-for="product in learningDeals" :key="product.id" :href="product.show_url" class="group">
                             <div class="aspect-[4/3] overflow-hidden rounded bg-inputBg">
                                 <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition group-hover:scale-105" />
-                                <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-5xl text-air-orange']"></i>
+                                <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-5xl text-buttonPrimary']"></i>
                             </div>
                             <p class="mt-2 line-clamp-2 text-xs font-semibold text-primary">{{ product.title }}</p>
                             <p class="text-sm font-black text-primary">{{ formatPrice(product.price_cents, product.currency) }}</p>
@@ -313,13 +347,13 @@ const selectQuickTile = (tile) => {
                 <div v-if="serviceDeals.length" class="rounded bg-card shadow-sm">
                     <div class="flex items-center justify-between border-b border-border px-4 py-3">
                         <h2 class="text-lg font-black text-primary">Services & Analysen</h2>
-                        <button class="text-sm font-bold text-air-orange" @click="selectQuickTile({ category: 'service' })">Mehr sehen</button>
+                        <button class="text-sm font-bold text-buttonPrimary" @click="selectQuickTile({ category: 'service' })">Mehr sehen</button>
                     </div>
                     <div class="grid grid-cols-2 gap-2 p-3 md:grid-cols-5">
                         <Link v-for="product in serviceDeals" :key="product.id" :href="product.show_url" class="group">
                             <div class="aspect-[4/3] overflow-hidden rounded bg-inputBg">
                                 <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition group-hover:scale-105" />
-                                <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-5xl text-air-orange']"></i>
+                                <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-5xl text-buttonPrimary']"></i>
                             </div>
                             <p class="mt-2 line-clamp-2 text-xs font-semibold text-primary">{{ product.title }}</p>
                             <p class="text-sm font-black text-primary">{{ formatPrice(product.price_cents, product.currency) }}</p>
@@ -330,12 +364,12 @@ const selectQuickTile = (tile) => {
                 <div v-if="outfitPlans.length" class="rounded bg-card shadow-sm">
                     <div class="flex items-center justify-between border-b border-border px-4 py-3">
                         <h2 class="text-lg font-black text-primary">Outfit-Abos</h2>
-                        <button class="text-sm font-bold text-air-orange" @click="selectQuickTile({ category: 'outfit_subscription' })">Mehr sehen</button>
+                        <button class="text-sm font-bold text-buttonPrimary" @click="selectQuickTile({ category: 'outfit_subscription' })">Mehr sehen</button>
                     </div>
                     <div class="grid grid-cols-2 gap-2 p-3 md:grid-cols-4">
-                        <Link v-for="plan in outfitPlans" :key="plan.id" :href="route('login')" class="rounded border border-border p-3 transition hover:border-air-orange">
+                        <Link v-for="plan in outfitPlans" :key="plan.id" :href="route('login')" class="rounded border border-border p-3 transition hover:border-borderHover">
                             <div class="flex h-24 items-center justify-center rounded bg-muted">
-                                <i class="las la-tshirt text-5xl text-air-orange"></i>
+                                <i class="las la-tshirt text-5xl text-buttonPrimary"></i>
                             </div>
                             <p class="mt-2 line-clamp-2 text-xs font-semibold text-primary">{{ plan.title }}</p>
                             <p class="text-sm font-black text-primary">{{ formatPrice(plan.price_cents, plan.currency) }}</p>
@@ -362,19 +396,19 @@ const selectQuickTile = (tile) => {
                         <article
                             v-for="product in productItems"
                             :key="product.id"
-                            class="group overflow-hidden rounded border border-border bg-card transition hover:border-air-orange"
+                            class="group overflow-hidden rounded border border-border bg-card transition hover:border-borderHover"
                         >
                             <Link :href="product.show_url" class="block">
                                 <div class="relative aspect-square overflow-hidden bg-inputBg">
                                     <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition group-hover:scale-105" />
-                                    <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-6xl text-air-orange']"></i>
-                                    <span class="absolute left-2 top-2 rounded bg-card/90 px-2 py-1 text-[11px] font-black text-air-orange">{{ product.badge }}</span>
+                                    <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-6xl text-buttonPrimary']"></i>
+                                    <span class="absolute left-2 top-2 rounded bg-card/90 px-2 py-1 text-[11px] font-black text-buttonPrimary">{{ product.badge }}</span>
                                 </div>
                                 <div class="p-3">
                                     <p class="text-[11px] font-bold uppercase tracking-wide text-secondary">
                                         {{ categoryLabels[product.category] || product.category }}
                                     </p>
-                                    <h3 class="mt-1 line-clamp-2 min-h-[2.5rem] text-sm font-bold text-primary group-hover:text-air-orange">
+                                    <h3 class="mt-1 line-clamp-2 min-h-[2.5rem] text-sm font-bold text-primary group-hover:text-buttonPrimary">
                                         {{ product.title }}
                                     </h3>
                                     <p class="mt-1 hidden text-xs leading-5 text-secondary sm:line-clamp-2">
@@ -406,7 +440,7 @@ const selectQuickTile = (tile) => {
                             :href="link.url"
                             preserve-scroll
                             class="rounded border px-3 py-2 text-sm font-bold"
-                            :class="link.active ? 'border-air-orange bg-buttonPrimary text-buttonTextPrimary' : 'border-border bg-card text-primary hover:bg-muted'"
+                            :class="link.active ? 'border-borderHover bg-buttonPrimary text-buttonTextPrimary' : 'border-border bg-card text-primary hover:bg-muted'"
                             v-html="link.label"
                         />
                     </div>

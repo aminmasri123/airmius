@@ -999,7 +999,7 @@ const resetFilters = () => {
         <!-- EVENT LIST -->
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <article v-for="event in events" :key="event.id"
-                class="rounded-lg border border-border bg-card p-4 transition hover:border-borderHover">
+                class="group rounded-lg border border-border bg-card p-4 transition hover:-translate-y-0.5 hover:border-borderHover hover:shadow-lg">
                 <div class="flex items-start gap-3">
                     <div class="flex w-16 shrink-0 flex-col items-center justify-center rounded-lg bg-inputBg py-2">
                         <span class="text-[10px] font-semibold uppercase text-secondary">
@@ -1019,7 +1019,7 @@ const resetFilters = () => {
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
                                 <Link :href="route('auth.events.show', event.id)"
-                                    class="font-semibold text-primary hover:underline">
+                                    class="font-semibold text-primary transition group-hover:text-buttonPrimary hover:underline">
                                     <span>{{ event.club?.name }}</span>
                                     <span v-if="event.club?.name"> - </span>
                                     <span>{{ event.title }}</span>
@@ -1037,6 +1037,15 @@ const resetFilters = () => {
                             </span>
                         </div>
 
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <span v-if="event.comments_count" class="rounded-full bg-inputBg px-2 py-1 text-xs font-semibold text-secondary">
+                                {{ event.comments_count }} Kommentare
+                            </span>
+                            <span v-if="event.can_update" class="rounded-full bg-buttonPrimary/10 px-2 py-1 text-xs font-semibold text-buttonPrimary">
+                                Bearbeitbar
+                            </span>
+                        </div>
+
                         <div class="mt-3 space-y-1">
                             <p class="text-sm font-semibold text-primary">
                                 {{ eventDateTimeLabel(event) }}
@@ -1046,8 +1055,9 @@ const resetFilters = () => {
                                 {{ event.team?.name || event.club?.name || $t('events.public_scope') }}
                             </p>
 
-                            <p v-if="event.location" class="text-sm text-secondary">
-                                📍 {{ event.location }}
+                            <p class="flex items-center gap-1 text-sm text-secondary">
+                                <i class="las la-map-marker-alt text-base text-buttonPrimary"></i>
+                                <span class="truncate">{{ event.location || 'Keine Eingabe' }}</span>
                             </p>
                         </div>
 
@@ -1058,6 +1068,24 @@ const resetFilters = () => {
                                 @click="setParticipation(event, option.value)">
                                 {{ $t(option.label) }}
                             </button>
+                        </div>
+
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <Link
+                                :href="route('auth.events.show', event.id)"
+                                class="inline-flex flex-1 items-center justify-center rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover"
+                            >
+                                <i class="las la-eye mr-1"></i>
+                                Details
+                            </Link>
+                            <Link
+                                v-if="event.can_update"
+                                :href="`${route('auth.events.show', event.id)}?edit=1`"
+                                class="inline-flex flex-1 items-center justify-center rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary transition hover:border-borderHover hover:bg-muted"
+                            >
+                                <i class="las la-edit mr-1"></i>
+                                Bearbeiten
+                            </Link>
                         </div>
                     </div>
                 </div>

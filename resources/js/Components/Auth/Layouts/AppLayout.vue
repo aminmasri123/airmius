@@ -55,6 +55,7 @@ const statusOptions = [
 const iconFor = (type) => ({
     'chat.message': 'las la-comment-dots',
     'post.comment': 'las la-comments',
+    'event.comment': 'las la-calendar-check',
     'post.like': 'las la-heart',
     'friend.invite': 'las la-user-plus',
     'friend.accepted': 'las la-user-check',

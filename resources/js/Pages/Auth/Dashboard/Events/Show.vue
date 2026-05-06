@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
-import { Head, Link, router, useForm } from '@inertiajs/vue3'
-import { computed, ref, watch } from 'vue'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
+import { computed, onMounted, ref, watch } from 'vue'
 
 defineOptions({ layout: AppLayout })
 
@@ -18,6 +18,7 @@ const props = defineProps({
 
 const showEditModal = ref(false)
 const commentForm = useForm({ content: '' })
+const page = usePage()
 
 const browserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 
@@ -194,6 +195,12 @@ const deleteEvent = () => {
         preserveScroll: true,
     })
 }
+
+onMounted(() => {
+    if (props.can.update && page.url.includes('edit=1')) {
+        showEditModal.value = true
+    }
+})
 </script>
 
 <template>

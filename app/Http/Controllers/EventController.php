@@ -10,6 +10,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Services\EventService;
 use App\Services\GamificationService;
+use App\Support\AppNotification;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -89,10 +90,11 @@ class EventController extends Controller
 
         $events = $eventsQuery
             ->get()
-            ->each(fn (Event $event) => $event->setAttribute(
-                'current_participant_status',
-                $event->participants->first()?->pivot?->status,
-            ));
+            ->each(function (Event $event) use ($request) {
+                $event->setAttribute('current_participant_status', $event->participants->first()?->pivot?->status);
+                $event->setAttribute('can_update', $request->user()->can('update', $event));
+                $event->setAttribute('can_delete', $request->user()->can('delete', $event));
+            });
 
         return Inertia::render('Auth/Dashboard/Events/Index', [
             'events' => $events,
@@ -221,6 +223,18 @@ class EventController extends Controller
             'status' => ['required', Rule::in(Event::PARTICIPANT_STATUSES)],
         ]);
 
+        $currentStatus = $event->participants()
+            ->whereKey($request->user()->id)
+            ->first()
+            ?->pivot
+            ?->status;
+
+        if ($currentStatus === $data['status']) {
+            $event->participants()->detach($request->user()->id);
+
+            return back()->with('success', 'Teilnahmemeldung entfernt.');
+        }
+
         $event->participants()->syncWithoutDetaching([
             $request->user()->id => ['status' => $data['status']],
         ]);
@@ -250,10 +264,12 @@ class EventController extends Controller
             'content' => ['required', 'string', 'max:1500'],
         ]);
 
-        $event->comments()->create([
+        $comment = $event->comments()->create([
             'user_id' => $request->user()->id,
             'content' => $data['content'],
         ]);
+
+        $this->notifyEventCommentRecipients($event, $comment, $request->user());
 
         return back()->with('success', 'Kommentar erstellt.');
     }
@@ -458,6 +474,40 @@ class EventController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get(['id', 'name', 'slug', 'category']);
+    }
+
+    private function notifyEventCommentRecipients(Event $event, $comment, User $actor): void
+    {
+        $event->loadMissing(['team.users:id', 'club.users:id', 'team.club.users:id', 'participants:id']);
+
+        $recipientIds = collect([$event->user_id])
+            ->merge($event->participants->pluck('id'));
+
+        if ($event->team_id && $event->team) {
+            $recipientIds = $recipientIds->merge($event->team->users->pluck('id'));
+        } elseif ($event->club_id && $event->club) {
+            $recipientIds = $recipientIds->merge($event->club->users->pluck('id'));
+        } elseif ($event->team?->club) {
+            $recipientIds = $recipientIds->merge($event->team->club->users->pluck('id'));
+        }
+
+        $recipientIds
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->reject(fn ($id) => $id === (int) $actor->id)
+            ->each(fn ($recipientId) => AppNotification::send($recipientId, 'event.comment', [
+                'title' => $actor->name.' hat ein Event kommentiert',
+                'body' => str($comment->content)->limit(120)->toString(),
+                'url' => route('auth.events.show', $event->id),
+                'actor_id' => $actor->id,
+                'actor_name' => $actor->name,
+                'event_id' => $event->id,
+                'event_title' => $event->title,
+                'comment_id' => $comment->id,
+                'team_id' => $event->team_id,
+                'club_id' => $event->club_id ?: $event->team?->club_id,
+            ]));
     }
 
     private function grantGamificationForEvent(Request $request, Event $event): void
