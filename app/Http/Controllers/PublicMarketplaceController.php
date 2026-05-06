@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\CommerceOrder;
 use App\Models\MarketplaceProduct;
 use App\Models\OutfitSubscriptionPlan;
+use App\Models\Setting;
 use App\Services\MarketplacePricingService;
+use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -110,6 +112,7 @@ class PublicMarketplaceController extends Controller
             ],
             'segments' => $this->segments(),
             'pricingCountries' => $this->pricingCountries(),
+            'marketplaceVisuals' => $this->marketplaceVisuals(),
         ]);
     }
 
@@ -389,6 +392,21 @@ class PublicMarketplaceController extends Controller
                 'label' => $country.' · '.$profile['currency'].' · '.$profile['tax_label'].' '.$profile['tax_rate'].'%',
             ])
             ->values()
+            ->all();
+    }
+
+    private function marketplaceVisuals(): array
+    {
+        $defaults = [
+            'side_banner' => '/images/marketplace/airmius-marketplace-side-banner.png',
+            'hero_banner' => '',
+            'sale_banner' => '',
+        ];
+
+        return collect($defaults)
+            ->mapWithKeys(fn (string $default, string $key) => [
+                $key => UploadStorage::url(Setting::valueFor('marketplace_visual_'.$key, $default)),
+            ])
             ->all();
     }
 }

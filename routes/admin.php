@@ -103,6 +103,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/admin/commerce/addons/{addon}', [AdminCommerceController::class, 'updateAddon'])->middleware('can:subscriptions.manage')->name('admin.commerce.addons.update');
     Route::post('/admin/commerce/products', [AdminCommerceController::class, 'storeProduct'])->middleware('can:subscriptions.manage')->name('admin.commerce.products.store');
     Route::put('/admin/commerce/products/{product}', [AdminCommerceController::class, 'updateProduct'])->middleware('can:subscriptions.manage')->name('admin.commerce.products.update');
+    Route::post('/admin/commerce/marketplace-visuals', [AdminCommerceController::class, 'updateMarketplaceVisuals'])->middleware('can:subscriptions.manage')->name('admin.commerce.marketplace-visuals.update');
     Route::post('/admin/commerce/campaigns', [AdminCommerceController::class, 'storeCampaign'])->middleware('can:subscriptions.manage')->name('admin.commerce.campaigns.store');
     Route::put('/admin/commerce/campaigns/{campaign}', [AdminCommerceController::class, 'updateCampaign'])->middleware('can:subscriptions.manage')->name('admin.commerce.campaigns.update');
     Route::post('/admin/commerce/orders/{order}/mark-paid', [AdminCommerceController::class, 'markOrderPaid'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.mark-paid');

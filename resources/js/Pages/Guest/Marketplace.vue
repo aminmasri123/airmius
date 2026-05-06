@@ -20,6 +20,7 @@ const props = defineProps({
     categories: { type: Array, default: () => [] },
     segments: { type: Array, default: () => [] },
     pricingCountries: { type: Array, default: () => [] },
+    marketplaceVisuals: { type: Object, default: () => ({}) },
     filters: { type: Object, default: () => ({}) },
 })
 
@@ -43,10 +44,12 @@ const paginationLinks = computed(() => (props.products?.links || []).filter((lin
 const totalProducts = computed(() => props.products?.total || productItems.value.length)
 const heroProduct = computed(() => props.featuredProducts[0] || props.flashDeals[0] || productItems.value[0] || null)
 const heroSideProducts = computed(() => (props.featuredProducts.length ? props.featuredProducts : props.flashDeals).slice(1, 4))
-const sideBannerUrl = '/images/marketplace/airmius-marketplace-side-banner.png'
+const sideBannerUrl = computed(() => props.marketplaceVisuals.side_banner || '/images/marketplace/airmius-marketplace-side-banner.png')
 const sideBannerStyle = computed(() => ({
-    backgroundImage: `linear-gradient(180deg, rgba(5, 11, 22, 0.08), rgba(5, 11, 22, 0.18) 45%, rgba(5, 11, 22, 0.75)), url("${sideBannerUrl}")`,
+    backgroundImage: `linear-gradient(180deg, rgba(5, 11, 22, 0.08), rgba(5, 11, 22, 0.18) 45%, rgba(5, 11, 22, 0.75)), url("${sideBannerUrl.value}")`,
 }))
+const heroImageUrl = computed(() => props.marketplaceVisuals.hero_banner || heroProduct.value?.image_url || '')
+const saleBannerUrl = computed(() => props.marketplaceVisuals.sale_banner || '')
 const activeSegment = computed(() => props.segments.find((segment) => segment.value === form.value.segment) || props.segments[0] || null)
 const segmentLookup = computed(() => Object.fromEntries(props.segments.map((segment) => [segment.value || 'all', segment])))
 const productGroups = computed(() => {
@@ -256,9 +259,9 @@ const selectSegment = (segment) => {
                         class="relative min-h-[19rem] overflow-hidden rounded bg-buttonPrimary shadow-sm"
                     >
                         <img
-                            v-if="heroProduct?.image_url"
-                            :src="heroProduct.image_url"
-                            :alt="heroProduct.title"
+                            v-if="heroImageUrl"
+                            :src="heroImageUrl"
+                            :alt="heroProduct?.title || 'Airmius Marketplace'"
                             class="absolute inset-0 h-full w-full object-cover"
                         />
                         <div class="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent"></div>
@@ -304,6 +307,7 @@ const selectSegment = (segment) => {
                 </section>
 
                 <aside class="hidden rounded bg-buttonPrimary p-5 text-buttonTextPrimary shadow-sm lg:block">
+                    <img v-if="saleBannerUrl" :src="saleBannerUrl" alt="" class="-mx-2 -mt-2 mb-4 aspect-[4/5] rounded object-cover" />
                     <p class="font-heading text-3xl font-900 leading-tight">Sport Sale</p>
                     <p class="mt-2 text-sm font-semibold">Produkte, Camps, Kurse und Services aus deinem Sportnetzwerk.</p>
                     <div class="mt-8 rounded-full bg-white/20 p-6 text-center">

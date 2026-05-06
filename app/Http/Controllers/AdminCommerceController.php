@@ -7,11 +7,14 @@ use App\Models\CommerceOrder;
 use App\Models\MarketplacePayout;
 use App\Models\MarketplaceProduct;
 use App\Models\PayoutProfile;
+use App\Models\Setting;
 use App\Models\SubscriptionAddon;
 use App\Models\SubscriptionCoupon;
 use App\Models\SubscriptionInvoice;
 use App\Models\User;
 use App\Models\WebsiteRequest;
+use App\Services\MediaOptimizer;
+use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -19,6 +22,8 @@ use Inertia\Inertia;
 
 class AdminCommerceController extends Controller
 {
+    public function __construct(private MediaOptimizer $mediaOptimizer) {}
+
     public function index()
     {
         return Inertia::render('Auth/Dashboard/Admin/Commerce/Index', [
@@ -71,6 +76,7 @@ class AdminCommerceController extends Controller
                 ->latest('id')
                 ->limit(50)
                 ->get(),
+            'marketplaceVisuals' => $this->marketplaceVisualsForAdmin(),
         ]);
     }
 
@@ -229,6 +235,34 @@ class AdminCommerceController extends Controller
         return back()->with('success', 'Auszahlungsprofil aktualisiert.');
     }
 
+    public function updateMarketplaceVisuals(Request $request)
+    {
+        $definitions = $this->marketplaceVisualDefinitions();
+        $data = $request->validate([
+            'sources' => ['nullable', 'array'],
+            'sources.*' => ['nullable', 'string', 'max:2048'],
+            'uploads' => ['nullable', 'array'],
+            'uploads.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
+        ]);
+
+        foreach ($definitions as $key => $definition) {
+            $request->validate([
+                "sources.{$key}" => ['nullable', 'string', 'max:2048'],
+                "uploads.{$key}" => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
+            ]);
+
+            $source = trim((string) ($data['sources'][$key] ?? ''));
+
+            if ($request->hasFile("uploads.{$key}")) {
+                $source = $this->mediaOptimizer->store($request->file("uploads.{$key}"), 'marketplace/visuals')['path'];
+            }
+
+            Setting::setValue($definition['setting_key'], $source);
+        }
+
+        return back()->with('success', 'Marketplace-Bilder wurden aktualisiert.');
+    }
+
     private function couponData(Request $request): array
     {
         $data = $request->validate([
@@ -330,5 +364,47 @@ class AdminCommerceController extends Controller
             })
             ->values()
             ->all();
+    }
+
+    private function marketplaceVisualsForAdmin(): array
+    {
+        return collect($this->marketplaceVisualDefinitions())
+            ->map(fn (array $definition, string $key) => [
+                'key' => $key,
+                'label' => $definition['label'],
+                'description' => $definition['description'],
+                'recommended_size' => $definition['recommended_size'],
+                'source' => Setting::valueFor($definition['setting_key'], $definition['default']),
+                'url' => UploadStorage::url(Setting::valueFor($definition['setting_key'], $definition['default'])),
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function marketplaceVisualDefinitions(): array
+    {
+        return [
+            'side_banner' => [
+                'setting_key' => 'marketplace_visual_side_banner',
+                'label' => 'Seitlicher Marketplace-Banner',
+                'description' => 'Wird links und rechts im Marketplace als hoher Seitenbanner verwendet.',
+                'recommended_size' => '306 x 786 px oder 768 x 1920 px',
+                'default' => '/images/marketplace/airmius-marketplace-side-banner.png',
+            ],
+            'hero_banner' => [
+                'setting_key' => 'marketplace_visual_hero_banner',
+                'label' => 'Oberer Aktions-/Hero-Banner',
+                'description' => 'Optionales Hauptbild im ersten Marketplace-Bereich. Wenn leer, wird ein Produktbild verwendet.',
+                'recommended_size' => '1600 x 900 px',
+                'default' => '',
+            ],
+            'sale_banner' => [
+                'setting_key' => 'marketplace_visual_sale_banner',
+                'label' => 'Sale-Kachel / Aktionsbild',
+                'description' => 'Optionales Bild fuer die rechte Sale-Kachel im ersten Marketplace-Bereich.',
+                'recommended_size' => '800 x 1000 px',
+                'default' => '',
+            ],
+        ];
     }
 }

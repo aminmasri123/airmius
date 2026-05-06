@@ -16,6 +16,7 @@ const props = defineProps({
     payoutProfiles: { type: Array, default: () => [] },
     payoutCandidates: { type: Array, default: () => [] },
     payouts: { type: Array, default: () => [] },
+    marketplaceVisuals: { type: Array, default: () => [] },
 })
 
 const page = usePage()
@@ -52,6 +53,11 @@ const productForm = useForm({
     currency: 'EUR',
     status: 'draft',
     commission_percent: 10,
+})
+
+const marketplaceVisualForm = useForm({
+    sources: Object.fromEntries(props.marketplaceVisuals.map((visual) => [visual.key, visual.source || ''])),
+    uploads: {},
 })
 
 const campaignForm = useForm({
@@ -103,6 +109,18 @@ const storeAddon = () => addonForm.post(route('admin.commerce.addons.store'), {
 const storeProduct = () => productForm.post(route('admin.commerce.products.store'), {
     preserveScroll: true,
     onSuccess: () => productForm.reset('title', 'description', 'image_url'),
+})
+
+const setMarketplaceVisualUpload = (key, event) => {
+    marketplaceVisualForm.uploads[key] = event.target.files?.[0] || null
+}
+
+const updateMarketplaceVisuals = () => marketplaceVisualForm.post(route('admin.commerce.marketplace-visuals.update'), {
+    preserveScroll: true,
+    forceFormData: true,
+    onSuccess: () => {
+        marketplaceVisualForm.uploads = {}
+    },
 })
 
 const updateProductStatus = (product, status) => {
@@ -322,6 +340,65 @@ const updatePayoutProfile = (profile, status) => {
                 </form>
                 <p class="mt-4 text-sm text-secondary">{{ campaigns.length }} Kampagnen vorbereitet.</p>
             </article>
+        </section>
+
+        <section class="surface-card p-5">
+            <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Marketplace</p>
+                    <h2 class="mt-1 text-lg font-semibold text-primary">Statische Bilder verwalten</h2>
+                    <p class="mt-1 max-w-3xl text-sm text-secondary">
+                        Diese Bilder steuern die festen Marketplace-Flächen wie Seitenbanner, Hero-Banner und Sale-Kachel. Du kannst eine URL eintragen oder direkt ein Bild hochladen.
+                    </p>
+                </div>
+                <button
+                    type="button"
+                    class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60"
+                    :disabled="marketplaceVisualForm.processing"
+                    @click="updateMarketplaceVisuals"
+                >
+                    Bilder speichern
+                </button>
+            </div>
+
+            <div class="mt-5 grid gap-4 lg:grid-cols-3">
+                <article
+                    v-for="visual in marketplaceVisuals"
+                    :key="visual.key"
+                    class="rounded-lg border border-border bg-card p-4"
+                >
+                    <div class="overflow-hidden rounded-lg border border-border bg-inputBg">
+                        <img
+                            v-if="visual.url"
+                            :src="visual.url"
+                            :alt="visual.label"
+                            class="aspect-video w-full object-cover"
+                        />
+                        <div v-else class="flex aspect-video items-center justify-center text-secondary">
+                            <i class="las la-image text-4xl"></i>
+                        </div>
+                    </div>
+
+                    <h3 class="mt-3 font-semibold text-primary">{{ visual.label }}</h3>
+                    <p class="mt-1 text-xs leading-5 text-secondary">{{ visual.description }}</p>
+                    <p class="mt-2 text-xs font-semibold text-primary">Empfohlen: {{ visual.recommended_size }}</p>
+
+                    <label class="mt-4 block text-xs font-semibold uppercase text-secondary">Bild-URL oder gespeicherter Pfad</label>
+                    <input
+                        v-model="marketplaceVisualForm.sources[visual.key]"
+                        class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary"
+                        placeholder="https://... oder marketplace/visuals/..."
+                    />
+
+                    <label class="mt-3 block text-xs font-semibold uppercase text-secondary">Bild hochladen</label>
+                    <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                        @change="setMarketplaceVisualUpload(visual.key, $event)"
+                    />
+                </article>
+            </div>
         </section>
 
         <section class="surface-card overflow-hidden">
