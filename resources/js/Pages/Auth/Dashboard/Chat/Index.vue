@@ -20,6 +20,14 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    typingUsers: {
+        type: Array,
+        default: () => [],
+    },
+    messagePage: {
+        type: Object,
+        default: () => ({ limit: 50, has_more: false, next_limit: 50 }),
+    },
 })
 
 const page = usePage()
@@ -37,10 +45,13 @@ const reportForm = useForm({
 })
 const typingUsers = ref([])
 const showNewConversationModal = ref(false)
+const showAddMembersModal = ref(false)
 const showLeaveConversationModal = ref(false)
 const showChatOnMobile = ref(!!props.selectedConversation)
 const conversationSearch = ref('')
 const activeConversationFilter = ref(props.selectedConversation?.type ?? 'direct')
+const isPinnedToBottom = ref(true)
+const loadingOlderMessages = ref(false)
 let chatInterval = null
 let chatChannelName = null
 let typingTimeout = null
@@ -70,6 +81,10 @@ const conversationForm = useForm({
 
 const leaveConversationForm = useForm({
     delete_conversation: false,
+})
+
+const addMembersForm = useForm({
+    participant_ids: [],
 })
 
 const initials = (name) => (name || '?')
@@ -158,9 +173,27 @@ const selectedMessages = computed(() => {
 })
 
 const selectedUsers = computed(() => props.selectedConversation?.users || [])
+const activeTypingUsers = computed(() => {
+    const users = [...(props.typingUsers || []), ...typingUsers.value]
+    const seen = new Set()
+
+    return users.filter((user) => {
+        if (!user?.id || user.id === authUser?.id || seen.has(user.id)) {
+            return false
+        }
+
+        seen.add(user.id)
+        return true
+    })
+})
 const remainingMembersAfterLeave = computed(() => Math.max(0, selectedUsers.value.length - 1))
 const canLeaveConversation = computed(() => {
     return !!props.selectedConversation && props.selectedConversation.type !== 'direct'
+})
+const availableUsersToAdd = computed(() => {
+    const currentIds = new Set(selectedUsers.value.map((user) => user.id))
+
+    return props.users.filter((user) => !currentIds.has(user.id))
 })
 const canCreateConversation = computed(() => {
     if (conversationForm.type === 'team') {
@@ -180,6 +213,9 @@ const sendMessage = () => {
 
     const text = messageForm.message.trim()
     const temporaryId = `local-${Date.now()}`
+
+    window.clearTimeout(typingTimeout)
+    announceTyping(false)
 
     optimisticMessages.value.push({
         id: temporaryId,
@@ -202,6 +238,7 @@ const sendMessage = () => {
     messageForm.reset('message', 'attachments')
     const inputs = Array.isArray(attachmentInput.value) ? attachmentInput.value : [attachmentInput.value]
     inputs.filter(Boolean).forEach((input) => { input.value = '' })
+    isPinnedToBottom.value = true
     scrollMessagesToBottom()
 
     window.axios.post(route('auth.messages.store'), payload).then((response) => {
@@ -263,6 +300,32 @@ const openLeaveConversationModal = () => {
     showLeaveConversationModal.value = true
 }
 
+const openAddMembersModal = () => {
+    if (props.selectedConversation?.type !== 'group') return
+
+    addMembersForm.reset('participant_ids')
+    showAddMembersModal.value = true
+}
+
+const toggleAddMember = (id) => {
+    addMembersForm.participant_ids = addMembersForm.participant_ids.includes(id)
+        ? addMembersForm.participant_ids.filter((participantId) => participantId !== id)
+        : [...addMembersForm.participant_ids, id]
+}
+
+const addMembersToConversation = () => {
+    if (!props.selectedConversation?.id || addMembersForm.participant_ids.length === 0) return
+
+    addMembersForm.post(route('auth.conversations.members.store', props.selectedConversation.id), {
+        preserveScroll: true,
+        only: ['conversations', 'selectedConversation', 'messagePage', 'users', 'flash', 'errors'],
+        onSuccess: () => {
+            showAddMembersModal.value = false
+            addMembersForm.reset('participant_ids')
+        },
+    })
+}
+
 const closeLeaveConversationModal = () => {
     if (leaveConversationForm.processing) return
 
@@ -289,21 +352,77 @@ const onAttachmentChange = (event) => {
 const refreshChat = () => {
     if (document.hidden || messageForm.processing || conversationForm.processing) return
 
+    const shouldStickToBottom = isPinnedToBottom.value
+
     router.reload({
-        only: ['conversations', 'selectedConversation', 'notificationCenter', 'auth'],
+        only: ['conversations', 'selectedConversation', 'messagePage', 'typingUsers', 'notificationCenter', 'auth'],
+        data: {
+            message_limit: props.messagePage?.limit || 50,
+        },
         preserveScroll: true,
         preserveState: true,
         onSuccess: () => {
-            if (props.selectedConversation) scrollMessagesToBottom(false)
+            if (props.selectedConversation && shouldStickToBottom) scrollMessagesToBottom(false)
+        },
+    })
+}
+
+const messageContainer = () => Array.isArray(messagesContainer.value)
+    ? messagesContainer.value[0]
+    : messagesContainer.value
+
+const isNearBottom = (container) => {
+    if (!container) return true
+
+    return container.scrollHeight - container.scrollTop - container.clientHeight < 120
+}
+
+const onMessagesScroll = () => {
+    const container = messageContainer()
+    if (!container) return
+
+    isPinnedToBottom.value = isNearBottom(container)
+
+    if (container.scrollTop <= 80) {
+        loadOlderMessages()
+    }
+}
+
+const loadOlderMessages = () => {
+    if (!props.selectedConversation?.id || loadingOlderMessages.value || !props.messagePage?.has_more) return
+
+    const container = messageContainer()
+    if (!container) return
+
+    loadingOlderMessages.value = true
+    const previousHeight = container.scrollHeight
+    const previousTop = container.scrollTop
+
+    router.reload({
+        only: ['selectedConversation', 'messagePage', 'typingUsers'],
+        data: {
+            message_limit: props.messagePage.next_limit || ((props.messagePage.limit || 50) + 50),
+        },
+        preserveScroll: true,
+        preserveState: true,
+        onFinish: () => {
+            nextTick(() => {
+                const updatedContainer = messageContainer()
+
+                if (updatedContainer) {
+                    updatedContainer.scrollTop = updatedContainer.scrollHeight - previousHeight + previousTop
+                }
+
+                loadingOlderMessages.value = false
+                isPinnedToBottom.value = false
+            })
         },
     })
 }
 
 const scrollMessagesToBottom = (smooth = true) => {
     nextTick(() => {
-        const container = Array.isArray(messagesContainer.value)
-            ? messagesContainer.value[0]
-            : messagesContainer.value
+        const container = messageContainer()
 
         if (!container) return
 
@@ -311,6 +430,7 @@ const scrollMessagesToBottom = (smooth = true) => {
             top: container.scrollHeight,
             behavior: smooth ? 'smooth' : 'auto',
         })
+        isPinnedToBottom.value = true
     })
 }
 
@@ -376,13 +496,23 @@ const unbindChatRealtime = () => {
     typingUsers.value = []
 }
 
-const announceTyping = () => {
+const announceTyping = (typingValue = null) => {
     if (!props.selectedConversation?.id) return
 
     window.clearTimeout(typingTimeout)
-    typingTimeout = window.setTimeout(() => {
+
+    if (typingValue !== null) {
         window.axios.post(route('auth.conversations.typing', props.selectedConversation.id), {
-            typing: true,
+            typing: typingValue,
+        }).catch(() => { })
+        return
+    }
+
+    typingTimeout = window.setTimeout(() => {
+        const typing = !!messageForm.message.trim()
+
+        window.axios.post(route('auth.conversations.typing', props.selectedConversation.id), {
+            typing,
         }).catch(() => { })
     }, 200)
 }
@@ -513,6 +643,7 @@ watch(
             }
 
             scrollMessagesToBottom(false)
+            isPinnedToBottom.value = true
             selectConversation()
             markSelectedConversationAsRead()
             bindChatRealtime()
@@ -526,13 +657,16 @@ watch(
 watch(
     () => selectedMessages.value.length,
     () => {
-        if (props.selectedConversation) scrollMessagesToBottom()
+        if (props.selectedConversation && isPinnedToBottom.value && !loadingOlderMessages.value) {
+            scrollMessagesToBottom()
+        }
     },
 )
 
 onMounted(() => {
     if (props.selectedConversation) {
         scrollMessagesToBottom(false)
+        isPinnedToBottom.value = true
         markSelectedConversationAsRead()
         bindChatRealtime()
     }
@@ -615,7 +749,6 @@ onUnmounted(() => {
                         :key="conversation.id"
                         :href="route('auth.conversations.index', { conversation: conversation.id })"
                         preserve-scroll
-                        preserve-state
                         class="mb-1 flex gap-3 rounded-lg p-3 text-primary transition hover:bg-muted"
                         :class="selectedConversation?.id === conversation.id ? 'bg-muted' : ''"
                         @click="selectConversation"
@@ -676,18 +809,40 @@ onUnmounted(() => {
                             {{ initials(member.name) }}
                         </div>
                     </div>
-                    <button
-                        v-if="canLeaveConversation"
-                        type="button"
-                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-error"
-                        title="Gruppe verlassen"
-                        @click="openLeaveConversationModal"
-                    >
-                        <i class="las la-sign-out-alt text-xl"></i>
-                    </button>
+                    <div class="flex items-center gap-1">
+                        <button
+                            v-if="selectedConversation.type === 'group'"
+                            type="button"
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-primary"
+                            title="Personen hinzufuegen"
+                            @click="openAddMembersModal"
+                        >
+                            <i class="las la-user-plus text-xl"></i>
+                        </button>
+                        <button
+                            v-if="canLeaveConversation"
+                            type="button"
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-error"
+                            title="Gruppe verlassen"
+                            @click="openLeaveConversationModal"
+                        >
+                            <i class="las la-sign-out-alt text-xl"></i>
+                        </button>
+                    </div>
                 </div>
 
-                <div v-if="selectedConversation" ref="messagesContainer" class="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 custom-scrollbar">
+                <div v-if="selectedConversation" ref="messagesContainer" class="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 custom-scrollbar" @scroll.passive="onMessagesScroll">
+                    <div v-if="messagePage?.has_more || loadingOlderMessages" class="flex justify-center">
+                        <button
+                            type="button"
+                            class="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-secondary hover:bg-inputBg disabled:cursor-wait disabled:opacity-70"
+                            :disabled="loadingOlderMessages"
+                            @click="loadOlderMessages"
+                        >
+                            {{ loadingOlderMessages ? 'Lade ältere Nachrichten...' : 'Ältere Nachrichten laden' }}
+                        </button>
+                    </div>
+
                     <div
                         v-for="message in selectedMessages"
                         :key="message.id"
@@ -803,8 +958,8 @@ onUnmounted(() => {
                         Keine Nachrichten in diesem Chat.
                     </div>
 
-                    <div v-if="typingUsers.length" class="text-xs text-secondary">
-                        {{ typingUsers.map((user) => user.name).join(', ') }} schreibt...
+                    <div v-if="activeTypingUsers.length" class="text-xs text-secondary">
+                        {{ activeTypingUsers.map((user) => user.name).join(', ') }} schreibt...
                     </div>
                 </div>
 
@@ -859,13 +1014,79 @@ onUnmounted(() => {
             </section>
         </div>
 
+        <div v-if="showAddMembersModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-0 sm:p-4">
+            <div class="flex h-full w-full flex-col bg-card sm:h-[min(640px,90vh)] sm:max-w-lg sm:rounded-lg">
+                <div class="border-b border-border p-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-lg font-semibold text-primary">Personen hinzufuegen</h2>
+                            <p class="mt-1 text-sm text-secondary">{{ titleFor(selectedConversation) }}</p>
+                        </div>
+                        <button type="button" class="text-secondary hover:text-primary" @click="showAddMembersModal = false">
+                            <i class="las la-times text-2xl"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <form class="flex min-h-0 flex-1 flex-col" @submit.prevent="addMembersToConversation">
+                    <div class="min-h-0 flex-1 overflow-y-auto p-2 custom-scrollbar">
+                        <button
+                            v-for="member in availableUsersToAdd"
+                            :key="member.id"
+                            type="button"
+                            class="mb-2 flex w-full items-center gap-3 rounded-lg border p-3 text-left transition"
+                            :class="addMembersForm.participant_ids.includes(member.id)
+                                ? 'border-primary bg-inputBg'
+                                : 'border-border hover:bg-inputBg'"
+                            @click="toggleAddMember(member.id)"
+                        >
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary">
+                                {{ initials(member.name) }}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate text-sm font-medium text-primary">{{ member.name }}</p>
+                                <p class="truncate text-xs text-secondary">{{ member.email }}</p>
+                            </div>
+                            <i
+                                class="las text-xl"
+                                :class="addMembersForm.participant_ids.includes(member.id) ? 'la-check-circle text-success' : 'la-circle text-secondary'"
+                            ></i>
+                        </button>
+
+                        <p v-if="availableUsersToAdd.length === 0" class="p-6 text-center text-sm text-secondary">
+                            Keine weiteren Personen verfuegbar.
+                        </p>
+                    </div>
+
+                    <div class="border-t border-border p-3">
+                        <div class="flex gap-2">
+                            <button
+                                type="button"
+                                class="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary transition hover:bg-inputBg"
+                                @click="showAddMembersModal = false"
+                            >
+                                Abbrechen
+                            </button>
+                            <button
+                                type="submit"
+                                :disabled="addMembersForm.processing || addMembersForm.participant_ids.length === 0"
+                                class="flex-1 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Hinzufuegen
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <div v-if="showNewConversationModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-0 sm:p-4">
             <div class="flex h-full w-full flex-col bg-card sm:h-[min(720px,90vh)] sm:max-w-lg sm:rounded-lg">
                 <div class="border-b border-border p-4">
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <h2 class="text-lg font-semibold text-primary">Neue Konversation</h2>
-                            <p class="mt-1 text-sm text-secondary">Direktchat, Gruppe oder Team gezielt starten.</p>
+                            <p class="mt-1 text-sm text-secondary">Fuer Gruppen mindestens zwei Personen auswaehlen.</p>
                         </div>
                         <button type="button" class="text-secondary hover:text-primary" @click="showNewConversationModal = false">
                             <i class="las la-times text-2xl"></i>
@@ -947,6 +1168,9 @@ onUnmounted(() => {
                         />
 
                         <div class="flex gap-2">
+                            <div v-if="conversationForm.type === 'group'" class="flex flex-1 items-center text-xs text-secondary">
+                                {{ conversationForm.participant_ids.length }} von 2 Personen ausgewaehlt
+                            </div>
                             <button
                                 type="button"
                                 class="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary transition hover:bg-inputBg"

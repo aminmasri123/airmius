@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\ChatService;
 use App\Services\ModerationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -33,7 +34,7 @@ class ConversationController extends Controller
                 ->find($request->integer('conversation'));
         }
 
-        return $this->renderIndex($selected);
+        return $this->renderIndex($selected, $request);
     }
 
     /**
@@ -119,7 +120,7 @@ class ConversationController extends Controller
     {
         abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
 
-        return $this->renderIndex($conversation);
+        return $this->renderIndex($conversation, request());
     }
 
     public function typing(Request $request, Conversation $conversation)
@@ -130,9 +131,40 @@ class ConversationController extends Controller
             'typing' => ['nullable', 'boolean'],
         ]);
 
-        broadcast(new ChatTyping($conversation, $request->user(), $data['typing'] ?? true))->toOthers();
+        $typing = $data['typing'] ?? true;
+        $cacheKey = $this->typingCacheKey($conversation->id, $request->user()->id);
+
+        if ($typing) {
+            Cache::put($cacheKey, true, now()->addSeconds(6));
+        } else {
+            Cache::forget($cacheKey);
+        }
+
+        broadcast(new ChatTyping($conversation, $request->user(), $typing))->toOthers();
 
         return response()->json(['success' => true]);
+    }
+
+    public function addMembers(Request $request, Conversation $conversation)
+    {
+        abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
+        abort_if($conversation->type !== 'group', 422, 'Mitglieder koennen nur zu Gruppenchats hinzugefuegt werden.');
+
+        $data = $request->validate([
+            'participant_ids' => ['required', 'array', 'min:1'],
+            'participant_ids.*' => ['integer', 'exists:users,id'],
+        ]);
+
+        $participantIds = collect($data['participant_ids'])
+            ->reject(fn ($id) => (int) $id === auth()->id())
+            ->unique()
+            ->values();
+
+        abort_if($participantIds->isEmpty(), 422, 'Bitte mindestens eine weitere Person auswaehlen.');
+
+        $conversation->users()->syncWithoutDetaching($participantIds);
+
+        return back()->with('success', 'Mitglieder wurden hinzugefuegt.');
     }
 
     public function leave(Request $request, Conversation $conversation)
@@ -186,8 +218,10 @@ class ConversationController extends Controller
         //
     }
 
-    private function renderIndex(?Conversation $selectedConversation = null)
+    private function renderIndex(?Conversation $selectedConversation = null, ?Request $request = null)
     {
+        $request ??= request();
+        $messageLimit = min(500, max(50, (int) $request->integer('message_limit', 50)));
         $userConversationIds = Conversation::query()
             ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()))
             ->pluck('id');
@@ -228,11 +262,20 @@ class ConversationController extends Controller
                 ->update(['read' => true]);
         }
 
-        $selectedConversation?->load([
-            'users:id,name',
-            'team:id,name',
-            'event:id,conversation_id,title',
-            'messages' => fn ($query) => $query
+        $messagePage = [
+            'limit' => $messageLimit,
+            'has_more' => false,
+            'next_limit' => $messageLimit,
+        ];
+
+        if ($selectedConversation) {
+            $selectedConversation->load([
+                'users:id,name',
+                'team:id,name',
+                'event:id,conversation_id,title',
+            ]);
+
+            $messages = $selectedConversation->messages()
                 ->where('moderation_status', '!=', 'removed')
                 ->with([
                     'sender:id,name',
@@ -240,13 +283,36 @@ class ConversationController extends Controller
                     'attachments.file:id,path,thumbnail_path,type,size',
                     'reactions.user:id,name',
                 ])
-                ->oldest('id')
-                ->limit(80),
-        ]);
+                ->latest('id')
+                ->limit($messageLimit + 1)
+                ->get();
+
+            $messagePage = [
+                'limit' => $messageLimit,
+                'has_more' => $messages->count() > $messageLimit,
+                'next_limit' => min(500, $messageLimit + 50),
+            ];
+
+            $selectedConversation->setRelation(
+                'messages',
+                $messages->take($messageLimit)->sortBy('id')->values()
+            );
+        }
 
         return Inertia::render('Auth/Dashboard/Chat/Index', [
             'conversations' => $conversations,
             'selectedConversation' => $selectedConversation,
+            'messagePage' => $messagePage,
+            'typingUsers' => $selectedConversation
+                ? $selectedConversation->users
+                    ->where('id', '!=', auth()->id())
+                    ->filter(fn (User $user) => Cache::has($this->typingCacheKey($selectedConversation->id, $user->id)))
+                    ->map(fn (User $user) => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                    ])
+                    ->values()
+                : [],
             'users' => User::query()
                 ->whereKeyNot(auth()->id())
                 ->whereDoesntHave('blockedUsers', fn ($query) => $query->where('blocked_user_id', auth()->id()))
@@ -269,5 +335,10 @@ class ConversationController extends Controller
                 ->orderBy('teams.name')
                 ->get(),
         ]);
+    }
+
+    private function typingCacheKey(int $conversationId, int $userId): string
+    {
+        return "chat:typing:{$conversationId}:{$userId}";
     }
 }
