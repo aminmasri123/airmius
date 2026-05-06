@@ -42,6 +42,9 @@ const totalProducts = computed(() => props.products?.total || productItems.value
 const heroProduct = computed(() => props.featuredProducts[0] || props.flashDeals[0] || productItems.value[0] || null)
 const heroSideProducts = computed(() => (props.featuredProducts.length ? props.featuredProducts : props.flashDeals).slice(1, 4))
 const sideBannerUrl = '/images/marketplace/airmius-marketplace-side-banner.png'
+const sideBannerStyle = computed(() => ({
+    backgroundImage: `linear-gradient(180deg, rgba(5, 11, 22, 0.08), rgba(5, 11, 22, 0.18) 45%, rgba(5, 11, 22, 0.75)), url("${sideBannerUrl}")`,
+}))
 const activeSegment = computed(() => props.segments.find((segment) => segment.value === form.value.segment) || props.segments[0] || null)
 const segmentLookup = computed(() => Object.fromEntries(props.segments.map((segment) => [segment.value || 'all', segment])))
 const productGroups = computed(() => {
@@ -134,42 +137,46 @@ const selectSegment = (segment) => {
     <div class="min-h-screen bg-bg text-primary">
         <Subnav vertical />
 
-        <aside class="pointer-events-none fixed left-0 top-0 z-0 hidden h-screen w-[16vw] min-w-[13rem] max-w-[18rem] overflow-hidden bg-buttonPrimary/10 xl:block">
-            <img :src="sideBannerUrl" alt="" class="h-full w-full object-cover opacity-95" />
-            <div class="absolute inset-0 bg-gradient-to-b from-bg/10 via-transparent to-bg/70"></div>
+        <aside
+            class="pointer-events-none fixed left-0 top-0 z-0 hidden h-screen w-[16vw] min-w-[13rem] max-w-[18rem] overflow-hidden bg-buttonPrimary/20 bg-cover bg-center xl:block"
+            :style="sideBannerStyle"
+        >
+            <div class="absolute inset-0 bg-buttonPrimary/10"></div>
             <div class="absolute inset-x-4 top-14 text-center text-buttonTextPrimary drop-shadow">
                 <p class="font-heading text-3xl font-900 leading-none">AIRMIUS</p>
                 <p class="mt-2 text-sm font-black uppercase tracking-wide">Sport Deals</p>
             </div>
         </aside>
 
-        <aside class="pointer-events-none fixed right-0 top-0 z-0 hidden h-screen w-[16vw] min-w-[13rem] max-w-[18rem] overflow-hidden bg-buttonPrimary/10 xl:block">
-            <img :src="sideBannerUrl" alt="" class="h-full w-full scale-x-[-1] object-cover opacity-95" />
-            <div class="absolute inset-0 bg-gradient-to-b from-bg/10 via-transparent to-bg/70"></div>
+        <aside
+            class="pointer-events-none fixed right-0 top-0 z-0 hidden h-screen w-[16vw] min-w-[13rem] max-w-[18rem] scale-x-[-1] overflow-hidden bg-buttonPrimary/20 bg-cover bg-center xl:block"
+            :style="sideBannerStyle"
+        >
+            <div class="absolute inset-0 bg-buttonPrimary/10"></div>
             <div class="absolute inset-x-4 top-14 text-center text-buttonTextPrimary drop-shadow">
-                <p class="font-heading text-3xl font-900 leading-none">AIRMIUS</p>
-                <p class="mt-2 text-sm font-black uppercase tracking-wide">Marketplace</p>
+                <p class="scale-x-[-1] font-heading text-3xl font-900 leading-none">AIRMIUS</p>
+                <p class="mt-2 scale-x-[-1] text-sm font-black uppercase tracking-wide">Marketplace</p>
             </div>
         </aside>
 
         <main class="relative z-10 pb-24 pt-0 md:pb-14 xl:mx-[16vw] xl:pr-24">
-            <section class="border-b border-border bg-card px-4 py-3 shadow-sm">
-                <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 overflow-hidden rounded-lg bg-buttonPrimary px-5 py-3 text-buttonTextPrimary">
+            <section class="border-b border-border bg-bg px-4 py-3 shadow-sm">
+                <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 overflow-hidden rounded-lg border border-border bg-card px-5 py-3 text-primary shadow-sm">
                     <div class="flex min-w-0 items-center gap-3">
-                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-card/20">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary">
                             <i class="las la-running text-2xl"></i>
                         </div>
                         <div class="min-w-0">
                             <p class="font-heading text-lg font-900 leading-tight sm:text-2xl">AIRMIUS Marketplace</p>
-                            <p class="truncate text-xs font-semibold opacity-90 sm:text-sm">
+                            <p class="truncate text-xs font-semibold text-secondary sm:text-sm">
                                 Sport Deals, Kurse, Camps und Services passend zu deinem Design
                             </p>
                         </div>
                     </div>
                     <div class="hidden items-center gap-2 text-sm font-black sm:flex">
-                        <span class="rounded-full bg-card/20 px-3 py-1">Teams</span>
-                        <span class="rounded-full bg-card/20 px-3 py-1">Vereine</span>
-                        <span class="rounded-full bg-card/20 px-3 py-1">Athleten</span>
+                        <span class="rounded-full bg-muted px-3 py-1 text-secondary">Teams</span>
+                        <span class="rounded-full bg-muted px-3 py-1 text-secondary">Vereine</span>
+                        <span class="rounded-full bg-muted px-3 py-1 text-secondary">Athleten</span>
                     </div>
                 </div>
             </section>
