@@ -410,9 +410,32 @@ const canDeleteMessage = (message) => {
 
 const fileUrl = (file) => file?.url || (file?.path ? `${page.props.uploads?.url || '/storage'}/${file.path}` : '#')
 const fileThumbnailUrl = (file) => file?.thumbnail_url || (file?.thumbnail_path ? `${page.props.uploads?.url || '/storage'}/${file.thumbnail_path}` : null)
+const fileDownloadUrl = (file) => file?.id ? route('auth.files.download', file.id) : fileUrl(file)
 const attachmentLabel = (attachment) => attachment.file?.path?.split('/').pop() || 'Datei'
 const isImageMime = (type) => type?.startsWith('image/')
 const isVideoMime = (type) => type?.startsWith('video/')
+const fileExtension = (file) => (file?.path?.split('.').pop() || '').toLowerCase()
+const fileSizeLabel = (size) => {
+    if (!size) return ''
+    if (size < 1024) return `${size} B`
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+
+    return `${(size / 1024 / 1024).toFixed(1)} MB`
+}
+const fileIconFor = (file) => {
+    const type = file?.type || ''
+    const extension = fileExtension(file)
+
+    if (type.includes('pdf') || extension === 'pdf') return 'las la-file-pdf text-red-500'
+    if (type.includes('word') || ['doc', 'docx'].includes(extension)) return 'las la-file-word text-blue-500'
+    if (type.includes('excel') || type.includes('spreadsheet') || ['xls', 'xlsx', 'csv'].includes(extension)) return 'las la-file-excel text-green-600'
+    if (type.includes('powerpoint') || type.includes('presentation') || ['ppt', 'pptx'].includes(extension)) return 'las la-file-powerpoint text-orange-500'
+    if (type.includes('zip') || ['zip', 'rar', '7z'].includes(extension)) return 'las la-file-archive text-yellow-600'
+    if (type.includes('audio')) return 'las la-file-audio text-purple-500'
+    if (type.includes('text') || ['txt', 'md'].includes(extension)) return 'las la-file-alt text-secondary'
+
+    return 'las la-file text-secondary'
+}
 
 const reactionCounts = (message) => {
     return (message.reactions || []).reduce((counts, reaction) => {
@@ -687,10 +710,23 @@ onUnmounted(() => {
                                 <div
                                     v-for="attachment in message.attachments"
                                     :key="attachment.id"
-                                    class="overflow-hidden rounded border border-border/50"
+                                    class="overflow-hidden rounded border border-border/50 bg-card/40"
                                 >
+                                    <a
+                                        v-if="attachment.file && isImageMime(attachment.file.type)"
+                                        :href="fileDownloadUrl(attachment.file)"
+                                        class="block"
+                                        :title="`${attachmentLabel(attachment)} herunterladen`"
+                                    >
+                                        <img
+                                            :src="fileUrl(attachment.file)"
+                                            :alt="attachmentLabel(attachment)"
+                                            class="max-h-72 w-full object-cover"
+                                        />
+                                    </a>
+
                                     <video
-                                        v-if="attachment.file && isVideoMime(attachment.file.type)"
+                                        v-else-if="attachment.file && isVideoMime(attachment.file.type)"
                                         :src="fileUrl(attachment.file)"
                                         :poster="fileThumbnailUrl(attachment.file)"
                                         controls
@@ -698,21 +734,21 @@ onUnmounted(() => {
                                         class="max-h-72 w-full bg-black"
                                     ></video>
 
-                                    <img
-                                        v-else-if="attachment.file && isImageMime(attachment.file.type)"
-                                        :src="fileUrl(attachment.file)"
-                                        :alt="attachmentLabel(attachment)"
-                                        class="max-h-72 w-full object-cover"
-                                    />
-
                                     <a
-                                        v-else
-                                        :href="fileUrl(attachment.file)"
-                                        target="_blank"
-                                        class="flex items-center gap-2 px-2 py-1 text-xs underline-offset-2 hover:underline"
+                                        v-else-if="attachment.file"
+                                        :href="fileDownloadUrl(attachment.file)"
+                                        class="flex items-center gap-3 px-3 py-2 text-xs hover:bg-inputBg/70"
+                                        :title="`${attachmentLabel(attachment)} herunterladen`"
                                     >
-                                        <i class="las la-paperclip"></i>
-                                        <span class="truncate">{{ attachmentLabel(attachment) }}</span>
+                                        <i :class="[fileIconFor(attachment.file), 'text-2xl']"></i>
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block truncate font-semibold">{{ attachmentLabel(attachment) }}</span>
+                                            <span class="block text-[11px] opacity-75">
+                                                {{ fileExtension(attachment.file).toUpperCase() || 'DATEI' }}
+                                                <span v-if="fileSizeLabel(attachment.file.size)"> · {{ fileSizeLabel(attachment.file.size) }}</span>
+                                            </span>
+                                        </span>
+                                        <i class="las la-download text-lg opacity-75"></i>
                                     </a>
                                 </div>
                             </div>

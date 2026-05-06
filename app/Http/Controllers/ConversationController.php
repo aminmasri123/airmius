@@ -206,11 +206,15 @@ class ConversationController extends Controller
             ->orderByDesc('id')
             ->get();
 
-        if ($selectedConversation) {
+        $readConversationIds = $selectedConversation
+            ? collect([$selectedConversation->id])
+            : $userConversationIds;
+
+        if ($readConversationIds->isNotEmpty()) {
             MessageReceipt::query()
                 ->where('user_id', auth()->id())
                 ->whereNull('read_at')
-                ->whereHas('message', fn ($query) => $query->where('conversation_id', $selectedConversation->id))
+                ->whereHas('message', fn ($query) => $query->whereIn('conversation_id', $readConversationIds))
                 ->update([
                     'delivered_at' => now(),
                     'read_at' => now(),
@@ -220,7 +224,7 @@ class ConversationController extends Controller
                 ->appNotifications()
                 ->where('type', 'chat.message')
                 ->where('read', false)
-                ->where('data->conversation_id', $selectedConversation->id)
+                ->when($selectedConversation, fn ($query) => $query->where('data->conversation_id', $selectedConversation->id))
                 ->update(['read' => true]);
         }
 
@@ -233,7 +237,7 @@ class ConversationController extends Controller
                 ->with([
                     'sender:id,name',
                     'receipts:id,message_id,user_id,delivered_at,read_at',
-                    'attachments.file:id,path,type,size',
+                    'attachments.file:id,path,thumbnail_path,type,size',
                     'reactions.user:id,name',
                 ])
                 ->oldest('id')

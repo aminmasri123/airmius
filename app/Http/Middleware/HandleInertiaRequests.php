@@ -49,7 +49,7 @@ class HandleInertiaRequests extends Middleware
         $user = $request->user();
         $can = $user ? $this->permissionsFor($user) : [];
         $unreadNotificationsCount = $user
-            ? $user->appNotifications()->where('read', false)->count()
+            ? $user->appNotifications()->where('read', false)->where('type', '!=', 'chat.message')->count()
             : 0;
         $unreadChatsCount = $user
             ? \App\Models\MessageReceipt::where('user_id', $user->id)
@@ -63,6 +63,7 @@ class HandleInertiaRequests extends Middleware
             : 0;
         $latestNotifications = $user
             ? $user->appNotifications()
+                ->where('type', '!=', 'chat.message')
                 ->latest()
                 ->limit(5)
                 ->get()

@@ -18,6 +18,9 @@ class FilePolicy extends BasePolicy
     public function view(User $user, File $file)
     {
         return $file->user_id === $user->id
+            || $file->messages()
+                ->whereHas('conversation.users', fn ($query) => $query->where('users.id', $user->id))
+                ->exists()
             || ($user->can('file.view') && $this->canAccessScope($user, $file));
     }
 

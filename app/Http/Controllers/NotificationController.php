@@ -12,6 +12,7 @@ class NotificationController extends Controller
     {
         $notifications = $request->user()
             ->appNotifications()
+            ->where('type', '!=', 'chat.message')
             ->latest()
             ->paginate(20)
             ->through(fn (Notification $notification) => [
@@ -40,6 +41,7 @@ class NotificationController extends Controller
     {
         $request->user()
             ->appNotifications()
+            ->where('type', '!=', 'chat.message')
             ->where('read', false)
             ->update(['read' => true]);
 
