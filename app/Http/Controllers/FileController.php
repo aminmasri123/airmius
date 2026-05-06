@@ -45,6 +45,7 @@ class FileController extends Controller
                 ->with(['user:id,name', 'club:id,name', 'team:id,name', 'event:id,title', 'folder:id,name'])
                 ->where($scope)
                 ->where('folder_id', $currentFolder?->id)
+                ->whereDoesntHave('messages')
                 ->latest('id')
                 ->get(),
             'folders' => Folder::query()

@@ -21,7 +21,7 @@ class FilePolicy extends BasePolicy
     {
         return $file->user_id === $user->id
             || $this->canViewViaVisibleChatMessage($user, $file)
-            || ($user->can('file.view') && $this->canAccessScope($user, $file));
+            || $this->canAccessScope($user, $file);
     }
 
     public function upload(User $user)

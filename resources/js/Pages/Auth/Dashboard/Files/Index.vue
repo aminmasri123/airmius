@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import Modal from '@/Components/Modal.vue'
-import { Head, Link, router, useForm } from '@inertiajs/vue3'
+import { Head, router, useForm } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 
 const props = defineProps({
@@ -244,9 +244,9 @@ const contextLabel = (file) => file.event?.title || file.team?.name || file.club
                             <button class="rounded-lg p-2 text-secondary hover:bg-inputBg" @click="openShare(file)" title="Freigeben">
                                 <i class="las la-share-alt"></i>
                             </button>
-                            <Link :href="route('auth.files.download', file.id)" class="rounded-lg p-2 text-secondary hover:bg-inputBg" title="Herunterladen">
+                            <a :href="route('auth.files.download', file.id)" class="rounded-lg p-2 text-secondary hover:bg-inputBg" title="Herunterladen">
                                 <i class="las la-download"></i>
-                            </Link>
+                            </a>
                             <button class="rounded-lg p-2 text-secondary hover:bg-inputBg" @click="deleteFile(file)" title="Löschen">
                                 <i class="las la-trash"></i>
                             </button>
