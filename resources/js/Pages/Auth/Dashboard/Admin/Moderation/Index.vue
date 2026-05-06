@@ -16,6 +16,7 @@ const activeTab = ref('reports')
 
 const openReports = computed(() => props.reports.filter((item) => item.status === 'open'))
 const openFlags = computed(() => props.flags.filter((item) => item.status === 'open'))
+const storageUrl = (path) => path?.startsWith('http') ? path : `${page.props.uploads?.url || '/storage'}/${path}`
 
 const badgeClass = (severity) => ({
     high: 'bg-error/10 text-error border-error/30',
@@ -125,6 +126,13 @@ const updateFlag = (flag, status, removeContent = false) => {
                             {{ report.content?.text || 'Kein Inhalt mehr vorhanden.' }}
                         </p>
 
+                        <img
+                            v-if="report.content?.image"
+                            :src="storageUrl(report.content.image)"
+                            alt=""
+                            class="mt-3 max-h-96 w-full rounded-lg border border-border object-contain bg-bg"
+                        />
+
                         <p v-if="report.details" class="mt-2 text-sm text-secondary">
                             Hinweis: {{ report.details }}
                         </p>
@@ -168,6 +176,13 @@ const updateFlag = (flag, status, removeContent = false) => {
                         <p class="mt-3 whitespace-pre-line rounded-lg bg-bg p-3 text-sm leading-6 text-primary">
                             {{ flag.content?.text || 'Kein Inhalt mehr vorhanden.' }}
                         </p>
+
+                        <img
+                            v-if="flag.content?.image"
+                            :src="storageUrl(flag.content.image)"
+                            alt=""
+                            class="mt-3 max-h-96 w-full rounded-lg border border-border object-contain bg-bg"
+                        />
 
                         <div class="mt-2 flex flex-wrap gap-2 text-xs text-secondary">
                             <span v-for="category in flag.categories" :key="category" class="rounded bg-muted px-2 py-1">

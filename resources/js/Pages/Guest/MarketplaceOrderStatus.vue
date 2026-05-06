@@ -10,6 +10,11 @@ const props = defineProps({
 })
 
 const title = props.status === 'success' ? 'Bestellung verarbeitet' : 'Bestellung abgebrochen'
+
+const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: currency || 'EUR',
+}).format(Number(cents || 0) / 100)
 </script>
 
 <template>
@@ -35,6 +40,10 @@ const title = props.status === 'success' ? 'Bestellung verarbeitet' : 'Bestellun
                 <div class="mt-6 rounded-lg border border-border bg-bg p-4 text-left text-sm">
                     <p class="font-semibold text-primary">{{ order.title }}</p>
                     <p class="mt-1 text-secondary">{{ order.amount }}</p>
+                    <p v-if="order.pricing" class="mt-1 text-secondary">
+                        {{ formatMoney(order.pricing.net_cents, order.pricing.currency) }} netto ·
+                        {{ formatMoney(order.pricing.tax_cents, order.pricing.currency) }} {{ order.pricing.tax_label }}
+                    </p>
                     <p class="mt-1 text-secondary">Status: {{ order.status }}</p>
                 </div>
 

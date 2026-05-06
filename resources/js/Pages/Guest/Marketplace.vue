@@ -19,6 +19,7 @@ const props = defineProps({
     officialStores: { type: Array, default: () => [] },
     categories: { type: Array, default: () => [] },
     segments: { type: Array, default: () => [] },
+    pricingCountries: { type: Array, default: () => [] },
     filters: { type: Object, default: () => ({}) },
 })
 
@@ -26,6 +27,7 @@ const form = ref({
     search: props.filters.search || '',
     category: props.filters.category || '',
     segment: props.filters.segment || '',
+    country: props.filters.country || '',
 })
 
 const categoryLabels = {
@@ -82,6 +84,23 @@ const formatPrice = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
     currency: currency || 'EUR',
 }).format((cents || 0) / 100)
 
+const price = (item) => item.price || {
+    gross_cents: item.price_cents,
+    net_cents: item.price_cents,
+    tax_cents: 0,
+    currency: item.currency || 'EUR',
+    tax_rate: 0,
+    tax_label: 'Tax',
+}
+
+const grossPrice = (item) => formatPrice(price(item).gross_cents, price(item).currency)
+const netPrice = (item) => formatPrice(price(item).net_cents, price(item).currency)
+const taxInfo = (item) => {
+    const quote = price(item)
+
+    return `${netPrice(item)} netto · ${formatPrice(quote.tax_cents, quote.currency)} ${quote.tax_label} (${quote.tax_rate}%)`
+}
+
 const shortDescription = (text, length = 92) => {
     if (!text) return 'Sportangebot aus dem Airmius Marketplace.'
     if (text.length <= length) return text
@@ -94,6 +113,7 @@ const search = () => {
         search: form.value.search || undefined,
         category: form.value.category || undefined,
         segment: form.value.segment || undefined,
+        country: form.value.country || undefined,
     }, {
         preserveScroll: true,
         preserveState: true,
@@ -105,6 +125,7 @@ const reset = () => {
     form.value.search = ''
     form.value.category = ''
     form.value.segment = ''
+    form.value.country = ''
     search()
 }
 
@@ -182,7 +203,7 @@ const selectSegment = (segment) => {
             </section>
 
             <section class="bg-card px-4 py-4 shadow-sm">
-                <form class="mx-auto grid max-w-7xl gap-3 md:grid-cols-[13rem_12rem_1fr_8rem_6rem]" @submit.prevent="search">
+                <form class="mx-auto grid max-w-7xl gap-3 md:grid-cols-[12rem_12rem_10rem_1fr_8rem_6rem]" @submit.prevent="search">
                     <select v-model="form.category" class="h-12 rounded-md border-border bg-inputBg text-sm text-primary">
                         <option v-for="category in categories" :key="category.value" :value="category.value">
                             {{ category.label }}
@@ -191,6 +212,12 @@ const selectSegment = (segment) => {
                     <select v-model="form.segment" class="h-12 rounded-md border-border bg-inputBg text-sm text-primary">
                         <option v-for="segment in segments" :key="segment.value || 'all'" :value="segment.value">
                             {{ segment.label }}
+                        </option>
+                    </select>
+                    <select v-model="form.country" class="h-12 rounded-md border-border bg-inputBg text-sm text-primary" @change="search">
+                        <option value="">Land automatisch</option>
+                        <option v-for="country in pricingCountries" :key="country.country" :value="country.country">
+                            {{ country.label }}
                         </option>
                     </select>
                     <div class="relative">
@@ -270,7 +297,7 @@ const selectSegment = (segment) => {
                             </div>
                             <div class="min-w-0">
                                 <p class="truncate text-xs font-black text-primary">{{ product.title }}</p>
-                                <p class="text-xs font-bold text-buttonPrimary">{{ formatPrice(product.price_cents, product.currency) }}</p>
+                                <p class="text-xs font-bold text-buttonPrimary">{{ grossPrice(product) }} brutto</p>
                             </div>
                         </Link>
                     </div>
@@ -354,8 +381,9 @@ const selectSegment = (segment) => {
                         </div>
                         <div class="p-2">
                             <h3 class="line-clamp-2 min-h-[2.25rem] text-xs font-semibold text-primary">{{ product.title }}</h3>
-                            <p class="mt-1 text-sm font-black text-primary">{{ formatPrice(product.price_cents, product.currency) }}</p>
-                            <p v-if="product.old_price_cents" class="text-[11px] text-secondary line-through">{{ formatPrice(product.old_price_cents, product.currency) }}</p>
+                            <p class="mt-1 text-sm font-black text-primary">{{ grossPrice(product) }}</p>
+                            <p class="text-[11px] text-secondary">brutto · {{ netPrice(product) }} netto</p>
+                            <p v-if="product.old_price_cents" class="text-[11px] text-secondary line-through">{{ formatPrice(product.old_price_cents, price(product).currency) }}</p>
                         </div>
                     </Link>
                 </div>
@@ -409,7 +437,8 @@ const selectSegment = (segment) => {
                                 <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-5xl text-buttonPrimary']"></i>
                             </div>
                             <p class="mt-2 line-clamp-2 text-xs font-semibold text-primary">{{ product.title }}</p>
-                            <p class="text-sm font-black text-primary">{{ formatPrice(product.price_cents, product.currency) }}</p>
+                            <p class="text-sm font-black text-primary">{{ grossPrice(product) }}</p>
+                            <p class="text-[11px] text-secondary">{{ netPrice(product) }} netto</p>
                         </Link>
                     </div>
                 </div>
@@ -426,7 +455,8 @@ const selectSegment = (segment) => {
                                 <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-5xl text-buttonPrimary']"></i>
                             </div>
                             <p class="mt-2 line-clamp-2 text-xs font-semibold text-primary">{{ product.title }}</p>
-                            <p class="text-sm font-black text-primary">{{ formatPrice(product.price_cents, product.currency) }}</p>
+                            <p class="text-sm font-black text-primary">{{ grossPrice(product) }}</p>
+                            <p class="text-[11px] text-secondary">{{ netPrice(product) }} netto</p>
                         </Link>
                     </div>
                 </div>
@@ -442,7 +472,8 @@ const selectSegment = (segment) => {
                                 <i class="las la-tshirt text-5xl text-buttonPrimary"></i>
                             </div>
                             <p class="mt-2 line-clamp-2 text-xs font-semibold text-primary">{{ plan.title }}</p>
-                            <p class="text-sm font-black text-primary">{{ formatPrice(plan.price_cents, plan.currency) }}</p>
+                            <p class="text-sm font-black text-primary">{{ grossPrice(plan) }}</p>
+                            <p class="text-[11px] text-secondary">{{ netPrice(plan) }} netto</p>
                         </Link>
                     </div>
                 </div>
@@ -495,8 +526,9 @@ const selectSegment = (segment) => {
                                                 {{ shortDescription(product.description, 78) }}
                                             </p>
                                             <div class="mt-3">
-                                                <p class="text-lg font-black text-primary">{{ formatPrice(product.price_cents, product.currency) }}</p>
-                                                <p v-if="product.old_price_cents" class="text-xs text-secondary line-through">{{ formatPrice(product.old_price_cents, product.currency) }}</p>
+                                                <p class="text-lg font-black text-primary">{{ grossPrice(product) }}</p>
+                                                <p class="text-xs text-secondary">{{ taxInfo(product) }}</p>
+                                                <p v-if="product.old_price_cents" class="text-xs text-secondary line-through">{{ formatPrice(product.old_price_cents, price(product).currency) }}</p>
                                             </div>
                                             <div class="mt-2 flex items-center justify-between text-xs text-secondary">
                                                 <span>{{ product.rating }} / 5</span>

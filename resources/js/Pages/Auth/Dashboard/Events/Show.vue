@@ -13,7 +13,7 @@ const props = defineProps({
     visibilities: { type: Array, default: () => [] },
     participantStatuses: Array,
     currentParticipantStatus: String,
-    can: { type: Object, default: () => ({ update: false, delete: false }) },
+    can: { type: Object, default: () => ({ update: false, delete: false, cancel: false }) },
 })
 
 const showEditModal = ref(false)
@@ -39,6 +39,11 @@ const statusLabels = {
     yes: 'Zusage',
     maybe: 'Vielleicht',
     no: 'Absage',
+}
+
+const eventStatusLabels = {
+    scheduled: 'Geplant',
+    cancelled: 'Abgesagt',
 }
 
 const recurrenceOptions = [
@@ -160,6 +165,8 @@ const maybeCount = computed(() => props.event.participants?.filter((participant)
 const noCount = computed(() => props.event.participants?.filter((participant) => participant.pivot?.status === 'no').length || 0)
 
 const setStatus = (status) => {
+    if (props.event.status === 'cancelled') return
+
     router.post(route('auth.events.join', props.event.id), { status }, { preserveScroll: true })
 }
 
@@ -196,6 +203,16 @@ const deleteEvent = () => {
     })
 }
 
+const cancelEvent = () => {
+    const reason = window.prompt('Warum wird das Event abgesagt? Optional leer lassen.')
+
+    if (reason === null) return
+
+    router.post(route('auth.events.cancel', props.event.id), { reason }, {
+        preserveScroll: true,
+    })
+}
+
 onMounted(() => {
     if (props.can.update && page.url.includes('edit=1')) {
         showEditModal.value = true
@@ -213,6 +230,14 @@ onMounted(() => {
                     Zurueck zu Events
                 </Link>
                 <h1 class="mt-2 text-3xl font-bold text-primary">{{ event.title }}</h1>
+                <p class="mt-2">
+                    <span
+                        class="rounded-full px-2 py-1 text-xs font-semibold"
+                        :class="event.status === 'cancelled' ? 'bg-error/10 text-error' : 'bg-success/10 text-success'"
+                    >
+                        {{ eventStatusLabels[event.status || 'scheduled'] || event.status }}
+                    </span>
+                </p>
                 <p class="mt-2 text-sm text-secondary">
                     {{ typeLabels[event.type] || event.type }} · {{ visibilityLabels[event.visibility] || event.visibility }}
                 </p>
@@ -237,6 +262,15 @@ onMounted(() => {
                     Event bearbeiten
                 </button>
                 <button
+                    v-if="can.cancel && event.status !== 'cancelled'"
+                    type="button"
+                    class="rounded-lg border border-warning/40 px-4 py-2 text-sm font-semibold text-warning hover:bg-warning/10"
+                    @click="cancelEvent"
+                >
+                    <i class="las la-calendar-times mr-1"></i>
+                    Event absagen
+                </button>
+                <button
                     v-if="can.delete"
                     type="button"
                     class="rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
@@ -249,6 +283,14 @@ onMounted(() => {
         </div>
 
         <section class="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <div v-if="event.status === 'cancelled'" class="rounded-lg border border-error/40 bg-error/10 p-4 text-error lg:col-span-2">
+                <p class="font-semibold">Dieses Event wurde abgesagt.</p>
+                <p v-if="event.cancellation_reason" class="mt-1 text-sm">{{ event.cancellation_reason }}</p>
+                <p v-if="event.cancelled_by" class="mt-1 text-xs text-secondary">
+                    Abgesagt von {{ event.cancelled_by.name }}{{ event.cancelled_at ? ` am ${formatDateTime(event.cancelled_at)}` : '' }}
+                </p>
+            </div>
+
             <article class="rounded-lg border border-border bg-card p-5">
                 <div class="grid gap-4 md:grid-cols-2">
                     <div class="rounded-lg bg-inputBg p-4">
@@ -325,6 +367,8 @@ onMounted(() => {
                             :key="status"
                             class="rounded-lg border px-4 py-2 text-sm font-semibold"
                             :class="currentParticipantStatus === status ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary' : 'border-border text-primary hover:bg-muted'"
+                            :disabled="event.status === 'cancelled'"
+                            :title="event.status === 'cancelled' ? 'Event ist abgesagt' : ''"
                             @click="setStatus(status)"
                         >
                             {{ statusLabels[status] || status }}

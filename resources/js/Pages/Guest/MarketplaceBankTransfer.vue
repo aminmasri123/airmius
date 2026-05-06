@@ -8,6 +8,11 @@ defineProps({
     order: { type: Object, required: true },
     bank: { type: Object, required: true },
 })
+
+const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: currency || 'EUR',
+}).format(Number(cents || 0) / 100)
 </script>
 
 <template>
@@ -30,6 +35,16 @@ defineProps({
                         <div class="flex justify-between gap-4 border-b border-border pb-3">
                             <dt class="text-secondary">Betrag</dt>
                             <dd class="font-semibold text-primary">{{ order.amount }}</dd>
+                        </div>
+                        <div v-if="order.pricing" class="grid gap-2 rounded-lg border border-border bg-bg p-3">
+                            <div class="flex justify-between gap-4">
+                                <dt class="text-secondary">Netto</dt>
+                                <dd class="font-semibold text-primary">{{ formatMoney(order.pricing.net_cents, order.pricing.currency) }}</dd>
+                            </div>
+                            <div class="flex justify-between gap-4">
+                                <dt class="text-secondary">{{ order.pricing.tax_label }} ({{ order.pricing.tax_rate }}%)</dt>
+                                <dd class="font-semibold text-primary">{{ formatMoney(order.pricing.tax_cents, order.pricing.currency) }}</dd>
+                            </div>
                         </div>
                         <div class="flex justify-between gap-4 border-b border-border pb-3">
                             <dt class="text-secondary">Verwendungszweck</dt>

@@ -16,6 +16,6 @@ class RideService
 
     public function join($ride, $user)
     {
-        $ride->users()->attach($user->id);
+        $ride->users()->syncWithoutDetaching([$user->id]);
     }
 }

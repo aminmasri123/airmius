@@ -29,6 +29,7 @@ const commentEditForms = reactive({})
 const editForms = reactive({})
 const reportTarget = ref(null)
 const deleteTarget = ref(null)
+const deleteCommentTarget = ref(null)
 const deleteConfirmText = ref('')
 const reportForm = useForm({
     type: '',
@@ -86,10 +87,6 @@ const sportLabel = (sport) => {
 }
 const submitPost = () => {
     createPost()
-
-    if (!postForm.processing) {
-        showPostModal.value = false
-    }
 }
 const postTypeLabel = (type) => ({
     normal: 'Normal',
@@ -147,7 +144,10 @@ const createPost = () => {
         forceFormData: true,
         preserveScroll: true,
         only: ['posts', 'clubs', 'teams', 'notificationCenter', 'auth', 'errors'],
-        onSuccess: resetCreateForm,
+        onSuccess: () => {
+            resetCreateForm()
+            showPostModal.value = false
+        },
     })
 }
 
@@ -305,11 +305,20 @@ const updateComment = (comment) => {
 }
 
 const deleteComment = (comment) => {
-    if (!window.confirm('Kommentar wirklich löschen?')) return
+    deleteCommentTarget.value = comment
+}
 
-    router.delete(route('auth.comments.destroy', comment.id), {
+const closeDeleteComment = () => {
+    deleteCommentTarget.value = null
+}
+
+const confirmDeleteComment = () => {
+    if (!deleteCommentTarget.value) return
+
+    router.delete(route('auth.comments.destroy', deleteCommentTarget.value.id), {
         preserveScroll: true,
         only: ['posts', 'notificationCenter', 'auth', 'flash'],
+        onSuccess: closeDeleteComment,
     })
 }
 
@@ -1167,6 +1176,38 @@ const visitPage = (url) => url && router.visit(url, {
                     </button>
                 </div>
             </form>
+        </div>
+
+        <div
+            v-if="deleteCommentTarget"
+            class="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
+            @click.self="closeDeleteComment"
+        >
+            <div class="w-full max-w-md rounded-lg border border-border bg-card p-5 shadow-xl">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-error">Kommentar entfernen</p>
+                        <h2 class="mt-1 text-xl font-semibold text-primary">Bist du sicher?</h2>
+                        <p class="mt-2 text-sm leading-6 text-secondary">
+                            Dieser Kommentar wird dauerhaft vom Beitrag entfernt.
+                        </p>
+                    </div>
+                    <button type="button" class="rounded p-2 text-secondary hover:bg-muted" @click="closeDeleteComment">
+                        <i class="las la-times"></i>
+                    </button>
+                </div>
+
+                <div class="mt-5 flex justify-end gap-2">
+                    <button type="button" class="btn" @click="closeDeleteComment">Abbrechen</button>
+                    <button
+                        type="button"
+                        class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white"
+                        @click="confirmDeleteComment"
+                    >
+                        Kommentar lÃ¶schen
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div

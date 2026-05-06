@@ -1,0 +1,1 @@
+import{o as e,c as s,m as t,Q as a}from"./app-CGw-apgU.js";const c=["src"],l={__name:"ApplicationMark",setup(m){const{isDark:o}=a(),r=t(()=>o.value?"/img/logo/LOGO-Dark-Airmius-Quervormat.png":"/img/logo/Logo-Airmius-Quervormat.png");return(n,i)=>(e(),s("img",{src:r.value,alt:"AIRMIUS Logo"},null,8,c))}};export{l as _};

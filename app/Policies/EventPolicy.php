@@ -63,8 +63,17 @@ class EventPolicy extends BasePolicy
             || ($event->team && $user->can('event.delete') && $this->managesTeam($user, $event->team));
     }
 
+    public function cancel(User $user, Event $event)
+    {
+        return $this->update($user, $event);
+    }
+
     public function join(User $user, ?Event $event = null)
     {
+        if ($event && $event->status === 'cancelled') {
+            return false;
+        }
+
         if ($event && $this->view($user, $event)) {
             return true;
         }

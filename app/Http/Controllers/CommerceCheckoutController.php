@@ -637,7 +637,7 @@ class CommerceCheckoutController extends Controller
             'status' => 'awaiting_transfer',
             'payment_reference' => 'AIR-COM-'.$order->created_at->format('Y').'-'.str_pad((string) $order->id, 6, '0', STR_PAD_LEFT),
             'due_at' => now()->addDays((int) $bank['payment_terms_days'])->endOfDay(),
-            'payload' => ['bank_transfer' => $bank],
+            'payload' => [...($order->payload ?: []), 'bank_transfer' => $bank],
         ]);
     }
 
@@ -762,12 +762,15 @@ class CommerceCheckoutController extends Controller
 
     private function orderResource(CommerceOrder $order): array
     {
+        $pricing = $order->payload['pricing'] ?? null;
+
         return [
             'id' => $order->id,
             'type' => $order->type,
             'status' => $order->status,
             'title' => $order->orderable?->name ?? $order->orderable?->title ?? 'Airmius Bestellung',
             'amount' => number_format($order->amount_cents / 100, 2, ',', '.').' '.$order->currency,
+            'pricing' => $pricing,
             'payment_reference' => $order->payment_reference,
             'due_at' => $order->due_at?->toDateString(),
         ];

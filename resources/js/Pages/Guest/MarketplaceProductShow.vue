@@ -1,14 +1,16 @@
 <script setup>
-import { useForm, Link } from '@inertiajs/vue3'
+import { useForm, Link, router } from '@inertiajs/vue3'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
+import { computed } from 'vue'
 
 const props = defineProps({
     canLogin: Boolean,
     canRegister: Boolean,
     product: { type: Object, required: true },
+    pricingCountries: { type: Array, default: () => [] },
 })
 
 const form = useForm({
@@ -16,15 +18,35 @@ const form = useForm({
     guest_email: '',
     provider: 'bank_transfer',
     accepted_terms: false,
+    country: props.product.price?.country || '',
 })
 
 const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
     style: 'currency',
-    currency,
+    currency: currency || 'EUR',
 }).format(Number(cents || 0) / 100)
+
+const price = computed(() => props.product.price || {
+    gross_cents: props.product.price_cents,
+    net_cents: props.product.price_cents,
+    tax_cents: 0,
+    currency: props.product.currency || 'EUR',
+    tax_rate: 0,
+    tax_label: 'Tax',
+})
 
 const checkout = () => {
     form.post(route('guest.marketplace.products.checkout', props.product.id))
+}
+
+const updateCountry = () => {
+    router.get(route('guest.marketplace.products.show', props.product.id), {
+        country: form.country || undefined,
+    }, {
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+    })
 }
 </script>
 
@@ -72,9 +94,31 @@ const checkout = () => {
 
                     <aside class="surface-card h-fit p-6">
                         <p class="text-xs uppercase text-secondary">Preis</p>
-                        <p class="mt-2 text-3xl font-bold text-primary">{{ formatMoney(product.price_cents, product.currency) }}</p>
+                        <p class="mt-2 text-3xl font-bold text-primary">{{ formatMoney(price.gross_cents, price.currency) }}</p>
+                        <div class="mt-2 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
+                            <p>
+                                {{ formatMoney(price.net_cents, price.currency) }} netto
+                            </p>
+                            <p>
+                                {{ formatMoney(price.tax_cents, price.currency) }} {{ price.tax_label }} ({{ price.tax_rate }}%)
+                            </p>
+                            <p v-if="price.is_estimate" class="mt-2 text-xs">
+                                Steuer/Waehrung sind eine technische Schaetzung und werden beim finalen Checkout geprueft.
+                            </p>
+                        </div>
 
                         <form class="mt-6 space-y-4" @submit.prevent="checkout">
+                            <div>
+                                <label class="text-xs font-semibold uppercase text-secondary">Land / Steuerzone</label>
+                                <select v-model="form.country" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" @change="updateCountry">
+                                    <option value="">Automatisch</option>
+                                    <option v-for="country in pricingCountries" :key="country.country" :value="country.country">
+                                        {{ country.label }}
+                                    </option>
+                                </select>
+                                <p v-if="form.errors.country" class="mt-1 text-sm text-red-400">{{ form.errors.country }}</p>
+                            </div>
+
                             <div>
                                 <label class="text-xs font-semibold uppercase text-secondary">Name</label>
                                 <input v-model="form.guest_name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required autocomplete="name" />

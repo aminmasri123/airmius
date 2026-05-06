@@ -226,6 +226,8 @@ class PostController extends Controller
             }
 
             $data['image'] = $this->mediaOptimizer->store($request->file('image'), 'posts')['path'];
+        } else {
+            unset($data['image']);
         }
 
         $data['content'] ??= '';

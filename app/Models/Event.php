@@ -12,6 +12,7 @@ class Event extends Model
     public const TYPES = ['training', 'match', 'meeting', 'public'];
     public const VISIBILITIES = ['private', 'organization', 'public'];
     public const PARTICIPANT_STATUSES = ['yes', 'no', 'maybe'];
+    public const STATUSES = ['scheduled', 'cancelled'];
 
     protected $fillable = [
         'club_id',
@@ -21,6 +22,7 @@ class Event extends Model
         'title',
         'type',
         'visibility',
+        'status',
         'start_time',
         'end_time',
         'location',
@@ -29,6 +31,9 @@ class Event extends Model
         'recurrence_days',
         'recurrence_ends_at',
         'reminder_at',
+        'cancelled_at',
+        'cancelled_by',
+        'cancellation_reason',
     ];
 
   protected $casts = [
@@ -37,6 +42,7 @@ class Event extends Model
     'recurrence_days' => 'array',
     'recurrence_ends_at' => 'datetime',
     'reminder_at' => 'datetime',
+    'cancelled_at' => 'datetime',
 ];
 
     public function club()
@@ -57,6 +63,11 @@ class Event extends Model
     public function conversation()
     {
         return $this->belongsTo(Conversation::class);
+    }
+
+    public function cancelledBy()
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
     }
 
     public function participants()

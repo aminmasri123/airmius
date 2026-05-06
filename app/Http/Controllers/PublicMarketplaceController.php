@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CommerceOrder;
 use App\Models\MarketplaceProduct;
 use App\Models\OutfitSubscriptionPlan;
+use App\Services\MarketplacePricingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -13,19 +14,23 @@ use Illuminate\Validation\Rule;
 
 class PublicMarketplaceController extends Controller
 {
+    public function __construct(private MarketplacePricingService $pricing) {}
+
     public function index(Request $request)
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'in:product,course,camp,service,outfit_subscription'],
             'segment' => ['nullable', 'in:shoes,apparel,equipment,recovery,analysis,nutrition,plans,camps,team'],
+            'country' => ['nullable', 'string', 'size:2'],
         ]);
+        $country = $filters['country'] ?? null;
 
         $products = $this->marketplaceProductQuery($filters)
             ->latest('id')
             ->paginate(40)
             ->withQueryString()
-            ->through(fn (MarketplaceProduct $product) => $this->productCard($product));
+            ->through(fn (MarketplaceProduct $product) => $this->productCard($product, $request, $country));
 
         $featuredProducts = MarketplaceProduct::query()
             ->with(['user:id,name', 'club:id,name'])
@@ -33,33 +38,33 @@ class PublicMarketplaceController extends Controller
             ->latest('id')
             ->limit(8)
             ->get()
-            ->map(fn (MarketplaceProduct $product) => $this->productCard($product));
+            ->map(fn (MarketplaceProduct $product) => $this->productCard($product, $request, $country));
 
         $flashDeals = $this->marketplaceProductQuery()
             ->latest('id')
             ->limit(12)
             ->get()
-            ->map(fn (MarketplaceProduct $product) => $this->productCard($product));
+            ->map(fn (MarketplaceProduct $product) => $this->productCard($product, $request, $country));
 
         $essentialDeals = $this->marketplaceProductQuery(['category' => 'product'])
             ->latest('id')
             ->skip(12)
             ->limit(12)
             ->get()
-            ->map(fn (MarketplaceProduct $product) => $this->productCard($product));
+            ->map(fn (MarketplaceProduct $product) => $this->productCard($product, $request, $country));
 
         $learningDeals = $this->marketplaceProductQuery()
             ->whereIn('category', ['course', 'camp'])
             ->latest('id')
             ->limit(10)
             ->get()
-            ->map(fn (MarketplaceProduct $product) => $this->productCard($product));
+            ->map(fn (MarketplaceProduct $product) => $this->productCard($product, $request, $country));
 
         $serviceDeals = $this->marketplaceProductQuery(['category' => 'service'])
             ->latest('id')
             ->limit(10)
             ->get()
-            ->map(fn (MarketplaceProduct $product) => $this->productCard($product));
+            ->map(fn (MarketplaceProduct $product) => $this->productCard($product, $request, $country));
 
         $outfitPlans = collect();
 
@@ -79,7 +84,7 @@ class PublicMarketplaceController extends Controller
                 ->orderBy('monthly_price_cents')
                 ->limit(8)
                 ->get()
-                ->map(fn (OutfitSubscriptionPlan $plan) => $this->outfitPlanCard($plan));
+                ->map(fn (OutfitSubscriptionPlan $plan) => $this->outfitPlanCard($plan, $country));
         }
 
         return Inertia::render('Guest/Marketplace', [
@@ -104,6 +109,7 @@ class PublicMarketplaceController extends Controller
                 ['value' => 'service', 'label' => 'Services'],
             ],
             'segments' => $this->segments(),
+            'pricingCountries' => $this->pricingCountries(),
         ]);
     }
 
@@ -124,11 +130,12 @@ class PublicMarketplaceController extends Controller
             });
     }
 
-    public function show(MarketplaceProduct $product)
+    public function show(Request $request, MarketplaceProduct $product)
     {
         abort_unless($product->status === 'published', 404);
 
         $product->load(['user:id,name', 'club:id,name']);
+        $quote = $this->pricing->quoteForRequest($product, $request);
 
         return Inertia::render('Guest/MarketplaceProductShow', [
             'canLogin' => Route::has('login'),
@@ -141,8 +148,10 @@ class PublicMarketplaceController extends Controller
                 'category' => $product->category,
                 'price_cents' => $product->price_cents,
                 'currency' => $product->currency,
+                'price' => $quote,
                 'provider_name' => $product->club?->name ?: $product->user?->name,
             ],
+            'pricingCountries' => $this->pricingCountries(),
         ]);
     }
 
@@ -155,7 +164,9 @@ class PublicMarketplaceController extends Controller
             'guest_email' => ['required_without:login_checkout', 'nullable', 'email', 'max:255'],
             'provider' => ['required', Rule::in(['stripe', 'paypal', 'bank_transfer'])],
             'accepted_terms' => ['accepted'],
+            'country' => ['nullable', 'string', 'size:2'],
         ]);
+        $quote = $this->pricing->quoteForRequest($product, $request, $data['country'] ?? null);
 
         if ($request->user()) {
             $order = CommerceOrder::create([
@@ -165,10 +176,11 @@ class PublicMarketplaceController extends Controller
                 'orderable_id' => $product->id,
                 'type' => 'marketplace_product',
                 'provider' => $data['provider'],
-                'amount_cents' => $product->price_cents,
-                'commission_cents' => (int) floor($product->price_cents * ($product->commission_percent / 100)),
-                'currency' => $product->currency,
+                'amount_cents' => $quote['gross_cents'],
+                'commission_cents' => (int) floor($quote['gross_cents'] * ($product->commission_percent / 100)),
+                'currency' => $quote['currency'],
                 'status' => 'pending',
+                'payload' => ['pricing' => $quote],
             ]);
 
             return app(CommerceCheckoutController::class)->startPublicCheckout($order);
@@ -183,18 +195,21 @@ class PublicMarketplaceController extends Controller
             'orderable_id' => $product->id,
             'type' => 'marketplace_product',
             'provider' => $data['provider'],
-            'amount_cents' => $product->price_cents,
-            'commission_cents' => (int) floor($product->price_cents * ($product->commission_percent / 100)),
-            'currency' => $product->currency,
+            'amount_cents' => $quote['gross_cents'],
+            'commission_cents' => (int) floor($quote['gross_cents'] * ($product->commission_percent / 100)),
+            'currency' => $quote['currency'],
             'status' => 'pending',
+            'payload' => ['pricing' => $quote],
         ]);
 
         return app(CommerceCheckoutController::class)->startPublicCheckout($order);
     }
 
-    private function productCard(MarketplaceProduct $product): array
+    private function productCard(MarketplaceProduct $product, Request $request, ?string $country = null): array
     {
         $rating = 42 + ($product->id % 8);
+        $quote = $this->pricing->quoteForRequest($product, $request, $country);
+        $oldGrossCents = $product->price_cents > 0 ? (int) round($quote['gross_cents'] * 1.18) : null;
 
         return [
             'id' => $product->id,
@@ -202,9 +217,10 @@ class PublicMarketplaceController extends Controller
             'description' => $product->description,
             'image_url' => $product->image_url,
             'category' => $product->category,
-            'price_cents' => $product->price_cents,
-            'old_price_cents' => $product->price_cents > 0 ? (int) round($product->price_cents * 1.18) : null,
-            'currency' => $product->currency,
+            'price_cents' => $quote['gross_cents'],
+            'old_price_cents' => $oldGrossCents,
+            'currency' => $quote['currency'],
+            'price' => $quote,
             'provider_name' => $product->club?->name ?: $product->user?->name,
             'show_url' => route('guest.marketplace.products.show', $product),
             'segment' => $this->productSegment($product),
@@ -225,9 +241,12 @@ class PublicMarketplaceController extends Controller
         ];
     }
 
-    private function outfitPlanCard(OutfitSubscriptionPlan $plan): array
+    private function outfitPlanCard(OutfitSubscriptionPlan $plan, ?string $country = null): array
     {
         $effectivePrice = max(0, (int) $plan->monthly_price_cents - (int) $plan->sponsor_discount_cents);
+        $profile = $this->pricing->taxProfiles()[strtoupper((string) $country)] ?? $this->pricing->taxProfiles()['DE'];
+        $taxRate = (float) $profile['tax_rate'];
+        $netCents = $taxRate > 0 ? (int) round($effectivePrice / (1 + ($taxRate / 100))) : $effectivePrice;
 
         return [
             'id' => $plan->id,
@@ -237,6 +256,16 @@ class PublicMarketplaceController extends Controller
             'price_cents' => $effectivePrice,
             'old_price_cents' => $plan->sponsor_discount_cents ? $plan->monthly_price_cents : null,
             'currency' => $plan->currency,
+            'price' => [
+                'country' => strtoupper((string) $country) ?: 'DE',
+                'currency' => $plan->currency,
+                'gross_cents' => $effectivePrice,
+                'net_cents' => $netCents,
+                'tax_cents' => max(0, $effectivePrice - $netCents),
+                'tax_rate' => $taxRate,
+                'tax_label' => $profile['tax_label'],
+                'is_estimate' => (bool) $profile['is_estimate'],
+            ],
             'provider_name' => $plan->sponsor ? 'Subventioniert von '.$plan->sponsor->name : 'Airmius Outfit-Abo',
             'show_url' => route('login'),
             'rating' => '4,8',
@@ -348,5 +377,18 @@ class PublicMarketplaceController extends Controller
             ['name' => 'MatchDay', 'discount' => 'Camps', 'icon' => 'las la-futbol'],
             ['name' => 'SwimTech', 'discount' => 'Analyse', 'icon' => 'las la-swimmer'],
         ];
+    }
+
+    private function pricingCountries(): array
+    {
+        return collect($this->pricing->taxProfiles())
+            ->map(fn (array $profile, string $country) => [
+                'country' => $country,
+                'currency' => $profile['currency'],
+                'tax_rate' => $profile['tax_rate'],
+                'label' => $country.' · '.$profile['currency'].' · '.$profile['tax_label'].' '.$profile['tax_rate'].'%',
+            ])
+            ->values()
+            ->all();
     }
 }

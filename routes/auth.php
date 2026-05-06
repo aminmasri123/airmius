@@ -159,6 +159,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::post('/events', [EventController::class, 'store'])->name('auth.events.store');
     Route::get('/events/{event}', [EventController::class, 'show'])->name('auth.events.show');
     Route::put('/events/{event}', [EventController::class, 'update'])->name('auth.events.update');
+    Route::post('/events/{event}/cancel', [EventController::class, 'cancel'])->name('auth.events.cancel');
     Route::delete('/events/{event}', [EventController::class, 'destroy'])->name('auth.events.destroy');
 
     // EVENT PARTICIPATION

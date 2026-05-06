@@ -59,6 +59,7 @@ class EventController extends Controller
                 'participants' => fn ($query) => $query
                     ->where('users.id', $request->user()->id)
                     ->select('users.id', 'name'),
+                'cancelledBy:id,name',
             ])
             ->withCount(['comments', 'participants'])
             ->where(function ($query) use ($request) {
@@ -94,6 +95,7 @@ class EventController extends Controller
                 $event->setAttribute('current_participant_status', $event->participants->first()?->pivot?->status);
                 $event->setAttribute('can_update', $request->user()->can('update', $event));
                 $event->setAttribute('can_delete', $request->user()->can('delete', $event));
+                $event->setAttribute('can_cancel', $request->user()->can('cancel', $event));
             });
 
         return Inertia::render('Auth/Dashboard/Events/Index', [
@@ -158,6 +160,7 @@ class EventController extends Controller
             'team:id,name,club_id',
             'club:id,name',
             'conversation:id',
+            'cancelledBy:id,name',
             'participants:id,name',
             'comments' => fn ($query) => $query->with('user:id,name')->latest(),
         ]);
@@ -183,6 +186,7 @@ class EventController extends Controller
             'can' => [
                 'update' => auth()->user()->can('update', $event),
                 'delete' => auth()->user()->can('delete', $event),
+                'cancel' => auth()->user()->can('cancel', $event),
             ],
         ]);
     }
@@ -210,9 +214,35 @@ class EventController extends Controller
     {
         $this->authorize('delete', $event);
 
+        $this->notifyEventCancellationRecipients($event, 'deleted');
+
         $this->service->delete($event);
 
         return redirect()->route('auth.events.index')->with('success', 'Event gelöscht.');
+    }
+
+    public function cancel(Request $request, Event $event)
+    {
+        $this->authorize('cancel', $event);
+
+        if ($event->status === 'cancelled') {
+            return back()->with('success', 'Event ist bereits abgesagt.');
+        }
+
+        $data = $request->validate([
+            'reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $event->forceFill([
+            'status' => 'cancelled',
+            'cancelled_at' => now(),
+            'cancelled_by' => $request->user()->id,
+            'cancellation_reason' => $data['reason'] ?? null,
+        ])->save();
+
+        $this->notifyEventCancellationRecipients($event, 'cancelled', $data['reason'] ?? null);
+
+        return back()->with('success', 'Event wurde abgesagt und Teilnehmer wurden informiert.');
     }
 
     public function join(Request $request, Event $event)
@@ -508,6 +538,39 @@ class EventController extends Controller
                 'team_id' => $event->team_id,
                 'club_id' => $event->club_id ?: $event->team?->club_id,
             ]));
+    }
+
+    private function notifyEventCancellationRecipients(Event $event, string $action, ?string $reason = null): void
+    {
+        $event->loadMissing(['participants' => fn ($query) => $query->select('users.id', 'name')]);
+
+        $recipientIds = $event->participants
+            ->filter(fn ($participant) => $participant->pivot?->status === 'yes')
+            ->pluck('id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->reject(fn ($id) => $id === (int) auth()->id());
+
+        $title = $action === 'deleted'
+            ? 'Event wurde geloescht'
+            : 'Event wurde abgesagt';
+
+        $body = $reason
+            ? $event->title.' wurde abgesagt. Grund: '.$reason
+            : $event->title.' wurde abgesagt oder entfernt.';
+
+        $recipientIds->each(fn ($recipientId) => AppNotification::send($recipientId, 'event.cancelled', [
+            'title' => $title,
+            'body' => str($body)->limit(180)->toString(),
+            'url' => $action === 'deleted' ? route('auth.events.index') : route('auth.events.show', $event->id),
+            'event_id' => $event->id,
+            'event_title' => $event->title,
+            'action' => $action,
+            'reason' => $reason,
+            'team_id' => $event->team_id,
+            'club_id' => $event->club_id ?: $event->team?->club_id,
+        ]));
     }
 
     private function grantGamificationForEvent(Request $request, Event $event): void

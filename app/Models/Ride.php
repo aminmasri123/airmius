@@ -18,6 +18,6 @@ class Ride extends Model
 
     public function users()
     {
-        return $this->belongsToMany(User::class, 'ride_user');
+        return $this->belongsToMany(User::class, 'ride_users');
     }
 }

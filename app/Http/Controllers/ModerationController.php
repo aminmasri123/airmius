@@ -138,6 +138,7 @@ class ModerationController extends Controller
             'type' => class_basename($model),
             'id' => $model->getKey(),
             'text' => str($model->content ?? $model->message ?? $this->fallbackContentText($model))->limit(500)->toString(),
+            'image' => $model instanceof \App\Models\Post ? $model->image : null,
             'moderation_status' => $model->moderation_status ?? null,
             'author' => $model->user?->name ?? $model->sender?->name ?? null,
         ];
