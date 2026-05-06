@@ -32,6 +32,8 @@ class EventService
             $firstEvent = null;
 
             foreach ($events as $eventData) {
+                $eventData['user_id'] ??= auth()->id();
+
                 $event = Event::create($eventData);
                 $firstEvent ??= $event;
 

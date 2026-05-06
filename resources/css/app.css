@@ -224,6 +224,33 @@
     --card-gradient: linear-gradient(180deg, rgba(255,255,255,.96), rgba(238,246,226,.9));
   }
 
+  .theme-bazaar {
+    --bg: theme('colors.bazaar.bg');
+    --card: theme('colors.bazaar.card');
+    --primary: theme('colors.bazaar.primary');
+    --secondary: theme('colors.bazaar.secondary');
+    --success: theme('colors.bazaar.success');
+    --error: theme('colors.bazaar.error');
+    --border: theme('colors.bazaar.border');
+    --muted: theme('colors.bazaar.muted');
+    --buttonPrimary: theme('colors.bazaar.buttonPrimary');
+    --inputBg: theme('colors.bazaar.inputBg');
+    --borderHover: theme('colors.bazaar.borderHover');
+    --table: theme('colors.bazaar.table');
+    --buttonTextPrimary: theme('colors.bazaar.buttonTextPrimary');
+    --buttonTextSecondary: theme('colors.bazaar.buttonTextSecondary');
+    --buttonPrimaryHover: theme('colors.bazaar.buttonPrimaryHover');
+    --buttonTextPrimaryHover: theme('colors.bazaar.buttonTextPrimaryHover');
+    --buttonTextSecondaryHover: theme('colors.bazaar.buttonTextSecondaryHover');
+    --progress: theme('colors.bazaar.progress');
+    --accent: #00a8c6;
+    --accent-2: #16a34a;
+    --accent-3: #ff8a00;
+    --surface-strong: #c8eef4;
+    --soft-shadow: 0 18px 50px rgba(0, 89, 110, .14);
+    --card-gradient: linear-gradient(180deg, rgba(255,255,255,.96), rgba(244,251,252,.9));
+  }
+
   html {
     background: var(--bg);
     color: var(--primary);

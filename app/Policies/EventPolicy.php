@@ -10,11 +10,7 @@ class EventPolicy extends BasePolicy
 {
     public function viewAny(User $user)
     {
-        return $user->teams()->exists()
-            || $user->clubs()->exists()
-            || $user->can('event.join')
-            || $user->can('event.create')
-            || $user->can('event.update');
+        return true;
     }
 
     public function view(User $user, Event $event)
@@ -34,13 +30,21 @@ class EventPolicy extends BasePolicy
 
     public function create(User $user)
     {
-        return $user->can('event.create')
+        $allowed = $user->can('event.create')
             || $this->isCoach($user)
             || $this->isClubAdmin($user);
+
+        return $allowed
+            ? Response::allow()
+            : Response::deny('Um Events zu erstellen, brauchst du ein Paket oder eine Rolle mit Event-Erstellung. Bitte fuehre ein Upgrade durch oder bitte deinen Verein/Admin, dir die passende Berechtigung zu geben.');
     }
 
     public function update(User $user, Event $event)
     {
+        if ((int) $event->user_id === (int) $user->id) {
+            return true;
+        }
+
         $club = $event->resolvedClub();
 
         return ($club && $user->can('event.update') && $this->managesClub($user, $club))
@@ -49,6 +53,10 @@ class EventPolicy extends BasePolicy
 
     public function delete(User $user, Event $event)
     {
+        if ((int) $event->user_id === (int) $user->id) {
+            return true;
+        }
+
         $club = $event->resolvedClub();
 
         return ($club && $user->can('event.delete') && $this->managesClub($user, $club))
@@ -57,6 +65,10 @@ class EventPolicy extends BasePolicy
 
     public function join(User $user, ?Event $event = null)
     {
+        if ($event && $this->view($user, $event)) {
+            return true;
+        }
+
         return $user->can('event.join')
             || $this->isPlayer($user);
     }

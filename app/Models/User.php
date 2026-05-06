@@ -52,6 +52,9 @@ class User extends Authenticatable
         'postal_code',
         'city',
         'state',
+        'event_radius_km',
+        'event_default_sport_ids',
+        'event_default_filters',
         'status',
         'account_status',
         'suspended_until',
@@ -114,6 +117,9 @@ class User extends Authenticatable
             'guardian_consent_at' => 'datetime',
             'guardian_consent_rejected_at' => 'datetime',
             'guardian_consent_revoked_at' => 'datetime',
+            'event_radius_km' => 'integer',
+            'event_default_sport_ids' => 'array',
+            'event_default_filters' => 'array',
             'password' => 'hashed',
         ];
     }

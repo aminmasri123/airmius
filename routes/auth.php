@@ -155,8 +155,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
 
     // EVENTS
     Route::get('/events', [EventController::class, 'index'])->name('auth.events.index');
-    Route::get('/events/{event}', [EventController::class, 'show'])->name('auth.events.show');
+    Route::put('/events/default-filters', [EventController::class, 'saveDefaultFilters'])->name('auth.events.default-filters.update');
     Route::post('/events', [EventController::class, 'store'])->name('auth.events.store');
+    Route::get('/events/{event}', [EventController::class, 'show'])->name('auth.events.show');
     Route::put('/events/{event}', [EventController::class, 'update'])->name('auth.events.update');
     Route::delete('/events/{event}', [EventController::class, 'destroy'])->name('auth.events.destroy');
 

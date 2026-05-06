@@ -17,7 +17,7 @@ const props = defineProps({
 onMounted(() => {
     const theme = localStorage.getItem('theme')
     if (theme) {
-        document.documentElement.classList.remove('theme-air', 'theme-dark', 'theme-womanly', 'theme-champion', 'theme-sprint', 'theme-arena', 'theme-pulse', 'theme-trail')
+        document.documentElement.classList.remove('theme-air', 'theme-dark', 'theme-womanly', 'theme-champion', 'theme-sprint', 'theme-arena', 'theme-pulse', 'theme-trail', 'theme-bazaar')
         document.documentElement.classList.add(`theme-${theme}`)
     }
 })

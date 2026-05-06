@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Activity;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\Sport;
 use App\Models\SubscriptionInvoice;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -30,6 +31,16 @@ class UserSettingsController extends Controller
                 'direct_message_privacy',
                 'friend_request_privacy',
             ]),
+            'eventDefaults' => [
+                'radius_km' => $request->user()->event_radius_km,
+                'sport_ids' => $request->user()->event_default_sport_ids ?? [],
+                'filters' => $request->user()->event_default_filters ?? [],
+            ],
+            'sports' => Sport::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name', 'slug', 'category']),
             'billingHistory' => [
                 'invoices' => Invoice::query()
                     ->where('user_id', $request->user()->id)
@@ -143,13 +154,16 @@ class UserSettingsController extends Controller
     public function update(Request $request)
     {
             $data = $request->validate([
-                'theme' => ['nullable', 'in:air,dark,womanly,champion,sprint,arena,pulse,trail'],
+                'theme' => ['nullable', 'in:air,dark,womanly,champion,sprint,arena,pulse,trail,bazaar'],
                 'country' => ['required', 'string', 'size:2'],
                 'street' => ['nullable', 'string', 'max:255'],
                 'house_number' => ['nullable', 'string', 'max:40'],
                 'postal_code' => ['nullable', 'string', 'max:30'],
                 'city' => ['nullable', 'string', 'max:255'],
                 'state' => ['nullable', 'string', 'max:255'],
+                'event_radius_km' => ['nullable', 'integer', 'min:1', 'max:500'],
+                'event_default_sport_ids' => ['nullable', 'array'],
+                'event_default_sport_ids.*' => ['integer', 'exists:sports,id'],
                 'profile_visibility' => ['nullable', 'in:public,private'],
                 'direct_message_privacy' => ['nullable', 'in:everyone,friends'],
                 'friend_request_privacy' => ['nullable', 'in:everyone,friends'],
@@ -159,9 +173,18 @@ class UserSettingsController extends Controller
                 unset($data['theme']);
             }
 
+            $eventSportIds = collect($data['event_default_sport_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values()->all();
+            $eventDefaults = array_merge($request->user()->event_default_filters ?? [], [
+                'radius_km' => $data['event_radius_km'] ?? null,
+                'sport_ids' => $eventSportIds,
+            ]);
+
             $request->user()->update([
                 ...$data,
                 'country' => strtoupper($data['country']),
+                'event_radius_km' => $data['event_radius_km'] ?? null,
+                'event_default_sport_ids' => $eventSportIds,
+                'event_default_filters' => $eventDefaults,
                 'profile_visibility' => $data['profile_visibility'] ?? $request->user()->profile_visibility ?? 'public',
                 'direct_message_privacy' => $data['direct_message_privacy'] ?? $request->user()->direct_message_privacy ?? 'everyone',
                 'friend_request_privacy' => $data['friend_request_privacy'] ?? $request->user()->friend_request_privacy ?? 'everyone',

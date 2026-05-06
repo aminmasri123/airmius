@@ -1,6 +1,6 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
-import { Head, Link, router, useForm } from '@inertiajs/vue3'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -12,12 +12,18 @@ const props = defineProps({
     teams: Array,
     eventTypes: Array,
     visibilities: Array,
+    sports: { type: Array, default: () => [] },
+    eventDefaults: { type: Object, default: () => ({}) },
+    filters: { type: Object, default: () => ({}) },
 })
 
 const { t } = useI18n()
+const page = usePage()
 
 const showCreateModal = ref(false)
 const createStep = ref(1)
+const errors = computed(() => page.props.errors || {})
+const authorizationMessage = computed(() => errors.value.authorization || page.props.flash?.upgrade_required?.message || '')
 
 const steps = [
     { number: 1, label: 'Basis' },
@@ -80,6 +86,17 @@ const form = useForm({
     recurrence_ends_at: '',
     reminder_at: '',
     event_timezone: browserTimeZone(),
+})
+
+const filterForm = ref({
+    search: props.filters.search || '',
+    type: props.filters.type || '',
+    visibility: props.filters.visibility || '',
+    club_id: props.filters.club_id || '',
+    team_id: props.filters.team_id || '',
+    period: props.filters.period || 'upcoming',
+    radius_km: props.filters.radius_km || '',
+    sport_ids: props.filters.sport_ids || [],
 })
 
 const filteredTeams = computed(() => {
@@ -151,6 +168,11 @@ const submit = () => {
 
     form.post(route('auth.events.store'), {
         preserveScroll: true,
+        onError: () => {
+            if (form.errors.authorization) {
+                createStep.value = 1
+            }
+        },
         onSuccess: () => {
             resetCreateForm()
             showCreateModal.value = false
@@ -291,6 +313,63 @@ const setParticipation = (event, status) => {
         preserveState: true,
     })
 }
+
+const toggleFilterSport = (sportId) => {
+    const id = Number(sportId)
+    const selected = (filterForm.value.sport_ids || []).map(Number)
+
+    filterForm.value.sport_ids = selected.includes(id)
+        ? selected.filter((value) => value !== id)
+        : [...selected, id]
+}
+
+const applyFilters = () => {
+    router.get(route('auth.events.index'), {
+        search: filterForm.value.search || undefined,
+        type: filterForm.value.type || undefined,
+        visibility: filterForm.value.visibility || undefined,
+        club_id: filterForm.value.club_id || undefined,
+        team_id: filterForm.value.team_id || undefined,
+        period: filterForm.value.period || undefined,
+        radius_km: filterForm.value.radius_km || undefined,
+        sport_ids: filterForm.value.sport_ids?.length ? filterForm.value.sport_ids : undefined,
+    }, {
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+    })
+}
+
+const saveDefaultFilters = () => {
+    router.put(route('auth.events.default-filters.update'), {
+        search: filterForm.value.search || '',
+        type: filterForm.value.type || '',
+        visibility: filterForm.value.visibility || '',
+        club_id: filterForm.value.club_id || '',
+        team_id: filterForm.value.team_id || '',
+        period: filterForm.value.period || 'upcoming',
+        radius_km: filterForm.value.radius_km || null,
+        sport_ids: filterForm.value.sport_ids || [],
+    }, {
+        preserveScroll: true,
+        preserveState: true,
+    })
+}
+
+const resetFilters = () => {
+    filterForm.value = {
+        search: '',
+        type: '',
+        visibility: '',
+        club_id: '',
+        team_id: '',
+        period: 'upcoming',
+        radius_km: '',
+        sport_ids: [],
+    }
+
+    applyFilters()
+}
 </script>
 
 <template>
@@ -323,6 +402,153 @@ const setParticipation = (event, status) => {
                 + {{ $t('events.create') }}
             </button>
         </div>
+
+        <div v-if="authorizationMessage" class="rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm text-warning">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p class="font-semibold">
+                    {{ authorizationMessage }}
+                </p>
+                <Link :href="route('guest.pricing')" class="shrink-0 rounded-lg bg-buttonPrimary px-4 py-2 text-center text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover">
+                    Upgrade ansehen
+                </Link>
+            </div>
+        </div>
+
+        <section class="rounded-lg border border-border bg-card p-4">
+            <form class="grid gap-3 md:grid-cols-2 xl:grid-cols-4" @submit.prevent="applyFilters">
+                <div>
+                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-secondary" for="event-search">
+                        Suche
+                    </label>
+                    <input
+                        id="event-search"
+                        v-model="filterForm.search"
+                        class="h-11 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
+                        placeholder="Titel, Ort, Team, Verein..."
+                    >
+                </div>
+
+                <div>
+                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-secondary" for="event-filter-type">
+                        Typ
+                    </label>
+                    <select id="event-filter-type" v-model="filterForm.type" class="h-11 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary focus:border-borderHover focus:ring-borderHover">
+                        <option value="">Alle Typen</option>
+                        <option v-for="type in eventTypes" :key="type" :value="type">
+                            {{ $t(typeLabels[type] || type) }}
+                        </option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-secondary" for="event-filter-visibility">
+                        Sichtbarkeit
+                    </label>
+                    <select id="event-filter-visibility" v-model="filterForm.visibility" class="h-11 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary focus:border-borderHover focus:ring-borderHover">
+                        <option value="">Alle</option>
+                        <option v-for="visibility in visibilities" :key="visibility" :value="visibility">
+                            {{ $t(visibilityLabels[visibility] || visibility) }}
+                        </option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-secondary" for="event-filter-club">
+                        Verein
+                    </label>
+                    <select id="event-filter-club" v-model="filterForm.club_id" class="h-11 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary focus:border-borderHover focus:ring-borderHover">
+                        <option value="">Alle Vereine</option>
+                        <option v-for="club in clubs" :key="club.id" :value="club.id">
+                            {{ club.name }}
+                        </option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-secondary" for="event-filter-team">
+                        Team
+                    </label>
+                    <select id="event-filter-team" v-model="filterForm.team_id" class="h-11 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary focus:border-borderHover focus:ring-borderHover">
+                        <option value="">Alle Teams</option>
+                        <option v-for="team in teams" :key="team.id" :value="team.id">
+                            {{ team.name }}
+                        </option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-secondary" for="event-filter-period">
+                        Zeitraum
+                    </label>
+                    <select id="event-filter-period" v-model="filterForm.period" class="h-11 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary focus:border-borderHover focus:ring-borderHover">
+                        <option value="upcoming">Kommend</option>
+                        <option value="past">Vergangen</option>
+                        <option value="all">Alle</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-secondary" for="event-filter-radius">
+                        Zone
+                    </label>
+                    <div class="flex h-11 items-center gap-2 rounded-lg border border-border bg-inputBg px-3">
+                        <input
+                            id="event-filter-radius"
+                            v-model="filterForm.radius_km"
+                            class="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-primary focus:ring-0"
+                            min="1"
+                            max="500"
+                            placeholder="20"
+                            type="number"
+                        >
+                        <span class="text-sm font-semibold text-secondary">km</span>
+                    </div>
+                </div>
+
+                <div class="md:col-span-2 xl:col-span-4">
+                    <div class="mb-2 flex items-center justify-between gap-3">
+                        <label class="block text-xs font-semibold uppercase tracking-wide text-secondary">
+                            Sportarten
+                        </label>
+                        <span v-if="eventDefaults?.sport_ids?.length || eventDefaults?.radius_km" class="text-xs font-semibold text-secondary">
+                            Standardfilter aktiv
+                        </span>
+                    </div>
+                    <div class="flex max-h-28 flex-wrap gap-2 overflow-y-auto rounded-lg border border-border bg-inputBg p-2">
+                        <button
+                            v-for="sport in sports"
+                            :key="sport.id"
+                            type="button"
+                            class="rounded-full border px-3 py-1.5 text-xs font-semibold transition"
+                            :class="(filterForm.sport_ids || []).map(Number).includes(Number(sport.id))
+                                ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary'
+                                : 'border-border bg-bg text-secondary hover:border-borderHover hover:text-primary'"
+                            @click="toggleFilterSport(sport.id)"
+                        >
+                            {{ sport.name }}
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-end">
+                    <button class="h-11 w-full rounded-lg bg-buttonPrimary px-4 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover">
+                        Filtern
+                    </button>
+                </div>
+
+                <div class="flex items-end">
+                    <button type="button" class="h-11 w-full rounded-lg border border-border px-4 text-sm font-semibold text-secondary transition hover:border-borderHover hover:text-primary" @click="resetFilters">
+                        Reset
+                    </button>
+                </div>
+
+                <div class="flex items-end md:col-span-2">
+                    <button type="button" class="h-11 w-full rounded-lg border border-buttonPrimary px-4 text-sm font-semibold text-buttonPrimary transition hover:bg-buttonPrimary/10" @click="saveDefaultFilters">
+                        Diese Filter als Standard speichern
+                    </button>
+                </div>
+            </form>
+        </section>
 
         <!-- CREATE EVENT MODAL / WIZARD -->
         <Teleport to="body">
@@ -376,6 +602,17 @@ const setParticipation = (event, status) => {
                                 <p class="mt-1 text-sm text-secondary">
                                     Was für ein Event möchtest du erstellen?
                                 </p>
+                            </div>
+
+                            <div v-if="form.errors.authorization" class="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
+                                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <p class="font-semibold">
+                                        {{ form.errors.authorization }}
+                                    </p>
+                                    <Link :href="route('guest.pricing')" class="rounded-lg bg-buttonPrimary px-3 py-2 text-center text-sm font-semibold text-buttonTextPrimary">
+                                        Upgrade ansehen
+                                    </Link>
+                                </div>
                             </div>
 
                             <div>

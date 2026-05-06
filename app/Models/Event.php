@@ -15,6 +15,7 @@ class Event extends Model
 
     protected $fillable = [
         'club_id',
+        'user_id',
         'team_id',
         'conversation_id',
         'title',
@@ -41,6 +42,11 @@ class Event extends Model
     public function club()
     {
         return $this->belongsTo(Club::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function team()

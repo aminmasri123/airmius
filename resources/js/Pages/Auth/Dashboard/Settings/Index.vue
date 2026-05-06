@@ -25,6 +25,14 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
+    eventDefaults: {
+        type: Object,
+        default: () => ({ radius_km: null, sport_ids: [], filters: {} }),
+    },
+    sports: {
+        type: Array,
+        default: () => [],
+    },
     confirmsTwoFactorAuthentication: Boolean,
     billingHistory: {
         type: Object,
@@ -78,6 +86,7 @@ const themeOptions = [
     { key: 'arena', label: 'Arena', description: 'Ruhig, robust und professionell.', colors: ['#334155', '#64748b', '#f8fafc'] },
     { key: 'pulse', label: 'Pulse', description: 'Dynamisch und motivierend.', colors: ['#ea580c', '#f97316', '#fff7ed'] },
     { key: 'trail', label: 'Trail', description: 'Natuerlich, ausdauernd und bodenstaendig.', colors: ['#4d7c0f', '#65a30d', '#f6f8f2'] },
+    { key: 'bazaar', label: 'Bazaar Rush', description: 'Lebendig, verkaufsstark und frisch fuer Marketplace-Flows.', colors: ['#00a8c6', '#ff8a00', '#ffffff'] },
 ]
 
 // Form
@@ -89,6 +98,8 @@ const form = useForm({
     postal_code: props.profileAddress.postal_code || '',
     city: props.profileAddress.city || '',
     state: props.profileAddress.state || '',
+    event_radius_km: props.eventDefaults.radius_km || 20,
+    event_default_sport_ids: props.eventDefaults.sport_ids || [],
     profile_visibility: props.privacySettings.profile_visibility || 'public',
     direct_message_privacy: props.privacySettings.direct_message_privacy || 'everyone',
     friend_request_privacy: props.privacySettings.friend_request_privacy || 'everyone',
@@ -125,6 +136,15 @@ const updateTheme = (theme) => {
     setTheme(theme)
     form.theme = theme
     saveAddress(false)
+}
+
+const toggleDefaultSport = (sportId) => {
+    const id = Number(sportId)
+    const selected = (form.event_default_sport_ids || []).map(Number)
+
+    form.event_default_sport_ids = selected.includes(id)
+        ? selected.filter((value) => value !== id)
+        : [...selected, id]
 }
 
 const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
@@ -431,9 +451,56 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                     <p v-if="form.errors.house_number" class="mt-1 text-sm text-error">{{ form.errors.house_number }}</p>
                 </div>
 
+                <div class="md:col-span-2 mt-4 border-t border-border pt-5">
+                    <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">
+                        Event-Defaults
+                    </h2>
+                    <p class="mt-1 text-sm text-secondary">
+                        Diese Werte werden automatisch fuer deine Eventliste genutzt, solange du dort keine eigenen Filter setzt.
+                    </p>
+                </div>
+
+                <div>
+                    <label class="text-sm font-semibold text-primary">Eventzone</label>
+                    <div class="mt-1 flex items-center gap-2">
+                        <input
+                            v-model="form.event_radius_km"
+                            class="input"
+                            min="1"
+                            max="500"
+                            type="number"
+                        />
+                        <span class="text-sm font-semibold text-secondary">km</span>
+                    </div>
+                    <p class="mt-1 text-xs text-secondary">
+                        Aktuell adressbasiert ueber PLZ/Stadt/Vereinsadresse.
+                    </p>
+                    <p v-if="form.errors.event_radius_km" class="mt-1 text-sm text-error">{{ form.errors.event_radius_km }}</p>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="text-sm font-semibold text-primary">Sportarten fuer Eventvorschlaege</label>
+                    <div class="mt-2 grid max-h-64 gap-2 overflow-y-auto rounded-lg border border-border bg-bg p-3 sm:grid-cols-2 lg:grid-cols-3">
+                        <button
+                            v-for="sport in sports"
+                            :key="sport.id"
+                            type="button"
+                            class="rounded-lg border px-3 py-2 text-left text-sm transition"
+                            :class="(form.event_default_sport_ids || []).map(Number).includes(Number(sport.id))
+                                ? 'border-buttonPrimary bg-buttonPrimary/10 text-primary'
+                                : 'border-border bg-inputBg text-secondary hover:border-borderHover hover:text-primary'"
+                            @click="toggleDefaultSport(sport.id)"
+                        >
+                            <span class="block font-semibold">{{ sport.name }}</span>
+                            <span class="text-xs">{{ sport.category || 'Sport' }}</span>
+                        </button>
+                    </div>
+                    <p v-if="form.errors.event_default_sport_ids" class="mt-1 text-sm text-error">{{ form.errors.event_default_sport_ids }}</p>
+                </div>
+
                 <div class="md:col-span-2">
                     <button class="btn-primary" :disabled="form.processing">
-                        Adresse speichern
+                        Adresse & Event-Defaults speichern
                     </button>
                 </div>
 
