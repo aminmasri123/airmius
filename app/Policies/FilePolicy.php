@@ -3,8 +3,10 @@
 namespace App\Policies;
 
 use App\Models\File;
+use App\Models\Message;
 use App\Models\User;
 use Illuminate\Auth\Access\Response;
+use Illuminate\Support\Facades\DB;
 
 class FilePolicy extends BasePolicy
 {
@@ -18,9 +20,7 @@ class FilePolicy extends BasePolicy
     public function view(User $user, File $file)
     {
         return $file->user_id === $user->id
-            || $file->messages()
-                ->whereHas('conversation.users', fn ($query) => $query->where('users.id', $user->id))
-                ->exists()
+            || $this->canViewViaVisibleChatMessage($user, $file)
             || ($user->can('file.view') && $this->canAccessScope($user, $file));
     }
 
@@ -59,5 +59,33 @@ class FilePolicy extends BasePolicy
         }
 
         return false;
+    }
+
+    private function canViewViaVisibleChatMessage(User $user, File $file): bool
+    {
+        return $file->messages()
+            ->with('conversation:id,type')
+            ->get()
+            ->contains(fn (Message $message) => $this->canViewChatMessage($user, $message));
+    }
+
+    private function canViewChatMessage(User $user, Message $message): bool
+    {
+        $conversation = $message->conversation;
+
+        if (!$conversation || !$conversation->users()->where('users.id', $user->id)->exists()) {
+            return false;
+        }
+
+        if ($conversation->type !== 'group') {
+            return true;
+        }
+
+        $joinedAt = DB::table('conversation_users')
+            ->where('conversation_id', $conversation->id)
+            ->where('user_id', $user->id)
+            ->value('joined_at');
+
+        return !$joinedAt || $message->created_at->greaterThanOrEqualTo($joinedAt);
     }
 }

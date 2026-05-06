@@ -76,7 +76,10 @@ class ConversationController extends Controller
                 ['type' => 'team', 'team_id' => $team->id],
                 ['club_id' => $team->club_id]
             );
-            $conversation->users()->syncWithoutDetaching($team->users()->pluck('users.id')->push(auth()->id())->unique());
+            $this->attachNewParticipantsWithJoinedAt(
+                $conversation,
+                $team->users()->pluck('users.id')->push(auth()->id())->unique()
+            );
         } elseif ($data['type'] === 'direct') {
             $recipient = User::findOrFail($participantIds->first(fn ($id) => $id !== auth()->id()));
 
@@ -93,14 +96,14 @@ class ConversationController extends Controller
                     'type' => 'direct',
                     'club_id' => $data['club_id'] ?? null,
                 ]);
-                $conversation->users()->attach($participantIds);
+                $conversation->users()->attach($participantIds, ['joined_at' => now()]);
             }
         } else {
             $conversation = Conversation::create([
                 'type' => 'group',
                 'club_id' => $data['club_id'] ?? null,
             ]);
-            $conversation->users()->attach($participantIds);
+            $conversation->users()->attach($participantIds, ['joined_at' => now()]);
         }
 
         if (!empty($data['message'])) {
@@ -162,7 +165,7 @@ class ConversationController extends Controller
 
         abort_if($participantIds->isEmpty(), 422, 'Bitte mindestens eine weitere Person auswaehlen.');
 
-        $conversation->users()->syncWithoutDetaching($participantIds);
+        $this->attachNewParticipantsWithJoinedAt($conversation, $participantIds);
 
         return back()->with('success', 'Mitglieder wurden hinzugefuegt.');
     }
@@ -248,7 +251,11 @@ class ConversationController extends Controller
             MessageReceipt::query()
                 ->where('user_id', auth()->id())
                 ->whereNull('read_at')
-                ->whereHas('message', fn ($query) => $query->whereIn('conversation_id', $readConversationIds))
+                ->whereHas('message', function ($query) use ($readConversationIds, $selectedConversation) {
+                    $query->whereIn('conversation_id', $readConversationIds);
+
+                    $this->onlyMessagesVisibleSinceGroupJoin($query, $selectedConversation);
+                })
                 ->update([
                     'delivered_at' => now(),
                     'read_at' => now(),
@@ -275,14 +282,18 @@ class ConversationController extends Controller
                 'event:id,conversation_id,title',
             ]);
 
-            $messages = $selectedConversation->messages()
+            $messagesQuery = $selectedConversation->messages()
                 ->where('moderation_status', '!=', 'removed')
                 ->with([
                     'sender:id,name',
                     'receipts:id,message_id,user_id,delivered_at,read_at',
                     'attachments.file:id,path,thumbnail_path,type,size',
                     'reactions.user:id,name',
-                ])
+                ]);
+
+            $this->onlyMessagesVisibleSinceGroupJoin($messagesQuery, $selectedConversation);
+
+            $messages = $messagesQuery
                 ->latest('id')
                 ->limit($messageLimit + 1)
                 ->get();
@@ -340,5 +351,54 @@ class ConversationController extends Controller
     private function typingCacheKey(int $conversationId, int $userId): string
     {
         return "chat:typing:{$conversationId}:{$userId}";
+    }
+
+    private function participantsWithJoinedAt($participantIds): array
+    {
+        $joinedAt = now();
+
+        return collect($participantIds)
+            ->unique()
+            ->mapWithKeys(fn ($id) => [(int) $id => ['joined_at' => $joinedAt]])
+            ->all();
+    }
+
+    private function attachNewParticipantsWithJoinedAt(Conversation $conversation, $participantIds): void
+    {
+        $participantIds = collect($participantIds)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($participantIds->isEmpty()) {
+            return;
+        }
+
+        $existingIds = $conversation->users()
+            ->whereIn('users.id', $participantIds)
+            ->pluck('users.id')
+            ->map(fn ($id) => (int) $id);
+
+        $newParticipantIds = $participantIds->diff($existingIds)->values();
+
+        if ($newParticipantIds->isNotEmpty()) {
+            $conversation->users()->syncWithoutDetaching($this->participantsWithJoinedAt($newParticipantIds));
+        }
+    }
+
+    private function onlyMessagesVisibleSinceGroupJoin($query, ?Conversation $conversation): void
+    {
+        if (!$conversation || $conversation->type !== 'group') {
+            return;
+        }
+
+        $joinedAt = DB::table('conversation_users')
+            ->where('conversation_id', $conversation->id)
+            ->where('user_id', auth()->id())
+            ->value('joined_at');
+
+        if ($joinedAt) {
+            $query->where('created_at', '>=', $joinedAt);
+        }
     }
 }

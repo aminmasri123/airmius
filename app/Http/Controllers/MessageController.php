@@ -13,6 +13,7 @@ use App\Services\ModerationService;
 use App\Support\AppNotification;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class MessageController extends Controller
@@ -102,7 +103,7 @@ class MessageController extends Controller
 
     public function destroy(Message $message)
     {
-        abort_unless($message->conversation->users()->where('users.id', auth()->id())->exists(), 403);
+        abort_unless($this->canAccessMessage($message, auth()->id()), 403);
         abort_unless($message->sender_id === auth()->id() || auth()->user()->can('user.manage'), 403);
         abort_if(
             $message->receipts()->whereNotNull('read_at')->exists(),
@@ -133,7 +134,7 @@ class MessageController extends Controller
 
     public function react(Request $request, Message $message)
     {
-        abort_unless($message->conversation->users()->where('users.id', auth()->id())->exists(), 403);
+        abort_unless($this->canAccessMessage($message, auth()->id()), 403);
 
         $data = $request->validate([
             'reaction' => ['required', 'in:like,heart,ok'],
@@ -171,5 +172,25 @@ class MessageController extends Controller
             ->where('read', false)
             ->where('data->conversation_id', $conversationId)
             ->update(['read' => true]);
+    }
+
+    private function canAccessMessage(Message $message, int $userId): bool
+    {
+        $conversation = $message->conversation;
+
+        if (!$conversation->users()->where('users.id', $userId)->exists()) {
+            return false;
+        }
+
+        if ($conversation->type !== 'group') {
+            return true;
+        }
+
+        $joinedAt = DB::table('conversation_users')
+            ->where('conversation_id', $conversation->id)
+            ->where('user_id', $userId)
+            ->value('joined_at');
+
+        return !$joinedAt || $message->created_at->greaterThanOrEqualTo($joinedAt);
     }
 }

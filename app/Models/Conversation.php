@@ -13,7 +13,8 @@ class Conversation extends Model
 
     public function users()
     {
-        return $this->belongsToMany(User::class, 'conversation_users');
+        return $this->belongsToMany(User::class, 'conversation_users')
+            ->withPivot('joined_at');
     }
 
     public function messages()

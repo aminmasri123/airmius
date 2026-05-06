@@ -99,7 +99,26 @@ class EventService
             $conversation->update(['club_id' => $clubId]);
         }
 
-        $conversation->users()->syncWithoutDetaching($participantIds);
+        $participantIds = collect($participantIds)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $existingIds = $conversation->users()
+            ->whereIn('users.id', $participantIds)
+            ->pluck('users.id')
+            ->map(fn ($id) => (int) $id);
+
+        $newParticipantIds = $participantIds->diff($existingIds)->values();
+
+        if ($newParticipantIds->isNotEmpty()) {
+            $joinedAt = now();
+            $conversation->users()->syncWithoutDetaching(
+                $newParticipantIds
+                    ->mapWithKeys(fn ($id) => [(int) $id => ['joined_at' => $joinedAt]])
+                    ->all()
+            );
+        }
 
         return $conversation;
     }
