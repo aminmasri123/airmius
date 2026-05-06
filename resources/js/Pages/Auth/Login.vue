@@ -31,7 +31,7 @@ const submit = () => {
 };
 
 const images = [
-    '/img/login/slide1.png',
+    '/img/login/slide6.png',
     '/img/login/slide2.png',
 
     /*  '/img/login/slide2.jpeg',
