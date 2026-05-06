@@ -8,6 +8,7 @@ use App\Models\File;
 use App\Models\Folder;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\AppNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -107,11 +108,28 @@ class FolderController extends Controller
         $this->authorize('view', $folder);
 
         $data = $request->validate([
-            'target_type' => ['required', Rule::in(['user', 'team', 'club'])],
-            'target_id' => ['required', 'integer'],
+            'target_type' => ['required', Rule::in(['user'])],
+            'target_id' => ['required', 'integer', 'exists:users,id'],
         ]);
 
-        $this->copyTree($folder, $this->targetScope($data['target_type'], (int) $data['target_id']));
+        $targetUser = User::findOrFail((int) $data['target_id']);
+
+        abort_unless(
+            $request->user()->friendships()->where('friend_id', $targetUser->id)->exists(),
+            403,
+            'Ordner koennen nur mit Freunden geteilt werden.'
+        );
+
+        $this->copyTree($folder, $this->targetScope($data['target_type'], $targetUser->id));
+
+        AppNotification::send($targetUser, 'folder.shared', [
+            'title' => $request->user()->name.' hat einen Ordner mit dir geteilt',
+            'body' => $folder->name,
+            'url' => route('auth.files.index'),
+            'actor_id' => $request->user()->id,
+            'actor_name' => $request->user()->name,
+            'folder_id' => $folder->id,
+        ]);
 
         return back()->with('success', 'Ordner freigegeben.');
     }
@@ -188,6 +206,7 @@ class FolderController extends Controller
                     'path' => $file->path,
                 ]),
                 [
+                    'display_name' => $file->display_name,
                     'type' => $file->type,
                     'size' => $file->size,
                 ],

@@ -21,6 +21,7 @@ const showShareModal = ref(false)
 const folderToDelete = ref(null)
 const itemToShare = ref(null)
 const shareType = ref('file')
+const friendSearch = ref('')
 
 const scopeForm = useForm({
     scope: props.scope.type || 'user',
@@ -51,6 +52,7 @@ const folderForm = useForm({
 const shareForm = useForm({
     target_type: 'user',
     target_id: '',
+    email: '',
 })
 
 const scopeOptions = [
@@ -63,9 +65,11 @@ const scopeOptions = [
 const activeFiles = computed(() => props.files)
 const activeFolders = computed(() => props.folders)
 const shareTargets = computed(() => {
-    if (shareForm.target_type === 'team') return props.teams
-    if (shareForm.target_type === 'club') return props.clubs
-    return props.users
+    const query = friendSearch.value.trim().toLowerCase()
+
+    if (!query) return props.users
+
+    return props.users.filter((user) => `${user.name || ''} ${user.email || ''}`.toLowerCase().includes(query))
 })
 
 const syncForms = () => {
@@ -140,6 +144,8 @@ const openShare = (item, type = 'file') => {
     shareType.value = type
     shareForm.target_type = 'user'
     shareForm.target_id = props.users[0]?.id || ''
+    shareForm.email = ''
+    friendSearch.value = ''
     showShareModal.value = true
 }
 
@@ -152,7 +158,10 @@ const shareItem = () => {
 
     shareForm.post(shareRoute, {
         preserveScroll: true,
-        onSuccess: () => showShareModal.value = false,
+        onSuccess: () => {
+            showShareModal.value = false
+            shareForm.reset('email')
+        },
     })
 }
 
@@ -163,7 +172,7 @@ const formatSize = (size) => {
     return `${(size / 1024 / 1024).toFixed(1)} MB`
 }
 
-const fileName = (file) => file.path.split('/').pop()
+const fileName = (file) => file.display_name || file.path.split('/').pop()
 const contextLabel = (file) => file.event?.title || file.team?.name || file.club?.name || 'Privat'
 </script>
 
@@ -294,18 +303,19 @@ const contextLabel = (file) => file.event?.title || file.team?.name || file.club
     <Modal :show="showShareModal" max-width="md" @close="showShareModal = false">
         <div class="space-y-4 text-primary">
             <h2 class="text-lg font-bold">{{ shareType === 'folder' ? 'Ordner' : 'Datei' }} freigeben</h2>
-            <select v-model="shareForm.target_type" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary" @change="shareForm.target_id = shareTargets[0]?.id || ''">
-                <option value="user">Nutzer</option>
-                <option value="team">Team</option>
-                <option value="club">Verein</option>
+            <select v-model="shareForm.target_type" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary" @change="shareForm.target_id = shareTargets[0]?.id || ''; shareForm.email = ''">
+                <option value="user">Freund</option>
+                <option v-if="shareType === 'file'" value="email">Externe E-Mail</option>
             </select>
-            <select v-model="shareForm.target_id" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary">
+            <input v-if="shareForm.target_type === 'user'" v-model="friendSearch" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Freund suchen">
+            <select v-if="shareForm.target_type === 'user'" v-model="shareForm.target_id" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary">
                 <option value="">Auswählen</option>
                 <option v-for="target in shareTargets" :key="target.id" :value="target.id">
                     {{ target.name }}{{ target.email ? ` · ${target.email}` : '' }}
                 </option>
             </select>
-            <button :disabled="!shareForm.target_id || shareForm.processing" class="w-full rounded-lg bg-buttonPrimary py-2 text-buttonTextPrimary disabled:opacity-50" @click="shareItem">
+            <input v-else v-model="shareForm.email" type="email" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary" placeholder="name@example.com">
+            <button :disabled="shareForm.processing || (shareForm.target_type === 'user' ? !shareForm.target_id : !shareForm.email)" class="w-full rounded-lg bg-buttonPrimary py-2 text-buttonTextPrimary disabled:opacity-50" @click="shareItem">
                 Freigeben
             </button>
         </div>

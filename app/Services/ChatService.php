@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Events\MessageSent;
 use App\Models\File;
 use App\Models\Message;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ChatService
 {
@@ -32,6 +34,7 @@ class ChatService
                     'team_id' => $conversation->team_id,
                     'event_id' => $event?->id,
                     'user_id' => $user->id,
+                    'display_name' => $this->displayNameForUpload($attachment),
                     ...$optimized,
                 ]);
 
@@ -69,5 +72,13 @@ class ChatService
         }
 
         return 'users/'.$userId.'/chat';
+    }
+
+    private function displayNameForUpload(UploadedFile $file): string
+    {
+        $name = basename(str_replace('\\', '/', $file->getClientOriginalName()));
+        $name = trim((string) preg_replace('/[\x00-\x1F\x7F]+/', '', $name));
+
+        return Str::limit($name !== '' ? $name : 'Datei', 180, '');
     }
 }

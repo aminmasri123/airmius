@@ -541,7 +541,7 @@ const canDeleteMessage = (message) => {
 const fileUrl = (file) => file?.url || (file?.path ? `${page.props.uploads?.url || '/storage'}/${file.path}` : '#')
 const fileThumbnailUrl = (file) => file?.thumbnail_url || (file?.thumbnail_path ? `${page.props.uploads?.url || '/storage'}/${file.thumbnail_path}` : null)
 const fileDownloadUrl = (file) => file?.id ? route('auth.files.download', file.id) : fileUrl(file)
-const attachmentLabel = (attachment) => attachment.file?.path?.split('/').pop() || 'Datei'
+const attachmentLabel = (attachment) => attachment.file?.display_name || attachment.file?.path?.split('/').pop() || 'Datei'
 const isImageMime = (type) => type?.startsWith('image/')
 const isVideoMime = (type) => type?.startsWith('video/')
 const fileExtension = (file) => (file?.path?.split('.').pop() || '').toLowerCase()

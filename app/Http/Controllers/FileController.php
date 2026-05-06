@@ -5,17 +5,22 @@ namespace App\Http\Controllers;
 use App\Models\Club;
 use App\Models\Event;
 use App\Models\File;
+use App\Models\FileShare;
 use App\Models\Folder;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\FileService;
 use App\Services\PlanFeatureService;
+use App\Support\AppNotification;
 use App\Support\UploadStorage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Throwable;
 
 class FileController extends Controller
 {
@@ -69,12 +74,17 @@ class FileController extends Controller
             ],
             'clubs' => Club::query()->visibleTo(auth()->user())->select(['id', 'name'])->orderBy('name')->get(),
             'teams' => Team::query()->visibleTo(auth()->user())->select(['id', 'club_id', 'name'])->orderBy('name')->get(),
-            'users' => User::query()
-                ->where('id', '!=', auth()->id())
-                ->select(['id', 'name', 'email'])
-                ->orderBy('name')
-                ->limit(200)
-                ->get(),
+            'users' => $request->user()
+                ->friendships()
+                ->with('friend:id,name,email')
+                ->get()
+                ->map(fn ($friendship) => [
+                    'id' => $friendship->friend->id,
+                    'name' => $friendship->friend->name,
+                    'email' => $friendship->friend->email,
+                ])
+                ->sortBy('name')
+                ->values(),
             'events' => Event::query()
                 ->where(function ($query) {
                     $query->whereHas('participants', fn ($q) => $q->where('users.id', auth()->id()))
@@ -128,7 +138,7 @@ class FileController extends Controller
 
         abort_unless(Storage::disk(UploadStorage::disk())->exists($file->path), 404);
 
-        return Storage::disk(UploadStorage::disk())->download($file->path);
+        return Storage::disk(UploadStorage::disk())->download($file->path, $file->display_name);
     }
 
     public function destroy(File $file)
@@ -145,22 +155,64 @@ class FileController extends Controller
         $this->authorize('view', $file);
 
         $data = $request->validate([
-            'target_type' => ['required', Rule::in(['user', 'team', 'club'])],
-            'target_id' => ['required', 'integer'],
+            'target_type' => ['required', Rule::in(['user', 'email'])],
+            'target_id' => ['nullable', 'required_if:target_type,user', 'integer', 'exists:users,id'],
+            'email' => ['nullable', 'required_if:target_type,email', 'email', 'max:255'],
         ]);
 
-        File::firstOrCreate(
-            array_merge($this->targetScope($data['target_type'], (int) $data['target_id']), [
-                'path' => $file->path,
-                'folder_id' => null,
-            ]),
+        if ($data['target_type'] === 'email') {
+            return $this->shareWithExternalEmail($request, $file, $data['email']);
+        }
+
+        $targetUser = User::findOrFail((int) $data['target_id']);
+
+        abort_unless(
+            $request->user()->friendships()->where('friend_id', $targetUser->id)->exists(),
+            403,
+            'Dateien koennen nur mit Freunden geteilt werden.'
+        );
+
+        $sharedFile = File::firstOrCreate(
             [
+                'user_id' => $targetUser->id,
+                'club_id' => null,
+                'team_id' => null,
+                'event_id' => null,
+                'folder_id' => null,
+                'path' => $file->path,
+            ],
+            [
+                'display_name' => $file->display_name,
                 'type' => $file->type,
                 'size' => $file->size,
             ],
         );
 
+        AppNotification::send($targetUser, 'file.shared', [
+            'title' => $request->user()->name.' hat eine Datei mit dir geteilt',
+            'body' => $file->display_name,
+            'url' => route('auth.files.index'),
+            'actor_id' => $request->user()->id,
+            'actor_name' => $request->user()->name,
+            'file_id' => $sharedFile->id,
+        ]);
+
         return back()->with('success', 'Datei freigegeben.');
+    }
+
+    public function sharedDownload(string $token)
+    {
+        $share = FileShare::query()
+            ->with('file')
+            ->where('token_hash', hash('sha256', $token))
+            ->firstOrFail();
+
+        abort_if($share->expires_at && $share->expires_at->isPast(), 410, 'Dieser Freigabe-Link ist abgelaufen.');
+        abort_unless($share->file && Storage::disk(UploadStorage::disk())->exists($share->file->path), 404);
+
+        $share->forceFill(['downloaded_at' => now()])->save();
+
+        return Storage::disk(UploadStorage::disk())->download($share->file->path, $share->file->display_name);
     }
 
     private function scopeData(Request $request): array
@@ -247,5 +299,39 @@ class FileController extends Controller
             'team_id' => null,
             'event_id' => null,
         ];
+    }
+
+    private function shareWithExternalEmail(Request $request, File $file, string $email)
+    {
+        $token = Str::random(64);
+        $expiresAt = now()->addDays(14);
+
+        $share = FileShare::create([
+            'file_id' => $file->id,
+            'shared_by_user_id' => $request->user()->id,
+            'email' => strtolower($email),
+            'token_hash' => hash('sha256', $token),
+            'expires_at' => $expiresAt,
+        ]);
+
+        $downloadUrl = route('files.shared-download', ['token' => $token]);
+        $senderName = $request->user()->name;
+        $fileName = $file->display_name;
+
+        try {
+            Mail::raw(
+                "Hallo,\n\n{$senderName} hat die Datei \"{$fileName}\" mit dir geteilt.\n\nDownload-Link: {$downloadUrl}\n\nDer Link ist bis {$expiresAt->format('d.m.Y H:i')} gueltig.\n\nViele Gruesse\nAirmius",
+                function ($message) use ($email, $senderName, $fileName) {
+                    $message->to($email)
+                        ->subject("{$senderName} hat eine Datei mit dir geteilt: {$fileName}");
+                }
+            );
+        } catch (Throwable) {
+            $share->delete();
+
+            return back()->with('error', 'Die E-Mail konnte nicht gesendet werden. Bitte pruefe die Mail-Konfiguration.');
+        }
+
+        return back()->with('success', 'Externe Freigabe per E-Mail gesendet.');
     }
 }

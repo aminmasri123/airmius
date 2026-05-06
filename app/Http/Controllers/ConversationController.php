@@ -287,7 +287,7 @@ class ConversationController extends Controller
                 ->with([
                     'sender:id,name',
                     'receipts:id,message_id,user_id,delivered_at,read_at',
-                    'attachments.file:id,path,thumbnail_path,type,size',
+                    'attachments.file:id,display_name,path,thumbnail_path,type,size',
                     'reactions.user:id,name',
                 ]);
 

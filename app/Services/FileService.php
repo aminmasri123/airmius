@@ -6,6 +6,7 @@ use App\Models\File;
 use App\Support\UploadStorage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class FileService
 {
@@ -22,6 +23,7 @@ class FileService
             'team_id' => $data['team_id'] ?? null,
             'event_id' => $data['event_id'] ?? null,
             'folder_id' => $data['folder_id'] ?? null,
+            'display_name' => $this->displayNameForUpload($file),
             ...$optimized,
         ]);
     }
@@ -53,5 +55,13 @@ class FileService
         }
 
         return 'users/'.$data['user_id'];
+    }
+
+    private function displayNameForUpload(UploadedFile $file): string
+    {
+        $name = basename(str_replace('\\', '/', $file->getClientOriginalName()));
+        $name = trim((string) preg_replace('/[\x00-\x1F\x7F]+/', '', $name));
+
+        return Str::limit($name !== '' ? $name : 'Datei', 180, '');
     }
 }

@@ -70,7 +70,13 @@ const reportReasons = [
 const initials = (name) => (name || '?').split(' ').slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase()
 const formatDate = (value) => new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
 const storageUrl = (path) => path?.startsWith('http') ? path : `${page.props.uploads?.url || '/storage'}/${path}`
-const fileName = (path) => (path || '').split('/').pop()
+const fileName = (fileOrPath) => {
+    if (typeof fileOrPath === 'object' && fileOrPath !== null) {
+        return fileOrPath.display_name || (fileOrPath.path || '').split('/').pop()
+    }
+
+    return (fileOrPath || '').split('/').pop()
+}
 const isImageMime = (type) => type?.startsWith('image/')
 const isVideoMime = (type) => type?.startsWith('video/')
 const sportLabel = (sport) => {
@@ -882,7 +888,7 @@ const visitPage = (url) => url && router.visit(url, {
                             <img
                                 v-else-if="attachment.file && isImageMime(attachment.file.type)"
                                 :src="storageUrl(attachment.file.path)"
-                                :alt="fileName(attachment.file.path)"
+                                :alt="fileName(attachment.file)"
                                 class="max-h-[70vh] w-full rounded-xl border border-border object-cover"
                             />
 
@@ -895,7 +901,7 @@ const visitPage = (url) => url && router.visit(url, {
                                 <i class="las la-paperclip"></i>
 
                                 <span class="min-w-0 flex-1 truncate">
-                                    {{ fileName(attachment.file.path) }}
+                                    {{ fileName(attachment.file) }}
                                 </span>
 
                                 <span class="hidden text-xs text-secondary sm:inline">

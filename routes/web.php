@@ -3,6 +3,7 @@
 use App\Http\Controllers\GuardianConsentController;
 use App\Http\Controllers\GuardianAccessController;
 use App\Http\Controllers\AccountDeletionController;
+use App\Http\Controllers\FileController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\CommerceCheckoutController;
@@ -27,6 +28,8 @@ Route::post('/webhooks/commerce/paypal', [CommerceCheckoutController::class, 'pa
     ->name('webhooks.commerce.paypal');
 Route::get('/ads/active', [CommerceCheckoutController::class, 'activeAd'])->name('ads.active');
 Route::get('/ads/{campaign}/click', [CommerceCheckoutController::class, 'clickAd'])->name('ads.click');
+Route::get('/shared-files/{token}', [FileController::class, 'sharedDownload'])
+    ->name('files.shared-download');
 Route::get('/checkout/guest-commerce/{order}/{token}/success', [CommerceCheckoutController::class, 'guestSuccess'])
     ->name('commerce-checkout.guest.success');
 Route::get('/checkout/guest-commerce/{order}/{token}/cancel', [CommerceCheckoutController::class, 'guestCancel'])

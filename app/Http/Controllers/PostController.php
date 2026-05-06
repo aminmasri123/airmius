@@ -63,7 +63,7 @@ class PostController extends Controller
                 'team' => fn ($query) => $query->select('id', 'name', 'club_id'),
                 'sport:id,name,slug,category',
                 'sportSkills:id,sport_id,key,name',
-                'attachments.file:id,path,type,size',
+                'attachments.file:id,display_name,path,type,size',
                 'comments' => fn ($query) => $query
                     ->where('moderation_status', '!=', 'removed')
                     ->with('user:id,name,profile_photo_path')

@@ -10,7 +10,7 @@ class File extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['club_id','team_id','event_id','user_id','folder_id','path','thumbnail_path','type','size'];
+    protected $fillable = ['club_id','team_id','event_id','user_id','folder_id','display_name','path','thumbnail_path','type','size'];
 
     protected $appends = ['url', 'thumbnail_url'];
 
@@ -22,6 +22,17 @@ class File extends Model
     public function getThumbnailUrlAttribute(): ?string
     {
         return UploadStorage::url($this->thumbnail_path);
+    }
+
+    public function getDisplayNameAttribute($value): string
+    {
+        $name = trim((string) $value);
+
+        if ($name !== '') {
+            return $name;
+        }
+
+        return basename(str_replace('\\', '/', (string) $this->path)) ?: 'Datei';
     }
 
     public function club()
@@ -57,5 +68,10 @@ class File extends Model
     public function messages()
     {
         return $this->belongsToMany(Message::class, 'message_attachments');
+    }
+
+    public function externalShares()
+    {
+        return $this->hasMany(FileShare::class);
     }
 }

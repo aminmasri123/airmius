@@ -6,6 +6,7 @@ use App\Models\Activity;
 use App\Models\File;
 use App\Models\Post;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Str;
 
 class PostService
 {
@@ -42,6 +43,7 @@ class PostService
                     'club_id' => $post->club_id,
                     'team_id' => $post->team_id,
                     'user_id' => $user->id,
+                    'display_name' => $this->displayNameForUpload($attachment),
                     ...$this->mediaOptimizer->store($attachment, $this->directoryFor($post, $user->id)),
                 ]);
 
@@ -77,5 +79,13 @@ class PostService
         }
 
         return 'users/'.$userId.'/posts';
+    }
+
+    private function displayNameForUpload(UploadedFile $file): string
+    {
+        $name = basename(str_replace('\\', '/', $file->getClientOriginalName()));
+        $name = trim((string) preg_replace('/[\x00-\x1F\x7F]+/', '', $name));
+
+        return Str::limit($name !== '' ? $name : 'Datei', 180, '');
     }
 }
