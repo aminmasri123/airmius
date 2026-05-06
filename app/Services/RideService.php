@@ -10,7 +10,9 @@ class RideService
     {
         return Ride::create([
             ...$data,
-            'driver_id' => $user->id
+            'club_id' => $data['visibility'] === 'club' ? ($data['club_id'] ?? null) : null,
+            'team_id' => $data['visibility'] === 'team' ? ($data['team_id'] ?? null) : null,
+            'driver_id' => $user->id,
         ]);
     }
 
