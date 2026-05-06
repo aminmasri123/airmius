@@ -59,7 +59,7 @@ class EventController extends Controller
                 ->orderBy('name')
                 ->get(),
             'teams' => Team::query()
-                ->visibleTo($request->user())
+                ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
                 ->select(['id', 'club_id', 'name'])
                 ->orderBy('name')
                 ->get(),
@@ -217,8 +217,10 @@ class EventController extends Controller
         }
 
         if (! empty($data['team_id'])) {
-            $team = Team::findOrFail($data['team_id']);
-            $this->authorize('view', $team);
+            $team = Team::query()
+                ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
+                ->findOrFail($data['team_id']);
+
             $data['club_id'] = $team->club_id;
         }
 

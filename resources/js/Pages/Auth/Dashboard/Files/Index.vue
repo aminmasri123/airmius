@@ -18,10 +18,13 @@ const props = defineProps({
 
 const showDeleteModal = ref(false)
 const showShareModal = ref(false)
+const showRenameModal = ref(false)
 const folderToDelete = ref(null)
 const itemToShare = ref(null)
 const shareType = ref('file')
 const friendSearch = ref('')
+const renameTarget = ref(null)
+const renameType = ref('file')
 
 const scopeForm = useForm({
     scope: props.scope.type || 'user',
@@ -53,6 +56,11 @@ const shareForm = useForm({
     target_type: 'user',
     target_id: '',
     email: '',
+})
+
+const renameForm = useForm({
+    name: '',
+    display_name: '',
 })
 
 const scopeOptions = [
@@ -135,6 +143,31 @@ const deleteFolderConfirmed = () => {
         onFinish: () => {
             showDeleteModal.value = false
             folderToDelete.value = null
+        },
+    })
+}
+
+const openRename = (item, type = 'file') => {
+    renameTarget.value = item
+    renameType.value = type
+    renameForm.name = type === 'folder' ? item.name : ''
+    renameForm.display_name = type === 'file' ? fileName(item) : ''
+    showRenameModal.value = true
+}
+
+const submitRename = () => {
+    if (!renameTarget.value) return
+
+    const renameRoute = renameType.value === 'folder'
+        ? route('auth.folders.update', renameTarget.value.id)
+        : route('auth.files.update', renameTarget.value.id)
+
+    renameForm.put(renameRoute, {
+        preserveScroll: true,
+        onSuccess: () => {
+            showRenameModal.value = false
+            renameTarget.value = null
+            renameForm.reset('name', 'display_name')
         },
     })
 }
@@ -239,6 +272,9 @@ const contextLabel = (file) => file.event?.title || file.team?.name || file.club
                             <span class="rounded-lg p-2 text-secondary opacity-0 group-hover:opacity-100" @click.stop="openShare(folder, 'folder')" title="Freigeben">
                                 <i class="las la-share-alt"></i>
                             </span>
+                            <span class="rounded-lg p-2 text-secondary opacity-0 group-hover:opacity-100" @click.stop="openRename(folder, 'folder')" title="Umbenennen">
+                                <i class="las la-pen"></i>
+                            </span>
                             <span class="rounded-lg p-2 text-secondary opacity-0 group-hover:opacity-100" @click.stop="confirmDeleteFolder(folder)" title="Löschen">
                                 <i class="las la-trash"></i>
                             </span>
@@ -252,6 +288,9 @@ const contextLabel = (file) => file.event?.title || file.team?.name || file.club
                             </div>
                             <button class="rounded-lg p-2 text-secondary hover:bg-inputBg" @click="openShare(file)" title="Freigeben">
                                 <i class="las la-share-alt"></i>
+                            </button>
+                            <button class="rounded-lg p-2 text-secondary hover:bg-inputBg" @click="openRename(file)" title="Umbenennen">
+                                <i class="las la-pen"></i>
                             </button>
                             <a :href="route('auth.files.download', file.id)" class="rounded-lg p-2 text-secondary hover:bg-inputBg" title="Herunterladen">
                                 <i class="las la-download"></i>
@@ -298,6 +337,34 @@ const contextLabel = (file) => file.event?.title || file.team?.name || file.club
                 <button class="flex-1 rounded-lg bg-red-500 py-2 text-white hover:bg-red-600" @click="deleteFolderConfirmed">Löschen</button>
             </div>
         </div>
+    </Modal>
+
+    <Modal :show="showRenameModal" max-width="md" @close="showRenameModal = false">
+        <form class="space-y-4 text-primary" @submit.prevent="submitRename">
+            <h2 class="text-lg font-bold">{{ renameType === 'folder' ? 'Ordner' : 'Datei' }} umbenennen</h2>
+            <input
+                v-if="renameType === 'folder'"
+                v-model="renameForm.name"
+                class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
+                placeholder="Ordnername"
+            >
+            <input
+                v-else
+                v-model="renameForm.display_name"
+                class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
+                placeholder="Dateiname"
+            >
+            <div class="flex gap-3">
+                <button type="button" class="flex-1 rounded-lg bg-gray-500 py-2 text-white hover:bg-gray-600" @click="showRenameModal = false">Abbrechen</button>
+                <button
+                    type="submit"
+                    :disabled="renameForm.processing || (renameType === 'folder' ? !renameForm.name.trim() : !renameForm.display_name.trim())"
+                    class="flex-1 rounded-lg bg-buttonPrimary py-2 text-buttonTextPrimary disabled:opacity-50"
+                >
+                    Speichern
+                </button>
+            </div>
+        </form>
     </Modal>
 
     <Modal :show="showShareModal" max-width="md" @close="showShareModal = false">

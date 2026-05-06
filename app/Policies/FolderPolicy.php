@@ -31,6 +31,14 @@ class FolderPolicy extends BasePolicy
             || $this->isClubAdmin($user);
     }
 
+    public function update(User $user, Folder $folder)
+    {
+        return $folder->user_id === $user->id
+            || ($user->can('file.upload') && $this->canAccessScope($user, $folder))
+            || $this->isClubAdmin($user)
+            || $this->isCoach($user);
+    }
+
     private function canAccessScope(User $user, Folder $folder): bool
     {
         if ($folder->event) {

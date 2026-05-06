@@ -150,6 +150,21 @@ class FileController extends Controller
         return back()->with('success', 'Datei gelöscht.');
     }
 
+    public function update(Request $request, File $file)
+    {
+        $this->authorize('update', $file);
+
+        $data = $request->validate([
+            'display_name' => ['required', 'string', 'max:180'],
+        ]);
+
+        $file->update([
+            'display_name' => trim($data['display_name']),
+        ]);
+
+        return back()->with('success', 'Datei umbenannt.');
+    }
+
     public function share(Request $request, File $file)
     {
         $this->authorize('view', $file);

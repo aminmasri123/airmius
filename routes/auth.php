@@ -210,12 +210,14 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::get('/files', [FileController::class, 'index'])->name('auth.files.index');
     Route::post('/files', [FileController::class, 'store'])->name('auth.files.store');
     Route::post('/files/{file}/share', [FileController::class, 'share'])->name('auth.files.share');
+    Route::put('/files/{file}', [FileController::class, 'update'])->name('auth.files.update');
     Route::get('/files/{file}/download', [FileController::class, 'download'])->name('auth.files.download');
     Route::delete('/files/{file}', [FileController::class, 'destroy'])->name('auth.files.destroy');
 
     // FOLDERS
     Route::post('/folders', [FolderController::class, 'store'])->name('auth.folders.store');
     Route::post('/folders/{folder}/share', [FolderController::class, 'share'])->name('auth.folders.share');
+    Route::put('/folders/{folder}', [FolderController::class, 'update'])->name('auth.folders.update');
     Route::delete('/folders/{folder}', [FolderController::class, 'destroy'])->name('auth.folders.destroy');
 
     // RIDES

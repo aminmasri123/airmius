@@ -88,7 +88,17 @@ class FolderController extends Controller
      */
     public function update(Request $request, Folder $folder)
     {
-        //
+        $this->authorize('update', $folder);
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+        ]);
+
+        $folder->update([
+            'name' => trim($data['name']),
+        ]);
+
+        return back()->with('success', 'Ordner umbenannt.');
     }
 
     /**

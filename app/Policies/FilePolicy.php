@@ -39,6 +39,14 @@ class FilePolicy extends BasePolicy
             || $this->isClubAdmin($user);
     }
 
+    public function update(User $user, File $file)
+    {
+        return $file->user_id === $user->id
+            || ($user->can('file.upload') && $this->canAccessScope($user, $file))
+            || $this->isClubAdmin($user)
+            || $this->isCoach($user);
+    }
+
     private function canAccessScope(User $user, File $file): bool
     {
         if ($file->event) {
