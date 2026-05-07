@@ -14,6 +14,9 @@ const props = defineProps({
 })
 
 const showCreateModal = ref(false)
+const showDeleteModal = ref(false)
+const deleteTarget = ref(null)
+const deleteConfirmation = ref('')
 
 const form = useForm({
     visibility: 'friends',
@@ -78,10 +81,25 @@ const leaveRide = (ride) => {
     router.post(route('auth.rides.leave', ride.id), {}, { preserveScroll: true })
 }
 
-const deleteRide = (ride) => {
-    if (!window.confirm('Diese Fahrgemeinschaft wirklich loeschen?')) return
+const openDeleteModal = (ride) => {
+    deleteTarget.value = ride
+    deleteConfirmation.value = ''
+    showDeleteModal.value = true
+}
 
-    router.delete(route('auth.rides.destroy', ride.id), { preserveScroll: true })
+const closeDeleteModal = () => {
+    showDeleteModal.value = false
+    deleteTarget.value = null
+    deleteConfirmation.value = ''
+}
+
+const confirmDeleteRide = () => {
+    if (!deleteTarget.value || deleteConfirmation.value !== 'DELETE') return
+
+    router.delete(route('auth.rides.destroy', deleteTarget.value.id), {
+        preserveScroll: true,
+        onSuccess: () => closeDeleteModal(),
+    })
 }
 </script>
 
@@ -262,6 +280,52 @@ const deleteRide = (ride) => {
             </form>
         </Modal>
 
+        <Modal :show="showDeleteModal" max-width="md" @close="closeDeleteModal">
+            <div v-if="deleteTarget" class="space-y-4">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-error">Fahrgemeinschaft loeschen</p>
+                    <h2 class="mt-1 text-lg font-bold text-primary">
+                        {{ deleteTarget.from }} -> {{ deleteTarget.to }}
+                    </h2>
+                    <p class="mt-2 text-sm text-secondary">
+                        Diese Fahrt wird dauerhaft geloescht. Beigetretene Mitfahrer verlieren den Zugriff auf Kontakt- und Treffpunktdaten.
+                    </p>
+                </div>
+
+                <div class="rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error">
+                    Bitte gib <strong>DELETE</strong> ein, um die Aktion zu bestaetigen.
+                </div>
+
+                <label class="block">
+                    <span class="text-sm font-semibold text-primary">Bestaetigung</span>
+                    <input
+                        v-model="deleteConfirmation"
+                        class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                        placeholder="DELETE"
+                        autocomplete="off"
+                    >
+                </label>
+
+                <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button
+                        type="button"
+                        class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
+                        @click="closeDeleteModal"
+                    >
+                        Abbrechen
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        :disabled="deleteConfirmation !== 'DELETE'"
+                        @click="confirmDeleteRide"
+                    >
+                        Endgueltig loeschen
+                    </button>
+                </div>
+            </div>
+        </Modal>
+
         <section class="grid gap-4 md:grid-cols-2">
             <article v-for="ride in rides" :key="ride.id" class="rounded-lg border border-border bg-card p-5">
                 <div class="flex items-start justify-between gap-3">
@@ -334,7 +398,7 @@ const deleteRide = (ride) => {
                     <button
                         v-if="ride.can_delete"
                         class="rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
-                        @click="deleteRide(ride)"
+                        @click="openDeleteModal(ride)"
                     >
                         Loeschen
                     </button>
