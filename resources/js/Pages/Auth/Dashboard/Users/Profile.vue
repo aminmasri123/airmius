@@ -248,28 +248,30 @@ const rejectRecommendation = (recommendation) => {
 
         <div class="mx-auto max-w-7xl space-y-6">
             <section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-                <div class="relative min-h-48 bg-[color:var(--surface-strong)]">
+                <div class="relative h-32 bg-[color:var(--surface-strong)] sm:h-40">
                     <div class="absolute inset-0 opacity-90" style="background: linear-gradient(135deg, color-mix(in srgb, var(--buttonPrimary) 34%, transparent), color-mix(in srgb, var(--accent-2) 18%, transparent) 52%, color-mix(in srgb, var(--accent-3) 18%, transparent));"></div>
                     <div class="absolute inset-x-0 bottom-0 h-24" style="background: linear-gradient(180deg, transparent, var(--card));"></div>
                 </div>
 
                 <div class="px-4 pb-6 sm:px-6">
-                    <div class="-mt-16 grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
-                        <div class="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end">
-                            <img
-                                v-if="profileUser.profile_photo_url"
-                                :src="profileUser.profile_photo_url"
-                                :alt="profileUser.name"
-                                class="size-32 shrink-0 rounded-xl border-4 border-card object-cover shadow-lg"
-                            />
-                            <div
-                                v-else
-                                class="flex size-32 shrink-0 items-center justify-center rounded-xl border-4 border-card bg-buttonPrimary text-4xl font-bold text-buttonTextPrimary shadow-lg"
-                            >
-                                {{ initials(profileUser.name) }}
+                    <div class="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-start">
+                        <div class="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start">
+                            <div class="-mt-12 shrink-0 sm:-mt-14">
+                                <img
+                                    v-if="profileUser.profile_photo_url"
+                                    :src="profileUser.profile_photo_url"
+                                    :alt="profileUser.name"
+                                    class="size-28 rounded-xl border-4 border-card object-cover shadow-lg sm:size-32"
+                                />
+                                <div
+                                    v-else
+                                    class="flex size-28 items-center justify-center rounded-xl border-4 border-card bg-buttonPrimary text-3xl font-bold text-buttonTextPrimary shadow-lg sm:size-32 sm:text-4xl"
+                                >
+                                    {{ initials(profileUser.name) }}
+                                </div>
                             </div>
 
-                            <div class="min-w-0 pb-1">
+                            <div class="min-w-0 pt-1 sm:pt-4">
                                 <div class="flex flex-wrap items-center gap-2">
                                     <span class="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-secondary">
                                         {{ privacyLabel }}
@@ -282,7 +284,7 @@ const rejectRecommendation = (recommendation) => {
                                     </span>
                                 </div>
 
-                                <h1 class="mt-3 break-words text-3xl font-bold tracking-normal text-primary sm:text-4xl">
+                                <h1 class="mt-3 break-words text-2xl font-bold leading-tight tracking-normal text-primary sm:text-4xl">
                                     {{ profileUser.name }}
                                 </h1>
 
