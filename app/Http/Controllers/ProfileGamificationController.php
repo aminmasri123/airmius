@@ -8,6 +8,7 @@ use App\Models\Sport;
 use App\Models\User;
 use App\Models\UserSport;
 use App\Models\UserSportSkill;
+use App\Models\Notification;
 use App\Services\GamificationService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -135,12 +136,24 @@ class ProfileGamificationController extends Controller
             'body' => ['required', 'string', 'min:20', 'max:1000'],
         ]);
 
-        ProfileRecommendation::create([
+        $recommendation = ProfileRecommendation::create([
             'profile_user_id' => $user->id,
             'author_id' => $request->user()->id,
             'relationship' => $data['relationship'],
             'body' => $data['body'],
             'status' => 'pending',
+        ]);
+
+        Notification::create([
+            'user_id' => $user->id,
+            'type' => 'profile.recommendation_received',
+            'data' => [
+                'title' => 'Neue Empfehlung erhalten',
+                'body' => $request->user()->name.' hat eine Empfehlung geschrieben. Sie wartet auf deine Freigabe.',
+                'url' => route('auth.users.show', ['user' => $user->id, 'tab' => 'recommendations']),
+                'recommendation_id' => $recommendation->id,
+                'author_id' => $request->user()->id,
+            ],
         ]);
 
         return back()->with('message', 'Empfehlung wurde gesendet und wartet auf Freigabe.');

@@ -29,6 +29,15 @@ class MediaGuidelineController extends Controller
                     'note' => 'Wichtige Inhalte mittig platzieren, weil mobile Ansichten seitlich beschneiden koennen.',
                 ],
                 [
+                    'category' => 'Login',
+                    'name' => 'Login-Slider rechts',
+                    'dimensions' => '1080 x 1920 px',
+                    'ratio' => '9:16',
+                    'formats' => 'PNG, WebP, JPG',
+                    'max_size' => 'bis 3 MB',
+                    'note' => 'Hochformat fuer die rechte Login-Seite. Wichtige Texte und Logos mittig platzieren; der Code zeigt die Bilder in einem 9:16-Frame.',
+                ],
+                [
                     'category' => 'Verein & Team',
                     'name' => 'Vereinslogo / Teamlogo',
                     'dimensions' => '800 x 800 px',

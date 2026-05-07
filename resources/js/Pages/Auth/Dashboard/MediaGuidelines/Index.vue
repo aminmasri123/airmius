@@ -72,9 +72,9 @@ const filteredGuidelines = computed(() => {
                 <p class="mt-1 text-sm text-secondary">Diese Formate funktionieren fuer fast alle Bildbereiche.</p>
             </article>
             <article class="rounded-lg border border-border bg-card p-4">
-                <p class="text-xs font-semibold uppercase tracking-wider text-secondary">Blog & Video</p>
-                <p class="mt-2 text-2xl font-bold text-primary">16:9</p>
-                <p class="mt-1 text-sm text-secondary">Ideal fuer Cover, Detailseiten, Thumbnails und Social Sharing.</p>
+                <p class="text-xs font-semibold uppercase tracking-wider text-secondary">Login-Slider</p>
+                <p class="mt-2 text-2xl font-bold text-primary">9:16</p>
+                <p class="mt-1 text-sm text-secondary">Hochformat fuer die rechte Login-Seite, ideal 1080 x 1920 px.</p>
             </article>
             <article class="rounded-lg border border-border bg-card p-4">
                 <p class="text-xs font-semibold uppercase tracking-wider text-secondary">Profil & Produkte</p>

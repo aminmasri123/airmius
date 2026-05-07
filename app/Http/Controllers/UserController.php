@@ -72,6 +72,13 @@ class UserController extends Controller
     {
         $this->authorize('view', $user);
 
+        $activeTab = (string) $request->query('tab', 'overview');
+        $allowedTabs = ['overview', 'sports', 'skills', 'posts', 'network', 'recommendations'];
+
+        if (! in_array($activeTab, $allowedTabs, true)) {
+            $activeTab = 'overview';
+        }
+
         $viewer = $request->user();
         $canManageRoles = $viewer->can('assignRoles', $user);
         $profileVisible = $user->isProfileVisibleTo($viewer);
@@ -118,7 +125,16 @@ class UserController extends Controller
             'clubs' => fn ($query) => $query->select('clubs.id', 'name')->orderBy('name')->limit(8),
             'teams' => fn ($query) => $query->select('teams.id', 'club_id', 'name', 'sport_type')->orderBy('name')->limit(8),
             'sportProfiles.sport:id,name,slug,category',
-            'sportSkills' => fn ($query) => $query
+        ]);
+
+        $gamification = $this->gamification->summaryFor($user);
+
+        $sportSkills = collect();
+        $recommendations = collect();
+        $posts = collect();
+
+        if ($profileVisible && $activeTab === 'skills') {
+            $sportSkills = $user->sportSkills()
                 ->where('is_visible', true)
                 ->with([
                     'sport:id,name,slug,category',
@@ -127,42 +143,52 @@ class UserController extends Controller
                 ])
                 ->withCount('endorsements')
                 ->orderBy('sport_id')
-                ->orderBy('sport_skill_id'),
-            'recommendationsReceived' => fn ($query) => $query
+                ->orderBy('sport_skill_id')
+                ->get();
+        }
+
+        if ($profileVisible && $activeTab === 'recommendations') {
+            $recommendations = $user->recommendationsReceived()
                 ->where(function ($query) use ($viewer, $user) {
                     $query->where('status', 'approved')
                         ->when($viewer->is($user), fn ($query) => $query->orWhere('status', 'pending'));
                 })
+                ->orWhere(function ($query) use ($viewer, $user) {
+                    $query->where('profile_user_id', $user->id)
+                        ->where('author_id', $viewer->id)
+                        ->where('status', 'pending');
+                })
                 ->with('author:id,name,profile_photo_path')
                 ->latest('id')
-                ->limit(8),
-        ]);
+                ->limit(12)
+                ->get();
+        }
 
-        $gamification = $this->gamification->summaryFor($user);
-
-        $posts = Post::query()
-            ->where('user_id', $user->id)
-            ->where('moderation_status', '!=', 'removed')
-            ->where(function ($query) use ($viewer) {
-                $query->where('visibility', 'public')
-                    ->orWhere('user_id', $viewer->id)
-                    ->orWhere(function ($query) use ($viewer) {
-                        $query->where('visibility', 'organization')
-                            ->whereHas('club.users', fn ($q) => $q->where('users.id', $viewer->id));
-                    })
-                    ->orWhere(function ($query) use ($viewer) {
-                        $query->where('visibility', 'team')
-                            ->whereHas('team.users', fn ($q) => $q->where('users.id', $viewer->id));
-                    });
-            })
-            ->with(['club:id,name', 'team:id,name,club_id'])
-            ->withCount([
-                'comments' => fn ($query) => $query->where('moderation_status', '!=', 'removed'),
-                'likes',
-            ])
-            ->latest('id')
-            ->limit(8)
-            ->get();
+        if ($profileVisible && $activeTab === 'posts') {
+            $posts = Post::query()
+                ->where('user_id', $user->id)
+                ->where('moderation_status', '!=', 'removed')
+                ->where(function ($query) use ($viewer) {
+                    $query->where('visibility', 'public')
+                        ->orWhere('user_id', $viewer->id)
+                        ->orWhere(function ($query) use ($viewer) {
+                            $query->where('visibility', 'organization')
+                                ->whereHas('club.users', fn ($q) => $q->where('users.id', $viewer->id));
+                        })
+                        ->orWhere(function ($query) use ($viewer) {
+                            $query->where('visibility', 'team')
+                                ->whereHas('team.users', fn ($q) => $q->where('users.id', $viewer->id));
+                        });
+                })
+                ->with(['club:id,name', 'team:id,name,club_id'])
+                ->withCount([
+                    'comments' => fn ($query) => $query->where('moderation_status', '!=', 'removed'),
+                    'likes',
+                ])
+                ->latest('id')
+                ->limit(12)
+                ->get();
+        }
 
         return Inertia::render('Auth/Dashboard/Users/Profile', [
             'profileUser' => [
@@ -186,7 +212,7 @@ class UserController extends Controller
                     'experience_level' => $profile->experience_level,
                     'sport' => $profile->sport,
                 ])->values() : [],
-                'sport_skills' => $profileVisible ? $user->sportSkills->map(fn (UserSportSkill $userSkill) => [
+                'sport_skills' => $profileVisible ? $sportSkills->map(fn (UserSportSkill $userSkill) => [
                     'id' => $userSkill->id,
                     'self_level' => $userSkill->self_level,
                     'notes' => $userSkill->notes,
@@ -202,7 +228,7 @@ class UserController extends Controller
                         'endorser' => $endorsement->endorser,
                     ])->values(),
                 ])->values() : [],
-                'recommendations' => $profileVisible ? $user->recommendationsReceived->map(fn ($recommendation) => [
+                'recommendations' => $profileVisible ? $recommendations->map(fn ($recommendation) => [
                     'id' => $recommendation->id,
                     'relationship' => $recommendation->relationship,
                     'body' => $recommendation->body,
@@ -237,6 +263,7 @@ class UserController extends Controller
                     : [],
             ],
             'posts' => $profileVisible ? $posts : [],
+            'activeTab' => $activeTab,
             'viewer' => [
                 'is_self' => $viewer->is($user),
                 'is_following' => $user->isFollowedBy($viewer),
@@ -257,11 +284,13 @@ class UserController extends Controller
                 'can_manage_roles' => $canManageRoles,
                 'can_view_private_profile' => $profileVisible,
             ],
-            'sports' => Sport::query()
-                ->where('is_active', true)
-                ->select(['id', 'name', 'slug', 'category'])
-                ->orderBy('sort_order')
-                ->get(),
+            'sports' => $profileVisible && $viewer->is($user) && $activeTab === 'sports'
+                ? Sport::query()
+                    ->where('is_active', true)
+                    ->select(['id', 'name', 'slug', 'category'])
+                    ->orderBy('sort_order')
+                    ->get()
+                : [],
         ]);
     }
 

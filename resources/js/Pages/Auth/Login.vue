@@ -1,6 +1,5 @@
 <script setup>
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import AuthenticationCard from '@/Components/AuthenticationCard.vue';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
 import Checkbox from '@/Components/Checkbox.vue';
 import InputError from '@/Components/InputError.vue';
@@ -8,7 +7,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 defineProps({
     canResetPassword: Boolean,
@@ -31,14 +30,10 @@ const submit = () => {
 };
 
 const images = [
-    '/img/login/bild1.png',
-    '/img/login/bild2.png',
-    '/img/login/bild3.png',
-    '/img/login/bild4.png',
-
-    /*  '/img/login/slide2.jpeg',
-     '/img/login/slide3.jpeg',
-     '/img/login/slide4.jpeg', */
+    { src: '/img/login/bild1.png', alt: 'Airmius Neueroeffnung Sport-Plattform' },
+    { src: '/img/login/bild2.png', alt: 'Airmius Neueroeffnung Marketplace' },
+    { src: '/img/login/bild3.png', alt: 'Airmius Community Gamification' },
+    { src: '/img/login/bild4.png', alt: 'Airmius Gemeinsam aktiv' },
 ]
 
 const current = ref(0)
@@ -51,6 +46,11 @@ onMounted(() => {
     }, 8000)
 })
 
+onUnmounted(() => {
+    if (interval) {
+        clearInterval(interval)
+    }
+})
 
 const goBack = () => {
     window.history.back()
@@ -58,28 +58,27 @@ const goBack = () => {
 </script>
 
 <template>
-
     <Head :title="$t('Anmelden')" />
+
     <button type="button" @click="goBack" class="absolute top-4 left-4 md:top-16 md:left-24 text-primary text-sm">
         <i class="las la-chevron-circle-left la-lg"></i>
     </button>
-    <div class="min-h-screen flex bg-bg text-primary">
 
-        <!-- LINKS: LOGIN -->
+    <div class="min-h-screen flex bg-bg text-primary">
         <div class="w-full md:w-1/2 flex items-center justify-center px-6 sm:px-10">
             <div class="surface-card w-full max-w-md px-6 py-8 sm:px-8">
-
                 <div class="w-36 h-36 md:w-48 md:h-48 context-center mx-auto mt-10">
                     <AuthenticationCardLogo />
-
                 </div>
+
                 <div v-if="status" class="mb-4 font-medium text-sm text-success">
                     {{ status }}
                 </div>
+
                 <div class="mb-4 rounded-lg border border-border bg-inputBg p-3 text-sm text-secondary">
                     Eltern/Erziehungsberechtigte?
                     <Link :href="route('guardian-access.create')" class="font-semibold text-primary underline">
-                        Elternbereich ohne Konto öffnen
+                        Elternbereich ohne Konto oeffnen
                     </Link>
                 </div>
 
@@ -103,15 +102,28 @@ const goBack = () => {
                 <form @submit.prevent="submit">
                     <div>
                         <InputLabel for="email" :value="$t('Email')" />
-                        <TextInput id="email" v-model="form.email" type="email" class="mt-1 block w-full" required
-                            autofocus autocomplete="username" />
+                        <TextInput
+                            id="email"
+                            v-model="form.email"
+                            type="email"
+                            class="mt-1 block w-full"
+                            required
+                            autofocus
+                            autocomplete="username"
+                        />
                         <InputError class="mt-2" :message="form.errors.email" />
                     </div>
 
                     <div class="mt-4">
                         <InputLabel for="password" :value="$t('Passwort')" />
-                        <TextInput id="password" v-model="form.password" type="password" class="mt-1 block w-full"
-                            required autocomplete="current-password" />
+                        <TextInput
+                            id="password"
+                            v-model="form.password"
+                            type="password"
+                            class="mt-1 block w-full"
+                            required
+                            autocomplete="current-password"
+                        />
                         <InputError class="mt-2" :message="form.errors.password" />
                     </div>
 
@@ -122,82 +134,84 @@ const goBack = () => {
                         </label>
                     </div>
 
-                        <div class="flex items-center justify-start my-4">
-                            <SecondaryButton class="" :class="{ 'opacity-25': form.processing }"
-                                :disabled="form.processing">
-                                <Link :href="route('register')">{{ $t('Registrieren') }}?</Link>
-                            </SecondaryButton>
+                    <div class="flex items-center justify-start my-4">
+                        <SecondaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
+                            <Link :href="route('register')">{{ $t('Registrieren') }}?</Link>
+                        </SecondaryButton>
 
-                            <PrimaryButton class="ms-4" :class="{ 'opacity-25': form.processing }"
-                                :disabled="form.processing">
-                                {{ $t('Anmelden') }}
-                            </PrimaryButton>
-                        </div>
+                        <PrimaryButton class="ms-4" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
+                            {{ $t('Anmelden') }}
+                        </PrimaryButton>
+                    </div>
 
-                        <Link v-if="canResetPassword" :href="route('password.request')"
-                            class="underline  text-sm text-secondary hover:text-primary">
-                            {{ $t('Passwort vergessen?') }}
-                        </Link>
+                    <Link v-if="canResetPassword" :href="route('password.request')" class="underline text-sm text-secondary hover:text-primary">
+                        {{ $t('Passwort vergessen?') }}
+                    </Link>
                 </form>
             </div>
         </div>
 
-        <!-- RECHTS: SLIDER -->
-
-
         <div class="hidden md:block md:w-1/2 bg-bg">
-            <div class="hidden h-screen md:flex  text-white items-center justify-center">
+            <div class="hidden h-screen md:flex text-white items-center justify-center p-6 lg:p-10">
+                <div class="relative flex h-full w-full items-center justify-center overflow-hidden rounded-xl border border-border bg-card">
+                    <div
+                        class="absolute inset-0 scale-110 bg-cover bg-center opacity-35 blur-2xl transition-all duration-700"
+                        :style="{ backgroundImage: `url(${images[current].src})` }"
+                    ></div>
 
-                <div class="w-full h-full relative overflow-hidden">
-                    <!-- Slider Container -->
-                    <div class="h-full w-4/6 relative">
-
-                        <!-- SLIDES -->
-                        <div v-for="(img, index) in images" :key="index" :class="[
-                            'absolute inset-0 transition-all duration-700',
-                            current === index ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
-                        ]">
-                            <img :src="img"
-                                class="w-full h-full object-cover transition-transform duration-[8000ms] ease-in-out"
-                                :class="current === index ? 'scale-110' : 'scale-300'" />
+                    <div class="relative z-10 aspect-[9/16] h-[min(92vh,56rem)] overflow-hidden rounded-xl bg-black shadow-2xl">
+                        <div
+                            v-for="(img, index) in images"
+                            :key="index"
+                            :class="[
+                                'absolute inset-0 transition-all duration-700',
+                                current === index ? 'opacity-100 scale-100' : 'opacity-0 scale-105',
+                            ]"
+                        >
+                            <img
+                                :src="img.src"
+                                :alt="img.alt"
+                                class="h-full w-full object-contain transition-transform duration-[8000ms] ease-in-out"
+                                :class="current === index ? 'scale-105' : 'scale-110'"
+                            />
                         </div>
 
-                        <!-- LEFT BUTTON -->
-                        <button @click="current = (current - 1 + images.length) % images.length"
-                            class="absolute left-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 p-3 rounded-full z-20">
-                            ‹
+                        <button
+                            type="button"
+                            @click="current = (current - 1 + images.length) % images.length"
+                            class="absolute left-4 top-1/2 z-20 rounded-full bg-black/40 p-3 hover:bg-black/60"
+                        >
+                            <i class="las la-angle-left"></i>
                         </button>
 
-                        <!-- RIGHT BUTTON -->
-                        <button @click="current = (current + 1) % images.length"
-                            class="absolute right-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 p-3 rounded-full z-20">
-                            ›
+                        <button
+                            type="button"
+                            @click="current = (current + 1) % images.length"
+                            class="absolute right-4 top-1/2 z-20 rounded-full bg-black/40 p-3 hover:bg-black/60"
+                        >
+                            <i class="las la-angle-right"></i>
                         </button>
 
-                        <!-- Text Overlay -->
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <div
-                                class="absolute text-center bottom-10 text-white bg-black/55 p-8 rounded-xl backdrop-blur">
+                        <div class="pointer-events-none absolute inset-0 flex items-end justify-center p-5">
+                            <div class="w-full rounded-lg bg-black/55 p-5 text-center text-white backdrop-blur">
                                 <h2 class="text-2xl font-bold">{{ $t('Sport Plattform') }}</h2>
-                                <p class="text-sm opacity-80">{{ $t('Team Management · Kommunikation · Events') }}</p>
+                                <p class="text-sm opacity-80">{{ $t('Team Management - Kommunikation - Events') }}</p>
 
-
-                                <div class="absolute  left-1/2 -translate-x-1/2 flex gap-2 z-20">
-                                    <button v-for="(img, index) in images" :key="index" @click="current = index"
-                                        class="w-2.5 h-2.5 rounded-full transition-all mt-2 duration-300"
-                                        :class="current === index ? 'bg-primary scale-125' : 'bg-primary/40 hover:bg-primary/70'" />
+                                <div class="pointer-events-auto mt-3 flex justify-center gap-2">
+                                    <button
+                                        v-for="(img, index) in images"
+                                        :key="index"
+                                        type="button"
+                                        @click="current = index"
+                                        class="h-2.5 w-2.5 rounded-full transition-all duration-300"
+                                        :class="current === index ? 'bg-primary scale-125' : 'bg-primary/40 hover:bg-primary/70'"
+                                    />
                                 </div>
                             </div>
                         </div>
-
-
                     </div>
-
-
                 </div>
             </div>
         </div>
     </div>
-
-
 </template>

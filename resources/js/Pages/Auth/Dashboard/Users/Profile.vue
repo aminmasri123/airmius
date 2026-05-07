@@ -10,6 +10,7 @@ const props = defineProps({
     posts: { type: Array, default: () => [] },
     viewer: Object,
     sports: { type: Array, default: () => [] },
+    activeTab: { type: String, default: 'overview' },
 })
 
 const { t, te } = useI18n()
@@ -163,6 +164,17 @@ const visibleBadges = computed(() => props.profileUser.badges.slice(0, 6))
 const membershipCount = computed(() => props.profileUser.clubs.length + props.profileUser.teams.length)
 
 const privacyLabel = computed(() => props.profileUser.profile_visibility === 'private' ? 'Privates Profil' : 'Oeffentliches Profil')
+
+const tabs = computed(() => [
+    { key: 'overview', label: 'Uebersicht', icon: 'las la-id-card' },
+    { key: 'sports', label: 'Sportarten', icon: 'las la-running' },
+    { key: 'skills', label: 'Skills', icon: 'las la-medal' },
+    { key: 'posts', label: 'Beitraege', icon: 'las la-stream' },
+    { key: 'network', label: 'Netzwerk', icon: 'las la-users' },
+    { key: 'recommendations', label: 'Empfehlungen', icon: 'las la-star' },
+])
+
+const tabHref = (tab) => route('auth.users.show', { user: props.profileUser.id, tab })
 
 const groupedSkills = computed(() => {
     return props.profileUser.sport_skills.reduce((groups, skill) => {
@@ -422,9 +434,29 @@ const rejectRecommendation = (recommendation) => {
                     </div>
                 </section>
 
-                <section class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-                    <div class="space-y-6">
-                        <section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+                <nav class="overflow-x-auto rounded-xl border border-border bg-card p-2 shadow-sm">
+                    <div class="flex min-w-max gap-2">
+                        <Link
+                            v-for="tab in tabs"
+                            :key="tab.key"
+                            :href="tabHref(tab.key)"
+                            preserve-scroll
+                            :class="[
+                                'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition',
+                                activeTab === tab.key
+                                    ? 'bg-buttonPrimary text-buttonTextPrimary'
+                                    : 'text-secondary hover:bg-inputBg hover:text-primary',
+                            ]"
+                        >
+                            <i :class="[tab.icon, 'text-lg']"></i>
+                            {{ tab.label }}
+                        </Link>
+                    </div>
+                </nav>
+
+                <section :class="['grid gap-6', activeTab === 'overview' ? 'xl:grid-cols-[minmax(0,1fr)_360px]' : '']">
+                    <div v-if="['overview', 'sports', 'skills', 'posts'].includes(activeTab)" class="space-y-6">
+                        <section v-if="activeTab === 'overview'" class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
                             <div class="grid lg:grid-cols-[1.25fr_.75fr]">
                                 <div class="p-5 sm:p-6">
                                     <div class="flex flex-wrap items-center gap-2">
@@ -474,7 +506,7 @@ const rejectRecommendation = (recommendation) => {
                             </div>
                         </section>
 
-                        <section class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
+                        <section v-if="activeTab === 'overview'" class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
                             <div class="flex items-center justify-between gap-4">
                                 <div>
                                     <h2 class="text-lg font-bold text-primary">Profil</h2>
@@ -490,7 +522,7 @@ const rejectRecommendation = (recommendation) => {
                             </p>
                         </section>
 
-                        <section class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
+                        <section v-if="activeTab === 'sports'" class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
                                     <h2 class="text-lg font-bold text-primary">Sportliches Profil</h2>
@@ -551,7 +583,7 @@ const rejectRecommendation = (recommendation) => {
                             </div>
                         </section>
 
-                        <section class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
+                        <section v-if="activeTab === 'skills'" class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
                             <div>
                                 <h2 class="text-lg font-bold text-primary">Skills & Bestaetigungen</h2>
                                 <p class="mt-1 text-sm text-secondary">Skills entstehen aus den gewaehlten Sportarten und koennen bestaetigt werden.</p>
@@ -635,7 +667,7 @@ const rejectRecommendation = (recommendation) => {
                             </div>
                         </section>
 
-                        <section class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
+                        <section v-if="activeTab === 'posts'" class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
                             <div class="flex items-center justify-between gap-4">
                                 <div>
                                     <h2 class="text-lg font-bold text-primary">Aktuelle Beitraege</h2>
@@ -664,8 +696,8 @@ const rejectRecommendation = (recommendation) => {
                         </section>
                     </div>
 
-                    <aside class="space-y-6">
-                        <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
+                    <aside v-if="['overview', 'network', 'recommendations'].includes(activeTab)" class="space-y-6">
+                        <section v-if="activeTab === 'network' || activeTab === 'overview'" class="rounded-xl border border-border bg-card p-5 shadow-sm">
                             <h2 class="text-sm font-bold uppercase tracking-wide text-secondary">Teams</h2>
                             <div class="mt-4 space-y-2">
                                 <Link v-for="team in profileUser.teams" :key="team.id" :href="route('auth.teams.show', team.id)" class="flex items-center gap-3 rounded-lg p-2 hover:bg-inputBg">
@@ -676,7 +708,7 @@ const rejectRecommendation = (recommendation) => {
                             </div>
                         </section>
 
-                        <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
+                        <section v-if="activeTab === 'network' || activeTab === 'overview'" class="rounded-xl border border-border bg-card p-5 shadow-sm">
                             <h2 class="text-sm font-bold uppercase tracking-wide text-secondary">Vereine</h2>
                             <div class="mt-4 space-y-2">
                                 <Link v-for="club in profileUser.clubs" :key="club.id" :href="route('auth.clubs.show', club.id)" class="flex items-center gap-3 rounded-lg p-2 hover:bg-inputBg">
@@ -687,19 +719,34 @@ const rejectRecommendation = (recommendation) => {
                             </div>
                         </section>
 
-                        <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
+                        <section v-if="activeTab === 'recommendations'" class="rounded-xl border border-border bg-card p-5 shadow-sm">
                             <h2 class="text-sm font-bold uppercase tracking-wide text-secondary">Empfehlungen</h2>
 
                             <form v-if="!viewer.is_self" class="mt-4 space-y-3 rounded-xl border border-border bg-bg p-4" @submit.prevent="sendRecommendation">
-                                <select v-model="recommendationForm.relationship" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                                    <option value="visitor">Besucher</option>
-                                    <option value="friend">Freund</option>
-                                    <option value="team_member">Teamkollege</option>
-                                    <option value="trainer">Trainer</option>
-                                    <option value="club_admin">Verein</option>
-                                </select>
-                                <textarea v-model="recommendationForm.body" rows="4" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Empfehlung schreiben"></textarea>
-                                <button class="w-full rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Senden</button>
+                                <div>
+                                    <select v-model="recommendationForm.relationship" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                        <option value="visitor">Besucher</option>
+                                        <option value="friend">Freund</option>
+                                        <option value="team_member">Teamkollege</option>
+                                        <option value="trainer">Trainer</option>
+                                        <option value="club_admin">Verein</option>
+                                    </select>
+                                    <p v-if="recommendationForm.errors.relationship" class="mt-1 text-xs text-error">{{ recommendationForm.errors.relationship }}</p>
+                                </div>
+
+                                <div>
+                                    <textarea v-model="recommendationForm.body" rows="4" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Empfehlung schreiben"></textarea>
+                                    <p class="mt-1 text-xs" :class="recommendationForm.errors.body ? 'text-error' : 'text-secondary'">
+                                        {{ recommendationForm.errors.body || 'Mindestens 20 Zeichen.' }}
+                                    </p>
+                                </div>
+
+                                <button
+                                    class="w-full rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60"
+                                    :disabled="recommendationForm.processing"
+                                >
+                                    {{ recommendationForm.processing ? 'Wird gesendet...' : 'Senden' }}
+                                </button>
                             </form>
 
                             <div class="mt-4 space-y-3">
