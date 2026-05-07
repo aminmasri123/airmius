@@ -162,6 +162,11 @@ class User extends Authenticatable
         return $this->belongsToMany(Team::class)->withPivot('role');
     }
 
+    public function teamInvitations()
+    {
+        return $this->hasMany(TeamInvitation::class, 'recipient_id');
+    }
+
     public function sportProfiles()
     {
         return $this->hasMany(UserSport::class);

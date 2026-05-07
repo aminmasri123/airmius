@@ -12,6 +12,7 @@ class TeamPolicy extends BasePolicy
     {
         return $user->teams()->exists()
             || $user->clubs()->exists()
+            || $user->teamInvitations()->where('status', 'pending')->exists()
             || $user->can('teams.view')
             || $user->can('clubs.view')
             || $this->hasFullAccess($user);

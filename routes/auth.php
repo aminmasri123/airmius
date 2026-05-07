@@ -144,6 +144,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::post('/teams/{team}/join-requests', [TeamController::class, 'requestJoin'])->name('auth.teams.join-requests.store');
     Route::post('/team-invitations/{invitation}/accept', [TeamController::class, 'acceptInvitation'])
         ->name('auth.team-invitations.accept');
+    Route::post('/team-invitations/{invitation}/decline', [TeamController::class, 'declineInvitation'])
+        ->name('auth.team-invitations.decline');
     Route::get('/team-invitations/token/{token}/accept', [TeamController::class, 'acceptInvitationByToken'])
         ->name('auth.team-invitations.accept-by-token');
     Route::post('/team-join-requests/{joinRequest}/approve', [TeamController::class, 'approveJoinRequest'])

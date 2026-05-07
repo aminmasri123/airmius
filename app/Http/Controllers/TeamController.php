@@ -96,8 +96,28 @@ class TeamController extends Controller
                 });
                 $club->setRelation('teams', $teams);
             });
+        $receivedInvitations = TeamInvitation::query()
+            ->where('recipient_id', $user->id)
+            ->where('status', 'pending')
+            ->with(['team.club:id,name', 'inviter:id,name,email'])
+            ->latest('id')
+            ->get()
+            ->map(fn (TeamInvitation $invitation) => [
+                'id' => $invitation->id,
+                'role' => $invitation->role,
+                'created_at' => $invitation->created_at,
+                'team' => [
+                    'id' => $invitation->team?->id,
+                    'name' => $invitation->team?->name,
+                    'sport_type' => $invitation->team?->sport_type,
+                    'club' => $invitation->team?->club,
+                ],
+                'inviter' => $invitation->inviter,
+            ]);
+
         return Inertia::render('Auth/Dashboard/Teams/Index', [
             'clubs' => $clubs,
+            'receivedInvitations' => $receivedInvitations,
             'availableUsers' => User::query()
                 ->select(['id', 'name', 'email'])
                 ->orderBy('name')
@@ -337,7 +357,7 @@ class TeamController extends Controller
             AppNotification::send($recipient->id, 'team.invite', [
                 'title' => 'Einladung zu '.$team->name,
                 'body' => 'Du wurdest als '.$data['role'].' eingeladen.',
-                'url' => route('auth.teams.index'),
+                'url' => route('auth.teams.index', ['team_invitation' => $invitation->id]),
                 'team_id' => $team->id,
                 'invitation_id' => $invitation->id,
             ]);
@@ -401,6 +421,19 @@ class TeamController extends Controller
         ]);
 
         return back()->with('success', 'Einladung angenommen.');
+    }
+
+    public function declineInvitation(Request $request, TeamInvitation $invitation)
+    {
+        abort_unless($invitation->recipient_id === $request->user()->id, 403);
+        abort_unless($invitation->status === 'pending', 422);
+
+        $invitation->update([
+            'status' => 'declined',
+            'responded_at' => now(),
+        ]);
+
+        return back()->with('success', 'Einladung abgelehnt.');
     }
 
     public function acceptInvitationByToken(Request $request, string $token)

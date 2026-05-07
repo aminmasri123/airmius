@@ -18,6 +18,7 @@ const props = defineProps({
     clubRoles: { type: Array, default: () => ['owner', 'admin', 'manager', 'member'] },
     teamRoles: { type: Array, default: () => ['Coach', 'Captain', 'Player'] },
     filters: { type: Object, default: () => ({}) },
+    receivedInvitations: { type: Array, default: () => [] },
 })
 
 const page = usePage()
@@ -67,6 +68,7 @@ const clubForm = ref({
 })
 
 const inviteForms = ref({})
+const inviteNotices = ref({})
 const teamForms = ref({})
 const clubEditForms = ref({})
 const jobForms = ref({})
@@ -182,6 +184,10 @@ const setActionNotice = (type, message) => {
     actionNotice.value = { type, message }
 }
 
+const setInviteNotice = (team, type, message) => {
+    inviteNotices.value[team.id] = { type, message }
+}
+
 const openDeleteModal = (target) => {
     deleteTarget.value = target
     deleteConfirmation.value = ''
@@ -272,8 +278,39 @@ const createTeam = () => {
 }
 
 const inviteUser = (team) => {
+    actionNotice.value = null
+    inviteNotices.value[team.id] = null
+
     router.post(route('auth.teams.invite', team.id), inviteFormFor(team), {
         preserveScroll: true,
+        onSuccess: () => {
+            inviteFormFor(team).email = ''
+            setInviteNotice(team, 'success', 'Einladung wurde erfolgreich gesendet.')
+        },
+        onError: (errors) => {
+            const message = errors.email || errors.user_id || errors.role || 'Einladung konnte nicht gesendet werden.'
+            setInviteNotice(team, 'error', message)
+        },
+    })
+}
+
+const acceptInvitation = (invitation) => {
+    actionNotice.value = null
+
+    router.post(route('auth.team-invitations.accept', invitation.id), {}, {
+        preserveScroll: true,
+        onSuccess: () => setActionNotice('success', 'Team-Einladung wurde angenommen.'),
+        onError: () => setActionNotice('error', 'Team-Einladung konnte nicht angenommen werden.'),
+    })
+}
+
+const declineInvitation = (invitation) => {
+    actionNotice.value = null
+
+    router.post(route('auth.team-invitations.decline', invitation.id), {}, {
+        preserveScroll: true,
+        onSuccess: () => setActionNotice('success', 'Team-Einladung wurde abgelehnt.'),
+        onError: () => setActionNotice('error', 'Team-Einladung konnte nicht abgelehnt werden.'),
     })
 }
 
@@ -532,6 +569,66 @@ const deleteJob = (job) => {
                 : 'border-error/30 bg-error/10 text-error'"
         >
             {{ actionNotice.message }}
+        </div>
+
+        <div
+            v-if="receivedInvitations.length"
+            class="space-y-3 rounded-xl border border-border bg-card p-4 sm:p-5"
+        >
+            <div class="flex flex-col gap-1">
+                <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                    Offene Team-Einladungen
+                </p>
+                <h2 class="text-lg font-semibold text-primary">
+                    Du wurdest zu einem Team eingeladen
+                </h2>
+                <p class="text-sm text-secondary">
+                    Nimm die Einladung an, um dem Team und dem zugehoerigen Verein beizutreten.
+                </p>
+            </div>
+
+            <div class="grid gap-3 md:grid-cols-2">
+                <div
+                    v-for="invitation in receivedInvitations"
+                    :key="invitation.id"
+                    class="rounded-lg border border-border bg-bg p-4"
+                >
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold text-primary">
+                            {{ initials(invitation.team?.name) }}
+                        </div>
+
+                        <div class="min-w-0 flex-1">
+                            <h3 class="truncate font-semibold text-primary">
+                                {{ invitation.team?.name || 'Team' }}
+                            </h3>
+                            <p class="mt-1 text-sm text-secondary">
+                                {{ invitation.team?.club?.name || 'Verein' }} - Rolle: {{ teamRoleLabel(invitation.role) }}
+                            </p>
+                            <p v-if="invitation.inviter?.name" class="mt-1 text-xs text-secondary">
+                                Eingeladen von {{ invitation.inviter.name }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+                        <button
+                            type="button"
+                            class="inline-flex flex-1 items-center justify-center rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
+                            @click="acceptInvitation(invitation)"
+                        >
+                            Annehmen
+                        </button>
+                        <button
+                            type="button"
+                            class="inline-flex flex-1 items-center justify-center rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
+                            @click="declineInvitation(invitation)"
+                        >
+                            Ablehnen
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- MOBILE FILTER SHORT BAR -->
@@ -868,6 +965,16 @@ const deleteJob = (job) => {
                             Einladen
                         </button>
                     </form>
+
+                    <p
+                        v-if="inviteNotices[team.id]"
+                        class="rounded-lg border px-3 py-2 text-xs font-semibold"
+                        :class="inviteNotices[team.id].type === 'success'
+                            ? 'border-success/30 bg-success/10 text-success'
+                            : 'border-error/30 bg-error/10 text-error'"
+                    >
+                        {{ inviteNotices[team.id].message }}
+                    </p>
                 </div>
             </div>
 
