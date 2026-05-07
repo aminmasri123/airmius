@@ -116,7 +116,7 @@ const sportLabel = (sport) => {
 
 const statusLabel = (status) => ({
     active: 'Betreibe ich',
-    wants_to_learn: 'Möchte ich lernen',
+    wants_to_learn: 'Moechte ich lernen',
     coach: 'Trainiere ich',
     interested: 'Interessiert mich',
 }[status] || status)
@@ -148,6 +148,21 @@ const trustTone = computed(() => {
 
     return 'text-air-blue'
 })
+
+const profileStats = computed(() => [
+    { label: 'Follower', value: props.profileUser.followers_count },
+    { label: 'Folgt', value: props.profileUser.following_count },
+    { label: 'Beitraege', value: props.profileUser.posts_count },
+    { label: 'Level', value: props.profileUser.gamification.level },
+])
+
+const primarySportProfiles = computed(() => props.profileUser.sport_profiles.slice(0, 4))
+
+const visibleBadges = computed(() => props.profileUser.badges.slice(0, 6))
+
+const membershipCount = computed(() => props.profileUser.clubs.length + props.profileUser.teams.length)
+
+const privacyLabel = computed(() => props.profileUser.profile_visibility === 'private' ? 'Privates Profil' : 'Oeffentliches Profil')
 
 const groupedSkills = computed(() => {
     return props.profileUser.sport_skills.reduce((groups, skill) => {
@@ -219,434 +234,512 @@ const rejectRecommendation = (recommendation) => {
     <AppLayout>
         <Head :title="profileUser.name" />
 
-        <div class="mx-auto max-w-5xl space-y-6">
-            <section class="overflow-hidden rounded-lg border border-border bg-card">
-                <div class="h-32 bg-card border border-border"></div>
-                <div class="px-5 pb-5">
-                <div class="-mt-11 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                    <div class="flex items-center gap-4">
-                        <img
-                            v-if="profileUser.profile_photo_url"
-                            :src="profileUser.profile_photo_url"
-                            :alt="profileUser.name"
-                            class="size-24 rounded-full border-4 border-card object-cover"
-                        />
-                        <div
-                            v-else
-                            class="flex size-24 items-center justify-center rounded-full border-4 border-card bg-buttonPrimary text-2xl font-semibold text-buttonTextPrimary"
-                        >
-                            {{ initials(profileUser.name) }}
+        <div class="mx-auto max-w-7xl space-y-6">
+            <section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+                <div class="relative min-h-48 bg-[color:var(--surface-strong)]">
+                    <div class="absolute inset-0 opacity-90" style="background: linear-gradient(135deg, color-mix(in srgb, var(--buttonPrimary) 34%, transparent), color-mix(in srgb, var(--accent-2) 18%, transparent) 52%, color-mix(in srgb, var(--accent-3) 18%, transparent));"></div>
+                    <div class="absolute inset-x-0 bottom-0 h-24" style="background: linear-gradient(180deg, transparent, var(--card));"></div>
+                </div>
+
+                <div class="px-4 pb-6 sm:px-6">
+                    <div class="-mt-16 grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
+                        <div class="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end">
+                            <img
+                                v-if="profileUser.profile_photo_url"
+                                :src="profileUser.profile_photo_url"
+                                :alt="profileUser.name"
+                                class="size-32 shrink-0 rounded-xl border-4 border-card object-cover shadow-lg"
+                            />
+                            <div
+                                v-else
+                                class="flex size-32 shrink-0 items-center justify-center rounded-xl border-4 border-card bg-buttonPrimary text-4xl font-bold text-buttonTextPrimary shadow-lg"
+                            >
+                                {{ initials(profileUser.name) }}
+                            </div>
+
+                            <div class="min-w-0 pb-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-secondary">
+                                        {{ privacyLabel }}
+                                    </span>
+                                    <span v-if="profileUser.gamification.rank" class="rounded-full bg-buttonPrimary px-3 py-1 text-xs font-bold text-buttonTextPrimary">
+                                        {{ profileUser.gamification.rank }}
+                                    </span>
+                                    <span v-if="viewer.friendship_status === 'friends'" class="rounded-full border border-success/40 bg-success/10 px-3 py-1 text-xs font-semibold text-success">
+                                        Befreundet
+                                    </span>
+                                </div>
+
+                                <h1 class="mt-3 break-words text-3xl font-bold tracking-normal text-primary sm:text-4xl">
+                                    {{ profileUser.name }}
+                                </h1>
+
+                                <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-secondary">
+                                    <span v-if="profileUser.email" class="inline-flex items-center gap-1.5">
+                                        <i class="las la-envelope text-base"></i>
+                                        {{ profileUser.email }}
+                                    </span>
+                                    <span v-if="profileUser.athlete_license_number" class="inline-flex items-center gap-1.5">
+                                        <i class="las la-id-card text-base"></i>
+                                        Lizenz {{ profileUser.athlete_license_number }}
+                                    </span>
+                                    <span class="inline-flex items-center gap-1.5">
+                                        <i class="las la-users text-base"></i>
+                                        {{ membershipCount }} Bereiche
+                                    </span>
+                                </div>
+
+                                <div v-if="viewer.can_view_private_profile" class="mt-4 flex flex-wrap gap-2">
+                                    <span
+                                        v-for="profile in primarySportProfiles"
+                                        :key="profile.id"
+                                        class="rounded-full border border-border bg-inputBg px-3 py-1.5 text-xs font-semibold text-primary"
+                                    >
+                                        {{ sportLabel(profile.sport) }} - {{ levelLabel(profile.experience_level) }}
+                                    </span>
+                                    <span v-if="!primarySportProfiles.length" class="rounded-full border border-border bg-inputBg px-3 py-1.5 text-xs font-semibold text-secondary">
+                                        Keine Sportarten hinterlegt
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <h1 class="text-2xl font-semibold text-primary">{{ profileUser.name }}</h1>
-                        <p v-if="profileUser.email" class="text-sm text-secondary">{{ profileUser.email }}</p>
-                        <p v-if="profileUser.athlete_license_number" class="text-sm text-secondary">
-                            Lizenznummer: {{ profileUser.athlete_license_number }}
-                        </p>
-                        <p class="mt-1 text-xs uppercase tracking-wide text-secondary">
-                                {{ profileUser.profile_visibility === 'private' ? 'Privates Profil' : 'Öffentliches Profil' }}
-                            </p>
-                        </div>
-                    </div>
 
-                    <div class="flex flex-wrap justify-end gap-2">
-                        <Link
-                            v-if="viewer.is_self"
-                            :href="route('profile.show')"
-                            class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:border-borderHover"
-                        >
-                            Profil bearbeiten
-                        </Link>
-                        <template v-else>
-                            <button
-                                v-if="viewer.can_send_message"
-                                type="button"
-                                class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm text-buttonTextPrimary hover:bg-buttonPrimaryHover"
-                                @click="sendMessage"
+                        <div class="flex flex-wrap gap-2 lg:justify-end">
+                            <Link
+                                v-if="viewer.is_self"
+                                :href="route('profile.show')"
+                                class="inline-flex items-center gap-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
                             >
-                                Nachricht senden
-                            </button>
-                            <span
-                                v-else-if="viewer.is_blocked"
-                                class="rounded-lg border border-border px-4 py-2 text-sm text-secondary"
-                            >
-                                Nachrichten blockiert
-                            </span>
+                                <i class="las la-user-edit text-lg"></i>
+                                Profil bearbeiten
+                            </Link>
 
-                            <button
-                                v-if="viewer.can_follow && !viewer.is_following"
-                                type="button"
-                                class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm text-buttonTextPrimary hover:bg-buttonPrimaryHover"
-                                @click="follow"
-                            >
-                                Folgen
-                            </button>
-                            <button
-                                v-else-if="viewer.can_follow"
-                                type="button"
-                                class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:border-borderHover"
-                                @click="unfollow"
-                            >
-                                Entfolgen
-                            </button>
+                            <template v-else>
+                                <button
+                                    v-if="viewer.can_send_message"
+                                    type="button"
+                                    class="inline-flex items-center gap-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
+                                    @click="sendMessage"
+                                >
+                                    <i class="las la-comment text-lg"></i>
+                                    Nachricht
+                                </button>
+                                <span v-else-if="viewer.is_blocked" class="inline-flex items-center rounded-lg border border-border px-4 py-2 text-sm text-secondary">
+                                    Nachrichten blockiert
+                                </span>
 
-                            <button
-                                v-if="viewer.can_send_friend_request"
-                                type="button"
-                                class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:border-borderHover"
-                                @click="sendFriendRequest"
-                            >
-                                Freundschaft anfragen
-                            </button>
-                            <button
-                                v-else-if="viewer.friendship_status === 'received'"
-                                type="button"
-                                class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm text-buttonTextPrimary hover:bg-buttonPrimaryHover"
-                                @click="acceptFriendRequest"
-                            >
-                                Anfrage annehmen
-                            </button>
-                            <span
-                                v-else-if="viewer.friendship_status === 'sent'"
-                                class="rounded-lg border border-border px-4 py-2 text-sm text-secondary"
-                            >
-                                Anfrage gesendet
-                            </span>
-                            <template v-else-if="viewer.friendship_status === 'friends'">
-                                <span class="rounded-lg border border-border px-4 py-2 text-sm text-secondary">
-                                    Befreundet
+                                <button
+                                    v-if="viewer.can_follow && !viewer.is_following"
+                                    type="button"
+                                    class="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
+                                    @click="follow"
+                                >
+                                    <i class="las la-plus text-lg"></i>
+                                    Folgen
+                                </button>
+                                <button
+                                    v-else-if="viewer.can_follow"
+                                    type="button"
+                                    class="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
+                                    @click="unfollow"
+                                >
+                                    <i class="las la-user-minus text-lg"></i>
+                                    Entfolgen
+                                </button>
+
+                                <button
+                                    v-if="viewer.can_send_friend_request"
+                                    type="button"
+                                    class="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
+                                    @click="sendFriendRequest"
+                                >
+                                    <i class="las la-user-plus text-lg"></i>
+                                    Freundschaft
+                                </button>
+                                <button
+                                    v-else-if="viewer.friendship_status === 'received'"
+                                    type="button"
+                                    class="inline-flex items-center gap-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
+                                    @click="acceptFriendRequest"
+                                >
+                                    <i class="las la-check text-lg"></i>
+                                    Annehmen
+                                </button>
+                                <span v-else-if="viewer.friendship_status === 'sent'" class="inline-flex items-center rounded-lg border border-border px-4 py-2 text-sm text-secondary">
+                                    Anfrage gesendet
                                 </span>
                                 <button
+                                    v-else-if="viewer.friendship_status === 'friends'"
                                     type="button"
-                                    class="rounded-lg border border-error/40 px-4 py-2 text-sm text-error hover:bg-error/10"
+                                    class="inline-flex items-center gap-2 rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
                                     @click="removeFriend"
                                 >
-                                    Freundschaft beenden
+                                    <i class="las la-user-times text-lg"></i>
+                                    Entfernen
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
+                                    @click="openProfileReport"
+                                >
+                                    <i class="las la-flag text-lg"></i>
+                                    Melden
+                                </button>
+                                <button
+                                    v-if="viewer.has_blocked"
+                                    type="button"
+                                    class="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
+                                    @click="unblockUser"
+                                >
+                                    <i class="las la-unlock text-lg"></i>
+                                    Entblockieren
+                                </button>
+                                <button
+                                    v-else
+                                    type="button"
+                                    class="inline-flex items-center gap-2 rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
+                                    @click="blockUser"
+                                >
+                                    <i class="las la-ban text-lg"></i>
+                                    Blockieren
                                 </button>
                             </template>
-                            <button
-                                type="button"
-                                class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:border-borderHover"
-                                @click="openProfileReport"
-                            >
-                                Profil melden
-                            </button>
-                            <button
-                                v-if="viewer.has_blocked"
-                                type="button"
-                                class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:border-borderHover"
-                                @click="unblockUser"
-                            >
-                                Entblockieren
-                            </button>
-                            <button
-                                v-else
-                                type="button"
-                                class="rounded-lg border border-error/40 px-4 py-2 text-sm text-error hover:bg-error/10"
-                                @click="blockUser"
-                            >
-                                Blockieren
-                            </button>
-                        </template>
-                    </div>
-                </div>
-                </div>
-            </section>
-
-            <section v-if="viewer.can_view_private_profile" class="grid gap-4 sm:grid-cols-4">
-                <div class="rounded-lg border border-border bg-card p-4">
-                    <div class="text-2xl font-semibold text-primary">{{ profileUser.followers_count }}</div>
-                    <div class="text-sm text-secondary">Follower</div>
-                </div>
-                <div class="rounded-lg border border-border bg-card p-4">
-                    <div class="text-2xl font-semibold text-primary">{{ profileUser.following_count }}</div>
-                    <div class="text-sm text-secondary">Folgt</div>
-                </div>
-                <div class="rounded-lg border border-border bg-card p-4">
-                    <div class="text-2xl font-semibold text-primary">{{ profileUser.posts_count }}</div>
-                    <div class="text-sm text-secondary">Beiträge</div>
-                </div>
-            </section>
-
-            <section v-if="viewer.can_view_private_profile" class="overflow-hidden rounded-xl border border-border bg-card">
-                <div class="grid gap-0 lg:grid-cols-[1.2fr_1fr]">
-                    <div class="p-5">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <span class="rounded-full bg-buttonPrimary px-3 py-1 text-xs font-bold text-buttonTextPrimary">
-                                {{ profileUser.gamification.rank }}
-                            </span>
-                            <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-secondary">
-                                {{ profileUser.gamification.streak_days }} Tage Streak
-                            </span>
                         </div>
-                        <div class="mt-4 text-3xl font-bold text-primary">Level {{ profileUser.gamification.level }}</div>
-                        <div class="mt-1 text-sm text-secondary">
-                            {{ profileUser.gamification.xp }} XP · nächstes Level bei {{ profileUser.gamification.next_level_xp }} XP
-                        </div>
-                        <div class="mt-4 h-3 overflow-hidden rounded-full bg-inputBg">
-                            <div class="h-full rounded-full bg-buttonPrimary" :style="{ width: `${profileUser.gamification.progress}%` }"></div>
-                        </div>
-                        <div class="mt-2 text-xs text-secondary">
-                            Fortschritt basiert auf sinnvoller Aktivität, Skills, Bestätigungen, Empfehlungen und hilfreichen Beiträgen.
-                        </div>
-                    </div>
-
-                    <div class="border-t border-border bg-bg p-5 lg:border-l lg:border-t-0">
-                        <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Trust & Fairness</h2>
-                        <div class="mt-4 grid grid-cols-2 gap-3">
-                            <div class="rounded-lg border border-border bg-card p-3">
-                                <div :class="['text-2xl font-bold', trustTone]">{{ profileUser.gamification.trust_score }}</div>
-                                <div class="text-xs text-secondary">Trust Score</div>
-                            </div>
-                            <div class="rounded-lg border border-border bg-card p-3">
-                                <div class="text-2xl font-bold text-primary">x{{ profileUser.gamification.trust_multiplier }}</div>
-                                <div class="text-xs text-secondary">XP-Multiplikator</div>
-                            </div>
-                        </div>
-                        <p class="mt-3 text-xs leading-relaxed text-secondary">
-                            Daily Limits, Trust-Multiplikator und Streak-Boni schützen vor Spam und fördern echte sportliche Entwicklung.
-                        </p>
                     </div>
                 </div>
             </section>
 
-            <!-- <section v-if="viewer.can_view_private_profile" class="rounded-lg border border-border bg-card p-4">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <div class="text-2xl font-semibold text-primary">Level {{ profileUser.gamification.level }}</div>
-                        <div class="text-sm text-secondary">{{ profileUser.gamification.title }} · {{ profileUser.gamification.xp }} XP</div>
+            <template v-if="viewer.can_view_private_profile">
+                <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div
+                        v-for="stat in profileStats"
+                        :key="stat.label"
+                        class="rounded-xl border border-border bg-card p-4 shadow-sm"
+                    >
+                        <div class="text-2xl font-bold text-primary">{{ stat.value }}</div>
+                        <div class="mt-1 text-xs font-semibold uppercase tracking-wide text-secondary">{{ stat.label }}</div>
                     </div>
-                    <div class="w-full sm:w-64">
-                        <div class="h-2 overflow-hidden rounded-full bg-inputBg">
-                            <div class="h-full rounded-full bg-buttonPrimary" :style="{ width: `${profileUser.gamification.progress}%` }"></div>
-                        </div>
-                        <div class="mt-1 text-xs text-secondary">Nächstes Level bei {{ profileUser.gamification.next_level_xp }} XP</div>
-                    </div>
-                </div>
-            </section> -->
+                </section>
 
-            <div class="grid gap-6 lg:grid-cols-[1fr_320px]">
-                <section class="space-y-4">
-                    <section class="rounded-lg border border-border bg-card p-5">
-                        <h2 class="text-lg font-semibold text-primary">Profil</h2>
-                        <p v-if="viewer.can_view_private_profile && profileUser.bio" class="mt-3 whitespace-pre-line text-sm text-primary">
-                            {{ profileUser.bio }}
-                        </p>
-                        <p v-else-if="viewer.can_view_private_profile" class="mt-3 text-sm text-secondary">
-                            Dieses Profil hat noch keine Bio.
-                        </p>
-                        <p v-else class="mt-3 text-sm text-secondary">
-                            Dieses Profil ist privat.
-                        </p>
-                    </section>
+                <section class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+                    <div class="space-y-6">
+                        <section class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+                            <div class="grid lg:grid-cols-[1.25fr_.75fr]">
+                                <div class="p-5 sm:p-6">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="rounded-full bg-buttonPrimary px-3 py-1 text-xs font-bold text-buttonTextPrimary">
+                                            {{ profileUser.gamification.title }}
+                                        </span>
+                                        <span class="rounded-full border border-border bg-inputBg px-3 py-1 text-xs font-semibold text-secondary">
+                                            {{ profileUser.gamification.streak_days }} Tage Streak
+                                        </span>
+                                    </div>
 
-                    <section v-if="viewer.can_view_private_profile" class="rounded-lg border border-border bg-card p-5">
-                        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
-                                <h2 class="text-lg font-semibold text-primary">Sportliches Profil</h2>
-                                <p class="mt-1 text-sm text-secondary">Sportarten, Ziele und automatisch passende Skills für dieses Profil.</p>
-                            </div>
-                            <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-secondary">
-                                {{ profileUser.sport_profiles.length }} Sportarten
-                            </span>
-                        </div>
-
-                        <form v-if="viewer.is_self" class="mt-5 grid gap-3 rounded-lg border border-border bg-bg p-4 md:grid-cols-[1fr_160px_160px_auto]" @submit.prevent="addSport">
-                            <SearchableSelect
-                                v-model="sportForm.sport_id"
-                                :options="sports"
-                                value-key="id"
-                                translation-prefix="sports"
-                                category-translation-prefix="sport_categories"
-                                placeholder="Sportart suchen"
-                            />
-                            <select v-model="sportForm.status" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                                <option value="active">Betreibe ich</option>
-                                <option value="wants_to_learn">Möchte ich lernen</option>
-                                <option value="coach">Trainiere ich</option>
-                                <option value="interested">Interessiert mich</option>
-                            </select>
-                            <select v-model="sportForm.experience_level" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                                <option value="beginner">Einsteiger</option>
-                                <option value="intermediate">Fortgeschritten</option>
-                                <option value="advanced">Erfahren</option>
-                                <option value="expert">Experte</option>
-                            </select>
-                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover">
-                                Hinzufügen
-                            </button>
-                        </form>
-
-                        <div class="mt-5 flex flex-wrap gap-2">
-                            <span
-                                v-for="profile in profileUser.sport_profiles"
-                                :key="profile.id"
-                                class="rounded-full border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                            >
-                                {{ sportLabel(profile.sport) }} · {{ statusLabel(profile.status) }} · {{ levelLabel(profile.experience_level) }}
-                            </span>
-                            <span v-if="!profileUser.sport_profiles.length" class="text-sm text-secondary">Noch keine Sportarten hinterlegt.</span>
-                        </div>
-                    </section>
-
-                    <section v-if="viewer.can_view_private_profile" class="rounded-lg border border-border bg-card p-5">
-                        <h2 class="text-lg font-semibold text-primary">Skills & Bestätigungen</h2>
-                        <p class="mt-1 text-sm text-secondary">Skills entstehen aus den gewählten Sportarten. Andere können sie bestätigen und Kontext geben.</p>
-
-                        <div class="mt-5 space-y-5">
-                            <article v-for="group in groupedSkills" :key="group.sport?.id" class="rounded-lg border border-border bg-bg p-4">
-                                <h3 class="font-semibold text-primary">{{ sportLabel(group.sport) }}</h3>
-
-                                <div class="mt-4 space-y-3">
-                                    <div v-for="skill in group.skills" :key="skill.id" class="rounded-lg border border-border bg-card p-4">
-                                        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                            <div>
-                                                <h4 class="font-semibold text-primary">{{ skill.skill.name }}</h4>
-                                                <p class="mt-1 text-sm text-secondary">{{ skill.skill.description }}</p>
-                                                <p class="mt-2 text-xs text-secondary">
-                                                    Eigenes Level: {{ levelLabel(skill.self_level) }} · {{ skill.endorsements_count }} Bestätigungen
-                                                </p>
+                                    <div class="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                                        <div>
+                                            <div class="text-sm font-semibold uppercase tracking-wide text-secondary">Fortschritt</div>
+                                            <div class="mt-1 text-3xl font-bold text-primary">Level {{ profileUser.gamification.level }}</div>
+                                            <div class="mt-1 text-sm text-secondary">
+                                                {{ profileUser.gamification.xp }} XP von {{ profileUser.gamification.next_level_xp }} XP
                                             </div>
-
-                                            <button
-                                                v-if="!viewer.is_self"
-                                                type="button"
-                                                class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-inputBg disabled:opacity-60"
-                                                :disabled="skill.viewer_has_endorsed"
-                                                @click="endorseSkill(skill)"
-                                            >
-                                                {{ skill.viewer_has_endorsed ? 'Bestätigt' : 'Bestätigen' }}
-                                            </button>
                                         </div>
-
-                                        <form v-if="viewer.is_self" class="mt-3 grid gap-2 sm:grid-cols-[180px_1fr_auto]" @submit.prevent="updateSkill(skill)">
-                                            <select v-model="skillFormFor(skill).self_level" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                                                <option value="learning">Lerne ich</option>
-                                                <option value="developing">In Entwicklung</option>
-                                                <option value="solid">Solide</option>
-                                                <option value="strong">Stark</option>
-                                                <option value="expert">Experte</option>
-                                            </select>
-                                            <input v-model="skillFormFor(skill).notes" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Kurze Notiz, optional" />
-                                            <button class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary">Speichern</button>
-                                        </form>
-
-                                        <form v-else-if="!skill.viewer_has_endorsed" class="mt-3 grid gap-2 sm:grid-cols-[150px_150px_1fr]" @submit.prevent="endorseSkill(skill)">
-                                            <select v-model="skillFormFor(skill).relationship" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                                                <option value="visitor">Besucher</option>
-                                                <option value="friend">Freund</option>
-                                                <option value="team_member">Teamkollege</option>
-                                                <option value="trainer">Trainer</option>
-                                                <option value="club_admin">Verein</option>
-                                            </select>
-                                            <select v-model="skillFormFor(skill).level" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                                                <option value="confirmed">Kann ich bestätigen</option>
-                                                <option value="good">Gut</option>
-                                                <option value="strong">Stark</option>
-                                                <option value="exceptional">Außergewöhnlich</option>
-                                            </select>
-                                            <input v-model="skillFormFor(skill).comment" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Kommentar, optional" />
-                                        </form>
-
-                                        <div v-if="skill.endorsements.length" class="mt-3 flex flex-wrap gap-2">
-                                            <span v-for="endorsement in skill.endorsements" :key="endorsement.id" class="rounded-full bg-inputBg px-3 py-1 text-xs text-secondary">
-                                                {{ endorsement.endorser.name }} · {{ relationshipLabel(endorsement.relationship) }}
-                                            </span>
+                                        <div class="rounded-xl border border-border bg-inputBg px-4 py-3">
+                                            <div :class="['text-2xl font-bold', trustTone]">{{ profileUser.gamification.trust_score }}</div>
+                                            <div class="text-xs font-semibold uppercase tracking-wide text-secondary">Trust Score</div>
                                         </div>
+                                    </div>
+
+                                    <div class="mt-5 h-3 overflow-hidden rounded-full bg-inputBg">
+                                        <div class="h-full rounded-full bg-buttonPrimary" :style="{ width: `${profileUser.gamification.progress}%` }"></div>
                                     </div>
                                 </div>
-                            </article>
 
-                            <p v-if="!profileUser.sport_skills.length" class="text-sm text-secondary">Sobald Sportarten hinzugefügt werden, erscheinen hier passende Skills.</p>
-                        </div>
-                    </section>
-
-                    <section v-if="viewer.can_view_private_profile" class="rounded-lg border border-border bg-card p-5">
-                        <h2 class="text-lg font-semibold text-primary">Empfehlungen</h2>
-                        <p class="mt-1 text-sm text-secondary">Empfehlungen werden erst nach Freigabe auf dem Profil sichtbar.</p>
-
-                        <form v-if="!viewer.is_self" class="mt-4 space-y-3 rounded-lg border border-border bg-bg p-4" @submit.prevent="sendRecommendation">
-                            <select v-model="recommendationForm.relationship" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                                <option value="visitor">Besucher</option>
-                                <option value="friend">Freund</option>
-                                <option value="team_member">Teamkollege</option>
-                                <option value="trainer">Trainer</option>
-                                <option value="club_admin">Verein</option>
-                            </select>
-                            <textarea v-model="recommendationForm.body" rows="4" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Schreibe konkret, wobei du diese Person erlebt hast."></textarea>
-                            <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Empfehlung senden</button>
-                        </form>
-
-                        <div class="mt-5 space-y-3">
-                            <article v-for="recommendation in profileUser.recommendations" :key="recommendation.id" class="rounded-lg border border-border bg-bg p-4">
-                                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                    <div>
-                                        <p class="text-sm leading-relaxed text-primary">{{ recommendation.body }}</p>
-                                        <p class="mt-2 text-xs text-secondary">
-                                            {{ recommendation.author.name }} · {{ relationshipLabel(recommendation.relationship) }} · {{ recommendation.status === 'pending' ? 'wartet auf Freigabe' : 'veröffentlicht' }}
-                                        </p>
+                                <div class="border-t border-border bg-bg p-5 sm:p-6 lg:border-l lg:border-t-0">
+                                    <div class="text-sm font-semibold uppercase tracking-wide text-secondary">Badges</div>
+                                    <div class="mt-4 grid grid-cols-2 gap-3">
+                                        <div
+                                            v-for="badge in visibleBadges"
+                                            :key="badge.id"
+                                            class="rounded-xl border border-border bg-card p-3"
+                                        >
+                                            <div class="text-2xl text-primary">
+                                                <i :class="badge.icon || 'las la-medal'"></i>
+                                            </div>
+                                            <div class="mt-2 line-clamp-2 text-sm font-semibold text-primary">{{ badge.name }}</div>
+                                        </div>
+                                        <p v-if="!visibleBadges.length" class="col-span-2 text-sm text-secondary">Noch keine Badges sichtbar.</p>
                                     </div>
-                                    <div v-if="viewer.is_self && recommendation.status === 'pending'" class="flex gap-2">
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
+                            <div class="flex items-center justify-between gap-4">
+                                <div>
+                                    <h2 class="text-lg font-bold text-primary">Profil</h2>
+                                    <p class="mt-1 text-sm text-secondary">Bio, Sportarten und oeffentliche Einordnung.</p>
+                                </div>
+                            </div>
+
+                            <p v-if="profileUser.bio" class="mt-5 whitespace-pre-line text-sm leading-7 text-primary">
+                                {{ profileUser.bio }}
+                            </p>
+                            <p v-else class="mt-5 rounded-xl border border-dashed border-border bg-bg p-4 text-sm text-secondary">
+                                Dieses Profil hat noch keine Bio.
+                            </p>
+                        </section>
+
+                        <section class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <h2 class="text-lg font-bold text-primary">Sportliches Profil</h2>
+                                    <p class="mt-1 text-sm text-secondary">Sportarten, Ziele und Erfahrungslevel.</p>
+                                </div>
+                                <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-secondary">
+                                    {{ profileUser.sport_profiles.length }} Sportarten
+                                </span>
+                            </div>
+
+                            <form
+                                v-if="viewer.is_self"
+                                class="mt-5 grid gap-3 rounded-xl border border-border bg-bg p-4 md:grid-cols-[1fr_170px_170px_auto]"
+                                @submit.prevent="addSport"
+                            >
+                                <SearchableSelect
+                                    v-model="sportForm.sport_id"
+                                    :options="sports"
+                                    value-key="id"
+                                    translation-prefix="sports"
+                                    category-translation-prefix="sport_categories"
+                                    placeholder="Sportart suchen"
+                                />
+                                <select v-model="sportForm.status" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                    <option value="active">Betreibe ich</option>
+                                    <option value="wants_to_learn">Moechte ich lernen</option>
+                                    <option value="coach">Trainiere ich</option>
+                                    <option value="interested">Interessiert mich</option>
+                                </select>
+                                <select v-model="sportForm.experience_level" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                    <option value="beginner">Einsteiger</option>
+                                    <option value="intermediate">Fortgeschritten</option>
+                                    <option value="advanced">Erfahren</option>
+                                    <option value="expert">Experte</option>
+                                </select>
+                                <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover">
+                                    Hinzufuegen
+                                </button>
+                            </form>
+
+                            <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                                <article
+                                    v-for="profile in profileUser.sport_profiles"
+                                    :key="profile.id"
+                                    class="rounded-xl border border-border bg-bg p-4"
+                                >
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div>
+                                            <h3 class="font-semibold text-primary">{{ sportLabel(profile.sport) }}</h3>
+                                            <p class="mt-1 text-sm text-secondary">{{ statusLabel(profile.status) }}</p>
+                                        </div>
+                                        <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-primary">
+                                            {{ levelLabel(profile.experience_level) }}
+                                        </span>
+                                    </div>
+                                </article>
+                                <p v-if="!profileUser.sport_profiles.length" class="text-sm text-secondary">Noch keine Sportarten hinterlegt.</p>
+                            </div>
+                        </section>
+
+                        <section class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
+                            <div>
+                                <h2 class="text-lg font-bold text-primary">Skills & Bestaetigungen</h2>
+                                <p class="mt-1 text-sm text-secondary">Skills entstehen aus den gewaehlten Sportarten und koennen bestaetigt werden.</p>
+                            </div>
+
+                            <div class="mt-5 space-y-5">
+                                <article
+                                    v-for="group in groupedSkills"
+                                    :key="group.sport?.id || 'other'"
+                                    class="rounded-xl border border-border bg-bg p-4"
+                                >
+                                    <h3 class="font-semibold text-primary">{{ sportLabel(group.sport) }}</h3>
+
+                                    <div class="mt-4 grid gap-3">
+                                        <div
+                                            v-for="skill in group.skills"
+                                            :key="skill.id"
+                                            class="rounded-xl border border-border bg-card p-4"
+                                        >
+                                            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                                <div>
+                                                    <h4 class="font-semibold text-primary">{{ skill.skill.name }}</h4>
+                                                    <p class="mt-1 text-sm text-secondary">{{ skill.skill.description }}</p>
+                                                    <p class="mt-2 text-xs font-semibold text-secondary">
+                                                        Eigenes Level: {{ levelLabel(skill.self_level) }} - {{ skill.endorsements_count }} Bestaetigungen
+                                                    </p>
+                                                </div>
+
+                                                <button
+                                                    v-if="!viewer.is_self"
+                                                    type="button"
+                                                    class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-inputBg disabled:opacity-60"
+                                                    :disabled="skill.viewer_has_endorsed"
+                                                    @click="endorseSkill(skill)"
+                                                >
+                                                    {{ skill.viewer_has_endorsed ? 'Bestaetigt' : 'Bestaetigen' }}
+                                                </button>
+                                            </div>
+
+                                            <form v-if="viewer.is_self" class="mt-3 grid gap-2 sm:grid-cols-[180px_1fr_auto]" @submit.prevent="updateSkill(skill)">
+                                                <select v-model="skillFormFor(skill).self_level" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                                    <option value="learning">Lerne ich</option>
+                                                    <option value="developing">In Entwicklung</option>
+                                                    <option value="solid">Solide</option>
+                                                    <option value="strong">Stark</option>
+                                                    <option value="expert">Experte</option>
+                                                </select>
+                                                <input v-model="skillFormFor(skill).notes" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Kurze Notiz, optional" />
+                                                <button class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary">Speichern</button>
+                                            </form>
+
+                                            <form v-else-if="!skill.viewer_has_endorsed" class="mt-3 grid gap-2 sm:grid-cols-[150px_150px_1fr]" @submit.prevent="endorseSkill(skill)">
+                                                <select v-model="skillFormFor(skill).relationship" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                                    <option value="visitor">Besucher</option>
+                                                    <option value="friend">Freund</option>
+                                                    <option value="team_member">Teamkollege</option>
+                                                    <option value="trainer">Trainer</option>
+                                                    <option value="club_admin">Verein</option>
+                                                </select>
+                                                <select v-model="skillFormFor(skill).level" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                                    <option value="confirmed">Kann ich bestaetigen</option>
+                                                    <option value="good">Gut</option>
+                                                    <option value="strong">Stark</option>
+                                                    <option value="exceptional">Aussergewoehnlich</option>
+                                                </select>
+                                                <input v-model="skillFormFor(skill).comment" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Kommentar, optional" />
+                                            </form>
+
+                                            <div v-if="skill.endorsements.length" class="mt-3 flex flex-wrap gap-2">
+                                                <span v-for="endorsement in skill.endorsements" :key="endorsement.id" class="rounded-full bg-inputBg px-3 py-1 text-xs text-secondary">
+                                                    {{ endorsement.endorser.name }} - {{ relationshipLabel(endorsement.relationship) }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </article>
+
+                                <p v-if="!profileUser.sport_skills.length" class="rounded-xl border border-dashed border-border bg-bg p-4 text-sm text-secondary">
+                                    Sobald Sportarten hinzugefuegt werden, erscheinen hier passende Skills.
+                                </p>
+                            </div>
+                        </section>
+
+                        <section class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
+                            <div class="flex items-center justify-between gap-4">
+                                <div>
+                                    <h2 class="text-lg font-bold text-primary">Aktuelle Beitraege</h2>
+                                    <p class="mt-1 text-sm text-secondary">Die letzten sichtbaren Aktivitaeten dieses Profils.</p>
+                                </div>
+                            </div>
+
+                            <div class="mt-5 space-y-3">
+                                <article v-for="post in posts" :key="post.id" class="rounded-xl border border-border bg-bg p-4">
+                                    <div class="flex flex-wrap items-center gap-2 text-xs text-secondary">
+                                        <Link v-if="post.team" :href="route('auth.teams.show', post.team.id)" class="font-semibold text-primary hover:underline">{{ post.team.name }}</Link>
+                                        <Link v-else-if="post.club" :href="route('auth.clubs.show', post.club.id)" class="font-semibold text-primary hover:underline">{{ post.club.name }}</Link>
+                                        <span v-else class="font-semibold text-primary">Public</span>
+                                        <span>- {{ formatDate(post.created_at) }}</span>
+                                    </div>
+                                    <p class="mt-3 whitespace-pre-line text-sm leading-6 text-primary">{{ post.content }}</p>
+                                    <div class="mt-3 flex gap-4 text-xs text-secondary">
+                                        <span>{{ post.likes_count }} Likes</span>
+                                        <span>{{ post.comments_count }} Kommentare</span>
+                                    </div>
+                                </article>
+                                <p v-if="!posts.length" class="rounded-xl border border-dashed border-border bg-bg p-4 text-sm text-secondary">
+                                    Keine sichtbaren Beitraege vorhanden.
+                                </p>
+                            </div>
+                        </section>
+                    </div>
+
+                    <aside class="space-y-6">
+                        <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
+                            <h2 class="text-sm font-bold uppercase tracking-wide text-secondary">Teams</h2>
+                            <div class="mt-4 space-y-2">
+                                <Link v-for="team in profileUser.teams" :key="team.id" :href="route('auth.teams.show', team.id)" class="flex items-center gap-3 rounded-lg p-2 hover:bg-inputBg">
+                                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary">{{ initials(team.name) }}</div>
+                                    <span class="min-w-0 truncate text-sm font-semibold text-primary">{{ team.name }}</span>
+                                </Link>
+                                <p v-if="!profileUser.teams.length" class="text-sm text-secondary">Keine Teams sichtbar.</p>
+                            </div>
+                        </section>
+
+                        <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
+                            <h2 class="text-sm font-bold uppercase tracking-wide text-secondary">Vereine</h2>
+                            <div class="mt-4 space-y-2">
+                                <Link v-for="club in profileUser.clubs" :key="club.id" :href="route('auth.clubs.show', club.id)" class="flex items-center gap-3 rounded-lg p-2 hover:bg-inputBg">
+                                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-inputBg text-sm font-semibold text-primary">{{ initials(club.name) }}</div>
+                                    <span class="min-w-0 truncate text-sm font-semibold text-primary">{{ club.name }}</span>
+                                </Link>
+                                <p v-if="!profileUser.clubs.length" class="text-sm text-secondary">Keine Vereine sichtbar.</p>
+                            </div>
+                        </section>
+
+                        <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
+                            <h2 class="text-sm font-bold uppercase tracking-wide text-secondary">Empfehlungen</h2>
+
+                            <form v-if="!viewer.is_self" class="mt-4 space-y-3 rounded-xl border border-border bg-bg p-4" @submit.prevent="sendRecommendation">
+                                <select v-model="recommendationForm.relationship" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                    <option value="visitor">Besucher</option>
+                                    <option value="friend">Freund</option>
+                                    <option value="team_member">Teamkollege</option>
+                                    <option value="trainer">Trainer</option>
+                                    <option value="club_admin">Verein</option>
+                                </select>
+                                <textarea v-model="recommendationForm.body" rows="4" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Empfehlung schreiben"></textarea>
+                                <button class="w-full rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Senden</button>
+                            </form>
+
+                            <div class="mt-4 space-y-3">
+                                <article v-for="recommendation in profileUser.recommendations" :key="recommendation.id" class="rounded-xl border border-border bg-bg p-4">
+                                    <p class="text-sm leading-relaxed text-primary">{{ recommendation.body }}</p>
+                                    <p class="mt-3 text-xs text-secondary">
+                                        {{ recommendation.author.name }} - {{ relationshipLabel(recommendation.relationship) }} - {{ recommendation.status === 'pending' ? 'wartet auf Freigabe' : 'veroeffentlicht' }}
+                                    </p>
+                                    <div v-if="viewer.is_self && recommendation.status === 'pending'" class="mt-3 flex gap-2">
                                         <button class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm text-buttonTextPrimary" @click="approveRecommendation(recommendation)">Freigeben</button>
                                         <button class="rounded-lg border border-border px-3 py-2 text-sm text-primary" @click="rejectRecommendation(recommendation)">Ablehnen</button>
                                     </div>
-                                </div>
-                            </article>
-
-                            <p v-if="!profileUser.recommendations.length" class="text-sm text-secondary">Noch keine Empfehlungen sichtbar.</p>
-                        </div>
-                    </section>
-
-                    <article v-for="post in posts" :key="post.id" class="rounded-lg border border-border bg-card p-4">
-                        <div class="flex items-center gap-3 text-xs text-secondary">
-                            <Link v-if="post.team" :href="route('auth.teams.show', post.team.id)" class="font-medium text-primary hover:underline">{{ post.team.name }}</Link>
-                            <Link v-else-if="post.club" :href="route('auth.clubs.show', post.club.id)" class="font-medium text-primary hover:underline">{{ post.club.name }}</Link>
-                            <span v-else class="font-medium text-primary">Public</span>
-                            <span>· {{ formatDate(post.created_at) }}</span>
-                        </div>
-                        <p class="mt-3 whitespace-pre-line text-sm leading-6 text-primary">{{ post.content }}</p>
-                        <div class="mt-3 flex gap-4 text-xs text-secondary">
-                            <span>{{ post.likes_count }} Likes</span>
-                            <span>{{ post.comments_count }} Kommentare</span>
-                        </div>
-                    </article>
+                                </article>
+                                <p v-if="!profileUser.recommendations.length" class="text-sm text-secondary">Noch keine Empfehlungen sichtbar.</p>
+                            </div>
+                        </section>
+                    </aside>
                 </section>
+            </template>
 
-                <aside v-if="viewer.can_view_private_profile" class="space-y-4">
-                    <section class="rounded-lg border border-border bg-card p-4">
-                        <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Teams</h2>
-                        <div class="mt-4 space-y-2">
-                            <Link v-for="team in profileUser.teams" :key="team.id" :href="route('auth.teams.show', team.id)" class="flex items-center gap-3 rounded-lg p-2 hover:bg-inputBg">
-                                <div class="flex h-9 w-9 items-center justify-center rounded bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary">{{ initials(team.name) }}</div>
-                                <span class="min-w-0 truncate text-sm font-medium text-primary">{{ team.name }}</span>
-                            </Link>
-                            <p v-if="!profileUser.teams.length" class="text-sm text-secondary">Keine Teams sichtbar.</p>
-                        </div>
-                    </section>
+            <section v-else class="rounded-xl border border-border bg-card p-6 text-center shadow-sm">
+                <div class="mx-auto flex size-14 items-center justify-center rounded-xl bg-inputBg text-2xl text-secondary">
+                    <i class="las la-lock"></i>
+                </div>
+                <h2 class="mt-4 text-xl font-bold text-primary">Dieses Profil ist privat</h2>
+                <p class="mx-auto mt-2 max-w-xl text-sm leading-6 text-secondary">
+                    Details, Beitraege, Teams und Sportprofil sind nur fuer berechtigte Personen sichtbar.
+                </p>
+            </section>
 
-                    <section class="rounded-lg border border-border bg-card p-4">
-                        <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Vereine</h2>
-                        <div class="mt-4 space-y-2">
-                            <Link v-for="club in profileUser.clubs" :key="club.id" :href="route('auth.clubs.show', club.id)" class="flex items-center gap-3 rounded-lg p-2 hover:bg-inputBg">
-                                <div class="flex h-9 w-9 items-center justify-center rounded bg-inputBg text-sm font-semibold text-primary">{{ initials(club.name) }}</div>
-                                <span class="min-w-0 truncate text-sm font-medium text-primary">{{ club.name }}</span>
-                            </Link>
-                            <p v-if="!profileUser.clubs.length" class="text-sm text-secondary">Keine Vereine sichtbar.</p>
-                        </div>
-                    </section>
-                </aside>
-            </div>
-
-            <section v-if="viewer.can_manage_roles" class="rounded-lg border border-border bg-card p-5">
-                <h2 class="text-lg font-semibold text-primary">Rollen & Berechtigungen</h2>
-                <div class="mt-3 space-y-3 text-sm">
-                    <div>
-                        <div class="font-medium text-primary">Rollen</div>
-                        <div class="mt-1 text-secondary">{{ profileUser.roles.length ? profileUser.roles.join(', ') : 'Keine Rollen' }}</div>
+            <section v-if="viewer.can_manage_roles" class="rounded-xl border border-border bg-card p-5 shadow-sm">
+                <h2 class="text-lg font-bold text-primary">Rollen & Berechtigungen</h2>
+                <div class="mt-4 grid gap-4 text-sm md:grid-cols-2">
+                    <div class="rounded-xl border border-border bg-bg p-4">
+                        <div class="font-semibold text-primary">Rollen</div>
+                        <div class="mt-2 text-secondary">{{ profileUser.roles.length ? profileUser.roles.join(', ') : 'Keine Rollen' }}</div>
                     </div>
-                    <div>
-                        <div class="font-medium text-primary">Berechtigungen</div>
-                        <div class="mt-1 max-h-32 overflow-auto text-secondary">
+                    <div class="rounded-xl border border-border bg-bg p-4">
+                        <div class="font-semibold text-primary">Berechtigungen</div>
+                        <div class="mt-2 max-h-32 overflow-auto text-secondary">
                             {{ profileUser.permissions.length ? profileUser.permissions.join(', ') : 'Keine Berechtigungen' }}
                         </div>
                     </div>
@@ -658,13 +751,13 @@ const rejectRecommendation = (recommendation) => {
                 class="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4"
                 @click.self="closeProfileReport"
             >
-                <form class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-xl" @submit.prevent="submitProfileReport">
+                <form class="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-xl" @submit.prevent="submitProfileReport">
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Profil melden</p>
-                            <h2 class="mt-1 text-xl font-semibold text-primary">Warum soll dieses Profil geprüft werden?</h2>
+                            <h2 class="mt-1 text-xl font-semibold text-primary">Warum soll dieses Profil geprueft werden?</h2>
                         </div>
-                        <button type="button" class="rounded p-2 text-secondary hover:bg-muted" @click="closeProfileReport">
+                        <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted" @click="closeProfileReport">
                             <i class="las la-times"></i>
                         </button>
                     </div>
