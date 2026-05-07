@@ -327,6 +327,10 @@ const saveMember = (member) => {
 const generateMemberNumber = (member) => {
     router.post(route('auth.club-memberships.members.member-number', [selectedClub.value.id, member.id]), {}, {
         preserveScroll: true,
+        only: ['clubs', 'flash'],
+        onSuccess: () => {
+            delete memberForms.value[member.id]
+        },
     })
 }
 
