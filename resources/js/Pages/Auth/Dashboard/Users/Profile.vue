@@ -256,7 +256,7 @@ const rejectRecommendation = (recommendation) => {
                 <div class="px-4 pb-6 sm:px-6">
                     <div class="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-start">
                         <div class="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start">
-                            <div class="-mt-8 shrink-0 sm:-mt-10">
+                            <div class="relative z-10 -mt-14 shrink-0 sm:-mt-16">
                                 <img
                                     v-if="profileUser.profile_photo_url"
                                     :src="profileUser.profile_photo_url"
