@@ -174,6 +174,7 @@ class ClubController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'sport_type' => ['nullable', 'string', 'max:120'],
             'logo' => ['nullable', 'string', 'max:255'],
+            'official_club_number' => ['nullable', 'string', 'max:120'],
             'country' => ['required', 'string', 'size:2'],
             'street' => ['nullable', 'string', 'max:255'],
             'house_number' => ['nullable', 'string', 'max:40'],

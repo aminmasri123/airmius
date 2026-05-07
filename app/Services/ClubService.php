@@ -58,11 +58,26 @@ class ClubService
 
     public function update($club, array $data)
     {
+        $hasSubmittedClubNumber = array_key_exists('official_club_number', $data);
+        $submittedClubNumber = $hasSubmittedClubNumber
+            ? trim((string) ($data['official_club_number'] ?? ''))
+            : null;
+
         if (isset($data['country'])) {
             $data['country'] = strtoupper($data['country']);
         }
 
         unset($data['is_official'], $data['official_club_number'], $data['verification_status']);
+
+        if ($hasSubmittedClubNumber) {
+            $data['requested_official_club_number'] = $submittedClubNumber !== '' ? $submittedClubNumber : null;
+
+            if ($submittedClubNumber !== '' && $submittedClubNumber !== (string) $club->official_club_number) {
+                $data['verification_status'] = 'pending_verification';
+                $data['verification_requested_at'] = now();
+                $data['verification_notes'] = null;
+            }
+        }
 
         $club->update($data);
 

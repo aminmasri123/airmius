@@ -35,6 +35,7 @@ const pauseForm = useForm({
 const clubForm = useForm({
     name: props.clubProfile.name || '',
     sport_type: props.clubProfile.sport_type || '',
+    official_club_number: props.clubProfile.requested_official_club_number || props.clubProfile.official_club_number || '',
     country: props.clubProfile.country || 'DE',
     street: props.clubProfile.street || '',
     house_number: props.clubProfile.house_number || '',
@@ -228,16 +229,15 @@ const leaveClub = () => {
                         </span>
                     </label>
 
-                    <div v-if="false" class="md:col-span-2">
-                        <label class="text-sm font-semibold text-primary">Vereinsnummer</label>
+                    <div class="md:col-span-2">
+                        <label class="text-sm font-semibold text-primary">Vereinsnummer zur Pruefung</label>
                         <input
                             v-model="clubForm.official_club_number"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                            :required="clubForm.is_official"
                             placeholder="z. B. Vereinsregister- oder Verbandsnummer"
                         >
                         <p class="mt-1 text-xs text-secondary">
-                            Pflichtfeld für offizielle Vereine.
+                            Wenn die Nummer neu oder geaendert ist, wird sie zur Admin-Pruefung vorgemerkt.
                         </p>
                     </div>
 

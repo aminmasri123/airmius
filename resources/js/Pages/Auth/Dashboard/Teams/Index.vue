@@ -330,6 +330,7 @@ const clubEditFormFor = (club) => {
     clubEditForms.value[club.id] ??= {
         name: club.name || '',
         sport_type: club.sport_type || '',
+        official_club_number: club.requested_official_club_number || club.official_club_number || '',
         country: club.country || user?.country || 'DE',
         street: club.street || '',
         house_number: club.house_number || '',
@@ -346,6 +347,7 @@ const editClub = (club) => {
     clubEditForms.value[club.id] = {
         name: club.name || '',
         sport_type: club.sport_type || '',
+        official_club_number: club.requested_official_club_number || club.official_club_number || '',
         country: club.country || user?.country || 'DE',
         street: club.street || '',
         house_number: club.house_number || '',
@@ -827,6 +829,18 @@ const deleteJob = (job) => {
                             category-translation-prefix="sport_categories"
                             placeholder="Sportart suchen"
                         />
+                    </label>
+
+                    <label class="block xl:col-span-2">
+                        <span class="text-xs font-semibold uppercase text-secondary">Vereinsnummer zur Pruefung</span>
+                        <input
+                            v-model="clubEditFormFor(club).official_club_number"
+                            class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                            placeholder="z. B. Vereinsregister- oder Verbandsnummer"
+                        >
+                        <span class="mt-1 block text-xs text-secondary">
+                            Neue oder geaenderte Nummern werden zur Admin-Pruefung vorgemerkt.
+                        </span>
                     </label>
 
                     <label class="block">
