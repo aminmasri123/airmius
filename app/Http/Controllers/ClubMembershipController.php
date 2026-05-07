@@ -42,14 +42,11 @@ class ClubMembershipController extends Controller
     {
         $user = $request->user();
 
-        $hasFullClubAccess = $user->hasAnyRole(Roles::FULL_ACCESS) || $user->can('org.manage');
+        $hasFullClubAccess = $user->hasAnyRole(Roles::FULL_ACCESS);
 
         $clubs = Club::query()
             ->when(! $hasFullClubAccess, function ($query) use ($user) {
-                $query->where('owner_id', $user->id)
-                    ->orWhereHas('users', fn ($memberQuery) => $memberQuery
-                        ->where('users.id', $user->id)
-                        ->whereIn('club_user.role', ['owner', 'admin', 'manager']));
+                $this->scopeVisibleMembershipClubs($query, $user);
             })
             ->with([
                 'users' => fn ($query) => $query
@@ -215,6 +212,26 @@ class ClubMembershipController extends Controller
             'contributionIntervals' => self::CONTRIBUTION_INTERVALS,
             'teamRoles' => Team::ROLES,
         ]);
+    }
+
+    private function scopeVisibleMembershipClubs($query, User $user): void
+    {
+        $query->where(function ($clubQuery) use ($user) {
+            $clubQuery
+                ->where('owner_id', $user->id)
+                ->orWhereHas('users', fn ($memberQuery) => $memberQuery
+                    ->where('users.id', $user->id)
+                    ->whereIn('club_user.role', [
+                        'owner',
+                        'admin',
+                        'manager',
+                        'academy_manager',
+                        'financial_controller',
+                    ]))
+                ->orWhereHas('teams.users', fn ($teamUserQuery) => $teamUserQuery
+                    ->where('users.id', $user->id)
+                    ->whereIn('team_user.role', ['Coach', 'Captain']));
+        });
     }
 
     public function updateMember(Request $request, Club $club, User $user)

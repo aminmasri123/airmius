@@ -174,9 +174,12 @@ class HandleInertiaRequests extends Middleware
             'club.update' => $user->can('clubs.edit') || $user->can('org.manage'),
             'club.delete' => $user->can('clubs.delete'),
             'club.jobs.manage' => $user->can('club.jobs.manage'),
-            'club-memberships.view' => $user->can('org.manage')
+            'club-memberships.view' => $user->hasAnyRole(\App\Support\Roles::FULL_ACCESS)
                 || $user->clubs()
-                    ->wherePivotIn('role', ['owner', 'admin', 'manager'])
+                    ->wherePivotIn('role', ['owner', 'admin', 'manager', 'academy_manager', 'financial_controller'])
+                    ->exists()
+                || $user->teams()
+                    ->wherePivotIn('role', ['Coach', 'Captain'])
                     ->exists(),
 
             'teams.view' => $user->can('viewAny', \App\Models\Team::class),
