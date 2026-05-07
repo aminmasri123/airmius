@@ -8,8 +8,8 @@ use App\Models\Sport;
 use App\Models\User;
 use App\Models\UserSport;
 use App\Models\UserSportSkill;
-use App\Models\Notification;
 use App\Services\GamificationService;
+use App\Support\AppNotification;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -124,6 +124,18 @@ class ProfileGamificationController extends Controller
             ]);
         }
 
+        if ($data['relationship'] === 'trainer') {
+            $userSportSkill->loadMissing('skill');
+
+            AppNotification::send($user, 'profile.trainer_mentioned', [
+                'title' => 'Trainer-Erwaehnung erhalten',
+                'body' => $request->user()->name.' hat dich bei '.$userSportSkill->skill->name.' mit Trainer-Bezug bestaetigt.',
+                'url' => route('auth.users.show', ['user' => $user->id, 'tab' => 'skills']),
+                'skill_id' => $userSportSkill->id,
+                'endorser_id' => $request->user()->id,
+            ]);
+        }
+
         return back()->with('message', 'Skill wurde bestätigt.');
     }
 
@@ -144,16 +156,14 @@ class ProfileGamificationController extends Controller
             'status' => 'pending',
         ]);
 
-        Notification::create([
-            'user_id' => $user->id,
-            'type' => 'profile.recommendation_received',
-            'data' => [
-                'title' => 'Neue Empfehlung erhalten',
-                'body' => $request->user()->name.' hat eine Empfehlung geschrieben. Sie wartet auf deine Freigabe.',
-                'url' => route('auth.users.show', ['user' => $user->id, 'tab' => 'recommendations']),
-                'recommendation_id' => $recommendation->id,
-                'author_id' => $request->user()->id,
-            ],
+        AppNotification::send($user, $data['relationship'] === 'trainer' ? 'profile.trainer_mentioned' : 'profile.recommendation_received', [
+            'title' => $data['relationship'] === 'trainer' ? 'Trainer-Erwaehnung erhalten' : 'Neue Empfehlung erhalten',
+            'body' => $data['relationship'] === 'trainer'
+                ? $request->user()->name.' hat eine Empfehlung mit Trainer-Bezug geschrieben. Sie wartet auf deine Freigabe.'
+                : $request->user()->name.' hat eine Empfehlung geschrieben. Sie wartet auf deine Freigabe.',
+            'url' => route('auth.users.show', ['user' => $user->id, 'tab' => 'recommendations']),
+            'recommendation_id' => $recommendation->id,
+            'author_id' => $request->user()->id,
         ]);
 
         return back()->with('message', 'Empfehlung wurde gesendet und wartet auf Freigabe.');

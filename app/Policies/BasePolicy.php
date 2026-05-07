@@ -76,11 +76,31 @@ class BasePolicy
 
         return $this->hasFullAccess($user)
             || $club->owner_id === $user->id
-            || $club->users()
-                ->where('users.id', $user->id)
-                ->wherePivotIn('role', ['owner', 'admin', 'manager'])
-                ->exists()
-            || ($user->can('org.manage') && $this->inClub($user, $club));
+            || $this->hasElevatedClubRole($user, $club);
+    }
+
+    protected function hasElevatedClubRole(User $user, $club): bool
+    {
+        if (! $club) {
+            return false;
+        }
+
+        return $club->users()
+            ->where('users.id', $user->id)
+            ->wherePivotIn('role', ['owner', 'admin', 'manager', 'academy_manager'])
+            ->exists();
+    }
+
+    protected function hasElevatedTeamRole(User $user, $team): bool
+    {
+        if (! $team) {
+            return false;
+        }
+
+        return $team->users()
+            ->where('users.id', $user->id)
+            ->wherePivotIn('role', ['Coach', 'Captain'])
+            ->exists();
     }
 
     protected function managesTeam(User $user, $team): bool
@@ -90,10 +110,6 @@ class BasePolicy
         }
 
         return $this->managesClub($user, $team->club)
-            || $team->users()
-                ->where('users.id', $user->id)
-                ->wherePivotIn('role', ['Coach', 'Captain'])
-                ->exists()
-            || ($user->can('team.update') && $team->users()->where('users.id', $user->id)->exists());
+            || ($user->can('team.update') && $this->hasElevatedTeamRole($user, $team));
     }
 }

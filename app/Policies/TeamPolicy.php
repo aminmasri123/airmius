@@ -45,7 +45,6 @@ class TeamPolicy extends BasePolicy
 
     public function delete(User $user, Team $team)
     {
-        return $this->managesClub($user, $team->club)
-            || (($user->can('team.delete') || $user->can('teams.delete')) && $this->managesTeam($user, $team));
+        return $this->managesClub($user, $team->club);
     }
 }

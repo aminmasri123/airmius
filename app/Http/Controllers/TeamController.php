@@ -150,9 +150,7 @@ class TeamController extends Controller
         $user = $request->user();
 
         abort_unless(
-            $club->users()->where('users.id', $user->id)->exists()
-                || $user->hasAnyRole(Roles::FULL_ACCESS)
-                || $user->can('org.manage'),
+            $user->can('update', $club),
             403
         );
 
@@ -355,9 +353,11 @@ class TeamController extends Controller
                 ],
             );
 
-            AppNotification::send($recipient->id, 'team.invite', [
-                'title' => 'Einladung zu '.$team->name,
-                'body' => 'Du wurdest als '.$data['role'].' eingeladen.',
+            AppNotification::send($recipient->id, $data['role'] === 'Coach' ? 'team.trainer_mentioned' : 'team.invite', [
+                'title' => $data['role'] === 'Coach' ? 'Trainer-Einladung zu '.$team->name : 'Einladung zu '.$team->name,
+                'body' => $data['role'] === 'Coach'
+                    ? 'Du wurdest als Trainer fuer '.$team->name.' eingeladen.'
+                    : 'Du wurdest als '.$data['role'].' eingeladen.',
                 'url' => route('auth.teams.index', ['team_invitation' => $invitation->id]),
                 'team_id' => $team->id,
                 'invitation_id' => $invitation->id,
@@ -545,6 +545,16 @@ class TeamController extends Controller
             'role' => $data['role'] ?? 'Player',
         ]);
 
+        if (($data['role'] ?? 'Player') === 'Coach') {
+            AppNotification::send($joinRequest->user_id, 'team.trainer_mentioned', [
+                'title' => 'Als Trainer aufgenommen',
+                'body' => 'Du wurdest in '.$joinRequest->team->name.' als Trainer aufgenommen.',
+                'url' => route('auth.teams.index'),
+                'team_id' => $joinRequest->team_id,
+                'club_id' => $joinRequest->team->club_id,
+            ]);
+        }
+
         return back()->with('success', 'Beitrittsanfrage angenommen.');
     }
 
@@ -569,9 +579,23 @@ class TeamController extends Controller
             'role' => ['required', Rule::in(Team::ROLES)],
         ]);
 
+        $previousRole = $team->users()
+            ->where('users.id', $user->id)
+            ->first()?->pivot?->role;
+
         $team->users()->updateExistingPivot($user->id, [
             'role' => $data['role'],
         ]);
+
+        if ($data['role'] === 'Coach' && $previousRole !== 'Coach') {
+            AppNotification::send($user, 'team.trainer_mentioned', [
+                'title' => 'Als Trainer eingetragen',
+                'body' => 'Du wurdest in '.$team->name.' als Trainer eingetragen.',
+                'url' => route('auth.teams.index'),
+                'team_id' => $team->id,
+                'club_id' => $team->club_id,
+            ]);
+        }
 
         return back()->with('success', 'Teamrolle aktualisiert.');
     }
