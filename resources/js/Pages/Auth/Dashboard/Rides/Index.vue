@@ -17,6 +17,13 @@ const form = useForm({
     team_id: '',
     from: '',
     to: '',
+    pickup_name: '',
+    pickup_street: '',
+    pickup_house_number: '',
+    pickup_postal_code: '',
+    pickup_city: '',
+    pickup_country: 'DE',
+    pickup_note: '',
     departure_time: '',
     seats: 3,
     contact_details: '',
@@ -31,10 +38,17 @@ const formatDateTime = (value) => {
     }).format(new Date(value))
 }
 
+const resetForm = () => {
+    form.reset()
+    form.visibility = 'friends'
+    form.seats = 3
+    form.pickup_country = 'DE'
+}
+
 const submit = () => {
     form.post(route('auth.rides.store'), {
         preserveScroll: true,
-        onSuccess: () => form.reset(),
+        onSuccess: resetForm,
     })
 }
 
@@ -122,6 +136,65 @@ const deleteRide = (ride) => {
                     <p v-if="form.errors.departure_time" class="mt-1 text-xs text-error">{{ form.errors.departure_time }}</p>
                 </div>
 
+                <div class="md:col-span-2 rounded-lg border border-border bg-bg p-4">
+                    <h3 class="text-sm font-semibold text-primary">Treffpunkt</h3>
+                    <p class="mt-1 text-xs text-secondary">
+                        Bitte moeglichst einen oeffentlichen Treffpunkt angeben, keine private Wohnadresse.
+                    </p>
+
+                    <div class="mt-3 grid gap-3 md:grid-cols-2">
+                        <div>
+                            <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Treffpunkt / Ort</label>
+                            <input
+                                v-model="form.pickup_name"
+                                class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"
+                                placeholder="z. B. Vereinsheim, Parkplatz Sporthalle"
+                            />
+                            <p v-if="form.errors.pickup_name" class="mt-1 text-xs text-error">{{ form.errors.pickup_name }}</p>
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Stadt</label>
+                            <input v-model="form.pickup_city" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Stadt" />
+                            <p v-if="form.errors.pickup_city" class="mt-1 text-xs text-error">{{ form.errors.pickup_city }}</p>
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-semibold uppercase tracking-wide text-secondary">PLZ</label>
+                            <input v-model="form.pickup_postal_code" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="PLZ" />
+                            <p v-if="form.errors.pickup_postal_code" class="mt-1 text-xs text-error">{{ form.errors.pickup_postal_code }}</p>
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Land</label>
+                            <input v-model="form.pickup_country" maxlength="2" class="mt-1 w-full rounded-lg border-border bg-inputBg uppercase text-primary" placeholder="DE" />
+                            <p v-if="form.errors.pickup_country" class="mt-1 text-xs text-error">{{ form.errors.pickup_country }}</p>
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Strasse optional</label>
+                            <input v-model="form.pickup_street" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Strasse" />
+                            <p v-if="form.errors.pickup_street" class="mt-1 text-xs text-error">{{ form.errors.pickup_street }}</p>
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Hausnummer optional</label>
+                            <input v-model="form.pickup_house_number" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Nr." />
+                            <p v-if="form.errors.pickup_house_number" class="mt-1 text-xs text-error">{{ form.errors.pickup_house_number }}</p>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Hinweis optional</label>
+                            <input
+                                v-model="form.pickup_note"
+                                class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"
+                                placeholder="z. B. Eingang Nord, bei den Fahrradstaendern"
+                            />
+                            <p v-if="form.errors.pickup_note" class="mt-1 text-xs text-error">{{ form.errors.pickup_note }}</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="md:col-span-2">
                     <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Kontakt / Treffpunkt nach Beitritt</label>
                     <textarea
@@ -177,7 +250,13 @@ const deleteRide = (ride) => {
                         </span>
                     </p>
                     <p class="text-secondary">
-                        Kontakt/Treffpunkt:
+                        Treffpunkt:
+                        <span class="font-semibold text-primary">
+                            {{ ride.pickup_private_label || ride.pickup_public_label || 'Keine Angabe' }}
+                        </span>
+                    </p>
+                    <p class="text-secondary">
+                        Kontakt:
                         <span class="font-semibold text-primary">
                             {{ ride.contact_details || (ride.is_joined ? 'Keine Angabe' : 'Nach Beitritt sichtbar') }}
                         </span>

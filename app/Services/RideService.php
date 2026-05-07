@@ -8,6 +8,10 @@ class RideService
 {
     public function create($user, $data)
     {
+        if (isset($data['pickup_country'])) {
+            $data['pickup_country'] = strtoupper($data['pickup_country']);
+        }
+
         return Ride::create([
             ...$data,
             'club_id' => $data['visibility'] === 'club' ? ($data['club_id'] ?? null) : null,

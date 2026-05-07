@@ -60,6 +60,15 @@ class RideController extends Controller
                     'visibility' => $ride->visibility,
                     'from' => $ride->from,
                     'to' => $ride->to,
+                    'pickup_name' => $ride->pickup_name,
+                    'pickup_street' => $canSeePrivateDetails ? $ride->pickup_street : null,
+                    'pickup_house_number' => $canSeePrivateDetails ? $ride->pickup_house_number : null,
+                    'pickup_postal_code' => $ride->pickup_postal_code,
+                    'pickup_city' => $ride->pickup_city,
+                    'pickup_country' => $ride->pickup_country,
+                    'pickup_note' => $canSeePrivateDetails ? $ride->pickup_note : null,
+                    'pickup_public_label' => $this->pickupPublicLabel($ride),
+                    'pickup_private_label' => $canSeePrivateDetails ? $this->pickupPrivateLabel($ride) : null,
                     'departure_time' => $ride->departure_time,
                     'seats' => $ride->seats,
                     'contact_details' => $canSeePrivateDetails ? $ride->contact_details : null,
@@ -103,6 +112,13 @@ class RideController extends Controller
             'team_id' => ['nullable', 'integer', Rule::exists('teams', 'id')],
             'from' => ['required', 'string', 'max:255'],
             'to' => ['required', 'string', 'max:255'],
+            'pickup_name' => ['nullable', 'string', 'max:255'],
+            'pickup_street' => ['nullable', 'string', 'max:255'],
+            'pickup_house_number' => ['nullable', 'string', 'max:40'],
+            'pickup_postal_code' => ['nullable', 'string', 'max:30'],
+            'pickup_city' => ['nullable', 'string', 'max:255'],
+            'pickup_country' => ['nullable', 'string', 'size:2'],
+            'pickup_note' => ['nullable', 'string', 'max:500'],
             'departure_time' => ['required', 'date'],
             'seats' => ['required', 'integer', 'min:1', 'max:20'],
             'contact_details' => ['nullable', 'string', 'max:1000'],
@@ -153,5 +169,38 @@ class RideController extends Controller
         $ride->delete();
 
         return back()->with('success', 'Fahrgemeinschaft geloescht.');
+    }
+
+    private function pickupPublicLabel(Ride $ride): ?string
+    {
+        $parts = array_filter([
+            $ride->pickup_name,
+            trim(implode(' ', array_filter([$ride->pickup_postal_code, $ride->pickup_city]))),
+        ]);
+
+        return $parts ? implode(' - ', $parts) : null;
+    }
+
+    private function pickupPrivateLabel(Ride $ride): ?string
+    {
+        $street = trim(implode(' ', array_filter([
+            $ride->pickup_street,
+            $ride->pickup_house_number,
+        ])));
+
+        $city = trim(implode(' ', array_filter([
+            $ride->pickup_postal_code,
+            $ride->pickup_city,
+        ])));
+
+        $parts = array_filter([
+            $ride->pickup_name,
+            $street,
+            $city,
+            $ride->pickup_country,
+            $ride->pickup_note,
+        ]);
+
+        return $parts ? implode(', ', $parts) : null;
     }
 }
