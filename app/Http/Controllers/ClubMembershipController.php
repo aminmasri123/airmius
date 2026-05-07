@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class ClubMembershipController extends Controller
@@ -323,6 +324,102 @@ class ClubMembershipController extends Controller
         return back()->with('success', 'Mitgliedsdaten aktualisiert.');
     }
 
+    public function removeMember(Request $request, Club $club, User $user)
+    {
+        $this->authorize('update', $club);
+
+        abort_unless($club->users()->where('users.id', $user->id)->exists(), 404);
+        abort_if($club->owner_id === $user->id, 422, 'Der Owner kann nicht entfernt werden. Weise zuerst einem anderen Mitglied die Rolle Owner zu.');
+
+        DB::transaction(function () use ($club, $user) {
+            $teamIds = $club->teams()->pluck('id');
+
+            DB::table('team_user')
+                ->whereIn('team_id', $teamIds)
+                ->where('user_id', $user->id)
+                ->delete();
+
+            $club->users()->detach($user->id);
+            $this->clubService->refreshClubOwnerRole($user);
+        });
+
+        AppNotification::send($user, 'club.member_removed', [
+            'title' => 'Vereinsmitgliedschaft beendet',
+            'body' => 'Du wurdest aus '.$club->name.' entfernt. Wenn du das fuer falsch haeltst, kannst du widersprechen.',
+            'url' => route('auth.notifications.index'),
+            'club_id' => $club->id,
+        ]);
+
+        return back()->with('success', 'Mitglied wurde aus Verein und zugehoerigen Teams entfernt.');
+    }
+
+    public function leaveClub(Request $request, Club $club)
+    {
+        $user = $request->user();
+
+        abort_unless($club->users()->where('users.id', $user->id)->exists(), 404);
+        abort_if($club->owner_id === $user->id, 422, 'Owner koennen den Verein nicht verlassen. Weise zuerst einem anderen Mitglied die Rolle Owner zu.');
+
+        $hasOpenDebt = Invoice::query()
+            ->where('club_id', $club->id)
+            ->where('user_id', $user->id)
+            ->whereIn('status', ['open', 'overdue'])
+            ->exists();
+
+        if ($hasOpenDebt) {
+            throw ValidationException::withMessages([
+                'club' => 'Du kannst den Verein erst verlassen, wenn alle offenen Rechnungen ausgeglichen sind.',
+            ]);
+        }
+
+        DB::transaction(function () use ($club, $user) {
+            $teamIds = $club->teams()->pluck('id');
+
+            DB::table('team_user')
+                ->whereIn('team_id', $teamIds)
+                ->where('user_id', $user->id)
+                ->delete();
+
+            $club->users()->detach($user->id);
+            $this->clubService->refreshClubOwnerRole($user);
+        });
+
+        $this->notifyClubManagers($club, 'club.member_left', [
+            'title' => 'Mitglied hat den Verein verlassen',
+            'body' => $user->name.' hat '.$club->name.' verlassen.',
+            'url' => route('auth.club-memberships.index'),
+            'club_id' => $club->id,
+            'user_id' => $user->id,
+        ], $user->id);
+
+        return back()->with('success', 'Du hast den Verein verlassen.');
+    }
+
+    public function objectToRemoval(Request $request, Club $club)
+    {
+        $data = $request->validate([
+            'message' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $membershipRequest = ClubMembershipRequest::create([
+            'club_id' => $club->id,
+            'user_id' => $request->user()->id,
+            'type' => 'removal_objection',
+            'status' => 'pending',
+            'message' => $data['message'] ?? 'Ich widerspreche der Entfernung und bitte um Pruefung.',
+        ]);
+
+        $this->notifyClubManagers($club, 'club.member_removal_objection', [
+            'title' => 'Widerspruch gegen Entfernung',
+            'body' => $request->user()->name.' widerspricht der Entfernung aus '.$club->name.'.',
+            'url' => route('auth.club-memberships.index'),
+            'club_id' => $club->id,
+            'request_id' => $membershipRequest->id,
+        ], $request->user()->id);
+
+        return back()->with('success', 'Widerspruch wurde an den Verein gesendet.');
+    }
+
     public function updateMembershipSettings(Request $request, Club $club)
     {
         $this->authorize('update', $club);
@@ -463,6 +560,14 @@ class ClubMembershipController extends Controller
                     'paused_until' => $membershipRequest->requested_pause_until,
                     'pause_requested_at' => null,
                 ]);
+            } elseif ($membershipRequest->type === 'removal_objection') {
+                $club->users()->syncWithoutDetaching([
+                    $membershipRequest->user_id => [
+                        'role' => 'member',
+                        'membership_status' => 'active',
+                        'joined_on' => now()->toDateString(),
+                    ],
+                ]);
             } else {
                 $club->users()->syncWithoutDetaching([
                     $membershipRequest->user_id => [
@@ -483,6 +588,14 @@ class ClubMembershipController extends Controller
             ]);
         });
 
+        AppNotification::send($membershipRequest->user_id, 'club.membership_request_approved', [
+            'title' => 'Anfrage angenommen',
+            'body' => $club->name.' hat deine Anfrage angenommen.',
+            'url' => route('auth.clubs.show', $club),
+            'club_id' => $club->id,
+            'request_id' => $membershipRequest->id,
+        ]);
+
         return back()->with('success', 'Anfrage wurde angenommen.');
     }
 
@@ -495,6 +608,14 @@ class ClubMembershipController extends Controller
             'reviewed_by' => $request->user()->id,
             'reviewed_at' => now(),
             'review_note' => $request->input('review_note'),
+        ]);
+
+        AppNotification::send($membershipRequest->user_id, 'club.membership_request_declined', [
+            'title' => 'Anfrage abgelehnt',
+            'body' => $membershipRequest->club->name.' hat deine Anfrage abgelehnt.',
+            'url' => route('auth.notifications.index'),
+            'club_id' => $membershipRequest->club_id,
+            'request_id' => $membershipRequest->id,
         ]);
 
         return back()->with('success', 'Anfrage wurde abgelehnt.');
@@ -1223,6 +1344,15 @@ class ClubMembershipController extends Controller
             'url' => route('auth.club-memberships.index'),
             'club_id' => $club->id,
         ]);
+    }
+
+    private function notifyClubManagers(Club $club, string $type, array $data, ?int $exceptUserId = null): void
+    {
+        $club->users()
+            ->wherePivotIn('role', ['owner', 'admin', 'manager'])
+            ->when($exceptUserId, fn ($query) => $query->where('users.id', '!=', $exceptUserId))
+            ->get(['users.id'])
+            ->each(fn (User $manager) => AppNotification::send($manager, $type, $data));
     }
 
     private function recordBankMatchedPayment(Invoice $invoice, array $transaction): Payment

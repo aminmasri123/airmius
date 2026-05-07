@@ -61,6 +61,11 @@ const iconFor = (type) => ({
     'friend.invite': 'las la-user-plus',
     'friend.accepted': 'las la-user-check',
     'team.invite': 'las la-users',
+    'team.member_removed': 'las la-user-minus',
+    'club.member_removed': 'las la-user-times',
+    'club.member_left': 'las la-door-open',
+    'team.member_left': 'las la-door-open',
+    'club.member_removal_objection': 'las la-exclamation-circle',
     'user.followed': 'las la-user-plus',
 }[type] || 'las la-bell')
 

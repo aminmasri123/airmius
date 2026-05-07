@@ -29,6 +29,11 @@ const iconFor = (type) => ({
     'friend.invite': 'las la-user-plus',
     'friend.accepted': 'las la-user-check',
     'team.invite': 'las la-users',
+    'team.member_removed': 'las la-user-minus',
+    'club.member_removed': 'las la-user-times',
+    'club.member_left': 'las la-door-open',
+    'team.member_left': 'las la-door-open',
+    'club.member_removal_objection': 'las la-exclamation-circle',
     'user.followed': 'las la-user-plus',
 }[type] || 'las la-bell')
 
@@ -50,6 +55,21 @@ const deleteNotification = (notification) => {
     router.delete(route('auth.notifications.destroy', notification.id), {
         preserveScroll: true,
         only: ['notifications', 'notificationCenter', 'auth', 'flash'],
+    })
+}
+
+const canObjectToRemoval = (notification) => (
+    ['club.member_removed', 'team.member_removed'].includes(notification.type)
+    && notification.data?.club_id
+)
+
+const objectToRemoval = (notification) => {
+    router.post(route('auth.club-memberships.removal-objection', notification.data.club_id), {
+        message: 'Ich widerspreche der Entfernung und bitte um Pruefung.',
+    }, {
+        preserveScroll: true,
+        only: ['notifications', 'notificationCenter', 'auth', 'flash'],
+        onSuccess: () => markAsRead(notification),
     })
 }
 
@@ -144,6 +164,15 @@ onUnmounted(() => {
                                 >
                                     Öffnen
                                 </Link>
+
+                                <button
+                                    v-if="canObjectToRemoval(notification)"
+                                    type="button"
+                                    class="rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning transition hover:bg-warning/10"
+                                    @click="objectToRemoval(notification)"
+                                >
+                                    Widersprechen
+                                </button>
 
                                 <button
                                     v-if="!notification.read"

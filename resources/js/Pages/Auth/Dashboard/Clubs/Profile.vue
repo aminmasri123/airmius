@@ -83,6 +83,16 @@ const requestPause = () => {
         onSuccess: () => pauseForm.reset(),
     })
 }
+
+const leaveClub = () => {
+    const confirmed = window.confirm(`Verein "${props.clubProfile.name}" wirklich verlassen? Du wirst auch aus allen Teams dieses Vereins entfernt. Das ist nur moeglich, wenn keine offenen Rechnungen bestehen.`)
+
+    if (!confirmed) return
+
+    router.post(route('auth.club-memberships.leave', props.clubProfile.id), {}, {
+        preserveScroll: true,
+    })
+}
 </script>
 
 <template>
@@ -130,6 +140,14 @@ const requestPause = () => {
                             class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:bg-inputBg">
                             Teams ansehen
                         </Link>
+                        <button
+                            v-if="viewer.is_member && !viewer.can_manage"
+                            type="button"
+                            class="rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
+                            @click="leaveClub"
+                        >
+                            Verein verlassen
+                        </button>
                     </div>
                 </div>
             </section>

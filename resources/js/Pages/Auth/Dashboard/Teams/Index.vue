@@ -201,7 +201,7 @@ const closeDeleteModal = () => {
 }
 
 const confirmDelete = () => {
-    if (!deleteTarget.value || deleteConfirmation.value !== 'delete') return
+    if (!deleteTarget.value || deleteConfirmation.value !== (deleteTarget.value.confirmText || 'delete')) return
 
     const target = deleteTarget.value
     actionNotice.value = null
@@ -212,7 +212,7 @@ const confirmDelete = () => {
             setActionNotice('success', target.successMessage)
             closeDeleteModal()
         },
-        onError: () => setActionNotice('error', target.errorMessage),
+        onError: (errors) => setActionNotice('error', errors.team || errors.user || target.errorMessage),
     })
 }
 
@@ -385,6 +385,25 @@ const updateTeamMemberRole = (team, member) => {
         preserveScroll: true,
         onSuccess: () => setActionNotice('success', 'Teamrolle wurde gespeichert.'),
         onError: () => setActionNotice('error', 'Teamrolle konnte nicht gespeichert werden.'),
+    })
+}
+
+const removeTeamMember = (team, member) => {
+    const isLeavingSelf = member.id === user?.id
+
+    openDeleteModal({
+        title: isLeavingSelf ? `Team "${team.name}" verlassen` : `${member.name} aus "${team.name}" entfernen`,
+        description: isLeavingSelf
+            ? 'Du kannst dieses Team nur verlassen, wenn alle offenen Rechnungen im zugehoerigen Verein ausgeglichen sind.'
+            : 'Das Mitglied wird aus diesem Team entfernt. Die Vereinsmitgliedschaft bleibt bestehen.',
+        route: 'auth.teams.members.destroy',
+        params: [team.id, member.id],
+        confirmText: isLeavingSelf ? 'verlassen' : 'entfernen',
+        buttonLabel: isLeavingSelf ? 'Team verlassen' : 'Mitglied entfernen',
+        successMessage: isLeavingSelf ? 'Du hast das Team verlassen.' : 'Mitglied wurde aus dem Team entfernt.',
+        errorMessage: isLeavingSelf
+            ? 'Team konnte nicht verlassen werden. Bitte pruefe, ob noch offene Rechnungen vorhanden sind.'
+            : 'Mitglied konnte nicht entfernt werden.',
     })
 }
 
@@ -947,6 +966,15 @@ const deleteJob = (job) => {
                             >
                                 {{ teamRoleLabel(member.pivot.role) }}
                             </span>
+
+                            <button
+                                v-if="member.id === user?.id || (team.can_manage && can('team.kick'))"
+                                type="button"
+                                class="rounded border border-border px-2 py-1 text-xs font-semibold text-primary hover:border-error/40 hover:bg-error/10 hover:text-error"
+                                @click="removeTeamMember(team, member)"
+                            >
+                                {{ member.id === user?.id ? 'Team verlassen' : 'Entfernen' }}
+                            </button>
                         </div>
                     </div>
 
@@ -1759,7 +1787,7 @@ const deleteJob = (job) => {
             </div>
 
             <div class="rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error">
-                Bitte gib <strong>delete</strong> ein, um das Loeschen zu bestaetigen.
+                Bitte gib <strong>{{ deleteTarget.confirmText || 'delete' }}</strong> ein, um die Aktion zu bestaetigen.
             </div>
 
             <label class="block">
@@ -1767,7 +1795,7 @@ const deleteJob = (job) => {
                 <input
                     v-model="deleteConfirmation"
                     class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                    placeholder="delete"
+                    :placeholder="deleteTarget.confirmText || 'delete'"
                     autocomplete="off"
                 >
             </label>
@@ -1783,10 +1811,10 @@ const deleteJob = (job) => {
                 <button
                     type="button"
                     class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                    :disabled="deleteConfirmation !== 'delete'"
+                    :disabled="deleteConfirmation !== (deleteTarget.confirmText || 'delete')"
                     @click="confirmDelete"
                 >
-                    Endgueltig loeschen
+                    {{ deleteTarget.buttonLabel || 'Endgueltig loeschen' }}
                 </button>
             </div>
         </div>

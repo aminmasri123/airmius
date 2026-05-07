@@ -334,6 +334,19 @@ const generateMemberNumber = (member) => {
     })
 }
 
+const removeMember = (member) => {
+    if (!selectedClub.value) return
+
+    const confirmed = window.confirm(`${member.name} wirklich aus dem Verein entfernen? Die Person wird auch aus allen Teams dieses Vereins entfernt.`)
+
+    if (!confirmed) return
+
+    router.delete(route('auth.club-memberships.members.destroy', [selectedClub.value.id, member.id]), {
+        preserveScroll: true,
+        only: ['clubs', 'flash'],
+    })
+}
+
 const openInvoice = (member) => {
     invoiceMemberId.value = member.id
     invoiceForm.title = 'Mitgliedsbeitrag'
@@ -636,6 +649,7 @@ const inviteExternalMember = (member) => {
                                 <p class="text-sm text-secondary">
                                     {{ request.user.email }}
                                     <span v-if="request.type === 'pause'">moechte die Mitgliedschaft pausieren</span>
+                                    <span v-else-if="request.type === 'removal_objection'">widerspricht der Entfernung aus dem Verein</span>
                                     <span v-else>moechte Vereinsmitglied werden</span>
                                 </p>
                                 <p v-if="request.membership_type" class="mt-1 text-xs text-secondary">
@@ -837,6 +851,13 @@ const inviteExternalMember = (member) => {
                                     @click="openInvoice(member)"
                                 >
                                     Rechnung
+                                </button>
+                                <button
+                                    type="button"
+                                    class="rounded-lg border border-error/40 px-3 py-2 text-sm font-semibold text-error hover:bg-error/10"
+                                    @click="removeMember(member)"
+                                >
+                                    Aus Verein entfernen
                                 </button>
                             </div>
                         </div>

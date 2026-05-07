@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Club;
+use App\Models\Invoice;
 use App\Models\Post;
 use App\Models\Sport;
 use App\Models\Team;
@@ -83,7 +84,7 @@ class TeamController extends Controller
             ->get()
             ->each(function (Club $club) use ($user) {
                 $club->setAttribute('can_manage', $user->can('update', $club));
-                $club->setAttribute('can_manage_jobs', $club->can_manage && $user->can('club.jobs.manage'));
+                $club->setAttribute('can_manage_jobs', $this->canManageJobsForClub($user, $club));
                 $club->setAttribute('can_delete', $user->can('delete', $club));
                 $club->setAttribute('subscription_capabilities', $this->planFeatures->capabilities($club));
                 $teams = $club->can_manage
@@ -577,11 +578,74 @@ class TeamController extends Controller
 
     public function removeMember(Request $request, Team $team, User $user)
     {
-        $this->authorize('update', $team);
-        abort_unless($request->user()->can('team.kick'), 403);
+        $isLeavingSelf = $request->user()->id === $user->id;
+
+        if (! $isLeavingSelf) {
+            $this->authorize('update', $team);
+            abort_unless($request->user()->can('team.kick'), 403);
+        }
+
+        abort_unless($team->users()->where('users.id', $user->id)->exists(), 404);
+
+        if ($isLeavingSelf) {
+            $hasOpenDebt = Invoice::query()
+                ->where('club_id', $team->club_id)
+                ->where('user_id', $user->id)
+                ->whereIn('status', ['open', 'overdue'])
+                ->exists();
+
+            if ($hasOpenDebt) {
+                throw ValidationException::withMessages([
+                    'team' => 'Du kannst das Team erst verlassen, wenn alle offenen Rechnungen im Verein ausgeglichen sind.',
+                ]);
+            }
+        }
 
         $team->users()->detach($user->id);
 
-        return back()->with('success', 'Mitglied entfernt.');
+        if ($isLeavingSelf) {
+            $this->notifyClubManagers($team->club, 'team.member_left', [
+                'title' => 'Mitglied hat Team verlassen',
+                'body' => $user->name.' hat '.$team->name.' verlassen.',
+                'url' => route('auth.teams.index'),
+                'club_id' => $team->club_id,
+                'team_id' => $team->id,
+                'user_id' => $user->id,
+            ], $user->id);
+        } else {
+            AppNotification::send($user, 'team.member_removed', [
+                'title' => 'Aus Team entfernt',
+                'body' => 'Du wurdest aus '.$team->name.' entfernt. Deine Vereinsmitgliedschaft bleibt bestehen.',
+                'url' => route('auth.notifications.index'),
+                'club_id' => $team->club_id,
+                'team_id' => $team->id,
+            ]);
+        }
+
+        return back()->with('success', $isLeavingSelf ? 'Du hast das Team verlassen.' : 'Mitglied entfernt.');
+    }
+
+    private function notifyClubManagers(Club $club, string $type, array $data, ?int $exceptUserId = null): void
+    {
+        $club->users()
+            ->wherePivotIn('role', ['owner', 'admin', 'manager'])
+            ->when($exceptUserId, fn ($query) => $query->where('users.id', '!=', $exceptUserId))
+            ->get(['users.id'])
+            ->each(fn (User $manager) => AppNotification::send($manager, $type, $data));
+    }
+
+    private function canManageJobsForClub(User $user, Club $club): bool
+    {
+        return $user->hasAnyRole(Roles::FULL_ACCESS)
+            || (
+                $user->can('club.jobs.manage')
+                && (
+                    $club->owner_id === $user->id
+                    || $club->users()
+                        ->where('users.id', $user->id)
+                        ->wherePivotIn('role', ['owner', 'admin', 'manager'])
+                        ->exists()
+                )
+            );
     }
 }

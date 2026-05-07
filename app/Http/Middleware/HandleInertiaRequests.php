@@ -190,6 +190,7 @@ class HandleInertiaRequests extends Middleware
             'team.update' => $user->can('team.update') || $user->can('teams.edit'),
             'team.delete' => $user->can('team.delete') || $user->can('teams.delete'),
             'team.invite' => $user->can('team.invite') || $user->can('teams.manage_players'),
+            'team.kick' => $user->can('team.kick'),
 
             'events.view' => $user->can('viewAny', \App\Models\Event::class),
             'event.index' => $user->can('viewAny', \App\Models\Event::class),

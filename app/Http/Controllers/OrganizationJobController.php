@@ -148,12 +148,20 @@ class OrganizationJobController extends Controller
 
     private function authorizeManageJobs(Request $request, Club $club): void
     {
-        $this->authorize('update', $club);
-
         $user = $request->user();
 
         abort_unless(
-            $user?->can('club.jobs.manage') || $user?->hasAnyRole(Roles::FULL_ACCESS),
+            $user?->hasAnyRole(Roles::FULL_ACCESS)
+                || (
+                    $user?->can('club.jobs.manage')
+                    && (
+                        $club->owner_id === $user->id
+                        || $club->users()
+                            ->where('users.id', $user->id)
+                            ->wherePivotIn('role', ['owner', 'admin', 'manager'])
+                            ->exists()
+                    )
+                ),
             403
         );
     }
