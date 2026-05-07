@@ -1,6 +1,8 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import Modal from '@/Components/Modal.vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
+import { ref } from 'vue'
 
 defineOptions({ layout: AppLayout })
 
@@ -10,6 +12,8 @@ const props = defineProps({
     teams: { type: Array, default: () => [] },
     visibilities: { type: Array, default: () => [] },
 })
+
+const showCreateModal = ref(false)
 
 const form = useForm({
     visibility: 'friends',
@@ -45,10 +49,22 @@ const resetForm = () => {
     form.pickup_country = 'DE'
 }
 
+const openCreateModal = () => {
+    showCreateModal.value = true
+}
+
+const closeCreateModal = () => {
+    showCreateModal.value = false
+    form.clearErrors()
+}
+
 const submit = () => {
     form.post(route('auth.rides.store'), {
         preserveScroll: true,
-        onSuccess: resetForm,
+        onSuccess: () => {
+            resetForm()
+            closeCreateModal()
+        },
     })
 }
 
@@ -73,14 +89,44 @@ const deleteRide = (ride) => {
     <Head title="Fahrgemeinschaften" />
 
     <div class="mx-auto max-w-6xl space-y-6">
-        <div>
-            <h1 class="text-2xl font-bold text-primary">Fahrgemeinschaften</h1>
-            <p class="mt-1 text-sm text-secondary">Organisiere gemeinsame Fahrten zu Training, Events und Vereinsaktivitaeten.</p>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-primary">Fahrgemeinschaften</h1>
+                <p class="mt-1 text-sm text-secondary">Organisiere gemeinsame Fahrten zu Training, Events und Vereinsaktivitaeten.</p>
+            </div>
+
+            <button
+                type="button"
+                class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover sm:w-auto"
+                @click="openCreateModal"
+            >
+                <i class="las la-plus text-lg"></i>
+                Fahrt anbieten
+            </button>
         </div>
 
-        <section class="rounded-lg border border-border bg-card p-5">
-            <h2 class="text-lg font-semibold text-primary">Neue Fahrgemeinschaft</h2>
-            <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="submit">
+        <Modal :show="showCreateModal" max-width="2xl" @close="closeCreateModal">
+            <form class="max-h-[calc(100dvh-3.5rem)] overflow-y-auto p-1 pr-2" @submit.prevent="submit">
+                <div class="sticky top-0 z-10 border-b border-border bg-card pb-4 pr-8">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Fahrgemeinschaft</p>
+                            <h2 class="mt-1 text-lg font-semibold text-primary">Neue Fahrt anbieten</h2>
+                            <p class="mt-1 text-sm text-secondary">
+                                Erstelle eine datenschutzfreundliche Fahrt mit oeffentlichem Treffpunkt statt privater Adresse.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary"
+                            @click="closeCreateModal"
+                        >
+                            <i class="las la-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-4 grid gap-3 md:grid-cols-2">
                 <div>
                     <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Sichtbarkeit</label>
                     <select v-model="form.visibility" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required>
@@ -207,13 +253,14 @@ const deleteRide = (ride) => {
                     <p v-if="form.errors.contact_details" class="mt-1 text-xs text-error">{{ form.errors.contact_details }}</p>
                 </div>
 
-                <div class="flex items-end">
-                    <button class="w-full rounded-lg bg-buttonPrimary px-4 py-2 font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover" :disabled="form.processing">
+                <div class="md:col-span-2">
+                    <button class="w-full rounded-lg bg-buttonPrimary px-4 py-3 font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover disabled:opacity-60" :disabled="form.processing">
                         {{ form.processing ? 'Speichern...' : 'Fahrt anbieten' }}
                     </button>
                 </div>
+                </div>
             </form>
-        </section>
+        </Modal>
 
         <section class="grid gap-4 md:grid-cols-2">
             <article v-for="ride in rides" :key="ride.id" class="rounded-lg border border-border bg-card p-5">

@@ -70,7 +70,7 @@ const maxWidthClass = computed(() => {
 
 <template>
     <dialog class="z-50 m-0 min-h-full min-w-full overflow-y-auto bg-transparent backdrop:bg-transparent " ref="dialog">
-        <div class="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 sm:px-0" scroll-region>
+        <div class="fixed inset-0 z-50 flex items-center justify-center px-3 py-4 sm:px-4 sm:py-6" scroll-region>
             <transition enter-active-class="ease-out duration-300" enter-from-class="opacity-0"
                 enter-to-class="opacity-100" leave-active-class="ease-in duration-200" leave-from-class="opacity-100"
                 leave-to-class="opacity-0">
@@ -86,7 +86,7 @@ const maxWidthClass = computed(() => {
                 leave-to-class="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
 
                 <div v-show="show"
-                    class="surface-card relative mb-6 p-4 overflow-hidden transform transition-all sm:w-full sm:mx-auto"
+                    class="surface-card relative max-h-[calc(100dvh-2rem)] w-[calc(100vw-1.5rem)] overflow-hidden p-3 transform transition-all sm:mx-auto sm:w-full sm:p-4"
                     :class="maxWidthClass">
                     <!-- Close Button -->
                     <button v-if="closeable" @click="close"
