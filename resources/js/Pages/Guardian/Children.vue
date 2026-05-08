@@ -13,6 +13,10 @@ defineProps({
         type: Array,
         default: () => [],
     },
+    hasAuthenticatedAccount: {
+        type: Boolean,
+        default: false,
+    },
 })
 
 const page = usePage()
@@ -110,7 +114,7 @@ const logout = () => {
                 {{ page.props.flash.success }}
             </div>
 
-            <section class="mt-5 rounded-lg border border-border bg-card p-5">
+            <section v-if="!hasAuthenticatedAccount" class="mt-5 rounded-lg border border-border bg-card p-5">
                 <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h2 class="text-lg font-semibold text-primary">Eigenes Elternkonto nutzen</h2>

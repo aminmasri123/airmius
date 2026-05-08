@@ -159,6 +159,8 @@ class HandleInertiaRequests extends Middleware
             'notifications.view' => true,
             'friends.view' => true,
             'profile.view' => true,
+            'guardians.children.view' => $user->can('guardians.children.view'),
+            'guardians.children.manage' => $user->can('guardians.children.manage'),
 
             'feed.view' => $user->can('viewAny', \App\Models\Post::class),
             'post.create' => $user->can('create', \App\Models\Post::class),

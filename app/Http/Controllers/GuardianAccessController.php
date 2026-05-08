@@ -90,16 +90,25 @@ class GuardianAccessController extends Controller
 
     public function children(Request $request): Response|RedirectResponse
     {
-        $email = $request->session()->get('guardian_access_verified_email');
+        $email = $this->guardianEmail($request);
 
         if (! $email) {
             return redirect()->route('guardian-access.create');
         }
 
+        $user = $request->user();
+
         return Inertia::render('Guardian/Children', [
             'email' => $email,
+            'hasAuthenticatedAccount' => (bool) $user,
             'children' => User::query()
-                ->whereRaw('LOWER(guardian_email) = ?', [$email])
+                ->where(function ($query) use ($email, $user) {
+                    $query->whereRaw('LOWER(guardian_email) = ?', [$email]);
+
+                    if ($user) {
+                        $query->orWhere('guardian_user_id', $user->id);
+                    }
+                })
                 ->whereDate('birth_date', '>', now()->subYears(16)->toDateString())
                 ->select([
                     'id',
@@ -189,9 +198,9 @@ class GuardianAccessController extends Controller
 
     public function revoke(Request $request, User $child): RedirectResponse
     {
-        $email = $request->session()->get('guardian_access_verified_email');
+        $email = $this->guardianEmail($request);
         abort_if(! $email, 403);
-        abort_unless(mb_strtolower((string) $child->guardian_email) === $email, 403);
+        abort_unless($this->canManageChild($request, $child, $email), 403);
         abort_unless($child->birth_date && Carbon::parse($child->birth_date)->age < 16, 422);
 
         $child->forceFill([
@@ -214,9 +223,9 @@ class GuardianAccessController extends Controller
 
     public function approve(Request $request, User $child): RedirectResponse
     {
-        $email = $request->session()->get('guardian_access_verified_email');
+        $email = $this->guardianEmail($request);
         abort_if(! $email, 403);
-        abort_unless(mb_strtolower((string) $child->guardian_email) === $email, 403);
+        abort_unless($this->canManageChild($request, $child, $email), 403);
         abort_unless($child->birth_date && Carbon::parse($child->birth_date)->age < 16, 422);
 
         $child->forceFill([
@@ -245,6 +254,10 @@ class GuardianAccessController extends Controller
             'guardian_access_verified_email',
         ]);
 
+        if ($request->user()) {
+            return redirect()->route('auth.dashboard');
+        }
+
         return redirect()->route('guardian-access.create');
     }
 
@@ -258,5 +271,33 @@ class GuardianAccessController extends Controller
             ->whereRaw('LOWER(guardian_email) = ?', [$email])
             ->whereDate('birth_date', '>', now()->subYears(16)->toDateString())
             ->update(['guardian_user_id' => $guardian->id]);
+    }
+
+    private function guardianEmail(Request $request): ?string
+    {
+        $email = $request->session()->get('guardian_access_verified_email');
+
+        if ($email) {
+            return mb_strtolower((string) $email);
+        }
+
+        $user = $request->user();
+
+        if ($user && $user->can('guardians.children.view')) {
+            return mb_strtolower((string) $user->email);
+        }
+
+        return null;
+    }
+
+    private function canManageChild(Request $request, User $child, string $email): bool
+    {
+        if (mb_strtolower((string) $child->guardian_email) === $email) {
+            return true;
+        }
+
+        $user = $request->user();
+
+        return (bool) $user && (int) $child->guardian_user_id === (int) $user->id;
     }
 }
