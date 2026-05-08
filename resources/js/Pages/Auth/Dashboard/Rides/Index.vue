@@ -20,6 +20,7 @@ const deleteConfirmation = ref('')
 const editTarget = ref(null)
 const requestTarget = ref(null)
 const requestMessage = ref('')
+const removeMemberTarget = ref(null)
 
 const form = useForm({
     visibility: 'friends',
@@ -148,6 +149,26 @@ const approveRequest = (ride, request) => {
 
 const rejectRequest = (ride, request) => {
     router.post(route('auth.rides.requests.reject', [ride.id, request.id]), {}, { preserveScroll: true })
+}
+
+const openRemoveMemberModal = (ride, member) => {
+    removeMemberTarget.value = { ride, member }
+}
+
+const closeRemoveMemberModal = () => {
+    removeMemberTarget.value = null
+}
+
+const removeAcceptedMember = () => {
+    if (!removeMemberTarget.value) return
+
+    router.delete(route('auth.rides.members.destroy', [
+        removeMemberTarget.value.ride.id,
+        removeMemberTarget.value.member.id,
+    ]), {
+        preserveScroll: true,
+        onSuccess: () => closeRemoveMemberModal(),
+    })
 }
 
 const openDeleteModal = (ride) => {
@@ -436,6 +457,39 @@ const confirmDeleteRide = () => {
             </div>
         </Modal>
 
+        <Modal :show="Boolean(removeMemberTarget)" max-width="md" @close="closeRemoveMemberModal">
+            <div v-if="removeMemberTarget" class="space-y-4">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-error">Mitfahrer entfernen</p>
+                    <h2 class="mt-1 text-lg font-bold text-primary">
+                        {{ removeMemberTarget.member.name }}
+                    </h2>
+                    <p class="mt-2 text-sm text-secondary">
+                        Diese Person wird aus der Fahrgemeinschaft
+                        <span class="font-semibold text-primary">{{ removeMemberTarget.ride.from }} -> {{ removeMemberTarget.ride.to }}</span>
+                        entfernt und bekommt eine Benachrichtigung.
+                    </p>
+                </div>
+
+                <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button
+                        type="button"
+                        class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
+                        @click="closeRemoveMemberModal"
+                    >
+                        Abbrechen
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white"
+                        @click="removeAcceptedMember"
+                    >
+                        Entfernen
+                    </button>
+                </div>
+            </div>
+        </Modal>
+
         <section class="grid gap-4 md:grid-cols-2">
             <article v-for="ride in rides" :key="ride.id" class="rounded-lg border border-border bg-card p-5">
                 <div class="flex items-start justify-between gap-3">
@@ -466,10 +520,28 @@ const confirmDeleteRide = () => {
                     </p>
                     <p class="text-secondary">
                         Mitfahrer:
-                        <span class="font-semibold text-primary">
-                            {{ ride.users?.length ? ride.users.map((user) => user.name).join(', ') : 'Noch niemand' }}
+                        <span v-if="!ride.users?.length" class="font-semibold text-primary">
+                            Noch niemand
                         </span>
                     </p>
+                    <div v-if="ride.users?.length" class="flex flex-wrap gap-2">
+                        <span
+                            v-for="member in ride.users"
+                            :key="member.id"
+                            class="inline-flex items-center gap-2 rounded-full border border-border bg-inputBg px-3 py-1 text-xs font-semibold text-primary"
+                        >
+                            {{ member.name }}
+                            <button
+                                v-if="member.can_remove"
+                                type="button"
+                                class="text-error hover:text-error/80"
+                                :aria-label="`${member.name} entfernen`"
+                                @click="openRemoveMemberModal(ride, member)"
+                            >
+                                <i class="las la-times text-base"></i>
+                            </button>
+                        </span>
+                    </div>
                     <p class="text-secondary">
                         Treffpunkt:
                         <span class="font-semibold text-primary">

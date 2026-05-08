@@ -58,7 +58,8 @@ class RideController extends Controller
                 $ownPivot = $ride->users->firstWhere('id', $user->id)?->pivot;
                 $isJoined = $ownPivot?->status === 'accepted';
                 $hasPendingRequest = $ownPivot?->status === 'requested';
-                $canSeePrivateDetails = $isDriver || $isJoined;
+                $canUpdate = $user->can('update', $ride);
+                $canSeePrivateDetails = $isDriver || $isJoined || $canUpdate;
 
                 return [
                     'id' => $ride->id,
@@ -83,7 +84,11 @@ class RideController extends Controller
                     'departure_time' => $ride->departure_time,
                     'seats' => $ride->seats,
                     'contact_details' => $canSeePrivateDetails ? $ride->contact_details : null,
-                    'users' => $canSeePrivateDetails ? $acceptedUsers : [],
+                    'users' => $canSeePrivateDetails ? $acceptedUsers->map(fn (User $member) => [
+                        'id' => $member->id,
+                        'name' => $member->name,
+                        'can_remove' => $canUpdate && (int) $member->id !== (int) $ride->driver_id,
+                    ])->values() : [],
                     'participants_count' => $acceptedUsers->count(),
                     'pending_requests' => $isDriver ? $pendingUsers->map(fn (User $member) => [
                         'id' => $member->id,
@@ -99,7 +104,7 @@ class RideController extends Controller
                         && ! $hasPendingRequest
                         && $acceptedUsers->count() < (int) $ride->seats
                         && $user->can('join', $ride),
-                    'can_update' => $user->can('update', $ride),
+                    'can_update' => $canUpdate,
                     'can_delete' => $user->can('delete', $ride),
                 ];
             });
@@ -250,6 +255,24 @@ class RideController extends Controller
         ]);
 
         return back()->with('success', 'Mitfahranfrage abgelehnt.');
+    }
+
+    public function removeMember(Ride $ride, User $user)
+    {
+        $this->authorize('update', $ride);
+        abort_if((int) $ride->driver_id === (int) $user->id, 422, 'Der Fahrer kann nicht aus seiner eigenen Fahrgemeinschaft entfernt werden.');
+        abort_unless($ride->users()->where('users.id', $user->id)->wherePivot('status', 'accepted')->exists(), 404);
+
+        $ride->users()->detach($user->id);
+
+        AppNotification::send($user, 'ride.member_removed', [
+            'title' => 'Aus Fahrgemeinschaft entfernt',
+            'message' => 'Du wurdest aus der Fahrgemeinschaft '.$ride->from.' -> '.$ride->to.' entfernt.',
+            'ride_id' => $ride->id,
+            'url' => route('auth.rides.index'),
+        ]);
+
+        return back()->with('success', 'Mitfahrer wurde entfernt.');
     }
 
     public function destroy(Ride $ride)
