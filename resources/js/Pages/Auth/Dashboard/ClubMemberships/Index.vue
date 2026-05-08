@@ -86,6 +86,7 @@ const clubRequests = computed(() => selectedClub.value?.club_requests || [])
 const membershipTypes = computed(() => selectedClub.value?.membership_types || [])
 const contributionRules = computed(() => selectedClub.value?.contribution_rules || [])
 const capabilities = computed(() => selectedClub.value?.capabilities || {})
+const canOpenEmailMembers = computed(() => capabilities.value.external_members !== false || capabilities.value.member_invitations !== false)
 const members = computed(() => selectedClub.value?.members || [])
 const externalMembers = computed(() => selectedClub.value?.external_members || [])
 const invoices = computed(() => selectedClub.value?.invoices || [])
@@ -524,8 +525,8 @@ const inviteExternalMember = (member) => {
                         <button
                             type="button"
                             class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50"
-                            :disabled="capabilities.external_members === false"
-                            :title="capabilities.external_members === false ? 'Externe Mitglieder sind ab Starter verfuegbar' : ''"
+                            :disabled="!canOpenEmailMembers"
+                            :title="!canOpenEmailMembers ? 'Externe Mitglieder sind ab Starter verfuegbar' : ''"
                             @click="showAddMemberModal = true"
                         >
                             Mitglied hinzufügen
@@ -1202,6 +1203,12 @@ const inviteExternalMember = (member) => {
                 <h2 class="text-xl font-bold text-primary">Mitglieder per E-Mail hinzufuegen</h2>
                 <p class="mt-1 text-sm text-secondary">
                     Erfasse mehrere Mitglieder auf einmal. Wenn eine Einladung aktiv ist, werden vorhandene Konten verknuepft, sonst geht eine Einladung per E-Mail raus.
+                </p>
+                <p
+                    v-if="capabilities.member_invitation_daily_limit"
+                    class="mt-2 rounded-lg border border-border bg-bg px-3 py-2 text-xs font-semibold text-secondary"
+                >
+                    Free-Limit: {{ capabilities.member_invitation_remaining_today }} von {{ capabilities.member_invitation_daily_limit }} Einladungen heute uebrig.
                 </p>
 
                 <form class="mt-5 space-y-4" @submit.prevent="addEmailMember">

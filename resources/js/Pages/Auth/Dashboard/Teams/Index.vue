@@ -1003,10 +1003,20 @@ const deleteJob = (job) => {
                             class="min-w-0 flex-1 rounded border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                         >
 
-                        <button class="rounded bg-buttonPrimary px-3 py-2 text-sm text-buttonTextPrimary">
+                        <button
+                            class="rounded bg-buttonPrimary px-3 py-2 text-sm text-buttonTextPrimary disabled:opacity-50"
+                            :disabled="club.subscription_capabilities?.member_invitation_remaining_today === 0"
+                        >
                             Einladen
                         </button>
                     </form>
+
+                    <p
+                        v-if="club.subscription_capabilities?.member_invitation_daily_limit"
+                        class="text-xs text-secondary"
+                    >
+                        Free-Limit: {{ club.subscription_capabilities.member_invitation_remaining_today }} von {{ club.subscription_capabilities.member_invitation_daily_limit }} Einladungen heute uebrig.
+                    </p>
 
                     <p
                         v-if="inviteNotices[team.id]"

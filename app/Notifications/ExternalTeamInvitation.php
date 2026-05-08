@@ -25,6 +25,7 @@ class ExternalTeamInvitation extends Notification
 
         return EmailTemplate::mail('external_team_invitation', [
             'team_name' => $team->name,
+            'inviter_name' => $this->invitation->inviter?->name ?: 'Ein Vereinsverantwortlicher',
         ], route('auth.team-invitations.accept-by-token', $this->invitation->token));
     }
 }

@@ -307,22 +307,22 @@ class EmailTemplate
             'external_club_membership_invitation' => [
                 'label' => 'Vereinsmitglied Einladung',
                 'description' => 'Einladung fuer extern hinterlegte Vereinsmitglieder.',
-                'variables' => ['name', 'club_name'],
+                'variables' => ['name', 'club_name', 'inviter_name'],
                 'template' => [
                     'subject' => 'Einladung zu {{ club_name }} auf Airmius',
                     'greeting' => 'Hallo {{ name }},',
-                    'body' => "{{ club_name }} hat dich als Mitglied hinterlegt und moechte dich mit Airmius verknuepfen.\nMit einem Airmius-Konto kannst du deine Vereinsdaten, Rechnungen, Zahlungshistorie, Teams und Nachrichten besser ueberblicken.\nWenn du bereits ein Konto mit dieser E-Mail hast, kannst du dich anmelden und die Verknuepfung abschliessen. Falls nicht, kannst du dich mit dieser E-Mail registrieren.",
+                    'body' => "{{ inviter_name }} hat dich im Namen von {{ club_name }} eingeladen und moechte dich mit Airmius verknuepfen.\nMit einem Airmius-Konto kannst du deine Vereinsdaten, Rechnungen, Zahlungshistorie, Teams und Nachrichten besser ueberblicken.\nWenn du bereits ein Konto mit dieser E-Mail hast, kannst du dich anmelden und die Verknuepfung abschliessen. Falls nicht, kannst du dich mit dieser E-Mail registrieren.",
                     'action_label' => 'Einladung ansehen',
                 ],
             ],
             'external_team_invitation' => [
                 'label' => 'Team Einladung',
                 'description' => 'Einladung zu einem Team per E-Mail.',
-                'variables' => ['team_name'],
+                'variables' => ['team_name', 'inviter_name'],
                 'template' => [
                     'subject' => 'Einladung zu {{ team_name }}',
                     'greeting' => 'Hallo,',
-                    'body' => "du wurdest zu {{ team_name }} auf Airmius eingeladen.\nNimm die Einladung an, um dem Team beizutreten.",
+                    'body' => "{{ inviter_name }} hat dich zu {{ team_name }} auf Airmius eingeladen.\nNimm die Einladung an, um dem Team beizutreten.",
                     'action_label' => 'Einladung annehmen',
                 ],
             ],

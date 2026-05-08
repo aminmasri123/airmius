@@ -341,6 +341,8 @@ class TeamController extends Controller
                 ]);
             }
 
+            $this->planFeatures->ensureCanSendMemberInvitations($team->club);
+
             $invitation = TeamInvitation::updateOrCreate(
                 ['team_id' => $team->id, 'recipient_id' => $recipient->id],
                 [
@@ -367,7 +369,7 @@ class TeamController extends Controller
         }
 
         $email = strtolower($data['email']);
-        $this->planFeatures->ensureAllows($team->club, 'member_invitations');
+        $this->planFeatures->ensureCanSendMemberInvitations($team->club);
 
         $invitation = TeamInvitation::updateOrCreate(
             ['team_id' => $team->id, 'email' => $email],

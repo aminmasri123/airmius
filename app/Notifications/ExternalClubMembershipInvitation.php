@@ -26,6 +26,7 @@ class ExternalClubMembershipInvitation extends Notification
         return EmailTemplate::mail('external_club_membership_invitation', [
             'name' => $this->externalMember->name ?: 'zusammen',
             'club_name' => $club->name,
+            'inviter_name' => $this->externalMember->creator?->name ?: $club->name,
         ], route('auth.club-member-invitations.accept', $this->externalMember->invitation_token));
     }
 }

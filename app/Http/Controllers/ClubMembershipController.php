@@ -646,7 +646,7 @@ class ClubMembershipController extends Controller
             ]);
 
             if ((bool) ($data['send_invitation'] ?? false)) {
-                $this->planFeatures->ensureAllows($club, 'member_invitations');
+                $this->planFeatures->ensureCanSendMemberInvitations($club, count($data['members']));
             }
 
             $stats = ['stored' => 0, 'linked' => 0, 'invited' => 0];
@@ -681,7 +681,7 @@ class ClubMembershipController extends Controller
         ]);
 
         if ((bool) ($data['send_invitation'] ?? false)) {
-            $this->planFeatures->ensureAllows($club, 'member_invitations');
+            $this->planFeatures->ensureCanSendMemberInvitations($club);
         }
 
         $result = $this->storeEmailMemberData($club, $request->user(), $data, (bool) ($data['send_invitation'] ?? false));
@@ -704,6 +704,15 @@ class ClubMembershipController extends Controller
 
         $rows = $this->readMembershipImportRows($data['file']->getRealPath(), $data['file']->getClientOriginalExtension());
         $sendInvitation = (bool) ($data['send_invitation'] ?? false);
+
+        if ($sendInvitation) {
+            $invitationCount = collect($rows)
+                ->filter(fn (array $row) => filter_var(strtolower(trim((string) ($row['email'] ?? ''))), FILTER_VALIDATE_EMAIL))
+                ->count();
+
+            $this->planFeatures->ensureCanSendMemberInvitations($club, $invitationCount);
+        }
+
         $stats = [
             'stored' => 0,
             'linked' => 0,
@@ -871,7 +880,7 @@ class ClubMembershipController extends Controller
     public function inviteEmailMember(Request $request, ClubExternalMember $externalMember)
     {
         $this->authorize('update', $externalMember->club);
-        $this->planFeatures->ensureAllows($externalMember->club, 'member_invitations');
+        $this->planFeatures->ensureCanSendMemberInvitations($externalMember->club);
 
         $existingUser = User::query()
             ->where('email', strtolower($externalMember->email))
@@ -1539,7 +1548,10 @@ class ClubMembershipController extends Controller
             || $club->externalMembers()->where('email', $email)->exists();
 
         if (! $alreadyTracked) {
-            $this->planFeatures->ensureAllows($club, 'external_members');
+            if (! $sendInvitation) {
+                $this->planFeatures->ensureAllows($club, 'external_members');
+            }
+
             $this->ensureClubCanAddMembers($club);
         }
 
