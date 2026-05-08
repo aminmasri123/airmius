@@ -35,6 +35,7 @@ const iconFor = (type) => ({
     'club.member_left': 'las la-door-open',
     'team.member_left': 'las la-door-open',
     'club.member_removal_objection': 'las la-exclamation-circle',
+    'guardian.consent_requested': 'las la-user-shield',
     'profile.recommendation_received': 'las la-star',
     'profile.trainer_mentioned': 'las la-chalkboard-teacher',
     'user.followed': 'las la-user-plus',

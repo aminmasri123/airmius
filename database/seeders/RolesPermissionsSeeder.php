@@ -419,7 +419,6 @@ class RolesPermissionsSeeder extends Seeder
         Role::findByName('parent')->givePermissionTo([
             'file.view',
             'follow.user',
-            'clubs.view','teams.view',
             'players.view',
             'training.view',
             'matches.view',
@@ -430,7 +429,6 @@ class RolesPermissionsSeeder extends Seeder
         Role::findByName('guardian')->givePermissionTo([
             'file.view',
             'follow.user',
-            'clubs.view','teams.view',
             'players.view',
             'training.view',
             'matches.view',

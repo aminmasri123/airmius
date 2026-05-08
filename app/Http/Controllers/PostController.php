@@ -7,6 +7,7 @@ use App\Models\Post;
 use App\Models\Sport;
 use App\Models\SportSkill;
 use App\Models\Team;
+use App\Models\User;
 use App\Services\GamificationService;
 use App\Services\MediaOptimizer;
 use App\Services\ModerationService;
@@ -92,15 +93,20 @@ class PostController extends Controller
             'posts' => $posts,
             'clubs' => Club::query()
                 ->when(
-                    $user->hasAnyRole(Roles::PLAYER),
-                    fn ($query) => $query->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id)),
-                    fn ($query) => $query->visibleTo($user),
+                    ! $user->hasAnyRole(Roles::FULL_ACCESS),
+                    fn ($query) => $query->where(function ($query) use ($user) {
+                        $query->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id))
+                            ->orWhereHas('teams.users', fn ($userQuery) => $userQuery->where('users.id', $user->id));
+                    }),
                 )
                 ->select(['id', 'name'])
                 ->orderBy('name')
                 ->get(),
             'teams' => Team::query()
-                ->visibleTo($user)
+                ->when(
+                    ! $user->hasAnyRole(Roles::FULL_ACCESS),
+                    fn ($query) => $query->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id)),
+                )
                 ->select(['id', 'club_id', 'name'])
                 ->orderBy('name')
                 ->get(),
@@ -118,6 +124,7 @@ class PostController extends Controller
     public function store(Request $request)
     {
         $this->authorize('create', Post::class);
+        $user = $request->user();
 
         $data = $request->validate([
             'club_id' => ['nullable', 'exists:clubs,id'],
@@ -136,12 +143,12 @@ class PostController extends Controller
 
         if (! empty($data['team_id'])) {
             $team = Team::findOrFail($data['team_id']);
-            $this->authorize('view', $team);
+            abort_unless($this->canUseTeam($user, $team), 403);
             $data['club_id'] = $team->club_id;
         }
 
         if (! empty($data['club_id'])) {
-            $this->authorize('view', Club::findOrFail($data['club_id']));
+            abort_unless($this->canUseClub($user, Club::findOrFail($data['club_id'])), 403);
         }
 
         abort_if($data['visibility'] === 'team' && empty($data['team_id']), 422, 'Team posts brauchen ein Team.');
@@ -191,6 +198,7 @@ class PostController extends Controller
     public function update(Request $request, Post $post)
     {
         $this->authorize('update', $post);
+        $user = $request->user();
 
         $data = $request->validate([
             'club_id' => ['nullable', 'exists:clubs,id'],
@@ -209,12 +217,12 @@ class PostController extends Controller
 
         if (! empty($data['team_id'])) {
             $team = Team::findOrFail($data['team_id']);
-            $this->authorize('view', $team);
+            abort_unless($this->canUseTeam($user, $team), 403);
             $data['club_id'] = $team->club_id;
         }
 
         if (! empty($data['club_id'])) {
-            $this->authorize('view', Club::findOrFail($data['club_id']));
+            abort_unless($this->canUseClub($user, Club::findOrFail($data['club_id'])), 403);
         }
 
         abort_if($data['visibility'] === 'team' && empty($data['team_id']), 422, 'Team posts brauchen ein Team.');
@@ -280,5 +288,18 @@ class PostController extends Controller
             ->pluck('id')
             ->values()
             ->all();
+    }
+
+    private function canUseClub(User $user, Club $club): bool
+    {
+        return $user->hasAnyRole(Roles::FULL_ACCESS)
+            || $club->users()->where('users.id', $user->id)->exists()
+            || $club->teams()->whereHas('users', fn ($query) => $query->where('users.id', $user->id))->exists();
+    }
+
+    private function canUseTeam(User $user, Team $team): bool
+    {
+        return $user->hasAnyRole(Roles::FULL_ACCESS)
+            || $team->users()->where('users.id', $user->id)->exists();
     }
 }

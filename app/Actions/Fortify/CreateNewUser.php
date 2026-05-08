@@ -3,11 +3,9 @@
 namespace App\Actions\Fortify;
 
 use App\Models\User;
-use App\Notifications\GuardianConsentRequested;
+use App\Support\GuardianConsentNotifier;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
@@ -58,6 +56,7 @@ class CreateNewUser implements CreatesNewUsers
 
         $birthDate = Carbon::parse($input['birth_date']);
         $requiresGuardianConsent = $birthDate->age < 16;
+        $guardianEmail = $requiresGuardianConsent ? mb_strtolower(trim($input['guardian_email'])) : null;
         $firstName = trim($input['first_name']);
         $lastName = trim($input['last_name']);
 
@@ -73,7 +72,7 @@ class CreateNewUser implements CreatesNewUsers
             'city' => $input['city'] ?? null,
             'state' => $input['state'] ?? null,
             'birth_date' => $birthDate->toDateString(),
-            'guardian_email' => $requiresGuardianConsent ? $input['guardian_email'] : null,
+            'guardian_email' => $guardianEmail,
             'guardian_consent_requested_at' => $requiresGuardianConsent ? now() : null,
             'guardian_consent_token' => $requiresGuardianConsent ? Str::random(64) : null,
             'password' => Hash::make($input['password']),
@@ -82,18 +81,7 @@ class CreateNewUser implements CreatesNewUsers
         $user->assignRole($requiresGuardianConsent ? 'minor_pending_consent' : 'player');
 
         if ($requiresGuardianConsent) {
-            try {
-                Notification::send(
-                    Notification::route('mail', $input['guardian_email']),
-                    new GuardianConsentRequested($user)
-                );
-            } catch (\Throwable $exception) {
-                Log::warning('Guardian consent notification could not be sent.', [
-                    'user_id' => $user->id,
-                    'guardian_email' => $input['guardian_email'],
-                    'exception' => $exception->getMessage(),
-                ]);
-            }
+            GuardianConsentNotifier::send($user, $guardianEmail);
         }
 
         return $user;

@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Notifications\GuardianConsentRequested;
+use App\Support\GuardianConsentNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -31,6 +29,7 @@ class ProfileCompletionController extends Controller
 
         $birthDate = Carbon::parse($data['birth_date']);
         $requiresGuardianConsent = $birthDate->age < 16;
+        $guardianEmail = $requiresGuardianConsent ? mb_strtolower(trim($data['guardian_email'] ?? '')) : null;
 
         if ($requiresGuardianConsent && empty($data['guardian_email'])) {
             return back()->withErrors([
@@ -45,7 +44,7 @@ class ProfileCompletionController extends Controller
             'name' => trim($data['first_name'].' '.$data['last_name']),
             'country' => strtoupper($data['country']),
             'birth_date' => $birthDate->toDateString(),
-            'guardian_email' => $requiresGuardianConsent ? $data['guardian_email'] : null,
+            'guardian_email' => $guardianEmail,
             'guardian_consent_requested_at' => $requiresGuardianConsent ? now() : null,
             'guardian_consent_token' => $requiresGuardianConsent ? Str::random(64) : null,
         ]);
@@ -53,18 +52,7 @@ class ProfileCompletionController extends Controller
         if ($requiresGuardianConsent) {
             $user->syncRoles(['minor_pending_consent']);
 
-            try {
-                Notification::send(
-                    Notification::route('mail', $data['guardian_email']),
-                    new GuardianConsentRequested($user)
-                );
-            } catch (\Throwable $exception) {
-                Log::warning('Guardian consent notification could not be sent after social signup.', [
-                    'user_id' => $user->id,
-                    'guardian_email' => $data['guardian_email'],
-                    'exception' => $exception->getMessage(),
-                ]);
-            }
+            GuardianConsentNotifier::send($user, $guardianEmail);
 
             return redirect()->route('guardian-consent.pending');
         }
