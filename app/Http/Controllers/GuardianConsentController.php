@@ -3,11 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Notifications\GuardianConsentRequested;
+use App\Support\GuardianConsentNotifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -37,9 +35,7 @@ class GuardianConsentController extends Controller
 
         $this->approveMinor($request, $minor);
 
-        return redirect()
-            ->route('login')
-            ->with('status', 'Die Registrierung wurde bestaetigt.');
+        return $this->redirectAfterDecision($request, 'Die Registrierung wurde bestaetigt.');
     }
 
     public function approveDirect(Request $request, string $token): RedirectResponse
@@ -48,9 +44,7 @@ class GuardianConsentController extends Controller
 
         $this->approveMinor($request, $minor);
 
-        return redirect()
-            ->route('login')
-            ->with('status', 'Die Registrierung wurde bestaetigt.');
+        return $this->redirectAfterDecision($request, 'Die Registrierung wurde bestaetigt.');
     }
 
     public function reject(Request $request, string $token): RedirectResponse
@@ -59,9 +53,7 @@ class GuardianConsentController extends Controller
 
         $this->rejectMinor($request, $minor);
 
-        return redirect()
-            ->route('login')
-            ->with('status', 'Die Registrierung wurde abgelehnt.');
+        return $this->redirectAfterDecision($request, 'Die Registrierung wurde abgelehnt.');
     }
 
     public function rejectDirect(Request $request, string $token): RedirectResponse
@@ -70,9 +62,7 @@ class GuardianConsentController extends Controller
 
         $this->rejectMinor($request, $minor);
 
-        return redirect()
-            ->route('login')
-            ->with('status', 'Die Registrierung wurde abgelehnt.');
+        return $this->redirectAfterDecision($request, 'Die Registrierung wurde abgelehnt.');
     }
 
     public function pending(Request $request): Response
@@ -112,22 +102,7 @@ class GuardianConsentController extends Controller
             'guardian_consent_token' => $user->guardian_consent_token ?: Str::random(64),
         ])->save();
 
-        try {
-            Notification::send(
-                Notification::route('mail', $user->guardian_email),
-                new GuardianConsentRequested($user)
-            );
-        } catch (\Throwable $exception) {
-            Log::warning('Guardian consent notification could not be resent.', [
-                'user_id' => $user->id,
-                'guardian_email' => $user->guardian_email,
-                'exception' => $exception->getMessage(),
-            ]);
-
-            return back()->withErrors([
-                'resend' => 'Die E-Mail konnte gerade nicht gesendet werden. Bitte versuche es spaeter erneut.',
-            ]);
-        }
+        GuardianConsentNotifier::send($user, $user->guardian_email);
 
         return back()->with('success', 'Die E-Mail wurde erneut gesendet.');
     }
@@ -178,5 +153,15 @@ class GuardianConsentController extends Controller
             'guardian_consent_rejected_at' => now(),
             'guardian_consent_token' => null,
         ])->save();
+    }
+
+    private function redirectAfterDecision(Request $request, string $message): RedirectResponse
+    {
+        $route = $request->user() ? 'auth.dashboard' : 'login';
+
+        return redirect()
+            ->route($route)
+            ->with('status', $message)
+            ->with('success', $message);
     }
 }

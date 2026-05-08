@@ -160,14 +160,14 @@ onUnmounted(() => {
                             </div>
 
                             <div class="flex shrink-0 gap-2">
-                                <Link
+                                <a
                                     v-if="notification.data?.url"
                                     :href="notification.data.url"
                                     class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover"
                                     @click="markAsRead(notification)"
                                 >
                                     Öffnen
-                                </Link>
+                                </a>
 
                                 <button
                                     v-if="canObjectToRemoval(notification)"

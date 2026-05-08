@@ -456,14 +456,14 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                                             </p>
                                         </div>
 
-                                        <Link
+                                        <a
                                             v-if="notification.data?.url"
                                             :href="notification.data.url"
                                             class="self-center rounded-lg border border-border px-2 py-1 text-xs font-semibold hover:bg-inputBg"
                                             @click="openNotification(notification)"
                                         >
                                             Öffnen
-                                        </Link>
+                                        </a>
 
                                         <button
                                             v-else-if="!notification.read"
