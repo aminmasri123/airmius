@@ -11,6 +11,7 @@ use App\Models\SubscriptionPlan;
 use App\Notifications\SubscriptionInvoiceAwaitingTransfer;
 use App\Notifications\SubscriptionInvoicePaid;
 use App\Support\AppNotification;
+use App\Support\ClubRoles;
 use App\Support\VisitorCountry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -248,9 +249,10 @@ class SubscriptionCheckoutController extends Controller
             ->where('id', $clubId)
             ->where(function ($query) use ($request) {
                 $query->where('owner_id', $request->user()->id)
-                    ->orWhereHas('users', fn ($memberQuery) => $memberQuery
-                        ->where('users.id', $request->user()->id)
-                        ->whereIn('club_user.role', ['owner', 'admin', 'manager']));
+                    ->orWhereHas('users', function ($memberQuery) use ($request) {
+                        $memberQuery->where('users.id', $request->user()->id);
+                        ClubRoles::whereAny($memberQuery, ['owner', 'admin', 'manager']);
+                    });
             })
             ->first();
 

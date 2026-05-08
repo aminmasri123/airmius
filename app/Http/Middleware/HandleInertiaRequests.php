@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use App\Support\ClubRoles;
 use Symfony\Component\HttpFoundation\Response;
 
 class HandleInertiaRequests extends Middleware
@@ -184,9 +185,7 @@ class HandleInertiaRequests extends Middleware
             'club.delete' => $user->can('clubs.delete'),
             'club.jobs.manage' => $user->can('club.jobs.manage'),
             'club-memberships.view' => $user->hasAnyRole(\App\Support\Roles::FULL_ACCESS)
-                || $user->clubs()
-                    ->wherePivotIn('role', ['owner', 'admin', 'manager', 'academy_manager', 'financial_controller'])
-                    ->exists()
+                || tap($user->clubs(), fn ($query) => ClubRoles::whereAny($query, ClubRoles::ELEVATED))->exists()
                 || $user->teams()
                     ->wherePivotIn('role', ['Coach', 'Captain'])
                     ->exists(),

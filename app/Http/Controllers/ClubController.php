@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\ClubService;
 use App\Services\GamificationService;
 use App\Services\MediaOptimizer;
+use App\Support\ClubRoles;
 use App\Support\UploadStorage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -23,7 +24,7 @@ class ClubController extends Controller
 {
     use AuthorizesRequests;
 
-    public const MEMBER_ROLES = ['owner', 'admin', 'manager', 'member'];
+    public const MEMBER_ROLES = ClubRoles::ALL;
 
     public function __construct(
         private ClubService $service,
@@ -193,34 +194,43 @@ class ClubController extends Controller
         abort_unless($club->users()->where('users.id', $user->id)->exists(), 404);
 
         $data = $request->validate([
-            'role' => ['required', Rule::in(self::MEMBER_ROLES)],
+            'role' => ['nullable', Rule::in(self::MEMBER_ROLES)],
+            'roles' => ['nullable', 'array'],
+            'roles.*' => [Rule::in(self::MEMBER_ROLES)],
         ]);
 
+        $roles = ClubRoles::normalize($data['role'] ?? null, $data['roles'] ?? []);
+        $primaryRole = ClubRoles::primary($roles);
+
         abort_if(
-            $club->owner_id === $user->id && $data['role'] !== 'owner',
+            $club->owner_id === $user->id && ! in_array('owner', $roles, true),
             422,
             'Der aktuelle Owner kann nicht direkt herabgestuft werden. Weise zuerst einem anderen Mitglied die Rolle Owner zu.'
         );
 
-        DB::transaction(function () use ($club, $user, $data) {
+        DB::transaction(function () use ($club, $user, $roles, $primaryRole) {
             $previousOwner = null;
 
-            if ($data['role'] === 'owner') {
+            if (in_array('owner', $roles, true)) {
                 $previousOwnerId = $club->owner_id;
 
                 $club->forceFill(['owner_id' => $user->id])->save();
 
                 if ($previousOwnerId && $previousOwnerId !== $user->id) {
-                    $club->users()->updateExistingPivot($previousOwnerId, ['role' => 'admin']);
+                    $club->users()->updateExistingPivot($previousOwnerId, [
+                        'role' => 'admin',
+                        'roles' => ['admin'],
+                    ]);
                     $previousOwner = User::find($previousOwnerId);
                 }
             }
 
             $club->users()->updateExistingPivot($user->id, [
-                'role' => $data['role'],
+                'role' => $primaryRole,
+                'roles' => $roles,
             ]);
 
-            if ($data['role'] === 'owner') {
+            if (in_array('owner', $roles, true)) {
                 $this->service->assignClubOwnerRole($user);
 
                 if ($previousOwner) {

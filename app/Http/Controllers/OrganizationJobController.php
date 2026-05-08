@@ -7,6 +7,7 @@ use App\Models\OrganizationJob;
 use App\Models\OrganizationJobInterest;
 use App\Models\Sport;
 use App\Notifications\OrganizationJobInterestReceived;
+use App\Support\ClubRoles;
 use App\Support\Roles;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -156,10 +157,7 @@ class OrganizationJobController extends Controller
                     $user?->can('club.jobs.manage')
                     && (
                         $club->owner_id === $user->id
-                        || $club->users()
-                            ->where('users.id', $user->id)
-                            ->wherePivotIn('role', ['owner', 'admin', 'manager'])
-                            ->exists()
+                        || tap($club->users()->where('users.id', $user->id), fn ($query) => ClubRoles::whereAny($query, ['owner', 'admin', 'manager']))->exists()
                     )
                 ),
             403

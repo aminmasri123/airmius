@@ -75,6 +75,7 @@ const closeSidebar = () => {
         <!-- <TeamSwitcher /> -->
 
         <nav class="custom-scrollbar mt-2 flex-1 space-y-1 overflow-y-auto px-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            <NavItem @click="closeSidebar" :href="route('welcome')" label="Zur Gastseite" icon="las la-external-link-alt" />
             <NavItem v-if="can('dashboard.view')" @click="closeSidebar" :href="route('auth.dashboard')" label="Dashboard" icon="las la-th-large" />
             <NavItem v-if="can('workspaces.view')" @click="closeSidebar" :href="route('auth.workspaces.index')" label="Arbeitsbereiche" icon="las la-compass" />
             <NavItem v-if="can('team.index')" @click="closeSidebar" :href="route('auth.teams.index')" label="Teams" icon="las la-users" />

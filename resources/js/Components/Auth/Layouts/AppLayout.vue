@@ -327,6 +327,13 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
 
                     <!-- RECHTS -->
                     <div class="flex items-center gap-2 sm:gap-3">
+                        <Link
+                            :href="route('welcome')"
+                            class="hidden items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted lg:flex"
+                        >
+                            <i class="las la-external-link-alt text-lg"></i>
+                            <span>Gastseite</span>
+                        </Link>
 
                         <!-- Search Mobile -->
                         <button type="button" class="rounded-lg p-2 hover:bg-muted sm:hidden"

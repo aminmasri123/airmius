@@ -18,8 +18,21 @@ const clubRoleLabel = (role) => ({
     owner: 'Owner',
     admin: 'Verein-Admin',
     manager: 'Manager',
+    academy_manager: 'Akademie-Manager',
+    financial_controller: 'Kassierer',
+    trainer: 'Trainer',
     member: 'Mitglied',
 }[role] || role)
+const memberRoles = (member) => Array.isArray(member.pivot.roles) && member.pivot.roles.length
+    ? member.pivot.roles
+    : [member.pivot.role || 'member']
+const toggleMemberRole = (member, role) => {
+    const roles = memberRoles(member)
+
+    member.pivot.roles = roles.includes(role)
+        ? roles.filter((value) => value !== role)
+        : [...roles, role]
+}
 const logoInput = ref(null)
 const coverInput = ref(null)
 const imageForm = useForm({
@@ -67,6 +80,7 @@ const uploadImage = (field, event) => {
 const updateMemberRole = (member) => {
     router.put(route('auth.clubs.members.update', [props.clubProfile.id, member.id]), {
         role: member.pivot.role,
+        roles: memberRoles(member),
     }, {
         preserveScroll: true,
     })
@@ -357,15 +371,22 @@ const leaveClub = () => {
                                         </div>
                                         {{ member.name }}
                                     </Link>
-                                    <p class="text-xs text-secondary">{{ clubRoleLabel(member.pivot.role) }}</p>
+                                    <p class="text-xs text-secondary">{{ memberRoles(member).map(clubRoleLabel).join(', ') }}</p>
                                 </div>
-                                <select v-if="viewer.can_manage" v-model="member.pivot.role"
-                                    class="max-w-28 rounded border border-border bg-inputBg px-2 py-1 text-xs text-primary"
-                                    @change="updateMemberRole(member)">
-                                    <option v-for="role in clubRoles" :key="role" :value="role">
-                                        {{ clubRoleLabel(role) }}
-                                    </option>
-                                </select>
+                                <div v-if="viewer.can_manage" class="w-44 rounded border border-border bg-inputBg p-2">
+                                    <label v-for="role in clubRoles" :key="role" class="flex items-center gap-2 py-1 text-xs text-primary">
+                                        <input
+                                            type="checkbox"
+                                            class="rounded border-border bg-card"
+                                            :checked="memberRoles(member).includes(role)"
+                                            @change="toggleMemberRole(member, role)"
+                                        >
+                                        <span>{{ clubRoleLabel(role) }}</span>
+                                    </label>
+                                    <button type="button" class="mt-2 w-full rounded bg-buttonPrimary px-2 py-1 text-xs font-semibold text-buttonTextPrimary" @click="updateMemberRole(member)">
+                                        Speichern
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </section>

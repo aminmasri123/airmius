@@ -17,6 +17,7 @@ use App\Services\MediaOptimizer;
 use App\Services\GamificationService;
 use App\Services\PlanFeatureService;
 use App\Support\UploadStorage;
+use App\Support\ClubRoles;
 use App\Support\Roles;
 use App\Support\AppNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -412,6 +413,7 @@ class TeamController extends Controller
             $invitation->team->club->users()->syncWithoutDetaching([
                 $invitation->recipient_id => [
                     'role' => 'member',
+                    'roles' => ['member'],
                     'membership_status' => 'non_member',
                     'joined_on' => now()->toDateString(),
                 ],
@@ -469,6 +471,7 @@ class TeamController extends Controller
             $invitation->team->club->users()->syncWithoutDetaching([
                 $request->user()->id => [
                     'role' => 'member',
+                    'roles' => ['member'],
                     'membership_status' => 'non_member',
                     'joined_on' => now()->toDateString(),
                 ],
@@ -503,7 +506,7 @@ class TeamController extends Controller
         $team->load('club.users');
 
         $team->club->users
-            ->filter(fn (User $member) => in_array($member->pivot?->role, ['owner', 'admin', 'manager'], true))
+            ->filter(fn (User $member) => filled(array_intersect($member->pivot?->roles ?: [$member->pivot?->role], ['owner', 'admin', 'manager'])))
             ->each(fn (User $member) => AppNotification::send($member, 'team.join_request', [
                 'title' => 'Neue Team-Anfrage',
                 'body' => $request->user()->name.' möchte '.$team->name.' beitreten.',
@@ -540,6 +543,7 @@ class TeamController extends Controller
             $joinRequest->team->club->users()->syncWithoutDetaching([
                 $joinRequest->user_id => [
                     'role' => 'member',
+                    'roles' => ['member'],
                     'membership_status' => 'non_member',
                     'joined_on' => now()->toDateString(),
                 ],
@@ -554,6 +558,14 @@ class TeamController extends Controller
         $this->gamification->grantToTeam($request->user(), $joinRequest->team, 'team_member_joined', $joinRequest, [
             'member_id' => $joinRequest->user_id,
             'role' => $data['role'] ?? 'Player',
+        ]);
+
+        AppNotification::send($joinRequest->user_id, 'team.join_request_accepted', [
+            'title' => 'Team-Beitrittsanfrage akzeptiert',
+            'body' => 'Deine Anfrage fuer '.$joinRequest->team->name.' wurde akzeptiert.',
+            'url' => route('auth.teams.show', $joinRequest->team),
+            'team_id' => $joinRequest->team_id,
+            'club_id' => $joinRequest->team->club_id,
         ]);
 
         if (($data['role'] ?? 'Player') === 'Coach') {
@@ -577,6 +589,14 @@ class TeamController extends Controller
         $joinRequest->update([
             'status' => 'declined',
             'responded_at' => now(),
+        ]);
+
+        AppNotification::send($joinRequest->user_id, 'team.join_request_declined', [
+            'title' => 'Team-Beitrittsanfrage abgelehnt',
+            'body' => 'Deine Anfrage fuer '.$joinRequest->team->name.' wurde abgelehnt.',
+            'url' => route('auth.teams.show', $joinRequest->team),
+            'team_id' => $joinRequest->team_id,
+            'club_id' => $joinRequest->team->club_id,
         ]);
 
         return back()->with('success', 'Beitrittsanfrage abgelehnt.');
@@ -614,6 +634,11 @@ class TeamController extends Controller
     public function removeMember(Request $request, Team $team, User $user)
     {
         $isLeavingSelf = $request->user()->id === $user->id;
+        $data = $isLeavingSelf
+            ? $request->validate([
+                'reason' => ['nullable', 'string', 'max:1000'],
+            ])
+            : [];
 
         if (! $isLeavingSelf) {
             $this->authorize('update', $team);
@@ -642,7 +667,8 @@ class TeamController extends Controller
         if ($isLeavingSelf) {
             $this->notifyClubManagers($team->club, 'team.member_left', [
                 'title' => 'Mitglied hat Team verlassen',
-                'body' => $user->name.' hat '.$team->name.' verlassen.',
+                'body' => $user->name.' hat '.$team->name.' verlassen.'
+                    .(filled($data['reason'] ?? null) ? "\n\nBegruendung: ".$data['reason'] : ''),
                 'url' => route('auth.teams.index'),
                 'club_id' => $team->club_id,
                 'team_id' => $team->id,
@@ -664,7 +690,7 @@ class TeamController extends Controller
     private function notifyClubManagers(Club $club, string $type, array $data, ?int $exceptUserId = null): void
     {
         $club->users()
-            ->wherePivotIn('role', ['owner', 'admin', 'manager'])
+            ->tap(fn ($query) => ClubRoles::whereAny($query, ['owner', 'admin', 'manager']))
             ->when($exceptUserId, fn ($query) => $query->where('users.id', '!=', $exceptUserId))
             ->get(['users.id'])
             ->each(fn (User $manager) => AppNotification::send($manager, $type, $data));
@@ -727,10 +753,7 @@ class TeamController extends Controller
                 $user->can('club.jobs.manage')
                 && (
                     $club->owner_id === $user->id
-                    || $club->users()
-                        ->where('users.id', $user->id)
-                        ->wherePivotIn('role', ['owner', 'admin', 'manager'])
-                        ->exists()
+                    || tap($club->users()->where('users.id', $user->id), fn ($query) => ClubRoles::whereAny($query, ['owner', 'admin', 'manager']))->exists()
                 )
             );
     }

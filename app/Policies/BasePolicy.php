@@ -4,6 +4,7 @@ namespace App\Policies;
 
 
 use App\Models\User;
+use App\Support\ClubRoles;
 use App\Support\Roles;
 
 class BasePolicy
@@ -85,10 +86,11 @@ class BasePolicy
             return false;
         }
 
-        return $club->users()
-            ->where('users.id', $user->id)
-            ->wherePivotIn('role', ['owner', 'admin', 'manager', 'academy_manager'])
-            ->exists();
+        $query = $club->users()->where('users.id', $user->id);
+
+        ClubRoles::whereAny($query, ['owner', 'admin', 'manager', 'academy_manager']);
+
+        return $query->exists();
     }
 
     protected function hasElevatedTeamRole(User $user, $team): bool

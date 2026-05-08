@@ -17,6 +17,7 @@ use App\Notifications\ExternalClubMembershipInvitation;
 use App\Services\ClubService;
 use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
+use App\Support\ClubRoles;
 use App\Support\Roles;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -220,15 +221,10 @@ class ClubMembershipController extends Controller
         $query->where(function ($clubQuery) use ($user) {
             $clubQuery
                 ->where('owner_id', $user->id)
-                ->orWhereHas('users', fn ($memberQuery) => $memberQuery
-                    ->where('users.id', $user->id)
-                    ->whereIn('club_user.role', [
-                        'owner',
-                        'admin',
-                        'manager',
-                        'academy_manager',
-                        'financial_controller',
-                    ]))
+                ->orWhereHas('users', function ($memberQuery) use ($user) {
+                    $memberQuery->where('users.id', $user->id);
+                    ClubRoles::whereAny($memberQuery, ClubRoles::ELEVATED);
+                })
                 ->orWhereHas('teams.users', fn ($teamUserQuery) => $teamUserQuery
                     ->where('users.id', $user->id)
                     ->whereIn('team_user.role', ['Coach', 'Captain']));
@@ -242,7 +238,9 @@ class ClubMembershipController extends Controller
         abort_unless($club->users()->where('users.id', $user->id)->exists(), 404);
 
         $data = $request->validate([
-            'role' => ['required', Rule::in(ClubController::MEMBER_ROLES)],
+            'role' => ['nullable', Rule::in(ClubController::MEMBER_ROLES)],
+            'roles' => ['nullable', 'array'],
+            'roles.*' => [Rule::in(ClubController::MEMBER_ROLES)],
             'membership_status' => ['required', Rule::in(self::MEMBERSHIP_STATUSES)],
             'club_membership_type_id' => ['nullable', Rule::exists('club_membership_types', 'id')->where('club_id', $club->id)],
             'member_number' => ['nullable', 'string', 'max:80'],
@@ -260,8 +258,11 @@ class ClubMembershipController extends Controller
             'membership_notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        $roles = ClubRoles::normalize($data['role'] ?? null, $data['roles'] ?? []);
+        $primaryRole = ClubRoles::primary($roles);
+
         abort_if(
-            $club->owner_id === $user->id && $data['role'] !== 'owner',
+            $club->owner_id === $user->id && ! in_array('owner', $roles, true),
             422,
             'Der Owner kann hier nicht herabgestuft werden.'
         );
@@ -275,21 +276,25 @@ class ClubMembershipController extends Controller
 
         abort_if($duplicateNumber, 422, 'Diese Mitgliedsnummer ist in diesem Verein bereits vergeben.');
 
-        DB::transaction(function () use ($club, $user, $data) {
+        DB::transaction(function () use ($club, $user, $data, $roles, $primaryRole) {
             $previousOwner = null;
 
-            if ($data['role'] === 'owner') {
+            if (in_array('owner', $roles, true)) {
                 $previousOwnerId = $club->owner_id;
                 $club->forceFill(['owner_id' => $user->id])->save();
 
                 if ($previousOwnerId && $previousOwnerId !== $user->id) {
-                    $club->users()->updateExistingPivot($previousOwnerId, ['role' => 'admin']);
+                    $club->users()->updateExistingPivot($previousOwnerId, [
+                        'role' => 'admin',
+                        'roles' => ['admin'],
+                    ]);
                     $previousOwner = User::find($previousOwnerId);
                 }
             }
 
             $club->users()->updateExistingPivot($user->id, [
-                'role' => $data['role'],
+                'role' => $primaryRole,
+                'roles' => $roles,
                 'membership_status' => $data['membership_status'],
                 'club_membership_type_id' => $data['club_membership_type_id'] ?? null,
                 'member_number' => $data['member_number'] ?? null,
@@ -308,7 +313,7 @@ class ClubMembershipController extends Controller
                 'membership_notes' => $data['membership_notes'] ?? null,
             ]);
 
-            if ($data['role'] === 'owner') {
+            if (in_array('owner', $roles, true)) {
                 $this->clubService->assignClubOwnerRole($user);
 
                 if ($previousOwner) {
@@ -564,6 +569,7 @@ class ClubMembershipController extends Controller
                 $club->users()->syncWithoutDetaching([
                     $membershipRequest->user_id => [
                         'role' => 'member',
+                        'roles' => ['member'],
                         'membership_status' => 'active',
                         'joined_on' => now()->toDateString(),
                     ],
@@ -572,6 +578,7 @@ class ClubMembershipController extends Controller
                 $club->users()->syncWithoutDetaching([
                     $membershipRequest->user_id => [
                         'role' => 'member',
+                        'roles' => ['member'],
                         'membership_status' => 'active',
                         'club_membership_type_id' => $membershipRequest->club_membership_type_id,
                         'contribution_amount' => $membershipRequest->preview_amount,
@@ -1322,6 +1329,7 @@ class ClubMembershipController extends Controller
         $club->users()->syncWithoutDetaching([
             $user->id => [
                 'role' => 'member',
+                'roles' => ['member'],
                 'membership_status' => $data['membership_status'],
                 'member_number' => $data['member_number'],
                 'contribution_amount' => $data['contribution_amount'],
@@ -1362,7 +1370,7 @@ class ClubMembershipController extends Controller
     private function notifyClubManagers(Club $club, string $type, array $data, ?int $exceptUserId = null): void
     {
         $club->users()
-            ->wherePivotIn('role', ['owner', 'admin', 'manager'])
+            ->tap(fn ($query) => ClubRoles::whereAny($query, ['owner', 'admin', 'manager']))
             ->when($exceptUserId, fn ($query) => $query->where('users.id', '!=', $exceptUserId))
             ->get(['users.id'])
             ->each(fn (User $manager) => AppNotification::send($manager, $type, $data));

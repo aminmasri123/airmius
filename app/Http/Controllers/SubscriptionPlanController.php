@@ -13,6 +13,7 @@ use App\Notifications\SubscriptionCancelled;
 use App\Notifications\SubscriptionPaymentIssue;
 use App\Notifications\SubscriptionRenewed;
 use App\Support\AppNotification;
+use App\Support\ClubRoles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
@@ -366,8 +367,7 @@ class SubscriptionPlanController extends Controller
             return collect();
         }
 
-        return $club->users()
-            ->wherePivotIn('role', ['owner', 'admin', 'manager'])
+        return ClubRoles::whereAny($club->users(), ['owner', 'admin', 'manager'])
             ->get()
             ->push($club->owner)
             ->filter()

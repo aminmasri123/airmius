@@ -174,6 +174,16 @@ const statusClass = (status) => ({
     former: 'bg-error/10 text-error',
 }[status] || 'bg-muted text-secondary')
 
+const clubRoleOptions = [
+    { value: 'owner', label: 'Owner' },
+    { value: 'admin', label: 'Verein-Admin' },
+    { value: 'manager', label: 'Manager' },
+    { value: 'academy_manager', label: 'Akademie-Manager' },
+    { value: 'financial_controller', label: 'Kassierer' },
+    { value: 'trainer', label: 'Trainer' },
+    { value: 'member', label: 'Mitglied' },
+]
+
 const intervalLabel = (interval) => ({
     none: 'Kein Beitrag',
     monthly: 'Monatlich',
@@ -195,6 +205,9 @@ const formatDate = (value) => {
 const formFor = (member) => {
     memberForms.value[member.id] ??= {
         role: member.pivot.role || 'member',
+        roles: Array.isArray(member.pivot.roles) && member.pivot.roles.length
+            ? [...member.pivot.roles]
+            : [member.pivot.role || 'member'],
         membership_status: member.pivot.membership_status || 'non_member',
         club_membership_type_id: member.pivot.club_membership_type_id || '',
         member_number: member.pivot.member_number || '',
@@ -886,13 +899,19 @@ const inviteExternalMember = (member) => {
 
                         <form v-if="editingMemberId === member.id" class="mt-4 grid gap-3 rounded-lg border border-border bg-bg p-4 md:grid-cols-3" @submit.prevent="saveMember(member)">
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">Rolle</label>
-                                <select v-model="formFor(member).role" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                                    <option value="owner">Owner</option>
-                                    <option value="admin">Verein-Admin</option>
-                                    <option value="manager">Manager</option>
-                                    <option value="member">Mitglied</option>
-                                </select>
+                                <label class="text-xs font-semibold uppercase text-secondary">Rollen</label>
+                                <div class="mt-1 grid gap-2 rounded-lg border border-border bg-inputBg p-3">
+                                    <label v-for="role in clubRoleOptions" :key="role.value" class="flex items-center gap-2 text-sm text-primary">
+                                        <input
+                                            v-model="formFor(member).roles"
+                                            type="checkbox"
+                                            :value="role.value"
+                                            class="rounded border-border bg-card"
+                                        >
+                                        <span>{{ role.label }}</span>
+                                    </label>
+                                </div>
+                                <p class="mt-1 text-xs text-secondary">Mehrere Rollen sind moeglich, z. B. Trainer und Kassierer.</p>
                             </div>
 
                             <div>

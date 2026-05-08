@@ -36,7 +36,7 @@ class ClubService
             ]);
 
             $club->users()->syncWithoutDetaching([
-                $user->id => ['role' => 'owner'],
+                $user->id => ['role' => 'owner', 'roles' => ['owner']],
             ]);
 
             $this->assignClubOwnerRole($user);

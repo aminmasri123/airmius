@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\Roles;
+use App\Support\ClubRoles;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -18,7 +19,7 @@ class Club extends Model
             }
 
             $club->users()->syncWithoutDetaching([
-                $club->owner_id => ['role' => 'owner'],
+                $club->owner_id => ['role' => 'owner', 'roles' => ['owner']],
             ]);
 
             if (! $club->currentSubscription && ($freePlan = SubscriptionPlan::free())) {
@@ -108,8 +109,10 @@ class Club extends Model
     public function users()
     {
         return $this->belongsToMany(User::class)
+            ->using(ClubUser::class)
             ->withPivot([
                 'role',
+                'roles',
                 'membership_status',
                 'club_membership_type_id',
                 'member_number',
@@ -170,7 +173,7 @@ class Club extends Model
 
     public function admins()
     {
-        return $this->users()->wherePivotIn('role', ['owner', 'admin']);
+        return ClubRoles::whereAny($this->users(), ['owner', 'admin']);
     }
 
     public function posts()

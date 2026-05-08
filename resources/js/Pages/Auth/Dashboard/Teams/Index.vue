@@ -38,6 +38,7 @@ const actionNotice = ref(null)
 const jobModalNotice = ref(null)
 const deleteTarget = ref(null)
 const deleteConfirmation = ref('')
+const deleteReason = ref('')
 const errors = computed(() => page.props.errors || {})
 
 const clubCreateStep = ref(1)
@@ -91,8 +92,14 @@ const clubRoleLabel = (role) => ({
     owner: 'Owner',
     admin: 'Verein-Admin',
     manager: 'Manager',
+    academy_manager: 'Akademie-Manager',
+    financial_controller: 'Kassierer',
+    trainer: 'Trainer',
     member: 'Mitglied',
 }[role] || role)
+const clubRoleList = (member) => Array.isArray(member.pivot.roles) && member.pivot.roles.length
+    ? member.pivot.roles
+    : [member.pivot.role || 'member']
 
 const teamRoleLabel = (role) => ({
     Coach: 'Trainer',
@@ -191,6 +198,7 @@ const setInviteNotice = (team, type, message) => {
 const openDeleteModal = (target) => {
     deleteTarget.value = target
     deleteConfirmation.value = ''
+    deleteReason.value = ''
     showDeleteModal.value = true
 }
 
@@ -198,6 +206,7 @@ const closeDeleteModal = () => {
     showDeleteModal.value = false
     deleteTarget.value = null
     deleteConfirmation.value = ''
+    deleteReason.value = ''
 }
 
 const confirmDelete = () => {
@@ -207,6 +216,7 @@ const confirmDelete = () => {
     actionNotice.value = null
 
     router.delete(route(target.route, target.params), {
+        data: target.requiresReason ? { reason: deleteReason.value } : {},
         preserveScroll: true,
         onSuccess: () => {
             setActionNotice('success', target.successMessage)
@@ -319,6 +329,7 @@ const updateClubMemberRole = (club, member) => {
 
     router.put(route('auth.clubs.members.update', [club.id, member.id]), {
         role: member.pivot.role,
+        roles: clubRoleList(member),
     }, {
         preserveScroll: true,
         onSuccess: () => setActionNotice('success', 'Vereinsrolle wurde gespeichert.'),
@@ -402,6 +413,7 @@ const removeTeamMember = (team, member) => {
         params: [team.id, member.id],
         confirmText: isLeavingSelf ? 'verlassen' : 'entfernen',
         buttonLabel: isLeavingSelf ? 'Team verlassen' : 'Mitglied entfernen',
+        requiresReason: isLeavingSelf,
         successMessage: isLeavingSelf ? 'Du hast das Team verlassen.' : 'Mitglied wurde aus dem Team entfernt.',
         errorMessage: isLeavingSelf
             ? 'Team konnte nicht verlassen werden. Bitte pruefe, ob noch offene Rechnungen vorhanden sind.'
@@ -1100,7 +1112,7 @@ const deleteJob = (job) => {
                             v-else
                             class="rounded-full bg-muted px-2 py-1 text-xs text-secondary"
                         >
-                            {{ clubRoleLabel(member.pivot.role) }}
+                            {{ clubRoleList(member).map(clubRoleLabel).join(', ') }}
                         </span>
                     </div>
                 </div>
@@ -1822,6 +1834,17 @@ const deleteJob = (job) => {
                     :placeholder="deleteTarget.confirmText || 'delete'"
                     autocomplete="off"
                 >
+            </label>
+
+            <label v-if="deleteTarget.requiresReason" class="block">
+                <span class="text-sm font-semibold text-primary">Begruendung</span>
+                <textarea
+                    v-model="deleteReason"
+                    rows="4"
+                    class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                    placeholder="Warum moechtest du dieses Team verlassen?"
+                ></textarea>
+                <p class="mt-1 text-xs text-secondary">Die Begruendung wird an die Vereinsverantwortlichen gesendet.</p>
             </label>
 
             <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
