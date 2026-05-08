@@ -85,7 +85,7 @@ class GuardianConsentController extends Controller
             'rejectedAt' => $user->guardian_consent_rejected_at,
             'approvedAt' => $user->guardian_consent_at,
             'resendAvailableIn' => $user->guardian_consent_requested_at
-                ? max(0, 60 - $user->guardian_consent_requested_at->diffInSeconds(now()))
+                ? $this->resendAvailableIn($user)
                 : 0,
         ]);
     }
@@ -98,9 +98,7 @@ class GuardianConsentController extends Controller
         abort_if($user->guardian_consent_at, 422, 'Die Zustimmung wurde bereits erteilt.');
         abort_if(empty($user->guardian_email), 422, 'Es ist keine E-Mail eines Erziehungsberechtigten hinterlegt.');
 
-        $availableIn = $user->guardian_consent_requested_at
-            ? max(0, 60 - $user->guardian_consent_requested_at->diffInSeconds(now()))
-            : 0;
+        $availableIn = $this->resendAvailableIn($user);
 
         if ($availableIn > 0) {
             return back()->withErrors([
@@ -140,6 +138,15 @@ class GuardianConsentController extends Controller
             ->whereNull('guardian_consent_at')
             ->whereNull('guardian_consent_rejected_at')
             ->firstOrFail();
+    }
+
+    private function resendAvailableIn(User $user): int
+    {
+        if (! $user->guardian_consent_requested_at) {
+            return 0;
+        }
+
+        return (int) max(0, ceil(60 - $user->guardian_consent_requested_at->diffInSeconds(now())));
     }
 
     private function approveMinor(Request $request, User $minor): void

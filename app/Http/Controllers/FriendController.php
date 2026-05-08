@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class FriendController extends Controller
@@ -76,7 +77,11 @@ class FriendController extends Controller
             : User::where('email', $email)->first();
 
         if (! $recipient) {
-            abort_if($email === strtolower($sender->email), 422, 'Du kannst dich nicht selbst einladen.');
+            if ($email === strtolower($sender->email)) {
+                throw ValidationException::withMessages([
+                    'email' => 'Du kannst dich nicht selbst einladen.',
+                ]);
+            }
 
             $invitation = FriendInvitation::updateOrCreate(
                 [
@@ -96,7 +101,12 @@ class FriendController extends Controller
             return back()->with('success', 'Einladung per E-Mail gesendet.');
         }
 
-        abort_if($recipient->is($sender), 422, 'Du kannst dich nicht selbst einladen.');
+        if ($recipient->is($sender)) {
+            throw ValidationException::withMessages([
+                'email' => 'Du kannst dich nicht selbst einladen.',
+            ]);
+        }
+
         abort_unless($recipient->allowsFriendRequestsFrom($sender), 403, 'Diese Person erlaubt keine Freundschaftsanfragen von dir.');
 
         $alreadyFriends = Friendship::query()
@@ -104,7 +114,11 @@ class FriendController extends Controller
             ->where('friend_id', $recipient->id)
             ->exists();
 
-        abort_if($alreadyFriends, 422, 'Ihr seid bereits Freunde.');
+        if ($alreadyFriends) {
+            throw ValidationException::withMessages([
+                'email' => 'Ihr seid bereits Freunde.',
+            ]);
+        }
 
         $inversePendingInvitation = FriendInvitation::query()
             ->where('sender_id', $recipient->id)

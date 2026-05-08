@@ -15,7 +15,8 @@ const props = defineProps({
 
 const page = usePage()
 const resendForm = useForm({})
-const resendCooldown = ref(props.resendAvailableIn || 0)
+const wholeSeconds = (value) => Math.max(0, Math.ceil(Number(value) || 0))
+const resendCooldown = ref(wholeSeconds(props.resendAvailableIn))
 let resendTimer = null
 
 const resendDisabled = computed(() => resendForm.processing || resendCooldown.value > 0 || Boolean(props.approvedAt))
@@ -54,10 +55,13 @@ const resendGuardianEmail = () => {
 }
 
 watch(() => props.resendAvailableIn, (value) => {
-    resendCooldown.value = value || 0
+    resendCooldown.value = wholeSeconds(value)
 })
 
 onMounted(() => {
+    document.body.style.overflow = null
+    document.querySelectorAll('dialog[open]').forEach((dialog) => dialog.close())
+
     resendTimer = window.setInterval(() => {
         if (resendCooldown.value > 0) {
             resendCooldown.value -= 1

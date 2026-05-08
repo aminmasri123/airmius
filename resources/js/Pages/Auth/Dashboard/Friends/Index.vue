@@ -23,11 +23,26 @@ const props = defineProps({
 const inviteForm = useForm({
     email: '',
 })
+const inviteNotice = ref(null)
 
 const invite = () => {
+    inviteNotice.value = null
+
     inviteForm.post(route('auth.friends.invitations.store'), {
         preserveScroll: true,
-        onSuccess: () => inviteForm.reset(),
+        onSuccess: (page) => {
+            inviteForm.reset()
+            inviteNotice.value = {
+                type: 'success',
+                message: page.props.flash?.success || 'Einladung wurde erfolgreich gesendet.',
+            }
+        },
+        onError: (errors) => {
+            inviteNotice.value = {
+                type: 'error',
+                message: errors.email || errors.user_id || 'Einladung konnte nicht gesendet werden.',
+            }
+        },
     })
 }
 
@@ -125,6 +140,16 @@ const initials = (name) => (name || '?')
 
             <p v-if="inviteForm.errors.email" class="mt-2 text-sm text-error">
                 {{ inviteForm.errors.email }}
+            </p>
+
+            <p
+                v-if="inviteNotice"
+                class="mt-3 rounded-lg border px-3 py-2 text-sm font-semibold"
+                :class="inviteNotice.type === 'success'
+                    ? 'border-success/30 bg-success/10 text-success'
+                    : 'border-error/30 bg-error/10 text-error'"
+            >
+                {{ inviteNotice.message }}
             </p>
         </section>
 

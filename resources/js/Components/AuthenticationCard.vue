@@ -1,9 +1,9 @@
 <template>
-    <button type="button" @click="goBack" class="absolute top-4 left-4 md:top-16 md:left-24 text-primary text-sm">
+    <button type="button" @click="goBack" class="absolute top-4 left-4 z-[101] md:top-16 md:left-24 text-primary text-sm">
         <i class="las la-chevron-circle-left la-lg"></i>
     </button>
 
-        <div class="min-h-screen flex flex-col sm:justify-center items-center px-4 pt-6 sm:pt-0 bg-bg text-primary">
+        <div class="relative z-[100] min-h-screen flex flex-col sm:justify-center items-center px-4 pt-6 sm:pt-0 bg-bg text-primary">
 
             <div>
                 <slot name="logo" />
