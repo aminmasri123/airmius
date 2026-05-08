@@ -139,6 +139,11 @@ class PublicMarketplaceController extends Controller
     public function show(Request $request, MarketplaceProduct $product)
     {
         abort_unless($product->status === 'published', 404);
+
+        if ($request->user()) {
+            return redirect()->route('auth.commerce.products.show', $product);
+        }
+
         abort_if($product->manages_stock && (int) $product->stock_quantity < 1, 422, 'Dieses Angebot ist aktuell ausverkauft.');
 
         $product->load(['user:id,name', 'club:id,name']);
