@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Link, router } from '@inertiajs/vue3'
+import { Link, router, usePage } from '@inertiajs/vue3'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
@@ -26,6 +26,8 @@ const props = defineProps({
     filters: { type: Object, default: () => ({}) },
 })
 
+const page = usePage()
+const currentUser = computed(() => props.authUser || page.props.auth?.user || null)
 const form = ref({
     search: props.filters.search || '',
     category: props.filters.category || '',
@@ -201,7 +203,7 @@ const selectSegment = (segment) => {
                     </div>
                     <div class="hidden items-center gap-2 text-sm font-black sm:flex">
                         <Link
-                            v-if="authUser"
+                            v-if="currentUser"
                             :href="route('auth.commerce.index')"
                             class="inline-flex items-center gap-2 rounded-full bg-buttonPrimary px-3 py-1 text-buttonTextPrimary"
                         >
@@ -295,7 +297,7 @@ const selectSegment = (segment) => {
                             <p class="text-sm font-black text-primary">Hilfe & Bestellung</p>
                             <p class="mt-1 text-xs leading-5 text-secondary">Gastbestellung, Login-Bestellung und Anbieterangebote sind vorbereitet.</p>
                         </div>
-                        <Link :href="authUser ? route('auth.commerce.index') : route('login')" class="rounded bg-card p-4 shadow-sm transition hover:bg-muted">
+                        <Link :href="currentUser ? route('auth.commerce.index') : route('login')" class="rounded bg-card p-4 shadow-sm transition hover:bg-muted">
                             <p class="text-sm font-black text-primary">Anbieter werden</p>
                             <p class="mt-1 text-xs leading-5 text-secondary">Vereine, Trainer und Shops koennen Angebote einstellen.</p>
                         </Link>
@@ -503,7 +505,7 @@ const selectSegment = (segment) => {
                                 {{ totalProducts }} Treffer, angezeigt werden maximal {{ products.per_page || 40 }} pro Seite.
                             </p>
                         </div>
-                        <Link :href="authUser ? route('auth.commerce.index') : route('login')" class="rounded bg-buttonPrimary px-4 py-2 text-sm font-black text-buttonTextPrimary hover:bg-buttonPrimaryHover">
+                        <Link :href="currentUser ? route('auth.commerce.index') : route('login')" class="rounded bg-buttonPrimary px-4 py-2 text-sm font-black text-buttonTextPrimary hover:bg-buttonPrimaryHover">
                             Angebot einstellen
                         </Link>
                     </div>

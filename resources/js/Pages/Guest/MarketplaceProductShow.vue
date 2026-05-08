@@ -16,10 +16,11 @@ const props = defineProps({
 })
 
 const page = usePage()
-const isAuthenticated = computed(() => Boolean(props.authUser))
+const currentUser = computed(() => props.authUser || page.props.auth?.user || null)
+const isAuthenticated = computed(() => Boolean(currentUser.value))
 const form = useForm({
-    guest_name: props.authUser?.name || '',
-    guest_email: props.authUser?.email || '',
+    guest_name: currentUser.value?.name || '',
+    guest_email: currentUser.value?.email || '',
     provider: 'bank_transfer',
     accepted_terms: false,
     shipping_country: props.product.price?.country || 'DE',
