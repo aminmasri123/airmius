@@ -1,6 +1,8 @@
 <script setup>
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue'
+import ConfirmActionModal from '@/Components/ConfirmActionModal.vue'
+import { computed, ref } from 'vue'
 
 defineProps({
     email: {
@@ -14,6 +16,29 @@ defineProps({
 })
 
 const page = usePage()
+const pendingAction = ref(null)
+
+const confirmation = computed(() => {
+    if (!pendingAction.value) return null
+
+    const { type, child } = pendingAction.value
+
+    if (type === 'revoke') {
+        return {
+            title: 'Zustimmung widerrufen',
+            message: `Möchtest du die Zustimmung für ${child.name} wirklich widerrufen? Die sozialen Funktionen werden danach wieder gesperrt.`,
+            confirmLabel: 'Zustimmung widerrufen',
+            danger: true,
+        }
+    }
+
+    return {
+        title: 'Ablehnung zurücknehmen',
+        message: `Möchtest du die Ablehnung für ${child.name} zurücknehmen und die Zustimmung erteilen? Das Konto wird danach freigegeben.`,
+        confirmLabel: 'Zurücknehmen und zustimmen',
+        danger: false,
+    }
+})
 
 const formatDate = (value) => {
     if (!value) return '-'
@@ -25,19 +50,25 @@ const formatDate = (value) => {
     }).format(new Date(value))
 }
 
-const revoke = (child) => {
-    if (!confirm(`Zustimmung für ${child.name} wirklich widerrufen?`)) return
-
-    router.put(route('guardian-access.children.revoke', child.id), {}, {
-        preserveScroll: true,
-    })
+const openConfirmation = (type, child) => {
+    pendingAction.value = { type, child }
 }
 
-const approve = (child) => {
-    if (!confirm(`Ablehnung für ${child.name} zurücknehmen und Zustimmung erteilen?`)) return
+const closeConfirmation = () => {
+    pendingAction.value = null
+}
 
-    router.put(route('guardian-access.children.approve', child.id), {}, {
+const confirmAction = () => {
+    if (!pendingAction.value) return
+
+    const { type, child } = pendingAction.value
+    const routeName = type === 'revoke'
+        ? 'guardian-access.children.revoke'
+        : 'guardian-access.children.approve'
+
+    router.put(route(routeName, child.id), {}, {
         preserveScroll: true,
+        onFinish: closeConfirmation,
     })
 }
 
@@ -118,7 +149,7 @@ const logout = () => {
                             v-if="child.approved_at && !child.revoked_at"
                             type="button"
                             class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white"
-                            @click="revoke(child)"
+                            @click="openConfirmation('revoke', child)"
                         >
                             Zustimmung widerrufen
                         </button>
@@ -126,7 +157,7 @@ const logout = () => {
                             v-else-if="child.rejected_at"
                             type="button"
                             class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
-                            @click="approve(child)"
+                            @click="openConfirmation('approve', child)"
                         >
                             Ablehnung zurücknehmen und zustimmen
                         </button>
@@ -142,5 +173,15 @@ const logout = () => {
                 <Link :href="route('welcome')" class="underline hover:text-primary">Zur Startseite</Link>
             </div>
         </div>
+
+        <ConfirmActionModal
+            :show="Boolean(confirmation)"
+            :title="confirmation?.title"
+            :message="confirmation?.message"
+            :confirm-label="confirmation?.confirmLabel"
+            :danger="confirmation?.danger"
+            @cancel="closeConfirmation"
+            @confirm="confirmAction"
+        />
     </main>
 </template>
