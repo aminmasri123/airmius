@@ -8,6 +8,7 @@ use App\Models\File;
 use App\Models\TeamInvitation;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PlanFeatureService
 {
@@ -49,11 +50,9 @@ class PlanFeatureService
 
     public function ensureAllows(Club $club, string $feature, ?string $message = null): void
     {
-        abort_unless(
-            $this->allows($club, $feature),
-            422,
-            $message ?? $this->featureMessage($feature)
-        );
+        if (! $this->allows($club, $feature)) {
+            $this->fail($message ?? $this->featureMessage($feature));
+        }
     }
 
     public function canCreateTeam(Club $club): bool
@@ -65,11 +64,9 @@ class PlanFeatureService
 
     public function ensureCanCreateTeam(Club $club): void
     {
-        abort_unless(
-            $this->canCreateTeam($club),
-            422,
-            'Das Teamlimit des aktuellen Vereinsplans ist erreicht.'
-        );
+        if (! $this->canCreateTeam($club)) {
+            $this->fail('Das Teamlimit des aktuellen Vereinsplans ist erreicht.');
+        }
     }
 
     public function canStoreFile(Club $club, ?UploadedFile $file = null): bool
@@ -91,11 +88,9 @@ class PlanFeatureService
 
     public function ensureCanStoreFile(Club $club, ?UploadedFile $file = null): void
     {
-        abort_unless(
-            $this->canStoreFile($club, $file),
-            422,
-            'Der Speicher des aktuellen Vereinsplans ist ausgeschöpft.'
-        );
+        if (! $this->canStoreFile($club, $file)) {
+            $this->fail('Der Speicher des aktuellen Vereinsplans ist ausgeschoepft.');
+        }
     }
 
     public function memberInvitationUsageToday(Club $club): int
@@ -143,11 +138,9 @@ class PlanFeatureService
 
         $remaining = $this->memberInvitationRemainingToday($club);
 
-        abort_if(
-            $amount > $remaining,
-            422,
-            "Im Free-Plan koennen Vereine maximal {$limit} Einladungen pro Tag versenden. Heute sind noch {$remaining} moeglich."
-        );
+        if ($amount > $remaining) {
+            $this->fail("Im Free-Plan koennen Vereine maximal {$limit} Einladungen pro Tag versenden. Heute sind noch {$remaining} moeglich.");
+        }
     }
 
     public function manualMemberAdditionUsageToday(Club $club): int
@@ -195,11 +188,9 @@ class PlanFeatureService
 
         $remaining = $this->manualMemberAdditionRemainingToday($club);
 
-        abort_if(
-            $amount > $remaining,
-            422,
-            "Im Free-Plan koennen Vereine maximal {$limit} Mitglieder pro Tag manuell hinzufuegen. Heute sind noch {$remaining} moeglich."
-        );
+        if ($amount > $remaining) {
+            $this->fail("Im Free-Plan koennen Vereine maximal {$limit} Mitglieder pro Tag manuell hinzufuegen. Heute sind noch {$remaining} moeglich.");
+        }
     }
 
     public function capabilities(Club $club): array
@@ -250,5 +241,12 @@ class PlanFeatureService
             'api' => 'API-Zugang ist im Elite-Plan vorgesehen.',
             default => 'Diese Funktion ist im aktuellen Plan nicht enthalten.',
         };
+    }
+
+    private function fail(string $message): never
+    {
+        throw ValidationException::withMessages([
+            'general' => $message,
+        ]);
     }
 }

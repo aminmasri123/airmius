@@ -1655,11 +1655,11 @@ class ClubMembershipController extends Controller
         $plan = $club->subscriptionPlan();
         $limit = $plan?->member_limit;
 
-        abort_if(
-            ! $club->canAddMembers($amount),
-            422,
-            'Das Mitgliederlimit des aktuellen Plans'.($plan ? ' '.$plan->name : '').' ist erreicht'.($limit ? " ({$limit} Mitglieder)." : '.')
-        );
+        if (! $club->canAddMembers($amount)) {
+            throw ValidationException::withMessages([
+                'general' => 'Das Mitgliederlimit des aktuellen Plans'.($plan ? ' '.$plan->name : '').' ist erreicht'.($limit ? " ({$limit} Mitglieder)." : '.'),
+            ]);
+        }
     }
 
     private function readMembershipImportRows(string $path, ?string $extension): array

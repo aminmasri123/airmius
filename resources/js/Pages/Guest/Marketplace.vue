@@ -8,6 +8,8 @@ import SeoHead from '@/Components/Guest/SeoHead.vue'
 const props = defineProps({
     canLogin: Boolean,
     canRegister: Boolean,
+    authUser: { type: Object, default: null },
+    cart: { type: Object, default: () => ({ items_count: 0 }) },
     products: { type: Object, default: () => ({ data: [], links: [], total: 0, per_page: 40 }) },
     featuredProducts: { type: Array, default: () => [] },
     flashDeals: { type: Array, default: () => [] },
@@ -198,7 +200,16 @@ const selectSegment = (segment) => {
                         </div>
                     </div>
                     <div class="hidden items-center gap-2 text-sm font-black sm:flex">
-                        <span class="rounded-full bg-muted px-3 py-1 text-secondary">Teams</span>
+                        <Link
+                            v-if="authUser"
+                            :href="route('auth.commerce.index')"
+                            class="inline-flex items-center gap-2 rounded-full bg-buttonPrimary px-3 py-1 text-buttonTextPrimary"
+                        >
+                            <i class="las la-shopping-cart text-lg"></i>
+                            Warenkorb
+                            <span class="rounded-full bg-white/20 px-2 py-0.5 text-xs">{{ cart.items_count || 0 }}</span>
+                        </Link>
+                        <span v-else class="rounded-full bg-muted px-3 py-1 text-secondary">Gastbestellung moeglich</span>
                         <span class="rounded-full bg-muted px-3 py-1 text-secondary">Vereine</span>
                         <span class="rounded-full bg-muted px-3 py-1 text-secondary">Athleten</span>
                     </div>
@@ -284,7 +295,7 @@ const selectSegment = (segment) => {
                             <p class="text-sm font-black text-primary">Hilfe & Bestellung</p>
                             <p class="mt-1 text-xs leading-5 text-secondary">Gastbestellung, Login-Bestellung und Anbieterangebote sind vorbereitet.</p>
                         </div>
-                        <Link :href="route('login')" class="rounded bg-card p-4 shadow-sm transition hover:bg-muted">
+                        <Link :href="authUser ? route('auth.commerce.index') : route('login')" class="rounded bg-card p-4 shadow-sm transition hover:bg-muted">
                             <p class="text-sm font-black text-primary">Anbieter werden</p>
                             <p class="mt-1 text-xs leading-5 text-secondary">Vereine, Trainer und Shops koennen Angebote einstellen.</p>
                         </Link>
@@ -492,7 +503,7 @@ const selectSegment = (segment) => {
                                 {{ totalProducts }} Treffer, angezeigt werden maximal {{ products.per_page || 40 }} pro Seite.
                             </p>
                         </div>
-                        <Link :href="route('login')" class="rounded bg-buttonPrimary px-4 py-2 text-sm font-black text-buttonTextPrimary hover:bg-buttonPrimaryHover">
+                        <Link :href="authUser ? route('auth.commerce.index') : route('login')" class="rounded bg-buttonPrimary px-4 py-2 text-sm font-black text-buttonTextPrimary hover:bg-buttonPrimaryHover">
                             Angebot einstellen
                         </Link>
                     </div>

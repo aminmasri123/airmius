@@ -1,5 +1,5 @@
 <script setup>
-import { useForm, Link, router } from '@inertiajs/vue3'
+import { useForm, Link, router, usePage } from '@inertiajs/vue3'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
@@ -9,13 +9,17 @@ import { computed } from 'vue'
 const props = defineProps({
     canLogin: Boolean,
     canRegister: Boolean,
+    authUser: { type: Object, default: null },
+    cart: { type: Object, default: () => ({ items_count: 0 }) },
     product: { type: Object, required: true },
     pricingCountries: { type: Array, default: () => [] },
 })
 
+const page = usePage()
+const isAuthenticated = computed(() => Boolean(props.authUser))
 const form = useForm({
-    guest_name: '',
-    guest_email: '',
+    guest_name: props.authUser?.name || '',
+    guest_email: props.authUser?.email || '',
     provider: 'bank_transfer',
     accepted_terms: false,
     shipping_country: props.product.price?.country || 'DE',
@@ -44,7 +48,19 @@ const price = computed(() => props.product.price || {
 })
 
 const checkout = () => {
-    form.post(route('guest.marketplace.products.checkout', props.product.id))
+    form.post(isAuthenticated.value
+        ? route('auth.commerce.products.checkout', props.product.id)
+        : route('guest.marketplace.products.checkout', props.product.id)
+    )
+}
+
+const addToCart = () => {
+    if (!isAuthenticated.value) {
+        router.visit(route('login'))
+        return
+    }
+
+    router.post(route('auth.commerce.cart.items.store', props.product.id), { quantity: 1 }, { preserveScroll: true })
 }
 
 const updateCountry = () => {
@@ -101,6 +117,9 @@ const updateCountry = () => {
                     </article>
 
                     <aside class="surface-card h-fit p-6">
+                        <div v-if="page.props.flash?.success" class="mb-4 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm font-semibold text-success">
+                            {{ page.props.flash.success }}
+                        </div>
                         <p class="text-xs uppercase text-secondary">Preis</p>
                         <p class="mt-2 text-3xl font-bold text-primary">{{ formatMoney(price.gross_cents, price.currency) }}</p>
                         <div class="mt-2 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
@@ -148,7 +167,7 @@ const updateCountry = () => {
                                 </div>
                             </div>
 
-                            <div>
+                            <div v-if="!isAuthenticated">
                                 <label class="text-xs font-semibold uppercase text-secondary">Name</label>
                                 <input v-model="form.guest_name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required autocomplete="name" />
                                 <p v-if="form.errors.guest_name" class="mt-1 text-sm text-red-400">{{ form.errors.guest_name }}</p>
@@ -173,7 +192,7 @@ const updateCountry = () => {
                                 </div>
                             </div>
 
-                            <div>
+                            <div v-if="!isAuthenticated">
                                 <label class="text-xs font-semibold uppercase text-secondary">E-Mail</label>
                                 <input v-model="form.guest_email" type="email" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required autocomplete="email" />
                                 <p v-if="form.errors.guest_email" class="mt-1 text-sm text-red-400">{{ form.errors.guest_email }}</p>
@@ -215,10 +234,23 @@ const updateCountry = () => {
                                 :disabled="form.processing"
                                 :class="{ 'opacity-60': form.processing }"
                             >
-                                Als Gast bestellen
+                                {{ isAuthenticated ? 'Jetzt kaufen' : 'Als Gast bestellen' }}
                             </button>
 
-                            <Link :href="route('login')" class="block text-center text-sm font-semibold text-air-blue">
+                            <button
+                                v-if="isAuthenticated"
+                                type="button"
+                                class="w-full rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted"
+                                @click="addToCart"
+                            >
+                                In den Warenkorb
+                            </button>
+
+                            <Link v-if="isAuthenticated" :href="route('auth.commerce.index')" class="block text-center text-sm font-semibold text-air-blue">
+                                Einkaufswagen ansehen ({{ cart.items_count || 0 }})
+                            </Link>
+
+                            <Link v-else :href="route('login')" class="block text-center text-sm font-semibold text-air-blue">
                                 Mit Konto anmelden
                             </Link>
                         </form>

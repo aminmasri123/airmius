@@ -1,6 +1,6 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
-import { Head, Link, router, useForm } from '@inertiajs/vue3'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
 
 defineOptions({ layout: AppLayout })
@@ -11,6 +11,7 @@ const props = defineProps({
     checkoutAddress: { type: Object, default: () => ({}) },
 })
 
+const page = usePage()
 const form = useForm({
     provider: 'bank_transfer',
     accepted_terms: false,
@@ -54,6 +55,10 @@ const price = computed(() => props.product.price || {
     <Head :title="product.title" />
 
     <div class="space-y-6">
+        <div v-if="page.props.flash?.success" class="rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm font-semibold text-success">
+            {{ page.props.flash.success }}
+        </div>
+
         <section class="surface-card p-5">
             <Link :href="route('auth.commerce.index')" class="text-sm font-semibold text-air-blue">Zurück zum Marketplace</Link>
             <div class="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -142,6 +147,9 @@ const price = computed(() => props.product.price || {
                         <button type="button" class="w-full rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted" @click="addToCart">
                             In den Warenkorb
                         </button>
+                        <Link :href="route('auth.commerce.index')" class="block text-center text-sm font-semibold text-air-blue">
+                            Einkaufswagen ansehen
+                        </Link>
                     </form>
                 </aside>
             </div>

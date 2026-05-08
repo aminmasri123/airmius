@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CommerceCart;
 use App\Models\CommerceOrder;
 use App\Models\MarketplaceProduct;
 use App\Models\OutfitSubscriptionPlan;
@@ -92,6 +93,8 @@ class PublicMarketplaceController extends Controller
         return Inertia::render('Guest/Marketplace', [
             'canLogin' => Route::has('login'),
             'canRegister' => Route::has('register'),
+            'authUser' => $this->authUser($request),
+            'cart' => $this->cartBadge($request),
             'filters' => $filters,
             'products' => $products,
             'featuredProducts' => $featuredProducts,
@@ -145,6 +148,8 @@ class PublicMarketplaceController extends Controller
         return Inertia::render('Guest/MarketplaceProductShow', [
             'canLogin' => Route::has('login'),
             'canRegister' => Route::has('register'),
+            'authUser' => $this->authUser($request),
+            'cart' => $this->cartBadge($request),
             'product' => [
                 'id' => $product->id,
                 'title' => $product->title,
@@ -250,7 +255,9 @@ class PublicMarketplaceController extends Controller
             'currency' => $quote['currency'],
             'price' => $quote,
             'provider_name' => $product->club?->name ?: $product->user?->name,
-            'show_url' => route('guest.marketplace.products.show', $product),
+            'show_url' => $request->user()
+                ? route('auth.commerce.products.show', $product)
+                : route('guest.marketplace.products.show', $product),
             'segment' => $this->productSegment($product),
             'rating' => number_format($rating / 10, 1, ',', '.'),
             'sold_count' => 12 + ($product->id * 7 % 240),
@@ -266,6 +273,39 @@ class PublicMarketplaceController extends Controller
                 'service' => 'las la-hands-helping',
                 default => 'las la-dumbbell',
             },
+        ];
+    }
+
+    private function authUser(Request $request): ?array
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return null;
+        }
+
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+        ];
+    }
+
+    private function cartBadge(Request $request): array
+    {
+        if (! $request->user()) {
+            return [
+                'items_count' => 0,
+            ];
+        }
+
+        $cart = CommerceCart::query()
+            ->with('items:id,commerce_cart_id,quantity')
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        return [
+            'items_count' => (int) ($cart?->items->sum('quantity') ?? 0),
         ];
     }
 

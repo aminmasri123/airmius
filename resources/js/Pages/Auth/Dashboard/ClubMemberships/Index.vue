@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import Modal from '@/Components/Modal.vue'
-import { Head, Link, router, useForm } from '@inertiajs/vue3'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 
 defineOptions({ layout: AppLayout })
@@ -13,6 +13,7 @@ const props = defineProps({
     teamRoles: { type: Array, default: () => ['Coach', 'Captain', 'Player'] },
 })
 
+const page = usePage()
 const selectedClubId = ref(props.clubs[0]?.id || null)
 const activeTab = ref('members')
 const memberSearch = ref('')
@@ -81,6 +82,12 @@ const contributionRuleForm = useForm({
 })
 
 const selectedClub = computed(() => props.clubs.find((club) => club.id === selectedClubId.value) || props.clubs[0] || null)
+const pageError = computed(() => {
+    const errors = page.props.errors || {}
+    const value = errors.general || errors.message || Object.values(errors)[0]
+
+    return Array.isArray(value) ? value[0] : value
+})
 const pendingRequests = computed(() => selectedClub.value?.pending_requests || [])
 const clubRequests = computed(() => selectedClub.value?.club_requests || [])
 const membershipTypes = computed(() => selectedClub.value?.membership_types || [])
@@ -443,6 +450,20 @@ const inviteExternalMember = (member) => {
     <Head title="Mitgliederverwaltung" />
 
     <div class="space-y-6">
+        <div
+            v-if="page.props.flash?.success"
+            class="rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm font-semibold text-success"
+        >
+            {{ page.props.flash.success }}
+        </div>
+
+        <div
+            v-if="pageError"
+            class="rounded-lg border border-error/30 bg-error/10 px-4 py-3 text-sm font-semibold text-error"
+        >
+            {{ pageError }}
+        </div>
+
         <section class="surface-card overflow-hidden">
             <div class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-end">
                 <div>
