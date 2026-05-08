@@ -3,7 +3,7 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vite build && xcopy public\\build C:\\xampp\\htdocs\\airmius\\build /MIR",
+        "build": "vite build",
         "dev": "vite"
     },
     "devDependencies": {
