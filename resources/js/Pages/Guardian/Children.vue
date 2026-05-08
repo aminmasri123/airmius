@@ -32,6 +32,15 @@ const confirmation = computed(() => {
         }
     }
 
+    if (child.revoked_at) {
+        return {
+            title: 'Zustimmung erneut erteilen',
+            message: `Möchtest du die Zustimmung für ${child.name} erneut erteilen? Das Konto wird danach wieder freigegeben.`,
+            confirmLabel: 'Erneut zustimmen',
+            danger: false,
+        }
+    }
+
     return {
         title: 'Ablehnung zurücknehmen',
         message: `Möchtest du die Ablehnung für ${child.name} zurücknehmen und die Zustimmung erteilen? Das Konto wird danach freigegeben.`,
@@ -160,6 +169,14 @@ const logout = () => {
                             @click="openConfirmation('approve', child)"
                         >
                             Ablehnung zurücknehmen und zustimmen
+                        </button>
+                        <button
+                            v-else-if="child.revoked_at"
+                            type="button"
+                            class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
+                            @click="openConfirmation('approve', child)"
+                        >
+                            Zustimmung erneut erteilen
                         </button>
                     </div>
                 </article>
