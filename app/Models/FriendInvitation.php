@@ -12,6 +12,8 @@ class FriendInvitation extends Model
     protected $fillable = [
         'sender_id',
         'recipient_id',
+        'email',
+        'token',
         'status',
         'responded_at',
     ];

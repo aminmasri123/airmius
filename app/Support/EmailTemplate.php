@@ -326,6 +326,17 @@ class EmailTemplate
                     'action_label' => 'Einladung annehmen',
                 ],
             ],
+            'external_friend_invitation' => [
+                'label' => 'Freundschafts-Einladung',
+                'description' => 'Einladung zu Airmius von einer Person aus der Freunde-Seite.',
+                'variables' => ['sender_name'],
+                'template' => [
+                    'subject' => '{{ sender_name }} moechte dich auf Airmius verbinden',
+                    'greeting' => 'Hallo,',
+                    'body' => "{{ sender_name }} hat dich auf Airmius als Freund eingeladen.\nWenn du bereits ein Konto mit dieser E-Mail hast, kannst du dich anmelden und die Einladung annehmen. Falls nicht, kannst du dich mit dieser E-Mail registrieren.",
+                    'action_label' => 'Einladung annehmen',
+                ],
+            ],
         ];
     }
 

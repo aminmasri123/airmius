@@ -102,7 +102,7 @@ const initials = (name) => (name || '?')
         <section class="surface-card p-5">
             <h2 class="text-lg font-semibold text-primary">Freund einladen</h2>
             <p class="mt-1 text-sm text-secondary">
-                Gib die E-Mail-Adresse eines bestehenden AIRMIUS-Nutzers ein.
+                Gib eine E-Mail-Adresse ein. Bestehende Nutzer erhalten eine Anfrage, externe Personen eine Einladung per E-Mail.
             </p>
 
             <form class="mt-4 flex flex-col gap-3 sm:flex-row" @submit.prevent="invite">

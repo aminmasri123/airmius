@@ -211,6 +211,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::post('/friends/invitations', [FriendController::class, 'store'])->name('auth.friends.invitations.store');
     Route::post('/friends/invitations/{invitation}/accept', [FriendController::class, 'accept'])->name('auth.friends.invitations.accept');
     Route::post('/friends/invitations/{invitation}/decline', [FriendController::class, 'decline'])->name('auth.friends.invitations.decline');
+    Route::get('/friends/invitations/token/{token}/accept', [FriendController::class, 'acceptByToken'])->name('auth.friends.invitations.accept-by-token');
     Route::delete('/friends/{user}', [FriendController::class, 'destroy'])->name('auth.friends.destroy');
 
     // FILES
