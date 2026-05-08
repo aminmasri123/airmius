@@ -33,6 +33,14 @@ const revoke = (child) => {
     })
 }
 
+const approve = (child) => {
+    if (!confirm(`Ablehnung für ${child.name} zurücknehmen und Zustimmung erteilen?`)) return
+
+    router.put(route('guardian-access.children.approve', child.id), {}, {
+        preserveScroll: true,
+    })
+}
+
 const logout = () => {
     router.post(route('guardian-access.destroy'))
 }
@@ -113,6 +121,14 @@ const logout = () => {
                             @click="revoke(child)"
                         >
                             Zustimmung widerrufen
+                        </button>
+                        <button
+                            v-else-if="child.rejected_at"
+                            type="button"
+                            class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
+                            @click="approve(child)"
+                        >
+                            Ablehnung zurücknehmen und zustimmen
                         </button>
                     </div>
                 </article>

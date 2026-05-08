@@ -212,6 +212,32 @@ class GuardianAccessController extends Controller
         return back()->with('success', 'Die Zustimmung wurde widerrufen.');
     }
 
+    public function approve(Request $request, User $child): RedirectResponse
+    {
+        $email = $request->session()->get('guardian_access_verified_email');
+        abort_if(! $email, 403);
+        abort_unless(mb_strtolower((string) $child->guardian_email) === $email, 403);
+        abort_unless($child->birth_date && Carbon::parse($child->birth_date)->age < 16, 422);
+
+        $child->forceFill([
+            'guardian_consent_at' => now(),
+            'guardian_consent_rejected_at' => null,
+            'guardian_consent_revoked_at' => null,
+            'guardian_consent_revoked_by_email' => null,
+            'guardian_consent_token' => null,
+        ])->save();
+
+        if ($child->hasRole('minor_pending_consent')) {
+            $child->removeRole('minor_pending_consent');
+        }
+
+        if (! $child->hasRole('minor_player')) {
+            $child->assignRole('minor_player');
+        }
+
+        return back()->with('success', 'Die Ablehnung wurde zurueckgenommen und die Zustimmung erteilt.');
+    }
+
     public function destroy(Request $request): RedirectResponse
     {
         $request->session()->forget([
