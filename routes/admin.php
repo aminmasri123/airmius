@@ -103,6 +103,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/admin/commerce/addons/{addon}', [AdminCommerceController::class, 'updateAddon'])->middleware('can:subscriptions.manage')->name('admin.commerce.addons.update');
     Route::post('/admin/commerce/products', [AdminCommerceController::class, 'storeProduct'])->middleware('can:subscriptions.manage')->name('admin.commerce.products.store');
     Route::put('/admin/commerce/products/{product}', [AdminCommerceController::class, 'updateProduct'])->middleware('can:subscriptions.manage')->name('admin.commerce.products.update');
+    Route::post('/admin/commerce/products/{product}/stock', [AdminCommerceController::class, 'adjustProductStock'])->middleware('can:subscriptions.manage')->name('admin.commerce.products.stock.adjust');
     Route::post('/admin/commerce/marketplace-visuals', [AdminCommerceController::class, 'updateMarketplaceVisuals'])->middleware('can:subscriptions.manage')->name('admin.commerce.marketplace-visuals.update');
     Route::put('/admin/commerce/settings', [AdminCommerceController::class, 'updateCommerceSettings'])->middleware('can:subscriptions.manage')->name('admin.commerce.settings.update');
     Route::post('/admin/commerce/tax-rates', [AdminCommerceController::class, 'storeTaxRate'])->middleware('can:subscriptions.manage')->name('admin.commerce.tax-rates.store');
@@ -113,6 +114,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/admin/commerce/campaigns/{campaign}', [AdminCommerceController::class, 'updateCampaign'])->middleware('can:subscriptions.manage')->name('admin.commerce.campaigns.update');
     Route::post('/admin/commerce/orders/{order}/mark-paid', [AdminCommerceController::class, 'markOrderPaid'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.mark-paid');
     Route::put('/admin/commerce/orders/{order}/issue', [AdminCommerceController::class, 'updateOrderIssue'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.issue');
+    Route::put('/admin/commerce/returns/{returnRequest}', [AdminCommerceController::class, 'updateReturnRequest'])->middleware('can:subscriptions.manage')->name('admin.commerce.returns.update');
     Route::put('/admin/commerce/website-requests/{websiteRequest}', [AdminCommerceController::class, 'updateWebsiteRequest'])->middleware('can:subscriptions.manage')->name('admin.commerce.website-requests.update');
     Route::post('/admin/commerce/payouts/{user}', [AdminCommerceController::class, 'createPayout'])->middleware('can:subscriptions.manage')->name('admin.commerce.payouts.create');
     Route::put('/admin/commerce/payouts/{payout}/paid', [AdminCommerceController::class, 'markPayoutPaid'])->middleware('can:subscriptions.manage')->name('admin.commerce.payouts.paid');

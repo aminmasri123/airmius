@@ -16,6 +16,7 @@ const props = defineProps({
     websiteRequests: { type: Array, default: () => [] },
     payoutProfile: { type: Object, default: null },
     payoutSummary: { type: Object, default: () => ({}) },
+    returnRequests: { type: Array, default: () => [] },
 })
 
 const page = usePage()
@@ -23,6 +24,7 @@ const selectedClubId = ref(props.clubs[0]?.id || '')
 const provider = ref('bank_transfer')
 const interval = ref('monthly')
 const acceptedTerms = ref(false)
+const issueModal = ref({ open: false, order: null, note: '', mode: 'issue' })
 const productForm = useForm({
     club_id: '',
     title: '',
@@ -116,16 +118,30 @@ const storePayoutProfile = () => payoutForm.post(route('auth.commerce.payout-pro
     preserveScroll: true,
 })
 
-const reportIssue = (order) => {
-    const note = window.prompt('Was ist das Problem mit dieser Bestellung?')
+const openIssueModal = (order, mode = 'issue') => {
+    issueModal.value = { open: true, order, note: '', mode }
+}
 
-    if (!note) {
+const closeIssueModal = () => {
+    issueModal.value = { open: false, order: null, note: '', mode: 'issue' }
+}
+
+const submitOrderRequest = () => {
+    if (!issueModal.value.order || !issueModal.value.note.trim()) {
         return
     }
 
-    router.post(route('auth.commerce.orders.issue', order.id), {
-        issue_note: note,
-    }, { preserveScroll: true })
+    const url = issueModal.value.mode === 'return'
+        ? route('auth.commerce.orders.returns.store', issueModal.value.order.id)
+        : route('auth.commerce.orders.issue', issueModal.value.order.id)
+
+    router.post(url, {
+        reason: issueModal.value.note,
+        issue_note: issueModal.value.note,
+    }, {
+        preserveScroll: true,
+        onSuccess: closeIssueModal,
+    })
 }
 </script>
 
@@ -400,8 +416,11 @@ const reportIssue = (order) => {
                             <td class="px-5 py-3 text-secondary">{{ order.status }}</td>
                             <td class="px-5 py-3 text-secondary">{{ formatMoney(order.amount_cents, order.currency) }}</td>
                             <td class="px-5 py-3 text-right">
-                                <button v-if="order.status === 'completed'" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="reportIssue(order)">
+                                <button v-if="order.status === 'completed'" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="openIssueModal(order, 'issue')">
                                     Problem melden
+                                </button>
+                                <button v-if="order.status === 'completed'" class="ml-2 rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="openIssueModal(order, 'return')">
+                                    Ruecksendung
                                 </button>
                                 <span v-else-if="order.issue_status && order.issue_status !== 'none'" class="text-xs text-secondary">{{ order.issue_status }}</span>
                             </td>
@@ -411,5 +430,39 @@ const reportIssue = (order) => {
                 <p v-if="!activeOrders.length" class="px-5 py-6 text-sm text-secondary">Noch keine Bestellungen.</p>
             </div>
         </section>
+
+        <section class="surface-card overflow-hidden">
+            <div class="border-b border-border p-5">
+                <h2 class="text-lg font-semibold text-primary">Meine Ruecksendungen</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-left text-sm">
+                    <tbody class="divide-y divide-border">
+                        <tr v-for="request in returnRequests" :key="request.id">
+                            <td class="px-5 py-3 font-semibold text-primary">{{ request.item?.title || request.order?.orderable?.title || 'Ruecksendung' }}</td>
+                            <td class="px-5 py-3 text-secondary">{{ request.status }}</td>
+                            <td class="px-5 py-3 text-secondary">{{ request.reason }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p v-if="!returnRequests.length" class="px-5 py-6 text-sm text-secondary">Noch keine Ruecksendungen.</p>
+            </div>
+        </section>
+
+        <div v-if="issueModal.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+            <div class="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-2xl">
+                <h2 class="text-lg font-semibold text-primary">
+                    {{ issueModal.mode === 'return' ? 'Ruecksendung anfragen' : 'Problem melden' }}
+                </h2>
+                <p class="mt-2 text-sm text-secondary">
+                    Beschreibe kurz, was geprueft werden soll.
+                </p>
+                <textarea v-model="issueModal.note" rows="5" class="mt-4 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Grund eingeben"></textarea>
+                <div class="mt-5 flex justify-end gap-3">
+                    <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="closeIssueModal">Abbrechen</button>
+                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="submitOrderRequest">Senden</button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>

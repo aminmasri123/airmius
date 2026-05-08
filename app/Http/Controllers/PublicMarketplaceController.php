@@ -203,6 +203,7 @@ class PublicMarketplaceController extends Controller
                 'status' => 'pending',
                 'payload' => ['pricing' => $quote, 'shipping_address' => $shippingAddress],
             ]);
+            $this->createOrderItem($order, $product, $quote);
 
             return app(CommerceCheckoutController::class)->startPublicCheckout($order);
         }
@@ -227,6 +228,7 @@ class PublicMarketplaceController extends Controller
             'status' => 'pending',
             'payload' => ['pricing' => $quote, 'shipping_address' => $shippingAddress],
         ]);
+        $this->createOrderItem($order, $product, $quote);
 
         return app(CommerceCheckoutController::class)->startPublicCheckout($order);
     }
@@ -448,6 +450,26 @@ class PublicMarketplaceController extends Controller
             'tax_cents' => (int) ($quote['tax_cents'] ?? 0),
             'amount_cents' => (int) ($quote['gross_cents'] ?? 0),
         ];
+    }
+
+    private function createOrderItem(CommerceOrder $order, MarketplaceProduct $product, array $quote): void
+    {
+        $order->items()->create([
+            'orderable_type' => $product::class,
+            'orderable_id' => $product->id,
+            'title' => $product->title,
+            'sku' => $product->sku,
+            'quantity' => 1,
+            'unit_gross_cents' => (int) ($quote['item_gross_cents'] ?? $product->price_cents),
+            'shipping_cents' => (int) ($quote['shipping_gross_cents'] ?? 0),
+            'net_cents' => (int) ($quote['net_cents'] ?? 0),
+            'tax_cents' => (int) ($quote['tax_cents'] ?? 0),
+            'total_cents' => (int) ($quote['gross_cents'] ?? $order->amount_cents),
+            'currency' => $quote['currency'] ?? $order->currency,
+            'tax_rate_percent' => $quote['tax_rate'] ?? null,
+            'tax_class' => $product->tax_class ?: 'standard',
+            'is_shippable' => (bool) $product->is_shippable,
+        ]);
     }
 
     private function marketplaceVisuals(): array

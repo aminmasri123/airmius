@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\AdCampaign;
 use App\Models\CommerceOrder;
+use App\Models\CommerceReturnRequest;
+use App\Models\CommerceStockMovement;
 use App\Models\CommerceShippingRate;
 use App\Models\CommerceTaxRate;
 use App\Models\MarketplacePayout;
@@ -58,7 +60,12 @@ class AdminCommerceController extends Controller
                 'active' => AdCampaign::query()->where('status', 'active')->count(),
             ],
             'orders' => CommerceOrder::query()
-                ->with(['user:id,name,email', 'club:id,name', 'orderable'])
+                ->with(['user:id,name,email', 'club:id,name', 'orderable', 'items', 'returnRequests'])
+                ->latest('id')
+                ->limit(50)
+                ->get(),
+            'returnRequests' => CommerceReturnRequest::query()
+                ->with(['order.user:id,name,email', 'order.orderable', 'item.orderable'])
                 ->latest('id')
                 ->limit(50)
                 ->get(),
@@ -133,6 +140,32 @@ class AdminCommerceController extends Controller
         return back()->with('success', 'Marketplace-Produkt aktualisiert.');
     }
 
+    public function adjustProductStock(Request $request, MarketplaceProduct $product)
+    {
+        $data = $request->validate([
+            'quantity_delta' => ['required', 'integer', 'not_in:0'],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        abort_unless($product->manages_stock, 422, 'Dieses Produkt verwaltet keinen Lagerbestand.');
+
+        DB::transaction(function () use ($product, $data) {
+            $product = MarketplaceProduct::query()->lockForUpdate()->findOrFail($product->id);
+            $product->stock_quantity = max(0, (int) $product->stock_quantity + (int) $data['quantity_delta']);
+            $product->save();
+
+            CommerceStockMovement::create([
+                'marketplace_product_id' => $product->id,
+                'type' => 'manual_adjustment',
+                'quantity_delta' => (int) $data['quantity_delta'],
+                'stock_after' => $product->stock_quantity,
+                'note' => $data['note'] ?? null,
+            ]);
+        });
+
+        return back()->with('success', 'Lagerbestand wurde angepasst.');
+    }
+
     public function updateOrderIssue(Request $request, CommerceOrder $order)
     {
         $data = $request->validate([
@@ -148,6 +181,66 @@ class AdminCommerceController extends Controller
         ]);
 
         return back()->with('success', 'Bestellproblem wurde aktualisiert.');
+    }
+
+    public function updateReturnRequest(Request $request, CommerceReturnRequest $returnRequest)
+    {
+        $data = $request->validate([
+            'status' => ['required', Rule::in(['requested', 'approved', 'rejected', 'received', 'refunded', 'cancelled'])],
+            'resolution_note' => ['nullable', 'string', 'max:2000'],
+            'approved_amount_cents' => ['nullable', 'integer', 'min:0'],
+            'restock' => ['boolean'],
+        ]);
+
+        DB::transaction(function () use ($returnRequest, $data) {
+            $updates = [
+                'status' => $data['status'],
+                'resolution_note' => $data['resolution_note'] ?? $returnRequest->resolution_note,
+                'approved_amount_cents' => $data['approved_amount_cents'] ?? $returnRequest->approved_amount_cents,
+            ];
+
+            $timestampColumn = match ($data['status']) {
+                'approved' => 'approved_at',
+                'rejected' => 'rejected_at',
+                'received' => 'received_at',
+                'refunded' => 'refunded_at',
+                default => null,
+            };
+
+            if ($timestampColumn) {
+                $updates[$timestampColumn] = now();
+            }
+
+            $returnRequest->update($updates);
+
+            if (($data['status'] === 'refunded') && $returnRequest->order) {
+                $returnRequest->order->update([
+                    'issue_status' => 'refunded',
+                    'status' => 'refunded',
+                ]);
+            }
+
+            if (($data['restock'] ?? false) && $returnRequest->item?->orderable instanceof MarketplaceProduct && $returnRequest->item->orderable->manages_stock) {
+                $product = MarketplaceProduct::query()->lockForUpdate()->find($returnRequest->item->orderable_id);
+
+                if ($product) {
+                    $product->increment('stock_quantity', (int) $returnRequest->quantity);
+                    $product->refresh();
+
+                    CommerceStockMovement::create([
+                        'marketplace_product_id' => $product->id,
+                        'commerce_order_id' => $returnRequest->commerce_order_id,
+                        'commerce_return_request_id' => $returnRequest->id,
+                        'type' => 'return_restock',
+                        'quantity_delta' => (int) $returnRequest->quantity,
+                        'stock_after' => $product->stock_quantity,
+                        'note' => 'Ruecksendung #'.$returnRequest->id,
+                    ]);
+                }
+            }
+        });
+
+        return back()->with('success', 'Ruecksendung wurde aktualisiert.');
     }
 
     public function storeCampaign(Request $request)

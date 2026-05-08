@@ -84,4 +84,14 @@ class CommerceOrder extends Model
     {
         return $this->belongsTo(MarketplacePayout::class, 'payout_id');
     }
+
+    public function items()
+    {
+        return $this->hasMany(CommerceOrderItem::class);
+    }
+
+    public function returnRequests()
+    {
+        return $this->hasMany(CommerceReturnRequest::class);
+    }
 }

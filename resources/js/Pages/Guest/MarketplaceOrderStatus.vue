@@ -1,5 +1,5 @@
 <script setup>
-import { Head, Link } from '@inertiajs/vue3'
+import { Head, Link, useForm } from '@inertiajs/vue3'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
@@ -15,6 +15,18 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
     style: 'currency',
     currency: currency || 'EUR',
 }).format(Number(cents || 0) / 100)
+
+const returnForm = useForm({
+    reason: '',
+})
+
+const submitReturn = () => {
+    if (!props.order.return_url) {
+        return
+    }
+
+    returnForm.post(props.order.return_url, { preserveScroll: true })
+}
 </script>
 
 <template>
@@ -46,6 +58,14 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                     </p>
                     <p class="mt-1 text-secondary">Status: {{ order.status }}</p>
                 </div>
+
+                <form v-if="status === 'success' && order.return_url" class="mt-6 rounded-lg border border-border bg-bg p-4 text-left" @submit.prevent="submitReturn">
+                    <h2 class="font-semibold text-primary">Ruecksendung anfragen</h2>
+                    <textarea v-model="returnForm.reason" rows="4" class="mt-3 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Grund fuer die Ruecksendung"></textarea>
+                    <button class="mt-3 rounded-lg border border-warning/40 px-4 py-2 text-sm font-semibold text-warning" :disabled="returnForm.processing">
+                        Ruecksendung senden
+                    </button>
+                </form>
 
                 <Link :href="route('guest.marketplace')" class="mt-6 inline-flex rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover">
                     Zurueck zum Marketplace

@@ -73,6 +73,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::post('/commerce/addons/{addon}', [CommerceCheckoutController::class, 'storeAddon'])->name('auth.commerce.addons.checkout');
     Route::post('/commerce/products/{product}', [CommerceCheckoutController::class, 'storeProduct'])->name('auth.commerce.products.checkout');
     Route::post('/commerce/orders/{order}/issue', [CommerceCheckoutController::class, 'reportOrderIssue'])->name('auth.commerce.orders.issue');
+    Route::post('/commerce/orders/{order}/returns', [CommerceCheckoutController::class, 'requestReturn'])->name('auth.commerce.orders.returns.store');
     Route::post('/commerce/products', [CommerceCheckoutController::class, 'storeOwnProduct'])->name('auth.commerce.products.store');
     Route::post('/commerce/campaigns', [CommerceCheckoutController::class, 'storeOwnCampaign'])->name('auth.commerce.campaigns.store');
     Route::post('/commerce/website-requests', [CommerceCheckoutController::class, 'storeWebsiteRequest'])->name('auth.commerce.website-requests.store');
@@ -231,6 +232,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     // RIDES
     Route::get('/rides', [RideController::class, 'index'])->name('auth.rides.index');
     Route::post('/rides', [RideController::class, 'store'])->name('auth.rides.store');
+    Route::put('/rides/{ride}', [RideController::class, 'update'])->name('auth.rides.update');
     Route::post('/rides/{ride}/join', [RideController::class, 'join'])->name('auth.rides.join');
     Route::post('/rides/{ride}/leave', [RideController::class, 'leave'])->name('auth.rides.leave');
     Route::delete('/rides/{ride}', [RideController::class, 'destroy'])->name('auth.rides.destroy');

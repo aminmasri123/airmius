@@ -7,6 +7,7 @@ use App\Models\Club;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\RideService;
+use App\Support\AppNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -78,6 +79,7 @@ class RideController extends Controller
                     'is_driver' => $isDriver,
                     'is_joined' => $isJoined,
                     'can_join' => $user->can('join', $ride),
+                    'can_update' => $user->can('update', $ride),
                     'can_delete' => $user->can('delete', $ride),
                 ];
             });
@@ -107,6 +109,100 @@ class RideController extends Controller
     {
         $this->authorize('create', Ride::class);
 
+        $data = $this->validatedRideData($request);
+
+        $ride = $this->service->create($request->user(), $data);
+        $this->service->join($ride, $request->user());
+
+        return back()->with('success', 'Fahrgemeinschaft erstellt.');
+    }
+
+    public function update(Request $request, Ride $ride)
+    {
+        $this->authorize('update', $ride);
+
+        $data = $this->validatedRideData($request);
+        $participantsCount = $ride->users()->count();
+
+        abort_if((int) $data['seats'] < $participantsCount, 422, 'Die Plaetze duerfen nicht unter der aktuellen Mitfahrerzahl liegen.');
+
+        $ride->update([
+            ...$data,
+            'club_id' => $data['visibility'] === 'club' ? ($data['club_id'] ?? null) : ($data['visibility'] === 'team' ? ($data['club_id'] ?? null) : null),
+            'team_id' => $data['visibility'] === 'team' ? ($data['team_id'] ?? null) : null,
+        ]);
+
+        $this->notifyParticipants($ride->fresh(['users', 'driver']), 'ride.updated', [
+            'title' => 'Fahrgemeinschaft wurde bearbeitet',
+            'message' => $ride->from.' -> '.$ride->to.' wurde aktualisiert.',
+            'ride_id' => $ride->id,
+            'url' => route('auth.rides.index'),
+        ], excludeUserId: $request->user()->id);
+
+        return back()->with('success', 'Fahrgemeinschaft aktualisiert.');
+    }
+
+    public function join(Ride $ride)
+    {
+        $this->authorize('join', $ride);
+
+        $alreadyJoined = $ride->users()->where('users.id', auth()->id())->exists();
+        $this->service->join($ride, auth()->user());
+
+        if (! $alreadyJoined && (int) $ride->driver_id !== (int) auth()->id()) {
+            AppNotification::send($ride->driver_id, 'ride.joined', [
+                'title' => 'Neue Mitfahrt',
+                'message' => auth()->user()->name.' ist deiner Fahrgemeinschaft '.$ride->from.' -> '.$ride->to.' beigetreten.',
+                'ride_id' => $ride->id,
+                'url' => route('auth.rides.index'),
+            ]);
+        }
+
+        return back()->with('success', 'Du bist der Fahrgemeinschaft beigetreten.');
+    }
+
+    public function leave(Ride $ride)
+    {
+        $user = auth()->user();
+        abort_if((int) $ride->driver_id === (int) $user->id, 422, 'Fahrer koennen ihre eigene Fahrt nicht verlassen. Bitte loesche die Fahrt stattdessen.');
+
+        $wasJoined = $ride->users()->where('users.id', $user->id)->exists();
+        $ride->users()->detach($user->id);
+
+        if ($wasJoined) {
+            AppNotification::send($ride->driver_id, 'ride.left', [
+                'title' => 'Mitfahrt verlassen',
+                'message' => $user->name.' hat deine Fahrgemeinschaft '.$ride->from.' -> '.$ride->to.' verlassen.',
+                'ride_id' => $ride->id,
+                'url' => route('auth.rides.index'),
+            ]);
+        }
+
+        return back()->with('success', 'Du hast die Fahrgemeinschaft verlassen.');
+    }
+
+    public function destroy(Ride $ride)
+    {
+        $this->authorize('delete', $ride);
+        $participants = $ride->users()->where('users.id', '!=', $ride->driver_id)->get();
+        $message = $ride->from.' -> '.$ride->to.' wurde geloescht.';
+
+        foreach ($participants as $participant) {
+            AppNotification::send($participant, 'ride.deleted', [
+                'title' => 'Fahrgemeinschaft geloescht',
+                'message' => $message,
+                'ride_id' => $ride->id,
+                'url' => route('auth.rides.index'),
+            ]);
+        }
+
+        $ride->delete();
+
+        return back()->with('success', 'Fahrgemeinschaft geloescht.');
+    }
+
+    private function validatedRideData(Request $request): array
+    {
         $data = $request->validate([
             'visibility' => ['required', Rule::in(Ride::VISIBILITIES)],
             'club_id' => ['nullable', 'integer', Rule::exists('clubs', 'id')],
@@ -124,6 +220,7 @@ class RideController extends Controller
             'seats' => ['required', 'integer', 'min:1', 'max:20'],
             'contact_details' => ['nullable', 'string', 'max:1000'],
         ]);
+
         $request->validate([
             'club_id' => [$data['visibility'] === 'club' ? 'required' : 'nullable'],
             'team_id' => [$data['visibility'] === 'team' ? 'required' : 'nullable'],
@@ -144,35 +241,11 @@ class RideController extends Controller
             $data['club_id'] = Team::query()->whereKey($data['team_id'])->value('club_id');
         }
 
-        $ride = $this->service->create($request->user(), $data);
-        $this->service->join($ride, $request->user());
+        if (isset($data['pickup_country'])) {
+            $data['pickup_country'] = strtoupper((string) $data['pickup_country']);
+        }
 
-        return back()->with('success', 'Fahrgemeinschaft erstellt.');
-    }
-
-    public function join(Ride $ride)
-    {
-        $this->authorize('join', $ride);
-
-        $this->service->join($ride, auth()->user());
-
-        return back()->with('success', 'Du bist der Fahrgemeinschaft beigetreten.');
-    }
-
-    public function leave(Ride $ride)
-    {
-        $ride->users()->detach(auth()->id());
-
-        return back()->with('success', 'Du hast die Fahrgemeinschaft verlassen.');
-    }
-
-    public function destroy(Ride $ride)
-    {
-        $this->authorize('delete', $ride);
-
-        $ride->delete();
-
-        return back()->with('success', 'Fahrgemeinschaft geloescht.');
+        return $data;
     }
 
     private function pickupPublicLabel(Ride $ride): ?string
@@ -242,5 +315,16 @@ class RideController extends Controller
         ]);
 
         return $parts ? implode(', ', $parts) : null;
+    }
+
+    private function notifyParticipants(Ride $ride, string $type, array $data, ?int $excludeUserId = null): void
+    {
+        foreach ($ride->users as $participant) {
+            if ((int) $participant->id === (int) $excludeUserId) {
+                continue;
+            }
+
+            AppNotification::send($participant, $type, $data);
+        }
     }
 }

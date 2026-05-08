@@ -6,6 +6,9 @@ use App\Models\AdCampaign;
 use App\Models\AdCampaignStat;
 use App\Models\Club;
 use App\Models\CommerceOrder;
+use App\Models\CommerceOrderItem;
+use App\Models\CommerceReturnRequest;
+use App\Models\CommerceStockMovement;
 use App\Models\MarketplaceProduct;
 use App\Models\OutfitSubscriptionPlan;
 use App\Models\PayoutProfile;
@@ -20,6 +23,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -63,12 +67,19 @@ class CommerceCheckoutController extends Controller
                     'sponsor' => $plan->sponsor,
                 ]),
             'orders' => CommerceOrder::query()
-                ->with(['orderable', 'club:id,name'])
+                ->with(['orderable', 'club:id,name', 'returnRequests', 'items'])
                 ->where('user_id', $request->user()->id)
                 ->latest('id')
                 ->limit(30)
                 ->get(),
             'myProducts' => MarketplaceProduct::query()
+                ->where('user_id', $request->user()->id)
+                ->withCount('stockMovements')
+                ->latest('id')
+                ->limit(20)
+                ->get(),
+            'returnRequests' => CommerceReturnRequest::query()
+                ->with(['order.orderable', 'item'])
                 ->where('user_id', $request->user()->id)
                 ->latest('id')
                 ->limit(20)
@@ -143,6 +154,7 @@ class CommerceCheckoutController extends Controller
             'currency' => 'EUR',
             'status' => 'pending',
         ]);
+        $this->createOrderItem($order, $product, $quote);
 
         return $this->startCheckout($order);
     }
@@ -282,6 +294,35 @@ class CommerceCheckoutController extends Controller
         return back()->with('success', 'Problem wurde gemeldet. Airmius prueft den Fall.');
     }
 
+    public function requestReturn(Request $request, CommerceOrder $order)
+    {
+        abort_unless($order->user_id === $request->user()->id, 403);
+        abort_unless($order->status === 'completed', 422, 'Ruecksendungen sind nur fuer abgeschlossene Bestellungen moeglich.');
+
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:2000'],
+            'commerce_order_item_id' => ['nullable', 'integer', Rule::exists('commerce_order_items', 'id')],
+            'quantity' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $item = $order->items()->when($data['commerce_order_item_id'] ?? null, fn ($query, $id) => $query->whereKey($id))->first();
+        abort_if($item && ! $item->is_shippable, 422, 'Dieses Angebot ist nicht ruecksendepflichtig.');
+
+        CommerceReturnRequest::create([
+            'commerce_order_id' => $order->id,
+            'commerce_order_item_id' => $item?->id,
+            'user_id' => $request->user()->id,
+            'status' => 'requested',
+            'reason' => $data['reason'],
+            'quantity' => (int) ($data['quantity'] ?? 1),
+            'requested_amount_cents' => $item?->total_cents ?: $order->amount_cents,
+            'currency' => $order->currency,
+            'requested_at' => now(),
+        ]);
+
+        return back()->with('success', 'Ruecksendung wurde angefragt.');
+    }
+
     public function storeOwnCampaign(Request $request)
     {
         $data = $request->validate([
@@ -353,7 +394,7 @@ class CommerceCheckoutController extends Controller
         abort_unless($order->user_id === $request->user()->id, 403);
 
         return inertia('Auth/Dashboard/Commerce/BankTransfer', [
-            'order' => $this->orderResource($order->load('orderable')),
+            'order' => $this->orderResource($order->load(['orderable', 'items', 'returnRequests'])),
             'bank' => $this->bankTransferSettings(),
         ]);
     }
@@ -372,7 +413,7 @@ class CommerceCheckoutController extends Controller
 
         return inertia('Guest/MarketplaceOrderStatus', [
             'status' => 'success',
-            'order' => $this->orderResource($order->refresh()->load('orderable')),
+            'order' => $this->orderResource($order->refresh()->load(['orderable', 'items', 'returnRequests'])),
         ]);
     }
 
@@ -384,7 +425,7 @@ class CommerceCheckoutController extends Controller
 
         return inertia('Guest/MarketplaceOrderStatus', [
             'status' => 'cancelled',
-            'order' => $this->orderResource($order->load('orderable')),
+            'order' => $this->orderResource($order->load(['orderable', 'items', 'returnRequests'])),
         ]);
     }
 
@@ -393,9 +434,34 @@ class CommerceCheckoutController extends Controller
         $this->authorizeGuestOrder($order, $token);
 
         return inertia('Guest/MarketplaceBankTransfer', [
-            'order' => $this->orderResource($order->load('orderable')),
+            'order' => $this->orderResource($order->load(['orderable', 'items', 'returnRequests'])),
             'bank' => $this->bankTransferSettings(),
         ]);
+    }
+
+    public function guestReturn(Request $request, CommerceOrder $order, string $token)
+    {
+        $this->authorizeGuestOrder($order, $token);
+        abort_unless($order->status === 'completed', 422, 'Ruecksendungen sind nur fuer abgeschlossene Bestellungen moeglich.');
+
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'max:2000'],
+        ]);
+        $item = $order->items()->first();
+
+        CommerceReturnRequest::create([
+            'commerce_order_id' => $order->id,
+            'commerce_order_item_id' => $item?->id,
+            'guest_email' => $order->guest_email,
+            'status' => 'requested',
+            'reason' => $data['reason'],
+            'quantity' => 1,
+            'requested_amount_cents' => $item?->total_cents ?: $order->amount_cents,
+            'currency' => $order->currency,
+            'requested_at' => now(),
+        ]);
+
+        return back()->with('success', 'Ruecksendung wurde angefragt.');
     }
 
     public function activeAd()
@@ -521,7 +587,25 @@ class CommerceCheckoutController extends Controller
         }
 
         if ($order->type === 'marketplace_product' && $order->orderable instanceof MarketplaceProduct && $order->orderable->manages_stock) {
-            $order->orderable->decrement('stock_quantity');
+            DB::transaction(function () use ($order) {
+                $product = MarketplaceProduct::query()->lockForUpdate()->find($order->orderable_id);
+
+                if (! $product || ! $product->manages_stock) {
+                    return;
+                }
+
+                $product->decrement('stock_quantity');
+                $product->refresh();
+
+                CommerceStockMovement::create([
+                    'marketplace_product_id' => $product->id,
+                    'commerce_order_id' => $order->id,
+                    'type' => 'sale',
+                    'quantity_delta' => -1,
+                    'stock_after' => $product->stock_quantity,
+                    'note' => 'Bestellung #'.$order->id.' bezahlt',
+                ]);
+            });
         }
 
         $order->update([
@@ -812,9 +896,43 @@ class CommerceCheckoutController extends Controller
             'title' => $order->orderable?->name ?? $order->orderable?->title ?? 'Airmius Bestellung',
             'amount' => number_format($order->amount_cents / 100, 2, ',', '.').' '.$order->currency,
             'pricing' => $pricing,
+            'items' => $order->items->map(fn (CommerceOrderItem $item) => [
+                'id' => $item->id,
+                'title' => $item->title,
+                'sku' => $item->sku,
+                'quantity' => $item->quantity,
+                'is_shippable' => $item->is_shippable,
+                'total_cents' => $item->total_cents,
+            ])->values(),
+            'return_requests' => $order->returnRequests->map(fn (CommerceReturnRequest $return) => [
+                'id' => $return->id,
+                'status' => $return->status,
+                'reason' => $return->reason,
+            ])->values(),
+            'return_url' => $order->access_token ? route('commerce-checkout.guest.returns.store', [$order, $order->access_token]) : null,
             'payment_reference' => $order->payment_reference,
             'due_at' => $order->due_at?->toDateString(),
         ];
+    }
+
+    private function createOrderItem(CommerceOrder $order, MarketplaceProduct $product, array $quote): void
+    {
+        $order->items()->create([
+            'orderable_type' => $product::class,
+            'orderable_id' => $product->id,
+            'title' => $product->title,
+            'sku' => $product->sku,
+            'quantity' => 1,
+            'unit_gross_cents' => (int) ($quote['item_gross_cents'] ?? $product->price_cents),
+            'shipping_cents' => (int) ($quote['shipping_gross_cents'] ?? 0),
+            'net_cents' => (int) ($quote['net_cents'] ?? 0),
+            'tax_cents' => (int) ($quote['tax_cents'] ?? 0),
+            'total_cents' => (int) ($quote['gross_cents'] ?? $order->amount_cents),
+            'currency' => $quote['currency'] ?? $order->currency,
+            'tax_rate_percent' => $quote['tax_rate'] ?? null,
+            'tax_class' => $product->tax_class ?: 'standard',
+            'is_shippable' => (bool) $product->is_shippable,
+        ]);
     }
 
     private function shippingAddressForAuthenticatedUser(Request $request, array $data): array

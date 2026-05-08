@@ -17,6 +17,7 @@ const showCreateModal = ref(false)
 const showDeleteModal = ref(false)
 const deleteTarget = ref(null)
 const deleteConfirmation = ref('')
+const editTarget = ref(null)
 
 const form = useForm({
     visibility: 'friends',
@@ -45,6 +46,16 @@ const formatDateTime = (value) => {
     }).format(new Date(value))
 }
 
+const toDateTimeLocal = (value) => {
+    if (!value) return ''
+
+    const date = new Date(value)
+    const offset = date.getTimezoneOffset()
+    const local = new Date(date.getTime() - offset * 60 * 1000)
+
+    return local.toISOString().slice(0, 16)
+}
+
 const resetForm = () => {
     form.reset()
     form.visibility = 'friends'
@@ -53,22 +64,53 @@ const resetForm = () => {
 }
 
 const openCreateModal = () => {
+    editTarget.value = null
+    resetForm()
+    showCreateModal.value = true
+}
+
+const openEditModal = (ride) => {
+    editTarget.value = ride
+    form.visibility = ride.visibility || 'friends'
+    form.club_id = ride.club_id || ''
+    form.team_id = ride.team_id || ''
+    form.from = ride.from || ''
+    form.to = ride.to || ''
+    form.pickup_name = ride.pickup_name || ''
+    form.pickup_street = ride.pickup_street || ''
+    form.pickup_house_number = ride.pickup_house_number || ''
+    form.pickup_postal_code = ride.pickup_postal_code || ''
+    form.pickup_city = ride.pickup_city || ''
+    form.pickup_country = ride.pickup_country || 'DE'
+    form.pickup_note = ride.pickup_note || ''
+    form.departure_time = toDateTimeLocal(ride.departure_time)
+    form.seats = ride.seats || 1
+    form.contact_details = ride.contact_details || ''
+    form.clearErrors()
     showCreateModal.value = true
 }
 
 const closeCreateModal = () => {
     showCreateModal.value = false
+    editTarget.value = null
     form.clearErrors()
 }
 
 const submit = () => {
-    form.post(route('auth.rides.store'), {
+    const options = {
         preserveScroll: true,
         onSuccess: () => {
             resetForm()
             closeCreateModal()
         },
-    })
+    }
+
+    if (editTarget.value) {
+        form.put(route('auth.rides.update', editTarget.value.id), options)
+        return
+    }
+
+    form.post(route('auth.rides.store'), options)
 }
 
 const visibilityLabel = (value) => props.visibilities.find((visibility) => visibility.value === value)?.label || value
@@ -129,7 +171,7 @@ const confirmDeleteRide = () => {
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Fahrgemeinschaft</p>
-                            <h2 class="mt-1 text-lg font-semibold text-primary">Neue Fahrt anbieten</h2>
+                            <h2 class="mt-1 text-lg font-semibold text-primary">{{ editTarget ? 'Fahrt bearbeiten' : 'Neue Fahrt anbieten' }}</h2>
                             <p class="mt-1 text-sm text-secondary">
                                 Erstelle eine datenschutzfreundliche Fahrt mit oeffentlichem Treffpunkt statt privater Adresse.
                             </p>
@@ -273,7 +315,7 @@ const confirmDeleteRide = () => {
 
                 <div class="md:col-span-2">
                     <button class="w-full rounded-lg bg-buttonPrimary px-4 py-3 font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover disabled:opacity-60" :disabled="form.processing">
-                        {{ form.processing ? 'Speichern...' : 'Fahrt anbieten' }}
+                        {{ form.processing ? 'Speichern...' : (editTarget ? 'Aenderungen speichern' : 'Fahrt anbieten') }}
                     </button>
                 </div>
                 </div>
@@ -375,6 +417,13 @@ const confirmDeleteRide = () => {
                 </div>
 
                 <div class="mt-4 flex flex-wrap gap-2">
+                    <button
+                        v-if="ride.can_update"
+                        class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
+                        @click="openEditModal(ride)"
+                    >
+                        Bearbeiten
+                    </button>
                     <button
                         v-if="!ride.is_joined && ride.can_join"
                         class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"

@@ -50,4 +50,9 @@ class MarketplaceProduct extends Model
     {
         return $this->belongsTo(Club::class);
     }
+
+    public function stockMovements()
+    {
+        return $this->hasMany(CommerceStockMovement::class);
+    }
 }

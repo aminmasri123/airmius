@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BlogPostController;
+use App\Http\Controllers\CommerceCheckoutController;
 use App\Http\Controllers\KontaktController;
 use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\OrganizationJobController;
@@ -115,6 +116,7 @@ Route::get('/vereine', [PublicClubController::class, 'index'])->name('guest.vere
 Route::get('/marketplace', [PublicMarketplaceController::class, 'index'])->name('guest.marketplace');
 Route::get('/marketplace/products/{product}', [PublicMarketplaceController::class, 'show'])->name('guest.marketplace.products.show');
 Route::post('/marketplace/products/{product}/checkout', [PublicMarketplaceController::class, 'checkout'])->name('guest.marketplace.products.checkout');
+Route::post('/marketplace/orders/{order}/{token}/returns', [CommerceCheckoutController::class, 'guestReturn'])->name('commerce-checkout.guest.returns.store');
 
 Route::get('/blog', [BlogPostController::class, 'publicIndex'])->name('guest.blog.index');
 Route::get('/blog/{blogPost:slug}', [BlogPostController::class, 'publicShow'])->name('guest.blog.show');

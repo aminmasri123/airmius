@@ -20,6 +20,7 @@ const props = defineProps({
     taxRates: { type: Array, default: () => [] },
     shippingRates: { type: Array, default: () => [] },
     commerceSettings: { type: Object, default: () => ({}) },
+    returnRequests: { type: Array, default: () => [] },
 })
 
 const page = usePage()
@@ -224,6 +225,22 @@ const updateProductStatus = (product, status) => {
         status,
         rejection_reason: rejectionReason || null,
         commission_percent: product.commission_percent,
+    }, { preserveScroll: true })
+}
+
+const adjustProductStock = (product, quantityDelta) => {
+    router.post(route('admin.commerce.products.stock.adjust', product.id), {
+        quantity_delta: quantityDelta,
+        note: 'Admin-Anpassung',
+    }, { preserveScroll: true })
+}
+
+const updateReturnRequest = (request, status, restock = false) => {
+    router.put(route('admin.commerce.returns.update', request.id), {
+        status,
+        resolution_note: request.resolution_note || '',
+        approved_amount_cents: request.approved_amount_cents || request.requested_amount_cents,
+        restock,
     }, { preserveScroll: true })
 }
 
@@ -523,9 +540,16 @@ const updatePayoutProfile = (profile, status) => {
                             <div>
                                 <p class="font-semibold text-primary">{{ product.title }}</p>
                                 <p class="text-xs text-secondary">{{ product.status }} · {{ product.moderation_status }} · {{ formatMoney(product.price_cents) }}</p>
+                                <p class="text-xs text-secondary">
+                                    SKU {{ product.sku || '-' }} · Steuer {{ product.tax_class || 'standard' }} ·
+                                    <span v-if="product.manages_stock">Bestand {{ product.stock_quantity ?? 0 }}</span>
+                                    <span v-else>Bestand nicht verwaltet</span>
+                                </p>
                                 <p v-if="product.rejection_reason" class="mt-1 text-xs text-warning">{{ product.rejection_reason }}</p>
                             </div>
                             <div class="flex flex-wrap gap-2">
+                                <button v-if="product.manages_stock" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="adjustProductStock(product, 1)">+ Bestand</button>
+                                <button v-if="product.manages_stock" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="adjustProductStock(product, -1)">- Bestand</button>
                                 <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="updateProductStatus(product, 'published')">Freigeben</button>
                                 <button class="rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="updateProductStatus(product, 'rejected')">Ablehnen</button>
                                 <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="updateProductStatus(product, 'archived')">Archivieren</button>
@@ -766,6 +790,38 @@ const updatePayoutProfile = (profile, status) => {
                     </table>
                     <p v-if="!payouts.length" class="px-4 py-6 text-sm text-secondary">Noch keine Auszahlungen vorbereitet.</p>
                 </div>
+            </div>
+        </section>
+
+        <section class="surface-card overflow-hidden">
+            <div class="border-b border-border p-5">
+                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">After Sales</p>
+                <h2 class="mt-1 text-lg font-semibold text-primary">Ruecksendungen und Erstattungen</h2>
+                <p class="mt-1 text-sm text-secondary">Anfragen pruefen, Ware als erhalten markieren, Bestand wieder einbuchen und Erstattung dokumentieren.</p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-left text-sm">
+                    <tbody class="divide-y divide-border">
+                        <tr v-for="request in returnRequests" :key="request.id">
+                            <td class="px-5 py-3">
+                                <p class="font-semibold text-primary">{{ request.item?.title || request.order?.orderable?.title || `Ruecksendung #${request.id}` }}</p>
+                                <p class="text-xs text-secondary">{{ request.order?.user?.email || request.guest_email || '-' }}</p>
+                            </td>
+                            <td class="px-5 py-3 text-secondary">{{ request.status }}</td>
+                            <td class="px-5 py-3 text-secondary">{{ request.reason }}</td>
+                            <td class="px-5 py-3 text-secondary">{{ formatMoney(request.requested_amount_cents) }}</td>
+                            <td class="px-5 py-3 text-right">
+                                <div class="flex flex-wrap justify-end gap-2">
+                                    <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="updateReturnRequest(request, 'approved')">Freigeben</button>
+                                    <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="updateReturnRequest(request, 'received', true)">Erhalten + Bestand</button>
+                                    <button class="rounded-lg border border-success/40 px-3 py-2 text-xs font-semibold text-success" @click="updateReturnRequest(request, 'refunded')">Erstattet</button>
+                                    <button class="rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="updateReturnRequest(request, 'rejected')">Ablehnen</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p v-if="!returnRequests.length" class="px-5 py-6 text-sm text-secondary">Noch keine Ruecksendungen.</p>
             </div>
         </section>
 
