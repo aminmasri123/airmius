@@ -140,10 +140,6 @@ class PublicMarketplaceController extends Controller
     {
         abort_unless($product->status === 'published', 404);
 
-        if ($request->user()) {
-            return redirect()->route('auth.commerce.products.show', $product);
-        }
-
         abort_if($product->manages_stock && (int) $product->stock_quantity < 1, 422, 'Dieses Angebot ist aktuell ausverkauft.');
 
         $product->load(['user:id,name', 'club:id,name']);
@@ -260,9 +256,7 @@ class PublicMarketplaceController extends Controller
             'currency' => $quote['currency'],
             'price' => $quote,
             'provider_name' => $product->club?->name ?: $product->user?->name,
-            'show_url' => $request->user()
-                ? route('auth.commerce.products.show', $product)
-                : route('guest.marketplace.products.show', $product),
+            'show_url' => route('guest.marketplace.products.show', $product),
             'segment' => $this->productSegment($product),
             'rating' => number_format($rating / 10, 1, ',', '.'),
             'sold_count' => 12 + ($product->id * 7 % 240),

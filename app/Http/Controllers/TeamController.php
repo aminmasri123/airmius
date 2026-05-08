@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Club;
+use App\Models\Conversation;
 use App\Models\Invoice;
 use App\Models\Post;
 use App\Models\Sport;
@@ -178,6 +179,8 @@ class TeamController extends Controller
             $team->users()->syncWithoutDetaching([
                 $user->id => ['role' => 'Coach'],
             ]);
+
+            $this->syncTeamChatMembers($team, [$user->id]);
 
             return $team;
         });
@@ -404,6 +407,8 @@ class TeamController extends Controller
                 $invitation->recipient_id => ['role' => $invitation->role],
             ]);
 
+            $this->syncTeamChatMembers($invitation->team, [$invitation->recipient_id]);
+
             $invitation->team->club->users()->syncWithoutDetaching([
                 $invitation->recipient_id => [
                     'role' => 'member',
@@ -458,6 +463,8 @@ class TeamController extends Controller
             $invitation->team->users()->syncWithoutDetaching([
                 $request->user()->id => ['role' => $invitation->role],
             ]);
+
+            $this->syncTeamChatMembers($invitation->team, [$request->user()->id]);
 
             $invitation->team->club->users()->syncWithoutDetaching([
                 $request->user()->id => [
@@ -527,6 +534,8 @@ class TeamController extends Controller
             $joinRequest->team->users()->syncWithoutDetaching([
                 $joinRequest->user_id => ['role' => $data['role'] ?? 'Player'],
             ]);
+
+            $this->syncTeamChatMembers($joinRequest->team, [$joinRequest->user_id]);
 
             $joinRequest->team->club->users()->syncWithoutDetaching([
                 $joinRequest->user_id => [
@@ -628,6 +637,7 @@ class TeamController extends Controller
         }
 
         $team->users()->detach($user->id);
+        $this->removeTeamChatMember($team, $user->id);
 
         if ($isLeavingSelf) {
             $this->notifyClubManagers($team->club, 'team.member_left', [
@@ -658,6 +668,56 @@ class TeamController extends Controller
             ->when($exceptUserId, fn ($query) => $query->where('users.id', '!=', $exceptUserId))
             ->get(['users.id'])
             ->each(fn (User $manager) => AppNotification::send($manager, $type, $data));
+    }
+
+    private function syncTeamChatMembers(Team $team, array $newUserIds = []): void
+    {
+        $participantIds = $team->users()
+            ->pluck('users.id')
+            ->merge($newUserIds)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($participantIds->isEmpty()) {
+            return;
+        }
+
+        $conversation = Conversation::firstOrCreate(
+            ['type' => 'team', 'team_id' => $team->id],
+            ['club_id' => $team->club_id],
+        );
+
+        if (! $conversation->club_id && $team->club_id) {
+            $conversation->update(['club_id' => $team->club_id]);
+        }
+
+        $existingIds = $conversation->users()
+            ->whereIn('users.id', $participantIds)
+            ->pluck('users.id')
+            ->map(fn ($id) => (int) $id);
+
+        $missingIds = $participantIds->diff($existingIds)->values();
+
+        if ($missingIds->isEmpty()) {
+            return;
+        }
+
+        $joinedAt = now();
+
+        $conversation->users()->syncWithoutDetaching(
+            $missingIds
+                ->mapWithKeys(fn (int $id) => [$id => ['joined_at' => $joinedAt]])
+                ->all()
+        );
+    }
+
+    private function removeTeamChatMember(Team $team, int $userId): void
+    {
+        Conversation::query()
+            ->where('type', 'team')
+            ->where('team_id', $team->id)
+            ->each(fn (Conversation $conversation) => $conversation->users()->detach($userId));
     }
 
     private function canManageJobsForClub(User $user, Club $club): bool

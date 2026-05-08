@@ -17,7 +17,7 @@ class HandleInertiaRequests extends Middleware
 
         $response->headers->set('Vary', $this->appendVaryHeader($response->headers->get('Vary')));
 
-        if ($request->headers->has('X-Inertia') || $response->headers->has('X-Inertia')) {
+        if ($request->headers->has('X-Inertia') || $response->headers->has('X-Inertia') || $request->is('marketplace*')) {
             $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
             $response->headers->set('Pragma', 'no-cache');
             $response->headers->set('Expires', '0');
@@ -60,6 +60,12 @@ class HandleInertiaRequests extends Middleware
             ? $user->receivedFriendInvitations()
                 ->where('status', 'pending')
                 ->count()
+            : 0;
+        $commerceCartCount = $user
+            ? (int) \App\Models\CommerceCart::query()
+                ->where('user_id', $user->id)
+                ->withSum('items as items_quantity_sum', 'quantity')
+                ->first()?->items_quantity_sum
             : 0;
         $latestNotifications = $user
             ? $user->appNotifications()
@@ -126,6 +132,7 @@ class HandleInertiaRequests extends Middleware
             ],
 
             'unreadChatsCount' => $unreadChatsCount,
+            'commerceCartCount' => $commerceCartCount,
             'friendCenter' => [
                 'pending_received_count' => $pendingFriendInvitationsCount,
             ],
