@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\AdCampaign;
 use App\Models\CommerceOrder;
+use App\Models\CommerceShippingRate;
+use App\Models\CommerceTaxRate;
 use App\Models\MarketplacePayout;
 use App\Models\MarketplaceProduct;
 use App\Models\PayoutProfile;
@@ -77,6 +79,15 @@ class AdminCommerceController extends Controller
                 ->limit(50)
                 ->get(),
             'marketplaceVisuals' => $this->marketplaceVisualsForAdmin(),
+            'taxRates' => CommerceTaxRate::query()->orderBy('priority')->orderBy('country_code')->get(),
+            'shippingRates' => CommerceShippingRate::query()->orderBy('priority')->orderBy('country_code')->get(),
+            'commerceSettings' => [
+                'company_country' => Setting::valueFor('commerce_company_country', 'DE'),
+                'company_currency' => Setting::valueFor('commerce_company_currency', 'EUR'),
+                'enable_oss' => Setting::boolFor('commerce_enable_oss', true),
+                'export_vat_mode' => Setting::valueFor('commerce_export_vat_mode', 'zero'),
+                'reverse_charge_enabled' => Setting::boolFor('commerce_reverse_charge_enabled', true),
+            ],
         ]);
     }
 
@@ -263,6 +274,53 @@ class AdminCommerceController extends Controller
         return back()->with('success', 'Marketplace-Bilder wurden aktualisiert.');
     }
 
+    public function updateCommerceSettings(Request $request)
+    {
+        $data = $request->validate([
+            'company_country' => ['required', 'string', 'size:2'],
+            'company_currency' => ['required', 'string', 'size:3'],
+            'enable_oss' => ['boolean'],
+            'export_vat_mode' => ['required', Rule::in(['zero', 'domestic'])],
+            'reverse_charge_enabled' => ['boolean'],
+        ]);
+
+        Setting::setValue('commerce_company_country', strtoupper($data['company_country']));
+        Setting::setValue('commerce_company_currency', strtoupper($data['company_currency']));
+        Setting::setValue('commerce_enable_oss', (bool) ($data['enable_oss'] ?? false));
+        Setting::setValue('commerce_export_vat_mode', $data['export_vat_mode']);
+        Setting::setValue('commerce_reverse_charge_enabled', (bool) ($data['reverse_charge_enabled'] ?? false));
+
+        return back()->with('success', 'Commerce-Steuerlogik wurde aktualisiert.');
+    }
+
+    public function storeTaxRate(Request $request)
+    {
+        CommerceTaxRate::create($this->taxRateData($request));
+
+        return back()->with('success', 'Steuersatz wurde gespeichert.');
+    }
+
+    public function updateTaxRate(Request $request, CommerceTaxRate $taxRate)
+    {
+        $taxRate->update($this->taxRateData($request));
+
+        return back()->with('success', 'Steuersatz wurde aktualisiert.');
+    }
+
+    public function storeShippingRate(Request $request)
+    {
+        CommerceShippingRate::create($this->shippingRateData($request));
+
+        return back()->with('success', 'Versandkosten wurden gespeichert.');
+    }
+
+    public function updateShippingRate(Request $request, CommerceShippingRate $shippingRate)
+    {
+        $shippingRate->update($this->shippingRateData($request));
+
+        return back()->with('success', 'Versandkosten wurden aktualisiert.');
+    }
+
     private function couponData(Request $request): array
     {
         $data = $request->validate([
@@ -303,6 +361,11 @@ class AdminCommerceController extends Controller
             'description' => ['nullable', 'string', 'max:2000'],
             'image_url' => ['nullable', 'url', 'max:2048'],
             'category' => ['required', 'string', 'max:50'],
+            'sku' => ['nullable', 'string', 'max:80'],
+            'is_shippable' => ['boolean'],
+            'manages_stock' => ['boolean'],
+            'stock_quantity' => ['nullable', 'integer', 'min:0'],
+            'tax_class' => ['nullable', 'string', 'max:30'],
             'price_cents' => ['required', 'integer', 'min:0'],
             'currency' => ['required', 'string', 'size:3'],
             'status' => ['required', Rule::in(['draft', 'review', 'published', 'rejected', 'archived'])],
@@ -325,6 +388,54 @@ class AdminCommerceController extends Controller
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
         ]);
+    }
+
+    private function taxRateData(Request $request): array
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'country_code' => ['required', 'string', 'size:2'],
+            'region' => ['nullable', 'string', 'max:80'],
+            'tax_class' => ['nullable', 'string', 'max:30'],
+            'tax_label' => ['required', 'string', 'max:40'],
+            'rate_percent' => ['required', 'numeric', 'min:0', 'max:99.99'],
+            'currency' => ['required', 'string', 'size:3'],
+            'is_default' => ['boolean'],
+            'is_active' => ['boolean'],
+            'priority' => ['nullable', 'integer', 'min:1', 'max:9999'],
+        ]);
+
+        return [
+            ...$data,
+            'country_code' => strtoupper($data['country_code']),
+            'tax_class' => $data['tax_class'] ?: 'standard',
+            'currency' => strtoupper($data['currency']),
+            'is_default' => (bool) ($data['is_default'] ?? false),
+            'is_active' => (bool) ($data['is_active'] ?? false),
+            'priority' => (int) ($data['priority'] ?? 100),
+        ];
+    }
+
+    private function shippingRateData(Request $request): array
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'country_code' => ['nullable', 'string', 'size:2'],
+            'postal_code_prefix' => ['nullable', 'string', 'max:20'],
+            'amount_cents' => ['required', 'integer', 'min:0'],
+            'currency' => ['required', 'string', 'size:3'],
+            'free_from_cents' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['boolean'],
+            'priority' => ['nullable', 'integer', 'min:1', 'max:9999'],
+        ]);
+
+        return [
+            ...$data,
+            'country_code' => filled($data['country_code'] ?? null) ? strtoupper($data['country_code']) : null,
+            'currency' => strtoupper($data['currency']),
+            'is_active' => (bool) ($data['is_active'] ?? false),
+            'priority' => (int) ($data['priority'] ?? 100),
+        ];
     }
 
     private function pendingPayoutOrdersFor(User $user)

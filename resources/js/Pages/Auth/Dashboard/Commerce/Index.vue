@@ -29,6 +29,11 @@ const productForm = useForm({
     description: '',
     image_url: '',
     category: 'product',
+    sku: '',
+    is_shippable: true,
+    manages_stock: false,
+    stock_quantity: '',
+    tax_class: 'standard',
     price_cents: 0,
 })
 const campaignForm = useForm({
@@ -259,7 +264,22 @@ const reportIssue = (order) => {
                         <option value="camp">Camp</option>
                         <option value="service">Dienstleistung</option>
                     </select>
+                    <input v-model="productForm.sku" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="SKU / Artikelnummer">
+                    <select v-model="productForm.tax_class" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <option value="standard">Standardsteuer</option>
+                        <option value="reduced">Ermaessigt</option>
+                        <option value="zero">Nullsatz</option>
+                    </select>
                     <input v-model="productForm.price_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis in Cent">
+                    <label class="flex items-center gap-2 text-sm text-primary">
+                        <input v-model="productForm.is_shippable" type="checkbox" class="rounded border-border bg-inputBg">
+                        Versandpflichtig
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-primary">
+                        <input v-model="productForm.manages_stock" type="checkbox" class="rounded border-border bg-inputBg">
+                        Lagerbestand verwalten
+                    </label>
+                    <input v-if="productForm.manages_stock" v-model="productForm.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lagerbestand">
                     <textarea v-model="productForm.description" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung"></textarea>
                     <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Zur Prüfung einreichen</button>
                 </form>

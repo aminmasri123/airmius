@@ -30,13 +30,17 @@ class EventPolicy extends BasePolicy
 
     public function create(User $user)
     {
-        $allowed = $user->can('event.create')
+        if (
+            $user->can('event.create')
             || $this->isCoach($user)
-            || $this->isClubAdmin($user);
+            || $this->isClubAdmin($user)
+            || $this->hasActivePaidSubscription($user)
+            || $this->freeEventsRemainingThisMonth($user) > 0
+        ) {
+            return Response::allow();
+        }
 
-        return $allowed
-            ? Response::allow()
-            : Response::deny('Um Events zu erstellen, brauchst du ein Paket oder eine Rolle mit Event-Erstellung. Bitte fuehre ein Upgrade durch oder bitte deinen Verein/Admin, dir die passende Berechtigung zu geben.');
+        return Response::deny('Im kostenlosen Konto kannst du 2 Events pro Monat erstellen. Dein Monatslimit ist erreicht.');
     }
 
     public function update(User $user, Event $event)
@@ -80,5 +84,23 @@ class EventPolicy extends BasePolicy
 
         return $user->can('event.join')
             || $this->isPlayer($user);
+    }
+
+    private function freeEventsRemainingThisMonth(User $user): int
+    {
+        $used = Event::query()
+            ->where('user_id', $user->id)
+            ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->count();
+
+        return max(0, 2 - $used);
+    }
+
+    private function hasActivePaidSubscription(User $user): bool
+    {
+        return $user->subscriptions()
+            ->whereIn('status', ['active', 'trialing'])
+            ->whereHas('plan', fn ($query) => $query->where('slug', '!=', 'free'))
+            ->exists();
     }
 }

@@ -209,7 +209,7 @@ class HandleInertiaRequests extends Middleware
             'file.delete' => $user->can('file.delete'),
 
             'chat.view' => $user->teams()->exists() || $user->clubs()->exists(),
-            'rides.view' => $user->can('event.join'),
+            'rides.view' => $user->can('viewAny', \App\Models\Ride::class),
 
             'users.view' => $user->can('users.view'),
             'users.create' => $user->can('users.create'),

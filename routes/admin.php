@@ -104,6 +104,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/admin/commerce/products', [AdminCommerceController::class, 'storeProduct'])->middleware('can:subscriptions.manage')->name('admin.commerce.products.store');
     Route::put('/admin/commerce/products/{product}', [AdminCommerceController::class, 'updateProduct'])->middleware('can:subscriptions.manage')->name('admin.commerce.products.update');
     Route::post('/admin/commerce/marketplace-visuals', [AdminCommerceController::class, 'updateMarketplaceVisuals'])->middleware('can:subscriptions.manage')->name('admin.commerce.marketplace-visuals.update');
+    Route::put('/admin/commerce/settings', [AdminCommerceController::class, 'updateCommerceSettings'])->middleware('can:subscriptions.manage')->name('admin.commerce.settings.update');
+    Route::post('/admin/commerce/tax-rates', [AdminCommerceController::class, 'storeTaxRate'])->middleware('can:subscriptions.manage')->name('admin.commerce.tax-rates.store');
+    Route::put('/admin/commerce/tax-rates/{taxRate}', [AdminCommerceController::class, 'updateTaxRate'])->middleware('can:subscriptions.manage')->name('admin.commerce.tax-rates.update');
+    Route::post('/admin/commerce/shipping-rates', [AdminCommerceController::class, 'storeShippingRate'])->middleware('can:subscriptions.manage')->name('admin.commerce.shipping-rates.store');
+    Route::put('/admin/commerce/shipping-rates/{shippingRate}', [AdminCommerceController::class, 'updateShippingRate'])->middleware('can:subscriptions.manage')->name('admin.commerce.shipping-rates.update');
     Route::post('/admin/commerce/campaigns', [AdminCommerceController::class, 'storeCampaign'])->middleware('can:subscriptions.manage')->name('admin.commerce.campaigns.store');
     Route::put('/admin/commerce/campaigns/{campaign}', [AdminCommerceController::class, 'updateCampaign'])->middleware('can:subscriptions.manage')->name('admin.commerce.campaigns.update');
     Route::post('/admin/commerce/orders/{order}/mark-paid', [AdminCommerceController::class, 'markOrderPaid'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.mark-paid');

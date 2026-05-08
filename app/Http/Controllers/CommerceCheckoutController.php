@@ -14,6 +14,7 @@ use App\Models\SubscriptionAddon;
 use App\Models\SubscriptionAddonPurchase;
 use App\Models\WebsiteRequest;
 use App\Notifications\CommerceOrderCompleted;
+use App\Services\MarketplacePricingService;
 use App\Services\ModerationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -24,7 +25,7 @@ use Illuminate\Validation\Rule;
 
 class CommerceCheckoutController extends Controller
 {
-    public function __construct(private ModerationService $moderation) {}
+    public function __construct(private ModerationService $moderation, private MarketplacePricingService $pricing) {}
 
     public function index(Request $request)
     {
@@ -149,11 +150,24 @@ class CommerceCheckoutController extends Controller
     public function storeProduct(Request $request, MarketplaceProduct $product)
     {
         abort_unless($product->status === 'published', 404);
+        abort_if($product->manages_stock && (int) $product->stock_quantity < 1, 422, 'Dieses Angebot ist aktuell ausverkauft.');
 
         $data = $request->validate([
             'provider' => ['required', Rule::in(['stripe', 'paypal', 'bank_transfer'])],
             'accepted_terms' => ['accepted'],
+            'shipping_country' => ['nullable', 'string', 'size:2'],
+            'shipping_state' => ['nullable', 'string', 'max:80'],
+            'shipping_postal_code' => ['nullable', 'string', 'max:30'],
+            'shipping_city' => ['nullable', 'string', 'max:120'],
+            'shipping_street' => ['nullable', 'string', 'max:180'],
+            'shipping_house_number' => ['nullable', 'string', 'max:40'],
+            'customer_type' => ['nullable', Rule::in(['consumer', 'business'])],
+            'customer_company' => ['nullable', 'string', 'max:255'],
+            'customer_vat_id' => ['nullable', 'string', 'max:40'],
         ]);
+        $shippingAddress = $this->shippingAddressForAuthenticatedUser($request, $data);
+        $quote = $this->pricing->quoteForRequest($product, $request, $shippingAddress['country'], $shippingAddress);
+        $customer = $this->customerFromData($data);
 
         $order = CommerceOrder::create([
             'user_id' => $request->user()->id,
@@ -162,10 +176,16 @@ class CommerceCheckoutController extends Controller
             'orderable_id' => $product->id,
             'type' => 'marketplace_product',
             'provider' => $data['provider'],
-            'amount_cents' => $product->price_cents,
-            'commission_cents' => (int) floor($product->price_cents * ($product->commission_percent / 100)),
-            'currency' => $product->currency,
+            ...$this->orderAmountsFromQuote($quote),
+            'commission_cents' => (int) floor($quote['item_gross_cents'] * ($product->commission_percent / 100)),
+            'currency' => $quote['currency'],
+            'tax_country' => $quote['country'],
+            'tax_rate_percent' => $quote['tax_rate'],
+            'customer_type' => $customer['type'],
+            'customer_company' => $customer['company'] ?: null,
+            'customer_vat_id' => $customer['vat_id'] ?: null,
             'status' => 'pending',
+            'payload' => ['pricing' => $quote, 'shipping_address' => $shippingAddress],
         ]);
 
         return $this->startCheckout($order);
@@ -179,6 +199,11 @@ class CommerceCheckoutController extends Controller
             'description' => ['nullable', 'string', 'max:2000'],
             'image_url' => ['nullable', 'url', 'max:2048'],
             'category' => ['required', Rule::in(['product', 'course', 'camp', 'service'])],
+            'sku' => ['nullable', 'string', 'max:80'],
+            'is_shippable' => ['boolean'],
+            'manages_stock' => ['boolean'],
+            'stock_quantity' => ['nullable', 'integer', 'min:0'],
+            'tax_class' => ['nullable', 'string', 'max:30'],
             'price_cents' => ['required', 'integer', 'min:0'],
         ]);
 
@@ -190,6 +215,9 @@ class CommerceCheckoutController extends Controller
             ...$data,
             'user_id' => $request->user()->id,
             'currency' => 'EUR',
+            'is_shippable' => (bool) ($data['is_shippable'] ?? $data['category'] === 'product'),
+            'manages_stock' => (bool) ($data['manages_stock'] ?? false),
+            'tax_class' => $data['tax_class'] ?? 'standard',
             'status' => 'review',
             'moderation_status' => 'approved',
             'commission_percent' => 10,
@@ -221,9 +249,18 @@ class CommerceCheckoutController extends Controller
         );
 
         $product->load(['user:id,name', 'club:id,name']);
+        $shippingAddress = $this->shippingAddressForAuthenticatedUser($request, []);
+        $quote = $this->pricing->quoteForRequest($product, $request, $shippingAddress['country'], $shippingAddress);
 
         return inertia('Auth/Dashboard/Commerce/ProductShow', [
-            'product' => $product,
+            'product' => [
+                ...$product->toArray(),
+                'user' => $product->user,
+                'club' => $product->club,
+                'price' => $quote,
+            ],
+            'pricingCountries' => $this->pricingCountries(),
+            'checkoutAddress' => $shippingAddress,
         ]);
     }
 
@@ -481,6 +518,10 @@ class CommerceCheckoutController extends Controller
                     'current_period_ends_at' => $order->billing_interval === 'yearly' ? now()->addYear() : now()->addMonth(),
                 ],
             );
+        }
+
+        if ($order->type === 'marketplace_product' && $order->orderable instanceof MarketplaceProduct && $order->orderable->manages_stock) {
+            $order->orderable->decrement('stock_quantity');
         }
 
         $order->update([
@@ -774,5 +815,52 @@ class CommerceCheckoutController extends Controller
             'payment_reference' => $order->payment_reference,
             'due_at' => $order->due_at?->toDateString(),
         ];
+    }
+
+    private function shippingAddressForAuthenticatedUser(Request $request, array $data): array
+    {
+        $user = $request->user();
+
+        return [
+            'country' => strtoupper((string) ($data['shipping_country'] ?? $user?->country ?? 'DE')),
+            'state' => trim((string) ($data['shipping_state'] ?? $user?->state ?? '')),
+            'postal_code' => trim((string) ($data['shipping_postal_code'] ?? $user?->postal_code ?? '')),
+            'city' => trim((string) ($data['shipping_city'] ?? $user?->city ?? '')),
+            'street' => trim((string) ($data['shipping_street'] ?? $user?->street ?? '')),
+            'house_number' => trim((string) ($data['shipping_house_number'] ?? $user?->house_number ?? '')),
+        ];
+    }
+
+    private function customerFromData(array $data): array
+    {
+        return [
+            'type' => ($data['customer_type'] ?? 'consumer') === 'business' ? 'business' : 'consumer',
+            'company' => trim((string) ($data['customer_company'] ?? '')),
+            'vat_id' => strtoupper(preg_replace('/\s+/', '', (string) ($data['customer_vat_id'] ?? ''))),
+        ];
+    }
+
+    private function orderAmountsFromQuote(array $quote): array
+    {
+        return [
+            'item_gross_cents' => (int) ($quote['item_gross_cents'] ?? $quote['gross_cents']),
+            'shipping_cents' => (int) ($quote['shipping_gross_cents'] ?? 0),
+            'net_cents' => (int) ($quote['net_cents'] ?? 0),
+            'tax_cents' => (int) ($quote['tax_cents'] ?? 0),
+            'amount_cents' => (int) ($quote['gross_cents'] ?? 0),
+        ];
+    }
+
+    private function pricingCountries(): array
+    {
+        return collect($this->pricing->taxProfiles())
+            ->map(fn (array $profile, string $country) => [
+                'country' => $country,
+                'currency' => $profile['currency'],
+                'tax_rate' => $profile['tax_rate'],
+                'label' => $country.' - '.$profile['currency'].' - '.$profile['tax_label'].' '.$profile['tax_rate'].'%',
+            ])
+            ->values()
+            ->all();
     }
 }

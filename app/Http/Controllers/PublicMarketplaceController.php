@@ -136,9 +136,11 @@ class PublicMarketplaceController extends Controller
     public function show(Request $request, MarketplaceProduct $product)
     {
         abort_unless($product->status === 'published', 404);
+        abort_if($product->manages_stock && (int) $product->stock_quantity < 1, 422, 'Dieses Angebot ist aktuell ausverkauft.');
 
         $product->load(['user:id,name', 'club:id,name']);
-        $quote = $this->pricing->quoteForRequest($product, $request);
+        $shippingCountry = $request->input('shipping_country', 'DE');
+        $quote = $this->pricing->quoteForRequest($product, $request, $shippingCountry, ['country' => $shippingCountry]);
 
         return Inertia::render('Guest/MarketplaceProductShow', [
             'canLogin' => Route::has('login'),
@@ -167,9 +169,20 @@ class PublicMarketplaceController extends Controller
             'guest_email' => ['required_without:login_checkout', 'nullable', 'email', 'max:255'],
             'provider' => ['required', Rule::in(['stripe', 'paypal', 'bank_transfer'])],
             'accepted_terms' => ['accepted'],
-            'country' => ['nullable', 'string', 'size:2'],
+            'shipping_country' => ['required', 'string', 'size:2'],
+            'shipping_state' => ['nullable', 'string', 'max:80'],
+            'shipping_postal_code' => ['nullable', 'string', 'max:30'],
+            'shipping_city' => ['nullable', 'string', 'max:120'],
+            'shipping_street' => ['nullable', 'string', 'max:180'],
+            'shipping_house_number' => ['nullable', 'string', 'max:40'],
+            'customer_type' => ['nullable', Rule::in(['consumer', 'business'])],
+            'customer_company' => ['nullable', 'string', 'max:255'],
+            'customer_vat_id' => ['nullable', 'string', 'max:40'],
         ]);
-        $quote = $this->pricing->quoteForRequest($product, $request, $data['country'] ?? null);
+        $shippingAddress = $this->shippingAddressFromData($data);
+        $customer = $this->customerFromData($data);
+        $quote = $this->pricing->quoteForRequest($product, $request, $shippingAddress['country'], $shippingAddress);
+        $orderAmounts = $this->orderAmountsFromQuote($quote, $customer);
 
         if ($request->user()) {
             $order = CommerceOrder::create([
@@ -179,11 +192,16 @@ class PublicMarketplaceController extends Controller
                 'orderable_id' => $product->id,
                 'type' => 'marketplace_product',
                 'provider' => $data['provider'],
-                'amount_cents' => $quote['gross_cents'],
-                'commission_cents' => (int) floor($quote['gross_cents'] * ($product->commission_percent / 100)),
+                ...$orderAmounts,
+                'commission_cents' => (int) floor($quote['item_gross_cents'] * ($product->commission_percent / 100)),
                 'currency' => $quote['currency'],
+                'tax_country' => $quote['country'],
+                'tax_rate_percent' => $quote['tax_rate'],
+                'customer_type' => $customer['type'],
+                'customer_company' => $customer['company'] ?: null,
+                'customer_vat_id' => $customer['vat_id'] ?: null,
                 'status' => 'pending',
-                'payload' => ['pricing' => $quote],
+                'payload' => ['pricing' => $quote, 'shipping_address' => $shippingAddress],
             ]);
 
             return app(CommerceCheckoutController::class)->startPublicCheckout($order);
@@ -198,11 +216,16 @@ class PublicMarketplaceController extends Controller
             'orderable_id' => $product->id,
             'type' => 'marketplace_product',
             'provider' => $data['provider'],
-            'amount_cents' => $quote['gross_cents'],
-            'commission_cents' => (int) floor($quote['gross_cents'] * ($product->commission_percent / 100)),
+            ...$orderAmounts,
+            'commission_cents' => (int) floor($quote['item_gross_cents'] * ($product->commission_percent / 100)),
             'currency' => $quote['currency'],
+            'tax_country' => $quote['country'],
+            'tax_rate_percent' => $quote['tax_rate'],
+            'customer_type' => $customer['type'],
+            'customer_company' => $customer['company'] ?: null,
+            'customer_vat_id' => $customer['vat_id'] ?: null,
             'status' => 'pending',
-            'payload' => ['pricing' => $quote],
+            'payload' => ['pricing' => $quote, 'shipping_address' => $shippingAddress],
         ]);
 
         return app(CommerceCheckoutController::class)->startPublicCheckout($order);
@@ -211,7 +234,7 @@ class PublicMarketplaceController extends Controller
     private function productCard(MarketplaceProduct $product, Request $request, ?string $country = null): array
     {
         $rating = 42 + ($product->id % 8);
-        $quote = $this->pricing->quoteForRequest($product, $request, $country);
+        $quote = $this->pricing->quote($product, $country);
         $oldGrossCents = $product->price_cents > 0 ? (int) round($quote['gross_cents'] * 1.18) : null;
 
         return [
@@ -389,10 +412,42 @@ class PublicMarketplaceController extends Controller
                 'country' => $country,
                 'currency' => $profile['currency'],
                 'tax_rate' => $profile['tax_rate'],
-                'label' => $country.' · '.$profile['currency'].' · '.$profile['tax_label'].' '.$profile['tax_rate'].'%',
+                'label' => $country.' - '.$profile['currency'].' - '.$profile['tax_label'].' '.$profile['tax_rate'].'%',
             ])
             ->values()
             ->all();
+    }
+
+    private function shippingAddressFromData(array $data): array
+    {
+        return [
+            'country' => strtoupper((string) ($data['shipping_country'] ?? 'DE')),
+            'state' => trim((string) ($data['shipping_state'] ?? '')),
+            'postal_code' => trim((string) ($data['shipping_postal_code'] ?? '')),
+            'city' => trim((string) ($data['shipping_city'] ?? '')),
+            'street' => trim((string) ($data['shipping_street'] ?? '')),
+            'house_number' => trim((string) ($data['shipping_house_number'] ?? '')),
+        ];
+    }
+
+    private function customerFromData(array $data): array
+    {
+        return [
+            'type' => ($data['customer_type'] ?? 'consumer') === 'business' ? 'business' : 'consumer',
+            'company' => trim((string) ($data['customer_company'] ?? '')),
+            'vat_id' => strtoupper(preg_replace('/\s+/', '', (string) ($data['customer_vat_id'] ?? ''))),
+        ];
+    }
+
+    private function orderAmountsFromQuote(array $quote, array $customer): array
+    {
+        return [
+            'item_gross_cents' => (int) ($quote['item_gross_cents'] ?? $quote['gross_cents']),
+            'shipping_cents' => (int) ($quote['shipping_gross_cents'] ?? 0),
+            'net_cents' => (int) ($quote['net_cents'] ?? 0),
+            'tax_cents' => (int) ($quote['tax_cents'] ?? 0),
+            'amount_cents' => (int) ($quote['gross_cents'] ?? 0),
+        ];
     }
 
     private function marketplaceVisuals(): array

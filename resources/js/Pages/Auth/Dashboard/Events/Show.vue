@@ -1,5 +1,7 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import ConfirmActionModal from '@/Components/ConfirmActionModal.vue'
+import Modal from '@/Components/Modal.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, onMounted, ref, watch } from 'vue'
 
@@ -17,7 +19,10 @@ const props = defineProps({
 })
 
 const showEditModal = ref(false)
+const showDeleteModal = ref(false)
+const showCancelModal = ref(false)
 const commentForm = useForm({ content: '' })
+const cancelForm = useForm({ reason: '' })
 const page = usePage()
 
 const browserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
@@ -196,20 +201,21 @@ const toggleWeekday = (day) => {
 }
 
 const deleteEvent = () => {
-    if (!window.confirm('Dieses Event wirklich loeschen?')) return
-
     router.delete(route('auth.events.destroy', props.event.id), {
         preserveScroll: true,
+        onFinish: () => {
+            showDeleteModal.value = false
+        },
     })
 }
 
 const cancelEvent = () => {
-    const reason = window.prompt('Warum wird das Event abgesagt? Optional leer lassen.')
-
-    if (reason === null) return
-
-    router.post(route('auth.events.cancel', props.event.id), { reason }, {
+    cancelForm.post(route('auth.events.cancel', props.event.id), {
         preserveScroll: true,
+        onSuccess: () => {
+            cancelForm.reset()
+            showCancelModal.value = false
+        },
     })
 }
 
@@ -265,7 +271,7 @@ onMounted(() => {
                     v-if="can.cancel && event.status !== 'cancelled'"
                     type="button"
                     class="rounded-lg border border-warning/40 px-4 py-2 text-sm font-semibold text-warning hover:bg-warning/10"
-                    @click="cancelEvent"
+                    @click="showCancelModal = true"
                 >
                     <i class="las la-calendar-times mr-1"></i>
                     Event absagen
@@ -274,7 +280,7 @@ onMounted(() => {
                     v-if="can.delete"
                     type="button"
                     class="rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
-                    @click="deleteEvent"
+                    @click="showDeleteModal = true"
                 >
                     <i class="las la-trash mr-1"></i>
                     Loeschen
@@ -535,5 +541,46 @@ onMounted(() => {
                 </form>
             </div>
         </Teleport>
+
+        <Modal :show="showCancelModal" max-width="lg" @close="showCancelModal = false">
+            <form class="p-5" @submit.prevent="cancelEvent">
+                <h2 class="text-lg font-semibold text-primary">Event absagen</h2>
+                <p class="mt-2 text-sm leading-6 text-secondary">
+                    Teilnehmer mit Zusage werden informiert. Du kannst optional einen Grund angeben.
+                </p>
+
+                <label class="mt-4 block text-sm font-semibold text-primary" for="cancel-reason">
+                    Grund
+                </label>
+                <textarea
+                    id="cancel-reason"
+                    v-model="cancelForm.reason"
+                    rows="4"
+                    class="mt-1 w-full resize-none rounded-lg border border-border bg-inputBg px-3 py-3 text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
+                    placeholder="Optionaler Grund"
+                />
+                <p v-if="cancelForm.errors.reason" class="mt-1 text-sm text-error">{{ cancelForm.errors.reason }}</p>
+
+                <div class="mt-5 flex justify-end gap-3">
+                    <button type="button" class="rounded-lg border border-border px-4 py-2 text-primary hover:bg-muted" @click="showCancelModal = false">
+                        Abbrechen
+                    </button>
+                    <button class="rounded-lg bg-warning px-4 py-2 font-semibold text-white hover:opacity-90" :disabled="cancelForm.processing">
+                        {{ cancelForm.processing ? 'Wird abgesagt...' : 'Event absagen' }}
+                    </button>
+                </div>
+            </form>
+        </Modal>
+
+        <ConfirmActionModal
+            :show="showDeleteModal"
+            title="Event loeschen"
+            message="Moechtest du dieses Event wirklich loeschen? Teilnehmer mit Zusage werden informiert."
+            confirm-label="Event loeschen"
+            :danger="true"
+            :processing="false"
+            @cancel="showDeleteModal = false"
+            @confirm="deleteEvent"
+        />
     </div>
 </template>

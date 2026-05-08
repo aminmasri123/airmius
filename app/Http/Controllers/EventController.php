@@ -115,6 +115,7 @@ class EventController extends Controller
             'participantStatuses' => Event::PARTICIPANT_STATUSES,
             'sports' => $this->sportsForFilters(),
             'eventDefaults' => $this->eventDefaultFiltersFor($request->user()),
+            'eventCreation' => $this->eventCreationLimitsFor($request->user()),
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'type' => $filters['type'] ?? '',
@@ -195,7 +196,10 @@ class EventController extends Controller
     {
         $this->authorize('create', Event::class);
 
-        $event = $this->service->create($this->validated($request));
+        $data = $this->validated($request);
+        $this->enforceEventCreationLimits($request, $data);
+
+        $event = $this->service->create($data);
         $this->grantGamificationForEvent($request, $event);
 
         return redirect()->route('auth.events.show', $event)->with('success', 'Event erstellt.');
@@ -384,6 +388,64 @@ class EventController extends Controller
             'radius_km' => $user->event_radius_km,
             'sport_ids' => $user->event_default_sport_ids ?? [],
         ], $user->event_default_filters ?? []));
+    }
+
+    private function eventCreationLimitsFor(User $user): array
+    {
+        $isLimited = ! $this->hasUnlimitedEventCreation($user);
+        $used = $this->eventsCreatedThisMonth($user);
+        $limit = 2;
+
+        return [
+            'is_free_limited' => $isLimited,
+            'monthly_limit' => $isLimited ? $limit : null,
+            'used_this_month' => $isLimited ? $used : null,
+            'remaining_this_month' => $isLimited ? max(0, $limit - $used) : null,
+            'allows_recurring' => ! $isLimited,
+        ];
+    }
+
+    private function enforceEventCreationLimits(Request $request, array $data): void
+    {
+        if ($this->hasUnlimitedEventCreation($request->user())) {
+            return;
+        }
+
+        if (filled($data['recurring'] ?? null)) {
+            throw ValidationException::withMessages([
+                'recurring' => 'Wiederholungen und Intervalle sind im kostenlosen Konto nicht verfuegbar.',
+                'authorization' => 'Kostenlose Konten koennen einfache Events erstellen, aber keine wiederkehrenden Events.',
+            ]);
+        }
+
+        if ($this->eventsCreatedThisMonth($request->user()) >= 2) {
+            throw ValidationException::withMessages([
+                'authorization' => 'Im kostenlosen Konto kannst du 2 Events pro Monat erstellen. Dein Monatslimit ist erreicht.',
+            ]);
+        }
+    }
+
+    private function hasUnlimitedEventCreation(User $user): bool
+    {
+        if (
+            $user->can('event.create')
+            || $user->hasAnyRole(['coach', 'assistant_coach', 'performance_coach', 'fitness_coach', 'club_owner', 'club_admin', 'club_manager', 'academy_manager'])
+        ) {
+            return true;
+        }
+
+        return $user->subscriptions()
+            ->whereIn('status', ['active', 'trialing'])
+            ->whereHas('plan', fn ($query) => $query->where('slug', '!=', 'free'))
+            ->exists();
+    }
+
+    private function eventsCreatedThisMonth(User $user): int
+    {
+        return Event::query()
+            ->where('user_id', $user->id)
+            ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->count();
     }
 
     private function normalizeEventFilters(array $filters): array

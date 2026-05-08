@@ -16,6 +16,11 @@ class MarketplaceProduct extends Model
         'description',
         'image_url',
         'category',
+        'sku',
+        'is_shippable',
+        'manages_stock',
+        'stock_quantity',
+        'tax_class',
         'price_cents',
         'currency',
         'status',
@@ -24,6 +29,17 @@ class MarketplaceProduct extends Model
         'commission_percent',
         'payout_status',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_shippable' => 'boolean',
+            'manages_stock' => 'boolean',
+            'stock_quantity' => 'integer',
+            'price_cents' => 'integer',
+            'commission_percent' => 'integer',
+        ];
+    }
 
     public function user()
     {

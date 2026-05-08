@@ -18,7 +18,15 @@ const form = useForm({
     guest_email: '',
     provider: 'bank_transfer',
     accepted_terms: false,
-    country: props.product.price?.country || '',
+    shipping_country: props.product.price?.country || 'DE',
+    shipping_state: '',
+    shipping_postal_code: '',
+    shipping_city: '',
+    shipping_street: '',
+    shipping_house_number: '',
+    customer_type: 'consumer',
+    customer_company: '',
+    customer_vat_id: '',
 })
 
 const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
@@ -41,7 +49,7 @@ const checkout = () => {
 
 const updateCountry = () => {
     router.get(route('guest.marketplace.products.show', props.product.id), {
-        country: form.country || undefined,
+        shipping_country: form.shipping_country || undefined,
     }, {
         preserveScroll: true,
         preserveState: true,
@@ -109,20 +117,60 @@ const updateCountry = () => {
 
                         <form class="mt-6 space-y-4" @submit.prevent="checkout">
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">Land / Steuerzone</label>
-                                <select v-model="form.country" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" @change="updateCountry">
-                                    <option value="">Automatisch</option>
+                                <label class="text-xs font-semibold uppercase text-secondary">Lieferland</label>
+                                <select v-model="form.shipping_country" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" @change="updateCountry">
                                     <option v-for="country in pricingCountries" :key="country.country" :value="country.country">
                                         {{ country.label }}
                                     </option>
                                 </select>
-                                <p v-if="form.errors.country" class="mt-1 text-sm text-red-400">{{ form.errors.country }}</p>
+                                <p v-if="form.errors.shipping_country" class="mt-1 text-sm text-red-400">{{ form.errors.shipping_country }}</p>
+                            </div>
+
+                            <div class="grid gap-3 sm:grid-cols-[1fr_7rem]">
+                                <div>
+                                    <label class="text-xs font-semibold uppercase text-secondary">Straße</label>
+                                    <input v-model="form.shipping_street" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" autocomplete="shipping street-address" />
+                                </div>
+                                <div>
+                                    <label class="text-xs font-semibold uppercase text-secondary">Nr.</label>
+                                    <input v-model="form.shipping_house_number" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" autocomplete="shipping address-line2" />
+                                </div>
+                            </div>
+
+                            <div class="grid gap-3 sm:grid-cols-[8rem_1fr]">
+                                <div>
+                                    <label class="text-xs font-semibold uppercase text-secondary">PLZ</label>
+                                    <input v-model="form.shipping_postal_code" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" autocomplete="shipping postal-code" />
+                                </div>
+                                <div>
+                                    <label class="text-xs font-semibold uppercase text-secondary">Ort</label>
+                                    <input v-model="form.shipping_city" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" autocomplete="shipping address-level2" />
+                                </div>
                             </div>
 
                             <div>
                                 <label class="text-xs font-semibold uppercase text-secondary">Name</label>
                                 <input v-model="form.guest_name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required autocomplete="name" />
                                 <p v-if="form.errors.guest_name" class="mt-1 text-sm text-red-400">{{ form.errors.guest_name }}</p>
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-semibold uppercase text-secondary">Kundentyp</label>
+                                <select v-model="form.customer_type" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                                    <option value="consumer">Privatkunde</option>
+                                    <option value="business">Firma / Verein</option>
+                                </select>
+                            </div>
+
+                            <div v-if="form.customer_type === 'business'" class="space-y-3">
+                                <div>
+                                    <label class="text-xs font-semibold uppercase text-secondary">Firma / Verein</label>
+                                    <input v-model="form.customer_company" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" autocomplete="organization" />
+                                </div>
+                                <div>
+                                    <label class="text-xs font-semibold uppercase text-secondary">USt-IdNr.</label>
+                                    <input v-model="form.customer_vat_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary uppercase" placeholder="z. B. ATU..." />
+                                </div>
                             </div>
 
                             <div>
@@ -139,6 +187,19 @@ const updateCountry = () => {
                                     <option value="paypal">PayPal</option>
                                 </select>
                                 <p v-if="form.errors.provider" class="mt-1 text-sm text-red-400">{{ form.errors.provider }}</p>
+                            </div>
+
+                            <div class="rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
+                                <p class="flex justify-between gap-3">
+                                    <span>Zwischensumme</span>
+                                    <span class="font-semibold text-primary">{{ formatMoney(price.item_gross_cents ?? price.gross_cents, price.currency) }}</span>
+                                </p>
+                                <p class="mt-1 flex justify-between gap-3">
+                                    <span>{{ price.shipping_label || 'Versand' }}</span>
+                                    <span class="font-semibold text-primary">{{ formatMoney(price.shipping_gross_cents, price.currency) }}</span>
+                                </p>
+                                <p v-if="price.reverse_charge" class="mt-2 text-xs text-air-blue">Reverse-Charge: Steuerschuld geht auf den Leistungsempfaenger ueber.</p>
+                                <p v-else-if="price.tax_rule === 'export_outside_eu'" class="mt-2 text-xs text-air-blue">Export ausserhalb der EU: keine EU-MwSt. berechnet.</p>
                             </div>
 
                             <label class="flex items-start gap-3 text-sm text-secondary">

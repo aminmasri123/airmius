@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Ride;
 use App\Models\Club;
 use App\Models\Team;
+use App\Models\User;
 use App\Services\RideService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -22,8 +23,8 @@ class RideController extends Controller
         $this->authorize('viewAny', Ride::class);
         $user = $request->user();
         $friendIds = $user->friendships()->pluck('friend_id');
-        $clubIds = $user->clubs()->pluck('clubs.id');
-        $teamIds = $user->teams()->pluck('teams.id');
+        $clubIds = $this->relatedClubIds($user);
+        $teamIds = $this->relatedTeamIds($user);
 
         $rides = Ride::query()
             ->with(['driver:id,name', 'users:id,name', 'club:id,name', 'team:id,name'])
@@ -84,12 +85,12 @@ class RideController extends Controller
         return Inertia::render('Auth/Dashboard/Rides/Index', [
             'rides' => $rides,
             'clubs' => Club::query()
-                ->whereHas('users', fn ($query) => $query->where('users.id', $user->id))
+                ->whereIn('id', $clubIds)
                 ->select(['id', 'name'])
                 ->orderBy('name')
                 ->get(),
             'teams' => Team::query()
-                ->whereHas('users', fn ($query) => $query->where('users.id', $user->id))
+                ->whereIn('id', $teamIds)
                 ->select(['id', 'name', 'club_id'])
                 ->orderBy('name')
                 ->get(),
@@ -128,16 +129,19 @@ class RideController extends Controller
             'team_id' => [$data['visibility'] === 'team' ? 'required' : 'nullable'],
         ]);
 
-        if (! empty($data['club_id'])) {
-            Club::query()
-                ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
-                ->findOrFail($data['club_id']);
+        $clubIds = $this->relatedClubIds($request->user());
+        $teamIds = $this->relatedTeamIds($request->user());
+
+        if (! empty($data['club_id']) && ! $clubIds->contains((int) $data['club_id'])) {
+            abort(403);
         }
 
-        if (! empty($data['team_id'])) {
-            Team::query()
-                ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
-                ->findOrFail($data['team_id']);
+        if (! empty($data['team_id']) && ! $teamIds->contains((int) $data['team_id'])) {
+            abort(403);
+        }
+
+        if (! empty($data['team_id']) && empty($data['club_id'])) {
+            $data['club_id'] = Team::query()->whereKey($data['team_id'])->value('club_id');
         }
 
         $ride = $this->service->create($request->user(), $data);
@@ -179,6 +183,42 @@ class RideController extends Controller
         ]);
 
         return $parts ? implode(' - ', $parts) : null;
+    }
+
+    private function relatedClubIds(User $user)
+    {
+        return $user->clubs()
+            ->pluck('clubs.id')
+            ->merge($this->managedChildren($user)
+                ->load(['clubs:id', 'teams:id,club_id'])
+                ->flatMap(fn (User $child) => $child->clubs->pluck('id')
+                    ->merge($child->teams->pluck('club_id')->filter())))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+    }
+
+    private function relatedTeamIds(User $user)
+    {
+        return $user->teams()
+            ->pluck('teams.id')
+            ->merge($this->managedChildren($user)
+                ->load('teams:id')
+                ->flatMap(fn (User $child) => $child->teams->pluck('id')))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+    }
+
+    private function managedChildren(User $user)
+    {
+        return User::query()
+            ->whereDate('birth_date', '>', now()->subYears(16)->toDateString())
+            ->where(function ($query) use ($user) {
+                $query->where('guardian_user_id', $user->id)
+                    ->orWhereRaw('LOWER(guardian_email) = ?', [mb_strtolower((string) $user->email)]);
+            })
+            ->get();
     }
 
     private function pickupPrivateLabel(Ride $ride): ?string
