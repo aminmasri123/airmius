@@ -54,6 +54,18 @@ class Ride extends Model
 
     public function users()
     {
-        return $this->belongsToMany(User::class, 'ride_users');
+        return $this->belongsToMany(User::class, 'ride_users')
+            ->withPivot(['status', 'message', 'responded_at'])
+            ->withTimestamps();
+    }
+
+    public function acceptedUsers()
+    {
+        return $this->users()->wherePivot('status', 'accepted');
+    }
+
+    public function pendingUsers()
+    {
+        return $this->users()->wherePivot('status', 'requested');
     }
 }

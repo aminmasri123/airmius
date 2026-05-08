@@ -22,6 +22,26 @@ class RideService
 
     public function join($ride, $user)
     {
-        $ride->users()->syncWithoutDetaching([$user->id]);
+        $ride->users()->syncWithoutDetaching([
+            $user->id => [
+                'status' => 'accepted',
+                'responded_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+    }
+
+    public function requestToJoin($ride, $user, ?string $message = null)
+    {
+        $ride->users()->syncWithoutDetaching([
+            $user->id => [
+                'status' => 'requested',
+                'message' => $message,
+                'responded_at' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
     }
 }

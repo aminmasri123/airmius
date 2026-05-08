@@ -18,6 +18,8 @@ const showDeleteModal = ref(false)
 const deleteTarget = ref(null)
 const deleteConfirmation = ref('')
 const editTarget = ref(null)
+const requestTarget = ref(null)
+const requestMessage = ref('')
 
 const form = useForm({
     visibility: 'friends',
@@ -115,12 +117,37 @@ const submit = () => {
 
 const visibilityLabel = (value) => props.visibilities.find((visibility) => visibility.value === value)?.label || value
 
-const joinRide = (ride) => {
-    router.post(route('auth.rides.join', ride.id), {}, { preserveScroll: true })
+const openRequestModal = (ride) => {
+    requestTarget.value = ride
+    requestMessage.value = ''
+}
+
+const closeRequestModal = () => {
+    requestTarget.value = null
+    requestMessage.value = ''
+}
+
+const sendRideRequest = () => {
+    if (!requestTarget.value) return
+
+    router.post(route('auth.rides.join', requestTarget.value.id), {
+        message: requestMessage.value,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => closeRequestModal(),
+    })
 }
 
 const leaveRide = (ride) => {
     router.post(route('auth.rides.leave', ride.id), {}, { preserveScroll: true })
+}
+
+const approveRequest = (ride, request) => {
+    router.post(route('auth.rides.requests.approve', [ride.id, request.id]), {}, { preserveScroll: true })
+}
+
+const rejectRequest = (ride, request) => {
+    router.post(route('auth.rides.requests.reject', [ride.id, request.id]), {}, { preserveScroll: true })
 }
 
 const openDeleteModal = (ride) => {
@@ -368,6 +395,47 @@ const confirmDeleteRide = () => {
             </div>
         </Modal>
 
+        <Modal :show="Boolean(requestTarget)" max-width="md" @close="closeRequestModal">
+            <div v-if="requestTarget" class="space-y-4">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Mitfahranfrage</p>
+                    <h2 class="mt-1 text-lg font-bold text-primary">
+                        {{ requestTarget.from }} -> {{ requestTarget.to }}
+                    </h2>
+                    <p class="mt-2 text-sm text-secondary">
+                        Deine Anfrage wird an den Fahrer gesendet. Kontaktdaten und genaue Treffpunktdetails siehst du erst nach Annahme.
+                    </p>
+                </div>
+
+                <label class="block">
+                    <span class="text-sm font-semibold text-primary">Nachricht optional</span>
+                    <textarea
+                        v-model="requestMessage"
+                        rows="4"
+                        class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                        placeholder="z. B. Ich kann am Treffpunkt sein."
+                    ></textarea>
+                </label>
+
+                <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button
+                        type="button"
+                        class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
+                        @click="closeRequestModal"
+                    >
+                        Abbrechen
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
+                        @click="sendRideRequest"
+                    >
+                        Anfrage senden
+                    </button>
+                </div>
+            </div>
+        </Modal>
+
         <section class="grid gap-4 md:grid-cols-2">
             <article v-for="ride in rides" :key="ride.id" class="rounded-lg border border-border bg-card p-5">
                 <div class="flex items-start justify-between gap-3">
@@ -416,6 +484,29 @@ const confirmDeleteRide = () => {
                     </p>
                 </div>
 
+                <div v-if="ride.is_driver && ride.pending_requests?.length" class="mt-4 rounded-lg border border-air-blue/30 bg-air-blue/10 p-3">
+                    <h3 class="text-sm font-semibold text-primary">Offene Anfragen</h3>
+                    <div class="mt-3 space-y-3">
+                        <div v-for="request in ride.pending_requests" :key="request.id" class="rounded-lg border border-border bg-card p-3">
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <p class="font-semibold text-primary">{{ request.name }}</p>
+                                    <p v-if="request.message" class="mt-1 text-sm text-secondary">{{ request.message }}</p>
+                                    <p v-else class="mt-1 text-xs text-secondary">Keine Nachricht angegeben.</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="approveRequest(ride, request)">
+                                        Annehmen
+                                    </button>
+                                    <button class="rounded-lg border border-error/40 px-3 py-2 text-xs font-semibold text-error" @click="rejectRequest(ride, request)">
+                                        Ablehnen
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="mt-4 flex flex-wrap gap-2">
                     <button
                         v-if="ride.can_update"
@@ -427,10 +518,16 @@ const confirmDeleteRide = () => {
                     <button
                         v-if="!ride.is_joined && ride.can_join"
                         class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
-                        @click="joinRide(ride)"
+                        @click="openRequestModal(ride)"
                     >
-                        Beitreten
+                        Anfrage senden
                     </button>
+                    <span
+                        v-else-if="ride.has_pending_request"
+                        class="rounded-lg border border-air-blue/40 px-4 py-2 text-sm font-semibold text-air-blue"
+                    >
+                        Anfrage offen
+                    </span>
                     <span
                         v-else-if="!ride.is_joined"
                         class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-secondary"

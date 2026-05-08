@@ -33,12 +33,14 @@ class RidePolicy extends BasePolicy
     {
         return $this->canUseRides($user)
             && $this->canSeeRide($user, $ride)
-            && $ride->users()->count() < (int) $ride->seats;
+            && (int) $ride->driver_id !== (int) $user->id
+            && ! $ride->users()->where('users.id', $user->id)->wherePivotIn('status', ['requested', 'accepted'])->exists()
+            && $ride->acceptedUsers()->count() < (int) $ride->seats;
     }
 
     private function canSeeRide(User $user, Ride $ride): bool
     {
-        if ((int) $ride->driver_id === (int) $user->id || $ride->users()->where('users.id', $user->id)->exists()) {
+        if ((int) $ride->driver_id === (int) $user->id || $ride->users()->where('users.id', $user->id)->wherePivotIn('status', ['requested', 'accepted'])->exists()) {
             return true;
         }
 

@@ -8,6 +8,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Services\RideService;
 use App\Support\AppNotification;
+use App\Support\Roles;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -26,29 +27,37 @@ class RideController extends Controller
         $friendIds = $user->friendships()->pluck('friend_id');
         $clubIds = $this->relatedClubIds($user);
         $teamIds = $this->relatedTeamIds($user);
+        $canManageAllRides = $this->canManageAllRides($user);
 
         $rides = Ride::query()
             ->with(['driver:id,name', 'users:id,name', 'club:id,name', 'team:id,name'])
-            ->where(function ($query) use ($user, $friendIds, $clubIds, $teamIds) {
+            ->when(! $canManageAllRides, function ($query) use ($user, $friendIds, $clubIds, $teamIds) {
                 $query
-                    ->where('driver_id', $user->id)
-                    ->orWhereHas('users', fn ($users) => $users->where('users.id', $user->id))
-                    ->orWhere('visibility', 'public')
-                    ->orWhere(fn ($query) => $query
-                        ->where('visibility', 'friends')
-                        ->whereIn('driver_id', $friendIds))
-                    ->orWhere(fn ($query) => $query
-                        ->where('visibility', 'club')
-                        ->whereIn('club_id', $clubIds))
-                    ->orWhere(fn ($query) => $query
-                        ->where('visibility', 'team')
-                        ->whereIn('team_id', $teamIds));
+                    ->where(function ($query) use ($user, $friendIds, $clubIds, $teamIds) {
+                        $query
+                            ->where('driver_id', $user->id)
+                            ->orWhereHas('users', fn ($users) => $users->where('users.id', $user->id))
+                            ->orWhere('visibility', 'public')
+                            ->orWhere(fn ($query) => $query
+                                ->where('visibility', 'friends')
+                                ->whereIn('driver_id', $friendIds))
+                            ->orWhere(fn ($query) => $query
+                                ->where('visibility', 'club')
+                                ->whereIn('club_id', $clubIds))
+                            ->orWhere(fn ($query) => $query
+                                ->where('visibility', 'team')
+                                ->whereIn('team_id', $teamIds));
+                    });
             })
             ->latest()
             ->get()
             ->map(function (Ride $ride) use ($user) {
                 $isDriver = (int) $ride->driver_id === (int) $user->id;
-                $isJoined = $ride->users->contains('id', $user->id);
+                $acceptedUsers = $ride->users->filter(fn (User $member) => $member->pivot?->status === 'accepted')->values();
+                $pendingUsers = $ride->users->filter(fn (User $member) => $member->pivot?->status === 'requested')->values();
+                $ownPivot = $ride->users->firstWhere('id', $user->id)?->pivot;
+                $isJoined = $ownPivot?->status === 'accepted';
+                $hasPendingRequest = $ownPivot?->status === 'requested';
                 $canSeePrivateDetails = $isDriver || $isJoined;
 
                 return [
@@ -74,11 +83,22 @@ class RideController extends Controller
                     'departure_time' => $ride->departure_time,
                     'seats' => $ride->seats,
                     'contact_details' => $canSeePrivateDetails ? $ride->contact_details : null,
-                    'users' => $canSeePrivateDetails ? $ride->users : [],
-                    'participants_count' => $ride->users->count(),
+                    'users' => $canSeePrivateDetails ? $acceptedUsers : [],
+                    'participants_count' => $acceptedUsers->count(),
+                    'pending_requests' => $isDriver ? $pendingUsers->map(fn (User $member) => [
+                        'id' => $member->id,
+                        'name' => $member->name,
+                        'message' => $member->pivot?->message,
+                        'requested_at' => $member->pivot?->created_at,
+                    ])->values() : [],
                     'is_driver' => $isDriver,
                     'is_joined' => $isJoined,
-                    'can_join' => $user->can('join', $ride),
+                    'has_pending_request' => $hasPendingRequest,
+                    'can_join' => ! $isDriver
+                        && ! $isJoined
+                        && ! $hasPendingRequest
+                        && $acceptedUsers->count() < (int) $ride->seats
+                        && $user->can('join', $ride),
                     'can_update' => $user->can('update', $ride),
                     'can_delete' => $user->can('delete', $ride),
                 ];
@@ -122,7 +142,7 @@ class RideController extends Controller
         $this->authorize('update', $ride);
 
         $data = $this->validatedRideData($request);
-        $participantsCount = $ride->users()->count();
+        $participantsCount = $ride->acceptedUsers()->count();
 
         abort_if((int) $data['seats'] < $participantsCount, 422, 'Die Plaetze duerfen nicht unter der aktuellen Mitfahrerzahl liegen.');
 
@@ -146,19 +166,27 @@ class RideController extends Controller
     {
         $this->authorize('join', $ride);
 
-        $alreadyJoined = $ride->users()->where('users.id', auth()->id())->exists();
-        $this->service->join($ride, auth()->user());
+        $data = request()->validate([
+            'message' => ['nullable', 'string', 'max:500'],
+        ]);
+        $alreadyRequestedOrJoined = $ride->users()
+            ->where('users.id', auth()->id())
+            ->wherePivotIn('status', ['requested', 'accepted'])
+            ->exists();
+        abort_if(! $alreadyRequestedOrJoined && $ride->acceptedUsers()->count() >= (int) $ride->seats, 422, 'Diese Fahrgemeinschaft ist bereits voll.');
 
-        if (! $alreadyJoined && (int) $ride->driver_id !== (int) auth()->id()) {
-            AppNotification::send($ride->driver_id, 'ride.joined', [
-                'title' => 'Neue Mitfahrt',
-                'message' => auth()->user()->name.' ist deiner Fahrgemeinschaft '.$ride->from.' -> '.$ride->to.' beigetreten.',
+        $this->service->requestToJoin($ride, auth()->user(), $data['message'] ?? null);
+
+        if (! $alreadyRequestedOrJoined && (int) $ride->driver_id !== (int) auth()->id()) {
+            AppNotification::send($ride->driver_id, 'ride.requested', [
+                'title' => 'Neue Mitfahranfrage',
+                'message' => auth()->user()->name.' moechte bei '.$ride->from.' -> '.$ride->to.' mitfahren.',
                 'ride_id' => $ride->id,
                 'url' => route('auth.rides.index'),
             ]);
         }
 
-        return back()->with('success', 'Du bist der Fahrgemeinschaft beigetreten.');
+        return back()->with('success', 'Deine Mitfahranfrage wurde gesendet.');
     }
 
     public function leave(Ride $ride)
@@ -166,7 +194,7 @@ class RideController extends Controller
         $user = auth()->user();
         abort_if((int) $ride->driver_id === (int) $user->id, 422, 'Fahrer koennen ihre eigene Fahrt nicht verlassen. Bitte loesche die Fahrt stattdessen.');
 
-        $wasJoined = $ride->users()->where('users.id', $user->id)->exists();
+        $wasJoined = $ride->users()->where('users.id', $user->id)->wherePivot('status', 'accepted')->exists();
         $ride->users()->detach($user->id);
 
         if ($wasJoined) {
@@ -181,10 +209,53 @@ class RideController extends Controller
         return back()->with('success', 'Du hast die Fahrgemeinschaft verlassen.');
     }
 
+    public function approveRequest(Ride $ride, User $user)
+    {
+        $this->authorize('update', $ride);
+        abort_unless($ride->users()->where('users.id', $user->id)->wherePivot('status', 'requested')->exists(), 404);
+        abort_if($ride->acceptedUsers()->count() >= (int) $ride->seats, 422, 'Diese Fahrgemeinschaft ist bereits voll.');
+
+        $ride->users()->updateExistingPivot($user->id, [
+            'status' => 'accepted',
+            'responded_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        AppNotification::send($user, 'ride.request_approved', [
+            'title' => 'Mitfahranfrage angenommen',
+            'message' => 'Deine Anfrage fuer '.$ride->from.' -> '.$ride->to.' wurde angenommen.',
+            'ride_id' => $ride->id,
+            'url' => route('auth.rides.index'),
+        ]);
+
+        return back()->with('success', 'Mitfahranfrage angenommen.');
+    }
+
+    public function rejectRequest(Ride $ride, User $user)
+    {
+        $this->authorize('update', $ride);
+        abort_unless($ride->users()->where('users.id', $user->id)->wherePivot('status', 'requested')->exists(), 404);
+
+        $ride->users()->updateExistingPivot($user->id, [
+            'status' => 'rejected',
+            'responded_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        AppNotification::send($user, 'ride.request_rejected', [
+            'title' => 'Mitfahranfrage abgelehnt',
+            'message' => 'Deine Anfrage fuer '.$ride->from.' -> '.$ride->to.' wurde abgelehnt.',
+            'ride_id' => $ride->id,
+            'url' => route('auth.rides.index'),
+        ]);
+
+        return back()->with('success', 'Mitfahranfrage abgelehnt.');
+    }
+
     public function destroy(Ride $ride)
     {
         $this->authorize('delete', $ride);
-        $participants = $ride->users()->where('users.id', '!=', $ride->driver_id)->get();
+        $participants = $ride->users()->where('users.id', '!=', $ride->driver_id)->wherePivotIn('status', ['requested', 'accepted'])->get();
         $message = $ride->from.' -> '.$ride->to.' wurde geloescht.';
 
         foreach ($participants as $participant) {
@@ -326,5 +397,12 @@ class RideController extends Controller
 
             AppNotification::send($participant, $type, $data);
         }
+    }
+
+    private function canManageAllRides(User $user): bool
+    {
+        return $user->hasAnyRole(Roles::FULL_ACCESS)
+            || $user->can('system.manage')
+            || $user->can('rides.manage');
     }
 }

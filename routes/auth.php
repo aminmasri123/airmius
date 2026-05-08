@@ -234,6 +234,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::post('/rides', [RideController::class, 'store'])->name('auth.rides.store');
     Route::put('/rides/{ride}', [RideController::class, 'update'])->name('auth.rides.update');
     Route::post('/rides/{ride}/join', [RideController::class, 'join'])->name('auth.rides.join');
+    Route::post('/rides/{ride}/requests/{user}/approve', [RideController::class, 'approveRequest'])->name('auth.rides.requests.approve');
+    Route::post('/rides/{ride}/requests/{user}/reject', [RideController::class, 'rejectRequest'])->name('auth.rides.requests.reject');
     Route::post('/rides/{ride}/leave', [RideController::class, 'leave'])->name('auth.rides.leave');
     Route::delete('/rides/{ride}', [RideController::class, 'destroy'])->name('auth.rides.destroy');
 
