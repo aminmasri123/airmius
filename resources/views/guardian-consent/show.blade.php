@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Zustimmung bestaetigen</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite('resources/js/app.js')
 </head>
 <body class="bg-gray-100 text-gray-900 antialiased">
     <main class="mx-auto flex min-h-screen w-full max-w-xl items-center px-6 py-12">
