@@ -72,8 +72,14 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::get('/commerce/products/{product}', [CommerceCheckoutController::class, 'showProduct'])->name('auth.commerce.products.show');
     Route::post('/commerce/addons/{addon}', [CommerceCheckoutController::class, 'storeAddon'])->name('auth.commerce.addons.checkout');
     Route::post('/commerce/products/{product}', [CommerceCheckoutController::class, 'storeProduct'])->name('auth.commerce.products.checkout');
+    Route::post('/commerce/cart/items/{product}', [CommerceCheckoutController::class, 'addCartItem'])->name('auth.commerce.cart.items.store');
+    Route::put('/commerce/cart/items/{item}', [CommerceCheckoutController::class, 'updateCartItem'])->name('auth.commerce.cart.items.update');
+    Route::delete('/commerce/cart/items/{item}', [CommerceCheckoutController::class, 'removeCartItem'])->name('auth.commerce.cart.items.destroy');
+    Route::post('/commerce/cart/checkout', [CommerceCheckoutController::class, 'checkoutCart'])->name('auth.commerce.cart.checkout');
     Route::post('/commerce/orders/{order}/issue', [CommerceCheckoutController::class, 'reportOrderIssue'])->name('auth.commerce.orders.issue');
     Route::post('/commerce/orders/{order}/returns', [CommerceCheckoutController::class, 'requestReturn'])->name('auth.commerce.orders.returns.store');
+    Route::get('/commerce/orders/{order}/invoice', [CommerceCheckoutController::class, 'downloadInvoice'])->name('auth.commerce.orders.invoice');
+    Route::get('/commerce/orders/{order}/credit-note', [CommerceCheckoutController::class, 'downloadCreditNote'])->name('auth.commerce.orders.credit-note');
     Route::post('/commerce/products', [CommerceCheckoutController::class, 'storeOwnProduct'])->name('auth.commerce.products.store');
     Route::post('/commerce/campaigns', [CommerceCheckoutController::class, 'storeOwnCampaign'])->name('auth.commerce.campaigns.store');
     Route::post('/commerce/website-requests', [CommerceCheckoutController::class, 'storeWebsiteRequest'])->name('auth.commerce.website-requests.store');

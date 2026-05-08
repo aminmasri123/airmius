@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AdCampaign;
 use App\Models\CommerceOrder;
 use App\Models\CommerceReturnRequest;
+use App\Models\CommerceAuditLog;
 use App\Models\CommerceStockMovement;
 use App\Models\CommerceShippingRate;
 use App\Models\CommerceTaxRate;
@@ -18,15 +19,23 @@ use App\Models\SubscriptionInvoice;
 use App\Models\User;
 use App\Models\WebsiteRequest;
 use App\Services\MediaOptimizer;
+use App\Services\CommerceAuditService;
+use App\Services\CommerceDocumentService;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class AdminCommerceController extends Controller
 {
-    public function __construct(private MediaOptimizer $mediaOptimizer) {}
+    public function __construct(
+        private MediaOptimizer $mediaOptimizer,
+        private CommerceAuditService $audit,
+        private CommerceDocumentService $documents,
+    ) {}
 
     public function index()
     {
@@ -88,6 +97,13 @@ class AdminCommerceController extends Controller
             'marketplaceVisuals' => $this->marketplaceVisualsForAdmin(),
             'taxRates' => CommerceTaxRate::query()->orderBy('priority')->orderBy('country_code')->get(),
             'shippingRates' => CommerceShippingRate::query()->orderBy('priority')->orderBy('country_code')->get(),
+            'auditLogs' => CommerceAuditLog::query()
+                ->with('user:id,name,email')
+                ->latest('id')
+                ->limit(80)
+                ->get(),
+            'ossReport' => $this->ossReport(),
+            'sellerReports' => $this->sellerReports(),
             'commerceSettings' => [
                 'company_country' => Setting::valueFor('commerce_company_country', 'DE'),
                 'company_currency' => Setting::valueFor('commerce_company_currency', 'EUR'),
@@ -135,7 +151,9 @@ class AdminCommerceController extends Controller
 
     public function updateProduct(Request $request, MarketplaceProduct $product)
     {
+        $before = $product->only(['title', 'price_cents', 'status', 'stock_quantity', 'tax_class']);
         $product->update($this->productData($request));
+        $this->audit->log('product.updated', $product, $before, $product->fresh()->only(['title', 'price_cents', 'status', 'stock_quantity', 'tax_class']));
 
         return back()->with('success', 'Marketplace-Produkt aktualisiert.');
     }
@@ -161,6 +179,10 @@ class AdminCommerceController extends Controller
                 'stock_after' => $product->stock_quantity,
                 'note' => $data['note'] ?? null,
             ]);
+            $this->audit->log('stock.adjusted', $product, [], [
+                'quantity_delta' => (int) $data['quantity_delta'],
+                'stock_after' => $product->stock_quantity,
+            ], $data['note'] ?? null);
         });
 
         return back()->with('success', 'Lagerbestand wurde angepasst.');
@@ -193,6 +215,7 @@ class AdminCommerceController extends Controller
         ]);
 
         DB::transaction(function () use ($returnRequest, $data) {
+            $before = $returnRequest->only(['status', 'approved_amount_cents', 'resolution_note']);
             $updates = [
                 'status' => $data['status'],
                 'resolution_note' => $data['resolution_note'] ?? $returnRequest->resolution_note,
@@ -212,11 +235,14 @@ class AdminCommerceController extends Controller
             }
 
             $returnRequest->update($updates);
+            $this->audit->log('return.updated', $returnRequest, $before, $returnRequest->fresh()->only(['status', 'approved_amount_cents', 'resolution_note']));
 
             if (($data['status'] === 'refunded') && $returnRequest->order) {
                 $returnRequest->order->update([
                     'issue_status' => 'refunded',
                     'status' => 'refunded',
+                    'refunded_cents' => (int) ($data['approved_amount_cents'] ?? $returnRequest->approved_amount_cents ?? $returnRequest->requested_amount_cents),
+                    'credit_note_number' => $returnRequest->order->credit_note_number ?: $this->nextDocumentNumber('commerce_credit_note_number_next', 'AIR-GS'),
                 ]);
             }
 
@@ -240,7 +266,112 @@ class AdminCommerceController extends Controller
             }
         });
 
+        $returnRequest->refresh()->load('user');
+        if ($returnRequest->user) {
+            $returnRequest->user->notify(new \App\Notifications\CommerceReturnStatusUpdated($returnRequest));
+        } elseif ($returnRequest->guest_email) {
+            Notification::route('mail', $returnRequest->guest_email)
+                ->notify(new \App\Notifications\CommerceReturnStatusUpdated($returnRequest));
+        }
+
         return back()->with('success', 'Ruecksendung wurde aktualisiert.');
+    }
+
+    public function updateShipping(Request $request, CommerceOrder $order)
+    {
+        $data = $request->validate([
+            'shipping_status' => ['required', Rule::in(['open', 'prepared', 'shipped', 'delivered'])],
+            'shipping_carrier' => ['nullable', 'string', 'max:80'],
+            'shipping_label_url' => ['nullable', 'url', 'max:2048'],
+            'tracking_number' => ['nullable', 'string', 'max:120'],
+            'tracking_url' => ['nullable', 'url', 'max:2048'],
+        ]);
+
+        $before = $order->only(['shipping_status', 'shipping_carrier', 'tracking_number']);
+        $order->update([
+            ...$data,
+            'shipped_at' => $data['shipping_status'] === 'shipped' && ! $order->shipped_at ? now() : $order->shipped_at,
+            'delivered_at' => $data['shipping_status'] === 'delivered' && ! $order->delivered_at ? now() : $order->delivered_at,
+        ]);
+        $this->audit->log('shipping.updated', $order, $before, $order->fresh()->only(['shipping_status', 'shipping_carrier', 'tracking_number']));
+
+        return back()->with('success', 'Versandstatus wurde aktualisiert.');
+    }
+
+    public function refundOrder(Request $request, CommerceOrder $order)
+    {
+        $data = $request->validate([
+            'amount_cents' => ['required', 'integer', 'min:1'],
+            'reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        abort_if((int) $data['amount_cents'] > (int) $order->amount_cents, 422, 'Die Erstattung darf die Bestellung nicht uebersteigen.');
+
+        $providerRefundId = $this->refundViaProvider($order, (int) $data['amount_cents']);
+        $before = $order->only(['status', 'refunded_cents', 'refund_provider_id']);
+        $order->update([
+            'status' => (int) $data['amount_cents'] >= (int) $order->amount_cents ? 'refunded' : $order->status,
+            'issue_status' => 'refunded',
+            'refunded_cents' => (int) $order->refunded_cents + (int) $data['amount_cents'],
+            'refund_provider_id' => $providerRefundId ?: $order->refund_provider_id,
+            'credit_note_number' => $order->credit_note_number ?: $this->nextDocumentNumber('commerce_credit_note_number_next', 'AIR-GS'),
+        ]);
+        $this->audit->log('order.refunded', $order, $before, $order->fresh()->only(['status', 'refunded_cents', 'refund_provider_id']), $data['reason'] ?? null);
+
+        return back()->with('success', $providerRefundId ? 'Erstattung wurde beim Anbieter angestoßen.' : 'Erstattung wurde dokumentiert.');
+    }
+
+    public function downloadInvoice(CommerceOrder $order)
+    {
+        abort_unless($order->invoice_number, 404);
+
+        return response($this->documents->pdf($order, 'invoice'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$order->invoice_number.'.pdf"',
+        ]);
+    }
+
+    public function downloadCreditNote(CommerceOrder $order)
+    {
+        abort_unless($order->credit_note_number, 404);
+
+        return response($this->documents->pdf($order, 'credit_note'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$order->credit_note_number.'.pdf"',
+        ]);
+    }
+
+    public function exportCsv()
+    {
+        $orders = CommerceOrder::query()->with(['user:id,name,email', 'items'])->latest('id')->get();
+        $rows = [[
+            'order_id', 'invoice_number', 'credit_note_number', 'date', 'customer_email', 'country', 'net_cents', 'tax_cents', 'gross_cents', 'currency', 'status', 'shipping_status', 'tracking_number',
+        ]];
+
+        foreach ($orders as $order) {
+            $rows[] = [
+                $order->id,
+                $order->invoice_number,
+                $order->credit_note_number,
+                $order->created_at?->toDateString(),
+                $order->user?->email ?: $order->guest_email,
+                $order->tax_country,
+                $order->net_cents,
+                $order->tax_cents,
+                $order->amount_cents,
+                $order->currency,
+                $order->status,
+                $order->shipping_status,
+                $order->tracking_number,
+            ];
+        }
+
+        $csv = collect($rows)->map(fn ($row) => collect($row)->map(fn ($value) => '"'.str_replace('"', '""', (string) $value).'"')->implode(';'))->implode("\n");
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="airmius-commerce-export.csv"',
+        ]);
     }
 
     public function storeCampaign(Request $request)
@@ -458,7 +589,10 @@ class AdminCommerceController extends Controller
             'is_shippable' => ['boolean'],
             'manages_stock' => ['boolean'],
             'stock_quantity' => ['nullable', 'integer', 'min:0'],
+            'low_stock_threshold' => ['nullable', 'integer', 'min:0'],
             'tax_class' => ['nullable', 'string', 'max:30'],
+            'return_policy_type' => ['nullable', Rule::in(['standard', 'digital', 'service', 'hygiene', 'custom'])],
+            'return_window_days' => ['nullable', 'integer', 'min:0', 'max:365'],
             'price_cents' => ['required', 'integer', 'min:0'],
             'currency' => ['required', 'string', 'size:3'],
             'status' => ['required', Rule::in(['draft', 'review', 'published', 'rejected', 'archived'])],
@@ -534,27 +668,38 @@ class AdminCommerceController extends Controller
     private function pendingPayoutOrdersFor(User $user)
     {
         return CommerceOrder::query()
-            ->where('type', 'marketplace_product')
+            ->whereIn('type', ['marketplace_product', 'marketplace_cart'])
             ->where('status', 'completed')
             ->where('payout_status', 'pending')
-            ->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($query) => $query->where('user_id', $user->id));
+            ->where(function ($query) use ($user) {
+                $query->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($product) => $product->where('user_id', $user->id))
+                    ->orWhereHas('items', fn ($items) => $items
+                        ->where('orderable_type', MarketplaceProduct::class)
+                        ->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($product) => $product->where('user_id', $user->id)));
+            });
     }
 
     private function payoutCandidates(): array
     {
         $orders = CommerceOrder::query()
-            ->with(['orderable.user:id,name,email'])
-            ->where('type', 'marketplace_product')
+            ->with(['orderable.user:id,name,email', 'items.orderable.user:id,name,email'])
+            ->whereIn('type', ['marketplace_product', 'marketplace_cart'])
             ->where('status', 'completed')
             ->where('payout_status', 'pending')
-            ->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($query) => $query->whereNotNull('user_id'))
+            ->where(function ($query) {
+                $query->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($product) => $product->whereNotNull('user_id'))
+                    ->orWhereHas('items', fn ($items) => $items
+                        ->where('orderable_type', MarketplaceProduct::class)
+                        ->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($product) => $product->whereNotNull('user_id')));
+            })
             ->get();
 
         return $orders
-            ->groupBy(fn (CommerceOrder $order) => $order->orderable?->user_id)
+            ->groupBy(fn (CommerceOrder $order) => $order->orderable?->user_id ?: $order->items->first(fn ($item) => $item->orderable instanceof MarketplaceProduct)?->orderable?->user_id)
             ->filter(fn ($group, $userId) => filled($userId))
             ->map(function ($group, $userId) {
-                $seller = $group->first()->orderable?->user;
+                $seller = $group->first()->orderable?->user
+                    ?: $group->first()->items->first(fn ($item) => $item->orderable instanceof MarketplaceProduct)?->orderable?->user;
 
                 return [
                     'user_id' => (int) $userId,
@@ -568,6 +713,109 @@ class AdminCommerceController extends Controller
             })
             ->values()
             ->all();
+    }
+
+    private function sellerReports(): array
+    {
+        return MarketplaceProduct::query()
+            ->with('user:id,name,email')
+            ->withSum('stockMovements as stock_delta_sum', 'quantity_delta')
+            ->latest('id')
+            ->limit(100)
+            ->get()
+            ->map(fn (MarketplaceProduct $product) => [
+                'product_id' => $product->id,
+                'title' => $product->title,
+                'seller' => $product->user?->name ?: $product->user?->email,
+                'stock_quantity' => $product->stock_quantity,
+                'manages_stock' => $product->manages_stock,
+                'status' => $product->status,
+                'low_stock' => $product->manages_stock && (int) $product->low_stock_threshold > 0 && (int) $product->stock_quantity <= (int) $product->low_stock_threshold,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function ossReport(): array
+    {
+        return CommerceOrder::query()
+            ->where('status', 'completed')
+            ->whereNotNull('tax_country')
+            ->get()
+            ->groupBy('tax_country')
+            ->map(fn ($orders, string $country) => [
+                'country' => $country,
+                'orders_count' => $orders->count(),
+                'net_cents' => $orders->sum('net_cents'),
+                'tax_cents' => $orders->sum('tax_cents'),
+                'gross_cents' => $orders->sum('amount_cents'),
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function refundViaProvider(CommerceOrder $order, int $amountCents): ?string
+    {
+        if ($order->provider === 'stripe' && filled(config('services.stripe.secret'))) {
+            $paymentIntent = data_get($order->payload, 'payment_intent') ?: data_get($order->payload, 'data.object.payment_intent');
+            if ($paymentIntent) {
+                $response = Http::asForm()
+                    ->withToken(config('services.stripe.secret'))
+                    ->post('https://api.stripe.com/v1/refunds', [
+                        'payment_intent' => $paymentIntent,
+                        'amount' => $amountCents,
+                        'metadata[commerce_order_id]' => (string) $order->id,
+                    ]);
+
+                if ($response->ok()) {
+                    return $response->json('id');
+                }
+            }
+        }
+
+        if ($order->provider === 'paypal') {
+            $captureId = data_get($order->payload, 'purchase_units.0.payments.captures.0.id')
+                ?: data_get($order->payload, 'resource.id');
+            if ($captureId && filled(config('services.paypal.client_id')) && filled(config('services.paypal.client_secret'))) {
+                $tokenResponse = Http::asForm()
+                    ->withBasicAuth(config('services.paypal.client_id'), config('services.paypal.client_secret'))
+                    ->post($this->paypalBaseUrl().'/v1/oauth2/token', ['grant_type' => 'client_credentials']);
+
+                if ($tokenResponse->ok()) {
+                    $response = Http::withToken($tokenResponse->json('access_token'))
+                        ->withHeaders(['PayPal-Request-Id' => (string) \Illuminate\Support\Str::uuid()])
+                        ->post($this->paypalBaseUrl().'/v2/payments/captures/'.$captureId.'/refund', [
+                            'amount' => [
+                                'currency_code' => $order->currency,
+                                'value' => number_format($amountCents / 100, 2, '.', ''),
+                            ],
+                        ]);
+
+                    if ($response->ok()) {
+                        return $response->json('id');
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private function paypalBaseUrl(): string
+    {
+        return config('services.paypal.mode') === 'live'
+            ? 'https://api-m.paypal.com'
+            : 'https://api-m.sandbox.paypal.com';
+    }
+
+    private function nextDocumentNumber(string $settingKey, string $prefix): string
+    {
+        return DB::transaction(function () use ($settingKey, $prefix) {
+            $next = (int) Setting::valueFor($settingKey, 1);
+            Setting::setValue($settingKey, (string) ($next + 1));
+
+            return $prefix.'-'.now()->format('Y').'-'.str_pad((string) $next, 6, '0', STR_PAD_LEFT);
+        });
     }
 
     private function marketplaceVisualsForAdmin(): array

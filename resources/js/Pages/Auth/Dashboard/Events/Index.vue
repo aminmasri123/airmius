@@ -29,7 +29,7 @@ const authorizationMessage = computed(() => errors.value.authorization || page.p
 const freeEventLimitMessage = computed(() => {
     if (!props.eventCreation?.is_free_limited) return ''
 
-    return `Kostenloses Konto: ${props.eventCreation.remaining_this_month ?? 0} von ${props.eventCreation.monthly_limit ?? 2} Events in diesem Monat uebrig. Wiederholungen sind nicht verfuegbar.`
+    return `Kostenloses Konto: ${props.eventCreation.remaining_this_month ?? 0} von ${props.eventCreation.monthly_limit ?? 2} Events in diesem Monat übrig. Wiederholungen sind nicht verfuegbar.`
 })
 
 const steps = [

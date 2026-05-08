@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\AdCampaign;
 use App\Models\AdCampaignStat;
 use App\Models\Club;
+use App\Models\CommerceCart;
+use App\Models\CommerceCartItem;
 use App\Models\CommerceOrder;
 use App\Models\CommerceOrderItem;
 use App\Models\CommerceReturnRequest;
@@ -17,6 +19,8 @@ use App\Models\SubscriptionAddon;
 use App\Models\SubscriptionAddonPurchase;
 use App\Models\WebsiteRequest;
 use App\Notifications\CommerceOrderCompleted;
+use App\Services\CommerceAuditService;
+use App\Services\CommerceDocumentService;
 use App\Services\MarketplacePricingService;
 use App\Services\ModerationService;
 use Illuminate\Http\Request;
@@ -29,7 +33,12 @@ use Illuminate\Validation\Rule;
 
 class CommerceCheckoutController extends Controller
 {
-    public function __construct(private ModerationService $moderation, private MarketplacePricingService $pricing) {}
+    public function __construct(
+        private ModerationService $moderation,
+        private MarketplacePricingService $pricing,
+        private CommerceAuditService $audit,
+        private CommerceDocumentService $documents,
+    ) {}
 
     public function index(Request $request)
     {
@@ -100,6 +109,9 @@ class CommerceCheckoutController extends Controller
                 ->where('user_id', $request->user()->id)
                 ->first(),
             'payoutSummary' => $this->payoutSummaryFor($request->user()->id),
+            'cart' => $this->cartResource($request),
+            'pricingCountries' => $this->pricingCountries(),
+            'checkoutAddress' => $this->shippingAddressForAuthenticatedUser($request, []),
         ]);
     }
 
@@ -154,7 +166,17 @@ class CommerceCheckoutController extends Controller
             'currency' => 'EUR',
             'status' => 'pending',
         ]);
-        $this->createOrderItem($order, $product, $quote);
+        $order->items()->create([
+            'orderable_type' => $addon::class,
+            'orderable_id' => $addon->id,
+            'title' => $addon->name,
+            'quantity' => 1,
+            'unit_gross_cents' => $amount,
+            'net_cents' => $amount,
+            'total_cents' => $amount,
+            'currency' => 'EUR',
+            'is_shippable' => false,
+        ]);
 
         return $this->startCheckout($order);
     }
@@ -199,6 +221,115 @@ class CommerceCheckoutController extends Controller
             'status' => 'pending',
             'payload' => ['pricing' => $quote, 'shipping_address' => $shippingAddress],
         ]);
+        $this->createOrderItem($order, $product, $quote, 1);
+
+        return $this->startCheckout($order);
+    }
+
+    public function addCartItem(Request $request, MarketplaceProduct $product)
+    {
+        abort_unless($product->status === 'published', 404);
+
+        $data = $request->validate([
+            'quantity' => ['nullable', 'integer', 'min:1', 'max:99'],
+        ]);
+
+        $cart = $this->cartFor($request);
+        $quantity = (int) ($data['quantity'] ?? 1);
+        $item = $cart->items()->firstOrNew(['marketplace_product_id' => $product->id]);
+        $item->quantity = min(99, (int) $item->quantity + $quantity);
+
+        if ($product->manages_stock) {
+            abort_if($item->quantity > (int) $product->stock_quantity, 422, 'So viele Artikel sind aktuell nicht auf Lager.');
+        }
+
+        $item->save();
+
+        return back()->with('success', 'Artikel wurde in den Einkaufswagen gelegt.');
+    }
+
+    public function updateCartItem(Request $request, CommerceCartItem $item)
+    {
+        abort_unless((int) $item->cart->user_id === (int) $request->user()->id, 403);
+
+        $data = $request->validate([
+            'quantity' => ['required', 'integer', 'min:1', 'max:99'],
+        ]);
+
+        $product = $item->product;
+        abort_if($product?->manages_stock && (int) $data['quantity'] > (int) $product->stock_quantity, 422, 'So viele Artikel sind aktuell nicht auf Lager.');
+
+        $item->update(['quantity' => (int) $data['quantity']]);
+
+        return back()->with('success', 'Einkaufswagen wurde aktualisiert.');
+    }
+
+    public function removeCartItem(Request $request, CommerceCartItem $item)
+    {
+        abort_unless((int) $item->cart->user_id === (int) $request->user()->id, 403);
+        $item->delete();
+
+        return back()->with('success', 'Artikel wurde aus dem Einkaufswagen entfernt.');
+    }
+
+    public function checkoutCart(Request $request)
+    {
+        $data = $request->validate([
+            'provider' => ['required', Rule::in(['stripe', 'paypal', 'bank_transfer'])],
+            'accepted_terms' => ['accepted'],
+            'shipping_country' => ['nullable', 'string', 'size:2'],
+            'shipping_state' => ['nullable', 'string', 'max:80'],
+            'shipping_postal_code' => ['nullable', 'string', 'max:30'],
+            'shipping_city' => ['nullable', 'string', 'max:120'],
+            'shipping_street' => ['nullable', 'string', 'max:180'],
+            'shipping_house_number' => ['nullable', 'string', 'max:40'],
+            'customer_type' => ['nullable', Rule::in(['consumer', 'business'])],
+            'customer_company' => ['nullable', 'string', 'max:255'],
+            'customer_vat_id' => ['nullable', 'string', 'max:40'],
+        ]);
+
+        $cart = $this->cartFor($request)->load('items.product');
+        abort_if($cart->items->isEmpty(), 422, 'Dein Einkaufswagen ist leer.');
+
+        $shippingAddress = $this->shippingAddressForAuthenticatedUser($request, $data);
+        $customer = $this->customerFromData($data);
+        $summary = $this->cartQuote($cart, $request, $shippingAddress, $customer);
+
+        DB::transaction(function () use ($cart) {
+            foreach ($cart->items as $item) {
+                $product = MarketplaceProduct::query()->lockForUpdate()->findOrFail($item->marketplace_product_id);
+                abort_unless($product->status === 'published', 422, $product->title.' ist nicht mehr verfuegbar.');
+                abort_if($product->manages_stock && (int) $product->stock_quantity < (int) $item->quantity, 422, $product->title.' ist nicht ausreichend auf Lager.');
+            }
+        });
+
+        $order = CommerceOrder::create([
+            'user_id' => $request->user()->id,
+            'type' => 'marketplace_cart',
+            'provider' => $data['provider'],
+            'item_gross_cents' => $summary['item_gross_cents'],
+            'shipping_cents' => $summary['shipping_cents'],
+            'net_cents' => $summary['net_cents'],
+            'tax_cents' => $summary['tax_cents'],
+            'amount_cents' => $summary['amount_cents'],
+            'commission_cents' => $summary['commission_cents'],
+            'currency' => $summary['currency'],
+            'tax_country' => $summary['tax_country'],
+            'tax_rate_percent' => $summary['tax_rate_percent'],
+            'customer_type' => $customer['type'],
+            'customer_company' => $customer['company'] ?: null,
+            'customer_vat_id' => $customer['vat_id'] ?: null,
+            'customer_vat_is_valid' => $customer['vat_id'] ? $this->looksLikeEuVatId($customer['vat_id']) : null,
+            'customer_vat_validated_at' => $customer['vat_id'] ? now() : null,
+            'status' => 'pending',
+            'payload' => ['pricing' => $summary, 'shipping_address' => $shippingAddress, 'cart_id' => $cart->id],
+        ]);
+
+        foreach ($summary['items'] as $item) {
+            $this->createOrderItem($order, $item['product'], $item['quote'], $item['quantity']);
+        }
+
+        $cart->items()->delete();
 
         return $this->startCheckout($order);
     }
@@ -216,6 +347,8 @@ class CommerceCheckoutController extends Controller
             'manages_stock' => ['boolean'],
             'stock_quantity' => ['nullable', 'integer', 'min:0'],
             'tax_class' => ['nullable', 'string', 'max:30'],
+            'return_policy_type' => ['nullable', Rule::in(['standard', 'digital', 'service', 'hygiene', 'custom'])],
+            'return_window_days' => ['nullable', 'integer', 'min:0', 'max:365'],
             'price_cents' => ['required', 'integer', 'min:0'],
         ]);
 
@@ -230,6 +363,8 @@ class CommerceCheckoutController extends Controller
             'is_shippable' => (bool) ($data['is_shippable'] ?? $data['category'] === 'product'),
             'manages_stock' => (bool) ($data['manages_stock'] ?? false),
             'tax_class' => $data['tax_class'] ?? 'standard',
+            'return_policy_type' => $data['return_policy_type'] ?? 'standard',
+            'return_window_days' => (int) ($data['return_window_days'] ?? 14),
             'status' => 'review',
             'moderation_status' => 'approved',
             'commission_percent' => 10,
@@ -307,6 +442,7 @@ class CommerceCheckoutController extends Controller
 
         $item = $order->items()->when($data['commerce_order_item_id'] ?? null, fn ($query, $id) => $query->whereKey($id))->first();
         abort_if($item && ! $item->is_shippable, 422, 'Dieses Angebot ist nicht ruecksendepflichtig.');
+        abort_if($item && ! $this->itemStillReturnable($item), 422, 'Die Ruecksendefrist fuer diesen Artikel ist abgelaufen oder ausgeschlossen.');
 
         CommerceReturnRequest::create([
             'commerce_order_id' => $order->id,
@@ -321,6 +457,28 @@ class CommerceCheckoutController extends Controller
         ]);
 
         return back()->with('success', 'Ruecksendung wurde angefragt.');
+    }
+
+    public function downloadInvoice(Request $request, CommerceOrder $order)
+    {
+        abort_unless((int) $order->user_id === (int) $request->user()->id, 403);
+        abort_unless($order->invoice_number, 404);
+
+        return response($this->documents->pdf($order, 'invoice'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$order->invoice_number.'.pdf"',
+        ]);
+    }
+
+    public function downloadCreditNote(Request $request, CommerceOrder $order)
+    {
+        abort_unless((int) $order->user_id === (int) $request->user()->id, 403);
+        abort_unless($order->credit_note_number, 404);
+
+        return response($this->documents->pdf($order, 'credit_note'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$order->credit_note_number.'.pdf"',
+        ]);
     }
 
     public function storeOwnCampaign(Request $request)
@@ -586,32 +744,47 @@ class CommerceCheckoutController extends Controller
             );
         }
 
-        if ($order->type === 'marketplace_product' && $order->orderable instanceof MarketplaceProduct && $order->orderable->manages_stock) {
+        if (in_array($order->type, ['marketplace_product', 'marketplace_cart'], true)) {
             DB::transaction(function () use ($order) {
-                $product = MarketplaceProduct::query()->lockForUpdate()->find($order->orderable_id);
-
-                if (! $product || ! $product->manages_stock) {
-                    return;
+                $order->loadMissing('items');
+                if ($order->items->isEmpty() && $order->orderable instanceof MarketplaceProduct) {
+                    $this->createOrderItem($order, $order->orderable, $order->payload['pricing'] ?? [], 1);
+                    $order->load('items');
                 }
 
-                $product->decrement('stock_quantity');
-                $product->refresh();
+                foreach ($order->items as $item) {
+                    if ($item->orderable_type !== MarketplaceProduct::class || ! $item->orderable_id) {
+                        continue;
+                    }
 
-                CommerceStockMovement::create([
-                    'marketplace_product_id' => $product->id,
-                    'commerce_order_id' => $order->id,
-                    'type' => 'sale',
-                    'quantity_delta' => -1,
-                    'stock_after' => $product->stock_quantity,
-                    'note' => 'Bestellung #'.$order->id.' bezahlt',
-                ]);
+                    $product = MarketplaceProduct::query()->lockForUpdate()->find($item->orderable_id);
+
+                    if (! $product || ! $product->manages_stock) {
+                        continue;
+                    }
+
+                    abort_if((int) $product->stock_quantity < (int) $item->quantity, 422, $product->title.' ist nicht ausreichend auf Lager.');
+
+                    $product->decrement('stock_quantity', (int) $item->quantity);
+                    $product->refresh();
+
+                    CommerceStockMovement::create([
+                        'marketplace_product_id' => $product->id,
+                        'commerce_order_id' => $order->id,
+                        'type' => 'sale',
+                        'quantity_delta' => -1 * (int) $item->quantity,
+                        'stock_after' => $product->stock_quantity,
+                        'note' => 'Bestellung #'.$order->id.' bezahlt',
+                    ]);
+                }
             });
         }
 
         $order->update([
             'status' => 'completed',
             'completed_at' => now(),
-            'payout_status' => $order->type === 'marketplace_product' ? 'pending' : 'not_applicable',
+            'invoice_number' => $order->invoice_number ?: $this->nextDocumentNumber('commerce_invoice_number_next', 'AIR-RE'),
+            'payout_status' => in_array($order->type, ['marketplace_product', 'marketplace_cart'], true) ? 'pending' : 'not_applicable',
         ]);
         $this->sendConfirmationEmail($order->refresh());
     }
@@ -619,10 +792,15 @@ class CommerceCheckoutController extends Controller
     private function payoutSummaryFor(int $userId): array
     {
         $orders = CommerceOrder::query()
-            ->where('type', 'marketplace_product')
+            ->whereIn('type', ['marketplace_product', 'marketplace_cart'])
             ->where('status', 'completed')
             ->where('payout_status', 'pending')
-            ->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($query) => $query->where('user_id', $userId))
+            ->where(function ($query) use ($userId) {
+                $query->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($product) => $product->where('user_id', $userId))
+                    ->orWhereHas('items', fn ($items) => $items
+                        ->where('orderable_type', MarketplaceProduct::class)
+                        ->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($product) => $product->where('user_id', $userId)));
+            })
             ->get();
 
         return [
@@ -912,18 +1090,26 @@ class CommerceCheckoutController extends Controller
             'return_url' => $order->access_token ? route('commerce-checkout.guest.returns.store', [$order, $order->access_token]) : null,
             'payment_reference' => $order->payment_reference,
             'due_at' => $order->due_at?->toDateString(),
+            'invoice_number' => $order->invoice_number,
+            'credit_note_number' => $order->credit_note_number,
+            'shipping_status' => $order->shipping_status,
+            'shipping_carrier' => $order->shipping_carrier,
+            'tracking_number' => $order->tracking_number,
+            'tracking_url' => $order->tracking_url,
         ];
     }
 
-    private function createOrderItem(CommerceOrder $order, MarketplaceProduct $product, array $quote): void
+    private function createOrderItem(CommerceOrder $order, MarketplaceProduct $product, array $quote, int $quantity = 1): void
     {
+        $unitGrossCents = (int) round(((int) ($quote['item_gross_cents'] ?? $product->price_cents)) / max(1, $quantity));
+
         $order->items()->create([
             'orderable_type' => $product::class,
             'orderable_id' => $product->id,
             'title' => $product->title,
             'sku' => $product->sku,
-            'quantity' => 1,
-            'unit_gross_cents' => (int) ($quote['item_gross_cents'] ?? $product->price_cents),
+            'quantity' => $quantity,
+            'unit_gross_cents' => $unitGrossCents,
             'shipping_cents' => (int) ($quote['shipping_gross_cents'] ?? 0),
             'net_cents' => (int) ($quote['net_cents'] ?? 0),
             'tax_cents' => (int) ($quote['tax_cents'] ?? 0),
@@ -967,6 +1153,126 @@ class CommerceCheckoutController extends Controller
             'tax_cents' => (int) ($quote['tax_cents'] ?? 0),
             'amount_cents' => (int) ($quote['gross_cents'] ?? 0),
         ];
+    }
+
+    private function cartFor(Request $request): CommerceCart
+    {
+        return CommerceCart::query()->firstOrCreate(
+            ['user_id' => $request->user()->id],
+            ['currency' => 'EUR'],
+        );
+    }
+
+    private function cartResource(Request $request): array
+    {
+        $cart = $this->cartFor($request)->load('items.product');
+        $address = $this->shippingAddressForAuthenticatedUser($request, []);
+        $summary = $cart->items->isNotEmpty()
+            ? $this->cartQuote($cart, $request, $address, [])
+            : [
+                'item_gross_cents' => 0,
+                'shipping_cents' => 0,
+                'net_cents' => 0,
+                'tax_cents' => 0,
+                'amount_cents' => 0,
+                'currency' => 'EUR',
+                'items' => [],
+            ];
+
+        return [
+            'id' => $cart->id,
+            'items' => $cart->items->map(fn (CommerceCartItem $item) => [
+                'id' => $item->id,
+                'quantity' => $item->quantity,
+                'product' => $item->product,
+                'line_total_cents' => ((int) $item->product?->price_cents) * (int) $item->quantity,
+            ])->values(),
+            'summary' => $summary,
+        ];
+    }
+
+    private function cartQuote(CommerceCart $cart, Request $request, array $shippingAddress, array $customer): array
+    {
+        $items = [];
+        $currency = 'EUR';
+        $itemGross = 0;
+        $shipping = 0;
+        $net = 0;
+        $tax = 0;
+        $commission = 0;
+        $country = strtoupper((string) ($shippingAddress['country'] ?? 'DE'));
+        $taxRate = 0.0;
+
+        foreach ($cart->items as $cartItem) {
+            $product = $cartItem->product;
+            if (! $product || $product->status !== 'published') {
+                continue;
+            }
+
+            $quantity = max(1, (int) $cartItem->quantity);
+            $quote = $this->pricing->quote($product, $country, 'cart', $shippingAddress, $customer);
+            $quote['item_gross_cents'] *= $quantity;
+            $quote['item_net_cents'] *= $quantity;
+            $quote['item_tax_cents'] *= $quantity;
+            $quote['gross_cents'] = ($quote['item_gross_cents'] ?? 0) + ($quote['shipping_gross_cents'] ?? 0);
+            $quote['net_cents'] = ($quote['item_net_cents'] ?? 0) + ($quote['shipping_net_cents'] ?? 0);
+            $quote['tax_cents'] = ($quote['item_tax_cents'] ?? 0) + ($quote['shipping_tax_cents'] ?? 0);
+            $currency = $quote['currency'] ?? $currency;
+            $taxRate = max($taxRate, (float) ($quote['tax_rate'] ?? 0));
+
+            $itemGross += (int) $quote['item_gross_cents'];
+            $shipping += (int) ($quote['shipping_gross_cents'] ?? 0);
+            $net += (int) ($quote['net_cents'] ?? 0);
+            $tax += (int) ($quote['tax_cents'] ?? 0);
+            $commission += (int) floor(((int) $quote['item_gross_cents']) * ((int) $product->commission_percent / 100));
+            $items[] = ['product' => $product, 'quantity' => $quantity, 'quote' => $quote];
+        }
+
+        return [
+            'items' => $items,
+            'currency' => $currency,
+            'tax_country' => $country,
+            'tax_rate_percent' => $taxRate,
+            'item_gross_cents' => $itemGross,
+            'shipping_cents' => $shipping,
+            'shipping_gross_cents' => $shipping,
+            'net_cents' => $net,
+            'tax_cents' => $tax,
+            'amount_cents' => $itemGross + $shipping,
+            'gross_cents' => $itemGross + $shipping,
+            'commission_cents' => $commission,
+        ];
+    }
+
+    private function itemStillReturnable(CommerceOrderItem $item): bool
+    {
+        $item->loadMissing(['order', 'orderable']);
+        $product = $item->orderable instanceof MarketplaceProduct ? $item->orderable : null;
+        $policy = $product?->return_policy_type ?: 'standard';
+        $window = (int) ($product?->return_window_days ?? 14);
+
+        if (in_array($policy, ['digital', 'service', 'hygiene'], true) || $window <= 0) {
+            return false;
+        }
+
+        $completedAt = $item->order?->completed_at ?: $item->order?->created_at;
+
+        return $completedAt ? $completedAt->copy()->addDays($window)->endOfDay()->isFuture() : true;
+    }
+
+    private function looksLikeEuVatId(?string $vatId): bool
+    {
+        return (bool) preg_match('/^[A-Z]{2}[A-Z0-9]{8,12}$/', strtoupper((string) $vatId));
+    }
+
+    private function nextDocumentNumber(string $settingKey, string $prefix): string
+    {
+        return DB::transaction(function () use ($settingKey, $prefix) {
+            $next = (int) Setting::valueFor($settingKey, 1);
+            Setting::setValue($settingKey, (string) ($next + 1));
+
+            return $prefix.'-'.now()->format('Y').'-'.str_pad((string) $next, 6, '0', STR_PAD_LEFT);
+        });
     }
 
     private function pricingCountries(): array

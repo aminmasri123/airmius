@@ -7,10 +7,12 @@ use App\Models\ClubExternalMember;
 use App\Models\File;
 use App\Models\TeamInvitation;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 
 class PlanFeatureService
 {
     public const FREE_MEMBER_INVITATIONS_PER_DAY = 3;
+    public const FREE_MANUAL_MEMBER_ADDITIONS_PER_DAY = 3;
 
     private const PLAN_LEVELS = [
         'free' => 0,
@@ -21,7 +23,6 @@ class PlanFeatureService
     ];
 
     private const FEATURE_MINIMUM_PLANS = [
-        'external_members' => 'starter',
         'member_import' => 'starter',
         'invoices' => 'starter',
         'payment_tracking' => 'starter',
@@ -149,6 +150,58 @@ class PlanFeatureService
         );
     }
 
+    public function manualMemberAdditionUsageToday(Club $club): int
+    {
+        $start = now()->startOfDay();
+        $end = now()->endOfDay();
+
+        $linkedUsers = DB::table('club_user')
+            ->where('club_id', $club->id)
+            ->where('role', '!=', 'owner')
+            ->whereBetween('created_at', [$start, $end])
+            ->count();
+
+        $externalMembers = ClubExternalMember::query()
+            ->where('club_id', $club->id)
+            ->whereBetween('created_at', [$start, $end])
+            ->count();
+
+        return $linkedUsers + $externalMembers;
+    }
+
+    public function manualMemberAdditionDailyLimit(Club $club): ?int
+    {
+        return $this->planLevel($club) === self::PLAN_LEVELS['free']
+            ? self::FREE_MANUAL_MEMBER_ADDITIONS_PER_DAY
+            : null;
+    }
+
+    public function manualMemberAdditionRemainingToday(Club $club): ?int
+    {
+        $limit = $this->manualMemberAdditionDailyLimit($club);
+
+        return $limit === null
+            ? null
+            : max(0, $limit - $this->manualMemberAdditionUsageToday($club));
+    }
+
+    public function ensureCanAddManualMembers(Club $club, int $amount = 1): void
+    {
+        $limit = $this->manualMemberAdditionDailyLimit($club);
+
+        if ($limit === null || $amount <= 0) {
+            return;
+        }
+
+        $remaining = $this->manualMemberAdditionRemainingToday($club);
+
+        abort_if(
+            $amount > $remaining,
+            422,
+            "Im Free-Plan koennen Vereine maximal {$limit} Mitglieder pro Tag manuell hinzufuegen. Heute sind noch {$remaining} moeglich."
+        );
+    }
+
     public function capabilities(Club $club): array
     {
         return [
@@ -170,6 +223,9 @@ class PlanFeatureService
             'member_invitation_daily_limit' => $this->memberInvitationDailyLimit($club),
             'member_invitation_usage_today' => $this->memberInvitationUsageToday($club),
             'member_invitation_remaining_today' => $this->memberInvitationRemainingToday($club),
+            'manual_member_addition_daily_limit' => $this->manualMemberAdditionDailyLimit($club),
+            'manual_member_addition_usage_today' => $this->manualMemberAdditionUsageToday($club),
+            'manual_member_addition_remaining_today' => $this->manualMemberAdditionRemainingToday($club),
         ];
     }
 

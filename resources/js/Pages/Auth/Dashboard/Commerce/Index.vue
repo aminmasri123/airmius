@@ -17,6 +17,9 @@ const props = defineProps({
     payoutProfile: { type: Object, default: null },
     payoutSummary: { type: Object, default: () => ({}) },
     returnRequests: { type: Array, default: () => [] },
+    cart: { type: Object, default: () => ({ items: [], summary: {} }) },
+    pricingCountries: { type: Array, default: () => [] },
+    checkoutAddress: { type: Object, default: () => ({}) },
 })
 
 const page = usePage()
@@ -25,6 +28,7 @@ const provider = ref('bank_transfer')
 const interval = ref('monthly')
 const acceptedTerms = ref(false)
 const issueModal = ref({ open: false, order: null, note: '', mode: 'issue' })
+const showCartCheckout = ref(false)
 const productForm = useForm({
     club_id: '',
     title: '',
@@ -59,6 +63,19 @@ const payoutForm = useForm({
     tax_number: props.payoutProfile?.tax_number || '',
     notes: props.payoutProfile?.notes || '',
 })
+const cartCheckoutForm = useForm({
+    provider: 'bank_transfer',
+    accepted_terms: false,
+    shipping_country: props.checkoutAddress.country || 'DE',
+    shipping_state: props.checkoutAddress.state || '',
+    shipping_postal_code: props.checkoutAddress.postal_code || '',
+    shipping_city: props.checkoutAddress.city || '',
+    shipping_street: props.checkoutAddress.street || '',
+    shipping_house_number: props.checkoutAddress.house_number || '',
+    customer_type: 'consumer',
+    customer_company: '',
+    customer_vat_id: '',
+})
 
 const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
     style: 'currency',
@@ -90,6 +107,27 @@ const checkoutProduct = (product) => {
     router.post(route('auth.commerce.products.checkout', product.id), {
         provider: provider.value,
         accepted_terms: acceptedTerms.value,
+    })
+}
+
+const addToCart = (product, quantity = 1) => {
+    router.post(route('auth.commerce.cart.items.store', product.id), { quantity }, { preserveScroll: true })
+}
+
+const updateCartItem = (item, quantity) => {
+    router.put(route('auth.commerce.cart.items.update', item.id), { quantity }, { preserveScroll: true })
+}
+
+const removeCartItem = (item) => {
+    router.delete(route('auth.commerce.cart.items.destroy', item.id), { preserveScroll: true })
+}
+
+const checkoutCart = () => {
+    cartCheckoutForm.post(route('auth.commerce.cart.checkout'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showCartCheckout.value = false
+        },
     })
 }
 
@@ -157,6 +195,50 @@ const submitOrderRequest = () => {
             </p>
             <div v-if="page.props.flash?.success" class="mt-4 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
                 {{ page.props.flash.success }}
+            </div>
+        </section>
+
+        <section class="surface-card overflow-hidden">
+            <div class="border-b border-border p-5">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-primary">Einkaufswagen</h2>
+                        <p class="mt-1 text-sm text-secondary">Sammle mehrere Marketplace-Artikel und schließe sie gemeinsam ab.</p>
+                    </div>
+                    <button
+                        class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50"
+                        :disabled="!cart.items?.length"
+                        @click="showCartCheckout = true"
+                    >
+                        Zur Kasse
+                    </button>
+                </div>
+            </div>
+            <div class="divide-y divide-border">
+                <div v-for="item in cart.items" :key="item.id" class="grid gap-3 p-5 sm:grid-cols-[1fr_7rem_auto] sm:items-center">
+                    <div>
+                        <p class="font-semibold text-primary">{{ item.product?.title }}</p>
+                        <p class="text-sm text-secondary">{{ formatMoney(item.line_total_cents, item.product?.currency || cart.summary?.currency || 'EUR') }}</p>
+                    </div>
+                    <input
+                        :value="item.quantity"
+                        type="number"
+                        min="1"
+                        max="99"
+                        class="rounded-lg border-border bg-inputBg text-sm text-primary"
+                        @change="updateCartItem(item, Number($event.target.value || 1))"
+                    >
+                    <button class="rounded-lg border border-error/40 px-3 py-2 text-xs font-semibold text-error" @click="removeCartItem(item)">
+                        Entfernen
+                    </button>
+                </div>
+                <div v-if="cart.items?.length" class="grid gap-2 bg-bg p-5 text-sm text-secondary sm:grid-cols-4">
+                    <p>Warenwert: <span class="font-semibold text-primary">{{ formatMoney(cart.summary?.item_gross_cents, cart.summary?.currency) }}</span></p>
+                    <p>Versand: <span class="font-semibold text-primary">{{ formatMoney(cart.summary?.shipping_cents, cart.summary?.currency) }}</span></p>
+                    <p>Steuer: <span class="font-semibold text-primary">{{ formatMoney(cart.summary?.tax_cents, cart.summary?.currency) }}</span></p>
+                    <p>Gesamt: <span class="font-semibold text-primary">{{ formatMoney(cart.summary?.amount_cents, cart.summary?.currency) }}</span></p>
+                </div>
+                <p v-else class="p-5 text-sm text-secondary">Der Einkaufswagen ist leer.</p>
             </div>
         </section>
 
@@ -228,8 +310,8 @@ const submitOrderRequest = () => {
                         <span class="text-lg font-bold text-primary">{{ formatMoney(product.price_cents, product.currency) }}</span>
                         <div class="flex gap-2">
                             <Link :href="route('auth.commerce.products.show', product.id)" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary">Details</Link>
-                            <button class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary" @click="checkoutProduct(product)">
-                                Kaufen
+                            <button class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary" @click="addToCart(product)">
+                                In den Warenkorb
                             </button>
                         </div>
                     </div>
@@ -416,7 +498,13 @@ const submitOrderRequest = () => {
                             <td class="px-5 py-3 text-secondary">{{ order.status }}</td>
                             <td class="px-5 py-3 text-secondary">{{ formatMoney(order.amount_cents, order.currency) }}</td>
                             <td class="px-5 py-3 text-right">
-                                <button v-if="order.status === 'completed'" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="openIssueModal(order, 'issue')">
+                                <a v-if="order.invoice_number" :href="route('auth.commerce.orders.invoice', order.id)" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary">
+                                    Rechnung
+                                </a>
+                                <a v-if="order.credit_note_number" :href="route('auth.commerce.orders.credit-note', order.id)" class="ml-2 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary">
+                                    Gutschrift
+                                </a>
+                                <button v-if="order.status === 'completed'" class="ml-2 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="openIssueModal(order, 'issue')">
                                     Problem melden
                                 </button>
                                 <button v-if="order.status === 'completed'" class="ml-2 rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="openIssueModal(order, 'return')">
@@ -463,6 +551,46 @@ const submitOrderRequest = () => {
                     <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="submitOrderRequest">Senden</button>
                 </div>
             </div>
+        </div>
+
+        <div v-if="showCartCheckout" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+            <form class="max-h-[90dvh] w-full max-w-xl overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-2xl" @submit.prevent="checkoutCart">
+                <h2 class="text-lg font-semibold text-primary">Einkaufswagen abschließen</h2>
+                <p class="mt-2 text-sm text-secondary">
+                    Gesamt: {{ formatMoney(cart.summary?.amount_cents, cart.summary?.currency) }}
+                </p>
+
+                <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                    <select v-model="cartCheckoutForm.shipping_country" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <option v-for="country in pricingCountries" :key="country.country" :value="country.country">{{ country.label }}</option>
+                    </select>
+                    <select v-model="cartCheckoutForm.provider" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <option value="bank_transfer">Überweisung</option>
+                        <option value="stripe">Stripe</option>
+                        <option value="paypal">PayPal</option>
+                    </select>
+                    <select v-model="cartCheckoutForm.customer_type" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <option value="consumer">Privatkunde</option>
+                        <option value="business">Firma / Verein</option>
+                    </select>
+                    <input v-if="cartCheckoutForm.customer_type === 'business'" v-model="cartCheckoutForm.customer_vat_id" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="USt-IdNr.">
+                    <input v-if="cartCheckoutForm.customer_type === 'business'" v-model="cartCheckoutForm.customer_company" class="rounded-lg border-border bg-inputBg text-sm text-primary sm:col-span-2" placeholder="Firma / Verein">
+                    <input v-model="cartCheckoutForm.shipping_street" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Straße">
+                    <input v-model="cartCheckoutForm.shipping_house_number" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Nr.">
+                    <input v-model="cartCheckoutForm.shipping_postal_code" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="PLZ">
+                    <input v-model="cartCheckoutForm.shipping_city" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Ort">
+                </div>
+
+                <label class="mt-4 flex items-start gap-3 text-sm text-secondary">
+                    <input v-model="cartCheckoutForm.accepted_terms" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                    <span>Ich akzeptiere AGB und Widerrufshinweise.</span>
+                </label>
+
+                <div class="mt-5 flex justify-end gap-3">
+                    <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="showCartCheckout = false">Abbrechen</button>
+                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Kaufen</button>
+                </div>
+            </form>
         </div>
     </div>
 </template>

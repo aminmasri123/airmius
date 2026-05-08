@@ -21,6 +21,9 @@ const props = defineProps({
     shippingRates: { type: Array, default: () => [] },
     commerceSettings: { type: Object, default: () => ({}) },
     returnRequests: { type: Array, default: () => [] },
+    auditLogs: { type: Array, default: () => [] },
+    ossReport: { type: Array, default: () => [] },
+    sellerReports: { type: Array, default: () => [] },
 })
 
 const page = usePage()
@@ -112,6 +115,26 @@ const campaignForm = useForm({
     status: 'draft',
     starts_at: '',
     ends_at: '',
+})
+const rejectionModal = useForm({
+    open: false,
+    product: null,
+    reason: '',
+})
+const shippingModal = useForm({
+    open: false,
+    order: null,
+    shipping_status: 'open',
+    shipping_carrier: '',
+    shipping_label_url: '',
+    tracking_number: '',
+    tracking_url: '',
+})
+const refundModal = useForm({
+    open: false,
+    order: null,
+    amount_cents: 0,
+    reason: '',
 })
 
 const formatMoney = (cents) => new Intl.NumberFormat('de-DE', {
@@ -207,11 +230,10 @@ const updateShippingRate = (rate) => {
 }
 
 const updateProductStatus = (product, status) => {
-    const rejectionReason = status === 'rejected'
-        ? window.prompt('Warum wird das Angebot abgelehnt?')
-        : product.rejection_reason
-
-    if (status === 'rejected' && !rejectionReason) {
+    if (status === 'rejected') {
+        rejectionModal.open = true
+        rejectionModal.product = product
+        rejectionModal.reason = product.rejection_reason || ''
         return
     }
 
@@ -223,9 +245,49 @@ const updateProductStatus = (product, status) => {
         price_cents: product.price_cents,
         currency: product.currency,
         status,
-        rejection_reason: rejectionReason || null,
+        rejection_reason: product.rejection_reason || null,
         commission_percent: product.commission_percent,
+        sku: product.sku || '',
+        is_shippable: Boolean(product.is_shippable),
+        manages_stock: Boolean(product.manages_stock),
+        stock_quantity: product.stock_quantity || 0,
+        low_stock_threshold: product.low_stock_threshold || 0,
+        tax_class: product.tax_class || 'standard',
+        return_policy_type: product.return_policy_type || 'standard',
+        return_window_days: product.return_window_days ?? 14,
     }, { preserveScroll: true })
+}
+
+const submitRejection = () => {
+    const product = rejectionModal.product
+    if (!product || !rejectionModal.reason.trim()) return
+
+    router.put(route('admin.commerce.products.update', product.id), {
+        title: product.title,
+        description: product.description,
+        image_url: product.image_url,
+        category: product.category,
+        price_cents: product.price_cents,
+        currency: product.currency,
+        status: 'rejected',
+        rejection_reason: rejectionModal.reason,
+        commission_percent: product.commission_percent,
+        sku: product.sku || '',
+        is_shippable: Boolean(product.is_shippable),
+        manages_stock: Boolean(product.manages_stock),
+        stock_quantity: product.stock_quantity || 0,
+        low_stock_threshold: product.low_stock_threshold || 0,
+        tax_class: product.tax_class || 'standard',
+        return_policy_type: product.return_policy_type || 'standard',
+        return_window_days: product.return_window_days ?? 14,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            rejectionModal.open = false
+            rejectionModal.product = null
+            rejectionModal.reason = ''
+        },
+    })
 }
 
 const adjustProductStock = (product, quantityDelta) => {
@@ -259,6 +321,56 @@ const updateOrderIssue = (order, issueStatus, orderStatus = null) => {
         issue_note: order.issue_note || '',
         order_status: orderStatus,
     }, { preserveScroll: true })
+}
+
+const openShippingModal = (order) => {
+    shippingModal.open = true
+    shippingModal.order = order
+    shippingModal.shipping_status = order.shipping_status || 'open'
+    shippingModal.shipping_carrier = order.shipping_carrier || ''
+    shippingModal.shipping_label_url = order.shipping_label_url || ''
+    shippingModal.tracking_number = order.tracking_number || ''
+    shippingModal.tracking_url = order.tracking_url || ''
+}
+
+const submitShipping = () => {
+    if (!shippingModal.order) return
+
+    router.put(route('admin.commerce.orders.shipping', shippingModal.order.id), {
+        shipping_status: shippingModal.shipping_status,
+        shipping_carrier: shippingModal.shipping_carrier,
+        shipping_label_url: shippingModal.shipping_label_url,
+        tracking_number: shippingModal.tracking_number,
+        tracking_url: shippingModal.tracking_url,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            shippingModal.open = false
+            shippingModal.order = null
+        },
+    })
+}
+
+const openRefundModal = (order) => {
+    refundModal.open = true
+    refundModal.order = order
+    refundModal.amount_cents = order.amount_cents || 0
+    refundModal.reason = ''
+}
+
+const submitRefund = () => {
+    if (!refundModal.order) return
+
+    router.post(route('admin.commerce.orders.refund', refundModal.order.id), {
+        amount_cents: refundModal.amount_cents,
+        reason: refundModal.reason,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            refundModal.open = false
+            refundModal.order = null
+        },
+    })
 }
 
 const updateWebsiteRequest = (request, status) => {
@@ -320,6 +432,32 @@ const updatePayoutProfile = (profile, status) => {
                 <p class="text-xs uppercase text-secondary">{{ item[0] }}</p>
                 <p class="mt-2 text-xl font-bold text-primary">{{ item[1] }}</p>
             </div>
+        </section>
+
+        <section class="grid gap-6 xl:grid-cols-3">
+            <article class="surface-card p-5">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Export</p>
+                        <h2 class="mt-1 text-lg font-semibold text-primary">Steuerberater / DATEV-CSV</h2>
+                        <p class="mt-1 text-sm text-secondary">Bestellungen, Steuerland, Rechnungsnummern, Versandstatus und Betraege als CSV.</p>
+                    </div>
+                    <a :href="route('admin.commerce.export.csv')" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">CSV</a>
+                </div>
+            </article>
+
+            <article class="surface-card p-5 xl:col-span-2">
+                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">OSS</p>
+                <h2 class="mt-1 text-lg font-semibold text-primary">EU-Auswertung nach Land</h2>
+                <div class="mt-3 grid gap-3 md:grid-cols-3">
+                    <div v-for="row in ossReport" :key="row.country" class="rounded-lg border border-border bg-bg p-3">
+                        <p class="text-xs uppercase text-secondary">{{ row.country }} · {{ row.orders_count }} Orders</p>
+                        <p class="mt-1 font-semibold text-primary">{{ formatMoney(row.gross_cents) }}</p>
+                        <p class="text-xs text-secondary">Steuer {{ formatMoney(row.tax_cents) }}</p>
+                    </div>
+                    <p v-if="!ossReport.length" class="text-sm text-secondary">Noch keine OSS-Daten.</p>
+                </div>
+            </article>
         </section>
 
         <section class="grid gap-6 xl:grid-cols-2">
@@ -839,6 +977,8 @@ const updatePayoutProfile = (profile, status) => {
                             <td class="px-5 py-3 text-secondary">{{ formatMoney(order.amount_cents) }}</td>
                             <td class="px-5 py-3 text-secondary">
                                 <p>{{ order.status }}</p>
+                                <p class="text-xs text-secondary">Versand: {{ order.shipping_status || 'open' }}</p>
+                                <p v-if="order.tracking_number" class="text-xs text-secondary">{{ order.shipping_carrier }} · {{ order.tracking_number }}</p>
                                 <p v-if="order.issue_status && order.issue_status !== 'none'" class="text-xs text-warning">{{ order.issue_status }}</p>
                             </td>
                             <td class="px-5 py-3 text-right">
@@ -846,6 +986,10 @@ const updatePayoutProfile = (profile, status) => {
                                     <button v-if="order.status === 'awaiting_transfer'" class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="markOrderPaid(order)">
                                         Bezahlt
                                     </button>
+                                    <a v-if="order.invoice_number" :href="route('admin.commerce.orders.invoice', order.id)" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary">Rechnung</a>
+                                    <a v-if="order.credit_note_number" :href="route('admin.commerce.orders.credit-note', order.id)" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary">Gutschrift</a>
+                                    <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="openShippingModal(order)">Versand</button>
+                                    <button class="rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="openRefundModal(order)">Teilerstattung</button>
                                     <button v-if="order.issue_status === 'reported'" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="updateOrderIssue(order, 'reviewing')">Prüfen</button>
                                     <button v-if="order.issue_status && order.issue_status !== 'none'" class="rounded-lg border border-success/40 px-3 py-2 text-xs font-semibold text-success" @click="updateOrderIssue(order, 'resolved')">Gelöst</button>
                                     <button v-if="order.issue_status && order.issue_status !== 'none'" class="rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="updateOrderIssue(order, 'refunded', 'refunded')">Erstattet</button>
@@ -856,6 +1000,42 @@ const updatePayoutProfile = (profile, status) => {
                 </table>
                 <p v-if="!orders.length" class="px-5 py-6 text-sm text-secondary">Noch keine Commerce-Bestellungen.</p>
             </div>
+        </section>
+
+        <section class="grid gap-6 xl:grid-cols-2">
+            <article class="surface-card overflow-hidden">
+                <div class="border-b border-border p-5">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Verkaeufer</p>
+                    <h2 class="mt-1 text-lg font-semibold text-primary">Bestand und Angebote</h2>
+                </div>
+                <div class="divide-y divide-border">
+                    <div v-for="report in sellerReports" :key="report.product_id" class="flex items-center justify-between gap-3 p-4">
+                        <div>
+                            <p class="font-semibold text-primary">{{ report.title }}</p>
+                            <p class="text-xs text-secondary">{{ report.seller || 'Airmius' }} · {{ report.status }}</p>
+                        </div>
+                        <span :class="['rounded-full px-2 py-1 text-xs font-semibold', report.low_stock ? 'bg-warning/10 text-warning' : 'bg-muted text-secondary']">
+                            Bestand {{ report.manages_stock ? report.stock_quantity : 'frei' }}
+                        </span>
+                    </div>
+                    <p v-if="!sellerReports.length" class="p-5 text-sm text-secondary">Noch keine Verkaeuferdaten.</p>
+                </div>
+            </article>
+
+            <article class="surface-card overflow-hidden">
+                <div class="border-b border-border p-5">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Audit</p>
+                    <h2 class="mt-1 text-lg font-semibold text-primary">Commerce-Audit-Log</h2>
+                </div>
+                <div class="divide-y divide-border">
+                    <div v-for="entry in auditLogs" :key="entry.id" class="p-4">
+                        <p class="font-semibold text-primary">{{ entry.action }}</p>
+                        <p class="text-xs text-secondary">{{ entry.user?.email || 'System' }} · {{ entry.created_at }}</p>
+                        <p v-if="entry.note" class="mt-1 text-xs text-secondary">{{ entry.note }}</p>
+                    </div>
+                    <p v-if="!auditLogs.length" class="p-5 text-sm text-secondary">Noch keine Audit-Eintraege.</p>
+                </div>
+            </article>
         </section>
 
         <section class="surface-card overflow-hidden">
@@ -885,5 +1065,52 @@ const updatePayoutProfile = (profile, status) => {
                 <p v-if="!websiteRequests.length" class="px-5 py-6 text-sm text-secondary">Noch keine Website-Anfragen.</p>
             </div>
         </section>
+
+        <div v-if="rejectionModal.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+            <div class="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-2xl">
+                <h2 class="text-lg font-semibold text-primary">Angebot ablehnen</h2>
+                <textarea v-model="rejectionModal.reason" rows="4" class="mt-4 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Grund eingeben"></textarea>
+                <div class="mt-5 flex justify-end gap-3">
+                    <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="rejectionModal.open = false">Abbrechen</button>
+                    <button class="rounded-lg bg-warning px-4 py-2 text-sm font-semibold text-white" @click="submitRejection">Ablehnen</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="shippingModal.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+            <div class="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-2xl">
+                <h2 class="text-lg font-semibold text-primary">Versand bearbeiten</h2>
+                <div class="mt-4 grid gap-3">
+                    <select v-model="shippingModal.shipping_status" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <option value="open">Offen</option>
+                        <option value="prepared">Vorbereitet</option>
+                        <option value="shipped">Versendet</option>
+                        <option value="delivered">Zugestellt</option>
+                    </select>
+                    <input v-model="shippingModal.shipping_carrier" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="DHL / UPS / Hermes">
+                    <input v-model="shippingModal.shipping_label_url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Versandlabel-URL">
+                    <input v-model="shippingModal.tracking_number" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Trackingnummer">
+                    <input v-model="shippingModal.tracking_url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Tracking-URL">
+                </div>
+                <div class="mt-5 flex justify-end gap-3">
+                    <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="shippingModal.open = false">Abbrechen</button>
+                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="submitShipping">Speichern</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="refundModal.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+            <div class="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-2xl">
+                <h2 class="text-lg font-semibold text-primary">Erstattung dokumentieren</h2>
+                <div class="mt-4 grid gap-3">
+                    <input v-model="refundModal.amount_cents" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Betrag in Cent">
+                    <textarea v-model="refundModal.reason" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Grund"></textarea>
+                </div>
+                <div class="mt-5 flex justify-end gap-3">
+                    <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="refundModal.open = false">Abbrechen</button>
+                    <button class="rounded-lg bg-warning px-4 py-2 text-sm font-semibold text-white" @click="submitRefund">Erstatten</button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>

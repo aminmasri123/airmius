@@ -34,6 +34,10 @@ const checkout = () => {
     form.post(route('auth.commerce.products.checkout', props.product.id))
 }
 
+const addToCart = () => {
+    router.post(route('auth.commerce.cart.items.store', props.product.id), { quantity: 1 }, { preserveScroll: true })
+}
+
 const price = computed(() => props.product.price || {
     gross_cents: props.product.price_cents,
     item_gross_cents: props.product.price_cents,
@@ -134,6 +138,9 @@ const price = computed(() => props.product.price || {
 
                         <button class="w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary">
                             Kaufen
+                        </button>
+                        <button type="button" class="w-full rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted" @click="addToCart">
+                            In den Warenkorb
                         </button>
                     </form>
                 </aside>

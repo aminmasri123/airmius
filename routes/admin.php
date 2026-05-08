@@ -114,6 +114,11 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/admin/commerce/campaigns/{campaign}', [AdminCommerceController::class, 'updateCampaign'])->middleware('can:subscriptions.manage')->name('admin.commerce.campaigns.update');
     Route::post('/admin/commerce/orders/{order}/mark-paid', [AdminCommerceController::class, 'markOrderPaid'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.mark-paid');
     Route::put('/admin/commerce/orders/{order}/issue', [AdminCommerceController::class, 'updateOrderIssue'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.issue');
+    Route::put('/admin/commerce/orders/{order}/shipping', [AdminCommerceController::class, 'updateShipping'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.shipping');
+    Route::post('/admin/commerce/orders/{order}/refund', [AdminCommerceController::class, 'refundOrder'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.refund');
+    Route::get('/admin/commerce/orders/{order}/invoice', [AdminCommerceController::class, 'downloadInvoice'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.invoice');
+    Route::get('/admin/commerce/orders/{order}/credit-note', [AdminCommerceController::class, 'downloadCreditNote'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.credit-note');
+    Route::get('/admin/commerce/export.csv', [AdminCommerceController::class, 'exportCsv'])->middleware('can:subscriptions.manage')->name('admin.commerce.export.csv');
     Route::put('/admin/commerce/returns/{returnRequest}', [AdminCommerceController::class, 'updateReturnRequest'])->middleware('can:subscriptions.manage')->name('admin.commerce.returns.update');
     Route::put('/admin/commerce/website-requests/{websiteRequest}', [AdminCommerceController::class, 'updateWebsiteRequest'])->middleware('can:subscriptions.manage')->name('admin.commerce.website-requests.update');
     Route::post('/admin/commerce/payouts/{user}', [AdminCommerceController::class, 'createPayout'])->middleware('can:subscriptions.manage')->name('admin.commerce.payouts.create');

@@ -649,6 +649,8 @@ class ClubMembershipController extends Controller
                 $this->planFeatures->ensureCanSendMemberInvitations($club, count($data['members']));
             }
 
+            $this->planFeatures->ensureCanAddManualMembers($club, $this->newEmailMemberCount($club, $data['members']));
+
             $stats = ['stored' => 0, 'linked' => 0, 'invited' => 0];
 
             foreach ($data['members'] as $memberData) {
@@ -683,6 +685,8 @@ class ClubMembershipController extends Controller
         if ((bool) ($data['send_invitation'] ?? false)) {
             $this->planFeatures->ensureCanSendMemberInvitations($club);
         }
+
+        $this->planFeatures->ensureCanAddManualMembers($club, $this->newEmailMemberCount($club, [$data]));
 
         $result = $this->storeEmailMemberData($club, $request->user(), $data, (bool) ($data['send_invitation'] ?? false));
 
@@ -1548,10 +1552,6 @@ class ClubMembershipController extends Controller
             || $club->externalMembers()->where('email', $email)->exists();
 
         if (! $alreadyTracked) {
-            if (! $sendInvitation) {
-                $this->planFeatures->ensureAllows($club, 'external_members');
-            }
-
             $this->ensureClubCanAddMembers($club);
         }
 
@@ -1620,6 +1620,34 @@ class ClubMembershipController extends Controller
         }
 
         return 'stored';
+    }
+
+    private function newEmailMemberCount(Club $club, array $members): int
+    {
+        $emails = collect($members)
+            ->map(fn (array $member) => strtolower(trim((string) ($member['email'] ?? ''))))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($emails->isEmpty()) {
+            return 0;
+        }
+
+        $existingUserEmails = $club->users()
+            ->whereIn('users.email', $emails)
+            ->pluck('users.email')
+            ->map(fn (string $email) => strtolower($email));
+
+        $existingExternalEmails = $club->externalMembers()
+            ->whereIn('email', $emails)
+            ->pluck('email')
+            ->map(fn (string $email) => strtolower($email));
+
+        return $emails
+            ->diff($existingUserEmails)
+            ->diff($existingExternalEmails)
+            ->count();
     }
 
     private function ensureClubCanAddMembers(Club $club, int $amount = 1): void
