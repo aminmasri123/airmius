@@ -8,6 +8,7 @@ use App\Http\Controllers\OrganizationJobController;
 use App\Http\Controllers\PricingController;
 use App\Http\Controllers\PublicMarketplaceController;
 use App\Http\Controllers\PublicClubController;
+use App\Http\Controllers\PublicSponsorController;
 use App\Models\BlogPost;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
@@ -39,6 +40,7 @@ Route::get('/sitemap.xml', function () {
         ['loc' => route('guest.pricing'), 'priority' => '0.8', 'changefreq' => 'monthly'],
         ['loc' => route('guest.blog.index'), 'priority' => '0.8', 'changefreq' => 'weekly'],
         ['loc' => route('guest.jobs'), 'priority' => '0.7', 'changefreq' => 'weekly'],
+        ['loc' => route('guest.sponsors'), 'priority' => '0.7', 'changefreq' => 'monthly'],
         ['loc' => route('guest.werbeagentur'), 'priority' => '0.7', 'changefreq' => 'monthly'],
         ['loc' => route('guest.e-learning'), 'priority' => '0.6', 'changefreq' => 'monthly'],
         ['loc' => route('guest.gamification'), 'priority' => '0.6', 'changefreq' => 'monthly'],
@@ -92,12 +94,13 @@ Route::get('/top-inhalte', fn () => Inertia::render('Guest/Top-Inhalte', [
     'canRegister' => Route::has('register'),
 ]))->name('guest.top-inhalte');
 
-Route::get('/preise', [PricingController::class, 'index'])->name('guest.pricing');
+Route::get('/abos', [PricingController::class, 'index'])->name('guest.pricing');
 
 Route::get('/jobs', [OrganizationJobController::class, 'publicIndex'])->name('guest.jobs');
 Route::post('/jobs/{organizationJob}/interest', [OrganizationJobController::class, 'submitInterest'])->name('guest.jobs.interest');
+Route::get('/sponsoren', [PublicSponsorController::class, 'index'])->name('guest.sponsors');
 
-Route::get('/werbeagentur-fuer-vereine', fn () => Inertia::render('Guest/Werbeagentur', [
+Route::get('/werbeagentur-für-vereine', fn () => Inertia::render('Guest/Werbeagentur', [
     'canLogin' => Route::has('login'),
     'canRegister' => Route::has('register'),
 ]))->name('guest.werbeagentur');

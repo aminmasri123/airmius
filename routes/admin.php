@@ -78,6 +78,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/admin/blogs/{blogPost}', [BlogPostController::class, 'update'])->middleware('can:blog.update')->name('blogs.update');
     Route::delete('/admin/blogs/{blogPost}', [BlogPostController::class, 'destroy'])->middleware('can:blog.delete')->name('blogs.destroy');
     Route::get('/admin/media-guidelines', [MediaGuidelineController::class, 'index'])->middleware('can:blog.view')->name('admin.media-guidelines.index');
+    Route::post('/admin/media-guidelines/visuals', [MediaGuidelineController::class, 'updateVisuals'])->middleware('can:blog.view')->name('admin.media-guidelines.visuals.update');
 
     // PAYMENTS
     Route::get('/admin/payments', [PaymentController::class, 'index'])->middleware('can:billing.manage')->name('payments.index');
@@ -95,6 +96,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/admin/user-subscriptions/{subscription}/renew', [SubscriptionPlanController::class, 'renewUser'])->middleware('can:subscriptions.manage')->name('admin.user-subscriptions.renew');
     Route::post('/admin/subscription-checkouts/{checkout}/mark-paid', [SubscriptionCheckoutController::class, 'markBankTransferPaid'])->middleware('can:subscriptions.manage')->name('admin.subscription-checkouts.mark-paid');
     Route::get('/admin/subscription-invoices', [SubscriptionInvoiceController::class, 'index'])->middleware('can:subscriptions.manage')->name('admin.subscription-invoices.index');
+    Route::post('/admin/subscription-invoices/{subscriptionInvoice}/mark-paid', [SubscriptionInvoiceController::class, 'markPaid'])->middleware('can:subscriptions.manage')->name('admin.subscription-invoices.mark-paid');
     Route::get('/admin/subscription-invoices/{subscriptionInvoice}/download', [SubscriptionInvoiceController::class, 'download'])->middleware('can:subscriptions.manage')->name('admin.subscription-invoices.download');
     Route::get('/admin/commerce', [AdminCommerceController::class, 'index'])->middleware('can:subscriptions.manage')->name('admin.commerce.index');
     Route::post('/admin/commerce/coupons', [AdminCommerceController::class, 'storeCoupon'])->middleware('can:subscriptions.manage')->name('admin.commerce.coupons.store');
@@ -127,6 +129,9 @@ Route::middleware(['auth'])->group(function () {
 
     // SPORT CLOTHING SUBSCRIPTIONS
     Route::get('/admin/outfit-subscriptions', [AdminOutfitSubscriptionPlanController::class, 'index'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscriptions.index');
+    Route::post('/admin/outfit-subscriptions/{subscription}/mark-paid', [AdminOutfitSubscriptionPlanController::class, 'markSubscriptionPaid'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscriptions.mark-paid');
+    Route::post('/admin/outfit-subscriptions/{subscription}/cancel', [AdminOutfitSubscriptionPlanController::class, 'cancelSubscription'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscriptions.cancel');
+    Route::post('/admin/outfit-subscriptions/visuals', [AdminOutfitSubscriptionPlanController::class, 'updateVisuals'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscriptions.visuals.update');
     Route::post('/admin/outfit-subscription-plans', [AdminOutfitSubscriptionPlanController::class, 'store'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscription-plans.store');
     Route::put('/admin/outfit-subscription-plans/{plan}', [AdminOutfitSubscriptionPlanController::class, 'update'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscription-plans.update');
     Route::delete('/admin/outfit-subscription-plans/{plan}', [AdminOutfitSubscriptionPlanController::class, 'destroy'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscription-plans.destroy');

@@ -74,7 +74,7 @@ const deleteBadge = (badge) => {
             <p class="text-sm font-semibold uppercase tracking-wide text-air-blue">Admin</p>
             <h1 class="mt-1 text-2xl font-bold text-primary">Badges</h1>
             <p class="mt-2 text-sm text-secondary">
-                Automatische Auszeichnungen fuer XP, Level, Streaks und konkrete Aktionen.
+                Automatische Auszeichnungen für XP, Level, Streaks und konkrete Aktionen.
             </p>
         </section>
 

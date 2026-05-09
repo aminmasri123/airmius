@@ -95,11 +95,11 @@ return new class extends Migration
             [
                 'slug' => 'storage-10gb',
                 'name' => 'Speicher +10 GB',
-                'description' => 'Mehr Dokumenten- und Medien-Speicher fuer Vereine.',
+                'description' => 'Mehr Dokumenten- und Medien-Speicher für Vereine.',
                 'monthly_price_cents' => 500,
                 'yearly_price_cents' => 5000,
                 'target_actor' => 'verein',
-                'features' => json_encode(['+10 GB Speicher', 'Ideal fuer Dateien, Bilder und Vereinsdokumente']),
+                'features' => json_encode(['+10 GB Speicher', 'Ideal für Dateien, Bilder und Vereinsdokumente']),
                 'is_active' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -119,7 +119,7 @@ return new class extends Migration
             [
                 'slug' => 'finance-plus',
                 'name' => 'Finanzmodul Plus',
-                'description' => 'Erweiterte Finanzfunktionen fuer professionelle Vereinsverwaltung.',
+                'description' => 'Erweiterte Finanzfunktionen für professionelle Vereinsverwaltung.',
                 'monthly_price_cents' => 1900,
                 'yearly_price_cents' => 19000,
                 'target_actor' => 'verein',

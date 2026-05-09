@@ -16,6 +16,8 @@ class Sponsor extends Model
         'email',
         'website',
         'logo',
+        'logo_light',
+        'logo_dark',
         'amount',
         'starts_at',
         'ends_at',

@@ -231,7 +231,7 @@ const initials = (name) => (name || '?')
                                 type="button"
                                 class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border text-secondary transition hover:border-borderHover hover:bg-bg hover:text-primary"
                                 :aria-expanded="openFriendMenuId === friend.id"
-                                :aria-label="`Aktionen fuer ${friend.name}`"
+                                :aria-label="`Aktionen für ${friend.name}`"
                                 @click.stop="toggleFriendMenu(friend)"
                             >
                                 <i class="las la-ellipsis-v text-xl"></i>

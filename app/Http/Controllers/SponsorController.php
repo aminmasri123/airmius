@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Club;
 use App\Models\Sponsor;
 use App\Services\PlanFeatureService;
+use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -20,7 +21,28 @@ class SponsorController extends Controller
             'sponsors' => Sponsor::query()
                 ->with('club:id,name')
                 ->latest('id')
-                ->paginate(25),
+                ->paginate(25)
+                ->through(fn (Sponsor $sponsor) => [
+                    'id' => $sponsor->id,
+                    'club_id' => $sponsor->club_id,
+                    'name' => $sponsor->name,
+                    'contact_name' => $sponsor->contact_name,
+                    'email' => $sponsor->email,
+                    'website' => $sponsor->website,
+                    'logo' => $sponsor->logo,
+                    'logo_light' => $sponsor->logo_light,
+                    'logo_dark' => $sponsor->logo_dark,
+                    'logo_url' => UploadStorage::url($sponsor->logo),
+                    'logo_light_url' => UploadStorage::url($sponsor->logo_light ?: $sponsor->logo),
+                    'logo_dark_url' => UploadStorage::url($sponsor->logo_dark ?: $sponsor->logo_light ?: $sponsor->logo),
+                    'amount' => $sponsor->amount,
+                    'starts_at' => optional($sponsor->starts_at)->toDateString(),
+                    'ends_at' => optional($sponsor->ends_at)->toDateString(),
+                    'club' => $sponsor->club ? [
+                        'id' => $sponsor->club->id,
+                        'name' => $sponsor->club->name,
+                    ] : null,
+                ]),
             'clubs' => Club::query()
                 ->visibleTo($request->user())
                 ->with('currentSubscription.plan')
@@ -40,8 +62,13 @@ class SponsorController extends Controller
         abort_unless($request->user()->can('org.manage'), 403);
 
         $data = $this->validated($request);
-        $club = Club::query()->visibleTo($request->user())->findOrFail($data['club_id']);
-        $this->planFeatures->ensureAllows($club, 'sponsors');
+
+        if (! empty($data['club_id'])) {
+            $club = Club::query()->visibleTo($request->user())->findOrFail($data['club_id']);
+            $this->planFeatures->ensureAllows($club, 'sponsors');
+        }
+
+        $data = $this->normalizeLogos($data);
 
         Sponsor::create($data);
 
@@ -51,9 +78,17 @@ class SponsorController extends Controller
     public function update(Request $request, Sponsor $sponsor)
     {
         abort_unless($request->user()->can('org.manage'), 403);
-        $this->planFeatures->ensureAllows($sponsor->club, 'sponsors');
 
-        $sponsor->update($this->validated($request));
+        $data = $this->validated($request);
+
+        if (! empty($data['club_id'])) {
+            $club = Club::query()->visibleTo($request->user())->findOrFail($data['club_id']);
+            $this->planFeatures->ensureAllows($club, 'sponsors');
+        }
+
+        $data = $this->normalizeLogos($data);
+
+        $sponsor->update($data);
 
         return back()->with('success', 'Sponsor aktualisiert.');
     }
@@ -70,15 +105,28 @@ class SponsorController extends Controller
     private function validated(Request $request): array
     {
         return $request->validate([
-            'club_id' => ['required', 'exists:clubs,id'],
+            'club_id' => ['nullable', 'exists:clubs,id'],
             'name' => ['required', 'string', 'max:255'],
             'contact_name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'website' => ['nullable', 'url', 'max:255'],
             'logo' => ['nullable', 'string', 'max:2048'],
+            'logo_light' => ['nullable', 'string', 'max:2048'],
+            'logo_dark' => ['nullable', 'string', 'max:2048'],
             'amount' => ['nullable', 'numeric', 'min:0'],
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
         ]);
+    }
+
+    private function normalizeLogos(array $data): array
+    {
+        $fallback = $data['logo'] ?: ($data['logo_light'] ?? null) ?: ($data['logo_dark'] ?? null);
+
+        $data['logo'] = $fallback;
+        $data['logo_light'] = $data['logo_light'] ?: $fallback;
+        $data['logo_dark'] = $data['logo_dark'] ?: $data['logo_light'];
+
+        return $data;
     }
 }

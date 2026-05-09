@@ -16,7 +16,7 @@ defineProps({
         <section class="surface-card p-5">
             <h1 class="text-2xl font-bold text-primary">Arbeitsbereiche</h1>
             <p class="mt-1 text-sm text-secondary">
-                Rollenbasierte Einstiege fuer deine Aufgaben in Airmius.
+                Rollenbasierte Einstiege für deine Aufgaben in Airmius.
             </p>
         </section>
 

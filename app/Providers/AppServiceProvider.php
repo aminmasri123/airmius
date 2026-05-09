@@ -29,6 +29,7 @@ use App\Policies\PostPolicy;
 use App\Policies\RidePolicy;
 use App\Policies\TeamPolicy;
 use App\Policies\UserPolicy;
+use App\Support\Roles;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Cache;
@@ -70,6 +71,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Gate::before(function (User $user, string $ability) {
+            return $user->hasAnyRole(Roles::FULL_ACCESS) ? true : null;
+        });
+
         foreach ($this->policies as $model => $policy) {
             Gate::policy($model, $policy);
         }

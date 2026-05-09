@@ -32,7 +32,7 @@ class ClubVerificationStatusUpdated extends Notification
                 ->line($this->club->is_official ? 'Der Verein ist jetzt oeffentlich sichtbar und als offiziell markiert.' : 'Der Verein ist jetzt oeffentlich sichtbar.');
         } else {
             $message
-                ->line('dein Vereinsantrag fuer "'.$this->club->name.'" wurde abgelehnt.')
+                ->line('dein Vereinsantrag für "'.$this->club->name.'" wurde abgelehnt.')
                 ->line('Bitte pruefe die Hinweise im Dashboard oder kontaktiere den Support.');
         }
 

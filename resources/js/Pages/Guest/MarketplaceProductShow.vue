@@ -225,7 +225,7 @@ const updateCountry = () => {
                             <label class="flex items-start gap-3 text-sm text-secondary">
                                 <input v-model="form.accepted_terms" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                                 <span>
-                                    Ich akzeptiere AGB und Widerrufshinweise. Mir ist bewusst, dass der jeweilige Anbieter fuer sein Angebot verantwortlich sein kann.
+                                    Ich akzeptiere AGB und Widerrufshinweise. Mir ist bewusst, dass der jeweilige Anbieter für sein Angebot verantwortlich sein kann.
                                 </span>
                             </label>
                             <p v-if="form.errors.accepted_terms" class="text-sm text-red-400">{{ form.errors.accepted_terms }}</p>

@@ -7,6 +7,7 @@ use App\Http\Controllers\FileController;
 use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\CommerceCheckoutController;
+use App\Http\Controllers\OutfitSubscriptionController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])
@@ -26,6 +27,8 @@ Route::post('/webhooks/commerce/stripe', [CommerceCheckoutController::class, 'st
     ->name('webhooks.commerce.stripe');
 Route::post('/webhooks/commerce/paypal', [CommerceCheckoutController::class, 'paypalWebhook'])
     ->name('webhooks.commerce.paypal');
+Route::post('/webhooks/outfit-subscriptions/paypal', [OutfitSubscriptionController::class, 'paypalWebhook'])
+    ->name('webhooks.outfit-subscriptions.paypal');
 Route::get('/ads/active', [CommerceCheckoutController::class, 'activeAd'])->name('ads.active');
 Route::get('/ads/{campaign}/click', [CommerceCheckoutController::class, 'clickAd'])->name('ads.click');
 Route::get('/shared-files/{token}', [FileController::class, 'sharedDownload'])
@@ -57,6 +60,10 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session')])->group(fun
         ->name('commerce-checkout.cancel');
     Route::get('/checkout/commerce/{order}/bank-transfer', [CommerceCheckoutController::class, 'bankTransfer'])
         ->name('commerce-checkout.bank-transfer.show');
+    Route::get('/checkout/outfit-subscriptions/{subscription}/success', [OutfitSubscriptionController::class, 'success'])
+        ->name('outfit-subscription-checkout.success');
+    Route::get('/checkout/outfit-subscriptions/{subscription}/cancel', [OutfitSubscriptionController::class, 'cancelCheckout'])
+        ->name('outfit-subscription-checkout.cancel');
 });
 
 Route::middleware(['auth:sanctum', config('jetstream.auth_session')])

@@ -122,10 +122,10 @@ class RideController extends Controller
                 ->orderBy('name')
                 ->get(),
             'visibilities' => [
-                ['value' => 'friends', 'label' => 'Nur Freunde', 'description' => 'Datenschutzfreundlich: sichtbar fuer deine Freunde.'],
-                ['value' => 'club', 'label' => 'Nur Verein', 'description' => 'Sichtbar fuer Mitglieder des ausgewaehlten Vereins.'],
-                ['value' => 'team', 'label' => 'Nur Team', 'description' => 'Sichtbar fuer Mitglieder des ausgewaehlten Teams.'],
-                ['value' => 'public', 'label' => 'Oeffentlich', 'description' => 'Sichtbar fuer alle eingeloggten Nutzer. Kontaktdaten bleiben bis zum Beitritt verborgen.'],
+                ['value' => 'friends', 'label' => 'Nur Freunde', 'description' => 'Datenschutzfreundlich: sichtbar für deine Freunde.'],
+                ['value' => 'club', 'label' => 'Nur Verein', 'description' => 'Sichtbar für Mitglieder des ausgewaehlten Vereins.'],
+                ['value' => 'team', 'label' => 'Nur Team', 'description' => 'Sichtbar für Mitglieder des ausgewaehlten Teams.'],
+                ['value' => 'public', 'label' => 'Oeffentlich', 'description' => 'Sichtbar für alle eingeloggten Nutzer. Kontaktdaten bleiben bis zum Beitritt verborgen.'],
             ],
         ]);
     }
@@ -228,7 +228,7 @@ class RideController extends Controller
 
         AppNotification::send($user, 'ride.request_approved', [
             'title' => 'Mitfahranfrage angenommen',
-            'message' => 'Deine Anfrage fuer '.$ride->from.' -> '.$ride->to.' wurde angenommen.',
+            'message' => 'Deine Anfrage für '.$ride->from.' -> '.$ride->to.' wurde angenommen.',
             'ride_id' => $ride->id,
             'url' => route('auth.rides.index'),
         ]);
@@ -249,7 +249,7 @@ class RideController extends Controller
 
         AppNotification::send($user, 'ride.request_rejected', [
             'title' => 'Mitfahranfrage abgelehnt',
-            'message' => 'Deine Anfrage fuer '.$ride->from.' -> '.$ride->to.' wurde abgelehnt.',
+            'message' => 'Deine Anfrage für '.$ride->from.' -> '.$ride->to.' wurde abgelehnt.',
             'ride_id' => $ride->id,
             'url' => route('auth.rides.index'),
         ]);

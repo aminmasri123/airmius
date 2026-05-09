@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Setting;
 use App\Models\SubscriptionInvoice;
+use App\Support\AppNotification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -15,7 +16,7 @@ class SubscriptionInvoiceController extends Controller
 
         return Inertia::render('Auth/Dashboard/Admin/SubscriptionInvoices/Index', [
             'invoices' => SubscriptionInvoice::query()
-                ->with(['user:id,name,email', 'club:id,name', 'plan:id,name'])
+                ->with(['user:id,name,email', 'club:id,name', 'plan:id,name', 'checkout:id,status,provider_checkout_id,payment_reference'])
                 ->latest('id')
                 ->paginate(50)
                 ->through(fn (SubscriptionInvoice $invoice) => $this->resource($invoice)),
@@ -41,6 +42,74 @@ class SubscriptionInvoiceController extends Controller
         ]);
     }
 
+    public function markPaid(Request $request, SubscriptionInvoice $subscriptionInvoice)
+    {
+        abort_unless($request->user()->can('subscriptions.manage') || $request->user()->can('billing.manage'), 403);
+
+        $invoice = $subscriptionInvoice->load(['checkout.user', 'checkout.club', 'checkout.plan', 'user', 'club', 'plan']);
+        $checkout = $invoice->checkout;
+        $periodEndsAt = $invoice->billing_period_end
+            ?: ($checkout?->billing_interval === 'yearly' ? now()->addYear() : now()->addMonth());
+
+        if ($checkout) {
+            if ($checkout->club_id) {
+                $checkout->club->currentSubscription()->updateOrCreate(
+                    ['club_id' => $checkout->club_id],
+                    [
+                        'subscription_plan_id' => $checkout->subscription_plan_id,
+                        'status' => 'active',
+                        'payment_provider' => $checkout->provider,
+                        'provider_subscription_id' => $checkout->provider_subscription_id,
+                        'provider_customer_id' => $checkout->provider_customer_id,
+                        'trial_ends_at' => null,
+                        'current_period_ends_at' => $periodEndsAt,
+                    ],
+                );
+            } else {
+                $checkout->user->userSubscriptions()->updateOrCreate(
+                    ['subscription_plan_id' => $checkout->subscription_plan_id],
+                    [
+                        'status' => 'active',
+                        'payment_provider' => $checkout->provider,
+                        'provider_subscription_id' => $checkout->provider_subscription_id,
+                        'provider_customer_id' => $checkout->provider_customer_id,
+                        'trial_ends_at' => null,
+                        'current_period_ends_at' => $periodEndsAt,
+                    ],
+                );
+            }
+
+            $checkout->forceFill([
+                'status' => 'completed',
+                'completed_at' => now(),
+                'payload' => array_merge($checkout->payload ?? [], [
+                    'manually_marked_paid_at' => now()->toIso8601String(),
+                    'manually_marked_paid_by' => $request->user()->id,
+                ]),
+            ])->save();
+        }
+
+        $invoice->forceFill([
+            'status' => 'paid',
+            'paid_at' => now(),
+            'payment_reference' => $invoice->payment_reference ?: $checkout?->payment_reference ?: $checkout?->provider_checkout_id,
+            'meta' => array_merge($invoice->meta ?? [], [
+                'manually_marked_paid_at' => now()->toIso8601String(),
+                'manually_marked_paid_by' => $request->user()->id,
+            ]),
+        ])->save();
+
+        if ($invoice->user_id) {
+            AppNotification::send($invoice->user_id, 'subscription.invoice.paid', [
+                'title' => 'Airmius Rechnung bezahlt',
+                'body' => $invoice->number.' wurde als bezahlt markiert.',
+                'subscription_invoice_id' => $invoice->id,
+            ]);
+        }
+
+        return back()->with('success', 'Rechnung wurde als bezahlt markiert und das Abo wurde aktiviert.');
+    }
+
     private function resource(SubscriptionInvoice $invoice): array
     {
         return [
@@ -56,6 +125,9 @@ class SubscriptionInvoiceController extends Controller
             'issued_at' => $invoice->issued_at?->toDateString(),
             'due_at' => $invoice->due_at?->toDateString(),
             'paid_at' => $invoice->paid_at?->toDateString(),
+            'checkout_id' => $invoice->payment_checkout_id,
+            'checkout_status' => $invoice->checkout?->status,
+            'provider_checkout_id' => $invoice->checkout?->provider_checkout_id,
             'user' => $invoice->user,
             'club' => $invoice->club,
             'plan' => $invoice->plan,

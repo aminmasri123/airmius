@@ -350,7 +350,7 @@ class ClubMembershipController extends Controller
 
         AppNotification::send($user, 'club.member_removed', [
             'title' => 'Vereinsmitgliedschaft beendet',
-            'body' => 'Du wurdest aus '.$club->name.' entfernt. Wenn du das fuer falsch haeltst, kannst du widersprechen.',
+            'body' => 'Du wurdest aus '.$club->name.' entfernt. Wenn du das für falsch haeltst, kannst du widersprechen.',
             'url' => route('auth.notifications.index'),
             'club_id' => $club->id,
         ]);

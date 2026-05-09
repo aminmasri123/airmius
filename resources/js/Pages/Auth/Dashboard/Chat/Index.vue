@@ -1000,7 +1000,7 @@ onUnmounted(() => {
                         <h2 class="mt-4 text-lg font-semibold text-primary">Kein Chat geöffnet</h2>
                         <p class="mt-2 text-sm leading-6 text-secondary">
                             Aus Datenschutzgruenden wird keine Konversation automatisch angezeigt.
-                            Waehle links bewusst eine Person, ein Team oder eine Gruppe aus.
+                            Wählelinks bewusst eine Person, ein Team oder eine Gruppe aus.
                         </p>
                         <button
                             type="button"

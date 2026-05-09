@@ -128,6 +128,8 @@ class RolesPermissionsSeeder extends Seeder
             ['name' => 'finance.edit', 'description' => 'Finanzen bearbeiten'],
             ['name' => 'billing.manage', 'description' => 'Abrechnung verwalten'],
             ['name' => 'subscriptions.manage', 'description' => 'Abonnements verwalten'],
+            ['name' => 'marketplace.manage', 'description' => 'Marketplace verwalten'],
+            ['name' => 'commerce.orders.manage', 'description' => 'Marketplace-Bestellungen verwalten'],
             ['name' => 'outfit-subscriptions.view', 'description' => 'Sportkleidung-Abos verwenden'],
             ['name' => 'outfit-subscriptions.manage', 'description' => 'Sportkleidung-Abo-Modul verwalten'],
 
@@ -184,6 +186,9 @@ class RolesPermissionsSeeder extends Seeder
             ['name' => 'system_admin', 'description' => 'Technischer System Admin'],
             ['name' => 'support', 'description' => 'Support Mitarbeiter für Tickets & Hilfe'],
             ['name' => 'redaktor', 'description' => 'Website Redaktion für Blog und Inhalte'],
+            ['name' => 'marketplace_manager', 'description' => 'Marketplace, Bestellungen und Commerce-Prozesse verwalten'],
+            ['name' => 'outfit_subscription_manager', 'description' => 'Sportkleidung-Abos und Outfit-Prozesse verwalten'],
+            ['name' => 'sponsor_manager', 'description' => 'Sponsoren und Sponsor-Subventionen verwalten'],
 
             //🏢 CLUB MANAGEMENT
             ['name' => 'club_owner', 'description' => 'Besitzer eines Clubs'],
@@ -459,6 +464,28 @@ class RolesPermissionsSeeder extends Seeder
             'finance.view',
             'billing.manage',
             'subscriptions.manage',
+        ]);
+
+        Role::findByName('marketplace_manager')->givePermissionTo([
+            'marketplace.manage',
+            'commerce.orders.manage',
+            'subscriptions.manage',
+            'finance.view',
+            'outfit-subscriptions.view',
+            'outfit-subscriptions.manage',
+        ]);
+
+        Role::findByName('outfit_subscription_manager')->givePermissionTo([
+            'outfit-subscriptions.view',
+            'outfit-subscriptions.manage',
+            'subscriptions.manage',
+        ]);
+
+        Role::findByName('sponsor_manager')->givePermissionTo([
+            'finance.view',
+            'finance.edit',
+            'outfit-subscriptions.view',
+            'outfit-subscriptions.manage',
         ]);
 
         Role::findByName('media_manager')->givePermissionTo([

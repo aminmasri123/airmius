@@ -53,6 +53,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhooks/paypal',
             'webhooks/commerce/stripe',
             'webhooks/commerce/paypal',
+            'webhooks/outfit-subscriptions/paypal',
         ]);
 
     })

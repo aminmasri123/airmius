@@ -143,6 +143,8 @@ class HandleInertiaRequests extends Middleware
                 'url' => config('filesystems.uploads_url'),
             ],
 
+            'loginImages' => fn () => $this->loginImages(),
+
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
@@ -160,6 +162,8 @@ class HandleInertiaRequests extends Middleware
 
     private function permissionsFor($user): array
     {
+        $hasFullAccess = $user->hasAnyRole(\App\Support\Roles::FULL_ACCESS);
+
         return [
             'dashboard.view' => true,
             'workspaces.view' => true,
@@ -232,11 +236,39 @@ class HandleInertiaRequests extends Middleware
             'invoices.view' => $user->can('billing.manage'),
             'subscriptions.view' => $user->can('subscriptions.manage') || $user->can('system.manage'),
             'outfit-subscriptions.view' => true,
-            'outfit-subscriptions.manage' => $user->can('outfit-subscriptions.manage'),
+            'outfit-subscriptions.manage' => $hasFullAccess || $user->can('outfit-subscriptions.manage'),
             'sponsors.view' => $user->can('finance.view') || $user->can('org.manage'),
             'system.manage' => $user->can('system.manage'),
             'admin.moderation.view' => $user->can('system.manage'),
             'admin.settings.view' => $user->can('system.manage'),
         ];
+    }
+
+    private function loginImages(): array
+    {
+        $fallback = [
+            '/img/login/bild1.png',
+            '/img/login/bild2.png',
+            '/img/login/bild3.png',
+            '/img/login/bild4.png',
+        ];
+
+        $stored = \App\Models\Setting::valueFor('login_visual_slider');
+        $decoded = is_string($stored) ? json_decode($stored, true) : null;
+        $sources = is_array($decoded) && count(array_filter($decoded))
+            ? $decoded
+            : collect($fallback)
+                ->map(fn (string $source, int $index) => \App\Models\Setting::valueFor('login_visual_slide_'.($index + 1), $source))
+                ->all();
+
+        return collect($sources)
+            ->map(fn ($source) => trim((string) $source))
+            ->filter()
+            ->values()
+            ->map(fn (string $source, int $index) => [
+                'src' => \App\Support\UploadStorage::url($source),
+                'alt' => 'Airmius Login-Slider Bild '.($index + 1),
+            ])
+            ->all();
     }
 }

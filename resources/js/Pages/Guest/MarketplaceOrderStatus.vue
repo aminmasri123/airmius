@@ -61,7 +61,7 @@ const submitReturn = () => {
 
                 <form v-if="status === 'success' && order.return_url" class="mt-6 rounded-lg border border-border bg-bg p-4 text-left" @submit.prevent="submitReturn">
                     <h2 class="font-semibold text-primary">Ruecksendung anfragen</h2>
-                    <textarea v-model="returnForm.reason" rows="4" class="mt-3 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Grund fuer die Ruecksendung"></textarea>
+                    <textarea v-model="returnForm.reason" rows="4" class="mt-3 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Grund für die Ruecksendung"></textarea>
                     <button class="mt-3 rounded-lg border border-warning/40 px-4 py-2 text-sm font-semibold text-warning" :disabled="returnForm.processing">
                         Ruecksendung senden
                     </button>

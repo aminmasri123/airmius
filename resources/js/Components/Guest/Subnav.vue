@@ -11,11 +11,11 @@ defineProps({
 const items = [
     ['las la-bullhorn', 'Top Inhalte', '/top-inhalte'],
     ['las la-briefcase', 'Jobs', '/jobs'],
-    ['las la-laptop-code', 'Werbeagentur', '/werbeagentur-fuer-vereine'],
+    ['las la-laptop-code', 'Werbeagentur', '/werbeagentur-für-vereine'],
     ['las la-chalkboard-teacher', 'E-Learning', '/e-learning'],
     ['las la-trophy', 'Gamification', '/gamification', { hideOnMobile: true }],
     ['las la-warehouse', 'Vereine', '/vereine'],
-    ['las la-tags', 'Preise', '/preise'],
+    ['las la-tags', 'Abos', '/abos'],
     ['las la-shopping-bag', 'Marketplace', '/marketplace'],
 ]
 </script>

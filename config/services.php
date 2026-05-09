@@ -61,6 +61,8 @@ return [
         'client_id' => env('PAYPAL_CLIENT_ID'),
         'client_secret' => env('PAYPAL_CLIENT_SECRET'),
         'webhook_id' => env('PAYPAL_WEBHOOK_ID'),
+        'commerce_webhook_id' => env('PAYPAL_COMMERCE_WEBHOOK_ID', env('PAYPAL_WEBHOOK_ID')),
+        'outfit_webhook_id' => env('PAYPAL_OUTFIT_WEBHOOK_ID', env('PAYPAL_WEBHOOK_ID')),
         'mode' => env('PAYPAL_MODE', 'sandbox'),
     ],
 

@@ -157,16 +157,16 @@ Weitere Produkt- und Business-Planung:
 
 `app/Http/Controllers/OutfitSubscriptionController.php`
 
-- `index(Request $request)` - Nutzer-Dashboard fuer Outfit-Abos, Style-Profil und Lieferuebersicht.
+- `index(Request $request)` - Nutzer-Dashboard für Outfit-Abos, Style-Profil und Lieferuebersicht.
 - `updateProfile(Request $request)` - persoenliches Style-Profil speichern.
-- `store(Request $request, OutfitSubscriptionPlan $plan)` - Outfit-Abo fuer einen Plan aktivieren.
+- `store(Request $request, OutfitSubscriptionPlan $plan)` - Outfit-Abo für einen Plan aktivieren.
 - `pause(Request $request, OutfitSubscription $subscription)` - eigenes Outfit-Abo pausieren.
 - `resume(Request $request, OutfitSubscription $subscription)` - eigenes Outfit-Abo fortsetzen.
 - `cancel(Request $request, OutfitSubscription $subscription)` - eigenes Outfit-Abo kuendigen.
 
 `app/Http/Controllers/AdminOutfitSubscriptionPlanController.php`
 
-- `index()` - separate Admin-Verwaltung fuer Outfit-Abo-Plaene, Sponsorenrabatte und Modulstatistik.
+- `index()` - separate Admin-Verwaltung für Outfit-Abo-Plaene, Sponsorenrabatte und Modulstatistik.
 - `store(Request $request)` - Outfit-Abo-Plan erstellen.
 - `update(Request $request, OutfitSubscriptionPlan $plan)` - Outfit-Abo-Plan bearbeiten.
 - `destroy(OutfitSubscriptionPlan $plan)` - Plan loeschen oder bei Historie deaktivieren.
@@ -837,7 +837,7 @@ Diese Datei listet die Controller-Funktionen. Die konkrete URL-Zuordnung steht i
 
 - `routes/auth.php` - eingeloggte Plattformfunktionen.
 - `routes/admin.php` - Adminfunktionen.
-- `routes/guest.php` - oeffentliche Seiten, inklusive `/werbeagentur-fuer-vereine`.
+- `routes/guest.php` - oeffentliche Seiten, inklusive `/werbeagentur-für-vereine`.
 - `routes/web.php` - Web-Routen und rechtliche/Eltern-Routen.
 - `routes/api.php` - API-Routen.
 - `routes/channels.php` - Broadcast-Kanaele.

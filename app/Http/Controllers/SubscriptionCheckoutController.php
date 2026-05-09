@@ -13,11 +13,13 @@ use App\Notifications\SubscriptionInvoicePaid;
 use App\Support\AppNotification;
 use App\Support\ClubRoles;
 use App\Support\VisitorCountry;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 class SubscriptionCheckoutController extends Controller
 {
@@ -31,6 +33,9 @@ class SubscriptionCheckoutController extends Controller
             'billing_interval' => ['required', Rule::in(['monthly', 'yearly'])],
             'club_id' => ['nullable', Rule::exists('clubs', 'id')],
             'coupon_code' => ['nullable', 'string', 'max:80'],
+            'accepted_terms' => ['accepted'],
+        ], [
+            'accepted_terms.accepted' => 'Bitte bestaetige AGB und Widerrufshinweise, bevor du das Abo kostenpflichtig bestellst.',
         ]);
 
         $club = $this->resolveClub($request, $subscriptionPlan, $data['club_id'] ?? null);
@@ -101,7 +106,7 @@ class SubscriptionCheckoutController extends Controller
 
         $checkout->update(['checkout_url' => $checkoutUrl]);
 
-        return redirect()->away($checkoutUrl);
+        return Inertia::location($checkoutUrl);
     }
 
     public function success(Request $request, PaymentCheckout $checkout)
@@ -113,7 +118,11 @@ class SubscriptionCheckoutController extends Controller
         }
 
         if ($checkout->provider === 'paypal' && $checkout->status === 'pending') {
-            $this->capturePayPalOrder($checkout);
+            if (! $this->capturePayPalOrder($checkout)) {
+                return redirect()
+                    ->route('guest.pricing', ['audience' => $checkout->plan?->target_actor ?: 'sportler'])
+                    ->with('error', 'PayPal konnte die Zahlung gerade nicht final bestaetigen. Bitte versuche es erneut oder pruefe spaeter deine Abos.');
+            }
         }
 
         return redirect()
@@ -384,20 +393,46 @@ class SubscriptionCheckoutController extends Controller
         return $approveLink['href'];
     }
 
-    private function capturePayPalOrder(PaymentCheckout $checkout): void
+    private function capturePayPalOrder(PaymentCheckout $checkout): bool
     {
         if (! $checkout->provider_checkout_id) {
-            return;
+            return false;
         }
 
-        $response = Http::withToken($this->paypalAccessToken())
-            ->withHeaders(['PayPal-Request-Id' => (string) Str::uuid()])
-            ->post($this->paypalBaseUrl().'/v2/checkout/orders/'.$checkout->provider_checkout_id.'/capture');
+        try {
+            $response = Http::withToken($this->paypalAccessToken())
+                ->retry(3, 500)
+                ->timeout(20)
+                ->connectTimeout(10)
+                ->withOptions(['version' => 1.1])
+                ->withHeaders(['PayPal-Request-Id' => (string) Str::uuid()])
+                ->withBody('{}', 'application/json')
+                ->post($this->paypalBaseUrl().'/v2/checkout/orders/'.$checkout->provider_checkout_id.'/capture');
+        } catch (ConnectionException $exception) {
+            Log::warning('PayPal capture connection failed', [
+                'checkout_id' => $checkout->id,
+                'paypal_order_id' => $checkout->provider_checkout_id,
+                'message' => $exception->getMessage(),
+            ]);
 
-        if ($response->ok() && in_array($response->json('status'), ['COMPLETED', 'APPROVED'], true)) {
+            return false;
+        }
+
+        if ($response->successful() && in_array($response->json('status'), ['COMPLETED', 'APPROVED'], true)) {
             $checkout->update(['payload' => array_merge($checkout->payload ?? [], ['paypal_capture' => $response->json()])]);
             $this->activateCheckout($checkout);
+
+            return true;
         }
+
+        Log::warning('PayPal capture was not completed', [
+            'checkout_id' => $checkout->id,
+            'paypal_order_id' => $checkout->provider_checkout_id,
+            'status' => $response->status(),
+            'body' => $response->json(),
+        ]);
+
+        return false;
     }
 
     private function paypalAccessToken(): string

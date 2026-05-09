@@ -9,6 +9,14 @@ class Roles
         'system_admin',
     ];
 
+    public const MARKETPLACE_OPERATIONS = [
+        'marketplace_manager',
+        'outfit_subscription_manager',
+        'sponsor_manager',
+        'financial_controller',
+        'support',
+    ];
+
     // 👑 SYSTEM (GLOBAL)
     public const SYSTEM = [
         'super_admin',      // Globaler Systemadministrator mit Vollzugriff
@@ -66,6 +74,7 @@ class Roles
     {
         return array_merge(
             self::SYSTEM,
+            self::MARKETPLACE_OPERATIONS,
             self::CLUB_ADMIN,
             self::COACH,
             self::PLAYER,
@@ -84,6 +93,9 @@ class Roles
             ['name' => 'system_admin', 'description' => 'Technischer System Admin'],
             ['name' => 'support', 'description' => 'Support Mitarbeiter für Tickets & Hilfe'],
             ['name' => 'redaktor', 'description' => 'Website Redaktion für Blog und Inhalte'],
+            ['name' => 'marketplace_manager', 'description' => 'Marketplace, Bestellungen und Commerce-Prozesse verwalten'],
+            ['name' => 'outfit_subscription_manager', 'description' => 'Sportkleidung-Abos und Outfit-Prozesse verwalten'],
+            ['name' => 'sponsor_manager', 'description' => 'Sponsoren und Sponsor-Subventionen verwalten'],
 
             // 🏢 CLUB MANAGEMENT
             ['name' => 'club_owner', 'description' => 'Besitzer eines Clubs'],

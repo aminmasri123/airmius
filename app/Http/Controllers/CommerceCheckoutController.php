@@ -432,7 +432,7 @@ class CommerceCheckoutController extends Controller
     public function requestReturn(Request $request, CommerceOrder $order)
     {
         abort_unless($order->user_id === $request->user()->id, 403);
-        abort_unless($order->status === 'completed', 422, 'Ruecksendungen sind nur fuer abgeschlossene Bestellungen moeglich.');
+        abort_unless($order->status === 'completed', 422, 'Ruecksendungen sind nur für abgeschlossene Bestellungen moeglich.');
 
         $data = $request->validate([
             'reason' => ['required', 'string', 'max:2000'],
@@ -442,7 +442,7 @@ class CommerceCheckoutController extends Controller
 
         $item = $order->items()->when($data['commerce_order_item_id'] ?? null, fn ($query, $id) => $query->whereKey($id))->first();
         abort_if($item && ! $item->is_shippable, 422, 'Dieses Angebot ist nicht ruecksendepflichtig.');
-        abort_if($item && ! $this->itemStillReturnable($item), 422, 'Die Ruecksendefrist fuer diesen Artikel ist abgelaufen oder ausgeschlossen.');
+        abort_if($item && ! $this->itemStillReturnable($item), 422, 'Die Ruecksendefrist für diesen Artikel ist abgelaufen oder ausgeschlossen.');
 
         CommerceReturnRequest::create([
             'commerce_order_id' => $order->id,
@@ -600,7 +600,7 @@ class CommerceCheckoutController extends Controller
     public function guestReturn(Request $request, CommerceOrder $order, string $token)
     {
         $this->authorizeGuestOrder($order, $token);
-        abort_unless($order->status === 'completed', 422, 'Ruecksendungen sind nur fuer abgeschlossene Bestellungen moeglich.');
+        abort_unless($order->status === 'completed', 422, 'Ruecksendungen sind nur für abgeschlossene Bestellungen moeglich.');
 
         $data = $request->validate([
             'reason' => ['required', 'string', 'max:2000'],
@@ -923,6 +923,7 @@ class CommerceCheckoutController extends Controller
     {
         $response = Http::withToken($this->paypalAccessToken())
             ->withHeaders(['PayPal-Request-Id' => (string) Str::uuid()])
+            ->withBody('{}', 'application/json')
             ->post($this->paypalBaseUrl().'/v2/checkout/orders/'.$order->provider_checkout_id.'/capture');
 
         if ($response->ok() && in_array($response->json('status'), ['COMPLETED', 'APPROVED'], true)) {
@@ -1041,7 +1042,9 @@ class CommerceCheckoutController extends Controller
 
     private function isValidPayPalWebhook(Request $request): bool
     {
-        if (blank(config('services.paypal.webhook_id'))) {
+        $webhookId = config('services.paypal.commerce_webhook_id') ?: config('services.paypal.webhook_id');
+
+        if (blank($webhookId)) {
             return true;
         }
 
@@ -1053,7 +1056,7 @@ class CommerceCheckoutController extends Controller
                     'transmission_id' => $request->header('PAYPAL-TRANSMISSION-ID'),
                     'transmission_sig' => $request->header('PAYPAL-TRANSMISSION-SIG'),
                     'transmission_time' => $request->header('PAYPAL-TRANSMISSION-TIME'),
-                    'webhook_id' => config('services.paypal.webhook_id'),
+                    'webhook_id' => $webhookId,
                     'webhook_event' => $request->all(),
                 ]);
 

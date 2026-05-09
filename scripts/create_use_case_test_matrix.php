@@ -264,7 +264,7 @@ function prerequisiteFor(string $sectionTitle, string $item, string $phase): str
     $text = mb_strtolower($sectionTitle . ' ' . $item);
 
     if (str_starts_with($phase, '1 - Free: Gast')) {
-        return 'Browser im privaten Fenster oeffnen; fuer Registrierung eine neue Test-E-Mail verwenden.';
+        return 'Browser im privaten Fenster oeffnen; für Registrierung eine neue Test-E-Mail verwenden.';
     }
 
     if (str_contains($text, 'mitglied') || str_contains($text, 'team') || str_contains($text, 'verein')) {
@@ -539,7 +539,7 @@ function premiumExpectationFor(string $sectionTitle, string $item): string
     $text = mb_strtolower($sectionTitle . ' ' . $item);
 
     if (str_contains($text, 'admin') || str_contains($text, 'moderation') || str_contains($text, 'webhook') || str_contains($text, 'scheduler') || str_contains($text, 'cron')) {
-        return 'Nur fuer Admin/System ausfuehrbar; Premium-Konto allein reicht nicht.';
+        return 'Nur für Admin/System ausfuehrbar; Premium-Konto allein reicht nicht.';
     }
 
     if (isPremiumFeature($text)) {

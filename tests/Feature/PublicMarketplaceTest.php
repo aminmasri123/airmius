@@ -60,7 +60,7 @@ class PublicMarketplaceTest extends TestCase
     {
         return MarketplaceProduct::create([
             'title' => 'Lauftechnik Kurs',
-            'description' => 'Ein Kurs fuer bessere Lauftechnik.',
+            'description' => 'Ein Kurs für bessere Lauftechnik.',
             'category' => 'course',
             'price_cents' => 4900,
             'currency' => 'EUR',

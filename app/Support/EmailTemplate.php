@@ -119,18 +119,18 @@ class EmailTemplate
             ],
             'guardian_access_code' => [
                 'label' => 'Elternbereich: Zugangscode',
-                'description' => 'Code fuer den Eltern-Zugang.',
+                'description' => 'Code für den Eltern-Zugang.',
                 'variables' => ['code'],
                 'template' => [
-                    'subject' => 'Dein Eltern-Zugangscode fuer Airmius',
+                    'subject' => 'Dein Eltern-Zugangscode für Airmius',
                     'greeting' => 'Hallo,',
-                    'body' => "du hast einen Zugangscode fuer den Elternbereich von Airmius angefordert.\nDein Code lautet: {{ code }}\nDer Code ist 15 Minuten gueltig.\nWenn du diesen Code nicht angefordert hast, kannst du diese E-Mail ignorieren.",
+                    'body' => "du hast einen Zugangscode für den Elternbereich von Airmius angefordert.\nDein Code lautet: {{ code }}\nDer Code ist 15 Minuten gueltig.\nWenn du diesen Code nicht angefordert hast, kannst du diese E-Mail ignorieren.",
                     'action_label' => '',
                 ],
             ],
             'guardian_consent_requested' => [
                 'label' => 'Elternzustimmung',
-                'description' => 'Bitte um Zustimmung fuer ein minderjaehriges Konto.',
+                'description' => 'Bitte um Zustimmung für ein minderjaehriges Konto.',
                 'variables' => ['minor_name'],
                 'template' => [
                     'subject' => 'Zustimmung zur Registrierung bei Airmius',
@@ -146,7 +146,7 @@ class EmailTemplate
                 'template' => [
                     'subject' => 'Passwort zuruecksetzen',
                     'greeting' => 'Hallo!',
-                    'body' => "Du erhaeltst diese E-Mail, weil wir eine Anfrage zum Zuruecksetzen des Passworts fuer dein Konto erhalten haben.\nDieser Link laeuft in {{ expires_minutes }} Minuten ab.",
+                    'body' => "Du erhaeltst diese E-Mail, weil wir eine Anfrage zum Zuruecksetzen des Passworts für dein Konto erhalten haben.\nDieser Link laeuft in {{ expires_minutes }} Minuten ab.",
                     'action_label' => 'Passwort zuruecksetzen',
                 ],
             ],
@@ -179,7 +179,7 @@ class EmailTemplate
                 'template' => [
                     'subject' => 'Mehrere fehlgeschlagene Anmeldeversuche bei Airmius',
                     'greeting' => 'Hallo,',
-                    'body' => "fuer dein Airmius-Konto wurden mehrere falsche Login-Versuche erkannt.\nDer Login wurde voruebergehend blockiert, um dein Konto zu schuetzen.\nZeitpunkt: {{ locked_at }}\nIP-Adresse: {{ ip_address }}\nGeraet/Browser: {{ user_agent }}\nWenn du das warst, warte bitte kurz und versuche es danach erneut.\nWenn du das nicht warst, aendere bitte dein Passwort und pruefe deine Kontosicherheit.",
+                    'body' => "für dein Airmius-Konto wurden mehrere falsche Login-Versuche erkannt.\nDer Login wurde voruebergehend blockiert, um dein Konto zu schuetzen.\nZeitpunkt: {{ locked_at }}\nIP-Adresse: {{ ip_address }}\nGeraet/Browser: {{ user_agent }}\nWenn du das warst, warte bitte kurz und versuche es danach erneut.\nWenn du das nicht warst, aendere bitte dein Passwort und pruefe deine Kontosicherheit.",
                     'action_label' => '',
                 ],
             ],
@@ -190,7 +190,7 @@ class EmailTemplate
                 'template' => [
                     'subject' => 'Dein Airmius Konto war lange nicht aktiv',
                     'greeting' => 'Hallo {{ name }},',
-                    'body' => "dein Airmius Konto wurde seit laengerer Zeit nicht genutzt.\nAus Datenschutzgruenden pruefen wir inaktive Konten regelmaessig.\nWenn du Airmius weiter nutzen moechtest, melde dich einfach wieder an. Dadurch bleibt dein Konto aktiv.",
+                    'body' => "dein Airmius Konto wurde seit laengerer Zeit nicht genutzt.\nAus Datenschutzgruenden pruefen wir inaktive Konten regelmässig .\nWenn du Airmius weiter nutzen moechtest, melde dich einfach wieder an. Dadurch bleibt dein Konto aktiv.",
                     'action_label' => 'Bei Airmius anmelden',
                 ],
             ],
@@ -232,9 +232,9 @@ class EmailTemplate
                 'description' => 'Zahlungsproblem oder abgelaufene Testphase.',
                 'variables' => ['name', 'plan_name'],
                 'template' => [
-                    'subject' => 'Zahlung fuer dein Airmius Abo ist offen',
+                    'subject' => 'Zahlung für dein Airmius Abo ist offen',
                     'greeting' => 'Hallo {{ name }},',
-                    'body' => "fuer dein Airmius Abo ist eine Zahlung offen oder deine Testphase ist abgelaufen.\nPlan: {{ plan_name }}\nStatus: Zahlung offen\nBitte aktualisiere die Zahlung, damit alle gebuchten Funktionen aktiv bleiben.",
+                    'body' => "für dein Airmius Abo ist eine Zahlung offen oder deine Testphase ist abgelaufen.\nPlan: {{ plan_name }}\nStatus: Zahlung offen\nBitte aktualisiere die Zahlung, damit alle gebuchten Funktionen aktiv bleiben.",
                     'action_label' => 'Plan verlaengern',
                 ],
             ],
@@ -262,7 +262,7 @@ class EmailTemplate
             ],
             'subscription_invoice_awaiting_transfer' => [
                 'label' => 'Rechnung wartet auf Ueberweisung',
-                'description' => 'Bankdaten fuer Abo-Rechnung per Ueberweisung.',
+                'description' => 'Bankdaten für Abo-Rechnung per Ueberweisung.',
                 'variables' => ['name', 'invoice_number', 'plan_name', 'amount', 'due_date', 'payment_reference', 'bank_account_holder', 'bank_name', 'iban', 'bic'],
                 'template' => [
                     'subject' => 'Airmius Rechnung {{ invoice_number }} wartet auf Ueberweisung',
@@ -276,7 +276,7 @@ class EmailTemplate
                 'description' => 'Bestaetigung einer bezahlten Abo-Rechnung.',
                 'variables' => ['name', 'invoice_number', 'plan_name', 'amount', 'paid_date', 'payment_method'],
                 'template' => [
-                    'subject' => 'Zahlung fuer Airmius Rechnung {{ invoice_number }} bestaetigt',
+                    'subject' => 'Zahlung für Airmius Rechnung {{ invoice_number }} bestaetigt',
                     'greeting' => 'Hallo {{ name }},',
                     'body' => "deine Zahlung wurde bestaetigt. Dein Airmius Abo ist aktiv.\nRechnung: {{ invoice_number }}\nPlan: {{ plan_name }}\nBetrag: {{ amount }}\nBezahlt am: {{ paid_date }}\nZahlungsart: {{ payment_method }}\nDanke, dass du Airmius nutzt.",
                     'action_label' => 'Rechnung herunterladen',
@@ -284,12 +284,12 @@ class EmailTemplate
             ],
             'subscription_invoice_reminder' => [
                 'label' => 'Rechnungserinnerung',
-                'description' => 'Erinnerung fuer offene Abo-Rechnung.',
+                'description' => 'Erinnerung für offene Abo-Rechnung.',
                 'variables' => ['name', 'invoice_number', 'plan_name', 'amount', 'due_date', 'payment_reference'],
                 'template' => [
                     'subject' => 'Erinnerung: Airmius Rechnung {{ invoice_number }} ist offen',
                     'greeting' => 'Hallo {{ name }},',
-                    'body' => "fuer deine Airmius Rechnung ist noch keine Zahlung verbucht.\nRechnung: {{ invoice_number }}\nPlan: {{ plan_name }}\nBetrag: {{ amount }}\nFaellig seit: {{ due_date }}\nVerwendungszweck: {{ payment_reference }}\nFalls du bereits bezahlt hast, kannst du diese Erinnerung ignorieren. Die Zahlung wird nach dem Bankabgleich markiert.",
+                    'body' => "für deine Airmius Rechnung ist noch keine Zahlung verbucht.\nRechnung: {{ invoice_number }}\nPlan: {{ plan_name }}\nBetrag: {{ amount }}\nFaellig seit: {{ due_date }}\nVerwendungszweck: {{ payment_reference }}\nFalls du bereits bezahlt hast, kannst du diese Erinnerung ignorieren. Die Zahlung wird nach dem Bankabgleich markiert.",
                     'action_label' => 'Rechnung herunterladen',
                 ],
             ],
@@ -306,7 +306,7 @@ class EmailTemplate
             ],
             'external_club_membership_invitation' => [
                 'label' => 'Vereinsmitglied Einladung',
-                'description' => 'Einladung fuer extern hinterlegte Vereinsmitglieder.',
+                'description' => 'Einladung für extern hinterlegte Vereinsmitglieder.',
                 'variables' => ['name', 'club_name', 'inviter_name'],
                 'template' => [
                     'subject' => 'Einladung zu {{ club_name }} auf Airmius',

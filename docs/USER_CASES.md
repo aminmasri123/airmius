@@ -40,7 +40,7 @@ Relevante Routen:
 - `/blog/{slug}`
 - `/jobs`
 - `/marketplace`
-- `/werbeagentur-fuer-vereine`
+- `/werbeagentur-für-vereine`
 - `/e-learning`
 - `/gamification`
 - `/top-inhalte`

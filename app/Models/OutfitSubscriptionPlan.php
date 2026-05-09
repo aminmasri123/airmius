@@ -14,6 +14,11 @@ class OutfitSubscriptionPlan extends Model
         'name',
         'slug',
         'description',
+        'contract_title',
+        'contract_terms',
+        'minimum_term_months',
+        'pause_allowed_after_months',
+        'cancellation_notice_days',
         'monthly_price_cents',
         'sponsor_discount_cents',
         'currency',
@@ -25,6 +30,10 @@ class OutfitSubscriptionPlan extends Model
         'sort_order',
         'is_public',
         'is_active',
+        'paypal_product_id',
+        'paypal_plan_id',
+        'paypal_plan_signature',
+        'paypal_payload',
     ];
 
     protected function casts(): array
@@ -32,8 +41,10 @@ class OutfitSubscriptionPlan extends Model
         return [
             'sizes' => 'array',
             'sports' => 'array',
+            'contract_terms' => 'array',
             'is_public' => 'boolean',
             'is_active' => 'boolean',
+            'paypal_payload' => 'array',
         ];
     }
 

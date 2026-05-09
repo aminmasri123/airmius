@@ -50,6 +50,7 @@ const scrollTo = (id) => {
                     <div class="grid grid-cols-1 gap-1 text-sm text-secondary">
                         <button @click="scrollTo('ueber')" class="min-h-9 text-left transition hover:text-primary">{{ $t('guest.nav.about') }}</button>
                         <Link :href="route('guest.blog.index')" class="flex min-h-9 items-center transition hover:text-primary">{{ $t('Blog') }}</Link>
+                        <Link :href="route('guest.sponsors')" class="flex min-h-9 items-center transition hover:text-primary">{{ $t('Sponsors') }}</Link>
                         <button @click="scrollTo('kontakt')" class="min-h-9 text-left transition hover:text-primary">{{ $t('guest.nav.contact') }}</button>
                         <Link :href="route('guest.jobs')" class="flex min-h-9 items-center transition hover:text-primary">{{ $t('Jobs') }}</Link>
                     </div>

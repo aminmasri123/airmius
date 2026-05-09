@@ -131,10 +131,6 @@ const checkoutCart = () => {
     })
 }
 
-const subscribeOutfitPlan = (plan) => {
-    router.post(route('auth.outfit-subscriptions.store', plan.id), {}, { preserveScroll: true })
-}
-
 const activeOrders = computed(() => props.orders.filter((order) => ['pending', 'awaiting_transfer', 'completed'].includes(order.status)))
 
 const storeProduct = () => productForm.post(route('auth.commerce.products.store'), {
@@ -337,9 +333,9 @@ const submitOrderRequest = () => {
                             <span class="text-lg font-bold text-primary">{{ formatMoney(plan.effective_monthly_price_cents, plan.currency) }}</span>
                             <p v-if="plan.sponsor_discount_cents" class="text-xs text-secondary">statt {{ formatMoney(plan.monthly_price_cents, plan.currency) }}</p>
                         </div>
-                        <button class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary" @click="subscribeOutfitPlan(plan)">
-                            Abo starten
-                        </button>
+                        <Link :href="route('auth.outfit-subscriptions.index')" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary">
+                            Zum Outfit-Abo
+                        </Link>
                     </div>
                 </article>
                 <p v-if="!outfitPlans.length" class="text-sm text-secondary">Noch keine Outfit-Abos freigegeben.</p>

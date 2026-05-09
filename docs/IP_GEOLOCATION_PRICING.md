@@ -1,4 +1,4 @@
-# IP-Geolocation fuer Abo-Preise
+# IP-Geolocation für Abo-Preise
 
 Airmius kann Preise und Waehrungen je Land anzeigen. Fuer eingeloggte Nutzer wird bevorzugt das gespeicherte Land genutzt. Fuer nicht eingeloggte Besucher wird das Land aus der IP abgeleitet.
 
@@ -41,6 +41,6 @@ Im Adminbereich unter `Abos` kann pro Plan ein Laenderpreis gepflegt werden:
 - Jahresbetrag in Cent/Kleinsteinheit
 - Aktiv/Inaktiv
 
-Wenn fuer ein Land kein eigener Preis existiert, nutzt Airmius den Standardpreis des Plans.
+Wenn für ein Land kein eigener Preis existiert, nutzt Airmius den Standardpreis des Plans.
 
-Wenn ein Laenderpreis existiert, aber inaktiv ist, ist der Plan fuer dieses Land nicht verfuegbar.
+Wenn ein Laenderpreis existiert, aber inaktiv ist, ist der Plan für dieses Land nicht verfuegbar.

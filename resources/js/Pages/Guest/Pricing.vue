@@ -77,6 +77,20 @@ const audiences = [
 const selectedAudience = ref(audiences.find((audience) => props.planGroups[audience.key]?.length)?.key || 'verein')
 const page = usePage()
 const couponCode = ref('')
+const checkoutModal = ref({
+    open: false,
+    plan: null,
+    provider: 'paypal',
+    accepted: false,
+})
+
+const requestedAudience = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('audience')
+    : null
+
+if (requestedAudience && audiences.some((audience) => audience.key === requestedAudience)) {
+    selectedAudience.value = requestedAudience
+}
 
 const currentAudience = computed(() => audiences.find((audience) => audience.key === selectedAudience.value) || audiences[2])
 const visiblePlans = computed(() => props.planGroups[selectedAudience.value] || [])
@@ -100,16 +114,47 @@ const priceCaption = (plan) => {
 
 const ctaLabel = (plan) => plan.cta_label || (plan.monthly_price_cents ? 'Plan testen' : 'Kostenlos starten')
 
-const startCheckout = (plan, provider) => {
+const requestCheckout = (plan, provider) => {
     if (!page.props.auth?.user) {
         router.visit(route('login'))
         return
     }
 
-    router.post(route('subscription-checkout.store', plan.id), {
+    checkoutModal.value = {
+        open: true,
+        plan,
         provider,
+        accepted: false,
+    }
+}
+
+const closeCheckoutModal = () => {
+    checkoutModal.value = {
+        open: false,
+        plan: null,
+        provider: 'paypal',
+        accepted: false,
+    }
+}
+
+const providerLabel = (provider) => ({
+    stripe: 'Stripe / Karte',
+    paypal: 'PayPal',
+    bank_transfer: 'Ueberweisung',
+})[provider] || provider
+
+const startCheckout = () => {
+    const plan = checkoutModal.value.plan
+
+    if (!plan || !checkoutModal.value.accepted) return
+
+    router.post(route('subscription-checkout.store', plan.id), {
+        provider: checkoutModal.value.provider,
         billing_interval: 'monthly',
         coupon_code: couponCode.value,
+        accepted_terms: checkoutModal.value.accepted,
+    }, {
+        onFinish: closeCheckoutModal,
     })
 }
 </script>
@@ -183,9 +228,9 @@ const startCheckout = (plan, provider) => {
                             <p class="mt-2 text-xs text-secondary">Der Code wird beim Bezahlen automatisch berücksichtigt.</p>
                         </div>
                         <div class="mt-4 rounded-lg border border-border bg-bg p-4 text-sm text-secondary">
-                            <p class="font-semibold text-primary">Land & WÃ¤hrung</p>
+                            <p class="font-semibold text-primary">Land & Währung</p>
                             <p class="mt-2">
-                                Preise fÃ¼r {{ pricingCountry }} erkannt
+                                Preise für {{ pricingCountry }} erkannt
                                 <span class="text-xs">({{ pricingCountrySource }})</span>.
                             </p>
                         </div>
@@ -251,7 +296,7 @@ const startCheckout = (plan, provider) => {
                                     {{ formatPrice(plan.yearly_price_cents, plan.currency) }} pro Jahr
                                 </p>
                                 <p v-if="plan.localized_price" class="mt-1 text-xs text-air-blue">
-                                    Lokaler Preis fÃ¼r {{ plan.pricing_country }}
+                                    Lokaler Preis für {{ plan.pricing_country }}
                                 </p>
                             </div>
 
@@ -290,21 +335,21 @@ const startCheckout = (plan, provider) => {
                                     <button
                                         type="button"
                                         class="rounded-lg bg-buttonPrimary px-4 py-2 text-center text-sm font-semibold text-buttonTextPrimary"
-                                        @click="startCheckout(plan, 'stripe')"
+                                        @click="requestCheckout(plan, 'stripe')"
                                     >
                                         Mit Stripe zahlen
                                     </button>
                                     <button
                                         type="button"
                                         class="rounded-lg border border-border px-4 py-2 text-center text-sm font-semibold text-primary hover:bg-muted"
-                                        @click="startCheckout(plan, 'paypal')"
+                                        @click="requestCheckout(plan, 'paypal')"
                                     >
                                         Mit PayPal zahlen
                                     </button>
                                     <button
                                         type="button"
                                         class="rounded-lg border border-border px-4 py-2 text-center text-sm font-semibold text-primary hover:bg-muted"
-                                        @click="startCheckout(plan, 'bank_transfer')"
+                                        @click="requestCheckout(plan, 'bank_transfer')"
                                     >
                                         Per Überweisung zahlen
                                     </button>
@@ -315,6 +360,64 @@ const startCheckout = (plan, provider) => {
                 </div>
             </section>
         </main>
+
+        <Teleport to="body">
+            <div v-if="checkoutModal.open && checkoutModal.plan" class="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm">
+                <div class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-2xl">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Abo kostenpflichtig bestellen</p>
+                            <h2 class="mt-1 text-xl font-bold text-primary">{{ checkoutModal.plan.name }}</h2>
+                            <p class="mt-2 text-sm leading-6 text-secondary">
+                                Bitte pruefe dein Abo, bevor du zur Zahlung weitergeleitet wirst.
+                            </p>
+                        </div>
+                        <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="closeCheckoutModal">
+                            <i class="las la-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="mt-5 grid gap-3 rounded-lg border border-border bg-bg p-4 text-sm">
+                        <div class="flex items-center justify-between gap-4">
+                            <span class="text-secondary">Plan</span>
+                            <span class="font-semibold text-primary">{{ checkoutModal.plan.name }}</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-4">
+                            <span class="text-secondary">Preis</span>
+                            <span class="font-semibold text-primary">{{ formatPrice(checkoutModal.plan.monthly_price_cents, checkoutModal.plan.currency) }} pro Monat</span>
+                        </div>
+                        <div class="flex items-center justify-between gap-4">
+                            <span class="text-secondary">Zahlungsart</span>
+                            <span class="font-semibold text-primary">{{ providerLabel(checkoutModal.provider) }}</span>
+                        </div>
+                    </div>
+
+                    <label class="mt-4 flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
+                        <input v-model="checkoutModal.accepted" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                        <span>
+                            Ich akzeptiere
+                            <a :href="route('terms.show')" target="_blank" rel="noopener noreferrer" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>AGB</a>,
+                            <a :href="route('legal.withdrawal')" target="_blank" rel="noopener noreferrer" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>Widerrufshinweise</a>
+                            und weiss, dass ich ein kostenpflichtiges Abo abschliesse.
+                        </span>
+                    </label>
+
+                    <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeCheckoutModal">
+                            Abbrechen
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50"
+                            :disabled="!checkoutModal.accepted"
+                            @click="startCheckout"
+                        >
+                            Zahlungspflichtig bestellen
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
 
         <Footer />
     </div>

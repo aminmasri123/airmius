@@ -79,14 +79,14 @@ const { setTheme } = useTheme()
 const addressNotice = ref(null)
 const themeOptions = [
     { key: 'air', label: 'Air', description: 'Klar, leicht und fokussiert.', colors: ['#0ea5e9', '#10b981', '#f7fbff'] },
-    { key: 'dark', label: 'Dark', description: 'Konzentriert fuer spaete Sessions.', colors: ['#0c1016', '#60a5fa', '#34d399'] },
+    { key: 'dark', label: 'Dark', description: 'Konzentriert für spaete Sessions.', colors: ['#0c1016', '#60a5fa', '#34d399'] },
     { key: 'womanly', label: 'Womanly', description: 'Warm, stark und elegant.', colors: ['#be185d', '#fde8f2', '#0f9f6e'] },
-    { key: 'champion', label: 'Champion', description: 'Goldene Energie fuer Gewinner.', colors: ['#b45309', '#f59e0b', '#fffaf0'] },
+    { key: 'champion', label: 'Champion', description: 'Goldene Energie für Gewinner.', colors: ['#b45309', '#f59e0b', '#fffaf0'] },
     { key: 'sprint', label: 'Sprint', description: 'Frisch, schnell und aktiv.', colors: ['#059669', '#10b981', '#f5fff9'] },
     { key: 'arena', label: 'Arena', description: 'Ruhig, robust und professionell.', colors: ['#334155', '#64748b', '#f8fafc'] },
     { key: 'pulse', label: 'Pulse', description: 'Dynamisch und motivierend.', colors: ['#ea580c', '#f97316', '#fff7ed'] },
     { key: 'trail', label: 'Trail', description: 'Natuerlich, ausdauernd und bodenstaendig.', colors: ['#4d7c0f', '#65a30d', '#f6f8f2'] },
-    { key: 'bazaar', label: 'Bazaar Rush', description: 'Lebendig, verkaufsstark und frisch fuer Marketplace-Flows.', colors: ['#00a8c6', '#ff8a00', '#ffffff'] },
+    { key: 'bazaar', label: 'Bazaar Rush', description: 'Lebendig, verkaufsstark und frisch für Marketplace-Flows.', colors: ['#00a8c6', '#ff8a00', '#ffffff'] },
 ]
 
 // Form
@@ -456,7 +456,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         Event-Defaults
                     </h2>
                     <p class="mt-1 text-sm text-secondary">
-                        Diese Werte werden automatisch fuer deine Eventliste genutzt, solange du dort keine eigenen Filter setzt.
+                        Diese Werte werden automatisch für deine Eventliste genutzt, solange du dort keine eigenen Filter setzt.
                     </p>
                 </div>
 
@@ -479,7 +479,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                 </div>
 
                 <div class="md:col-span-2">
-                    <label class="text-sm font-semibold text-primary">Sportarten fuer Eventvorschlaege</label>
+                    <label class="text-sm font-semibold text-primary">Sportarten für Eventvorschlaege</label>
                     <div class="mt-2 grid max-h-64 gap-2 overflow-y-auto rounded-lg border border-border bg-bg p-3 sm:grid-cols-2 lg:grid-cols-3">
                         <button
                             v-for="sport in sports"

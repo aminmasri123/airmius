@@ -26,7 +26,7 @@ class OrganizationJobInterestReceived extends Notification
         $message = (new MailMessage)
             ->subject('Neue Interessenmeldung: '.$job->title)
             ->greeting('Hallo,')
-            ->line('es gibt eine neue Interessenmeldung fuer "'.$job->title.'" bei '.$club->name.'.')
+            ->line('es gibt eine neue Interessenmeldung für "'.$job->title.'" bei '.$club->name.'.')
             ->line('Name: '.$this->interest->name)
             ->line('E-Mail: '.$this->interest->email);
 

@@ -43,7 +43,7 @@ return new class extends Migration
             DB::table('subscription_addons')->insert([
                 'slug' => 'club-website-build',
                 'name' => 'Vereinswebsite erstellen lassen',
-                'description' => 'Airmius erstellt fuer deinen Verein eine moderne Website auf Basis eurer Vereinsdaten.',
+                'description' => 'Airmius erstellt für deinen Verein eine moderne Website auf Basis eurer Vereinsdaten.',
                 'monthly_price_cents' => 0,
                 'yearly_price_cents' => 0,
                 'target_actor' => 'verein',

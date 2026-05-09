@@ -9,9 +9,10 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { ref, onMounted, onUnmounted } from 'vue'
 
-defineProps({
+const props = defineProps({
     canResetPassword: Boolean,
     status: String,
+    loginImages: { type: Array, default: () => [] },
 });
 
 const form = useForm({
@@ -29,12 +30,14 @@ const submit = () => {
     });
 };
 
-const images = [
+const fallbackImages = [
     { src: '/img/login/bild1.png', alt: 'Airmius Neueroeffnung Sport-Plattform' },
     { src: '/img/login/bild2.png', alt: 'Airmius Neueroeffnung Marketplace' },
     { src: '/img/login/bild3.png', alt: 'Airmius Community Gamification' },
     { src: '/img/login/bild4.png', alt: 'Airmius Gemeinsam aktiv' },
 ]
+
+const images = props.loginImages.length ? props.loginImages : fallbackImages
 
 const current = ref(0)
 

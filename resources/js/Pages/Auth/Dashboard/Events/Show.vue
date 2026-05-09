@@ -420,7 +420,7 @@ onMounted(() => {
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <h2 class="text-xl font-semibold text-primary">Event bearbeiten</h2>
-                            <p class="mt-1 text-sm text-secondary">Aenderungen gelten fuer dieses Event.</p>
+                            <p class="mt-1 text-sm text-secondary">Aenderungen gelten für dieses Event.</p>
                         </div>
                         <button type="button" class="rounded-lg border border-border px-3 py-1 text-secondary hover:text-primary" @click="showEditModal = false">
                             Schliessen

@@ -853,7 +853,7 @@ class AdminCommerceController extends Controller
             'sale_banner' => [
                 'setting_key' => 'marketplace_visual_sale_banner',
                 'label' => 'Sale-Kachel / Aktionsbild',
-                'description' => 'Optionales Bild fuer die rechte Sale-Kachel im ersten Marketplace-Bereich.',
+                'description' => 'Optionales Bild für die rechte Sale-Kachel im ersten Marketplace-Bereich.',
                 'recommended_size' => '800 x 1000 px',
                 'default' => '',
             ],

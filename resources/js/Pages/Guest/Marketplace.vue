@@ -159,7 +159,7 @@ const selectSegment = (segment) => {
 <template>
     <SeoHead
         title="Airmius Sport Marketplace"
-        description="Sportfokussierter Marketplace fuer Produkte, Kurse, Camps und Services. Gaeste koennen direkt ohne Konto bestellen."
+        description="Sportfokussierter Marketplace für Produkte, Kurse, Camps und Services. Gaeste koennen direkt ohne Konto bestellen."
     />
 
     <div class="min-h-screen bg-bg text-primary">
@@ -281,7 +281,7 @@ const selectSegment = (segment) => {
                         <div class="relative flex min-h-[19rem] max-w-lg flex-col justify-center p-6 text-white">
                             <p class="text-xs font-black uppercase tracking-wide text-white/80">Airmius Marketplace</p>
                             <h1 class="mt-2 font-heading text-4xl font-900 leading-tight md:text-5xl">
-                                Sport Deals fuer Training, Team und Wettkampf
+                                Sport Deals für Training, Team und Wettkampf
                             </h1>
                             <p class="mt-4 text-sm leading-6 text-white/90">
                                 Weniger scrollen, schneller finden: Kategorien, Aktionen und kuratierte Reihen statt alle Produkte auf einmal.
@@ -408,7 +408,7 @@ const selectSegment = (segment) => {
 
             <section class="mx-auto mt-4 grid max-w-7xl gap-4 px-4 xl:grid-cols-[1fr_20rem]">
                 <div class="rounded bg-card p-4 shadow-sm">
-                    <h2 class="text-center text-lg font-black text-primary">Alles fuer deinen Sportalltag</h2>
+                    <h2 class="text-center text-lg font-black text-primary">Alles für deinen Sportalltag</h2>
                     <div class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
                         <Link
                             v-for="product in essentialDeals"

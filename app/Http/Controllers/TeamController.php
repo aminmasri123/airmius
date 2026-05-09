@@ -362,7 +362,7 @@ class TeamController extends Controller
             AppNotification::send($recipient->id, $data['role'] === 'Coach' ? 'team.trainer_mentioned' : 'team.invite', [
                 'title' => $data['role'] === 'Coach' ? 'Trainer-Einladung zu '.$team->name : 'Einladung zu '.$team->name,
                 'body' => $data['role'] === 'Coach'
-                    ? 'Du wurdest als Trainer fuer '.$team->name.' eingeladen.'
+                    ? 'Du wurdest als Trainer für '.$team->name.' eingeladen.'
                     : 'Du wurdest als '.$data['role'].' eingeladen.',
                 'url' => route('auth.teams.index', ['team_invitation' => $invitation->id]),
                 'team_id' => $team->id,
@@ -562,7 +562,7 @@ class TeamController extends Controller
 
         AppNotification::send($joinRequest->user_id, 'team.join_request_accepted', [
             'title' => 'Team-Beitrittsanfrage akzeptiert',
-            'body' => 'Deine Anfrage fuer '.$joinRequest->team->name.' wurde akzeptiert.',
+            'body' => 'Deine Anfrage für '.$joinRequest->team->name.' wurde akzeptiert.',
             'url' => route('auth.teams.show', $joinRequest->team),
             'team_id' => $joinRequest->team_id,
             'club_id' => $joinRequest->team->club_id,
@@ -593,7 +593,7 @@ class TeamController extends Controller
 
         AppNotification::send($joinRequest->user_id, 'team.join_request_declined', [
             'title' => 'Team-Beitrittsanfrage abgelehnt',
-            'body' => 'Deine Anfrage fuer '.$joinRequest->team->name.' wurde abgelehnt.',
+            'body' => 'Deine Anfrage für '.$joinRequest->team->name.' wurde abgelehnt.',
             'url' => route('auth.teams.show', $joinRequest->team),
             'team_id' => $joinRequest->team_id,
             'club_id' => $joinRequest->team->club_id,
