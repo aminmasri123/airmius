@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
+import axios from 'axios'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
@@ -82,6 +83,8 @@ const checkoutModal = ref({
     plan: null,
     provider: 'paypal',
     accepted: false,
+    processing: false,
+    error: '',
 })
 
 const requestedAudience = typeof window !== 'undefined'
@@ -125,6 +128,8 @@ const requestCheckout = (plan, provider) => {
         plan,
         provider,
         accepted: false,
+        processing: false,
+        error: '',
     }
 }
 
@@ -134,6 +139,8 @@ const closeCheckoutModal = () => {
         plan: null,
         provider: 'paypal',
         accepted: false,
+        processing: false,
+        error: '',
     }
 }
 
@@ -143,19 +150,40 @@ const providerLabel = (provider) => ({
     bank_transfer: 'Ueberweisung',
 })[provider] || provider
 
-const startCheckout = () => {
+const startCheckout = async () => {
     const plan = checkoutModal.value.plan
 
-    if (!plan || !checkoutModal.value.accepted) return
+    if (!plan || !checkoutModal.value.accepted || checkoutModal.value.processing) return
 
-    router.post(route('subscription-checkout.store', plan.id), {
-        provider: checkoutModal.value.provider,
-        billing_interval: 'monthly',
-        coupon_code: couponCode.value,
-        accepted_terms: checkoutModal.value.accepted,
-    }, {
-        onFinish: closeCheckoutModal,
-    })
+    checkoutModal.value.processing = true
+    checkoutModal.value.error = ''
+
+    try {
+        const response = await axios.post(route('subscription-checkout.store', plan.id), {
+            provider: checkoutModal.value.provider,
+            billing_interval: 'monthly',
+            coupon_code: couponCode.value,
+            accepted_terms: checkoutModal.value.accepted,
+        }, {
+            headers: {
+                Accept: 'application/json',
+                'X-Checkout-Mode': 'json',
+            },
+        })
+
+        if (response.data?.redirect_url) {
+            window.location.href = response.data.redirect_url
+            return
+        }
+
+        checkoutModal.value.error = 'Checkout konnte nicht gestartet werden.'
+    } catch (error) {
+        checkoutModal.value.error = Object.values(error.response?.data?.errors || {})?.flat()?.[0]
+            || error.response?.data?.message
+            || 'Checkout konnte nicht gestartet werden.'
+    } finally {
+        checkoutModal.value.processing = false
+    }
 }
 </script>
 
@@ -402,6 +430,10 @@ const startCheckout = () => {
                         </span>
                     </label>
 
+                    <p v-if="checkoutModal.error" class="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                        {{ checkoutModal.error }}
+                    </p>
+
                     <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                         <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeCheckoutModal">
                             Abbrechen
@@ -409,10 +441,10 @@ const startCheckout = () => {
                         <button
                             type="button"
                             class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50"
-                            :disabled="!checkoutModal.accepted"
+                            :disabled="!checkoutModal.accepted || checkoutModal.processing"
                             @click="startCheckout"
                         >
-                            Zahlungspflichtig bestellen
+                            {{ checkoutModal.processing ? 'Checkout wird gestartet...' : 'Zahlungspflichtig bestellen' }}
                         </button>
                     </div>
                 </div>

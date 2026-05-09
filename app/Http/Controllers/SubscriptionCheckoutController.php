@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class SubscriptionCheckoutController extends Controller
@@ -42,19 +43,29 @@ class SubscriptionCheckoutController extends Controller
         $country = $visitorCountry->resolve($request, $club?->country ?: $request->user()->country);
         $price = $subscriptionPlan->priceForCountry($country['country']);
 
-        abort_unless($price['available'], 422, 'Dieser Abo-Plan ist in deinem Land aktuell nicht verfuegbar.');
+        if (! $price['available']) {
+            $this->checkoutError('Dieser Abo-Plan ist in deinem Land aktuell nicht verfuegbar.');
+        }
 
         $amountCents = $data['billing_interval'] === 'yearly'
             ? (int) $price['yearly_price_cents']
             : (int) $price['monthly_price_cents'];
 
-        abort_if($amountCents <= 0, 422, 'Kostenlose Plaene brauchen keinen Checkout.');
+        if ($amountCents <= 0) {
+            $this->checkoutError('Kostenlose Plaene brauchen keinen Checkout.');
+        }
 
         $coupon = $this->resolveCoupon($data['coupon_code'] ?? null);
         $discountCents = $coupon ? $coupon->discountFor($amountCents) : 0;
         $payableCents = max(0, $amountCents - $discountCents);
 
-        abort_if($payableCents <= 0, 422, 'Der Rabatt deckt den gesamten Betrag. Kostenlose Aktivierung folgt in einer spaeteren Ausbaustufe.');
+        if ($payableCents <= 0) {
+            $this->checkoutError('Der Rabatt deckt den gesamten Betrag. Kostenlose Aktivierung folgt in einer spaeteren Ausbaustufe.');
+        }
+
+        if ($data['provider'] === 'bank_transfer' && blank($this->bankTransferSettings()['iban'])) {
+            $this->checkoutError('Bankverbindung fuer Ueberweisung ist noch nicht konfiguriert.');
+        }
 
         $checkout = PaymentCheckout::create([
             'user_id' => $request->user()->id,
@@ -97,6 +108,12 @@ class SubscriptionCheckoutController extends Controller
             ]);
             $this->sendAwaitingTransferEmail($checkout);
 
+            if ($this->expectsCheckoutJson($request)) {
+                return response()->json([
+                    'redirect_url' => route('subscription-checkout.bank-transfer.show', $checkout),
+                ]);
+            }
+
             return redirect()->route('subscription-checkout.bank-transfer.show', $checkout);
         }
 
@@ -106,7 +123,25 @@ class SubscriptionCheckoutController extends Controller
 
         $checkout->update(['checkout_url' => $checkoutUrl]);
 
+        if ($this->expectsCheckoutJson($request)) {
+            return response()->json([
+                'redirect_url' => $checkoutUrl,
+            ]);
+        }
+
         return Inertia::location($checkoutUrl);
+    }
+
+    private function expectsCheckoutJson(Request $request): bool
+    {
+        return $request->expectsJson() || $request->header('X-Checkout-Mode') === 'json';
+    }
+
+    private function checkoutError(string $message): never
+    {
+        throw ValidationException::withMessages([
+            'checkout' => $message,
+        ]);
     }
 
     public function success(Request $request, PaymentCheckout $checkout)
@@ -269,7 +304,9 @@ class SubscriptionCheckoutController extends Controller
             $club = Club::query()->where('owner_id', $request->user()->id)->oldest('id')->first();
         }
 
-        abort_unless($club, 422, 'Bitte erst einen Verein erstellen oder auswaehlen.');
+        if (! $club) {
+            $this->checkoutError('Bitte erst einen Verein erstellen oder auswaehlen.');
+        }
 
         return $club;
     }
@@ -277,7 +314,9 @@ class SubscriptionCheckoutController extends Controller
     private function createStripeCheckout(PaymentCheckout $checkout): string
     {
         $secret = config('services.stripe.secret');
-        abort_if(blank($secret), 422, 'Stripe ist noch nicht konfiguriert.');
+        if (blank($secret)) {
+            $this->checkoutError('Stripe ist noch nicht konfiguriert.');
+        }
 
         $response = Http::asForm()
             ->withToken($secret)
@@ -298,7 +337,7 @@ class SubscriptionCheckoutController extends Controller
 
         if ($response->failed()) {
             Log::warning('Stripe checkout failed', ['body' => $response->json()]);
-            abort(422, 'Stripe Checkout konnte nicht gestartet werden.');
+            $this->checkoutError('Stripe Checkout konnte nicht gestartet werden.');
         }
 
         $payload = $response->json();
@@ -314,7 +353,9 @@ class SubscriptionCheckoutController extends Controller
     {
         $bank = $this->bankTransferSettings();
 
-        abort_if(blank($bank['iban']), 422, 'Bankverbindung für Überweisung ist noch nicht konfiguriert.');
+        if (blank($bank['iban'])) {
+            $this->checkoutError('Bankverbindung fuer Ueberweisung ist noch nicht konfiguriert.');
+        }
 
         $checkout->update([
             'status' => 'awaiting_transfer',
@@ -377,7 +418,7 @@ class SubscriptionCheckoutController extends Controller
 
         if ($response->failed()) {
             Log::warning('PayPal checkout failed', ['body' => $response->json()]);
-            abort(422, 'PayPal Checkout konnte nicht gestartet werden.');
+            $this->checkoutError('PayPal Checkout konnte nicht gestartet werden.');
         }
 
         $payload = $response->json();
@@ -388,7 +429,9 @@ class SubscriptionCheckoutController extends Controller
 
         $approveLink = collect($payload['links'] ?? [])->firstWhere('rel', 'approve');
 
-        abort_if(! $approveLink || blank($approveLink['href'] ?? null), 422, 'PayPal Genehmigungslink fehlt.');
+        if (! $approveLink || blank($approveLink['href'] ?? null)) {
+            $this->checkoutError('PayPal Genehmigungslink fehlt.');
+        }
 
         return $approveLink['href'];
     }
@@ -437,7 +480,9 @@ class SubscriptionCheckoutController extends Controller
 
     private function paypalAccessToken(): string
     {
-        abort_if(blank(config('services.paypal.client_id')) || blank(config('services.paypal.client_secret')), 422, 'PayPal ist noch nicht konfiguriert.');
+        if (blank(config('services.paypal.client_id')) || blank(config('services.paypal.client_secret'))) {
+            $this->checkoutError('PayPal ist noch nicht konfiguriert.');
+        }
 
         $response = Http::asForm()
             ->withBasicAuth(config('services.paypal.client_id'), config('services.paypal.client_secret'))
@@ -446,7 +491,7 @@ class SubscriptionCheckoutController extends Controller
             ]);
 
         if ($response->failed()) {
-            abort(422, 'PayPal Token konnte nicht erzeugt werden.');
+            $this->checkoutError('PayPal Token konnte nicht erzeugt werden.');
         }
 
         return $response->json('access_token');
@@ -615,7 +660,9 @@ class SubscriptionCheckoutController extends Controller
             ->where('code', strtoupper(trim($code)))
             ->first();
 
-        abort_if(! $coupon || ! $coupon->isRedeemable(), 422, 'Der Rabattcode ist ungueltig oder abgelaufen.');
+        if (! $coupon || ! $coupon->isRedeemable()) {
+            $this->checkoutError('Der Rabattcode ist ungueltig oder abgelaufen.');
+        }
 
         return $coupon;
     }
