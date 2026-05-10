@@ -243,11 +243,20 @@ const startCheckout = async () => {
             return
         }
 
-        checkoutModal.value.error = 'Checkout konnte nicht gestartet werden.'
+        checkoutModal.value.error = `Checkout konnte nicht gestartet werden. Antwort ohne Weiterleitungslink (${response.status}).`
     } catch (error) {
+        const status = error.response?.status
+        const serverMessage = Object.values(error.response?.data?.errors || {})?.flat()?.[0]
+            || error.response?.data?.message
+        const requestUrl = error.config?.url
+
         checkoutModal.value.error = Object.values(error.response?.data?.errors || {})?.flat()?.[0]
             || error.response?.data?.message
-            || 'Checkout konnte nicht gestartet werden.'
+            || (status ? `Checkout konnte nicht gestartet werden. Serverantwort: ${status}${requestUrl ? ` (${requestUrl})` : ''}.` : 'Checkout konnte nicht gestartet werden. Netzwerkfehler oder alte Build-Datei.')
+
+        if (serverMessage && status) {
+            checkoutModal.value.error = `${serverMessage} (${status})`
+        }
     } finally {
         checkoutModal.value.processing = false
     }

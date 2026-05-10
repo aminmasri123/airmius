@@ -26,6 +26,21 @@ class SubscriptionCheckoutController extends Controller
 {
     public function start(Request $request, SubscriptionPlan $subscriptionPlan, VisitorCountry $visitorCountry)
     {
+        Log::info('Subscription checkout start requested', [
+            'plan_id' => $subscriptionPlan->id,
+            'plan_slug' => $subscriptionPlan->slug,
+            'user_id' => $request->user()?->id,
+            'provider' => $request->input('provider'),
+            'billing_interval' => $request->input('billing_interval'),
+            'accepted_terms' => $request->input('accepted_terms'),
+            'expects_json' => $request->expectsJson(),
+            'ajax' => $request->ajax(),
+            'host' => $request->getHost(),
+            'origin' => $request->headers->get('origin'),
+            'referer' => $request->headers->get('referer'),
+            'ip' => $request->ip(),
+        ]);
+
         return $this->store($request, $subscriptionPlan, $visitorCountry);
     }
 
@@ -97,6 +112,15 @@ class SubscriptionCheckoutController extends Controller
         ]);
         $this->createSubscriptionInvoice($checkout);
 
+        Log::info('Subscription checkout created', [
+            'checkout_id' => $checkout->id,
+            'plan_id' => $subscriptionPlan->id,
+            'user_id' => $request->user()->id,
+            'provider' => $data['provider'],
+            'amount_cents' => $payableCents,
+            'currency' => $price['currency'] ?: 'EUR',
+        ]);
+
         if ($data['provider'] === 'bank_transfer') {
             $this->prepareBankTransferCheckout($checkout);
             $checkout->invoice?->update([
@@ -131,6 +155,12 @@ class SubscriptionCheckoutController extends Controller
         $checkout->update(['checkout_url' => $checkoutUrl]);
 
         if ($this->expectsCheckoutJson($request)) {
+            Log::info('Subscription checkout redirect URL returned', [
+                'checkout_id' => $checkout->id,
+                'provider' => $checkout->provider,
+                'has_checkout_url' => filled($checkoutUrl),
+            ]);
+
             return response()->json([
                 'redirect_url' => $checkoutUrl,
             ]);
@@ -379,7 +409,11 @@ class SubscriptionCheckoutController extends Controller
             ]);
 
         if ($response->failed()) {
-            Log::warning('Stripe checkout failed', ['body' => $response->json()]);
+            Log::warning('Stripe checkout failed', [
+                'checkout_id' => $checkout->id,
+                'status' => $response->status(),
+                'body' => $response->json(),
+            ]);
             $this->checkoutError('Stripe Checkout konnte nicht gestartet werden.');
         }
 
@@ -460,7 +494,11 @@ class SubscriptionCheckoutController extends Controller
         ]);
 
         if ($response->failed()) {
-            Log::warning('PayPal checkout failed', ['body' => $response->json()]);
+            Log::warning('PayPal checkout failed', [
+                'checkout_id' => $checkout->id,
+                'status' => $response->status(),
+                'body' => $response->json(),
+            ]);
             $this->checkoutError('PayPal Checkout konnte nicht gestartet werden.');
         }
 
@@ -473,6 +511,11 @@ class SubscriptionCheckoutController extends Controller
         $approveLink = collect($payload['links'] ?? [])->firstWhere('rel', 'approve');
 
         if (! $approveLink || blank($approveLink['href'] ?? null)) {
+            Log::warning('PayPal approval link missing', [
+                'checkout_id' => $checkout->id,
+                'payload' => $payload,
+            ]);
+
             $this->checkoutError('PayPal Genehmigungslink fehlt.');
         }
 
