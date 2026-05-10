@@ -82,6 +82,18 @@ class HandleInertiaRequests extends Middleware
                     'created_at' => $notification->created_at,
                 ])
             : [];
+        $activeUserSubscriptions = $user
+            ? $user->subscriptions()
+                ->with('plan:id,slug,name,target_actor')
+                ->whereIn('status', ['active', 'trialing'])
+                ->get()
+            : collect();
+        $currentUserSubscription = $activeUserSubscriptions
+            ->sortByDesc(fn ($subscription) => $subscription->current_period_ends_at?->timestamp ?? 0)
+            ->first();
+        $storageUsage = $user
+            ? app(\App\Services\PlanFeatureService::class)->userStorageSummary($user)
+            : null;
 
         return array_merge(parent::share($request), [
             'csrf_token' => csrf_token(),
@@ -112,6 +124,27 @@ class HandleInertiaRequests extends Middleware
                         ->all(),
                     'can' => $can,
                     'unread_notifications_count' => $unreadNotificationsCount,
+                    'active_subscription_plan_ids' => $activeUserSubscriptions
+                        ->pluck('subscription_plan_id')
+                        ->values()
+                        ->all(),
+                    'active_subscription_plan_slugs' => $activeUserSubscriptions
+                        ->pluck('plan.slug')
+                        ->filter()
+                        ->values()
+                        ->all(),
+                    'current_subscription' => $currentUserSubscription ? [
+                        'id' => $currentUserSubscription->id,
+                        'status' => $currentUserSubscription->status,
+                        'current_period_ends_at' => $currentUserSubscription->current_period_ends_at,
+                        'plan' => $currentUserSubscription->plan ? [
+                            'id' => $currentUserSubscription->plan->id,
+                            'slug' => $currentUserSubscription->plan->slug,
+                            'name' => $currentUserSubscription->plan->name,
+                            'target_actor' => $currentUserSubscription->plan->target_actor,
+                        ] : null,
+                    ] : null,
+                    'storage_usage' => $storageUsage,
                     'realtime' => [
                         'notification_channel' => 'notifications.user.'.$user->id,
                         'team_event_channels' => $user->teams()

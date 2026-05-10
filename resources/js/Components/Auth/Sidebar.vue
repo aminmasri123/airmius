@@ -18,6 +18,26 @@ const unreadNotificationsCount = computed(() => page.props.notificationCenter?.u
 const unreadChatsCount = computed(() => page.props.unreadChatsCount || 0)
 const pendingFriendInvitationsCount = computed(() => page.props.friendCenter?.pending_received_count || 0)
 const { can, hasAny } = usePermissions()
+const activeSubscriptionSlugs = computed(() => page.props.auth?.user?.active_subscription_plan_slugs || [])
+const currentSubscriptionPlan = computed(() => page.props.auth?.user?.current_subscription?.plan || null)
+const hasSportlerPro = computed(() => activeSubscriptionSlugs.value.includes('sportler-pro'))
+const storageUsage = computed(() => page.props.auth?.user?.storage_usage || null)
+const upgradeLabel = computed(() => {
+    if (hasSportlerPro.value) return 'Sportler Pro aktiv'
+
+    return currentSubscriptionPlan.value?.target_actor === 'sportler'
+        ? `${currentSubscriptionPlan.value.name} aktiv`
+        : 'Upgrade Pro'
+})
+const upgradeIcon = computed(() => hasSportlerPro.value ? 'las la-check-circle' : 'las la-rocket')
+const formatStorage = (bytes) => {
+    const value = Number(bytes || 0)
+
+    if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`
+    if (value < 1024 * 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} MB`
+
+    return `${(value / 1024 / 1024 / 1024).toFixed(2)} GB`
+}
 
 const canAdmin = computed(() => hasAny([
     'users.view',
@@ -113,7 +133,33 @@ const closeSidebar = () => {
             <NavItem v-if="can('guardians.children.view')" @click="closeSidebar" :href="route('guardian-access.children')" label="Elternbereich" icon="las la-user-shield" />
             <NavItem @click="closeSidebar" :href="route('auth.commerce.index')" label="Marketplace" icon="las la-store" />
             <NavItem @click="closeSidebar" :href="route('auth.outfit-subscriptions.index')" label="Outfit-Abo" icon="las la-tshirt" />
-            <NavItem @click="closeSidebar" :href="route('guest.pricing', { audience: 'sportler' })" label="Upgrade Pro" icon="las la-rocket" />
+            <NavItem
+                @click="closeSidebar"
+                :href="route('guest.pricing', { audience: 'sportler' })"
+                :label="upgradeLabel"
+                :icon="upgradeIcon"
+            />
+
+            <Link
+                v-if="storageUsage"
+                :href="route('auth.files.index')"
+                class="mt-3 block rounded-lg border border-border bg-inputBg/60 p-3 text-left"
+                @click="closeSidebar"
+            >
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-xs font-semibold uppercase text-secondary">Speicher</span>
+                    <span class="text-xs font-bold text-primary">{{ storageUsage.used_percent }}%</span>
+                </div>
+                <div class="mt-2 h-1.5 rounded-full bg-card">
+                    <div
+                        class="h-1.5 rounded-full bg-buttonPrimary"
+                        :style="{ width: `${storageUsage.used_percent}%` }"
+                    ></div>
+                </div>
+                <p class="mt-2 text-xs text-secondary">
+                    {{ formatStorage(storageUsage.remaining_bytes) }} frei
+                </p>
+            </Link>
 
             <NavGroup v-if="canAdmin" label="Admin" icon="las la-shield-alt">
                 <NavItem v-if="can('users.view')" @click="closeSidebar" :href="route('members.index')" label="Users" icon="las la-user" />

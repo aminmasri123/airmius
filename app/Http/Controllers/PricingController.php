@@ -14,6 +14,13 @@ class PricingController extends Controller
     {
         $resolvedCountry = $visitorCountry->resolve($request, $request->user()?->country);
         $country = $resolvedCountry['country'];
+        $activePlanIds = $request->user()
+            ? $request->user()
+                ->subscriptions()
+                ->whereIn('status', ['active', 'trialing'])
+                ->pluck('subscription_plan_id')
+                ->all()
+            : [];
 
         $plans = SubscriptionPlan::query()
             ->with('countryPrices')
@@ -48,6 +55,7 @@ class PricingController extends Controller
                     'features' => $plan->features ?? [],
                     'cta_label' => $plan->cta_label,
                     'badge' => $plan->badge,
+                    'is_owned' => in_array($plan->id, $activePlanIds, true),
                 ];
             })
             ->filter()

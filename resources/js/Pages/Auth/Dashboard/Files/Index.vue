@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import Modal from '@/Components/Modal.vue'
-import { Head, router, useForm } from '@inertiajs/vue3'
+import { Head, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 
 const props = defineProps({
@@ -25,6 +25,7 @@ const shareType = ref('file')
 const friendSearch = ref('')
 const renameTarget = ref(null)
 const renameType = ref('file')
+const page = usePage()
 
 const scopeForm = useForm({
     scope: props.scope.type || 'user',
@@ -72,6 +73,7 @@ const scopeOptions = [
 
 const activeFiles = computed(() => props.files)
 const activeFolders = computed(() => props.folders)
+const storageUsage = computed(() => page.props.auth?.user?.storage_usage || null)
 const shareTargets = computed(() => {
     const query = friendSearch.value.trim().toLowerCase()
 
@@ -205,6 +207,16 @@ const formatSize = (size) => {
     return `${(size / 1024 / 1024).toFixed(1)} MB`
 }
 
+const formatStorage = (size) => {
+    const value = Number(size || 0)
+
+    if (value < 1024) return `${value} B`
+    if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`
+    if (value < 1024 * 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} MB`
+
+    return `${(value / 1024 / 1024 / 1024).toFixed(2)} GB`
+}
+
 const fileName = (file) => file.display_name || file.path.split('/').pop()
 const contextLabel = (file) => file.event?.title || file.team?.name || file.club?.name || 'Privat'
 </script>
@@ -307,10 +319,35 @@ const contextLabel = (file) => file.event?.title || file.team?.name || file.club
                 </section>
 
                 <aside class="space-y-4">
+                    <section v-if="storageUsage" class="rounded-lg border border-border bg-card p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Speicher</h2>
+                                <p class="mt-1 text-lg font-bold text-primary">{{ formatStorage(storageUsage.remaining_bytes) }} frei</p>
+                            </div>
+                            <span class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-primary">
+                                {{ storageUsage.plan_name }}
+                            </span>
+                        </div>
+                        <div class="mt-4 h-2 rounded-full bg-inputBg">
+                            <div
+                                class="h-2 rounded-full bg-buttonPrimary"
+                                :style="{ width: `${storageUsage.used_percent}%` }"
+                            ></div>
+                        </div>
+                        <div class="mt-2 flex items-center justify-between text-xs text-secondary">
+                            <span>{{ formatStorage(storageUsage.used_bytes) }} genutzt</span>
+                            <span>{{ storageUsage.limit_gb }} GB gesamt</span>
+                        </div>
+                    </section>
+
                     <form class="rounded-lg border border-border bg-card p-4" @submit.prevent="submitUpload">
                         <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Upload</h2>
                         <p class="mt-1 text-xs text-secondary">Ziel: {{ currentFolder?.name || 'Hauptebene' }}</p>
                         <input class="mt-3 block w-full text-sm text-secondary" type="file" @change="uploadForm.file = $event.target.files?.[0] || null">
+                        <p v-if="uploadForm.errors.file || uploadForm.errors.general" class="mt-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs font-semibold text-error">
+                            {{ uploadForm.errors.file || uploadForm.errors.general }}
+                        </p>
                         <button :disabled="uploadForm.processing || !uploadForm.file" class="mt-3 w-full rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50">
                             Hochladen
                         </button>

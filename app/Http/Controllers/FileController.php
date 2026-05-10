@@ -117,6 +117,10 @@ class FileController extends Controller
             $this->planFeatures->ensureCanStoreFile($club, $request->file('file'));
         }
 
+        if (($scope['user_id'] ?? null) === $request->user()->id && empty($scope['club_id']) && empty($scope['team_id']) && empty($scope['event_id'])) {
+            $this->planFeatures->ensureCanStoreUserFile($request->user(), $request->file('file'));
+        }
+
         if (!empty($data['folder_id'])) {
             $folder = Folder::findOrFail($data['folder_id']);
             abort_unless($folder->user_id === ($scope['user_id'] ?? null)

@@ -115,9 +115,13 @@ const priceCaption = (plan) => {
     return 'pro Monat'
 }
 
+const ownsPlan = (plan) => Boolean(plan.is_owned)
+
 const ctaLabel = (plan) => plan.cta_label || (plan.monthly_price_cents ? 'Plan testen' : 'Kostenlos starten')
 
 const requestCheckout = (plan, provider) => {
+    if (ownsPlan(plan)) return
+
     if (!page.props.auth?.user) {
         router.visit(route('login'))
         return
@@ -409,7 +413,13 @@ const startCheckout = async () => {
                             <div>
                                 <div class="flex items-start justify-between gap-3">
                                     <h3 class="text-xl font-bold text-primary">{{ plan.name }}</h3>
-                                    <span v-if="plan.badge" class="rounded-full bg-air-blue/15 px-2 py-1 text-xs font-semibold text-air-blue">{{ plan.badge }}</span>
+                                    <span
+                                        v-if="ownsPlan(plan)"
+                                        class="rounded-full bg-air-green/15 px-2 py-1 text-xs font-semibold text-air-green"
+                                    >
+                                        Aktiv
+                                    </span>
+                                    <span v-else-if="plan.badge" class="rounded-full bg-air-blue/15 px-2 py-1 text-xs font-semibold text-air-blue">{{ plan.badge }}</span>
                                 </div>
                                 <p class="mt-3 min-h-16 text-sm leading-relaxed text-secondary">{{ plan.description }}</p>
                             </div>
@@ -448,8 +458,15 @@ const startCheckout = async () => {
                             </ul>
 
                             <div class="mt-6 grid gap-2">
+                                <div
+                                    v-if="ownsPlan(plan)"
+                                    class="rounded-lg border border-air-green/40 bg-air-green/10 px-4 py-3 text-center text-sm font-semibold text-air-green"
+                                >
+                                    Du besitzt diesen Plan
+                                </div>
+
                                 <Link
-                                    v-if="!plan.monthly_price_cents"
+                                    v-else-if="!plan.monthly_price_cents"
                                     :href="canRegister ? route('register') : route('login')"
                                     class="rounded-lg bg-buttonPrimary px-4 py-2 text-center text-sm font-semibold text-buttonTextPrimary"
                                 >

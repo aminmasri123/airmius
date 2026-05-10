@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Models\Club;
 use App\Models\ClubExternalMember;
 use App\Models\File;
+use App\Models\SubscriptionPlan;
 use App\Models\TeamInvitation;
+use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -90,6 +92,40 @@ class PlanFeatureService
     {
         if (! $this->canStoreFile($club, $file)) {
             $this->fail('Der Speicher des aktuellen Vereinsplans ist ausgeschoepft.');
+        }
+    }
+
+    public function userStorageSummary(User $user): array
+    {
+        $plan = $this->userStoragePlan($user);
+        $limitGb = (int) ($plan?->storage_gb ?: 1);
+        $limitBytes = $limitGb * 1024 * 1024 * 1024;
+        $usedBytes = $this->userStorageUsageBytes($user);
+        $remainingBytes = max(0, $limitBytes - $usedBytes);
+
+        return [
+            'plan_name' => $plan?->name ?: 'Free',
+            'limit_gb' => $limitGb,
+            'limit_bytes' => $limitBytes,
+            'used_bytes' => $usedBytes,
+            'remaining_bytes' => $remainingBytes,
+            'used_percent' => $limitBytes > 0 ? min(100, round(($usedBytes / $limitBytes) * 100, 1)) : 0,
+            'is_full' => $limitBytes > 0 && $usedBytes >= $limitBytes,
+        ];
+    }
+
+    public function canStoreUserFile(User $user, ?UploadedFile $file = null): bool
+    {
+        $summary = $this->userStorageSummary($user);
+        $nextBytes = $file?->getSize() ?? 0;
+
+        return ($summary['used_bytes'] + $nextBytes) <= $summary['limit_bytes'];
+    }
+
+    public function ensureCanStoreUserFile(User $user, ?UploadedFile $file = null): void
+    {
+        if (! $this->canStoreUserFile($user, $file)) {
+            $this->fail('Dein Speicher ist ausgeschoepft. Bitte loesche Dateien oder fuehre ein Upgrade durch.');
         }
     }
 
@@ -225,6 +261,30 @@ class PlanFeatureService
         $slug = $club->subscriptionPlan()?->slug ?? 'free';
 
         return self::PLAN_LEVELS[$slug] ?? 0;
+    }
+
+    private function userStoragePlan(User $user): ?SubscriptionPlan
+    {
+        $activePlan = $user->subscriptions()
+            ->with('plan:id,name,storage_gb')
+            ->whereIn('status', ['active', 'trialing'])
+            ->get()
+            ->pluck('plan')
+            ->filter()
+            ->sortByDesc(fn (SubscriptionPlan $plan) => (int) $plan->storage_gb)
+            ->first();
+
+        return $activePlan ?: SubscriptionPlan::query()
+            ->whereIn('slug', ['sportler-free', 'free'])
+            ->orderByRaw("FIELD(slug, 'sportler-free', 'free')")
+            ->first();
+    }
+
+    private function userStorageUsageBytes(User $user): int
+    {
+        return (int) File::query()
+            ->where('user_id', $user->id)
+            ->sum('size');
     }
 
     private function featureMessage(string $feature): string
