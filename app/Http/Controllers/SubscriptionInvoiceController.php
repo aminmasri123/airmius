@@ -66,7 +66,7 @@ class SubscriptionInvoiceController extends Controller
                     ],
                 );
             } else {
-                $checkout->user->userSubscriptions()->updateOrCreate(
+                $checkout->user->subscriptions()->updateOrCreate(
                     ['subscription_plan_id' => $checkout->subscription_plan_id],
                     [
                         'status' => 'active',
