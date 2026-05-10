@@ -24,8 +24,39 @@ use Inertia\Inertia;
 
 class SubscriptionCheckoutController extends Controller
 {
-    public function start(Request $request, SubscriptionPlan $subscriptionPlan, VisitorCountry $visitorCountry)
+    public function start(Request $request, string $subscriptionPlanId, VisitorCountry $visitorCountry)
     {
+        $subscriptionPlan = SubscriptionPlan::query()->find($subscriptionPlanId);
+
+        if (! $subscriptionPlan) {
+            Log::warning('Subscription checkout start failed because plan was not found', [
+                'plan_id' => $subscriptionPlanId,
+                'user_id' => $request->user()?->id,
+                'provider' => $request->input('provider'),
+                'host' => $request->getHost(),
+                'referer' => $request->headers->get('referer'),
+            ]);
+
+            return redirect()
+                ->route('guest.pricing', ['audience' => 'sportler'])
+                ->with('error', 'Dieser Abo-Plan wurde online nicht gefunden. Bitte pruefe, ob der Plan auf Hostinger existiert.');
+        }
+
+        if (! $subscriptionPlan->is_active) {
+            Log::warning('Subscription checkout start failed because plan is inactive', [
+                'plan_id' => $subscriptionPlan->id,
+                'plan_slug' => $subscriptionPlan->slug,
+                'user_id' => $request->user()?->id,
+                'provider' => $request->input('provider'),
+                'host' => $request->getHost(),
+                'referer' => $request->headers->get('referer'),
+            ]);
+
+            return redirect()
+                ->route('guest.pricing', ['audience' => $subscriptionPlan->target_actor ?: 'sportler'])
+                ->with('error', 'Dieser Abo-Plan ist online aktuell nicht aktiv.');
+        }
+
         Log::info('Subscription checkout start requested', [
             'plan_id' => $subscriptionPlan->id,
             'plan_slug' => $subscriptionPlan->slug,

@@ -58,7 +58,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session')])->group(fun
 
     Route::post('/checkout/subscriptions/{subscriptionPlan}', [SubscriptionCheckoutController::class, 'store'])
         ->name('subscription-checkout.store');
-    Route::get('/checkout/subscriptions/{subscriptionPlan}/start', [SubscriptionCheckoutController::class, 'start'])
+    Route::get('/checkout/subscriptions/{subscriptionPlanId}/start', [SubscriptionCheckoutController::class, 'start'])
         ->name('subscription-checkout.start');
     Route::get('/checkout/subscriptions/{checkout}/success', [SubscriptionCheckoutController::class, 'success'])
         ->name('subscription-checkout.success');
