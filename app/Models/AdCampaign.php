@@ -15,13 +15,26 @@ class AdCampaign extends Model
         'user_id',
         'club_id',
         'name',
+        'headline',
         'description',
+        'primary_text',
         'target_url',
+        'cta_label',
+        'objective',
+        'placement',
+        'creative_format',
+        'creative_image_path',
+        'creative_image_url',
+        'audience',
         'budget_cents',
+        'daily_budget_cents',
+        'billing_event',
         'spent_cents',
         'impressions',
         'clicks',
         'status',
+        'review_note',
+        'reviewed_at',
         'starts_at',
         'ends_at',
     ];
@@ -31,11 +44,23 @@ class AdCampaign extends Model
         return [
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
+            'reviewed_at' => 'datetime',
+            'audience' => 'array',
         ];
     }
 
     public function stats(): HasMany
     {
         return $this->hasMany(AdCampaignStat::class);
+    }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(AdEvent::class);
+    }
+
+    public function creatives(): HasMany
+    {
+        return $this->hasMany(AdCreative::class);
     }
 }

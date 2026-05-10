@@ -12,12 +12,14 @@ use App\Services\GamificationService;
 use App\Services\MediaOptimizer;
 use App\Services\ModerationService;
 use App\Services\PostService;
+use App\Support\ClubRoles;
 use App\Support\UploadStorage;
 use App\Support\Roles;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class PostController extends Controller
@@ -51,12 +53,30 @@ class PostController extends Controller
                     })
                     ->orWhere(function ($query) use ($user) {
                         $query->where('visibility', 'organization')
-                            ->whereHas('club.users', fn ($q) => $q->where('users.id', $user->id));
+                            ->whereHas('club', fn ($clubQuery) => $clubQuery
+                                ->where('is_listed', true)
+                                ->whereHas('users', fn ($q) => $q->where('users.id', $user->id)));
                     })
                     ->orWhere(function ($query) use ($user) {
                         $query->where('visibility', 'team')
-                            ->whereHas('team.users', fn ($q) => $q->where('users.id', $user->id));
+                            ->whereHas('team', fn ($teamQuery) => $teamQuery
+                                ->whereHas('club', fn ($clubQuery) => $clubQuery
+                                    ->where('is_listed', true)
+                                    ->where('teams_are_listed', true))
+                                ->whereHas('users', fn ($q) => $q->where('users.id', $user->id)));
                     });
+            })
+            ->where(function ($query) {
+                $query->whereNull('club_id')
+                    ->orWhere('visibility', '!=', 'organization')
+                    ->orWhereHas('club', fn ($clubQuery) => $clubQuery->where('is_listed', true));
+            })
+            ->where(function ($query) {
+                $query->whereNull('team_id')
+                    ->orWhere('visibility', '!=', 'team')
+                    ->orWhereHas('team.club', fn ($clubQuery) => $clubQuery
+                        ->where('is_listed', true)
+                        ->where('teams_are_listed', true));
             })
             ->with([
                 'user:id,name,profile_photo_path',
@@ -92,20 +112,40 @@ class PostController extends Controller
         return Inertia::render('Auth/Dashboard/Feed/Index', [
             'posts' => $posts,
             'clubs' => Club::query()
+                ->where('is_listed', true)
                 ->when(
                     ! $user->hasAnyRole(Roles::FULL_ACCESS),
                     fn ($query) => $query->where(function ($query) use ($user) {
-                        $query->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id))
-                            ->orWhereHas('teams.users', fn ($userQuery) => $userQuery->where('users.id', $user->id));
+                        $query->where(function ($query) use ($user) {
+                            $query->where('members_can_post_to_club', true)
+                                ->where(function ($query) use ($user) {
+                                    $query->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id))
+                                        ->orWhereHas('teams.users', fn ($userQuery) => $userQuery->where('users.id', $user->id));
+                                });
+                        })->orWhereHas('users', function ($userQuery) use ($user) {
+                            $userQuery->where('users.id', $user->id);
+                            ClubRoles::whereAny($userQuery, ClubRoles::ELEVATED);
+                        });
                     }),
                 )
-                ->select(['id', 'name'])
+                ->select(['id', 'name', 'is_listed', 'teams_are_listed', 'members_can_post_to_club', 'members_can_post_to_teams'])
                 ->orderBy('name')
                 ->get(),
             'teams' => Team::query()
+                ->whereHas('club', fn ($clubQuery) => $clubQuery
+                    ->where('is_listed', true)
+                    ->where('teams_are_listed', true))
                 ->when(
                     ! $user->hasAnyRole(Roles::FULL_ACCESS),
-                    fn ($query) => $query->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id)),
+                    fn ($query) => $query->where(function ($query) use ($user) {
+                        $query->where(function ($query) use ($user) {
+                            $query->whereHas('club', fn ($clubQuery) => $clubQuery->where('members_can_post_to_teams', true))
+                                ->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id));
+                        })->orWhereHas('club.users', function ($userQuery) use ($user) {
+                            $userQuery->where('users.id', $user->id);
+                            ClubRoles::whereAny($userQuery, ClubRoles::ELEVATED);
+                        });
+                    }),
                 )
                 ->select(['id', 'club_id', 'name'])
                 ->orderBy('name')
@@ -292,14 +332,42 @@ class PostController extends Controller
 
     private function canUseClub(User $user, Club $club): bool
     {
-        return $user->hasAnyRole(Roles::FULL_ACCESS)
-            || $club->users()->where('users.id', $user->id)->exists()
+        if ($user->hasAnyRole(Roles::FULL_ACCESS)) {
+            return true;
+        }
+
+        if ($user->can('update', $club)) {
+            return true;
+        }
+
+        if (! $club->members_can_post_to_club) {
+            throw ValidationException::withMessages([
+                'club_id' => 'Mitglieder dürfen für diesen Verein keine Beiträge erstellen.',
+            ]);
+        }
+
+        return $club->users()->where('users.id', $user->id)->exists()
             || $club->teams()->whereHas('users', fn ($query) => $query->where('users.id', $user->id))->exists();
     }
 
     private function canUseTeam(User $user, Team $team): bool
     {
-        return $user->hasAnyRole(Roles::FULL_ACCESS)
-            || $team->users()->where('users.id', $user->id)->exists();
+        $team->loadMissing('club');
+
+        if ($user->hasAnyRole(Roles::FULL_ACCESS)) {
+            return true;
+        }
+
+        if ($user->can('update', $team)) {
+            return true;
+        }
+
+        if (! $team->club?->members_can_post_to_teams) {
+            throw ValidationException::withMessages([
+                'team_id' => 'Mitglieder dürfen für Teams dieses Vereins keine Beiträge erstellen.',
+            ]);
+        }
+
+        return $team->users()->where('users.id', $user->id)->exists();
     }
 }

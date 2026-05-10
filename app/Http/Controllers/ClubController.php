@@ -78,6 +78,10 @@ class ClubController extends Controller
             'postal_code' => ['nullable', 'string', 'max:30'],
             'city' => ['nullable', 'string', 'max:255'],
             'state' => ['nullable', 'string', 'max:255'],
+            'is_listed' => ['boolean'],
+            'teams_are_listed' => ['boolean'],
+            'members_can_post_to_club' => ['boolean'],
+            'members_can_post_to_teams' => ['boolean'],
         ]));
 
         session(['club_id' => $club->id]);
@@ -144,6 +148,10 @@ class ClubController extends Controller
                 'teams_count' => $club->teams_count,
                 'posts_count' => $club->posts_count,
                 'member_pause_requests_enabled' => $club->member_pause_requests_enabled,
+                'is_listed' => (bool) $club->is_listed,
+                'teams_are_listed' => (bool) $club->teams_are_listed,
+                'members_can_post_to_club' => (bool) $club->members_can_post_to_club,
+                'members_can_post_to_teams' => (bool) $club->members_can_post_to_teams,
                 'admins' => $club->admins,
                 'members' => $club->users,
                 'teams' => $club->teams,
@@ -182,6 +190,10 @@ class ClubController extends Controller
             'postal_code' => ['nullable', 'string', 'max:30'],
             'city' => ['nullable', 'string', 'max:255'],
             'state' => ['nullable', 'string', 'max:255'],
+            'is_listed' => ['boolean'],
+            'teams_are_listed' => ['boolean'],
+            'members_can_post_to_club' => ['boolean'],
+            'members_can_post_to_teams' => ['boolean'],
         ]));
 
         return back()->with('success', 'Club aktualisiert');

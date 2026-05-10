@@ -116,7 +116,7 @@ const submitInterest = () => {
         onError: () => {
             interestNotice.value = {
                 type: 'error',
-                message: 'Bitte pruefe deine Angaben.',
+                message: 'Bitte prüfe deine Angaben.',
             }
         },
     })
@@ -196,7 +196,7 @@ const submitInterest = () => {
                             class="rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted"
                             @click="resetFilters"
                         >
-                            Zuruecksetzen
+                            Zurücksetzen
                         </button>
                     </div>
                 </form>
@@ -250,7 +250,7 @@ const submitInterest = () => {
                         Interesse melden
                     </h2>
                     <p class="mt-2 text-sm text-secondary">
-                        Deine Angaben werden an den Verein weitergeleitet. Du musst dafuer nicht angemeldet sein.
+                        Deine Angaben werden an den Verein weitergeleitet. Du musst dafür nicht angemeldet sein.
                     </p>
                 </div>
 
@@ -277,7 +277,7 @@ const submitInterest = () => {
                 >
                     <span class="block font-semibold text-primary">Externe Bewerbung vorhanden</span>
                     <span class="mt-1 block">
-                        Du kannst dein Interesse hier senden oder dich direkt ueber das externe Formular bewerben.
+                        Du kannst dein Interesse hier senden oder dich direkt über das externe Formular bewerben.
                     </span>
                     <a
                         :href="selectedJob.application_url"
@@ -330,7 +330,7 @@ const submitInterest = () => {
                         v-model="interestForm.message"
                         rows="4"
                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                        placeholder="Kurz vorstellen, Erfahrung nennen oder Rueckfrage stellen."
+                        placeholder="Kurz vorstellen, Erfahrung nennen oder Rückfrage stellen."
                     ></textarea>
                     <span v-if="errors.message" class="mt-1 block text-xs text-error">{{ errors.message }}</span>
                 </label>
@@ -341,7 +341,7 @@ const submitInterest = () => {
                         class="rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted"
                         @click="closeInterestModal"
                     >
-                        Schliessen
+                        Schließen
                     </button>
                     <button class="rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary">
                         Interesse senden

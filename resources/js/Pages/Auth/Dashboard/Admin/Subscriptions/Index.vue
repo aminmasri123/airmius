@@ -97,6 +97,8 @@ const formForPlan = (plan) => {
         member_limit: plan.member_limit || '',
         team_limit: plan.team_limit || '',
         storage_gb: plan.storage_gb || 1,
+        minimum_term_months: plan.minimum_term_months ?? 0,
+        cancellation_notice_days: plan.cancellation_notice_days ?? 0,
         cta_label: plan.cta_label || '',
         badge: plan.badge || '',
         is_public: Boolean(plan.is_public),
@@ -303,6 +305,14 @@ const markTransferPaid = (checkout) => {
                             <p class="text-xs uppercase text-secondary">Speicher</p>
                             <p class="mt-1 font-bold text-primary">{{ plan.storage_gb }} GB</p>
                         </div>
+                        <div class="rounded-lg bg-bg p-3">
+                            <p class="text-xs uppercase text-secondary">Mindestlaufzeit</p>
+                            <p class="mt-1 font-bold text-primary">{{ Number(plan.minimum_term_months || 0) }} Monate</p>
+                        </div>
+                        <div class="rounded-lg bg-bg p-3">
+                            <p class="text-xs uppercase text-secondary">Kündigungsfrist</p>
+                            <p class="mt-1 font-bold text-primary">{{ Number(plan.cancellation_notice_days || 0) }} Tage</p>
+                        </div>
                     </div>
 
                     <div class="flex flex-wrap gap-2 text-xs">
@@ -363,6 +373,14 @@ const markTransferPaid = (checkout) => {
                         <div>
                             <label class="text-xs font-semibold uppercase text-secondary">Speicher GB</label>
                             <input v-model="formForPlan(plan).storage_gb" type="number" min="1" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Mindestlaufzeit Monate</label>
+                            <input v-model="formForPlan(plan).minimum_term_months" type="number" min="0" max="60" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Kündigungsfrist Tage</label>
+                            <input v-model="formForPlan(plan).cancellation_notice_days" type="number" min="0" max="365" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                         </div>
                         <div>
                             <label class="text-xs font-semibold uppercase text-secondary">Badge</label>

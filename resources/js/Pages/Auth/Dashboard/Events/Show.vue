@@ -233,7 +233,7 @@ onMounted(() => {
         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
                 <Link :href="route('auth.events.index')" class="text-sm font-semibold text-air-blue hover:underline">
-                    Zurueck zu Events
+                    Zurück zu Events
                 </Link>
                 <h1 class="mt-2 text-3xl font-bold text-primary">{{ event.title }}</h1>
                 <p class="mt-2">
@@ -423,7 +423,7 @@ onMounted(() => {
                             <p class="mt-1 text-sm text-secondary">Aenderungen gelten für dieses Event.</p>
                         </div>
                         <button type="button" class="rounded-lg border border-border px-3 py-1 text-secondary hover:text-primary" @click="showEditModal = false">
-                            Schliessen
+                            Schließen
                         </button>
                     </div>
 

@@ -17,12 +17,14 @@ class TeamInvitation extends Model
         'token',
         'role',
         'status',
+        'invited_at',
         'responded_at',
     ];
 
     protected function casts(): array
     {
         return [
+            'invited_at' => 'datetime',
             'responded_at' => 'datetime',
         ];
     }

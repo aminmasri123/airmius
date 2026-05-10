@@ -1086,7 +1086,7 @@ onUnmounted(() => {
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <h2 class="text-lg font-semibold text-primary">Neue Konversation</h2>
-                            <p class="mt-1 text-sm text-secondary">Fuer Gruppen mindestens zwei Personen auswaehlen.</p>
+                            <p class="mt-1 text-sm text-secondary">Für Gruppen mindestens zwei Personen auswählen.</p>
                         </div>
                         <button type="button" class="text-secondary hover:text-primary" @click="showNewConversationModal = false">
                             <i class="las la-times text-2xl"></i>

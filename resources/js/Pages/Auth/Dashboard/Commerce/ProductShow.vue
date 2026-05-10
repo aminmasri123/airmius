@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 defineOptions({ layout: AppLayout })
 
@@ -12,6 +12,7 @@ const props = defineProps({
 })
 
 const page = usePage()
+const selectedGalleryImage = ref(null)
 const form = useForm({
     provider: 'bank_transfer',
     accepted_terms: false,
@@ -49,6 +50,16 @@ const price = computed(() => props.product.price || {
     tax_rate: 0,
     tax_label: 'Tax',
 })
+const galleryImages = computed(() => {
+    const images = props.product.gallery_images?.length ? props.product.gallery_images : [props.product.image_url]
+
+    return [...new Set(images.filter(Boolean))]
+})
+const activeProductImage = computed(() => selectedGalleryImage.value || galleryImages.value[0] || props.product.image_url)
+const attributeOptions = (value) => String(value || '')
+    .split(/[|,]/)
+    .map((option) => option.trim())
+    .filter(Boolean)
 </script>
 
 <template>
@@ -64,14 +75,42 @@ const price = computed(() => props.product.price || {
             <div class="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
                 <article>
                     <div class="mb-5 overflow-hidden rounded-xl border border-border bg-inputBg">
-                        <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="aspect-[16/10] w-full object-cover" />
+                        <img v-if="activeProductImage" :src="activeProductImage" :alt="product.title" class="aspect-[16/10] w-full object-cover" />
                         <div v-else class="flex aspect-[16/10] items-center justify-center">
                             <i class="las la-store text-7xl text-air-blue"></i>
                         </div>
                     </div>
+                    <div v-if="galleryImages.length > 1" class="mb-5 grid grid-cols-5 gap-2">
+                        <button
+                            v-for="image in galleryImages"
+                            :key="image"
+                            type="button"
+                            :class="[
+                                'overflow-hidden rounded-lg border bg-inputBg',
+                                activeProductImage === image ? 'border-buttonPrimary' : 'border-border'
+                            ]"
+                            @click="selectedGalleryImage = image"
+                        >
+                            <img :src="image" :alt="product.title" class="aspect-square w-full object-cover" />
+                        </button>
+                    </div>
                     <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ product.category }}</p>
                     <h1 class="mt-2 text-3xl font-bold text-primary">{{ product.title }}</h1>
                     <p class="mt-4 whitespace-pre-line text-sm leading-7 text-secondary">{{ product.description || 'Keine Beschreibung hinterlegt.' }}</p>
+
+                    <div v-if="product.product_attributes?.length" class="mt-6 rounded-lg border border-border bg-bg p-4">
+                        <h2 class="font-semibold text-primary">Varianten</h2>
+                        <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                            <label v-for="attribute in product.product_attributes" :key="`${attribute.name}-${attribute.value}`" class="block">
+                                <span class="text-xs font-semibold uppercase text-secondary">{{ attribute.name }}</span>
+                                <select class="mt-1 w-full rounded-lg border-border bg-card text-sm font-semibold text-primary">
+                                    <option v-for="option in attributeOptions(attribute.value)" :key="option" :value="option">
+                                        {{ option }}
+                                    </option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
 
                     <div class="mt-6 grid gap-3 sm:grid-cols-2">
                         <div class="rounded-lg border border-border bg-bg p-4">
@@ -147,7 +186,7 @@ const price = computed(() => props.product.price || {
                         <button type="button" class="w-full rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted" @click="addToCart">
                             In den Warenkorb
                         </button>
-                        <Link :href="route('auth.commerce.index')" class="block text-center text-sm font-semibold text-air-blue">
+                        <Link :href="route('auth.commerce.cart.index')" class="block text-center text-sm font-semibold text-air-blue">
                             Einkaufswagen ansehen
                         </Link>
                     </form>

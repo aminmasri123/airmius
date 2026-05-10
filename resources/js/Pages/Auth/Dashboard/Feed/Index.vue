@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import AdSlot from '@/Components/Ads/AdSlot.vue'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
@@ -362,6 +363,8 @@ const visitPage = (url) => url && router.visit(url, {
                     Was gibt es Neues?
                 </span>
             </button>
+
+            <AdSlot placement="feed" variant="banner" :fallback="false" />
 
             <!-- Modal -->
             <Teleport to="body">
@@ -1106,6 +1109,8 @@ const visitPage = (url) => url && router.visit(url, {
         </section>
 
         <aside class="min-w-0 hidden md:block space-y-4 xl:sticky xl:top-24 xl:self-start">
+            <AdSlot placement="feed" variant="card" :fallback="false" />
+
             <div class="surface-card p-4">
                 <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">
                     {{ $t('Deine Vereine') }}

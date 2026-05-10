@@ -59,7 +59,7 @@ const saveRole = () => {
     roleForm.put(route('roles.update', selectedRole.value.id), {
         preserveScroll: true,
         onSuccess: () => setNotice('success', 'Rolle wurde gespeichert.'),
-        onError: () => setNotice('error', 'Rolle konnte nicht gespeichert werden. Bitte pruefe die Eingaben.'),
+        onError: () => setNotice('error', 'Rolle konnte nicht gespeichert werden. Bitte prüfe die Eingaben.'),
     })
 }
 
@@ -70,7 +70,7 @@ const createRole = () => {
             createRoleForm.reset()
             setNotice('success', 'Rolle wurde erstellt.')
         },
-        onError: () => setNotice('error', 'Rolle konnte nicht erstellt werden. Bitte pruefe die Eingaben.'),
+        onError: () => setNotice('error', 'Rolle konnte nicht erstellt werden. Bitte prüfe die Eingaben.'),
     })
 }
 
@@ -81,7 +81,7 @@ const createPermission = () => {
             createPermissionForm.reset()
             setNotice('success', 'Berechtigung wurde erstellt.')
         },
-        onError: () => setNotice('error', 'Berechtigung konnte nicht erstellt werden. Bitte pruefe die Eingaben.'),
+        onError: () => setNotice('error', 'Berechtigung konnte nicht erstellt werden. Bitte prüfe die Eingaben.'),
     })
 }
 

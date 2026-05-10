@@ -61,6 +61,10 @@ const clubForm = ref({
     is_official: false,
     official_club_number: '',
     country: user?.country || 'DE',
+    is_listed: true,
+    teams_are_listed: true,
+    members_can_post_to_club: true,
+    members_can_post_to_teams: true,
     street: '',
     house_number: '',
     postal_code: '',
@@ -70,10 +74,13 @@ const clubForm = ref({
 
 const inviteForms = ref({})
 const inviteNotices = ref({})
+const joinRequestNotices = ref({})
 const teamForms = ref({})
 const clubEditForms = ref({})
 const jobForms = ref({})
 const editingJobId = ref(null)
+const processingJoinTeamIds = ref(new Set())
+const processingJoinRequestIds = ref(new Set())
 
 const initials = (name) =>
     name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
@@ -140,6 +147,10 @@ const resetClubForm = () => {
         is_official: false,
         official_club_number: '',
         country: user?.country || 'DE',
+        is_listed: true,
+        teams_are_listed: true,
+        members_can_post_to_club: true,
+        members_can_post_to_teams: true,
         street: '',
         house_number: '',
         postal_code: '',
@@ -195,6 +206,26 @@ const setInviteNotice = (team, type, message) => {
     inviteNotices.value[team.id] = { type, message }
 }
 
+const setJoinRequestNotice = (team, type, message) => {
+    joinRequestNotices.value[team.id] = { type, message }
+}
+
+const clubForTeam = (team) => props.clubs.find((club) => club.teams?.some((clubTeam) => clubTeam.id === team.id))
+
+const decrementInvitationLimit = (club, amount = 1) => {
+    const capabilities = club?.subscription_capabilities
+
+    if (!capabilities || capabilities.member_invitation_daily_limit === null || capabilities.member_invitation_daily_limit === undefined) {
+        return
+    }
+
+    capabilities.member_invitation_usage_today = Number(capabilities.member_invitation_usage_today || 0) + amount
+    capabilities.member_invitation_remaining_today = Math.max(
+        0,
+        Number(capabilities.member_invitation_daily_limit || 0) - capabilities.member_invitation_usage_today,
+    )
+}
+
 const openDeleteModal = (target) => {
     deleteTarget.value = target
     deleteConfirmation.value = ''
@@ -236,7 +267,7 @@ const createClub = () => {
             closeClubModal()
             setActionNotice('success', 'Verein wurde registriert.')
         },
-        onError: () => setActionNotice('error', 'Verein konnte nicht registriert werden. Bitte pruefe die Eingaben.'),
+        onError: () => setActionNotice('error', 'Verein konnte nicht registriert werden. Bitte prüfe die Eingaben.'),
     })
 }
 
@@ -282,7 +313,7 @@ const createTeam = () => {
             closeTeamModal()
             setActionNotice('success', 'Team wurde erstellt.')
         },
-        onError: () => setActionNotice('error', 'Team konnte nicht erstellt werden. Bitte pruefe die Eingaben.'),
+        onError: () => setActionNotice('error', 'Team konnte nicht erstellt werden. Bitte prüfe die Eingaben.'),
         preserveScroll: true,
     })
 }
@@ -294,11 +325,18 @@ const inviteUser = (team) => {
     router.post(route('auth.teams.invite', team.id), inviteFormFor(team), {
         preserveScroll: true,
         onSuccess: () => {
+            decrementInvitationLimit(clubForTeam(team))
             inviteFormFor(team).email = ''
             setInviteNotice(team, 'success', 'Einladung wurde erfolgreich gesendet.')
         },
         onError: (errors) => {
-            const message = errors.email || errors.user_id || errors.role || 'Einladung konnte nicht gesendet werden.'
+            const message = errors.email
+                || errors.user_id
+                || errors.role
+                || errors.general
+                || errors.message
+                || Object.values(errors)[0]
+                || 'Einladung konnte nicht gesendet werden.'
             setInviteNotice(team, 'error', message)
         },
     })
@@ -324,12 +362,62 @@ const declineInvitation = (invitation) => {
     })
 }
 
+const requestJoinTeam = (team) => {
+    actionNotice.value = null
+    joinRequestNotices.value[team.id] = null
+
+    if (processingJoinTeamIds.value.has(team.id)) return
+    processingJoinTeamIds.value.add(team.id)
+
+    router.post(route('auth.teams.join-requests.store', team.id), {}, {
+        preserveScroll: true,
+        onSuccess: () => {
+            setJoinRequestNotice(team, 'success', 'Team-Beitrittsanfrage wurde gesendet.')
+        },
+        onError: (errors) => {
+            setJoinRequestNotice(team, 'error', errors.team || errors.general || errors.message || 'Team-Beitrittsanfrage konnte nicht gesendet werden.')
+        },
+        onFinish: () => processingJoinTeamIds.value.delete(team.id),
+    })
+}
+
+const approveJoinRequest = (request) => {
+    actionNotice.value = null
+
+    if (processingJoinRequestIds.value.has(request.id)) return
+    processingJoinRequestIds.value.add(request.id)
+
+    router.post(route('auth.team-join-requests.approve', request.id), { role: 'Player' }, {
+        preserveScroll: true,
+        onSuccess: () => setActionNotice('success', 'Team-Beitrittsanfrage wurde angenommen.'),
+        onError: (errors) => setActionNotice('error', errors.join_request || errors.general || errors.message || 'Team-Beitrittsanfrage konnte nicht angenommen werden.'),
+        onFinish: () => processingJoinRequestIds.value.delete(request.id),
+    })
+}
+
+const declineJoinRequest = (request) => {
+    actionNotice.value = null
+
+    if (processingJoinRequestIds.value.has(request.id)) return
+    processingJoinRequestIds.value.add(request.id)
+
+    router.post(route('auth.team-join-requests.decline', request.id), {}, {
+        preserveScroll: true,
+        onSuccess: () => setActionNotice('success', 'Team-Beitrittsanfrage wurde abgelehnt.'),
+        onError: (errors) => setActionNotice('error', errors.join_request || errors.general || errors.message || 'Team-Beitrittsanfrage konnte nicht abgelehnt werden.'),
+        onFinish: () => processingJoinRequestIds.value.delete(request.id),
+    })
+}
+
 const updateClubMemberRole = (club, member) => {
     actionNotice.value = null
 
+    const selectedRole = member.pivot.role || 'member'
+    member.pivot.roles = [selectedRole]
+
     router.put(route('auth.clubs.members.update', [club.id, member.id]), {
-        role: member.pivot.role,
-        roles: clubRoleList(member),
+        role: selectedRole,
+        roles: [selectedRole],
     }, {
         preserveScroll: true,
         onSuccess: () => setActionNotice('success', 'Vereinsrolle wurde gespeichert.'),
@@ -343,6 +431,10 @@ const clubEditFormFor = (club) => {
         sport_type: club.sport_type || '',
         official_club_number: club.requested_official_club_number || club.official_club_number || '',
         country: club.country || user?.country || 'DE',
+        is_listed: club.is_listed !== false,
+        teams_are_listed: club.teams_are_listed !== false,
+        members_can_post_to_club: club.members_can_post_to_club !== false,
+        members_can_post_to_teams: club.members_can_post_to_teams !== false,
         street: club.street || '',
         house_number: club.house_number || '',
         postal_code: club.postal_code || '',
@@ -360,6 +452,10 @@ const editClub = (club) => {
         sport_type: club.sport_type || '',
         official_club_number: club.requested_official_club_number || club.official_club_number || '',
         country: club.country || user?.country || 'DE',
+        is_listed: club.is_listed !== false,
+        teams_are_listed: club.teams_are_listed !== false,
+        members_can_post_to_club: club.members_can_post_to_club !== false,
+        members_can_post_to_teams: club.members_can_post_to_teams !== false,
         street: club.street || '',
         house_number: club.house_number || '',
         postal_code: club.postal_code || '',
@@ -385,7 +481,7 @@ const updateClub = (club) => {
             editingClubId.value = null
             setActionNotice('success', 'Vereinsdaten wurden gespeichert.')
         },
-        onError: () => setActionNotice('error', 'Vereinsdaten konnten nicht gespeichert werden. Bitte pruefe die Eingaben.'),
+        onError: () => setActionNotice('error', 'Vereinsdaten konnten nicht gespeichert werden. Bitte prüfe die Eingaben.'),
     })
 }
 
@@ -416,7 +512,7 @@ const removeTeamMember = (team, member) => {
         requiresReason: isLeavingSelf,
         successMessage: isLeavingSelf ? 'Du hast das Team verlassen.' : 'Mitglied wurde aus dem Team entfernt.',
         errorMessage: isLeavingSelf
-            ? 'Team konnte nicht verlassen werden. Bitte pruefe, ob noch offene Rechnungen vorhanden sind.'
+            ? 'Team konnte nicht verlassen werden. Bitte prüfe, ob noch offene Rechnungen vorhanden sind.'
             : 'Mitglied konnte nicht entfernt werden.',
     })
 }
@@ -528,7 +624,7 @@ const submitJob = (club) => {
         onError: () => {
             jobModalNotice.value = {
                 type: 'error',
-                message: 'Eintrag konnte nicht gespeichert werden. Bitte pruefe die markierten Felder.',
+                message: 'Eintrag konnte nicht gespeichert werden. Bitte prüfe die markierten Felder.',
             }
         },
     }
@@ -843,6 +939,54 @@ const deleteJob = (job) => {
                         />
                     </label>
 
+                    <label class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
+                        <input
+                            v-model="clubEditFormFor(club).is_listed"
+                            type="checkbox"
+                            class="mt-1 rounded border-border bg-inputBg"
+                        >
+                        <span>
+                            <span class="block font-semibold">Verein auflisten</span>
+                            <span class="block text-xs text-secondary">Der Verein darf in Vereinslisten und Auswahlfeldern sichtbar sein.</span>
+                        </span>
+                    </label>
+
+                    <label class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
+                        <input
+                            v-model="clubEditFormFor(club).teams_are_listed"
+                            type="checkbox"
+                            class="mt-1 rounded border-border bg-inputBg"
+                        >
+                        <span>
+                            <span class="block font-semibold">Teams auflisten</span>
+                            <span class="block text-xs text-secondary">Teams dürfen außerhalb des internen Vereinsbereichs sichtbar sein.</span>
+                        </span>
+                    </label>
+
+                    <label class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
+                        <input
+                            v-model="clubEditFormFor(club).members_can_post_to_club"
+                            type="checkbox"
+                            class="mt-1 rounded border-border bg-inputBg"
+                        >
+                        <span>
+                            <span class="block font-semibold">Vereinsbeiträge erlauben</span>
+                            <span class="block text-xs text-secondary">Normale Mitglieder dürfen Beiträge für den Verein erstellen.</span>
+                        </span>
+                    </label>
+
+                    <label class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
+                        <input
+                            v-model="clubEditFormFor(club).members_can_post_to_teams"
+                            type="checkbox"
+                            class="mt-1 rounded border-border bg-inputBg"
+                        >
+                        <span>
+                            <span class="block font-semibold">Teambeiträge erlauben</span>
+                            <span class="block text-xs text-secondary">Normale Teammitglieder dürfen Beiträge für ihre Teams erstellen.</span>
+                        </span>
+                    </label>
+
                     <label class="block xl:col-span-2">
                         <span class="text-xs font-semibold uppercase text-secondary">Vereinsnummer zur Pruefung</span>
                         <input
@@ -994,7 +1138,7 @@ const deleteJob = (job) => {
                             </span>
 
                             <button
-                                v-if="member.id === user?.id || (team.can_manage && can('team.kick'))"
+                                v-if="member.id === user?.id || team.can_remove_members"
                                 type="button"
                                 class="rounded border border-border px-2 py-1 text-xs font-semibold text-primary hover:border-error/40 hover:bg-error/10 hover:text-error"
                                 @click="removeTeamMember(team, member)"
@@ -1004,7 +1148,83 @@ const deleteJob = (job) => {
                         </div>
                     </div>
 
+                    <div
+                        v-if="team.can_request_join || team.viewer_pending_join_request_id || team.pending_join_requests?.length"
+                        class="space-y-2 rounded-lg border border-border bg-card p-3"
+                    >
+                        <button
+                            v-if="team.can_request_join"
+                            type="button"
+                            class="w-full rounded bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary"
+                            :disabled="processingJoinTeamIds.has(team.id)"
+                            :class="{ 'opacity-60': processingJoinTeamIds.has(team.id) }"
+                            @click="requestJoinTeam(team)"
+                        >
+                            {{ processingJoinTeamIds.has(team.id) ? 'Wird gesendet...' : 'Beitritt anfragen' }}
+                        </button>
+
+                        <p
+                            v-if="joinRequestNotices[team.id]"
+                            class="rounded border px-3 py-2 text-xs font-semibold"
+                            :class="joinRequestNotices[team.id].type === 'success'
+                                ? 'border-success/30 bg-success/10 text-success'
+                                : 'border-error/30 bg-error/10 text-error'"
+                        >
+                            {{ joinRequestNotices[team.id].message }}
+                        </p>
+
+                        <p
+                            v-else-if="team.viewer_pending_join_request_id"
+                            class="rounded border border-air-blue/30 bg-air-blue/10 px-3 py-2 text-xs font-semibold text-air-blue"
+                        >
+                            Deine Beitrittsanfrage wartet auf Freigabe.
+                        </p>
+
+                        <div v-if="team.pending_join_requests?.length" class="space-y-2">
+                            <p class="text-xs font-semibold uppercase text-secondary">
+                                Offene Team-Anfragen
+                            </p>
+
+                            <div
+                                v-for="request in team.pending_join_requests"
+                                :key="request.id"
+                                class="flex flex-col gap-2 rounded border border-border bg-bg p-2 sm:flex-row sm:items-center sm:justify-between"
+                            >
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-semibold text-primary">
+                                        {{ request.user?.name || 'Mitglied' }}
+                                    </p>
+                                    <p class="truncate text-xs text-secondary">
+                                        {{ request.user?.email }}
+                                    </p>
+                                </div>
+
+                                <div class="flex gap-2">
+                                    <button
+                                        type="button"
+                                        class="rounded bg-buttonPrimary px-3 py-1.5 text-xs font-semibold text-buttonTextPrimary"
+                                        :disabled="processingJoinRequestIds.has(request.id)"
+                                        :class="{ 'opacity-60': processingJoinRequestIds.has(request.id) }"
+                                        @click="approveJoinRequest(request)"
+                                    >
+                                        Annehmen
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="rounded border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-muted"
+                                        :disabled="processingJoinRequestIds.has(request.id)"
+                                        :class="{ 'opacity-60': processingJoinRequestIds.has(request.id) }"
+                                        @click="declineJoinRequest(request)"
+                                    >
+                                        Ablehnen
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <form
+                        v-if="team.can_manage"
                         class="flex flex-col gap-2 sm:flex-row"
                         @submit.prevent="inviteUser(team)"
                     >
@@ -1137,7 +1357,7 @@ const deleteJob = (job) => {
 
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="rounded-full bg-muted px-3 py-1 text-xs text-secondary">
-                            {{ club.jobs?.length || 0 }} Eintraege
+                            {{ club.jobs?.length || 0 }} Einträge
                         </span>
                         <button
                             v-if="club.can_manage_jobs"
@@ -1667,7 +1887,7 @@ const deleteJob = (job) => {
                     {{ editingJobId ? 'Eintrag bearbeiten' : 'Ehrenamt oder Beruf erstellen' }}
                 </h2>
                 <p class="mt-2 text-sm text-secondary">
-                    Beschreibe kurz, wobei der Verein Hilfe braucht und wie Interessierte Kontakt aufnehmen koennen.
+                    Beschreibe kurz, wobei der Verein Hilfe braucht und wie Interessierte Kontakt aufnehmen können.
                 </p>
             </div>
 
@@ -1827,7 +2047,7 @@ const deleteJob = (job) => {
             </div>
 
             <label class="block">
-                <span class="text-sm font-semibold text-primary">Bestaetigung</span>
+                <span class="text-sm font-semibold text-primary">Bestätigung</span>
                 <input
                     v-model="deleteConfirmation"
                     class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
@@ -1842,7 +2062,7 @@ const deleteJob = (job) => {
                     v-model="deleteReason"
                     rows="4"
                     class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                    placeholder="Warum moechtest du dieses Team verlassen?"
+                    placeholder="Warum möchtest du dieses Team verlassen?"
                 ></textarea>
                 <p class="mt-1 text-xs text-secondary">Die Begruendung wird an die Vereinsverantwortlichen gesendet.</p>
             </label>

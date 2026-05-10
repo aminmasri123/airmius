@@ -21,6 +21,8 @@ class SubscriptionPlan extends Model
         'team_limit',
         'storage_gb',
         'features',
+        'minimum_term_months',
+        'cancellation_notice_days',
         'cta_label',
         'badge',
         'sort_order',
@@ -32,6 +34,8 @@ class SubscriptionPlan extends Model
     {
         return [
             'features' => 'array',
+            'minimum_term_months' => 'integer',
+            'cancellation_notice_days' => 'integer',
             'is_public' => 'boolean',
             'is_active' => 'boolean',
         ];

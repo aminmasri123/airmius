@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CommerceCart;
 use App\Models\CommerceOrder;
+use App\Models\CommerceShippingAddress;
 use App\Models\MarketplaceProduct;
 use App\Models\OutfitSubscriptionPlan;
 use App\Models\Setting;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class PublicMarketplaceController extends Controller
 {
@@ -35,9 +37,7 @@ class PublicMarketplaceController extends Controller
             ->withQueryString()
             ->through(fn (MarketplaceProduct $product) => $this->productCard($product, $request, $country));
 
-        $featuredProducts = MarketplaceProduct::query()
-            ->with(['user:id,name', 'club:id,name'])
-            ->where('status', 'published')
+        $featuredProducts = $this->marketplaceProductQuery()
             ->latest('id')
             ->limit(8)
             ->get()
@@ -71,7 +71,8 @@ class PublicMarketplaceController extends Controller
 
         $outfitPlans = collect();
 
-        if (! isset($filters['category']) || in_array($filters['category'], ['', 'outfit_subscription'], true)) {
+        if ((! isset($filters['category']) || in_array($filters['category'], ['', 'outfit_subscription'], true))
+            && (! isset($filters['segment']) || in_array($filters['segment'], ['', 'apparel'], true))) {
             $outfitPlans = OutfitSubscriptionPlan::query()
                 ->with('sponsor:id,name,logo,website')
                 ->where('is_active', true)
@@ -124,6 +125,9 @@ class PublicMarketplaceController extends Controller
         return MarketplaceProduct::query()
             ->with(['user:id,name', 'club:id,name'])
             ->where('status', 'published')
+            ->where('manages_stock', true)
+            ->whereNotNull('stock_quantity')
+            ->where('stock_quantity', '>', 0)
             ->when(($filters['category'] ?? null) && $filters['category'] !== 'outfit_subscription', fn ($query, $category) => $query->where('category', $category))
             ->when(($filters['category'] ?? null) === 'outfit_subscription', fn ($query) => $query->whereRaw('1 = 0'))
             ->when($filters['segment'] ?? null, fn ($query, $segment) => $this->applySegmentFilter($query, $segment))
@@ -138,13 +142,18 @@ class PublicMarketplaceController extends Controller
 
     public function show(Request $request, MarketplaceProduct $product)
     {
-        abort_unless($product->status === 'published', 404);
-
-        abort_if($product->manages_stock && (int) $product->stock_quantity < 1, 422, 'Dieses Angebot ist aktuell ausverkauft.');
+        abort_unless($product->status === 'published' && $this->hasSellableStock($product), 404);
 
         $product->load(['user:id,name', 'club:id,name']);
-        $shippingCountry = $request->input('shipping_country', 'DE');
-        $quote = $this->pricing->quoteForRequest($product, $request, $shippingCountry, ['country' => $shippingCountry]);
+        $initialAddress = $this->shippingAddressFromData([
+            'shipping_country' => $request->input('shipping_country', $request->user()?->country ?: 'DE'),
+            'shipping_state' => $request->user()?->state,
+            'shipping_postal_code' => $request->user()?->postal_code,
+            'shipping_city' => $request->user()?->city,
+            'shipping_street' => $request->user()?->street,
+            'shipping_house_number' => $request->user()?->house_number,
+        ]);
+        $quote = $this->pricing->quoteForRequest($product, $request, $initialAddress['country'], $initialAddress);
 
         return Inertia::render('Guest/MarketplaceProductShow', [
             'canLogin' => Route::has('login'),
@@ -155,26 +164,41 @@ class PublicMarketplaceController extends Controller
                 'id' => $product->id,
                 'title' => $product->title,
                 'description' => $product->description,
+                'features' => $product->features ?: [],
+                'product_attributes' => $product->product_attributes ?: [],
                 'image_url' => $product->image_url,
+                'gallery_images' => $product->gallery_images ?: array_values(array_filter([$product->image_url])),
                 'category' => $product->category,
+                'sku' => $product->sku,
+                'is_shippable' => (bool) $product->is_shippable,
+                'manages_stock' => (bool) $product->manages_stock,
+                'stock_quantity' => (int) $product->stock_quantity,
+                'return_policy_type' => $product->return_policy_type,
+                'return_window_days' => $product->return_window_days,
                 'price_cents' => $product->price_cents,
                 'currency' => $product->currency,
                 'price' => $quote,
                 'provider_name' => $product->club?->name ?: $product->user?->name,
             ],
             'pricingCountries' => $this->pricingCountries(),
+            'checkoutAddress' => $initialAddress,
+            'profileAddress' => $this->profileAddressFor($request->user()),
+            'shippingAddresses' => $this->shippingAddressesFor($request->user()),
+            'marketplaceVisuals' => $this->marketplaceVisuals(),
         ]);
     }
 
     public function checkout(Request $request, MarketplaceProduct $product)
     {
         abort_unless($product->status === 'published', 404);
+        abort_unless($this->hasSellableStock($product), 404);
 
         $data = $request->validate([
             'guest_name' => ['required_without:login_checkout', 'nullable', 'string', 'max:255'],
             'guest_email' => ['required_without:login_checkout', 'nullable', 'email', 'max:255'],
             'provider' => ['required', Rule::in(['stripe', 'paypal', 'bank_transfer'])],
             'accepted_terms' => ['accepted'],
+            'quantity' => ['nullable', 'integer', 'min:1'],
             'shipping_country' => ['required', 'string', 'size:2'],
             'shipping_state' => ['nullable', 'string', 'max:80'],
             'shipping_postal_code' => ['nullable', 'string', 'max:30'],
@@ -184,10 +208,21 @@ class PublicMarketplaceController extends Controller
             'customer_type' => ['nullable', Rule::in(['consumer', 'business'])],
             'customer_company' => ['nullable', 'string', 'max:255'],
             'customer_vat_id' => ['nullable', 'string', 'max:40'],
+            'save_shipping_address' => ['boolean'],
+            'shipping_address_label' => ['nullable', 'string', 'max:80'],
         ]);
+        $quantity = (int) ($data['quantity'] ?? 1);
+        if ((int) $product->stock_quantity < $quantity) {
+            throw ValidationException::withMessages([
+                'quantity' => 'So viele Artikel sind aktuell nicht auf Lager.',
+            ]);
+        }
+
         $shippingAddress = $this->shippingAddressFromData($data);
+        $this->saveShippingAddressIfRequested($request, $data, $shippingAddress);
         $customer = $this->customerFromData($data);
         $quote = $this->pricing->quoteForRequest($product, $request, $shippingAddress['country'], $shippingAddress);
+        $quote = $this->quoteWithQuantity($quote, $quantity);
         $orderAmounts = $this->orderAmountsFromQuote($quote, $customer);
 
         if ($request->user()) {
@@ -209,7 +244,7 @@ class PublicMarketplaceController extends Controller
                 'status' => 'pending',
                 'payload' => ['pricing' => $quote, 'shipping_address' => $shippingAddress],
             ]);
-            $this->createOrderItem($order, $product, $quote);
+            $this->createOrderItem($order, $product, $quote, $quantity);
 
             return app(CommerceCheckoutController::class)->startPublicCheckout($order);
         }
@@ -234,7 +269,7 @@ class PublicMarketplaceController extends Controller
             'status' => 'pending',
             'payload' => ['pricing' => $quote, 'shipping_address' => $shippingAddress],
         ]);
-        $this->createOrderItem($order, $product, $quote);
+        $this->createOrderItem($order, $product, $quote, $quantity);
 
         return app(CommerceCheckoutController::class)->startPublicCheckout($order);
     }
@@ -249,8 +284,14 @@ class PublicMarketplaceController extends Controller
             'id' => $product->id,
             'title' => $product->title,
             'description' => $product->description,
+            'features' => $product->features ?: [],
+            'product_attributes' => $product->product_attributes ?: [],
             'image_url' => $product->image_url,
+            'gallery_images' => $product->gallery_images ?: array_values(array_filter([$product->image_url])),
             'category' => $product->category,
+            'sku' => $product->sku,
+            'manages_stock' => (bool) $product->manages_stock,
+            'stock_quantity' => (int) $product->stock_quantity,
             'price_cents' => $quote['gross_cents'],
             'old_price_cents' => $oldGrossCents,
             'currency' => $quote['currency'],
@@ -304,7 +345,7 @@ class PublicMarketplaceController extends Controller
             ->first();
 
         return [
-            'items_count' => (int) ($cart?->items->sum('quantity') ?? 0),
+            'items_count' => (int) ($cart?->items->count() ?? 0),
         ];
     }
 
@@ -364,12 +405,17 @@ class PublicMarketplaceController extends Controller
     private function applySegmentFilter($query, string $segment)
     {
         $keywords = $this->segmentKeywords($segment);
+        $categories = $this->segmentCategories($segment);
 
-        if ($keywords === []) {
+        if ($keywords === [] && $categories === []) {
             return $query;
         }
 
-        return $query->where(function ($query) use ($keywords) {
+        return $query->where(function ($query) use ($keywords, $categories) {
+            if ($categories !== []) {
+                $query->whereIn('category', $categories);
+            }
+
             foreach ($keywords as $keyword) {
                 $query
                     ->orWhere('title', 'like', '%'.$keyword.'%')
@@ -380,6 +426,17 @@ class PublicMarketplaceController extends Controller
 
     private function productSegment(MarketplaceProduct $product): string
     {
+        $categorySegment = match ($product->category) {
+            'course' => 'plans',
+            'camp' => 'camps',
+            'service' => 'analysis',
+            default => null,
+        };
+
+        if ($categorySegment) {
+            return $categorySegment;
+        }
+
         $text = Str::lower($product->title.' '.$product->description);
 
         foreach (array_keys($this->segmentKeywordMap()) as $segment) {
@@ -390,17 +447,27 @@ class PublicMarketplaceController extends Controller
             }
         }
 
-        return match ($product->category) {
-            'course' => 'plans',
-            'camp' => 'camps',
-            'service' => 'analysis',
-            default => 'equipment',
-        };
+        return 'equipment';
+    }
+
+    private function hasSellableStock(MarketplaceProduct $product): bool
+    {
+        return (bool) $product->manages_stock && (int) $product->stock_quantity > 0;
     }
 
     private function segmentKeywords(string $segment): array
     {
         return $this->segmentKeywordMap()[$segment] ?? [];
+    }
+
+    private function segmentCategories(string $segment): array
+    {
+        return [
+            'plans' => ['course'],
+            'camps' => ['camp'],
+            'analysis' => ['service'],
+            'equipment' => ['product'],
+        ][$segment] ?? [];
     }
 
     private function segmentKeywordMap(): array
@@ -425,10 +492,10 @@ class PublicMarketplaceController extends Controller
             ['label' => 'Fussball', 'icon' => 'las la-futbol', 'query' => 'fussball'],
             ['label' => 'Fitness', 'icon' => 'las la-dumbbell', 'query' => 'fitness'],
             ['label' => 'Teamsport', 'icon' => 'las la-users', 'query' => 'team'],
-            ['label' => 'Recovery', 'icon' => 'las la-heartbeat', 'query' => 'recovery'],
-            ['label' => 'Camps', 'icon' => 'las la-campground', 'query' => 'camp'],
-            ['label' => 'Kurse', 'icon' => 'las la-video', 'query' => 'kurs'],
-            ['label' => 'Services', 'icon' => 'las la-hands-helping', 'query' => 'analyse'],
+            ['label' => 'Recovery', 'icon' => 'las la-heartbeat', 'segment' => 'recovery'],
+            ['label' => 'Camps', 'icon' => 'las la-campground', 'category' => 'camp', 'segment' => 'camps'],
+            ['label' => 'Kurse', 'icon' => 'las la-video', 'category' => 'course', 'segment' => 'plans'],
+            ['label' => 'Services', 'icon' => 'las la-hands-helping', 'category' => 'service', 'segment' => 'analysis'],
         ];
     }
 
@@ -457,6 +524,97 @@ class PublicMarketplaceController extends Controller
             ])
             ->values()
             ->all();
+    }
+
+    private function profileAddressFor(?\App\Models\User $user): ?array
+    {
+        if (! $user) {
+            return null;
+        }
+
+        return $this->addressResource([
+            'id' => 'profile',
+            'label' => 'Meine Adresse',
+            'country' => $user->country ?: 'DE',
+            'state' => $user->state,
+            'postal_code' => $user->postal_code,
+            'city' => $user->city,
+            'street' => $user->street,
+            'house_number' => $user->house_number,
+            'is_default' => false,
+        ]);
+    }
+
+    private function shippingAddressesFor(?\App\Models\User $user): array
+    {
+        if (! $user) {
+            return [];
+        }
+
+        return CommerceShippingAddress::query()
+            ->where('user_id', $user->id)
+            ->orderByDesc('is_default')
+            ->latest('id')
+            ->get()
+            ->map(fn (CommerceShippingAddress $address) => $this->addressResource($address->toArray()))
+            ->all();
+    }
+
+    private function addressResource(array $address): array
+    {
+        $lineOne = trim(implode(' ', array_filter([
+            $address['street'] ?? '',
+            $address['house_number'] ?? '',
+        ])));
+        $lineTwo = trim(implode(' ', array_filter([
+            $address['postal_code'] ?? '',
+            $address['city'] ?? '',
+        ])));
+
+        return [
+            'id' => $address['id'] ?? null,
+            'label' => $address['label'] ?: ($lineOne ?: 'Lieferadresse'),
+            'country' => strtoupper((string) ($address['country'] ?? 'DE')),
+            'state' => trim((string) ($address['state'] ?? '')),
+            'postal_code' => trim((string) ($address['postal_code'] ?? '')),
+            'city' => trim((string) ($address['city'] ?? '')),
+            'street' => trim((string) ($address['street'] ?? '')),
+            'house_number' => trim((string) ($address['house_number'] ?? '')),
+            'is_default' => (bool) ($address['is_default'] ?? false),
+            'summary' => trim(implode(', ', array_filter([$lineOne, $lineTwo, strtoupper((string) ($address['country'] ?? 'DE'))]))),
+        ];
+    }
+
+    private function saveShippingAddressIfRequested(Request $request, array $data, array $address): void
+    {
+        $user = $request->user();
+
+        if (! $user || ! (bool) ($data['save_shipping_address'] ?? false)) {
+            return;
+        }
+
+        $hasAddressDetails = filled($address['street'] ?? null)
+            || filled($address['postal_code'] ?? null)
+            || filled($address['city'] ?? null);
+
+        if (! $hasAddressDetails) {
+            return;
+        }
+
+        CommerceShippingAddress::query()->updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'country' => $address['country'],
+                'postal_code' => $address['postal_code'],
+                'city' => $address['city'],
+                'street' => $address['street'],
+                'house_number' => $address['house_number'],
+            ],
+            [
+                'label' => trim((string) ($data['shipping_address_label'] ?? '')) ?: 'Lieferadresse',
+                'state' => $address['state'],
+            ],
+        );
     }
 
     private function shippingAddressFromData(array $data): array
@@ -491,15 +649,17 @@ class PublicMarketplaceController extends Controller
         ];
     }
 
-    private function createOrderItem(CommerceOrder $order, MarketplaceProduct $product, array $quote): void
+    private function createOrderItem(CommerceOrder $order, MarketplaceProduct $product, array $quote, int $quantity = 1): void
     {
+        $unitGrossCents = (int) round(((int) ($quote['item_gross_cents'] ?? $product->price_cents)) / max(1, $quantity));
+
         $order->items()->create([
             'orderable_type' => $product::class,
             'orderable_id' => $product->id,
             'title' => $product->title,
             'sku' => $product->sku,
-            'quantity' => 1,
-            'unit_gross_cents' => (int) ($quote['item_gross_cents'] ?? $product->price_cents),
+            'quantity' => $quantity,
+            'unit_gross_cents' => $unitGrossCents,
             'shipping_cents' => (int) ($quote['shipping_gross_cents'] ?? 0),
             'net_cents' => (int) ($quote['net_cents'] ?? 0),
             'tax_cents' => (int) ($quote['tax_cents'] ?? 0),
@@ -511,6 +671,20 @@ class PublicMarketplaceController extends Controller
         ]);
     }
 
+    private function quoteWithQuantity(array $quote, int $quantity): array
+    {
+        $quantity = max(1, $quantity);
+
+        $quote['item_gross_cents'] = (int) ($quote['item_gross_cents'] ?? $quote['gross_cents'] ?? 0) * $quantity;
+        $quote['item_net_cents'] = (int) ($quote['item_net_cents'] ?? $quote['net_cents'] ?? 0) * $quantity;
+        $quote['item_tax_cents'] = (int) ($quote['item_tax_cents'] ?? $quote['tax_cents'] ?? 0) * $quantity;
+        $quote['gross_cents'] = $quote['item_gross_cents'] + (int) ($quote['shipping_gross_cents'] ?? 0);
+        $quote['net_cents'] = $quote['item_net_cents'] + (int) ($quote['shipping_net_cents'] ?? 0);
+        $quote['tax_cents'] = $quote['item_tax_cents'] + (int) ($quote['shipping_tax_cents'] ?? 0);
+
+        return $quote;
+    }
+
     private function marketplaceVisuals(): array
     {
         $defaults = [
@@ -519,10 +693,27 @@ class PublicMarketplaceController extends Controller
             'sale_banner' => '',
         ];
 
-        return collect($defaults)
+        $visuals = collect($defaults)
             ->mapWithKeys(fn (string $default, string $key) => [
                 $key => UploadStorage::url(Setting::valueFor('marketplace_visual_'.$key, $default)),
             ])
             ->all();
+
+        $visuals['dimensions'] = [
+            'side_banner' => [
+                'width' => (int) Setting::valueFor('marketplace_visual_side_banner_width', 306),
+                'height' => (int) Setting::valueFor('marketplace_visual_side_banner_height', 786),
+            ],
+            'hero_banner' => [
+                'width' => (int) Setting::valueFor('marketplace_visual_hero_banner_width', 1600),
+                'height' => (int) Setting::valueFor('marketplace_visual_hero_banner_height', 900),
+            ],
+            'sale_banner' => [
+                'width' => (int) Setting::valueFor('marketplace_visual_sale_banner_width', 800),
+                'height' => (int) Setting::valueFor('marketplace_visual_sale_banner_height', 1000),
+            ],
+        ];
+
+        return $visuals;
     }
 }

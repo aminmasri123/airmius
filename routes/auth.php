@@ -69,6 +69,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::post('/user-subscriptions/{subscription}/provider-portal', [SubscriptionPlanController::class, 'providerPortal'])->name('auth.user-subscriptions.provider-portal');
     Route::put('/user/status', [UserStatusController::class, 'update'])->name('auth.user.status.update');
     Route::get('/commerce', [CommerceCheckoutController::class, 'index'])->name('auth.commerce.index');
+    Route::get('/card', [CommerceCheckoutController::class, 'cart'])->name('auth.commerce.cart.index');
+    Route::get('/cart', fn () => redirect()->route('auth.commerce.cart.index'))->name('auth.commerce.cart.redirect');
     Route::get('/commerce/products/{product}', [CommerceCheckoutController::class, 'showProduct'])->name('auth.commerce.products.show');
     Route::post('/commerce/addons/{addon}', [CommerceCheckoutController::class, 'storeAddon'])->name('auth.commerce.addons.checkout');
     Route::post('/commerce/products/{product}', [CommerceCheckoutController::class, 'storeProduct'])->name('auth.commerce.products.checkout');

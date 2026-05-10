@@ -251,7 +251,7 @@ const confirmDeleteRide = () => {
                 <div v-if="form.visibility === 'club'">
                     <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Verein</label>
                     <select v-model="form.club_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required>
-                        <option value="">Bitte waehlen</option>
+                        <option value="">Bitte wählen</option>
                         <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
                     </select>
                     <p v-if="form.errors.club_id" class="mt-1 text-xs text-error">{{ form.errors.club_id }}</p>
@@ -260,7 +260,7 @@ const confirmDeleteRide = () => {
                 <div v-if="form.visibility === 'team'">
                     <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Team</label>
                     <select v-model="form.team_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required>
-                        <option value="">Bitte waehlen</option>
+                        <option value="">Bitte wählen</option>
                         <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
                     </select>
                     <p v-if="form.errors.team_id" class="mt-1 text-xs text-error">{{ form.errors.team_id }}</p>
@@ -387,7 +387,7 @@ const confirmDeleteRide = () => {
                 </div>
 
                 <label class="block">
-                    <span class="text-sm font-semibold text-primary">Bestaetigung</span>
+                    <span class="text-sm font-semibold text-primary">Bestätigung</span>
                     <input
                         v-model="deleteConfirmation"
                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"

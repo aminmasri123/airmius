@@ -26,7 +26,7 @@ const statusLabel = (status) => ({
 const methodLabel = (method) => ({
     paypal: 'PayPal',
     stripe: 'Stripe',
-    bank_transfer: 'Ueberweisung',
+    bank_transfer: 'Überweisung',
     cash: 'Bar',
     card: 'Karte',
 }[method] || method || '-')

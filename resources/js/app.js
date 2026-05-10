@@ -19,6 +19,9 @@ import sports from './lang/sports';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 const rtlLocales = ['ar'];
+const autoTranslatedTextNodes = new WeakMap();
+const autoTranslatedAttributes = new WeakMap();
+const autoTranslateAttributes = ['placeholder', 'title', 'aria-label', 'alt'];
 
 const applyDocumentLocale = (locale) => {
     const normalizedLocale = locale || 'de';
@@ -28,6 +31,111 @@ const applyDocumentLocale = (locale) => {
     document.documentElement.dir = direction;
     document.documentElement.classList.toggle('is-rtl', direction === 'rtl');
     document.documentElement.classList.toggle('is-ltr', direction === 'ltr');
+};
+
+const autoDictionaryFor = (i18n, locale) => {
+    const messages = i18n.global.messages.value?.[locale] || {};
+
+    return messages.auto || {};
+};
+
+const translateAutoText = (i18n, locale, text) => {
+    const source = String(text || '').trim();
+
+    if (!source || locale === 'de') {
+        return source;
+    }
+
+    const autoTranslation = autoDictionaryFor(i18n, locale)[source];
+
+    if (autoTranslation) {
+        return autoTranslation;
+    }
+
+    return i18n.global.te(source, locale) ? i18n.global.t(source) : source;
+};
+
+const preserveOuterWhitespace = (original, translated) => {
+    const leading = original.match(/^\s*/)?.[0] || '';
+    const trailing = original.match(/\s*$/)?.[0] || '';
+
+    return `${leading}${translated}${trailing}`;
+};
+
+const autoTranslateVisibleText = (root, i18n) => {
+    if (!root || typeof document === 'undefined') {
+        return;
+    }
+
+    const locale = i18n.global.locale.value || 'de';
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+            const parent = node.parentElement;
+
+            if (!parent || !node.nodeValue.trim()) {
+                return NodeFilter.FILTER_REJECT;
+            }
+
+            if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA'].includes(parent.tagName)) {
+                return NodeFilter.FILTER_REJECT;
+            }
+
+            return NodeFilter.FILTER_ACCEPT;
+        },
+    });
+
+    const textNodes = [];
+    while (walker.nextNode()) {
+        textNodes.push(walker.currentNode);
+    }
+
+    textNodes.forEach((node) => {
+        const original = autoTranslatedTextNodes.get(node) || node.nodeValue;
+        const translated = translateAutoText(i18n, locale, original);
+
+        autoTranslatedTextNodes.set(node, original);
+        node.nodeValue = locale === 'de' ? original : preserveOuterWhitespace(original, translated);
+    });
+
+    root.querySelectorAll?.('[placeholder], [title], [aria-label], img[alt]').forEach((element) => {
+        let originals = autoTranslatedAttributes.get(element);
+
+        if (!originals) {
+            originals = {};
+            autoTranslatedAttributes.set(element, originals);
+        }
+
+        autoTranslateAttributes.forEach((attribute) => {
+            if (!element.hasAttribute(attribute)) {
+                return;
+            }
+
+            originals[attribute] = originals[attribute] || element.getAttribute(attribute);
+            const translated = translateAutoText(i18n, locale, originals[attribute]);
+            element.setAttribute(attribute, locale === 'de' ? originals[attribute] : translated);
+        });
+    });
+};
+
+const installAutoTranslation = (root, i18n) => {
+    let pending = false;
+    const run = () => {
+        if (pending) {
+            return;
+        }
+
+        pending = true;
+        window.requestAnimationFrame(() => {
+            pending = false;
+            autoTranslateVisibleText(root, i18n);
+        });
+    };
+
+    const observer = new MutationObserver(run);
+    observer.observe(root, { childList: true, subtree: true });
+    run();
+
+    return run;
 };
 
 window.addEventListener('storage', (event) => {
@@ -63,9 +171,11 @@ createInertiaApp({
         });
 
         applyDocumentLocale(i18n.global.locale.value);
+        const runAutoTranslation = installAutoTranslation(el, i18n);
 
         watch(i18n.global.locale, (locale) => {
             applyDocumentLocale(locale);
+            runAutoTranslation();
         });
 
         router.on('success', (event) => {
@@ -74,6 +184,7 @@ createInertiaApp({
             if (locale) {
                 i18n.global.locale.value = locale;
                 applyDocumentLocale(locale);
+                runAutoTranslation();
             }
         });
 

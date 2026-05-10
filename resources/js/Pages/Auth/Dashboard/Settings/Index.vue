@@ -125,7 +125,7 @@ const saveAddress = (showFeedback = true) => {
             if (showFeedback) {
                 addressNotice.value = {
                     type: 'error',
-                    message: 'Adresse konnte nicht gespeichert werden. Bitte pruefe die Eingaben.',
+                    message: 'Adresse konnte nicht gespeichert werden. Bitte prüfe die Eingaben.',
                 }
             }
         },
@@ -296,7 +296,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         Hier erscheinen nur Aktionen, die von deinem eigenen Konto erstellt wurden.
                     </p>
                 </div>
-                <span class="text-sm font-semibold text-secondary">{{ activities.length }} Eintraege</span>
+                <span class="text-sm font-semibold text-secondary">{{ activities.length }} Einträge</span>
             </div>
 
             <div v-if="activities.length" class="mt-5 divide-y divide-border rounded-lg border border-border bg-bg">

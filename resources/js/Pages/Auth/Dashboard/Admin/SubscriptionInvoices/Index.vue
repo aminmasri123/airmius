@@ -22,7 +22,7 @@ const formatMoney = (cents) => new Intl.NumberFormat('de-DE', {
 
 const statusLabel = (status) => ({
     open: 'Offen',
-    awaiting_transfer: 'Warte auf Ueberweisung',
+    awaiting_transfer: 'Warte auf Überweisung',
     paid: 'Bezahlt',
     overdue: 'Ueberfaellig',
     cancelled: 'Storniert',
@@ -31,7 +31,7 @@ const statusLabel = (status) => ({
 const methodLabel = (method) => ({
     stripe: 'Stripe',
     paypal: 'PayPal',
-    bank_transfer: 'Ueberweisung',
+    bank_transfer: 'Überweisung',
 }[method] || method || '-')
 
 const canMarkPaid = (invoice) => ['open', 'awaiting_transfer', 'overdue'].includes(invoice.status)
@@ -53,7 +53,7 @@ const markPaid = (invoice) => {
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Billing</p>
                     <h1 class="mt-1 text-2xl font-bold text-primary">Airmius Abo-Rechnungen</h1>
                     <p class="mt-2 max-w-3xl text-sm text-secondary">
-                        Rechnungen fuer Stripe, PayPal und Ueberweisung zentral kontrollieren. Abo-Plaene und Nutzer-Abos verwaltest du im Abo-Bereich.
+                        Rechnungen für Stripe, PayPal und Überweisung zentral kontrollieren. Abo-Pläne und Nutzer-Abos verwaltest du im Abo-Bereich.
                     </p>
                 </div>
                 <Link :href="route('admin.subscriptions.index')" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">

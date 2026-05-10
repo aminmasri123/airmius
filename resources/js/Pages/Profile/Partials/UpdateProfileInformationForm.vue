@@ -54,7 +54,7 @@ const updateProfileInformation = () => {
         onError: () => {
             notice.value = {
                 type: 'error',
-                message: 'Profilinformationen konnten nicht gespeichert werden. Bitte pruefe die Eingaben.',
+                message: 'Profilinformationen konnten nicht gespeichert werden. Bitte prüfe die Eingaben.',
             };
         },
     });

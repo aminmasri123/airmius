@@ -32,6 +32,10 @@ class ClubService
                 'postal_code' => $data['postal_code'] ?? null,
                 'city' => $data['city'] ?? null,
                 'state' => $data['state'] ?? null,
+                'is_listed' => $data['is_listed'] ?? true,
+                'teams_are_listed' => $data['teams_are_listed'] ?? true,
+                'members_can_post_to_club' => $data['members_can_post_to_club'] ?? true,
+                'members_can_post_to_teams' => $data['members_can_post_to_teams'] ?? true,
                 'owner_id' => $user->id,
             ]);
 

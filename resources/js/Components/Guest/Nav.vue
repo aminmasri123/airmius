@@ -94,18 +94,6 @@ const navItems = [
 
                 <Link
                     v-if="$page.props.auth.user"
-                    :href="route('auth.commerce.index')"
-                    class="hidden sm:inline-flex items-center rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:border-borderHover hover:bg-muted transition"
-                >
-                    <i class="las la-shopping-cart text-lg"></i>
-                    <span class="ml-2">{{ $t("Warenkorb") }}</span>
-                    <span class="ml-2 rounded-full bg-buttonPrimary px-2 py-0.5 text-xs text-buttonTextPrimary">
-                        {{ $page.props.commerceCartCount || 0 }}
-                    </span>
-                </Link>
-
-                <Link
-                    v-if="$page.props.auth.user"
                     :href="route('auth.dashboard')"
                     class="hidden sm:inline-flex items-center text-sm font-semibold text-air-blue hover:text-borderHover transition"
                 >
@@ -172,16 +160,6 @@ const navItems = [
                             </Link>
 
                             <div class="border-t border-border my-4"></div>
-
-                            <Link
-                                v-if="$page.props.auth.user"
-                                :href="route('auth.commerce.index')"
-                                @click="mobileOpen = false"
-                                class="text-left py-3 text-lg text-primary hover:text-air-blue transition"
-                            >
-                                <i class="las la-shopping-cart"></i>
-                                <span class="ml-2">{{ $t('Warenkorb') }} ({{ $page.props.commerceCartCount || 0 }})</span>
-                            </Link>
 
                             <Link
                                 v-if="props.canLogin"

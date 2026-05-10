@@ -42,7 +42,7 @@ const submitReturn = () => {
                 <h1 class="mt-2 text-3xl font-bold text-primary">{{ title }}</h1>
                 <p class="mt-3 text-sm leading-6 text-secondary">
                     <span v-if="status === 'success'">
-                        Danke. Deine Bestellung wurde verarbeitet. Wenn die Zahlung bestaetigt ist, bekommst du eine E-Mail.
+                        Danke. Deine Bestellung wurde verarbeitet. Wenn die Zahlung bestätigt ist, bekommst du eine E-Mail.
                     </span>
                     <span v-else>
                         Deine Bestellung wurde abgebrochen. Du kannst jederzeit erneut starten.
@@ -60,15 +60,15 @@ const submitReturn = () => {
                 </div>
 
                 <form v-if="status === 'success' && order.return_url" class="mt-6 rounded-lg border border-border bg-bg p-4 text-left" @submit.prevent="submitReturn">
-                    <h2 class="font-semibold text-primary">Ruecksendung anfragen</h2>
-                    <textarea v-model="returnForm.reason" rows="4" class="mt-3 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Grund für die Ruecksendung"></textarea>
+                    <h2 class="font-semibold text-primary">Rücksendung anfragen</h2>
+                    <textarea v-model="returnForm.reason" rows="4" class="mt-3 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Grund für die Rücksendung"></textarea>
                     <button class="mt-3 rounded-lg border border-warning/40 px-4 py-2 text-sm font-semibold text-warning" :disabled="returnForm.processing">
-                        Ruecksendung senden
+                        Rücksendung senden
                     </button>
                 </form>
 
                 <Link :href="route('guest.marketplace')" class="mt-6 inline-flex rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover">
-                    Zurueck zum Marketplace
+                    Zurück zum Marketplace
                 </Link>
             </section>
         </main>

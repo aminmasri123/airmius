@@ -121,8 +121,12 @@ class SportAdminController extends Controller
         return back()->with('success', 'Sportart aktualisiert.');
     }
 
-    public function destroy(Sport $sport)
+    public function destroy(Request $request, Sport $sport)
     {
+        $request->validate([
+            'confirmation' => ['required', 'in:delete'],
+        ]);
+
         $teamsCount = Team::query()->whereIn('sport_type', [$sport->slug, $sport->name])->count();
         $clubsCount = Club::query()->whereIn('sport_type', [$sport->slug, $sport->name])->count();
         $profilesCount = UserSport::query()->where('sport_id', $sport->id)->count();

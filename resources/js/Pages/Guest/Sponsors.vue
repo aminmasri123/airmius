@@ -5,6 +5,7 @@ import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
+import AdSlot from '@/Components/Ads/AdSlot.vue'
 import { useTheme } from '@/services/useTheme'
 
 const props = defineProps({
@@ -60,7 +61,7 @@ const sponsorLogoUrl = (sponsor) => isDark.value
                         Sponsoren, die Sport sichtbar und bezahlbarer machen.
                     </h1>
                     <p class="mt-5 max-w-2xl text-base leading-7 text-secondary">
-                        Hier finden Gaeste alle aktiven Airmius-Sponsoren und Vereins-Partner. Von Plattform-Deals bis zu lokalen Foerderern: Jede Karte zeigt, wer hinter Rabatten, Angeboten und Vereinsunterstuetzung steht.
+                        Hier finden Gäste alle aktiven Airmius-Sponsoren und Vereins-Partner. Von Plattform-Deals bis zu lokalen Förderern: Jede Karte zeigt, wer hinter Rabatten, Angeboten und Vereinsunterstützung steht.
                     </p>
                     <div class="mt-7 flex flex-wrap gap-3">
                         <Link
@@ -94,7 +95,7 @@ const sponsorLogoUrl = (sponsor) => isDark.value
                         </div>
                     </div>
                     <div class="mt-4 rounded-lg border border-air-blue/30 bg-air-blue/10 p-4">
-                        <p class="text-sm font-semibold text-primary">Sichtbar für Gaeste</p>
+                        <p class="text-sm font-semibold text-primary">Sichtbar für Gäste</p>
                         <p class="mt-1 text-sm leading-6 text-secondary">
                             Sponsoren aus dem Adminbereich erscheinen hier automatisch, solange ihre Laufzeit nicht beendet ist.
                         </p>
@@ -139,6 +140,10 @@ const sponsorLogoUrl = (sponsor) => isDark.value
                         </button>
                     </div>
                 </div>
+            </section>
+
+            <section class="mx-auto mt-8 max-w-6xl">
+                <AdSlot placement="sponsor_section" variant="banner" :fallback="false" />
             </section>
 
             <section v-if="featuredSponsors.length" class="mx-auto mt-8 grid max-w-6xl gap-4 lg:grid-cols-3">

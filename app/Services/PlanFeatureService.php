@@ -136,7 +136,8 @@ class PlanFeatureService
 
         $teamInvitations = TeamInvitation::query()
             ->whereHas('team', fn ($query) => $query->where('club_id', $club->id))
-            ->whereBetween('updated_at', [$start, $end])
+            ->whereNotNull('invited_at')
+            ->whereBetween('invited_at', [$start, $end])
             ->count();
 
         $clubInvitations = ClubExternalMember::query()

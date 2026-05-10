@@ -190,13 +190,13 @@ const submitMembershipRequest = () => {
                         <p v-for="type in selectedClub.membership_types" :key="type.id" class="py-1">
                             <span class="font-semibold text-primary">{{ type.name }}:</span>
                             <span v-if="type.amount !== null && type.amount !== undefined">{{ formatMoney(type.amount) }} / {{ intervalLabel(type.billing_interval) }}</span>
-                            <span v-else>Beitrag nach Ruecksprache</span>
+                            <span v-else>Beitrag nach Rücksprache</span>
                         </p>
                     </div>
 
                     <label class="block">
                         <span class="text-sm font-semibold text-primary">Nachricht</span>
-                        <textarea v-model="requestForm.message" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Warum moechtest du Mitglied werden?"></textarea>
+                        <textarea v-model="requestForm.message" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Warum möchtest du Mitglied werden?"></textarea>
                     </label>
                 </div>
 

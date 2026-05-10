@@ -55,6 +55,10 @@ const clubForm = useForm({
     postal_code: props.clubProfile.postal_code || '',
     city: props.clubProfile.city || '',
     state: props.clubProfile.state || '',
+    is_listed: props.clubProfile.is_listed !== false,
+    teams_are_listed: props.clubProfile.teams_are_listed !== false,
+    members_can_post_to_club: props.clubProfile.members_can_post_to_club !== false,
+    members_can_post_to_teams: props.clubProfile.members_can_post_to_teams !== false,
 })
 
 const uploadImage = (field, event) => {
@@ -235,6 +239,38 @@ const leaveClub = () => {
                         <input v-model="clubForm.sport_type" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </div>
 
+                    <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
+                        <input v-model="clubForm.is_listed" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                        <span>
+                            <span class="block font-semibold">Verein auflisten</span>
+                            <span class="block text-xs text-secondary">Der Verein darf in Vereinslisten und Auswahlfeldern sichtbar sein.</span>
+                        </span>
+                    </label>
+
+                    <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
+                        <input v-model="clubForm.teams_are_listed" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                        <span>
+                            <span class="block font-semibold">Teams auflisten</span>
+                            <span class="block text-xs text-secondary">Teams dürfen außerhalb des internen Vereinsbereichs sichtbar sein.</span>
+                        </span>
+                    </label>
+
+                    <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
+                        <input v-model="clubForm.members_can_post_to_club" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                        <span>
+                            <span class="block font-semibold">Vereinsbeiträge erlauben</span>
+                            <span class="block text-xs text-secondary">Normale Mitglieder dürfen Beiträge für den Verein erstellen.</span>
+                        </span>
+                    </label>
+
+                    <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
+                        <input v-model="clubForm.members_can_post_to_teams" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                        <span>
+                            <span class="block font-semibold">Teambeiträge erlauben</span>
+                            <span class="block text-xs text-secondary">Normale Teammitglieder dürfen Beiträge für ihre Teams erstellen.</span>
+                        </span>
+                    </label>
+
                     <label v-if="false" class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary md:col-span-2">
                         <input v-model="clubForm.is_official" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                         <span>
@@ -359,31 +395,39 @@ const leaveClub = () => {
                         <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Mitglieder</h2>
                         <div class="mt-4 space-y-2">
                             <div v-for="member in clubProfile.members" :key="member.id"
-                                class="flex items-center gap-3 rounded-lg p-2 hover:bg-inputBg">
-                                <div class="min-w-0 flex-1">
+                                class="flex flex-col gap-3 rounded-lg border border-transparent p-3 hover:border-border hover:bg-inputBg">
+                                <div class="flex min-w-0 items-center gap-3">
                                     <Link :href="route('auth.users.show', member.id)"
-                                        class="block truncate text-sm font-medium text-primary hover:underline">
+                                        class="flex min-w-0 items-center gap-3 hover:underline">
                                         <img v-if="member.profile_photo_thumb" :src="member.profile_photo_thumb"
                                             :alt="member.name" class="h-8 w-8 rounded-full object-cover" />
                                         <div v-else
-                                            class="flex h-8 w-8 items-center justify-center rounded-full bg-buttonPrimary text-xs font-semibold text-buttonTextPrimary">
+                                            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-buttonPrimary text-xs font-semibold text-buttonTextPrimary">
                                             {{ initials(member?.name) }}
                                         </div>
-                                        {{ member.name }}
+                                        <span class="truncate text-sm font-medium text-primary">{{ member.name }}</span>
                                     </Link>
-                                    <p class="text-xs text-secondary">{{ memberRoles(member).map(clubRoleLabel).join(', ') }}</p>
+                                    <p v-if="!viewer.can_manage" class="ml-auto shrink-0 text-right text-xs text-secondary">
+                                        {{ memberRoles(member).map(clubRoleLabel).join(', ') }}
+                                    </p>
                                 </div>
-                                <div v-if="viewer.can_manage" class="w-44 rounded border border-border bg-inputBg p-2">
-                                    <label v-for="role in clubRoles" :key="role" class="flex items-center gap-2 py-1 text-xs text-primary">
-                                        <input
-                                            type="checkbox"
-                                            class="rounded border-border bg-card"
-                                            :checked="memberRoles(member).includes(role)"
-                                            @change="toggleMemberRole(member, role)"
-                                        >
-                                        <span>{{ clubRoleLabel(role) }}</span>
-                                    </label>
-                                    <button type="button" class="mt-2 w-full rounded bg-buttonPrimary px-2 py-1 text-xs font-semibold text-buttonTextPrimary" @click="updateMemberRole(member)">
+
+                                <div v-if="viewer.can_manage" class="flex flex-wrap items-center gap-2">
+                                    <button
+                                        v-for="role in clubRoles"
+                                        :key="role"
+                                        type="button"
+                                        class="rounded-full border px-2.5 py-1 text-xs font-semibold transition"
+                                        :class="memberRoles(member).includes(role)
+                                            ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary'
+                                            : 'border-border bg-card text-secondary hover:border-borderHover hover:text-primary'"
+                                        :aria-pressed="memberRoles(member).includes(role)"
+                                        @click="toggleMemberRole(member, role)"
+                                    >
+                                        {{ clubRoleLabel(role) }}
+                                    </button>
+
+                                    <button type="button" class="ml-auto rounded bg-buttonPrimary px-3 py-1.5 text-xs font-semibold text-buttonTextPrimary" @click="updateMemberRole(member)">
                                         Speichern
                                     </button>
                                 </div>

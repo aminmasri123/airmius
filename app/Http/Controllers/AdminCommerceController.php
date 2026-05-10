@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AdCampaign;
+use App\Models\AdCreative;
 use App\Models\CommerceOrder;
 use App\Models\CommerceReturnRequest;
 use App\Models\CommerceAuditLog;
@@ -57,7 +58,7 @@ class AdminCommerceController extends Controller
             'addons' => SubscriptionAddon::query()->withCount('purchases')->latest('id')->get(),
             'products' => MarketplaceProduct::query()->latest('id')->limit(100)->get(),
             'campaigns' => AdCampaign::query()
-                ->with(['stats' => fn ($query) => $query->latest('date')->limit(30)])
+                ->with(['creatives', 'stats' => fn ($query) => $query->latest('date')->limit(30)])
                 ->latest('id')
                 ->limit(100)
                 ->get(),
@@ -110,6 +111,11 @@ class AdminCommerceController extends Controller
                 'enable_oss' => Setting::boolFor('commerce_enable_oss', true),
                 'export_vat_mode' => Setting::valueFor('commerce_export_vat_mode', 'zero'),
                 'reverse_charge_enabled' => Setting::boolFor('commerce_reverse_charge_enabled', true),
+                'ads_cpm_cents' => (int) Setting::valueFor('ads_cpm_cents', 500),
+                'ads_cpc_cents' => (int) Setting::valueFor('ads_cpc_cents', 30),
+                'ads_cpl_cents' => (int) Setting::valueFor('ads_cpl_cents', 200),
+                'ads_cpa_percent' => (int) Setting::valueFor('ads_cpa_percent', 10),
+                'ads_min_budget_cents' => (int) Setting::valueFor('ads_min_budget_cents', 1000),
             ],
         ]);
     }
@@ -376,14 +382,30 @@ class AdminCommerceController extends Controller
 
     public function storeCampaign(Request $request)
     {
-        AdCampaign::create($this->campaignData($request));
+        $data = $this->campaignData($request);
+        $data['reviewed_at'] = in_array($data['status'] ?? null, ['active', 'rejected'], true) ? now() : null;
+
+        $creativeRows = $data['_creative_rows'] ?? [];
+        unset($data['_creative_rows']);
+
+        $campaign = AdCampaign::create($data);
+        $this->syncAdCreatives($campaign, $creativeRows);
 
         return back()->with('success', 'Kampagne erstellt.');
     }
 
     public function updateCampaign(Request $request, AdCampaign $campaign)
     {
-        $campaign->update($this->campaignData($request));
+        $data = $this->campaignData($request);
+        $creativeRows = $data['_creative_rows'] ?? [];
+        unset($data['_creative_rows']);
+
+        if (($data['status'] ?? null) !== $campaign->status && in_array($data['status'] ?? null, ['active', 'rejected'], true)) {
+            $data['reviewed_at'] = now();
+        }
+
+        $campaign->update($data);
+        $this->syncAdCreatives($campaign, $creativeRows);
 
         return back()->with('success', 'Kampagne aktualisiert.');
     }
@@ -476,6 +498,9 @@ class AdminCommerceController extends Controller
         $data = $request->validate([
             'sources' => ['nullable', 'array'],
             'sources.*' => ['nullable', 'string', 'max:2048'],
+            'dimensions' => ['nullable', 'array'],
+            'dimensions.*.width' => ['nullable', 'integer', 'min:120', 'max:3840'],
+            'dimensions.*.height' => ['nullable', 'integer', 'min:120', 'max:3840'],
             'uploads' => ['nullable', 'array'],
             'uploads.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
         ]);
@@ -493,6 +518,8 @@ class AdminCommerceController extends Controller
             }
 
             Setting::setValue($definition['setting_key'], $source);
+            Setting::setValue($definition['setting_key'].'_width', (string) (int) ($data['dimensions'][$key]['width'] ?? $definition['default_width']));
+            Setting::setValue($definition['setting_key'].'_height', (string) (int) ($data['dimensions'][$key]['height'] ?? $definition['default_height']));
         }
 
         return back()->with('success', 'Marketplace-Bilder wurden aktualisiert.');
@@ -506,6 +533,11 @@ class AdminCommerceController extends Controller
             'enable_oss' => ['boolean'],
             'export_vat_mode' => ['required', Rule::in(['zero', 'domestic'])],
             'reverse_charge_enabled' => ['boolean'],
+            'ads_cpm_cents' => ['required', 'integer', 'min:0', 'max:100000'],
+            'ads_cpc_cents' => ['required', 'integer', 'min:0', 'max:100000'],
+            'ads_cpl_cents' => ['required', 'integer', 'min:0', 'max:100000'],
+            'ads_cpa_percent' => ['required', 'integer', 'min:0', 'max:100'],
+            'ads_min_budget_cents' => ['required', 'integer', 'min:0', 'max:10000000'],
         ]);
 
         Setting::setValue('commerce_company_country', strtoupper($data['company_country']));
@@ -513,6 +545,11 @@ class AdminCommerceController extends Controller
         Setting::setValue('commerce_enable_oss', (bool) ($data['enable_oss'] ?? false));
         Setting::setValue('commerce_export_vat_mode', $data['export_vat_mode']);
         Setting::setValue('commerce_reverse_charge_enabled', (bool) ($data['reverse_charge_enabled'] ?? false));
+        Setting::setValue('ads_cpm_cents', (int) $data['ads_cpm_cents']);
+        Setting::setValue('ads_cpc_cents', (int) $data['ads_cpc_cents']);
+        Setting::setValue('ads_cpl_cents', (int) $data['ads_cpl_cents']);
+        Setting::setValue('ads_cpa_percent', (int) $data['ads_cpa_percent']);
+        Setting::setValue('ads_min_budget_cents', (int) $data['ads_min_budget_cents']);
 
         return back()->with('success', 'Commerce-Steuerlogik wurde aktualisiert.');
     }
@@ -580,11 +617,30 @@ class AdminCommerceController extends Controller
 
     private function productData(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
+            'features_text' => ['nullable', 'string', 'max:2000'],
+            'attributes_text' => ['nullable', 'string', 'max:2000'],
+            'attribute_options' => ['nullable', 'array', 'max:20'],
+            'attribute_options.*.name' => ['nullable', 'string', 'max:80'],
+            'attribute_options.*.values' => ['nullable', 'array', 'max:30'],
+            'attribute_options.*.values.*' => ['nullable', 'string', 'max:80'],
+            'variants' => ['nullable', 'array', 'max:80'],
+            'variants.*.sku' => ['nullable', 'string', 'max:80'],
+            'variants.*.price_cents' => ['nullable', 'integer', 'min:0'],
+            'variants.*.stock_quantity' => ['nullable', 'integer', 'min:0'],
+            'variants.*.image_url' => ['nullable', 'url', 'max:2048'],
+            'variants.*.attributes' => ['nullable', 'array', 'max:20'],
+            'variants.*.attributes.*.name' => ['nullable', 'string', 'max:80'],
+            'variants.*.attributes.*.value' => ['nullable', 'string', 'max:80'],
             'image_url' => ['nullable', 'url', 'max:2048'],
+            'image_urls_text' => ['nullable', 'string', 'max:4000'],
+            'image_upload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
+            'image_uploads' => ['nullable', 'array', 'max:8'],
+            'image_uploads.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
             'category' => ['required', 'string', 'max:50'],
+            'product_type' => ['nullable', Rule::in(['single', 'variable', 'digital'])],
             'sku' => ['nullable', 'string', 'max:80'],
             'is_shippable' => ['boolean'],
             'manages_stock' => ['boolean'],
@@ -593,28 +649,282 @@ class AdminCommerceController extends Controller
             'tax_class' => ['nullable', 'string', 'max:30'],
             'return_policy_type' => ['nullable', Rule::in(['standard', 'digital', 'service', 'hygiene', 'custom'])],
             'return_window_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'digital_delivery_note' => ['nullable', 'string', 'max:2000'],
             'price_cents' => ['required', 'integer', 'min:0'],
             'currency' => ['required', 'string', 'size:3'],
             'status' => ['required', Rule::in(['draft', 'review', 'published', 'rejected', 'archived'])],
             'rejection_reason' => ['nullable', 'string', 'max:2000'],
             'commission_percent' => ['required', 'integer', 'min:0', 'max:100'],
         ]);
+
+        $featuresText = (string) ($data['features_text'] ?? '');
+        $attributesText = (string) ($data['attributes_text'] ?? '');
+        $imageUrlsText = (string) ($data['image_urls_text'] ?? '');
+        unset($data['features_text']);
+        unset($data['attributes_text']);
+        $attributeOptions = $this->normalizeAttributeOptions($data['attribute_options'] ?? []);
+        $variants = $this->normalizeVariants($data['variants'] ?? [], $attributeOptions, (int) $data['price_cents']);
+        unset($data['attribute_options']);
+        unset($data['variants']);
+        unset($data['image_urls_text']);
+        unset($data['image_upload']);
+        unset($data['image_uploads']);
+
+        $galleryImages = collect(preg_split('/\r\n|\r|\n/', $imageUrlsText))
+            ->map(fn (string $url) => trim($url))
+            ->filter()
+            ->take(12)
+            ->values()
+            ->all();
+
+        if ($request->hasFile('image_upload')) {
+            $stored = $this->mediaOptimizer->store($request->file('image_upload'), 'marketplace/products');
+            $data['image_url'] = UploadStorage::url($stored['path']);
+        }
+
+        foreach ($request->file('image_uploads', []) as $file) {
+            if (! $file) {
+                continue;
+            }
+
+            $stored = $this->mediaOptimizer->store($file, 'marketplace/products');
+            $galleryImages[] = UploadStorage::url($stored['path']);
+        }
+
+        $galleryImages = collect([$data['image_url'] ?? null, ...$galleryImages])
+            ->filter()
+            ->unique()
+            ->take(12)
+            ->values()
+            ->all();
+        $data['gallery_images'] = $galleryImages;
+        $data['image_url'] = $data['image_url'] ?: ($galleryImages[0] ?? null);
+
+        $data['features'] = collect(preg_split('/\r\n|\r|\n/', $featuresText))
+            ->map(fn (string $feature) => trim($feature))
+            ->filter()
+            ->take(12)
+            ->values()
+            ->all();
+        $data['product_attributes'] = $this->productAttributesFromText($attributesText);
+        $data['product_type'] = $data['product_type'] ?? 'single';
+        $data['attribute_options'] = $attributeOptions;
+        $data['variants'] = $data['product_type'] === 'variable' ? $variants : [];
+        if ($data['product_type'] === 'digital') {
+            $data['is_shippable'] = false;
+            $data['return_policy_type'] = $data['return_policy_type'] ?? 'digital';
+            $data['return_window_days'] = 0;
+        }
+        $data['sku'] = filled($data['sku'] ?? null) ? trim((string) $data['sku']) : null;
+
+        return $data;
+    }
+
+    private function normalizeAttributeOptions(array $options): array
+    {
+        return collect($options)
+            ->map(function (array $option) {
+                $values = collect($option['values'] ?? [])
+                    ->map(fn ($value) => trim((string) $value))
+                    ->filter()
+                    ->unique()
+                    ->take(30)
+                    ->values()
+                    ->all();
+
+                return [
+                    'name' => trim((string) ($option['name'] ?? '')),
+                    'values' => $values,
+                ];
+            })
+            ->filter(fn (array $option) => filled($option['name']) && $option['values'] !== [])
+            ->take(20)
+            ->values()
+            ->all();
+    }
+
+    private function normalizeVariants(array $variants, array $attributeOptions, int $fallbackPriceCents): array
+    {
+        $allowed = collect($attributeOptions)
+            ->mapWithKeys(fn (array $option) => [$option['name'] => $option['values']])
+            ->all();
+
+        return collect($variants)
+            ->map(function (array $variant) use ($allowed, $fallbackPriceCents) {
+                $attributes = collect($variant['attributes'] ?? [])
+                    ->map(fn (array $attribute) => [
+                        'name' => trim((string) ($attribute['name'] ?? '')),
+                        'value' => trim((string) ($attribute['value'] ?? '')),
+                    ])
+                    ->filter(fn (array $attribute) => filled($attribute['name'])
+                        && filled($attribute['value'])
+                        && in_array($attribute['value'], $allowed[$attribute['name']] ?? [], true))
+                    ->values()
+                    ->all();
+
+                return [
+                    'sku' => filled($variant['sku'] ?? null) ? trim((string) $variant['sku']) : null,
+                    'price_cents' => (int) ($variant['price_cents'] ?? $fallbackPriceCents),
+                    'stock_quantity' => ($variant['stock_quantity'] ?? null) === null || ($variant['stock_quantity'] ?? '') === ''
+                        ? null
+                        : max(0, (int) $variant['stock_quantity']),
+                    'image_url' => filled($variant['image_url'] ?? null) ? trim((string) $variant['image_url']) : null,
+                    'attributes' => $attributes,
+                ];
+            })
+            ->filter(fn (array $variant) => $variant['attributes'] !== [])
+            ->take(80)
+            ->values()
+            ->all();
+    }
+
+    private function productAttributesFromText(string $text): array
+    {
+        return collect(preg_split('/\r\n|\r|\n/', $text))
+            ->map(fn (string $line) => trim($line))
+            ->filter()
+            ->map(function (string $line) {
+                [$name, $value] = array_pad(preg_split('/[:=]/', $line, 2), 2, '');
+
+                return [
+                    'name' => trim($name),
+                    'value' => trim($value),
+                ];
+            })
+            ->filter(fn (array $attribute) => filled($attribute['name']) && filled($attribute['value']))
+            ->take(20)
+            ->values()
+            ->all();
     }
 
     private function campaignData(Request $request): array
     {
-        return $request->validate([
+        $minimumBudget = (int) Setting::valueFor('ads_min_budget_cents', 1000);
+
+        $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'headline' => ['nullable', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:2000'],
+            'primary_text' => ['nullable', 'string', 'max:500'],
             'target_url' => ['nullable', 'url', 'max:255'],
-            'budget_cents' => ['required', 'integer', 'min:0'],
+            'cta_label' => ['nullable', 'string', 'max:80'],
+            'objective' => ['required', Rule::in(['traffic', 'awareness', 'leads', 'sales'])],
+            'placement' => ['required', Rule::in(['marketplace_card', 'feed', 'sidebar', 'sponsor_section'])],
+            'creative_format' => ['required', Rule::in(['feed_square', 'feed_portrait', 'story_vertical', 'banner_wide'])],
+            'creative_image_url' => ['nullable', 'url', 'max:255'],
+            'creative_image_upload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
+            'creatives' => ['nullable', 'array', 'max:6'],
+            'creatives.*.id' => ['nullable', 'integer', Rule::exists('ad_creatives', 'id')],
+            'creatives.*.name' => ['nullable', 'string', 'max:80'],
+            'creatives.*.headline' => ['nullable', 'string', 'max:120'],
+            'creatives.*.description' => ['nullable', 'string', 'max:2000'],
+            'creatives.*.primary_text' => ['nullable', 'string', 'max:500'],
+            'creatives.*.target_url' => ['nullable', 'url', 'max:255'],
+            'creatives.*.cta_label' => ['nullable', 'string', 'max:80'],
+            'creatives.*.creative_image_url' => ['nullable', 'url', 'max:255'],
+            'creatives.*.weight' => ['nullable', 'integer', 'min:1', 'max:1000'],
+            'creatives.*.is_active' => ['boolean'],
+            'audience_locations' => ['nullable', 'string', 'max:255'],
+            'audience_interests' => ['nullable', 'string', 'max:500'],
+            'audience_age_min' => ['nullable', 'integer', 'min:13', 'max:100'],
+            'audience_age_max' => ['nullable', 'integer', 'min:13', 'max:100', 'gte:audience_age_min'],
+            'budget_cents' => ['required', 'integer', 'min:'.$minimumBudget],
+            'daily_budget_cents' => ['nullable', 'integer', 'min:0'],
             'spent_cents' => ['nullable', 'integer', 'min:0'],
             'impressions' => ['nullable', 'integer', 'min:0'],
             'clicks' => ['nullable', 'integer', 'min:0'],
-            'status' => ['required', Rule::in(['draft', 'active', 'paused', 'completed'])],
+            'status' => ['required', Rule::in(['draft', 'pending_review', 'active', 'paused', 'completed', 'rejected'])],
+            'review_note' => ['nullable', 'string', 'max:2000'],
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
         ]);
+
+        $data['audience'] = [
+            'locations' => $this->splitCampaignList($data['audience_locations'] ?? ''),
+            'interests' => $this->splitCampaignList($data['audience_interests'] ?? ''),
+            'age_min' => $data['audience_age_min'] ?? null,
+            'age_max' => $data['audience_age_max'] ?? null,
+        ];
+        $data['_creative_rows'] = $data['creatives'] ?? [];
+        unset($data['audience_locations'], $data['audience_interests'], $data['audience_age_min'], $data['audience_age_max'], $data['creative_image_upload'], $data['creatives']);
+
+        $data['daily_budget_cents'] = (int) ($data['daily_budget_cents'] ?? 0);
+        $data['billing_event'] = 'impression';
+
+        if ($request->hasFile('creative_image_upload')) {
+            $data['creative_image_path'] = $this->mediaOptimizer->store($request->file('creative_image_upload'), 'ads/creatives')['path'];
+            $data['creative_image_url'] = null;
+        }
+
+        return $data;
+    }
+
+    private function syncAdCreatives(AdCampaign $campaign, array $creativeRows): void
+    {
+        $rows = collect($creativeRows)
+            ->map(fn (array $row, int $index) => [
+                'id' => $row['id'] ?? null,
+                'name' => filled($row['name'] ?? null) ? trim((string) $row['name']) : 'Variante '.chr(65 + $index),
+                'headline' => filled($row['headline'] ?? null) ? trim((string) $row['headline']) : null,
+                'description' => filled($row['description'] ?? null) ? trim((string) $row['description']) : null,
+                'primary_text' => filled($row['primary_text'] ?? null) ? trim((string) $row['primary_text']) : null,
+                'target_url' => filled($row['target_url'] ?? null) ? trim((string) $row['target_url']) : null,
+                'cta_label' => filled($row['cta_label'] ?? null) ? trim((string) $row['cta_label']) : null,
+                'creative_format' => $campaign->creative_format,
+                'creative_image_url' => filled($row['creative_image_url'] ?? null) ? trim((string) $row['creative_image_url']) : null,
+                'weight' => max(1, (int) ($row['weight'] ?? 100)),
+                'is_active' => (bool) ($row['is_active'] ?? true),
+            ])
+            ->filter(fn (array $row) => filled($row['headline']) || filled($row['primary_text']) || filled($row['creative_image_url']))
+            ->values();
+
+        if ($rows->isEmpty() && $campaign->creatives()->doesntExist()) {
+            $rows = collect([[
+                'name' => 'Variante A',
+                'headline' => $campaign->headline,
+                'description' => $campaign->description,
+                'primary_text' => $campaign->primary_text,
+                'target_url' => $campaign->target_url,
+                'cta_label' => $campaign->cta_label,
+                'creative_format' => $campaign->creative_format,
+                'creative_image_path' => $campaign->creative_image_path,
+                'creative_image_url' => $campaign->creative_image_url,
+                'weight' => 100,
+                'is_active' => true,
+            ]]);
+        }
+
+        $keptIds = [];
+
+        $rows->each(function (array $row) use ($campaign, &$keptIds) {
+            $id = $row['id'] ?? null;
+            unset($row['id']);
+
+            $creative = $id
+                ? $campaign->creatives()->whereKey($id)->first()
+                : null;
+
+            if ($creative) {
+                $creative->update($row);
+            } else {
+                $creative = $campaign->creatives()->create($row);
+            }
+
+            $keptIds[] = $creative->id;
+        });
+
+        if ($keptIds) {
+            $campaign->creatives()->whereNotIn('id', $keptIds)->update(['is_active' => false]);
+        }
+    }
+
+    private function splitCampaignList(?string $value): array
+    {
+        return collect(preg_split('/[,;\n]+/', (string) $value))
+            ->map(fn ($item) => trim($item))
+            ->filter()
+            ->values()
+            ->all();
     }
 
     private function taxRateData(Request $request): array
@@ -826,6 +1136,8 @@ class AdminCommerceController extends Controller
                 'label' => $definition['label'],
                 'description' => $definition['description'],
                 'recommended_size' => $definition['recommended_size'],
+                'width' => (int) Setting::valueFor($definition['setting_key'].'_width', $definition['default_width']),
+                'height' => (int) Setting::valueFor($definition['setting_key'].'_height', $definition['default_height']),
                 'source' => Setting::valueFor($definition['setting_key'], $definition['default']),
                 'url' => UploadStorage::url(Setting::valueFor($definition['setting_key'], $definition['default'])),
             ])
@@ -841,6 +1153,8 @@ class AdminCommerceController extends Controller
                 'label' => 'Seitlicher Marketplace-Banner',
                 'description' => 'Wird links und rechts im Marketplace als hoher Seitenbanner verwendet.',
                 'recommended_size' => '306 x 786 px oder 768 x 1920 px',
+                'default_width' => 306,
+                'default_height' => 786,
                 'default' => '/images/marketplace/airmius-marketplace-side-banner.png',
             ],
             'hero_banner' => [
@@ -848,6 +1162,8 @@ class AdminCommerceController extends Controller
                 'label' => 'Oberer Aktions-/Hero-Banner',
                 'description' => 'Optionales Hauptbild im ersten Marketplace-Bereich. Wenn leer, wird ein Produktbild verwendet.',
                 'recommended_size' => '1600 x 900 px',
+                'default_width' => 1600,
+                'default_height' => 900,
                 'default' => '',
             ],
             'sale_banner' => [
@@ -855,6 +1171,8 @@ class AdminCommerceController extends Controller
                 'label' => 'Sale-Kachel / Aktionsbild',
                 'description' => 'Optionales Bild für die rechte Sale-Kachel im ersten Marketplace-Bereich.',
                 'recommended_size' => '800 x 1000 px',
+                'default_width' => 800,
+                'default_height' => 1000,
                 'default' => '',
             ],
         ];

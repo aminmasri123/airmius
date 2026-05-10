@@ -86,6 +86,8 @@ class SubscriptionPlanController extends Controller
             'member_limit' => ['nullable', 'integer', 'min:1', 'max:1000000'],
             'team_limit' => ['nullable', 'integer', 'min:1', 'max:1000000'],
             'storage_gb' => ['required', 'integer', 'min:1', 'max:1000000'],
+            'minimum_term_months' => ['nullable', 'integer', 'min:0', 'max:60'],
+            'cancellation_notice_days' => ['nullable', 'integer', 'min:0', 'max:365'],
             'cta_label' => ['nullable', 'string', 'max:80'],
             'badge' => ['nullable', 'string', 'max:80'],
             'is_public' => ['boolean'],
@@ -288,6 +290,8 @@ class SubscriptionPlanController extends Controller
                 'current_period_ends_at' => now(),
             ]);
         } else {
+            $endsAt = $this->contractualCancellationDate($subscription);
+
             $subscription->update([
                 'status' => 'cancels_at_period_end',
                 'cancel_at_period_end' => true,
@@ -304,6 +308,21 @@ class SubscriptionPlanController extends Controller
             ]);
         }
         $this->sendSubscriptionEmail($subscription, new SubscriptionCancelled($subscription, $mode), 'cancellation_email_sent_at');
+    }
+
+    private function contractualCancellationDate(ClubSubscription|UserSubscription $subscription)
+    {
+        $subscription->loadMissing('plan');
+
+        $plan = $subscription->plan;
+        $periodEnd = $subscription->current_period_ends_at ?: now();
+        $noticeEnd = now()->addDays((int) ($plan?->cancellation_notice_days ?? 0));
+        $minimumTermEnd = $subscription->created_at
+            ? $subscription->created_at->copy()->addMonths((int) ($plan?->minimum_term_months ?? 0))
+            : now();
+
+        return collect([$periodEnd, $noticeEnd, $minimumTermEnd])
+            ->reduce(fn ($latest, $date) => $date->greaterThan($latest) ? $date : $latest, now());
     }
 
     private function renewSubscription(ClubSubscription|UserSubscription $subscription, int $months): void

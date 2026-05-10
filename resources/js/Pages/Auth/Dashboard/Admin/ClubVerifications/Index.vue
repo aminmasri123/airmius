@@ -60,10 +60,10 @@ const submit = (club, action) => {
     }, {
         preserveScroll: true,
         onSuccess: () => {
-            notice.value = { type: 'success', message: page.props.flash?.success || 'Aenderung gespeichert.' }
+            notice.value = { type: 'success', message: page.props.flash?.success || 'Änderung gespeichert.' }
         },
         onError: () => {
-            notice.value = { type: 'error', message: 'Die Aenderung konnte nicht gespeichert werden. Bitte pruefe die Eingaben.' }
+            notice.value = { type: 'error', message: 'Die Änderung konnte nicht gespeichert werden. Bitte prüfe die Eingaben.' }
         },
         onFinish: () => {
             form.processing = false

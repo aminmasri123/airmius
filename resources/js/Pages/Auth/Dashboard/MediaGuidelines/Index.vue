@@ -93,7 +93,7 @@ const updateVisuals = () => {
             visualForm.login_slider_uploads = []
         },
         onError: () => {
-            visualFeedback.value = { type: 'error', message: 'Bilder konnten nicht gespeichert werden. Bitte pruefe die Dateien oder Pfade.' }
+            visualFeedback.value = { type: 'error', message: 'Bilder konnten nicht gespeichert werden. Bitte prüfe die Dateien oder Pfade.' }
         },
     })
 }
@@ -157,7 +157,7 @@ const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.h
                         <p class="text-xs font-semibold uppercase tracking-wider text-air-blue">Zentrale Bildsteuerung</p>
                         <h2 class="mt-1 text-xl font-bold text-primary">Globale Bilder direkt bearbeiten</h2>
                         <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
-                            Login-Slider, Marketplace-Banner und Outfit-Abo Hero koennen hier zentral gepflegt werden. Inhaltsspezifische Bilder bleiben beim jeweiligen Profil, Verein, Blog oder Produkt.
+                            Login-Slider, Marketplace-Banner und Outfit-Abo Hero können hier zentral gepflegt werden. Inhaltsspezifische Bilder bleiben beim jeweiligen Profil, Verein, Blog oder Produkt.
                         </p>
                     </div>
                     <button

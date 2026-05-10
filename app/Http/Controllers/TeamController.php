@@ -23,12 +23,14 @@ use App\Support\AppNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Throwable;
 
 class TeamController extends Controller
 {
@@ -89,13 +91,32 @@ class TeamController extends Controller
                 $club->setAttribute('can_manage_jobs', $this->canManageJobsForClub($user, $club));
                 $club->setAttribute('can_delete', $user->can('delete', $club));
                 $club->setAttribute('subscription_capabilities', $this->planFeatures->capabilities($club));
-                $teams = $club->can_manage
+                $isClubMember = $club->users->contains('id', $user->id);
+                $canSeeClubTeams = $isClubMember;
+                $teams = $club->can_manage || $canSeeClubTeams
                     ? $club->teams
                     : $club->teams->filter(fn (Team $team) => $team->users->contains('id', $user->id))->values();
 
-                $teams->each(function (Team $team) use ($user) {
+                $teams->each(function (Team $team) use ($user, $canSeeClubTeams) {
+                    $viewerIsMember = $team->users->contains('id', $user->id);
+                    $pendingJoinRequest = $team->joinRequests->firstWhere('user_id', $user->id);
+                    $canHandleJoinRequests = $user->can('invite', $team) || $user->can('update', $team);
+
                     $team->setAttribute('can_manage', $user->can('update', $team));
+                    $team->setAttribute('can_remove_members', $this->canRemoveTeamMembers($user, $team));
                     $team->setAttribute('can_delete', $user->can('delete', $team));
+                    $team->setAttribute('viewer_is_member', $viewerIsMember);
+                    $team->setAttribute('viewer_pending_join_request_id', $pendingJoinRequest?->id);
+                    $team->setAttribute('can_request_join', $canSeeClubTeams && ! $viewerIsMember && ! $pendingJoinRequest);
+                    $team->setAttribute('pending_join_requests', $canHandleJoinRequests
+                        ? $team->joinRequests
+                            ->map(fn (TeamJoinRequest $joinRequest) => [
+                                'id' => $joinRequest->id,
+                                'created_at' => $joinRequest->created_at,
+                                'user' => $joinRequest->user,
+                            ])
+                            ->values()
+                        : collect());
                 });
                 $club->setRelation('teams', $teams);
             });
@@ -355,6 +376,7 @@ class TeamController extends Controller
                     'token' => Str::random(64),
                     'role' => $data['role'],
                     'status' => 'pending',
+                    'invited_at' => now(),
                     'responded_at' => null,
                 ],
             );
@@ -383,11 +405,27 @@ class TeamController extends Controller
                 'token' => Str::random(64),
                 'role' => $data['role'],
                 'status' => 'pending',
+                'invited_at' => null,
                 'responded_at' => null,
             ],
         );
 
-        Notification::route('mail', $email)->notify(new ExternalTeamInvitation($invitation->load('team')));
+        try {
+            Notification::route('mail', $email)->notify(new ExternalTeamInvitation($invitation->load('team')));
+            $invitation->forceFill(['invited_at' => now()])->save();
+        } catch (Throwable $exception) {
+            Log::warning('External team invitation mail failed.', [
+                'team_id' => $team->id,
+                'club_id' => $team->club_id,
+                'email' => $email,
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+
+            throw ValidationException::withMessages([
+                'email' => 'Die Einladung wurde vorbereitet, aber die E-Mail konnte nicht versendet werden. Bitte pruefe die SMTP-/Mail-Einstellungen oder versuche es spaeter erneut.',
+            ]);
+        }
 
         return back()->with('success', 'Einladung per E-Mail gesendet.');
     }
@@ -496,7 +534,28 @@ class TeamController extends Controller
     {
         $this->authorize('view', $team);
 
-        abort_if($team->users()->where('users.id', $request->user()->id)->exists(), 422, 'Du bist bereits im Team.');
+        if (! $team->club->users()->where('users.id', $request->user()->id)->exists()) {
+            throw ValidationException::withMessages([
+                'team' => 'Du musst Mitglied im Verein sein, bevor du einem Team beitreten kannst.',
+            ]);
+        }
+
+        if ($team->users()->where('users.id', $request->user()->id)->exists()) {
+            throw ValidationException::withMessages([
+                'team' => 'Du bist bereits im Team.',
+            ]);
+        }
+
+        $existingRequest = TeamJoinRequest::query()
+            ->where('team_id', $team->id)
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if ($existingRequest?->status === 'pending') {
+            throw ValidationException::withMessages([
+                'team' => 'Deine Beitrittsanfrage wartet bereits auf Freigabe.',
+            ]);
+        }
 
         $joinRequest = TeamJoinRequest::updateOrCreate(
             ['team_id' => $team->id, 'user_id' => $request->user()->id],
@@ -521,7 +580,12 @@ class TeamController extends Controller
     public function approveJoinRequest(Request $request, TeamJoinRequest $joinRequest)
     {
         $this->authorize('invite', $joinRequest->team);
-        abort_unless($joinRequest->status === 'pending', 422);
+
+        if ($joinRequest->status !== 'pending') {
+            throw ValidationException::withMessages([
+                'join_request' => 'Diese Team-Beitrittsanfrage wurde bereits bearbeitet.',
+            ]);
+        }
 
         $data = $request->validate([
             'role' => ['nullable', Rule::in(Team::ROLES)],
@@ -584,7 +648,12 @@ class TeamController extends Controller
     public function declineJoinRequest(Request $request, TeamJoinRequest $joinRequest)
     {
         $this->authorize('update', $joinRequest->team);
-        abort_unless($joinRequest->status === 'pending', 422);
+
+        if ($joinRequest->status !== 'pending') {
+            throw ValidationException::withMessages([
+                'join_request' => 'Diese Team-Beitrittsanfrage wurde bereits bearbeitet.',
+            ]);
+        }
 
         $joinRequest->update([
             'status' => 'declined',
@@ -641,8 +710,7 @@ class TeamController extends Controller
             : [];
 
         if (! $isLeavingSelf) {
-            $this->authorize('update', $team);
-            abort_unless($request->user()->can('team.kick'), 403);
+            abort_unless($this->canRemoveTeamMembers($request->user(), $team), 403);
         }
 
         abort_unless($team->users()->where('users.id', $user->id)->exists(), 404);
@@ -694,6 +762,22 @@ class TeamController extends Controller
             ->when($exceptUserId, fn ($query) => $query->where('users.id', '!=', $exceptUserId))
             ->get(['users.id'])
             ->each(fn (User $manager) => AppNotification::send($manager, $type, $data));
+    }
+
+    private function canRemoveTeamMembers(User $user, Team $team): bool
+    {
+        if ($user->can('delete', $team->club)) {
+            return true;
+        }
+
+        $managesClubMembers = $team->club
+            ->users()
+            ->where('users.id', $user->id)
+            ->tap(fn ($query) => ClubRoles::whereAny($query, ['owner', 'admin', 'manager', 'academy_manager']))
+            ->exists();
+
+        return $managesClubMembers
+            || ($user->can('team.kick') && $user->can('update', $team));
     }
 
     private function syncTeamChatMembers(Team $team, array $newUserIds = []): void

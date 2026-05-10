@@ -1,6 +1,7 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, router, useForm, usePage } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
 
 defineOptions({ layout: AppLayout })
 
@@ -27,6 +28,7 @@ const props = defineProps({
 })
 
 const page = usePage()
+const activeTab = ref('marketplace')
 
 const couponForm = useForm({
     code: '',
@@ -54,21 +56,36 @@ const addonForm = useForm({
 const productForm = useForm({
     title: '',
     description: '',
+    features_text: '',
+    attributes_text: '',
+    attribute_options: [],
+    variants: [],
     image_url: '',
+    image_urls_text: '',
+    image_upload: null,
+    image_uploads: [],
     category: 'product',
+    product_type: 'single',
     sku: '',
     is_shippable: true,
     manages_stock: false,
     stock_quantity: '',
     tax_class: 'standard',
+    return_policy_type: 'standard',
+    return_window_days: 14,
+    digital_delivery_note: '',
     price_cents: 0,
     currency: 'EUR',
     status: 'draft',
     commission_percent: 10,
 })
+const productAttributeRows = ref([{ name: '', values: [] }])
+const productFeatureRows = ref([''])
+const productVariantRows = ref([])
 
 const marketplaceVisualForm = useForm({
     sources: Object.fromEntries(props.marketplaceVisuals.map((visual) => [visual.key, visual.source || ''])),
+    dimensions: Object.fromEntries(props.marketplaceVisuals.map((visual) => [visual.key, { width: visual.width, height: visual.height }])),
     uploads: {},
 })
 
@@ -91,6 +108,11 @@ const commerceSettingsForm = useForm({
     enable_oss: props.commerceSettings.enable_oss ?? true,
     export_vat_mode: props.commerceSettings.export_vat_mode || 'zero',
     reverse_charge_enabled: props.commerceSettings.reverse_charge_enabled ?? true,
+    ads_cpm_cents: props.commerceSettings.ads_cpm_cents ?? 500,
+    ads_cpc_cents: props.commerceSettings.ads_cpc_cents ?? 30,
+    ads_cpl_cents: props.commerceSettings.ads_cpl_cents ?? 200,
+    ads_cpa_percent: props.commerceSettings.ads_cpa_percent ?? 10,
+    ads_min_budget_cents: props.commerceSettings.ads_min_budget_cents ?? 1000,
 })
 
 const shippingRateForm = useForm({
@@ -106,21 +128,81 @@ const shippingRateForm = useForm({
 
 const campaignForm = useForm({
     name: '',
+    headline: '',
     description: '',
+    primary_text: '',
     target_url: '',
+    cta_label: 'Mehr erfahren',
+    objective: 'traffic',
+    placement: 'marketplace_card',
+    creative_format: 'feed_square',
+    creative_image_url: '',
+    creative_image_upload: null,
+    creatives: [],
+    audience_locations: '',
+    audience_interests: '',
+    audience_age_min: '',
+    audience_age_max: '',
     budget_cents: 0,
+    daily_budget_cents: 0,
     spent_cents: 0,
     impressions: 0,
     clicks: 0,
     status: 'draft',
+    review_note: '',
     starts_at: '',
     ends_at: '',
 })
+
+const adFormats = [
+    { key: 'feed_square', label: 'Feed Quadrat', size: '1080 x 1080 px' },
+    { key: 'feed_portrait', label: 'Feed Portrait', size: '1080 x 1350 px' },
+    { key: 'story_vertical', label: 'Story/Reel', size: '1080 x 1920 px' },
+    { key: 'banner_wide', label: 'Wide Banner', size: '1200 x 628 px' },
+]
+const selectedAdFormat = computed(() => adFormats.find((format) => format.key === campaignForm.creative_format) || adFormats[0])
+const campaignCreativeRows = ref([
+    { name: 'Variante A', headline: '', primary_text: '', description: '', target_url: '', cta_label: '', creative_image_url: '', weight: 100, is_active: true },
+    { name: 'Variante B', headline: '', primary_text: '', description: '', target_url: '', cta_label: '', creative_image_url: '', weight: 100, is_active: true },
+])
 const rejectionModal = useForm({
     open: false,
     product: null,
     reason: '',
 })
+const editProductForm = useForm({
+    open: false,
+    product: null,
+    title: '',
+    description: '',
+    features_text: '',
+    attributes_text: '',
+    attribute_options: [],
+    variants: [],
+    image_url: '',
+    image_urls_text: '',
+    image_upload: null,
+    image_uploads: [],
+    category: 'product',
+    product_type: 'single',
+    sku: '',
+    is_shippable: true,
+    manages_stock: false,
+    stock_quantity: 0,
+    low_stock_threshold: 0,
+    tax_class: 'standard',
+    return_policy_type: 'standard',
+    return_window_days: 14,
+    digital_delivery_note: '',
+    price_cents: 0,
+    currency: 'EUR',
+    status: 'draft',
+    rejection_reason: '',
+    commission_percent: 10,
+})
+const editAttributeRows = ref([{ name: '', values: [] }])
+const editFeatureRows = ref([''])
+const editVariantRows = ref([])
 const shippingModal = useForm({
     open: false,
     order: null,
@@ -142,6 +224,8 @@ const formatMoney = (cents) => new Intl.NumberFormat('de-DE', {
     currency: 'EUR',
 }).format(Number(cents || 0) / 100)
 
+const centsToEuro = (cents) => (Number(cents || 0) / 100).toFixed(2).replace('.', ',')
+
 const formatPercent = (value) => `${Number(value || 0).toFixed(2).replace('.', ',')} %`
 
 const ctr = (clicks, impressions) => {
@@ -160,6 +244,222 @@ const budgetUsage = (spent, budget) => {
     return Math.min(100, (Number(spent || 0) / Number(budget || 0)) * 100)
 }
 
+const tabs = computed(() => [
+    { key: 'marketplace', label: 'Marketplace', count: props.products.length },
+    { key: 'orders', label: 'Bestellungen', count: props.orders.length + props.returnRequests.length + props.websiteRequests.length },
+    { key: 'settings', label: 'Steuern & Versand', count: props.taxRates.length + props.shippingRates.length },
+    { key: 'ad-prices', label: 'Ads Preise', count: 5 },
+    { key: 'marketing', label: 'Rabatte & Ads', count: props.campaigns.length + props.coupons.length + props.addons.length },
+    { key: 'payouts', label: 'Auszahlungen', count: props.payoutCandidates.length + props.payouts.length },
+    { key: 'reports', label: 'Reports', count: props.auditLogs.length + props.sellerReports.length },
+])
+
+const adPricingCards = computed(() => [
+    {
+        key: 'ads_cpm_cents',
+        label: 'CPM',
+        title: 'Preis pro 1.000 Impressionen',
+        value: commerceSettingsForm.ads_cpm_cents,
+        suffix: 'Cent / 1.000 Views',
+        formula: 'Kosten = Impressionen / 1.000 x CPM',
+        example: `10.000 Views = ${formatMoney((Number(commerceSettingsForm.ads_cpm_cents || 0) * 10))}`,
+    },
+    {
+        key: 'ads_cpc_cents',
+        label: 'CPC',
+        title: 'Preis pro Klick',
+        value: commerceSettingsForm.ads_cpc_cents,
+        suffix: 'Cent / Klick',
+        formula: 'Kosten = Klicks x CPC',
+        example: `100 Klicks = ${formatMoney((Number(commerceSettingsForm.ads_cpc_cents || 0) * 100))}`,
+    },
+    {
+        key: 'ads_cpl_cents',
+        label: 'CPL',
+        title: 'Preis pro Lead',
+        value: commerceSettingsForm.ads_cpl_cents,
+        suffix: 'Cent / Lead',
+        formula: 'Kosten = Leads x CPL',
+        example: `25 Leads = ${formatMoney((Number(commerceSettingsForm.ads_cpl_cents || 0) * 25))}`,
+    },
+    {
+        key: 'ads_cpa_percent',
+        label: 'CPA',
+        title: 'Provision pro Verkauf',
+        value: commerceSettingsForm.ads_cpa_percent,
+        suffix: '% vom Warenwert',
+        formula: 'Kosten = Warenwert x CPA-Prozent / 100',
+        example: `600 EUR Verkauf = ${formatMoney(60000 * (Number(commerceSettingsForm.ads_cpa_percent || 0) / 100))}`,
+    },
+])
+
+const attributePresets = [
+    { name: 'Farbe', values: ['Schwarz', 'Weiß', 'Rot', 'Blau', 'Grün', 'Gelb', 'Orange', 'Grau'] },
+    { name: 'Größe', values: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46'] },
+    { name: 'Material', values: ['Baumwolle', 'Polyester', 'Leder', 'Mesh', 'Kunststoff', 'Metall'] },
+    { name: 'Dauer', values: ['30 Minuten', '60 Minuten', '90 Minuten', '1 Tag', '2 Tage', 'Wochenende'] },
+    { name: 'Lieferart', values: ['E-Mail', 'Download', 'Online-Zugang', 'Vor Ort', 'Versand'] },
+]
+
+const presetValuesFor = (name) => attributePresets.find((preset) => preset.name === name)?.values || []
+
+const normalizeAttributeRows = (rows) => rows
+    .map((row) => ({
+        name: String(row.name || '').trim(),
+        values: Array.isArray(row.values)
+            ? row.values.map((value) => String(value || '').trim()).filter(Boolean)
+            : String(row.values || '').split(/[|,]/).map((value) => value.trim()).filter(Boolean),
+    }))
+    .filter((row) => row.name && row.values.length)
+
+const normalizeVariantRows = (rows) => rows
+    .map((row) => ({
+        sku: String(row.sku || '').trim(),
+        price_cents: row.price_cents === '' || row.price_cents === null ? null : Number(row.price_cents),
+        stock_quantity: row.stock_quantity === '' || row.stock_quantity === null ? null : Number(row.stock_quantity),
+        image_url: String(row.image_url || '').trim(),
+        attributes: Object.entries(row.attributes || {})
+            .map(([name, value]) => ({ name, value: String(value || '').trim() }))
+            .filter((attribute) => attribute.name && attribute.value),
+    }))
+    .filter((row) => row.attributes.length)
+
+const productAttributesText = () => productAttributeRows.value
+    .map((row) => ({
+        name: String(row.name || '').trim(),
+        values: Array.isArray(row.values) ? row.values.join(' | ') : String(row.values || '').trim(),
+    }))
+    .filter((row) => row.name && row.values)
+    .map((row) => `${row.name}: ${row.values}`)
+    .join('\n')
+
+const productFeaturesText = () => productFeatureRows.value
+    .map((feature) => String(feature || '').trim())
+    .filter(Boolean)
+    .join('\n')
+
+const attributeRowsToText = (rows) => rows
+    .map((row) => ({
+        name: String(row.name || '').trim(),
+        values: Array.isArray(row.values) ? row.values.join(' | ') : String(row.values || '').trim(),
+    }))
+    .filter((row) => row.name && row.values)
+    .map((row) => `${row.name}: ${row.values}`)
+    .join('\n')
+
+const featureRowsToText = (rows) => rows
+    .map((feature) => String(feature || '').trim())
+    .filter(Boolean)
+    .join('\n')
+
+const galleryUrlsText = (product) => (product.gallery_images || [])
+    .filter((image) => image && image !== product.image_url)
+    .join('\n')
+
+const productPayload = (product, overrides = {}) => ({
+    title: product.title,
+    description: product.description,
+    features_text: (product.features || []).join('\n'),
+    attributes_text: (product.product_attributes || []).map((attribute) => `${attribute.name}: ${attribute.value}`).join('\n'),
+    attribute_options: product.attribute_options || [],
+    variants: product.variants || [],
+    image_url: product.image_url || '',
+    image_urls_text: galleryUrlsText(product),
+    category: product.category,
+    product_type: product.product_type || 'single',
+    price_cents: product.price_cents,
+    currency: product.currency || 'EUR',
+    status: product.status,
+    rejection_reason: product.rejection_reason || null,
+    commission_percent: product.commission_percent ?? 10,
+    sku: product.sku || '',
+    is_shippable: Boolean(product.is_shippable),
+    manages_stock: Boolean(product.manages_stock),
+    stock_quantity: product.stock_quantity ?? 0,
+    low_stock_threshold: product.low_stock_threshold || 0,
+    tax_class: product.tax_class || 'standard',
+    return_policy_type: product.return_policy_type || 'standard',
+    return_window_days: product.return_window_days ?? 14,
+    digital_delivery_note: product.digital_delivery_note || '',
+    ...overrides,
+})
+
+const addProductAttributeRow = () => {
+    productAttributeRows.value.push({ name: '', values: [] })
+}
+
+const removeProductAttributeRow = (index) => {
+    productAttributeRows.value.splice(index, 1)
+    if (!productAttributeRows.value.length) {
+        addProductAttributeRow()
+    }
+}
+
+const addProductVariantRow = () => {
+    productVariantRows.value.push({ sku: '', price_cents: productForm.price_cents || '', stock_quantity: '', image_url: '', attributes: {} })
+}
+
+const removeProductVariantRow = (index) => {
+    productVariantRows.value.splice(index, 1)
+}
+
+const addProductFeatureRow = () => {
+    productFeatureRows.value.push('')
+}
+
+const removeProductFeatureRow = (index) => {
+    productFeatureRows.value.splice(index, 1)
+    if (!productFeatureRows.value.length) {
+        addProductFeatureRow()
+    }
+}
+
+const addEditAttributeRow = () => {
+    editAttributeRows.value.push({ name: '', values: [] })
+}
+
+const removeEditAttributeRow = (index) => {
+    editAttributeRows.value.splice(index, 1)
+    if (!editAttributeRows.value.length) {
+        addEditAttributeRow()
+    }
+}
+
+const addEditVariantRow = () => {
+    editVariantRows.value.push({ sku: '', price_cents: editProductForm.price_cents || '', stock_quantity: '', image_url: '', attributes: {} })
+}
+
+const removeEditVariantRow = (index) => {
+    editVariantRows.value.splice(index, 1)
+}
+
+const addEditFeatureRow = () => {
+    editFeatureRows.value.push('')
+}
+
+const removeEditFeatureRow = (index) => {
+    editFeatureRows.value.splice(index, 1)
+    if (!editFeatureRows.value.length) {
+        addEditFeatureRow()
+    }
+}
+
+const setProductImageUpload = (event) => {
+    productForm.image_upload = event.target.files?.[0] || null
+}
+
+const setProductGalleryUploads = (event) => {
+    productForm.image_uploads = Array.from(event.target.files || [])
+}
+
+const setEditProductImageUpload = (event) => {
+    editProductForm.image_upload = event.target.files?.[0] || null
+}
+
+const setEditProductGalleryUploads = (event) => {
+    editProductForm.image_uploads = Array.from(event.target.files || [])
+}
+
 const storeCoupon = () => couponForm.post(route('admin.commerce.coupons.store'), {
     preserveScroll: true,
     onSuccess: () => couponForm.reset('code', 'name', 'max_redemptions', 'starts_at', 'ends_at'),
@@ -170,10 +470,23 @@ const storeAddon = () => addonForm.post(route('admin.commerce.addons.store'), {
     onSuccess: () => addonForm.reset('slug', 'name', 'description'),
 })
 
-const storeProduct = () => productForm.post(route('admin.commerce.products.store'), {
-    preserveScroll: true,
-    onSuccess: () => productForm.reset('title', 'description', 'image_url'),
-})
+const storeProduct = () => {
+    productForm.attributes_text = productAttributesText()
+    productForm.features_text = productFeaturesText()
+    productForm.attribute_options = normalizeAttributeRows(productAttributeRows.value)
+    productForm.variants = normalizeVariantRows(productVariantRows.value)
+
+    productForm.post(route('admin.commerce.products.store'), {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => {
+            productForm.reset('title', 'description', 'features_text', 'attributes_text', 'attribute_options', 'variants', 'image_url', 'image_urls_text', 'image_upload', 'image_uploads', 'sku', 'digital_delivery_note')
+            productAttributeRows.value = [{ name: '', values: [] }]
+            productFeatureRows.value = ['']
+            productVariantRows.value = []
+        },
+    })
+}
 
 const setMarketplaceVisualUpload = (key, event) => {
     marketplaceVisualForm.uploads[key] = event.target.files?.[0] || null
@@ -237,50 +550,17 @@ const updateProductStatus = (product, status) => {
         return
     }
 
-    router.put(route('admin.commerce.products.update', product.id), {
-        title: product.title,
-        description: product.description,
-        image_url: product.image_url,
-        category: product.category,
-        price_cents: product.price_cents,
-        currency: product.currency,
-        status,
-        rejection_reason: product.rejection_reason || null,
-        commission_percent: product.commission_percent,
-        sku: product.sku || '',
-        is_shippable: Boolean(product.is_shippable),
-        manages_stock: Boolean(product.manages_stock),
-        stock_quantity: product.stock_quantity || 0,
-        low_stock_threshold: product.low_stock_threshold || 0,
-        tax_class: product.tax_class || 'standard',
-        return_policy_type: product.return_policy_type || 'standard',
-        return_window_days: product.return_window_days ?? 14,
-    }, { preserveScroll: true })
+    router.put(route('admin.commerce.products.update', product.id), productPayload(product, { status }), { preserveScroll: true })
 }
 
 const submitRejection = () => {
     const product = rejectionModal.product
     if (!product || !rejectionModal.reason.trim()) return
 
-    router.put(route('admin.commerce.products.update', product.id), {
-        title: product.title,
-        description: product.description,
-        image_url: product.image_url,
-        category: product.category,
-        price_cents: product.price_cents,
-        currency: product.currency,
+    router.put(route('admin.commerce.products.update', product.id), productPayload(product, {
         status: 'rejected',
         rejection_reason: rejectionModal.reason,
-        commission_percent: product.commission_percent,
-        sku: product.sku || '',
-        is_shippable: Boolean(product.is_shippable),
-        manages_stock: Boolean(product.manages_stock),
-        stock_quantity: product.stock_quantity || 0,
-        low_stock_threshold: product.low_stock_threshold || 0,
-        tax_class: product.tax_class || 'standard',
-        return_policy_type: product.return_policy_type || 'standard',
-        return_window_days: product.return_window_days ?? 14,
-    }, {
+    }), {
         preserveScroll: true,
         onSuccess: () => {
             rejectionModal.open = false
@@ -290,11 +570,77 @@ const submitRejection = () => {
     })
 }
 
-const adjustProductStock = (product, quantityDelta) => {
-    router.post(route('admin.commerce.products.stock.adjust', product.id), {
-        quantity_delta: quantityDelta,
-        note: 'Admin-Anpassung',
-    }, { preserveScroll: true })
+const updateProductStock = (product) => {
+    router.put(route('admin.commerce.products.update', product.id), productPayload(product, {
+        manages_stock: true,
+        stock_quantity: Math.max(0, Number(product.stock_quantity || 0)),
+    }), { preserveScroll: true })
+}
+
+const openEditProduct = (product) => {
+    editProductForm.open = true
+    editProductForm.product = product
+    editProductForm.title = product.title || ''
+    editProductForm.description = product.description || ''
+    editProductForm.features_text = (product.features || []).join('\n')
+    editProductForm.attributes_text = (product.product_attributes || []).map((attribute) => `${attribute.name}: ${attribute.value}`).join('\n')
+    editProductForm.attribute_options = product.attribute_options || []
+    editProductForm.variants = product.variants || []
+    editProductForm.image_url = product.image_url || ''
+    editProductForm.image_urls_text = galleryUrlsText(product)
+    editProductForm.image_upload = null
+    editProductForm.image_uploads = []
+    editProductForm.category = product.category || 'product'
+    editProductForm.product_type = product.product_type || 'single'
+    editProductForm.sku = product.sku || ''
+    editProductForm.is_shippable = Boolean(product.is_shippable)
+    editProductForm.manages_stock = Boolean(product.manages_stock)
+    editProductForm.stock_quantity = product.stock_quantity ?? 0
+    editProductForm.low_stock_threshold = product.low_stock_threshold || 0
+    editProductForm.tax_class = product.tax_class || 'standard'
+    editProductForm.return_policy_type = product.return_policy_type || 'standard'
+    editProductForm.return_window_days = product.return_window_days ?? 14
+    editProductForm.digital_delivery_note = product.digital_delivery_note || ''
+    editProductForm.price_cents = product.price_cents || 0
+    editProductForm.currency = product.currency || 'EUR'
+    editProductForm.status = product.status || 'draft'
+    editProductForm.rejection_reason = product.rejection_reason || ''
+    editProductForm.commission_percent = product.commission_percent ?? 10
+    editAttributeRows.value = product.attribute_options?.length
+        ? product.attribute_options.map((attribute) => ({ name: attribute.name || '', values: attribute.values || [] }))
+        : (product.product_attributes?.length
+            ? product.product_attributes.map((attribute) => ({ name: attribute.name || '', values: String(attribute.value || '').split(/[|,]/).map((value) => value.trim()).filter(Boolean) }))
+            : [{ name: '', values: [] }])
+    editFeatureRows.value = product.features?.length ? [...product.features] : ['']
+    editVariantRows.value = product.variants?.length
+        ? product.variants.map((variant) => ({
+            sku: variant.sku || '',
+            price_cents: variant.price_cents ?? product.price_cents ?? '',
+            stock_quantity: variant.stock_quantity ?? '',
+            image_url: variant.image_url || '',
+            attributes: Object.fromEntries((variant.attributes || []).map((attribute) => [attribute.name, attribute.value])),
+        }))
+        : []
+}
+
+const closeEditProduct = () => {
+    editProductForm.open = false
+    editProductForm.product = null
+}
+
+const submitEditProduct = () => {
+    if (!editProductForm.product) return
+
+    editProductForm.attributes_text = attributeRowsToText(editAttributeRows.value)
+    editProductForm.features_text = featureRowsToText(editFeatureRows.value)
+    editProductForm.attribute_options = normalizeAttributeRows(editAttributeRows.value)
+    editProductForm.variants = normalizeVariantRows(editVariantRows.value)
+
+    editProductForm.put(route('admin.commerce.products.update', editProductForm.product.id), {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: closeEditProduct,
+    })
 }
 
 const updateReturnRequest = (request, status, restock = false) => {
@@ -306,10 +652,64 @@ const updateReturnRequest = (request, status, restock = false) => {
     }, { preserveScroll: true })
 }
 
-const storeCampaign = () => campaignForm.post(route('admin.commerce.campaigns.store'), {
-    preserveScroll: true,
-    onSuccess: () => campaignForm.reset('name', 'description', 'target_url', 'starts_at', 'ends_at'),
-})
+const setCampaignCreativeUpload = (event) => {
+    campaignForm.creative_image_upload = event.target.files?.[0] || null
+}
+
+const addCampaignCreativeRow = () => {
+    campaignCreativeRows.value.push({
+        name: `Variante ${String.fromCharCode(65 + campaignCreativeRows.value.length)}`,
+        headline: '',
+        primary_text: '',
+        description: '',
+        target_url: '',
+        cta_label: '',
+        creative_image_url: '',
+        weight: 100,
+        is_active: true,
+    })
+}
+
+const removeCampaignCreativeRow = (index) => {
+    campaignCreativeRows.value.splice(index, 1)
+    if (!campaignCreativeRows.value.length) {
+        addCampaignCreativeRow()
+    }
+}
+
+const normalizeCampaignCreatives = () => campaignCreativeRows.value
+    .map((creative) => ({
+        name: String(creative.name || '').trim(),
+        headline: String(creative.headline || '').trim(),
+        primary_text: String(creative.primary_text || '').trim(),
+        description: String(creative.description || '').trim(),
+        target_url: String(creative.target_url || '').trim(),
+        cta_label: String(creative.cta_label || '').trim(),
+        creative_image_url: String(creative.creative_image_url || '').trim(),
+        weight: Number(creative.weight || 100),
+        is_active: Boolean(creative.is_active),
+    }))
+    .filter((creative) => creative.headline || creative.primary_text || creative.creative_image_url)
+
+const resetCampaignCreativeRows = () => {
+    campaignCreativeRows.value = [
+        { name: 'Variante A', headline: '', primary_text: '', description: '', target_url: '', cta_label: '', creative_image_url: '', weight: 100, is_active: true },
+        { name: 'Variante B', headline: '', primary_text: '', description: '', target_url: '', cta_label: '', creative_image_url: '', weight: 100, is_active: true },
+    ]
+}
+
+const storeCampaign = () => {
+    campaignForm.creatives = normalizeCampaignCreatives()
+
+    campaignForm.post(route('admin.commerce.campaigns.store'), {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => {
+            campaignForm.reset('name', 'headline', 'description', 'primary_text', 'target_url', 'creative_image_url', 'creative_image_upload', 'creatives', 'audience_locations', 'audience_interests', 'audience_age_min', 'audience_age_max', 'starts_at', 'ends_at')
+            resetCampaignCreativeRows()
+        },
+    })
+}
 
 const markOrderPaid = (order) => {
     router.post(route('admin.commerce.orders.mark-paid', order.id), {}, { preserveScroll: true })
@@ -434,13 +834,40 @@ const updatePayoutProfile = (profile, status) => {
             </div>
         </section>
 
-        <section class="grid gap-6 xl:grid-cols-3">
+        <nav class="sticky top-0 z-30 overflow-x-auto rounded-lg border border-border bg-card p-2 shadow-lg">
+            <div class="flex min-w-max gap-2">
+                <button
+                    v-for="tab in tabs"
+                    :key="tab.key"
+                    type="button"
+                    :class="[
+                        'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition',
+                        activeTab === tab.key
+                            ? 'bg-buttonPrimary text-buttonTextPrimary shadow-sm'
+                            : 'text-secondary hover:bg-muted hover:text-primary'
+                    ]"
+                    @click="activeTab = tab.key"
+                >
+                    {{ tab.label }}
+                    <span
+                        :class="[
+                            'rounded-full px-2 py-0.5 text-xs',
+                            activeTab === tab.key ? 'bg-white/20 text-buttonTextPrimary' : 'bg-muted text-secondary'
+                        ]"
+                    >
+                        {{ tab.count }}
+                    </span>
+                </button>
+            </div>
+        </nav>
+
+        <section v-show="activeTab === 'settings'" class="grid gap-6 xl:grid-cols-3">
             <article class="surface-card p-5">
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Export</p>
                         <h2 class="mt-1 text-lg font-semibold text-primary">Steuerberater / DATEV-CSV</h2>
-                        <p class="mt-1 text-sm text-secondary">Bestellungen, Steuerland, Rechnungsnummern, Versandstatus und Betraege als CSV.</p>
+                        <p class="mt-1 text-sm text-secondary">Bestellungen, Steuerland, Rechnungsnummern, Versandstatus und Beträge als CSV.</p>
                     </div>
                     <a :href="route('admin.commerce.export.csv')" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">CSV</a>
                 </div>
@@ -460,10 +887,10 @@ const updatePayoutProfile = (profile, status) => {
             </article>
         </section>
 
-        <section class="grid gap-6 xl:grid-cols-2">
+        <section v-show="activeTab === 'settings'" class="grid gap-6 xl:grid-cols-2">
             <article class="surface-card p-5 xl:col-span-2">
                 <div class="flex flex-col gap-1">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">EU-Konformitaet</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">EU-Konformität</p>
                     <h2 class="text-lg font-semibold text-primary">Commerce-Steuerlogik</h2>
                     <p class="text-sm text-secondary">Diese Einstellungen steuern Firmenland, OSS-Verhalten, Export und Reverse-Charge.</p>
                 </div>
@@ -471,7 +898,7 @@ const updatePayoutProfile = (profile, status) => {
                     <input v-model="commerceSettingsForm.company_country" maxlength="2" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="Firmensitz, z. B. DE">
                     <input v-model="commerceSettingsForm.company_currency" maxlength="3" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="EUR">
                     <select v-model="commerceSettingsForm.export_vat_mode" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                        <option value="zero">Export ausserhalb EU: 0%</option>
+                        <option value="zero">Export außerhalb EU: 0%</option>
                         <option value="domestic">Export: Inlandssatz</option>
                     </select>
                     <label class="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary">
@@ -490,7 +917,7 @@ const updatePayoutProfile = (profile, status) => {
                 <div class="flex flex-col gap-1">
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Checkout</p>
                     <h2 class="text-lg font-semibold text-primary">Steuern verwalten</h2>
-                    <p class="text-sm text-secondary">Der Checkout waehlt den passenden Satz ueber Lieferland und optional Region.</p>
+                    <p class="text-sm text-secondary">Der Checkout wählt den passenden Satz über Lieferland und optional Region.</p>
                 </div>
                 <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeTaxRate">
                     <input v-model="taxRateForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Name">
@@ -498,13 +925,13 @@ const updatePayoutProfile = (profile, status) => {
                     <input v-model="taxRateForm.region" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Region optional">
                     <select v-model="taxRateForm.tax_class" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                         <option value="standard">Standard</option>
-                        <option value="reduced">Ermaessigt</option>
+                        <option value="reduced">Ermäßigt</option>
                         <option value="zero">Nullsatz</option>
                     </select>
                     <input v-model="taxRateForm.tax_label" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="MwSt.">
                     <input v-model="taxRateForm.rate_percent" type="number" min="0" max="99.99" step="0.01" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="19">
                     <input v-model="taxRateForm.currency" maxlength="3" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="EUR">
-                    <input v-model="taxRateForm.priority" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Prioritaet">
+                    <input v-model="taxRateForm.priority" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Priorität">
                     <div class="flex flex-wrap items-center gap-4 text-sm text-primary">
                         <label class="flex items-center gap-2">
                             <input v-model="taxRateForm.is_default" type="checkbox" class="rounded border-border bg-inputBg">
@@ -524,7 +951,7 @@ const updatePayoutProfile = (profile, status) => {
                         <input v-model="rate.country_code" maxlength="2" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary">
                         <select v-model="rate.tax_class" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                             <option value="standard">Standard</option>
-                            <option value="reduced">Ermaessigt</option>
+                            <option value="reduced">Ermäßigt</option>
                             <option value="zero">Nullsatz</option>
                         </select>
                         <input v-model="rate.tax_label" class="rounded-lg border-border bg-inputBg text-sm text-primary">
@@ -535,7 +962,7 @@ const updatePayoutProfile = (profile, status) => {
                         </label>
                         <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="updateTaxRate(rate)">Speichern</button>
                     </div>
-                    <p v-if="!taxRates.length" class="text-sm text-secondary">Noch keine Steuersaetze angelegt.</p>
+                    <p v-if="!taxRates.length" class="text-sm text-secondary">Noch keine Steuersätze angelegt.</p>
                 </div>
             </article>
 
@@ -543,7 +970,7 @@ const updatePayoutProfile = (profile, status) => {
                 <div class="flex flex-col gap-1">
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Checkout</p>
                     <h2 class="text-lg font-semibold text-primary">Versandkosten verwalten</h2>
-                    <p class="text-sm text-secondary">Regeln koennen nach Lieferland und PLZ-Prefix greifen, inklusive kostenfrei ab Warenwert.</p>
+                    <p class="text-sm text-secondary">Regeln können nach Lieferland und PLZ-Prefix greifen, inklusive kostenfrei ab Warenwert.</p>
                 </div>
                 <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeShippingRate">
                     <input v-model="shippingRateForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Name">
@@ -552,7 +979,7 @@ const updatePayoutProfile = (profile, status) => {
                     <input v-model="shippingRateForm.amount_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Cent">
                     <input v-model="shippingRateForm.free_from_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kostenfrei ab Cent">
                     <input v-model="shippingRateForm.currency" maxlength="3" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="EUR">
-                    <input v-model="shippingRateForm.priority" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Prioritaet">
+                    <input v-model="shippingRateForm.priority" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Priorität">
                     <label class="flex items-center gap-2 text-sm text-primary">
                         <input v-model="shippingRateForm.is_active" type="checkbox" class="rounded border-border bg-inputBg">
                         Aktiv
@@ -577,7 +1004,90 @@ const updatePayoutProfile = (profile, status) => {
             </article>
         </section>
 
-        <section class="grid gap-6 xl:grid-cols-2">
+        <section v-show="activeTab === 'ad-prices'" class="grid gap-6 xl:grid-cols-3">
+            <article class="surface-card p-5 xl:col-span-2">
+                <div class="flex flex-col gap-1">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Ads Abrechnung</p>
+                    <h2 class="text-lg font-semibold text-primary">Kosten und Preise verwalten</h2>
+                    <p class="text-sm text-secondary">Diese Werte steuern, wie Kampagnenbudget für Impressionen, Klicks, Leads und Sales verbraucht wird.</p>
+                </div>
+
+                <form class="mt-5 grid gap-4 md:grid-cols-2" @submit.prevent="updateCommerceSettings">
+                    <label class="rounded-lg border border-border bg-card p-4">
+                        <span class="text-xs font-semibold uppercase tracking-wide text-secondary">CPM</span>
+                        <span class="mt-1 block text-sm font-semibold text-primary">Preis pro 1.000 Impressionen</span>
+                        <div class="mt-3 flex items-center gap-2">
+                            <input v-model="commerceSettingsForm.ads_cpm_cents" type="number" min="0" max="100000" class="w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="500">
+                            <span class="shrink-0 text-sm text-secondary">Cent</span>
+                        </div>
+                        <span class="mt-2 block text-xs text-secondary">{{ centsToEuro(commerceSettingsForm.ads_cpm_cents) }} EUR pro 1.000 Views</span>
+                    </label>
+
+                    <label class="rounded-lg border border-border bg-card p-4">
+                        <span class="text-xs font-semibold uppercase tracking-wide text-secondary">CPC</span>
+                        <span class="mt-1 block text-sm font-semibold text-primary">Preis pro Klick</span>
+                        <div class="mt-3 flex items-center gap-2">
+                            <input v-model="commerceSettingsForm.ads_cpc_cents" type="number" min="0" max="100000" class="w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="30">
+                            <span class="shrink-0 text-sm text-secondary">Cent</span>
+                        </div>
+                        <span class="mt-2 block text-xs text-secondary">{{ centsToEuro(commerceSettingsForm.ads_cpc_cents) }} EUR pro Klick</span>
+                    </label>
+
+                    <label class="rounded-lg border border-border bg-card p-4">
+                        <span class="text-xs font-semibold uppercase tracking-wide text-secondary">CPL</span>
+                        <span class="mt-1 block text-sm font-semibold text-primary">Preis pro Lead</span>
+                        <div class="mt-3 flex items-center gap-2">
+                            <input v-model="commerceSettingsForm.ads_cpl_cents" type="number" min="0" max="100000" class="w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="200">
+                            <span class="shrink-0 text-sm text-secondary">Cent</span>
+                        </div>
+                        <span class="mt-2 block text-xs text-secondary">{{ centsToEuro(commerceSettingsForm.ads_cpl_cents) }} EUR pro Lead</span>
+                    </label>
+
+                    <label class="rounded-lg border border-border bg-card p-4">
+                        <span class="text-xs font-semibold uppercase tracking-wide text-secondary">CPA</span>
+                        <span class="mt-1 block text-sm font-semibold text-primary">Provision pro Verkauf</span>
+                        <div class="mt-3 flex items-center gap-2">
+                            <input v-model="commerceSettingsForm.ads_cpa_percent" type="number" min="0" max="100" class="w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="10">
+                            <span class="shrink-0 text-sm text-secondary">%</span>
+                        </div>
+                        <span class="mt-2 block text-xs text-secondary">{{ commerceSettingsForm.ads_cpa_percent || 0 }} % vom Warenwert</span>
+                    </label>
+
+                    <label class="rounded-lg border border-border bg-card p-4 md:col-span-2">
+                        <span class="text-xs font-semibold uppercase tracking-wide text-secondary">Mindestbudget</span>
+                        <span class="mt-1 block text-sm font-semibold text-primary">Kleinstes Kampagnenbudget für Nutzer</span>
+                        <div class="mt-3 flex items-center gap-2">
+                            <input v-model="commerceSettingsForm.ads_min_budget_cents" type="number" min="0" max="10000000" class="w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="1000">
+                            <span class="shrink-0 text-sm text-secondary">Cent</span>
+                        </div>
+                        <span class="mt-2 block text-xs text-secondary">Aktuell: {{ formatMoney(commerceSettingsForm.ads_min_budget_cents) }}</span>
+                    </label>
+
+                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary md:col-span-2" :disabled="commerceSettingsForm.processing">
+                        Ads-Preise speichern
+                    </button>
+                </form>
+            </article>
+
+            <aside class="surface-card p-5">
+                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Kontrolle</p>
+                <h2 class="mt-1 text-lg font-semibold text-primary">Berechnungsvorschau</h2>
+                <div class="mt-4 space-y-3">
+                    <div v-for="price in adPricingCards" :key="price.key" class="rounded-lg border border-border bg-bg p-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-semibold text-primary">{{ price.label }} - {{ price.title }}</p>
+                                <p class="mt-1 text-xs text-secondary">{{ price.formula }}</p>
+                            </div>
+                            <span class="shrink-0 rounded-md border border-border px-2 py-1 text-xs font-semibold text-primary">{{ price.value || 0 }} {{ price.suffix }}</span>
+                        </div>
+                        <p class="mt-2 text-xs text-air-blue">{{ price.example }}</p>
+                    </div>
+                </div>
+            </aside>
+        </section>
+
+        <section v-show="activeTab === 'marketing'" class="grid gap-6 xl:grid-cols-2">
             <article class="surface-card p-5">
                 <h2 class="text-lg font-semibold text-primary">Rabattcode erstellen</h2>
                 <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeCoupon">
@@ -630,23 +1140,54 @@ const updatePayoutProfile = (profile, status) => {
             </article>
         </section>
 
-        <section class="grid gap-6 xl:grid-cols-2">
+        <section v-show="activeTab === 'marketplace'" class="grid gap-6 xl:grid-cols-2">
             <article class="surface-card p-5">
                 <h2 class="text-lg font-semibold text-primary">Marketplace-Produkt</h2>
                 <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeProduct">
                     <input v-model="productForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Titel">
                     <input v-model="productForm.price_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis Cent">
-                    <input v-model="productForm.image_url" type="url" class="md:col-span-2 rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Produktbild URL, empfohlen 1200 x 1200 px">
+                    <select v-model="productForm.product_type" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <option value="single">Einfaches Produkt</option>
+                        <option value="variable">Variables Produkt</option>
+                        <option value="digital">Immaterial / digital</option>
+                    </select>
+                    <textarea
+                        v-if="productForm.product_type === 'digital'"
+                        v-model="productForm.digital_delivery_note"
+                        rows="2"
+                        class="rounded-lg border-border bg-inputBg text-sm text-primary"
+                        placeholder="Lieferinfo, z. B. Ticketcode oder Zugang wird per E-Mail versendet"
+                    ></textarea>
+                    <div class="md:col-span-2 grid gap-3 rounded-lg border border-border bg-bg p-3 md:grid-cols-2">
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Hauptbild per URL</label>
+                            <input v-model="productForm.image_url" type="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://...">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Hauptbild hochladen</label>
+                            <input type="file" accept="image/jpeg,image/png,image/webp" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:mr-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setProductImageUpload">
+                            <p class="mt-1 text-xs text-secondary">JPG, PNG oder WebP. Upload ersetzt die URL.</p>
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Weitere Bild-URLs</label>
+                            <textarea v-model="productForm.image_urls_text" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Eine URL pro Zeile"></textarea>
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Weitere Bilder hochladen</label>
+                            <input type="file" multiple accept="image/jpeg,image/png,image/webp" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:mr-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setProductGalleryUploads">
+                            <p class="mt-1 text-xs text-secondary">Bis zu 8 Dateien, Galerie maximal 12 Bilder.</p>
+                        </div>
+                    </div>
                     <select v-model="productForm.category" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                         <option value="product">Produkt</option>
                         <option value="course">Kurs</option>
                         <option value="camp">Camp</option>
                         <option value="service">Dienstleistung</option>
                     </select>
-                    <input v-model="productForm.sku" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="SKU / Artikelnummer">
+                    <input v-model="productForm.sku" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Artikelnummer">
                     <select v-model="productForm.tax_class" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                         <option value="standard">Standardsteuer</option>
-                        <option value="reduced">Ermaessigt</option>
+                        <option value="reduced">Ermäßigt</option>
                         <option value="zero">Nullsatz</option>
                     </select>
                     <select v-model="productForm.status" class="rounded-lg border-border bg-inputBg text-sm text-primary">
@@ -663,6 +1204,81 @@ const updatePayoutProfile = (profile, status) => {
                         Lagerbestand verwalten
                     </label>
                     <input v-if="productForm.manages_stock" v-model="productForm.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lagerbestand">
+                    <div class="md:col-span-2 rounded-lg border border-border bg-bg p-3">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h3 class="text-sm font-semibold text-primary">Merkmale / Variantenoptionen</h3>
+                                <p class="text-xs text-secondary">Ein Merkmal pro Zeile. Werte mit Komma oder | trennen, z. B. Rot | Blau | Schwarz.</p>
+                            </div>
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="addProductAttributeRow">
+                                Merkmal hinzufügen
+                            </button>
+                        </div>
+                        <div class="mt-3 space-y-2">
+                            <div v-for="(row, index) in productAttributeRows" :key="index" class="grid gap-2 md:grid-cols-[11rem_minmax(0,1fr)_auto]">
+                                <select v-model="row.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" @change="row.values = []">
+                                    <option value="">Merkmal wählen</option>
+                                    <option v-for="preset in attributePresets" :key="preset.name" :value="preset.name">{{ preset.name }}</option>
+                                </select>
+                                <select v-model="row.values" multiple class="min-h-24 rounded-lg border-border bg-inputBg text-sm text-primary">
+                                    <option v-for="value in presetValuesFor(row.name)" :key="value" :value="value">{{ value }}</option>
+                                </select>
+                                <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-secondary hover:text-primary" @click="removeProductAttributeRow(index)">
+                                    Entfernen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-if="productForm.product_type === 'variable'" class="md:col-span-2 rounded-lg border border-border bg-bg p-3">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h3 class="text-sm font-semibold text-primary">Varianten</h3>
+                                <p class="text-xs text-secondary">Jede Variante kann eigene Merkmale, Preis, Bestand und Bild haben.</p>
+                            </div>
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="addProductVariantRow">
+                                Variante hinzufügen
+                            </button>
+                        </div>
+                        <div class="mt-3 space-y-3">
+                            <div v-for="(variant, index) in productVariantRows" :key="index" class="rounded-lg border border-border p-3">
+                                <div class="grid gap-2 md:grid-cols-4">
+                                    <select
+                                        v-for="attribute in normalizeAttributeRows(productAttributeRows)"
+                                        :key="attribute.name"
+                                        v-model="variant.attributes[attribute.name]"
+                                        class="rounded-lg border-border bg-inputBg text-sm text-primary"
+                                    >
+                                        <option value="">{{ attribute.name }}</option>
+                                        <option v-for="value in attribute.values" :key="value" :value="value">{{ value }}</option>
+                                    </select>
+                                    <input v-model="variant.price_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis Cent">
+                                    <input v-model="variant.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bestand">
+                                    <input v-model="variant.sku" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Artikelnummer">
+                                    <input v-model="variant.image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-2" placeholder="Bild-URL für Variante">
+                                    <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-secondary hover:text-primary" @click="removeProductVariantRow(index)">Variante entfernen</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="md:col-span-2 rounded-lg border border-border bg-bg p-3">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h3 class="text-sm font-semibold text-primary">Produkt-Highlights</h3>
+                                <p class="text-xs text-secondary">Kurze Bulletpoints, die auf der Produktseite als Merkmale erscheinen.</p>
+                            </div>
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="addProductFeatureRow">
+                                Punkt hinzufügen
+                            </button>
+                        </div>
+                        <div class="mt-3 space-y-2">
+                            <div v-for="(feature, index) in productFeatureRows" :key="index" class="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+                                <input v-model="productFeatureRows[index]" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="z. B. Atmungsaktiv">
+                                <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-secondary hover:text-primary" @click="removeProductFeatureRow(index)">
+                                    Entfernen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                     <textarea v-model="productForm.description" rows="3" class="md:col-span-2 rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung"></textarea>
                     <button class="md:col-span-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Speichern</button>
                 </form>
@@ -677,20 +1293,36 @@ const updatePayoutProfile = (profile, status) => {
                             </div>
                             <div>
                                 <p class="font-semibold text-primary">{{ product.title }}</p>
-                                <p class="text-xs text-secondary">{{ product.status }} · {{ product.moderation_status }} · {{ formatMoney(product.price_cents) }}</p>
+                                <p class="text-xs text-secondary">{{ product.status }} · {{ product.moderation_status }} · {{ product.product_type || 'single' }} · {{ formatMoney(product.price_cents) }}</p>
                                 <p class="text-xs text-secondary">
-                                    SKU {{ product.sku || '-' }} · Steuer {{ product.tax_class || 'standard' }} ·
+                                    Artikelnummer {{ product.sku || '-' }} · Steuer {{ product.tax_class || 'standard' }} ·
                                     <span v-if="product.manages_stock">Bestand {{ product.stock_quantity ?? 0 }}</span>
                                     <span v-else>Bestand nicht verwaltet</span>
                                 </p>
+                                <p v-if="product.features?.length" class="mt-1 line-clamp-1 text-xs text-secondary">
+                                    Merkmale: {{ product.features.join(' | ') }}
+                                </p>
+                                <p v-if="product.product_attributes?.length" class="mt-1 line-clamp-1 text-xs text-secondary">
+                                    Eigenschaften: {{ product.product_attributes.map((attribute) => `${attribute.name}: ${attribute.value}`).join(' | ') }}
+                                </p>
+                                <p v-if="product.variants?.length" class="mt-1 line-clamp-1 text-xs text-secondary">
+                                    Varianten: {{ product.variants.length }}
+                                </p>
                                 <p v-if="product.rejection_reason" class="mt-1 text-xs text-warning">{{ product.rejection_reason }}</p>
                             </div>
-                            <div class="flex flex-wrap gap-2">
-                                <button v-if="product.manages_stock" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="adjustProductStock(product, 1)">+ Bestand</button>
-                                <button v-if="product.manages_stock" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="adjustProductStock(product, -1)">- Bestand</button>
-                                <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="updateProductStatus(product, 'published')">Freigeben</button>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <div v-if="product.manages_stock" class="flex items-center gap-2">
+                                    <input v-model.number="product.stock_quantity" type="number" min="0" class="w-24 rounded-lg border-border bg-inputBg text-xs text-primary" placeholder="Bestand">
+                                    <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="updateProductStock(product)">Bestand speichern</button>
+                                </div>
+                                <select v-model="product.status" class="rounded-lg border-border bg-inputBg text-xs font-semibold text-primary" @change="updateProductStatus(product, product.status)">
+                                    <option value="draft">Entwurf</option>
+                                    <option value="review">Prüfen</option>
+                                    <option value="published">Freigegeben</option>
+                                    <option value="archived">Archiviert</option>
+                                </select>
+                                <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="openEditProduct(product)">Bearbeiten</button>
                                 <button class="rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="updateProductStatus(product, 'rejected')">Ablehnen</button>
-                                <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="updateProductStatus(product, 'archived')">Archivieren</button>
                             </div>
                         </div>
                     </div>
@@ -702,23 +1334,89 @@ const updatePayoutProfile = (profile, status) => {
                 <h2 class="text-lg font-semibold text-primary">Ads-Kampagne</h2>
                 <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeCampaign">
                     <input v-model="campaignForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Name">
-                    <input v-model="campaignForm.budget_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Budget Cent">
+                    <input v-model="campaignForm.headline" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Headline">
                     <input v-model="campaignForm.target_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Ziel-URL">
+                    <input v-model="campaignForm.cta_label" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="CTA">
+                    <select v-model="campaignForm.objective" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <option value="traffic">Traffic</option>
+                        <option value="awareness">Reichweite</option>
+                        <option value="leads">Leads</option>
+                        <option value="sales">Sales</option>
+                    </select>
+                    <select v-model="campaignForm.placement" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <option value="marketplace_card">Marketplace Karte</option>
+                        <option value="feed">Feed</option>
+                        <option value="sidebar">Sidebar</option>
+                        <option value="sponsor_section">Sponsor-Bereich</option>
+                    </select>
+                    <div class="md:col-span-2 rounded-lg border border-border bg-bg p-3">
+                        <label class="text-xs font-semibold uppercase text-secondary">Bildformat</label>
+                        <select v-model="campaignForm.creative_format" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <option v-for="format in adFormats" :key="format.key" :value="format.key">{{ format.label }} - {{ format.size }}</option>
+                        </select>
+                        <p class="mt-2 text-xs text-secondary">Empfohlene Bildmaße: {{ selectedAdFormat.size }}</p>
+                    </div>
+                    <input v-model="campaignForm.creative_image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL">
+                    <input type="file" accept="image/jpeg,image/png,image/webp" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:mr-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setCampaignCreativeUpload">
+                    <div class="md:col-span-2 rounded-lg border border-border bg-bg p-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <label class="text-xs font-semibold uppercase text-secondary">A/B-Test Varianten</label>
+                                <p class="mt-1 text-xs text-secondary">Lege mehrere Anzeigenvarianten mit eigener Headline, Text, Bild-URL und Gewichtung an.</p>
+                            </div>
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="addCampaignCreativeRow">
+                                Variante hinzufügen
+                            </button>
+                        </div>
+                        <div class="mt-3 space-y-3">
+                            <div v-for="(creative, index) in campaignCreativeRows" :key="index" class="grid gap-2 rounded-lg border border-border bg-card p-3">
+                                <div class="grid gap-2 sm:grid-cols-[1fr_6rem_auto]">
+                                    <input v-model="creative.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Variante A">
+                                    <input v-model.number="creative.weight" type="number" min="1" max="1000" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Gewicht">
+                                    <label class="flex items-center gap-2 text-xs font-semibold text-primary">
+                                        <input v-model="creative.is_active" type="checkbox" class="rounded border-border bg-inputBg">
+                                        Aktiv
+                                    </label>
+                                </div>
+                                <input v-model="creative.headline" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Headline dieser Variante">
+                                <textarea v-model="creative.primary_text" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Anzeigentext dieser Variante"></textarea>
+                                <textarea v-model="creative.description" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung dieser Variante"></textarea>
+                                <div class="grid gap-2 sm:grid-cols-2">
+                                    <input v-model="creative.target_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Ziel-URL optional">
+                                    <input v-model="creative.cta_label" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="CTA optional">
+                                </div>
+                                <input v-model="creative.creative_image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL dieser Variante">
+                                <button v-if="campaignCreativeRows.length > 1" type="button" class="justify-self-start rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="removeCampaignCreativeRow(index)">
+                                    Variante entfernen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <input v-model="campaignForm.budget_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Gesamtbudget Cent">
+                    <input v-model="campaignForm.daily_budget_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Tagesbudget Cent">
                     <select v-model="campaignForm.status" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                         <option value="draft">Entwurf</option>
+                        <option value="pending_review">Wartet auf Freigabe</option>
                         <option value="active">Aktiv</option>
                         <option value="paused">Pausiert</option>
                         <option value="completed">Abgeschlossen</option>
+                        <option value="rejected">Abgelehnt</option>
                     </select>
                     <input v-model="campaignForm.clicks" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Klicks">
+                    <input v-model="campaignForm.audience_locations" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Regionen">
+                    <input v-model="campaignForm.audience_interests" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interessen">
+                    <input v-model="campaignForm.audience_age_min" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter von">
+                    <input v-model="campaignForm.audience_age_max" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter bis">
+                    <textarea v-model="campaignForm.primary_text" rows="3" class="md:col-span-2 rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Anzeigentext"></textarea>
                     <textarea v-model="campaignForm.description" rows="3" class="md:col-span-2 rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung"></textarea>
+                    <textarea v-model="campaignForm.review_note" rows="2" class="md:col-span-2 rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Review-Notiz / Ablehnungsgrund"></textarea>
                     <button class="md:col-span-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Speichern</button>
                 </form>
                 <p class="mt-4 text-sm text-secondary">{{ campaigns.length }} Kampagnen vorbereitet.</p>
             </article>
         </section>
 
-        <section class="surface-card p-5">
+        <section v-show="activeTab === 'marketplace'" class="surface-card p-5">
             <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Marketplace</p>
@@ -758,6 +1456,30 @@ const updatePayoutProfile = (profile, status) => {
                     <h3 class="mt-3 font-semibold text-primary">{{ visual.label }}</h3>
                     <p class="mt-1 text-xs leading-5 text-secondary">{{ visual.description }}</p>
                     <p class="mt-2 text-xs font-semibold text-primary">Empfohlen: {{ visual.recommended_size }}</p>
+                    <p class="mt-1 text-xs text-secondary">Aktuelle Zielgröße: {{ marketplaceVisualForm.dimensions[visual.key]?.width }} x {{ marketplaceVisualForm.dimensions[visual.key]?.height }} px</p>
+
+                    <div class="mt-4 grid grid-cols-2 gap-3">
+                        <label class="block text-xs font-semibold uppercase text-secondary">
+                            Breite px
+                            <input
+                                v-model="marketplaceVisualForm.dimensions[visual.key].width"
+                                type="number"
+                                min="120"
+                                max="3840"
+                                class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary"
+                            />
+                        </label>
+                        <label class="block text-xs font-semibold uppercase text-secondary">
+                            Höhe px
+                            <input
+                                v-model="marketplaceVisualForm.dimensions[visual.key].height"
+                                type="number"
+                                min="120"
+                                max="3840"
+                                class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary"
+                            />
+                        </label>
+                    </div>
 
                     <label class="mt-4 block text-xs font-semibold uppercase text-secondary">Bild-URL oder gespeicherter Pfad</label>
                     <input
@@ -777,7 +1499,7 @@ const updatePayoutProfile = (profile, status) => {
             </div>
         </section>
 
-        <section class="surface-card overflow-hidden">
+        <section v-show="activeTab === 'marketing'" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
                 <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Ads Reporting</p>
                 <h2 class="mt-1 text-lg font-semibold text-primary">Kampagnenleistung</h2>
@@ -820,29 +1542,64 @@ const updatePayoutProfile = (profile, status) => {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border">
-                        <tr v-for="campaign in campaigns" :key="campaign.id">
-                            <td class="px-5 py-3">
-                                <p class="font-semibold text-primary">{{ campaign.name }}</p>
-                                <p class="text-xs text-secondary">{{ campaign.target_url || '-' }}</p>
-                            </td>
-                            <td class="px-5 py-3 text-secondary">{{ campaign.status }}</td>
-                            <td class="px-5 py-3 text-secondary">{{ campaign.impressions || 0 }}</td>
-                            <td class="px-5 py-3 text-secondary">{{ campaign.clicks || 0 }}</td>
-                            <td class="px-5 py-3 text-secondary">{{ formatPercent(ctr(campaign.clicks, campaign.impressions)) }}</td>
-                            <td class="px-5 py-3">
-                                <p class="text-secondary">{{ formatMoney(campaign.spent_cents) }} / {{ formatMoney(campaign.budget_cents) }}</p>
-                                <div class="mt-2 h-2 rounded-full bg-muted">
-                                    <div class="h-2 rounded-full bg-air-blue" :style="{ width: `${budgetUsage(campaign.spent_cents, campaign.budget_cents)}%` }"></div>
-                                </div>
-                            </td>
-                        </tr>
+                        <template v-for="campaign in campaigns" :key="campaign.id">
+                            <tr>
+                                <td class="px-5 py-3">
+                                    <p class="font-semibold text-primary">{{ campaign.name }}</p>
+                                    <p class="text-xs text-secondary">{{ campaign.target_url || '-' }}</p>
+                                </td>
+                                <td class="px-5 py-3 text-secondary">{{ campaign.status }}</td>
+                                <td class="px-5 py-3 text-secondary">{{ campaign.impressions || 0 }}</td>
+                                <td class="px-5 py-3 text-secondary">{{ campaign.clicks || 0 }}</td>
+                                <td class="px-5 py-3 text-secondary">{{ formatPercent(ctr(campaign.clicks, campaign.impressions)) }}</td>
+                                <td class="px-5 py-3">
+                                    <p class="text-secondary">{{ formatMoney(campaign.spent_cents) }} / {{ formatMoney(campaign.budget_cents) }}</p>
+                                    <div class="mt-2 h-2 rounded-full bg-muted">
+                                        <div class="h-2 rounded-full bg-air-blue" :style="{ width: `${budgetUsage(campaign.spent_cents, campaign.budget_cents)}%` }"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr v-if="campaign.creatives?.length">
+                                <td colspan="6" class="bg-bg px-5 py-3">
+                                    <div class="grid gap-2 md:grid-cols-2">
+                                        <div v-for="creative in campaign.creatives" :key="creative.id" class="rounded-lg border border-border bg-card p-3">
+                                            <div class="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <p class="font-semibold text-primary">{{ creative.name }}</p>
+                                                    <p class="text-xs text-secondary">{{ creative.headline || campaign.headline || campaign.name }}</p>
+                                                </div>
+                                                <span class="rounded-full bg-muted px-2 py-1 text-xs font-semibold text-secondary">Gewicht {{ creative.weight }}</span>
+                                            </div>
+                                            <div class="mt-3 grid grid-cols-4 gap-2 text-xs">
+                                                <div>
+                                                    <p class="text-secondary">Views</p>
+                                                    <p class="font-semibold text-primary">{{ creative.impressions || 0 }}</p>
+                                                </div>
+                                                <div>
+                                                    <p class="text-secondary">Klicks</p>
+                                                    <p class="font-semibold text-primary">{{ creative.clicks || 0 }}</p>
+                                                </div>
+                                                <div>
+                                                    <p class="text-secondary">CTR</p>
+                                                    <p class="font-semibold text-primary">{{ formatPercent(ctr(creative.clicks, creative.impressions)) }}</p>
+                                                </div>
+                                                <div>
+                                                    <p class="text-secondary">Kosten</p>
+                                                    <p class="font-semibold text-primary">{{ formatMoney(creative.spent_cents) }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
                     </tbody>
                 </table>
                 <p v-if="!campaigns.length" class="px-5 py-6 text-sm text-secondary">Noch keine Ads-Kampagnen.</p>
             </div>
         </section>
 
-        <section class="surface-card overflow-hidden">
+        <section v-show="activeTab === 'payouts'" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
                 <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Marketplace</p>
                 <h2 class="mt-1 text-lg font-semibold text-primary">Auszahlungen</h2>
@@ -931,18 +1688,18 @@ const updatePayoutProfile = (profile, status) => {
             </div>
         </section>
 
-        <section class="surface-card overflow-hidden">
+        <section v-show="activeTab === 'orders'" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
                 <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">After Sales</p>
-                <h2 class="mt-1 text-lg font-semibold text-primary">Ruecksendungen und Erstattungen</h2>
-                <p class="mt-1 text-sm text-secondary">Anfragen pruefen, Ware als erhalten markieren, Bestand wieder einbuchen und Erstattung dokumentieren.</p>
+                <h2 class="mt-1 text-lg font-semibold text-primary">Rücksendungen und Erstattungen</h2>
+                <p class="mt-1 text-sm text-secondary">Anfragen prüfen, Ware als erhalten markieren, Bestand wieder einbuchen und Erstattung dokumentieren.</p>
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full text-left text-sm">
                     <tbody class="divide-y divide-border">
                         <tr v-for="request in returnRequests" :key="request.id">
                             <td class="px-5 py-3">
-                                <p class="font-semibold text-primary">{{ request.item?.title || request.order?.orderable?.title || `Ruecksendung #${request.id}` }}</p>
+                                <p class="font-semibold text-primary">{{ request.item?.title || request.order?.orderable?.title || `Rücksendung #${request.id}` }}</p>
                                 <p class="text-xs text-secondary">{{ request.order?.user?.email || request.guest_email || '-' }}</p>
                             </td>
                             <td class="px-5 py-3 text-secondary">{{ request.status }}</td>
@@ -959,11 +1716,11 @@ const updatePayoutProfile = (profile, status) => {
                         </tr>
                     </tbody>
                 </table>
-                <p v-if="!returnRequests.length" class="px-5 py-6 text-sm text-secondary">Noch keine Ruecksendungen.</p>
+                <p v-if="!returnRequests.length" class="px-5 py-6 text-sm text-secondary">Noch keine Rücksendungen.</p>
             </div>
         </section>
 
-        <section class="surface-card overflow-hidden">
+        <section v-show="activeTab === 'orders'" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
                 <h2 class="text-lg font-semibold text-primary">Commerce-Bestellungen</h2>
                 <p class="mt-1 text-sm text-secondary">Offene Überweisungen für Add-ons und Marketplace manuell bestätigen.</p>
@@ -1002,10 +1759,10 @@ const updatePayoutProfile = (profile, status) => {
             </div>
         </section>
 
-        <section class="grid gap-6 xl:grid-cols-2">
+        <section v-show="activeTab === 'reports'" class="grid gap-6 xl:grid-cols-2">
             <article class="surface-card overflow-hidden">
                 <div class="border-b border-border p-5">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Verkaeufer</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Verkäufer</p>
                     <h2 class="mt-1 text-lg font-semibold text-primary">Bestand und Angebote</h2>
                 </div>
                 <div class="divide-y divide-border">
@@ -1018,7 +1775,7 @@ const updatePayoutProfile = (profile, status) => {
                             Bestand {{ report.manages_stock ? report.stock_quantity : 'frei' }}
                         </span>
                     </div>
-                    <p v-if="!sellerReports.length" class="p-5 text-sm text-secondary">Noch keine Verkaeuferdaten.</p>
+                    <p v-if="!sellerReports.length" class="p-5 text-sm text-secondary">Noch keine Verkäuferdaten.</p>
                 </div>
             </article>
 
@@ -1033,12 +1790,12 @@ const updatePayoutProfile = (profile, status) => {
                         <p class="text-xs text-secondary">{{ entry.user?.email || 'System' }} · {{ entry.created_at }}</p>
                         <p v-if="entry.note" class="mt-1 text-xs text-secondary">{{ entry.note }}</p>
                     </div>
-                    <p v-if="!auditLogs.length" class="p-5 text-sm text-secondary">Noch keine Audit-Eintraege.</p>
+                <p v-if="!auditLogs.length" class="p-5 text-sm text-secondary">Noch keine Audit-Einträge.</p>
                 </div>
             </article>
         </section>
 
-        <section class="surface-card overflow-hidden">
+        <section v-show="activeTab === 'orders'" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
                 <h2 class="text-lg font-semibold text-primary">Website-Anfragen</h2>
                 <p class="mt-1 text-sm text-secondary">Vereine, die eine Website von Airmius erstellen lassen möchten.</p>
@@ -1065,6 +1822,161 @@ const updatePayoutProfile = (profile, status) => {
                 <p v-if="!websiteRequests.length" class="px-5 py-6 text-sm text-secondary">Noch keine Website-Anfragen.</p>
             </div>
         </section>
+
+        <div v-if="editProductForm.open" class="fixed inset-0 z-50 overflow-y-auto bg-black/60 px-4 py-8">
+            <div class="mx-auto w-full max-w-4xl rounded-xl border border-border bg-card p-5 shadow-2xl">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-primary">Produkt bearbeiten</h2>
+                        <p class="mt-1 text-sm text-secondary">Name, Texte, Preis, Bilder, Bestand und Variantenoptionen zentral pflegen.</p>
+                    </div>
+                    <button class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary" @click="closeEditProduct">Schließen</button>
+                </div>
+
+                <form class="mt-5 grid gap-3 md:grid-cols-2" @submit.prevent="submitEditProduct">
+                    <input v-model="editProductForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Titel">
+                    <input v-model="editProductForm.price_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis Cent">
+                    <select v-model="editProductForm.product_type" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <option value="single">Einfaches Produkt</option>
+                        <option value="variable">Variables Produkt</option>
+                        <option value="digital">Immaterial / digital</option>
+                    </select>
+                    <textarea
+                        v-if="editProductForm.product_type === 'digital'"
+                        v-model="editProductForm.digital_delivery_note"
+                        rows="2"
+                        class="rounded-lg border-border bg-inputBg text-sm text-primary"
+                        placeholder="Lieferinfo, z. B. Versand per E-Mail"
+                    ></textarea>
+                    <select v-model="editProductForm.category" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <option value="product">Produkt</option>
+                        <option value="course">Kurs</option>
+                        <option value="camp">Camp</option>
+                        <option value="service">Dienstleistung</option>
+                    </select>
+                    <input v-model="editProductForm.sku" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Artikelnummer">
+                    <select v-model="editProductForm.tax_class" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <option value="standard">Standardsteuer</option>
+                        <option value="reduced">Ermäßigt</option>
+                        <option value="zero">Nullsatz</option>
+                    </select>
+                    <select v-model="editProductForm.status" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <option value="draft">Entwurf</option>
+                        <option value="review">Prüfen</option>
+                        <option value="published">Freigegeben</option>
+                        <option value="archived">Archiviert</option>
+                        <option value="rejected">Abgelehnt</option>
+                    </select>
+                    <label class="flex items-center gap-2 text-sm text-primary">
+                        <input v-model="editProductForm.is_shippable" type="checkbox" class="rounded border-border bg-inputBg">
+                        Versandpflichtig
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-primary">
+                        <input v-model="editProductForm.manages_stock" type="checkbox" class="rounded border-border bg-inputBg">
+                        Lagerbestand verwalten
+                    </label>
+                    <input v-if="editProductForm.manages_stock" v-model="editProductForm.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lagerbestand">
+                    <input v-model="editProductForm.low_stock_threshold" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Warnbestand">
+
+                    <div class="md:col-span-2 grid gap-3 rounded-lg border border-border bg-bg p-3 md:grid-cols-2">
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Hauptbild per URL</label>
+                            <input v-model="editProductForm.image_url" type="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://...">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Hauptbild hochladen</label>
+                            <input type="file" accept="image/jpeg,image/png,image/webp" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:mr-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setEditProductImageUpload">
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Weitere Bild-URLs</label>
+                            <textarea v-model="editProductForm.image_urls_text" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Eine URL pro Zeile"></textarea>
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Weitere Bilder hochladen</label>
+                            <input type="file" multiple accept="image/jpeg,image/png,image/webp" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary file:mr-3 file:rounded file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setEditProductGalleryUploads">
+                            <p class="mt-1 text-xs text-secondary">Neue Uploads werden zur Galerie hinzugefügt.</p>
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2 rounded-lg border border-border bg-bg p-3">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h3 class="text-sm font-semibold text-primary">Merkmale / Variantenoptionen</h3>
+                                <p class="text-xs text-secondary">Werte mit Komma oder | trennen, z. B. Rot | Blau | Schwarz.</p>
+                            </div>
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="addEditAttributeRow">Merkmal hinzufügen</button>
+                        </div>
+                        <div class="mt-3 space-y-2">
+                            <div v-for="(row, index) in editAttributeRows" :key="index" class="grid gap-2 md:grid-cols-[11rem_minmax(0,1fr)_auto]">
+                                <select v-model="row.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" @change="row.values = []">
+                                    <option value="">Merkmal wählen</option>
+                                    <option v-for="preset in attributePresets" :key="preset.name" :value="preset.name">{{ preset.name }}</option>
+                                </select>
+                                <select v-model="row.values" multiple class="min-h-24 rounded-lg border-border bg-inputBg text-sm text-primary">
+                                    <option v-for="value in presetValuesFor(row.name)" :key="value" :value="value">{{ value }}</option>
+                                </select>
+                                <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-secondary hover:text-primary" @click="removeEditAttributeRow(index)">Entfernen</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="editProductForm.product_type === 'variable'" class="md:col-span-2 rounded-lg border border-border bg-bg p-3">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h3 class="text-sm font-semibold text-primary">Varianten</h3>
+                                <p class="text-xs text-secondary">Eigene Merkmale, Preis, Bestand und Bild pro Variante.</p>
+                            </div>
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="addEditVariantRow">Variante hinzufügen</button>
+                        </div>
+                        <div class="mt-3 space-y-3">
+                            <div v-for="(variant, index) in editVariantRows" :key="index" class="rounded-lg border border-border p-3">
+                                <div class="grid gap-2 md:grid-cols-4">
+                                    <select
+                                        v-for="attribute in normalizeAttributeRows(editAttributeRows)"
+                                        :key="attribute.name"
+                                        v-model="variant.attributes[attribute.name]"
+                                        class="rounded-lg border-border bg-inputBg text-sm text-primary"
+                                    >
+                                        <option value="">{{ attribute.name }}</option>
+                                        <option v-for="value in attribute.values" :key="value" :value="value">{{ value }}</option>
+                                    </select>
+                                    <input v-model="variant.price_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis Cent">
+                                    <input v-model="variant.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bestand">
+                                    <input v-model="variant.sku" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Artikelnummer">
+                                    <input v-model="variant.image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-2" placeholder="Bild-URL für Variante">
+                                    <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-secondary hover:text-primary" @click="removeEditVariantRow(index)">Variante entfernen</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2 rounded-lg border border-border bg-bg p-3">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h3 class="text-sm font-semibold text-primary">Produkt-Highlights</h3>
+                                <p class="text-xs text-secondary">Kurze Bulletpoints für die Produktseite.</p>
+                            </div>
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="addEditFeatureRow">Punkt hinzufügen</button>
+                        </div>
+                        <div class="mt-3 space-y-2">
+                            <div v-for="(feature, index) in editFeatureRows" :key="index" class="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+                                <input v-model="editFeatureRows[index]" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="z. B. Atmungsaktiv">
+                                <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-secondary hover:text-primary" @click="removeEditFeatureRow(index)">Entfernen</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <textarea v-model="editProductForm.description" rows="4" class="md:col-span-2 rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung"></textarea>
+
+                    <div class="md:col-span-2 flex justify-end gap-3">
+                        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="closeEditProduct">Abbrechen</button>
+                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="editProductForm.processing">
+                            Speichern
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
         <div v-if="rejectionModal.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
             <div class="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-2xl">

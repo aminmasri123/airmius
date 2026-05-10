@@ -33,6 +33,7 @@ Route::post('/webhooks/outfit-subscriptions/paypal', [OutfitSubscriptionControll
     ->name('webhooks.outfit-subscriptions.paypal');
 Route::get('/ads/active', [CommerceCheckoutController::class, 'activeAd'])->name('ads.active');
 Route::get('/ads/{campaign}/click', [CommerceCheckoutController::class, 'clickAd'])->name('ads.click');
+Route::post('/ads/{campaign}/conversion', [CommerceCheckoutController::class, 'conversionAd'])->name('ads.conversion');
 Route::get('/shared-files/{token}', [FileController::class, 'sharedDownload'])
     ->name('files.shared-download');
 Route::get('/checkout/guest-commerce/{order}/{token}/success', [CommerceCheckoutController::class, 'guestSuccess'])

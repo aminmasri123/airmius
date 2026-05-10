@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import DeleteConfirmModal from '@/Components/Auth/DeleteConfirmModal.vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 
@@ -13,9 +14,17 @@ const selectedSportId = ref(props.sports[0]?.id || null)
 const search = ref('')
 const statusFilter = ref('all')
 const showCreateModal = ref(false)
+const showDeleteModal = ref(false)
+const sportBeingDeleted = ref(null)
 
 const selectedSport = computed(() => {
     return props.sports.find((sport) => sport.id === selectedSportId.value) || props.sports[0] || null
+})
+
+const deleteModalMessage = computed(() => {
+    const name = sportBeingDeleted.value?.name || ''
+
+    return `Möchtest du die Sportart "${name}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.`
 })
 
 const filteredSports = computed(() => {
@@ -91,10 +100,25 @@ const createSport = () => {
 
 const deleteSport = () => {
     if (!selectedSport.value || selectedSport.value.usage_count > 0) return
-    if (!window.confirm(`Sportart "${selectedSport.value.name}" wirklich löschen?`)) return
 
-    router.delete(route('admin.sports.destroy', selectedSport.value.id), {
+    sportBeingDeleted.value = selectedSport.value
+    showDeleteModal.value = true
+}
+
+const closeDeleteModal = () => {
+    showDeleteModal.value = false
+    sportBeingDeleted.value = null
+}
+
+const confirmDeleteSport = () => {
+    if (!sportBeingDeleted.value) return
+
+    router.delete(route('admin.sports.destroy', sportBeingDeleted.value.id), {
         preserveScroll: true,
+        data: {
+            confirmation: 'delete',
+        },
+        onSuccess: closeDeleteModal,
     })
 }
 
@@ -477,5 +501,15 @@ const usageLabel = (sport) => {
                 </div>
             </div>
         </Teleport>
+
+        <DeleteConfirmModal
+            :show="showDeleteModal"
+            title="Sportart löschen"
+            :message="deleteModalMessage"
+            confirm-text="delete"
+            cancel-text="Abbrechen"
+            @cancel="closeDeleteModal"
+            @confirm="confirmDeleteSport"
+        />
     </AppLayout>
 </template>

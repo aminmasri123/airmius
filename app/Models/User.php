@@ -237,6 +237,11 @@ class User extends Authenticatable
         return $this->hasMany(OutfitSubscription::class);
     }
 
+    public function commerceShippingAddresses()
+    {
+        return $this->hasMany(CommerceShippingAddress::class);
+    }
+
     public function subscriptionInvoices()
     {
         return $this->hasMany(SubscriptionInvoice::class);

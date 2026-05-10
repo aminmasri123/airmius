@@ -63,7 +63,7 @@ const tabs = computed(() => [
     },
     {
         id: 'plans',
-        label: 'Plaene',
+        label: 'Pläne',
         icon: 'las la-box-open',
         count: props.summary.plans || 0,
     },
@@ -105,7 +105,7 @@ const paymentStatusLabel = (status) => ({
 })[status] || status || 'Unbekannt'
 
 const paymentProviderLabel = (provider) => ({
-    bank_transfer: 'Ueberweisung',
+    bank_transfer: 'Überweisung',
     stripe: 'Karte / Stripe',
     paypal: 'PayPal',
 })[provider] || provider || 'Nicht gesetzt'
@@ -364,14 +364,14 @@ const cancelSubscription = () => {
             <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <p class="text-sm font-semibold uppercase text-accent">Sportkleidung-Abo Modul</p>
-                    <h1 class="mt-2 text-2xl font-bold text-primary">Outfit-Abo Plaene</h1>
+                    <h1 class="mt-2 text-2xl font-bold text-primary">Outfit-Abo Pläne</h1>
                     <p class="mt-2 max-w-3xl text-sm text-secondary">
                         Verwalte monatliche Sportkleidung-Abos, Sponsor-Rabatte und Branding-Regeln. Diese Seite ist ueber eigene Permissions geschuetzt.
                     </p>
                 </div>
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
                     <div class="rounded-lg bg-inputBg p-3">
-                        <p class="text-xs uppercase text-secondary">Plaene</p>
+                        <p class="text-xs uppercase text-secondary">Pläne</p>
                         <p class="mt-1 text-xl font-bold text-primary">{{ summary.plans || 0 }}</p>
                     </div>
                     <div class="rounded-lg bg-inputBg p-3">
@@ -553,7 +553,7 @@ const cancelSubscription = () => {
                     </p>
                 </div>
                 <span class="rounded-full bg-inputBg px-3 py-1 text-sm font-semibold text-secondary">
-                    {{ subscriptions.length }} letzte Eintraege
+                    {{ subscriptions.length }} letzte Einträge
                 </span>
             </div>
 
@@ -668,7 +668,7 @@ const cancelSubscription = () => {
                             v-model="paymentModal.note"
                             rows="3"
                             class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"
-                            placeholder="Optional, z.B. Zahlung am Kontoauszug geprueft."
+                            placeholder="Optional, z.B. Zahlung am Kontoauszug geprüft."
                         ></textarea>
                     </label>
 
@@ -712,7 +712,7 @@ const cancelSubscription = () => {
 
                     <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                         <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeCancelSubscriptionModal">
-                            Zurueck
+                            Zurück
                         </button>
                         <button type="button" class="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500/90" @click="cancelSubscription">
                             Anfrage abbrechen
@@ -725,8 +725,8 @@ const cancelSubscription = () => {
         <section v-if="activeTab === 'plans'" class="rounded-lg border border-border bg-card p-5">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                    <h2 class="text-lg font-bold text-primary">Plaene verwalten</h2>
-                    <p class="mt-1 text-sm text-secondary">Erstelle neue Outfit-Abo-Plaene in einem fokussierten Dialog.</p>
+                    <h2 class="text-lg font-bold text-primary">Pläne verwalten</h2>
+                    <p class="mt-1 text-sm text-secondary">Erstelle neue Outfit-Abo-Pläne in einem fokussierten Dialog.</p>
                 </div>
                 <button
                     type="button"
@@ -865,7 +865,7 @@ const cancelSubscription = () => {
                                     v-model="newSportQuery"
                                     type="text"
                                     class="w-full rounded-lg border-border bg-card py-2 pl-10 pr-3 text-sm text-primary"
-                                    placeholder="Sportart filtern und aus Liste waehlen"
+                                    placeholder="Sportart filtern und aus Liste wählen"
                                 />
                             </div>
                             <div class="mt-2 grid max-h-56 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
@@ -1047,7 +1047,7 @@ const cancelSubscription = () => {
                                         v-model="editSportQueries[plan.id]"
                                         type="text"
                                         class="w-full rounded-lg border-border bg-card py-2 pl-10 pr-3 text-sm text-primary"
-                                        placeholder="Sportart filtern und aus Liste waehlen"
+                                        placeholder="Sportart filtern und aus Liste wählen"
                                     />
                                 </div>
                                 <div class="mt-2 grid max-h-56 gap-2 overflow-y-auto pr-1">

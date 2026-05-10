@@ -196,7 +196,13 @@ const bindRealtime = () => {
 
     statusChannel = window.Echo
         .join('users.status')
-        .listen('.user.status.updated', () => { })
+        .listen('.user.status.updated', () => {
+            router.reload({
+                only: ['auth'],
+                preserveScroll: true,
+                preserveState: true,
+            })
+        })
 
     const eventChannels = [
         ...(page.props.auth.user.realtime.team_event_channels || []),

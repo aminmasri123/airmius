@@ -41,7 +41,7 @@ defineProps({
         </section>
 
         <section v-else class="surface-card p-6 text-sm text-secondary">
-            Fuer deine aktuelle Rolle sind noch keine speziellen Arbeitsbereiche sichtbar.
+            Für deine aktuelle Rolle sind noch keine speziellen Arbeitsbereiche sichtbar.
         </section>
     </div>
 </template>

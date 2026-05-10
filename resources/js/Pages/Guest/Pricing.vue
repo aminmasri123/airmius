@@ -151,7 +151,7 @@ const closeCheckoutModal = () => {
 const providerLabel = (provider) => ({
     stripe: 'Stripe / Karte',
     paypal: 'PayPal',
-    bank_transfer: 'Ueberweisung',
+    bank_transfer: 'Überweisung',
 })[provider] || provider
 
 const setCsrfToken = (token) => {
@@ -511,7 +511,7 @@ const startCheckout = async () => {
                             <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Abo kostenpflichtig bestellen</p>
                             <h2 class="mt-1 text-xl font-bold text-primary">{{ checkoutModal.plan.name }}</h2>
                             <p class="mt-2 text-sm leading-6 text-secondary">
-                                Bitte pruefe dein Abo, bevor du zur Zahlung weitergeleitet wirst.
+                                Bitte prüfe dein Abo, bevor du zur Zahlung weitergeleitet wirst.
                             </p>
                         </div>
                         <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="closeCheckoutModal">

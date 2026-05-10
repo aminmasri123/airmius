@@ -4,6 +4,7 @@ import { Link, router, usePage } from '@inertiajs/vue3'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
+import AdSlot from '@/Components/Ads/AdSlot.vue'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -44,20 +45,24 @@ const categoryLabels = {
 }
 
 const productItems = computed(() => props.products?.data || [])
+const allOfferItems = computed(() => [...productItems.value, ...(props.outfitPlans || [])])
 const paginationLinks = computed(() => (props.products?.links || []).filter((link) => link.url))
-const totalProducts = computed(() => props.products?.total || productItems.value.length)
+const totalProducts = computed(() => (props.products?.total || productItems.value.length) + (props.outfitPlans?.length || 0))
+const cartItemCount = computed(() => Number(props.cart?.items_count || 0))
 const heroProduct = computed(() => props.featuredProducts[0] || props.flashDeals[0] || productItems.value[0] || null)
 const heroSideProducts = computed(() => (props.featuredProducts.length ? props.featuredProducts : props.flashDeals).slice(1, 4))
 const sideBannerUrl = computed(() => props.marketplaceVisuals.side_banner || '/images/marketplace/airmius-marketplace-side-banner.png')
+const sideBannerDimensions = computed(() => props.marketplaceVisuals.dimensions?.side_banner || { width: 306, height: 786 })
 const sideBannerStyle = computed(() => ({
     backgroundImage: `linear-gradient(180deg, rgba(5, 11, 22, 0.08), rgba(5, 11, 22, 0.18) 45%, rgba(5, 11, 22, 0.75)), url("${sideBannerUrl.value}")`,
+    width: `${Math.max(208, Math.min(288, Number(sideBannerDimensions.value.width || 306)))}px`,
 }))
 const heroImageUrl = computed(() => props.marketplaceVisuals.hero_banner || heroProduct.value?.image_url || '')
 const saleBannerUrl = computed(() => props.marketplaceVisuals.sale_banner || '')
 const activeSegment = computed(() => props.segments.find((segment) => segment.value === form.value.segment) || props.segments[0] || null)
 const segmentLookup = computed(() => Object.fromEntries(props.segments.map((segment) => [segment.value || 'all', segment])))
 const productGroups = computed(() => {
-    const groups = productItems.value.reduce((carry, product) => {
+    const groups = allOfferItems.value.reduce((carry, product) => {
         const key = product.segment || 'equipment'
 
         if (!carry[key]) {
@@ -138,8 +143,8 @@ const reset = () => {
 
 const searchCategory = (category) => {
     form.value.search = category.query || ''
-    form.value.category = ''
-    form.value.segment = ''
+    form.value.category = category.category || ''
+    form.value.segment = category.segment || ''
     search()
 }
 
@@ -159,7 +164,7 @@ const selectSegment = (segment) => {
 <template>
     <SeoHead
         title="Airmius Sport Marketplace"
-        description="Sportfokussierter Marketplace für Produkte, Kurse, Camps und Services. Gaeste koennen direkt ohne Konto bestellen."
+        description="Sportfokussierter Marketplace für Produkte, Kurse, Camps und Services. Gäste können direkt ohne Konto bestellen."
     />
 
     <div class="min-h-screen bg-bg text-primary">
@@ -170,7 +175,7 @@ const selectSegment = (segment) => {
             :style="sideBannerStyle"
         >
             <div class="absolute inset-0 bg-buttonPrimary/10"></div>
-            <div class="absolute inset-x-4 top-14 text-center text-buttonTextPrimary drop-shadow">
+            <div class="absolute inset-x-4 top-72 text-center text-buttonTextPrimary drop-shadow">
                 <p class="font-heading text-3xl font-900 leading-none">AIRMIUS</p>
                 <p class="mt-2 text-sm font-black uppercase tracking-wide">Sport Deals</p>
             </div>
@@ -181,13 +186,13 @@ const selectSegment = (segment) => {
             :style="sideBannerStyle"
         >
             <div class="absolute inset-0 bg-buttonPrimary/10"></div>
-            <div class="absolute inset-x-4 top-14 text-center text-buttonTextPrimary drop-shadow">
+            <div class="absolute inset-x-4 top-72 text-center text-buttonTextPrimary drop-shadow">
                 <p class="scale-x-[-1] font-heading text-3xl font-900 leading-none">AIRMIUS</p>
                 <p class="mt-2 scale-x-[-1] text-sm font-black uppercase tracking-wide">Marketplace</p>
             </div>
         </aside>
 
-        <main class="relative z-10 pb-24 pt-0 md:pb-14 xl:mx-[16vw] xl:pr-24">
+        <main class="relative z-10 pb-24 pt-0 md:pb-14 xl:mx-[16vw]">
             <section class="border-b border-border bg-bg px-4 py-3 shadow-sm">
                 <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 overflow-hidden rounded-lg border border-border bg-card px-5 py-3 text-primary shadow-sm">
                     <div class="flex min-w-0 items-center gap-3">
@@ -204,12 +209,18 @@ const selectSegment = (segment) => {
                     <div class="hidden items-center gap-2 text-sm font-black sm:flex">
                         <Link
                             v-if="currentUser"
-                            :href="route('auth.commerce.index')"
-                            class="inline-flex items-center gap-2 rounded-full bg-buttonPrimary px-3 py-1 text-buttonTextPrimary"
+                            href="/card"
+                            class="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary"
+                            aria-label="Warenkorb"
+                            title="Warenkorb"
                         >
-                            <i class="las la-shopping-cart text-lg"></i>
-                            Warenkorb
-                            <span class="rounded-full bg-white/20 px-2 py-0.5 text-xs">{{ cart.items_count || 0 }}</span>
+                            <i class="las la-shopping-cart text-xl"></i>
+                            <span
+                                v-if="cartItemCount"
+                                class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 text-[11px] font-black leading-none text-white ring-2 ring-card"
+                            >
+                                {{ cartItemCount }}
+                            </span>
                         </Link>
                         <span v-else class="rounded-full bg-muted px-3 py-1 text-secondary">Gastbestellung moeglich</span>
                         <span class="rounded-full bg-muted px-3 py-1 text-secondary">Vereine</span>
@@ -218,38 +229,62 @@ const selectSegment = (segment) => {
                 </div>
             </section>
 
-            <section class="bg-card px-4 py-4 shadow-sm">
-                <form class="mx-auto grid max-w-7xl gap-3 md:grid-cols-[12rem_12rem_10rem_1fr_8rem_6rem]" @submit.prevent="search">
-                    <select v-model="form.category" class="h-12 rounded-md border-border bg-inputBg text-sm text-primary">
-                        <option v-for="category in categories" :key="category.value" :value="category.value">
-                            {{ category.label }}
-                        </option>
-                    </select>
-                    <select v-model="form.segment" class="h-12 rounded-md border-border bg-inputBg text-sm text-primary">
-                        <option v-for="segment in segments" :key="segment.value || 'all'" :value="segment.value">
-                            {{ segment.label }}
-                        </option>
-                    </select>
-                    <select v-model="form.country" class="h-12 rounded-md border-border bg-inputBg text-sm text-primary" @change="search">
-                        <option value="">Land automatisch</option>
-                        <option v-for="country in pricingCountries" :key="country.country" :value="country.country">
-                            {{ country.label }}
-                        </option>
-                    </select>
-                    <div class="relative">
-                        <i class="las la-search absolute left-4 top-1/2 -translate-y-1/2 text-xl text-secondary"></i>
+            <section class="bg-card/70 px-4 py-4 shadow-sm backdrop-blur">
+                <form class="mx-auto flex max-w-7xl flex-col gap-3 rounded-2xl border border-border bg-bg/70 p-3 shadow-sm lg:flex-row lg:items-center" @submit.prevent="search">
+                    <div class="grid gap-3 sm:grid-cols-3 lg:w-[34rem] lg:shrink-0">
+                        <label class="relative block">
+                            <span class="sr-only">Kategorie</span>
+                            <select v-model="form.category" class="h-12 w-full rounded-xl border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
+                                <option v-for="category in categories" :key="category.value" :value="category.value">
+                                    {{ category.label }}
+                                </option>
+                            </select>
+                        </label>
+                        <label class="relative block">
+                            <span class="sr-only">Bereich</span>
+                            <select v-model="form.segment" class="h-12 w-full rounded-xl border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
+                                <option v-for="segment in segments" :key="segment.value || 'all'" :value="segment.value">
+                                    {{ segment.label }}
+                                </option>
+                            </select>
+                        </label>
+                        <label class="relative block">
+                            <span class="sr-only">Land</span>
+                            <select v-model="form.country" class="h-12 w-full rounded-xl border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25" @change="search">
+                                <option value="">Land automatisch</option>
+                                <option v-for="country in pricingCountries" :key="country.country" :value="country.country">
+                                    {{ country.label }}
+                                </option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <div class="relative min-w-0 flex-1">
+                        <i class="las la-search absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-buttonPrimary"></i>
                         <input
                             v-model="form.search"
-                            class="h-12 w-full rounded-md border-border bg-inputBg pl-11 text-sm text-primary"
-                            placeholder="Suche nach Laufschuhen, Trainingsplan, Fussballcamp, Analyse..."
+                            class="h-13 min-h-12 w-full rounded-2xl border-border bg-inputBg py-3 pl-12 pr-12 text-sm font-semibold text-primary outline-none transition placeholder:text-secondary/70 focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25"
+                            placeholder="Was suchst du? Laufschuhe, Camps, Kurse, Analyse..."
                         />
+                        <button
+                            v-if="form.search"
+                            type="button"
+                            class="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-muted text-secondary transition hover:bg-buttonPrimary hover:text-buttonTextPrimary"
+                            aria-label="Suche leeren"
+                            @click="form.search = ''"
+                        >
+                            <i class="las la-times"></i>
+                        </button>
                     </div>
-                    <button class="h-12 rounded-md bg-buttonPrimary px-4 text-sm font-black text-buttonTextPrimary hover:bg-buttonPrimaryHover">
-                        Suchen
-                    </button>
-                    <button type="button" class="h-12 rounded-md border border-border px-4 text-sm font-bold text-primary hover:bg-muted" @click="reset">
-                        Reset
-                    </button>
+
+                    <div class="grid grid-cols-[1fr_auto] gap-2 lg:w-auto lg:shrink-0">
+                        <button class="h-12 rounded-xl bg-buttonPrimary px-6 text-sm font-black text-buttonTextPrimary shadow-sm transition hover:bg-buttonPrimaryHover focus:outline-none focus:ring-2 focus:ring-buttonPrimary/30">
+                            Suchen
+                        </button>
+                        <button type="button" class="h-12 rounded-xl border border-border bg-card px-4 text-sm font-bold text-primary transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-buttonPrimary/20" @click="reset">
+                            Reset
+                        </button>
+                    </div>
                 </form>
             </section>
 
@@ -299,7 +334,7 @@ const selectSegment = (segment) => {
                         </div>
                         <Link :href="currentUser ? route('auth.commerce.index') : route('login')" class="rounded bg-card p-4 shadow-sm transition hover:bg-muted">
                             <p class="text-sm font-black text-primary">Anbieter werden</p>
-                            <p class="mt-1 text-xs leading-5 text-secondary">Vereine, Trainer und Shops koennen Angebote einstellen.</p>
+                            <p class="mt-1 text-xs leading-5 text-secondary">Vereine, Trainer und Shops können Angebote einstellen.</p>
                         </Link>
                         <Link
                             v-for="product in heroSideProducts"
@@ -311,22 +346,43 @@ const selectSegment = (segment) => {
                                 <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover" />
                                 <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-2xl text-buttonPrimary']"></i>
                             </div>
-                            <div class="min-w-0">
-                                <p class="truncate text-xs font-black text-primary">{{ product.title }}</p>
+                            <div class="min-w-0 flex-1">
+                                <p class="line-clamp-2 break-words text-xs font-black leading-4 text-primary">{{ product.title }}</p>
                                 <p class="text-xs font-bold text-buttonPrimary">{{ grossPrice(product) }} brutto</p>
                             </div>
                         </Link>
                     </div>
                 </section>
 
-                <aside class="hidden rounded bg-buttonPrimary p-5 text-buttonTextPrimary shadow-sm lg:block">
-                    <img v-if="saleBannerUrl" :src="saleBannerUrl" alt="" class="-mx-2 -mt-2 mb-4 aspect-[4/5] rounded object-cover" />
-                    <p class="font-heading text-3xl font-900 leading-tight">Sport Sale</p>
-                    <p class="mt-2 text-sm font-semibold">Produkte, Camps, Kurse und Services aus deinem Sportnetzwerk.</p>
-                    <div class="mt-8 rounded-full bg-white/20 p-6 text-center">
-                        <i class="las la-bolt text-6xl"></i>
-                        <p class="mt-2 text-2xl font-black">bis -40%</p>
-                    </div>
+                <aside class="hidden lg:block">
+                    <AdSlot placement="sidebar" variant="sidebar">
+                        <template #fallback>
+                            <div class="relative min-h-[27rem] overflow-hidden rounded border border-border bg-card p-5 text-primary shadow-sm">
+                                <img v-if="saleBannerUrl" :src="saleBannerUrl" alt="" class="absolute inset-0 h-full w-full object-cover" />
+                                <div v-if="saleBannerUrl" class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/35 to-black/70"></div>
+                                <div class="relative flex min-h-[27rem] flex-col justify-between">
+                                    <div :class="saleBannerUrl ? 'text-white' : 'text-primary'">
+                                        <p class="text-xs font-black uppercase tracking-wide opacity-75">Aktion</p>
+                                        <p class="mt-2 font-heading text-2xl font-900 leading-tight">Sport Sale</p>
+                                        <p class="mt-2 text-sm font-semibold leading-6">
+                                            Produkte, Camps und Kurse aus deinem Sportnetzwerk.
+                                        </p>
+                                    </div>
+                                    <div class="rounded-lg border border-border bg-bg/95 p-4 text-primary shadow-sm">
+                                        <div class="flex items-center gap-3">
+                                            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary">
+                                                <i class="las la-bolt text-2xl"></i>
+                                            </span>
+                                            <div>
+                                                <p class="text-xs font-bold uppercase text-secondary">Deals</p>
+                                                <p class="text-2xl font-black leading-none">bis -40%</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </AdSlot>
                 </aside>
             </section>
 
@@ -358,7 +414,7 @@ const selectSegment = (segment) => {
                         </div>
                         <button class="text-xs font-bold text-buttonPrimary" @click="selectSegment({ value: '' })">Alle anzeigen</button>
                     </div>
-                    <div class="mt-3 flex gap-2 overflow-x-auto pb-1">
+                    <div class="mt-3 flex gap-2 overflow-x-auto overscroll-x-contain rounded-lg pb-2 [scrollbar-color:theme(colors.border)_transparent] [scrollbar-width:thin]">
                         <button
                             v-for="segment in segments"
                             :key="segment.value || 'all'"
@@ -404,6 +460,10 @@ const selectSegment = (segment) => {
                         </div>
                     </Link>
                 </div>
+            </section>
+
+            <section class="mx-auto mt-4 max-w-7xl px-4">
+                <AdSlot placement="marketplace_card" variant="banner" :fallback="false" />
             </section>
 
             <section class="mx-auto mt-4 grid max-w-7xl gap-4 px-4 xl:grid-cols-[1fr_20rem]">
@@ -558,7 +618,7 @@ const selectSegment = (segment) => {
                             </div>
                         </div>
 
-                        <div v-if="!productItems.length" class="rounded border border-border bg-muted p-8 text-center">
+                        <div v-if="!allOfferItems.length" class="rounded border border-border bg-muted p-8 text-center">
                             <p class="text-lg font-bold text-primary">Keine passenden Angebote gefunden.</p>
                             <p class="mt-2 text-sm text-secondary">Passe Suche oder Kategorie an, dann werden wieder Angebote angezeigt.</p>
                         </div>

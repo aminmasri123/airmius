@@ -162,7 +162,7 @@ const updateProfile = () => {
         onError: () => {
             profileFeedback.value = {
                 type: 'error',
-                message: 'Style-Profil konnte nicht gespeichert werden. Bitte pruefe deine Angaben.',
+                message: 'Style-Profil konnte nicht gespeichert werden. Bitte prüfe deine Angaben.',
             }
         },
     })
@@ -254,12 +254,12 @@ const confirmCancel = () => {
                             Outfit-Abo für deinen Style
                         </h1>
                         <p class="mt-4 max-w-2xl text-sm leading-6 text-white/85 sm:text-base">
-                            Waehle einen Plan, pflege dein Style-Profil und erhalte regelmaessig Sport-Outfits passend zu Sportart, Groesse, Farben und Markenstil.
+                            Wähle einen Plan, pflege dein Style-Profil und erhalte regelmäßig Sport-Outfits passend zu Sportart, Größe, Farben und Markenstil.
                         </p>
 
                         <div class="mt-6 flex flex-wrap gap-3">
                             <button type="button" class="rounded-lg bg-white px-4 py-2 text-sm font-bold text-slate-950 hover:bg-white/90" @click="scrollToPlans">
-                                Plan waehlen
+                                Plan wählen
                             </button>
                             <a href="#style-profile" class="rounded-lg border border-white/35 bg-white/10 px-4 py-2 text-sm font-bold text-white backdrop-blur hover:bg-white/20">
                                 Style-Profil pflegen
@@ -354,7 +354,7 @@ const confirmCancel = () => {
                     </label>
                     <label class="block">
                         <span class="text-sm font-semibold text-primary">Lieblingsfarben</span>
-                        <input v-model="profileForm.colors_text" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Schwarz, Blau, Weiss" />
+                        <input v-model="profileForm.colors_text" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Schwarz, Blau, Weiß" />
                     </label>
                     <label class="block">
                         <span class="text-sm font-semibold text-primary">Ausschlussfarben</span>
@@ -382,7 +382,7 @@ const confirmCancel = () => {
                         <h2 class="text-lg font-bold text-primary">Deine Abos und Lieferungen</h2>
                         <p class="mt-1 text-sm text-secondary">Status, Liefermonat und Tracking an einem Ort.</p>
                     </div>
-                    <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-secondary">{{ subscriptions.length }} Eintraege</span>
+                    <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-secondary">{{ subscriptions.length }} Einträge</span>
                 </div>
 
                 <div v-if="subscriptions.length" class="mt-5 space-y-4">
@@ -470,7 +470,7 @@ const confirmCancel = () => {
         <section id="outfit-plans">
             <div class="mb-4 flex items-end justify-between gap-4">
                 <div>
-                    <h2 class="text-lg font-bold text-primary">Plaene waehlen</h2>
+                    <h2 class="text-lg font-bold text-primary">Pläne wählen</h2>
                     <p class="mt-1 text-sm text-secondary">Sponsor-Subventionen werden direkt vom Monatsbetrag abgezogen.</p>
                 </div>
             </div>
@@ -519,7 +519,7 @@ const confirmCancel = () => {
                         <p class="text-xs font-semibold uppercase tracking-wide text-accent">Outfit-Abo bestaetigen</p>
                         <h2 class="mt-1 text-lg font-bold text-primary">{{ pendingSubscribePlan.name }}</h2>
                         <p class="mt-2 text-sm leading-6 text-secondary">
-                            Nach deiner Bestaetigung wird das Abo als Zahlung offen vorgemerkt. Es wird erst aktiviert und beliefert, wenn die Zahlung bestaetigt ist.
+                            Nach deiner Bestätigung wird das Abo als Zahlung offen vorgemerkt. Es wird erst aktiviert und beliefert, wenn die Zahlung bestätigt ist.
                         </p>
                     </div>
                     <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="closeSubscribeModal">

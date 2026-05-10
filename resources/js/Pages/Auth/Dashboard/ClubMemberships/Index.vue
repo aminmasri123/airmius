@@ -30,6 +30,7 @@ const sepaSettingsForms = ref({})
 const datevSettingsForms = ref({})
 const datevExportForms = ref({})
 const membershipSettingsForms = ref({})
+const processingJoinRequestIds = ref(new Set())
 const createEmailMemberRow = () => ({
     name: '',
     email: '',
@@ -84,7 +85,7 @@ const contributionRuleForm = useForm({
 const selectedClub = computed(() => props.clubs.find((club) => club.id === selectedClubId.value) || props.clubs[0] || null)
 const pageError = computed(() => {
     const errors = page.props.errors || {}
-    const value = errors.general || errors.message || Object.values(errors)[0]
+    const value = errors.join_request || errors.general || errors.message || Object.values(errors)[0]
 
     return Array.isArray(value) ? value[0] : value
 })
@@ -305,13 +306,25 @@ const invoiceForm = useForm({
 })
 
 const approveRequest = (request) => {
+    if (processingJoinRequestIds.value.has(request.id)) return
+    processingJoinRequestIds.value.add(request.id)
+
     router.post(route('auth.team-join-requests.approve', request.id), {
         role: 'Player',
-    }, { preserveScroll: true })
+    }, {
+        preserveScroll: true,
+        onFinish: () => processingJoinRequestIds.value.delete(request.id),
+    })
 }
 
 const declineRequest = (request) => {
-    router.post(route('auth.team-join-requests.decline', request.id), {}, { preserveScroll: true })
+    if (processingJoinRequestIds.value.has(request.id)) return
+    processingJoinRequestIds.value.add(request.id)
+
+    router.post(route('auth.team-join-requests.decline', request.id), {}, {
+        preserveScroll: true,
+        onFinish: () => processingJoinRequestIds.value.delete(request.id),
+    })
 }
 
 const approveClubRequest = (request) => {
@@ -418,9 +431,12 @@ const confirmBankTransaction = (transaction) => {
 }
 
 const addEmailMember = () => {
+    const invitationCount = invitationRowsToSend()
+
     router.post(route('auth.club-memberships.email-members.store', selectedClub.value.id), emailMemberForm.value, {
         preserveScroll: true,
         onSuccess: () => {
+            decrementInvitationLimit(selectedClub.value, invitationCount)
             emailMemberForm.value = {
                 send_invitation: true,
                 members: [createEmailMemberRow()],
@@ -443,6 +459,28 @@ const removeEmailMemberRow = (index) => {
     emailMemberForm.value.members.splice(index, 1)
 }
 
+const invitationRowsToSend = () => {
+    if (!emailMemberForm.value.send_invitation) {
+        return 0
+    }
+
+    return emailMemberForm.value.members.filter((member) => String(member.email || '').trim()).length
+}
+
+const decrementInvitationLimit = (club, amount = 1) => {
+    const capabilities = club?.capabilities
+
+    if (!capabilities || capabilities.member_invitation_daily_limit === null || capabilities.member_invitation_daily_limit === undefined) {
+        return
+    }
+
+    capabilities.member_invitation_usage_today = Number(capabilities.member_invitation_usage_today || 0) + amount
+    capabilities.member_invitation_remaining_today = Math.max(
+        0,
+        Number(capabilities.member_invitation_daily_limit || 0) - capabilities.member_invitation_usage_today,
+    )
+}
+
 const importEmailMembers = () => {
     importForm.post(route('auth.club-memberships.email-members.import', selectedClub.value.id), {
         preserveScroll: true,
@@ -455,7 +493,10 @@ const importEmailMembers = () => {
 }
 
 const inviteExternalMember = (member) => {
-    router.post(route('auth.club-memberships.email-members.invite', member.id), {}, { preserveScroll: true })
+    router.post(route('auth.club-memberships.email-members.invite', member.id), {}, {
+        preserveScroll: true,
+        onSuccess: () => decrementInvitationLimit(selectedClub.value),
+    })
 }
 </script>
 
@@ -717,10 +758,20 @@ const inviteExternalMember = (member) => {
                             </div>
 
                             <div class="flex gap-2">
-                                <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="approveRequest(request)">
+                                <button
+                                    type="button"
+                                    class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60"
+                                    :disabled="processingJoinRequestIds.has(request.id)"
+                                    @click="approveRequest(request)"
+                                >
                                     Annehmen
                                 </button>
-                                <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="declineRequest(request)">
+                                <button
+                                    type="button"
+                                    class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary disabled:opacity-60"
+                                    :disabled="processingJoinRequestIds.has(request.id)"
+                                    @click="declineRequest(request)"
+                                >
                                     Ablehnen
                                 </button>
                             </div>
@@ -742,14 +793,14 @@ const inviteExternalMember = (member) => {
                                 <input v-model="membershipSettingsFor(selectedClub).membership_requests_enabled" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                                 <span>
                                     <span class="block font-semibold">Mitgliedsanfragen erlauben</span>
-                                    <span class="block text-secondary">Interessenten sehen die Beitragstypen und koennen eine Anfrage stellen.</span>
+                                    <span class="block text-secondary">Interessenten sehen die Beitragstypen und können eine Anfrage stellen.</span>
                                 </span>
                             </label>
                             <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
                                 <input v-model="membershipSettingsFor(selectedClub).member_pause_requests_enabled" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                                 <span>
                                     <span class="block font-semibold">Pausen-Anfragen erlauben</span>
-                                    <span class="block text-secondary">Mitglieder koennen eine Pause beantragen; der Verein entscheidet.</span>
+                                    <span class="block text-secondary">Mitglieder können eine Pause beantragen; der Verein entscheidet.</span>
                                 </span>
                             </label>
                             <div class="flex items-end">

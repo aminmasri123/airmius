@@ -39,8 +39,10 @@ class TeamPolicy extends BasePolicy
 
     public function invite(User $user, Team $team)
     {
-        return ($user->can('team.invite') || $user->can('teams.manage_players'))
-            && $this->managesTeam($user, $team);
+        return $this->managesClub($user, $team->club)
+            || $this->hasElevatedTeamRole($user, $team)
+            || (($user->can('team.invite') || $user->can('teams.manage_players'))
+                && $this->managesTeam($user, $team));
     }
 
     public function delete(User $user, Team $team)

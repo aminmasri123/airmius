@@ -588,7 +588,7 @@ const rejectRecommendation = (recommendation) => {
                         <section v-if="activeTab === 'skills'" class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
                             <div>
                                 <h2 class="text-lg font-bold text-primary">Skills & Bestaetigungen</h2>
-                                <p class="mt-1 text-sm text-secondary">Skills entstehen aus den gewaehlten Sportarten und koennen bestaetigt werden.</p>
+                                <p class="mt-1 text-sm text-secondary">Skills entstehen aus den gewählten Sportarten und können bestätigt werden.</p>
                             </div>
 
                             <div class="mt-5 space-y-5">
@@ -804,7 +804,7 @@ const rejectRecommendation = (recommendation) => {
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Profil melden</p>
-                            <h2 class="mt-1 text-xl font-semibold text-primary">Warum soll dieses Profil geprueft werden?</h2>
+                            <h2 class="mt-1 text-xl font-semibold text-primary">Warum soll dieses Profil geprüft werden?</h2>
                         </div>
                         <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted" @click="closeProfileReport">
                             <i class="las la-times"></i>

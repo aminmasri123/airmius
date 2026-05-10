@@ -19,19 +19,19 @@ const safeRoute = (name, fallback) => {
 const items = [
     ['las la-bullhorn', 'Top Inhalte', safeRoute('guest.top-inhalte', '/top-inhalte')],
     ['las la-briefcase', 'Jobs', safeRoute('guest.jobs', '/jobs')],
-    ['las la-laptop-code', 'Werbeagentur', safeRoute('guest.werbeagentur', '/werbeagentur-fuer-vereine')],
+    ['las la-laptop-code', 'Werbung', safeRoute('guest.werbeagentur', '/werbeagentur-fuer-vereine')],
     ['las la-chalkboard-teacher', 'E-Learning', safeRoute('guest.e-learning', '/e-learning')],
-    ['las la-trophy', 'Gamification', safeRoute('guest.gamification', '/gamification'), { hideOnMobile: true }],
+    ['las la-trophy', 'Level', safeRoute('guest.gamification', '/gamification'), { hideOnMobile: true }],
     ['las la-warehouse', 'Vereine', safeRoute('guest.vereine', '/vereine')],
     ['las la-tags', 'Abos', safeRoute('guest.pricing', '/abos')],
-    ['las la-shopping-bag', 'Marketplace', safeRoute('guest.marketplace', '/marketplace')],
+    ['las la-shopping-bag', 'Shop', safeRoute('guest.marketplace', '/marketplace')],
 ]
 </script>
 
 <template>
     <div
         v-if="vertical"
-        class="fixed bottom-0 left-0 right-0 z-40 border-y border-border bg-card/95 backdrop-blur md:bottom-auto md:left-auto md:right-4 md:top-24 md:w-20 md:rounded-xl md:border md:shadow-xl"
+        class="fixed bottom-0 left-0 right-0 z-40 border-y border-border bg-card/95 backdrop-blur md:bottom-auto md:left-auto md:right-4 md:top-24 md:w-24 md:rounded-xl md:border md:shadow-xl"
     >
         <div class="flex w-full justify-center gap-5 overflow-x-auto px-4 py-2 text-xs text-secondary md:flex-col md:items-stretch md:gap-1 md:overflow-visible md:p-2">
             <Link
@@ -39,12 +39,12 @@ const items = [
                 :key="label"
                 :href="href || '#'"
                 :class="[
-                    'rounded-lg px-2 py-2 text-center transition hover:bg-muted hover:text-primary',
+                    'min-w-16 rounded-lg px-2 py-2 text-center transition hover:bg-muted hover:text-primary md:min-w-0 md:w-full',
                     options?.hideOnMobile ? 'hidden md:block' : ''
                 ]"
             >
                 <p><i :class="[icon, 'text-2xl']"></i></p>
-                <span class="mt-1 block text-[10px] font-semibold leading-tight md:text-[11px]">{{ $t(label) }}</span>
+                <span class="mt-1 block max-w-full text-[10px] font-semibold leading-tight [hyphens:auto] [overflow-wrap:anywhere] md:text-[11px]">{{ $t(label) }}</span>
             </Link>
         </div>
     </div>

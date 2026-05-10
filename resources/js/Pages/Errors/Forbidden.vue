@@ -42,7 +42,7 @@ defineProps({
                 </Link>
 
                 <Link :href="route('auth.dashboard')" class="rounded-lg border border-border px-5 py-3 text-sm font-semibold text-primary hover:border-borderHover">
-                    Zurueck zum Dashboard
+                    Zurück zum Dashboard
                 </Link>
             </div>
         </section>
