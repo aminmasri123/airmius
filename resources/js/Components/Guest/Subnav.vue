@@ -8,15 +8,23 @@ defineProps({
     },
 })
 
+const safeRoute = (name, fallback) => {
+    try {
+        return route().has(name) ? route(name) : fallback
+    } catch (error) {
+        return fallback
+    }
+}
+
 const items = [
-    ['las la-bullhorn', 'Top Inhalte', '/top-inhalte'],
-    ['las la-briefcase', 'Jobs', '/jobs'],
-    ['las la-laptop-code', 'Werbeagentur', '/werbeagentur-für-vereine'],
-    ['las la-chalkboard-teacher', 'E-Learning', '/e-learning'],
-    ['las la-trophy', 'Gamification', '/gamification', { hideOnMobile: true }],
-    ['las la-warehouse', 'Vereine', '/vereine'],
-    ['las la-tags', 'Abos', '/abos'],
-    ['las la-shopping-bag', 'Marketplace', '/marketplace'],
+    ['las la-bullhorn', 'Top Inhalte', safeRoute('guest.top-inhalte', '/top-inhalte')],
+    ['las la-briefcase', 'Jobs', safeRoute('guest.jobs', '/jobs')],
+    ['las la-laptop-code', 'Werbeagentur', safeRoute('guest.werbeagentur', '/werbeagentur-fuer-vereine')],
+    ['las la-chalkboard-teacher', 'E-Learning', safeRoute('guest.e-learning', '/e-learning')],
+    ['las la-trophy', 'Gamification', safeRoute('guest.gamification', '/gamification'), { hideOnMobile: true }],
+    ['las la-warehouse', 'Vereine', safeRoute('guest.vereine', '/vereine')],
+    ['las la-tags', 'Abos', safeRoute('guest.pricing', '/abos')],
+    ['las la-shopping-bag', 'Marketplace', safeRoute('guest.marketplace', '/marketplace')],
 ]
 </script>
 
@@ -43,23 +51,30 @@ const items = [
 
     <div
         v-else
-        class="fixed bottom-0 md:top-16 left-0 right-0 max-w-7xl mx-auto h-16 sm:px-6 bg-card/90 border-y border-border backdrop-blur items-center z-40 transition-all duration-300">
-        <div class="hidden md:flex items-center justify-center gap-6 py-2 text-sm font-medium text-secondary">
-            <Link v-for="[icon, label, href] in items" :key="label" :href="href || '#'"
-                class="pb-1 text-center transition hover:text-primary">
-
-
+        class="fixed bottom-0 left-0 right-0 z-40 mx-auto h-16 max-w-7xl border-y border-border bg-card/90 backdrop-blur transition-all duration-300 sm:px-6 md:top-16"
+    >
+        <div class="hidden items-center justify-center gap-6 py-2 text-sm font-medium text-secondary md:flex">
+            <Link
+                v-for="[icon, label, href] in items"
+                :key="label"
+                :href="href || '#'"
+                class="pb-1 text-center transition hover:text-primary"
+            >
                 <p><i :class="[icon, 'la-2x']"></i></p>
                 {{ $t(label) }}
             </Link>
         </div>
 
-        <div class="md:hidden flex w-full justify-center gap-5 overflow-x-auto bg-card/95 px-4 py-2 text-xs text-secondary custom-scrollbar">
-            <Link v-for="[icon, label, href, options] in items" :key="label" :href="href || '#'"
-            :class="[
-                'py-1 rounded-full whitespace-nowrap transition text-center hover:text-primary',
-                options?.hideOnMobile ? 'hidden' : ''
-            ]">
+        <div class="custom-scrollbar flex w-full justify-center gap-5 overflow-x-auto bg-card/95 px-4 py-2 text-xs text-secondary md:hidden">
+            <Link
+                v-for="[icon, label, href, options] in items"
+                :key="label"
+                :href="href || '#'"
+                :class="[
+                    'rounded-full py-1 text-center transition hover:text-primary whitespace-nowrap',
+                    options?.hideOnMobile ? 'hidden' : ''
+                ]"
+            >
                 <p><i :class="[icon, 'la-2x']"></i></p>
                 {{ $t(label) }}
             </Link>

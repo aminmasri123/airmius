@@ -18,6 +18,14 @@ const scrollTo = (id) => {
         behavior: 'smooth',
     })
 }
+
+const safeRoute = (name, fallback, params) => {
+    try {
+        return route().has(name) ? route(name, params) : fallback
+    } catch (error) {
+        return fallback
+    }
+}
 </script>
 
 <template>
@@ -40,8 +48,8 @@ const scrollTo = (id) => {
                         <button @click="scrollTo('funktionen')" class="min-h-9 text-left transition hover:text-primary">{{ $t('guest.nav.features') }}</button>
                         <button @click="scrollTo('vorteile')" class="min-h-9 text-left transition hover:text-primary">{{ $t('guest.nav.benefits') }}</button>
                         <button @click="scrollTo('sportarten')" class="min-h-9 text-left transition hover:text-primary">{{ $t('guest.nav.sports') }}</button>
-                        <Link :href="route('guest.werbeagentur')" class="flex min-h-9 items-center transition hover:text-primary">{{ $t('guest.footer.agency_for_clubs') }}</Link>
-                        <Link :href="route('guest.marketplace')" class="flex min-h-9 items-center transition hover:text-primary">{{ $t('Marketplace') }}</Link>
+                        <Link :href="safeRoute('guest.werbeagentur', '/werbeagentur-fuer-vereine')" class="flex min-h-9 items-center transition hover:text-primary">{{ $t('guest.footer.agency_for_clubs') }}</Link>
+                        <Link :href="safeRoute('guest.marketplace', '/marketplace')" class="flex min-h-9 items-center transition hover:text-primary">{{ $t('Marketplace') }}</Link>
                     </div>
                 </div>
 
@@ -49,25 +57,25 @@ const scrollTo = (id) => {
                     <h4 class="mb-3 font-heading text-sm font-600 text-primary">{{ $t('guest.footer.company') }}</h4>
                     <div class="grid grid-cols-1 gap-1 text-sm text-secondary">
                         <button @click="scrollTo('ueber')" class="min-h-9 text-left transition hover:text-primary">{{ $t('guest.nav.about') }}</button>
-                        <Link :href="route('guest.blog.index')" class="flex min-h-9 items-center transition hover:text-primary">{{ $t('Blog') }}</Link>
-                        <Link :href="route('guest.sponsors')" class="flex min-h-9 items-center transition hover:text-primary">{{ $t('Sponsors') }}</Link>
+                        <Link :href="safeRoute('guest.blog.index', '/blog')" class="flex min-h-9 items-center transition hover:text-primary">{{ $t('Blog') }}</Link>
+                        <Link :href="safeRoute('guest.sponsors', '/sponsoren')" class="flex min-h-9 items-center transition hover:text-primary">{{ $t('Sponsors') }}</Link>
                         <button @click="scrollTo('kontakt')" class="min-h-9 text-left transition hover:text-primary">{{ $t('guest.nav.contact') }}</button>
-                        <Link :href="route('guest.jobs')" class="flex min-h-9 items-center transition hover:text-primary">{{ $t('Jobs') }}</Link>
+                        <Link :href="safeRoute('guest.jobs', '/jobs')" class="flex min-h-9 items-center transition hover:text-primary">{{ $t('Jobs') }}</Link>
                     </div>
                 </div>
 
                 <div class="min-[420px]:col-span-2 xl:col-span-1">
                     <h4 class="mb-3 font-heading text-sm font-600 text-primary">{{ $t('guest.footer.legal') }}</h4>
                     <div class="grid grid-cols-1 gap-x-4 gap-y-1 text-sm text-secondary min-[420px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-1">
-                        <Link :href="route('legal.imprint')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.imprint') }}</Link>
-                        <Link :href="route('policy.show')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.privacy') }}</Link>
-                        <Link :href="route('terms.show')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.terms') }}</Link>
-                        <Link :href="route('legal.community')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.community') }}</Link>
-                        <Link :href="route('legal.minors')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.minors') }}</Link>
-                        <Link :href="route('guardian-access.create')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.guardian') }}</Link>
-                        <Link :href="route('legal.cookies')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.cookies') }}</Link>
-                        <Link :href="route('legal.withdrawal')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.withdrawal') }}</Link>
-                        <Link :href="route('legal.reporting')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.reporting') }}</Link>
+                        <Link :href="safeRoute('legal.imprint', '/impressum')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.imprint') }}</Link>
+                        <Link :href="safeRoute('policy.show', '/datenschutz')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.privacy') }}</Link>
+                        <Link :href="safeRoute('terms.show', '/agb')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.terms') }}</Link>
+                        <Link :href="safeRoute('legal.community', '/community-richtlinien')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.community') }}</Link>
+                        <Link :href="safeRoute('legal.minors', '/jugendschutz')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.minors') }}</Link>
+                        <Link :href="safeRoute('guardian-access.create', '/eltern')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.guardian') }}</Link>
+                        <Link :href="safeRoute('legal.cookies', '/cookies')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.cookies') }}</Link>
+                        <Link :href="safeRoute('legal.withdrawal', '/widerruf')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.withdrawal') }}</Link>
+                        <Link :href="safeRoute('legal.reporting', '/kontakt-und-melden')" class="flex min-h-9 items-center break-words transition hover:text-primary">{{ $t('guest.footer.reporting') }}</Link>
                     </div>
                 </div>
             </div>

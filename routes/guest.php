@@ -94,11 +94,17 @@ Route::get('/top-inhalte', fn () => Inertia::render('Guest/Top-Inhalte', [
     'canRegister' => Route::has('register'),
 ]))->name('guest.top-inhalte');
 
+Route::get('/preise', [PricingController::class, 'index']);
 Route::get('/abos', [PricingController::class, 'index'])->name('guest.pricing');
 
 Route::get('/jobs', [OrganizationJobController::class, 'publicIndex'])->name('guest.jobs');
 Route::post('/jobs/{organizationJob}/interest', [OrganizationJobController::class, 'submitInterest'])->name('guest.jobs.interest');
 Route::get('/sponsoren', [PublicSponsorController::class, 'index'])->name('guest.sponsors');
+
+Route::get('/werbeagentur-fuer-vereine', fn () => Inertia::render('Guest/Werbeagentur', [
+    'canLogin' => Route::has('login'),
+    'canRegister' => Route::has('register'),
+]));
 
 Route::get('/werbeagentur-für-vereine', fn () => Inertia::render('Guest/Werbeagentur', [
     'canLogin' => Route::has('login'),
