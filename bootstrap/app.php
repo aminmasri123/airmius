@@ -14,6 +14,8 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Illuminate\Session\TokenMismatchException;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
@@ -54,10 +56,39 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhooks/commerce/stripe',
             'webhooks/commerce/paypal',
             'webhooks/outfit-subscriptions/paypal',
+            'checkout/subscriptions/*',
         ]);
 
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->render(function (TokenMismatchException $exception, Request $request) {
+            Log::warning('CSRF token mismatch', [
+                'method' => $request->method(),
+                'path' => $request->path(),
+                'route' => $request->route()?->getName(),
+                'user_id' => $request->user()?->id,
+                'session_id' => $request->hasSession() ? $request->session()->getId() : null,
+                'host' => $request->getHost(),
+                'origin' => $request->headers->get('origin'),
+                'referer' => $request->headers->get('referer'),
+                'expects_json' => $request->expectsJson(),
+                'ajax' => $request->ajax(),
+                'has_session_cookie' => $request->cookies->has(config('session.cookie')),
+                'has_xsrf_cookie' => $request->cookies->has('XSRF-TOKEN'),
+                'has_csrf_header' => $request->headers->has('X-CSRF-TOKEN'),
+                'has_xsrf_header' => $request->headers->has('X-XSRF-TOKEN'),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'message' => 'Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es erneut.',
+                ], 419);
+            }
+
+            return null;
+        });
+
         $upgradePayload = function (?string $message = null): array {
             $fallback = 'Diese Funktion ist in deinem aktuellen Paket oder mit deiner aktuellen Rolle nicht freigeschaltet. Bitte fuehre ein Upgrade durch oder bitte deinen Verein/Admin um die passende Berechtigung.';
 

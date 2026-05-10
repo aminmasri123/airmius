@@ -26,6 +26,8 @@ class SubscriptionCheckoutController extends Controller
 {
     public function store(Request $request, SubscriptionPlan $subscriptionPlan, VisitorCountry $visitorCountry)
     {
+        $this->ensureSameOriginCheckout($request);
+
         abort_unless($subscriptionPlan->is_active, 404);
         $subscriptionPlan->loadMissing('countryPrices');
 
@@ -144,6 +146,40 @@ class SubscriptionCheckoutController extends Controller
         throw ValidationException::withMessages([
             'checkout' => $message,
         ]);
+    }
+
+    private function ensureSameOriginCheckout(Request $request): void
+    {
+        $allowedHost = $request->getHost();
+        $source = $request->headers->get('origin') ?: $request->headers->get('referer');
+
+        if (blank($source)) {
+            Log::warning('Subscription checkout blocked because origin is missing', [
+                'path' => $request->path(),
+                'user_id' => $request->user()?->id,
+                'host' => $allowedHost,
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            abort(403, 'Checkout konnte aus Sicherheitsgruenden nicht gestartet werden.');
+        }
+
+        $sourceHost = parse_url($source, PHP_URL_HOST);
+
+        if (! hash_equals((string) $allowedHost, (string) $sourceHost)) {
+            Log::warning('Subscription checkout blocked because origin does not match host', [
+                'path' => $request->path(),
+                'user_id' => $request->user()?->id,
+                'host' => $allowedHost,
+                'source' => $source,
+                'source_host' => $sourceHost,
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
+            abort(403, 'Checkout konnte aus Sicherheitsgruenden nicht gestartet werden.');
+        }
     }
 
     public function success(Request $request, PaymentCheckout $checkout)
