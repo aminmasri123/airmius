@@ -150,6 +150,20 @@ const providerLabel = (provider) => ({
     bank_transfer: 'Ueberweisung',
 })[provider] || provider
 
+const setCsrfToken = (token) => {
+    if (!token) return ''
+
+    page.props.csrf_token = token
+
+    const metaToken = document.querySelector('meta[name="csrf-token"]')
+
+    if (metaToken) {
+        metaToken.setAttribute('content', token)
+    }
+
+    return token
+}
+
 const csrfToken = () => {
     if (page.props.csrf_token) return page.props.csrf_token
 
@@ -165,6 +179,33 @@ const csrfToken = () => {
     return tokenCookie ? decodeURIComponent(tokenCookie) : ''
 }
 
+const refreshCsrfToken = async () => {
+    try {
+        const response = await axios.get('/csrf-token', {
+            headers: {
+                Accept: 'application/json',
+            },
+        })
+
+        return setCsrfToken(response.data?.csrf_token) || csrfToken()
+    } catch (error) {
+        return csrfToken()
+    }
+}
+
+const createCheckout = (plan, token) => axios.post(route('subscription-checkout.store', plan.id), {
+    provider: checkoutModal.value.provider,
+    billing_interval: 'monthly',
+    coupon_code: couponCode.value,
+    accepted_terms: checkoutModal.value.accepted,
+}, {
+    headers: {
+        Accept: 'application/json',
+        'X-CSRF-TOKEN': token,
+        'X-Checkout-Mode': 'json',
+    },
+})
+
 const startCheckout = async () => {
     const plan = checkoutModal.value.plan
 
@@ -174,18 +215,17 @@ const startCheckout = async () => {
     checkoutModal.value.error = ''
 
     try {
-        const response = await axios.post(route('subscription-checkout.store', plan.id), {
-            provider: checkoutModal.value.provider,
-            billing_interval: 'monthly',
-            coupon_code: couponCode.value,
-            accepted_terms: checkoutModal.value.accepted,
-        }, {
-            headers: {
-                Accept: 'application/json',
-                'X-CSRF-TOKEN': csrfToken(),
-                'X-Checkout-Mode': 'json',
-            },
-        })
+        let response
+
+        try {
+            response = await createCheckout(plan, await refreshCsrfToken())
+        } catch (error) {
+            if (error.response?.status !== 419) {
+                throw error
+            }
+
+            response = await createCheckout(plan, await refreshCsrfToken())
+        }
 
         if (response.data?.redirect_url) {
             window.location.href = response.data.redirect_url

@@ -134,7 +134,9 @@ class SubscriptionCheckoutController extends Controller
 
     private function expectsCheckoutJson(Request $request): bool
     {
-        return $request->expectsJson() || $request->header('X-Checkout-Mode') === 'json';
+        return $request->expectsJson()
+            || $request->ajax()
+            || $request->header('X-Checkout-Mode') === 'json';
     }
 
     private function checkoutError(string $message): never

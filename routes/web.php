@@ -8,6 +8,7 @@ use App\Http\Controllers\SocialAuthController;
 use App\Http\Controllers\SubscriptionCheckoutController;
 use App\Http\Controllers\CommerceCheckoutController;
 use App\Http\Controllers\OutfitSubscriptionController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])
@@ -23,6 +24,13 @@ Route::post('/webhooks/stripe', [SubscriptionCheckoutController::class, 'stripeW
 
 Route::post('/webhooks/paypal', [SubscriptionCheckoutController::class, 'paypalWebhook'])
     ->name('webhooks.paypal');
+
+Route::get('/csrf-token', function (Request $request) {
+    return response()->json([
+        'csrf_token' => csrf_token(),
+    ]);
+})->name('csrf-token');
+
 Route::post('/webhooks/commerce/stripe', [CommerceCheckoutController::class, 'stripeWebhook'])
     ->name('webhooks.commerce.stripe');
 Route::post('/webhooks/commerce/paypal', [CommerceCheckoutController::class, 'paypalWebhook'])
