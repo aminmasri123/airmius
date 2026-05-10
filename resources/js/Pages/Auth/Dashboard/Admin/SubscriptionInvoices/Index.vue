@@ -129,9 +129,9 @@ const markPaid = (invoice) => {
                                     <Link :href="route('admin.subscriptions.index')" class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-muted">
                                         Abo
                                     </Link>
-                                    <Link :href="route('admin.subscription-invoices.download', invoice.id)" class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-muted">
+                                    <a :href="route('admin.subscription-invoices.download', invoice.id)" download class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-muted">
                                         Download
-                                    </Link>
+                                    </a>
                                 </div>
                             </td>
                         </tr>

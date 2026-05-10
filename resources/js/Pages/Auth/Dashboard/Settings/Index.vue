@@ -637,9 +637,9 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                 <td class="py-3 pr-4 text-secondary">{{ formatDate(invoice.due_at) }}</td>
                                 <td class="py-3 pr-4 text-secondary">{{ invoiceStatusLabel(invoice.status) }}</td>
                                 <td class="py-3 pr-4 text-right">
-                                    <Link :href="route('auth.subscription-invoices.download', invoice.id)" class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-muted">
+                                    <a :href="route('auth.subscription-invoices.download', invoice.id)" download class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-muted">
                                         Download
-                                    </Link>
+                                    </a>
                                 </td>
                             </tr>
                         </tbody>

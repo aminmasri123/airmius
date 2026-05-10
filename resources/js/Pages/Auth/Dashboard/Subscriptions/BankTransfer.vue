@@ -85,9 +85,9 @@ defineProps({
                     </div>
 
                     <div class="mt-5 flex flex-col gap-2">
-                        <Link v-if="checkout.invoice" :href="route('auth.subscription-invoices.download', checkout.invoice.id)" class="rounded-lg border border-border px-4 py-2 text-center text-sm font-semibold text-primary hover:bg-muted">
+                        <a v-if="checkout.invoice" :href="route('auth.subscription-invoices.download', checkout.invoice.id)" download class="rounded-lg border border-border px-4 py-2 text-center text-sm font-semibold text-primary hover:bg-muted">
                             Rechnung herunterladen
-                        </Link>
+                        </a>
                         <Link :href="route('guest.pricing')" class="rounded-lg border border-border px-4 py-2 text-center text-sm font-semibold text-primary hover:bg-muted">
                             Zurück zu Preise
                         </Link>

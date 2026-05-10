@@ -35,6 +35,21 @@ const form = useForm({
     maintenance_enabled: Boolean(maintenance.value.enabled),
     maintenance_title: maintenance.value.title || 'Airmius ist gerade im Wartemodus',
     maintenance_message: maintenance.value.message || 'Wir verbessern gerade die Plattform. Bitte versuche es in Kuerze erneut.',
+    billing_company_name: billing.value.company_name || 'Airmius',
+    billing_legal_name: billing.value.legal_name || '',
+    billing_company_street: billing.value.company_street || '',
+    billing_company_postal_code: billing.value.company_postal_code || '',
+    billing_company_city: billing.value.company_city || '',
+    billing_company_country: billing.value.company_country || 'Deutschland',
+    billing_company_email: billing.value.company_email || '',
+    billing_company_website: billing.value.company_website || 'airmius.com',
+    billing_tax_number: billing.value.tax_number || '',
+    billing_vat_id: billing.value.vat_id || '',
+    billing_court: billing.value.court || '',
+    billing_registration_number: billing.value.registration_number || '',
+    billing_managing_director: billing.value.managing_director || '',
+    billing_small_business_notice: billing.value.small_business_notice || '',
+    billing_invoice_note: billing.value.invoice_note || '',
     billing_bank_account_holder: billing.value.bank_account_holder || 'Airmius',
     billing_bank_name: billing.value.bank_name || '',
     billing_iban: billing.value.iban || '',
@@ -121,6 +136,85 @@ const save = () => {
                             <p v-if="form.errors.maintenance_message" class="mt-1 text-sm text-error">
                                 {{ form.errors.maintenance_message }}
                             </p>
+                        </div>
+                    </div>
+
+                    <div class="rounded-lg border border-border bg-bg p-4">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <h2 class="text-lg font-semibold text-primary">Rechtliche Rechnungsdaten</h2>
+                                <p class="mt-1 text-sm text-secondary">
+                                    Diese Angaben erscheinen auf allen Airmius-PDFs. Leere Felder werden im PDF als Platzhalter markiert.
+                                </p>
+                            </div>
+                            <span class="rounded-full bg-air-orange/15 px-3 py-1 text-xs font-semibold text-air-orange">
+                                PDF
+                            </span>
+                        </div>
+
+                        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <label for="billing_company_name" class="text-sm font-semibold text-primary">Marke / Rechnungsname</label>
+                                <input id="billing_company_name" v-model="form.billing_company_name" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Airmius">
+                            </div>
+                            <div>
+                                <label for="billing_legal_name" class="text-sm font-semibold text-primary">Rechtlicher Firmenname</label>
+                                <input id="billing_legal_name" v-model="form.billing_legal_name" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary" placeholder="z. B. Airmius GmbH">
+                            </div>
+                            <div>
+                                <label for="billing_company_street" class="text-sm font-semibold text-primary">Strasse und Hausnummer</label>
+                                <input id="billing_company_street" v-model="form.billing_company_street" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
+                            </div>
+                            <div class="grid gap-4 sm:grid-cols-[8rem_1fr]">
+                                <div>
+                                    <label for="billing_company_postal_code" class="text-sm font-semibold text-primary">PLZ</label>
+                                    <input id="billing_company_postal_code" v-model="form.billing_company_postal_code" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
+                                </div>
+                                <div>
+                                    <label for="billing_company_city" class="text-sm font-semibold text-primary">Ort</label>
+                                    <input id="billing_company_city" v-model="form.billing_company_city" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="billing_company_country" class="text-sm font-semibold text-primary">Land</label>
+                                <input id="billing_company_country" v-model="form.billing_company_country" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
+                            </div>
+                            <div>
+                                <label for="billing_company_email" class="text-sm font-semibold text-primary">Rechnungs-E-Mail</label>
+                                <input id="billing_company_email" v-model="form.billing_company_email" type="email" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
+                            </div>
+                            <div>
+                                <label for="billing_company_website" class="text-sm font-semibold text-primary">Website</label>
+                                <input id="billing_company_website" v-model="form.billing_company_website" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
+                            </div>
+                            <div>
+                                <label for="billing_managing_director" class="text-sm font-semibold text-primary">Vertreten durch</label>
+                                <input id="billing_managing_director" v-model="form.billing_managing_director" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
+                            </div>
+                            <div>
+                                <label for="billing_tax_number" class="text-sm font-semibold text-primary">Steuernummer</label>
+                                <input id="billing_tax_number" v-model="form.billing_tax_number" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
+                            </div>
+                            <div>
+                                <label for="billing_vat_id" class="text-sm font-semibold text-primary">USt-IdNr.</label>
+                                <input id="billing_vat_id" v-model="form.billing_vat_id" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary" placeholder="DE...">
+                            </div>
+                            <div>
+                                <label for="billing_court" class="text-sm font-semibold text-primary">Registergericht</label>
+                                <input id="billing_court" v-model="form.billing_court" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
+                            </div>
+                            <div>
+                                <label for="billing_registration_number" class="text-sm font-semibold text-primary">Registernummer</label>
+                                <input id="billing_registration_number" v-model="form.billing_registration_number" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label for="billing_small_business_notice" class="text-sm font-semibold text-primary">Kleinunternehmer- / Steuerhinweis</label>
+                                <input id="billing_small_business_notice" v-model="form.billing_small_business_notice" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary" placeholder="z. B. Gem. § 19 UStG wird keine Umsatzsteuer berechnet.">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label for="billing_invoice_note" class="text-sm font-semibold text-primary">Allgemeiner Rechnungshinweis</label>
+                                <input id="billing_invoice_note" v-model="form.billing_invoice_note" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
+                            </div>
                         </div>
                     </div>
 

@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Setting;
 use App\Models\SubscriptionInvoice;
+use App\Services\AirmiusLegalProfile;
+use App\Services\AirmiusPdfDocument;
 use App\Support\AppNotification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -34,7 +35,7 @@ class SubscriptionInvoiceController extends Controller
         $canManage = $request->user()?->can('subscriptions.manage') || $request->user()?->can('billing.manage');
         abort_unless($canManage || $subscriptionInvoice->user_id === $request->user()?->id, 403);
 
-        $pdf = $this->buildSimplePdf($subscriptionInvoice->load(['user', 'club', 'plan']));
+        $pdf = $this->buildBrandedPdf($subscriptionInvoice->load(['user', 'club', 'plan']), app(AirmiusLegalProfile::class));
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
@@ -134,82 +135,97 @@ class SubscriptionInvoiceController extends Controller
         ];
     }
 
-    private function buildSimplePdf(SubscriptionInvoice $invoice): string
+    private function buildBrandedPdf(SubscriptionInvoice $invoice, AirmiusLegalProfile $legalProfile): string
     {
-        $lines = [
-            'Airmius Rechnung',
-            'Rechnung: '.$invoice->number,
-            'Datum: '.($invoice->issued_at?->format('d.m.Y') ?? now()->format('d.m.Y')),
-            '',
-            'Leistungsempfaenger:',
-            $invoice->club?->name ?: ($invoice->user?->name ?: $invoice->user?->email),
-            $invoice->user?->email ?: '',
-            '',
-            'Leistung:',
-            $invoice->title,
-            $invoice->description ?: '',
-            'Plan: '.($invoice->plan?->name ?: '-'),
-            'Zeitraum: '.($invoice->billing_period_start?->format('d.m.Y') ?? '-').' - '.($invoice->billing_period_end?->format('d.m.Y') ?? '-'),
-            '',
-            'Betrag: '.number_format($invoice->amount_cents / 100, 2, ',', '.').' '.$invoice->currency,
-            'Status: '.$invoice->status,
-            'Zahlungsart: '.($invoice->payment_method ?: '-'),
-            'Verwendungszweck: '.($invoice->payment_reference ?: '-'),
-            '',
-            'Zahlungsempfaenger:',
-            Setting::valueFor('billing_bank_account_holder', 'Airmius'),
-            Setting::valueFor('billing_bank_name', ''),
-            'IBAN: '.Setting::valueFor('billing_iban', ''),
-            'BIC: '.Setting::valueFor('billing_bic', ''),
-        ];
+        $pdf = new AirmiusPdfDocument();
+        $profile = $legalProfile->data();
+        $bank = $legalProfile->bank();
+        $recipientName = $invoice->club?->name ?: ($invoice->user?->name ?: $invoice->user?->email ?: '-');
+        $recipientEmail = $invoice->user?->email ?: '';
+        $amount = $pdf->money($invoice->amount_cents, $invoice->currency);
+        $period = ($invoice->billing_period_start?->format('d.m.Y') ?? '-').' - '.($invoice->billing_period_end?->format('d.m.Y') ?? '-');
+        $issuedAt = $invoice->issued_at?->format('d.m.Y') ?? now()->format('d.m.Y');
+        $dueAt = $invoice->due_at?->format('d.m.Y') ?? '-';
+        $paidAt = $invoice->paid_at?->format('d.m.Y') ?? '-';
+        $statusLabel = $this->statusLabel($invoice->status);
+        $paymentMethod = $this->paymentMethodLabel($invoice->payment_method);
 
-        return $this->plainTextPdf($lines);
-    }
+        $pdf->header('RECHNUNG', $invoice->number);
 
-    private function plainTextPdf(array $lines): string
-    {
-        $content = "BT\n/F1 12 Tf\n50 790 Td\n14 TL\n";
+        // Meta cards
+        $pdf->card(48, 632, 150, 54, 'Datum', $issuedAt);
+        $pdf->card(222, 632, 150, 54, 'Faellig bis', $dueAt);
+        $pdf->card(396, 632, 150, 54, 'Betrag', $amount, true);
 
-        foreach ($lines as $line) {
-            $content .= '('.$this->escapePdfText($line).") Tj\nT*\n";
+        // Recipient and payment summary
+        $pdf->sectionTitle('Leistungsempfaenger', 48, 585);
+        $pdf->text($recipientName, 48, 562, 13, true);
+        if ($recipientEmail !== '') {
+            $pdf->text($recipientEmail, 48, 544, 10, false, AirmiusPdfDocument::SLATE);
+        }
+        if ($invoice->club) {
+            $pdf->text('Verein: '.$invoice->club->name, 48, 528, 10, false, AirmiusPdfDocument::SLATE);
+        }
+        $pdf->issuerBlock($profile, 48, 497);
+
+        $pdf->sectionTitle('Status', 396, 585);
+        $pdf->statusPill($statusLabel, $invoice->status, 396, 552);
+        $pdf->labelValue('Zahlungsart', $paymentMethod, 396, 528);
+        $pdf->labelValue('Bezahlt am', $paidAt, 396, 504);
+
+        // Line item table
+        $pdf->sectionTitle('Leistung', 48, 382);
+        $pdf->invoiceTableHeader(48, 339, 498);
+        $pdf->text($invoice->title ?: 'Airmius Abo', 64, 315, 11, true);
+        $pdf->text($invoice->description ?: ($invoice->plan?->name ?: '-'), 64, 298, 9, false, AirmiusPdfDocument::SLATE, 250);
+        $pdf->text($period, 330, 315, 9, false, AirmiusPdfDocument::SLATE);
+        $pdf->text($amount, 487, 315, 11, true);
+        $pdf->strokeColor(...AirmiusPdfDocument::BORDER)->line(48, 279, 546, 279);
+
+        // Totals
+        $pdf->text('Zwischensumme', 365, 244, 10, false, AirmiusPdfDocument::SLATE);
+        $pdf->text($amount, 488, 244, 10);
+        $pdf->text('Gesamtbetrag', 365, 216, 14, true);
+        $pdf->text($amount, 474, 216, 14, true, AirmiusPdfDocument::BLUE);
+
+        // Payment details
+        $pdf->sectionTitle('Zahlungsinformationen', 48, 244);
+        $pdf->labelValue('Verwendungszweck', $invoice->payment_reference ?: $invoice->number, 48, 216, 190);
+        $pdf->labelValue('Kontoinhaber', $bank['holder'], 48, 192, 190);
+        $pdf->labelValue('Bank', $bank['bank_name'], 48, 168, 190);
+        $pdf->labelValue('IBAN', $bank['iban'], 48, 144, 190);
+        $pdf->labelValue('BIC', $bank['bic'], 48, 120, 190);
+
+        if (filled($profile['small_business_notice'])) {
+            $pdf->text($profile['small_business_notice'], 48, 104, 8, false, AirmiusPdfDocument::SLATE, 95);
+        }
+        if (filled($profile['invoice_note'])) {
+            $pdf->text($profile['invoice_note'], 48, 92, 8, false, AirmiusPdfDocument::SLATE, 95);
         }
 
-        $content .= "ET";
-
-        $objects = [
-            "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
-            "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
-            "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n",
-            "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
-            "5 0 obj\n<< /Length ".strlen($content)." >>\nstream\n".$content."\nendstream\nendobj\n",
-        ];
-
-        $pdf = "%PDF-1.4\n";
-        $offsets = [0];
-
-        foreach ($objects as $object) {
-            $offsets[] = strlen($pdf);
-            $pdf .= $object;
-        }
-
-        $xref = strlen($pdf);
-        $pdf .= "xref\n0 ".(count($objects) + 1)."\n";
-        $pdf .= "0000000000 65535 f \n";
-
-        for ($i = 1; $i <= count($objects); $i++) {
-            $pdf .= str_pad((string) $offsets[$i], 10, '0', STR_PAD_LEFT)." 00000 n \n";
-        }
-
-        $pdf .= "trailer\n<< /Size ".(count($objects) + 1)." /Root 1 0 R >>\n";
-        $pdf .= "startxref\n".$xref."\n%%EOF";
-
-        return $pdf;
+        return $pdf->legalFooter($profile)->render();
     }
 
-    private function escapePdfText(?string $text): string
+    private function statusLabel(?string $status): string
     {
-        $text = iconv('UTF-8', 'ISO-8859-1//TRANSLIT//IGNORE', (string) $text);
-
-        return str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $text);
+        return match ($status) {
+            'paid' => 'Bezahlt',
+            'open' => 'Offen',
+            'awaiting_transfer' => 'Wartet auf Ueberweisung',
+            'overdue' => 'Ueberfaellig',
+            'cancelled' => 'Storniert',
+            default => $status ?: '-',
+        };
     }
+
+    private function paymentMethodLabel(?string $method): string
+    {
+        return match ($method) {
+            'stripe' => 'Stripe',
+            'paypal' => 'PayPal',
+            'bank_transfer' => 'Ueberweisung',
+            default => $method ?: '-',
+        };
+    }
+
 }
