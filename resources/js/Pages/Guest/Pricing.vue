@@ -217,6 +217,20 @@ const createCheckout = (plan, token) => axios.get(route('subscription-checkout.s
     },
 })
 
+const browserCheckoutUrl = (plan) => {
+    const url = new URL(route('subscription-checkout.start', plan.id), window.location.origin)
+
+    url.searchParams.set('provider', checkoutModal.value.provider)
+    url.searchParams.set('billing_interval', 'monthly')
+    url.searchParams.set('accepted_terms', checkoutModal.value.accepted ? '1' : '')
+
+    if (couponCode.value) {
+        url.searchParams.set('coupon_code', couponCode.value)
+    }
+
+    return url.toString()
+}
+
 const startCheckout = async () => {
     const plan = checkoutModal.value.plan
 
@@ -224,6 +238,11 @@ const startCheckout = async () => {
 
     checkoutModal.value.processing = true
     checkoutModal.value.error = ''
+
+    if (['paypal', 'stripe'].includes(checkoutModal.value.provider)) {
+        window.location.href = browserCheckoutUrl(plan)
+        return
+    }
 
     try {
         let response

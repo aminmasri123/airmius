@@ -166,7 +166,7 @@ class SubscriptionCheckoutController extends Controller
             ]);
         }
 
-        return Inertia::location($checkoutUrl);
+        return redirect()->away($checkoutUrl);
     }
 
     private function expectsCheckoutJson(Request $request): bool
