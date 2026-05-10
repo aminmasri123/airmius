@@ -28,7 +28,7 @@ class PricingController extends Controller
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->get()
-            ->map(function (SubscriptionPlan $plan) use ($country) {
+            ->map(function (SubscriptionPlan $plan) use ($country, $activePlanIds) {
                 $price = $plan->priceForCountry($country);
 
                 if (! $price['available']) {

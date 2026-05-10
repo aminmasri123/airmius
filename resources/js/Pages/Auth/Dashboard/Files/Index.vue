@@ -19,7 +19,10 @@ const props = defineProps({
 const showDeleteModal = ref(false)
 const showShareModal = ref(false)
 const showRenameModal = ref(false)
-const folderToDelete = ref(null)
+const deleteTarget = ref(null)
+const deleteType = ref('file')
+const deleteConfirmation = ref('')
+const deleteProcessing = ref(false)
 const itemToShare = ref(null)
 const shareType = ref('file')
 const friendSearch = ref('')
@@ -74,6 +77,12 @@ const scopeOptions = [
 const activeFiles = computed(() => props.files)
 const activeFolders = computed(() => props.folders)
 const storageUsage = computed(() => page.props.auth?.user?.storage_usage || null)
+const deleteTargetName = computed(() => {
+    if (!deleteTarget.value) return ''
+
+    return deleteType.value === 'folder' ? deleteTarget.value.name : fileName(deleteTarget.value)
+})
+const canConfirmDelete = computed(() => deleteConfirmation.value.trim().toLowerCase() === 'löschen')
 const shareTargets = computed(() => {
     const query = friendSearch.value.trim().toLowerCase()
 
@@ -132,19 +141,40 @@ const createFolder = () => {
     })
 }
 
-const deleteFile = (file) => router.delete(route('auth.files.destroy', file.id), { preserveScroll: true })
-const confirmDeleteFolder = (folder) => {
-    folderToDelete.value = folder
+const openDeleteModal = (item, type = 'file') => {
+    deleteTarget.value = item
+    deleteType.value = type
+    deleteConfirmation.value = ''
     showDeleteModal.value = true
 }
 
-const deleteFolderConfirmed = () => {
-    if (!folderToDelete.value) return
-    router.delete(route('auth.folders.destroy', folderToDelete.value.id), {
+const closeDeleteModal = () => {
+    if (deleteProcessing.value) return
+
+    showDeleteModal.value = false
+    deleteTarget.value = null
+    deleteType.value = 'file'
+    deleteConfirmation.value = ''
+}
+
+const deleteFile = (file) => openDeleteModal(file, 'file')
+const confirmDeleteFolder = (folder) => {
+    openDeleteModal(folder, 'folder')
+}
+
+const deleteConfirmed = () => {
+    if (!deleteTarget.value || !canConfirmDelete.value) return
+
+    const deleteRoute = deleteType.value === 'folder'
+        ? route('auth.folders.destroy', deleteTarget.value.id)
+        : route('auth.files.destroy', deleteTarget.value.id)
+
+    deleteProcessing.value = true
+    router.delete(deleteRoute, {
         preserveScroll: true,
         onFinish: () => {
-            showDeleteModal.value = false
-            folderToDelete.value = null
+            deleteProcessing.value = false
+            closeDeleteModal()
         },
     })
 }
@@ -365,13 +395,44 @@ const contextLabel = (file) => file.event?.title || file.team?.name || file.club
         </div>
     </AppLayout>
 
-    <Modal :show="showDeleteModal" max-width="md" @close="showDeleteModal = false">
-        <div class="space-y-4 text-primary">
-            <h2 class="text-lg font-bold">Ordner löschen</h2>
-            <p class="text-sm text-secondary">Der Ordner und seine Dateien werden entfernt.</p>
+    <Modal :show="showDeleteModal" max-width="md" @close="closeDeleteModal">
+        <div class="space-y-5 text-primary">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wide text-error">Endgültig löschen</p>
+                <h2 class="mt-1 text-lg font-bold">
+                    {{ deleteType === 'folder' ? 'Ordner löschen' : 'Datei löschen' }}
+                </h2>
+                <p class="mt-2 text-sm text-secondary">
+                    {{ deleteType === 'folder'
+                        ? 'Der Ordner und seine Dateien werden entfernt.'
+                        : 'Diese Datei wird entfernt.' }}
+                </p>
+            </div>
+
+            <div class="rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-primary">
+                <span class="font-semibold">{{ deleteTargetName }}</span>
+            </div>
+
+            <label class="block text-sm">
+                <span class="mb-1 block text-secondary">Schreibe <span class="font-semibold text-primary">löschen</span>, um fortzufahren.</span>
+                <input
+                    v-model="deleteConfirmation"
+                    class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
+                    autocomplete="off"
+                    placeholder="löschen"
+                    @keyup.enter="deleteConfirmed"
+                >
+            </label>
+
             <div class="flex gap-3">
-                <button class="flex-1 rounded-lg bg-gray-500 py-2 text-white hover:bg-gray-600" @click="showDeleteModal = false">Abbrechen</button>
-                <button class="flex-1 rounded-lg bg-red-500 py-2 text-white hover:bg-red-600" @click="deleteFolderConfirmed">Löschen</button>
+                <button class="flex-1 rounded-lg border border-border px-4 py-2 text-primary hover:bg-inputBg" @click="closeDeleteModal">Abbrechen</button>
+                <button
+                    class="flex-1 rounded-lg bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    :disabled="!canConfirmDelete || deleteProcessing"
+                    @click="deleteConfirmed"
+                >
+                    {{ deleteProcessing ? 'Lösche...' : 'Endgültig löschen' }}
+                </button>
             </div>
         </div>
     </Modal>
