@@ -150,6 +150,34 @@ const providerLabel = (provider) => ({
     bank_transfer: 'Ueberweisung',
 })[provider] || provider
 
+const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+
+const submitBrowserCheckout = (plan) => {
+    const form = document.createElement('form')
+    form.method = 'POST'
+    form.action = route('subscription-checkout.store', plan.id)
+    form.style.display = 'none'
+
+    const fields = {
+        _token: csrfToken(),
+        provider: checkoutModal.value.provider,
+        billing_interval: 'monthly',
+        coupon_code: couponCode.value,
+        accepted_terms: checkoutModal.value.accepted ? '1' : '',
+    }
+
+    Object.entries(fields).forEach(([name, value]) => {
+        const input = document.createElement('input')
+        input.type = 'hidden'
+        input.name = name
+        input.value = value
+        form.appendChild(input)
+    })
+
+    document.body.appendChild(form)
+    form.submit()
+}
+
 const startCheckout = async () => {
     const plan = checkoutModal.value.plan
 
@@ -157,6 +185,11 @@ const startCheckout = async () => {
 
     checkoutModal.value.processing = true
     checkoutModal.value.error = ''
+
+    if (['paypal', 'stripe'].includes(checkoutModal.value.provider)) {
+        submitBrowserCheckout(plan)
+        return
+    }
 
     try {
         const response = await axios.post(route('subscription-checkout.store', plan.id), {
