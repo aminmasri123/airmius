@@ -25,12 +25,6 @@ Route::post('/webhooks/stripe', [SubscriptionCheckoutController::class, 'stripeW
 Route::post('/webhooks/paypal', [SubscriptionCheckoutController::class, 'paypalWebhook'])
     ->name('webhooks.paypal');
 
-Route::get('/csrf-token', function (Request $request) {
-    return response()->json([
-        'csrf_token' => csrf_token(),
-    ]);
-})->name('csrf-token');
-
 Route::post('/webhooks/commerce/stripe', [CommerceCheckoutController::class, 'stripeWebhook'])
     ->name('webhooks.commerce.stripe');
 Route::post('/webhooks/commerce/paypal', [CommerceCheckoutController::class, 'paypalWebhook'])
@@ -49,6 +43,14 @@ Route::get('/checkout/guest-commerce/{order}/{token}/bank-transfer', [CommerceCh
     ->name('commerce-checkout.guest.bank-transfer.show');
 
 Route::middleware(['auth:sanctum', config('jetstream.auth_session')])->group(function () {
+    Route::get('/checkout/csrf-token', function (Request $request) {
+        $request->session()->regenerateToken();
+
+        return response()->json([
+            'csrf_token' => csrf_token(),
+        ]);
+    })->name('checkout.csrf-token');
+
     Route::post('/user/deletion-code', [AccountDeletionController::class, 'sendCode'])
         ->name('current-user.deletion-code');
     Route::delete('/user', [AccountDeletionController::class, 'destroy'])

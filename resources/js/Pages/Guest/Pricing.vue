@@ -179,9 +179,18 @@ const csrfToken = () => {
     return tokenCookie ? decodeURIComponent(tokenCookie) : ''
 }
 
+const xsrfCookieToken = () => {
+    const tokenCookie = document.cookie
+        .split('; ')
+        .find((cookie) => cookie.startsWith('XSRF-TOKEN='))
+        ?.split('=')[1]
+
+    return tokenCookie ? decodeURIComponent(tokenCookie) : ''
+}
+
 const refreshCsrfToken = async () => {
     try {
-        const response = await axios.get('/csrf-token', {
+        const response = await axios.get(route('checkout.csrf-token'), {
             headers: {
                 Accept: 'application/json',
             },
@@ -202,6 +211,7 @@ const createCheckout = (plan, token) => axios.post(route('subscription-checkout.
     headers: {
         Accept: 'application/json',
         'X-CSRF-TOKEN': token,
+        'X-XSRF-TOKEN': xsrfCookieToken(),
         'X-Checkout-Mode': 'json',
     },
 })
