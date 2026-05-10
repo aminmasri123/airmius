@@ -150,7 +150,18 @@ const providerLabel = (provider) => ({
     bank_transfer: 'Ueberweisung',
 })[provider] || provider
 
-const csrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+const csrfToken = () => {
+    const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+
+    if (metaToken) return metaToken
+
+    const tokenCookie = document.cookie
+        .split('; ')
+        .find((cookie) => cookie.startsWith('XSRF-TOKEN='))
+        ?.split('=')[1]
+
+    return tokenCookie ? decodeURIComponent(tokenCookie) : ''
+}
 
 const submitBrowserCheckout = (plan) => {
     const form = document.createElement('form')
