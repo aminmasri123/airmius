@@ -188,9 +188,11 @@ const xsrfCookieToken = () => {
     return tokenCookie ? decodeURIComponent(tokenCookie) : ''
 }
 
+const checkoutStartPath = (plan) => `/checkout/subscriptions/${plan.id}/start`
+
 const refreshCsrfToken = async () => {
     try {
-        const response = await axios.get(route('checkout.csrf-token'), {
+        const response = await axios.get('/checkout/csrf-token', {
             headers: {
                 Accept: 'application/json',
             },
@@ -202,7 +204,7 @@ const refreshCsrfToken = async () => {
     }
 }
 
-const createCheckout = (plan, token) => axios.get(route('subscription-checkout.start', plan.id), {
+const createCheckout = (plan, token) => axios.get(checkoutStartPath(plan), {
     params: {
         provider: checkoutModal.value.provider,
         billing_interval: 'monthly',
@@ -218,7 +220,7 @@ const createCheckout = (plan, token) => axios.get(route('subscription-checkout.s
 })
 
 const browserCheckoutUrl = (plan) => {
-    const url = new URL(route('subscription-checkout.start', plan.id), window.location.origin)
+    const url = new URL(checkoutStartPath(plan), window.location.origin)
 
     url.searchParams.set('provider', checkoutModal.value.provider)
     url.searchParams.set('billing_interval', 'monthly')
