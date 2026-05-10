@@ -292,6 +292,26 @@
     max-width: 100%;
   }
 
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+  }
+
+  main :where(p, li, dd, dt, blockquote, figcaption, h1, h2, h3, h4, h5, h6),
+  .prose :where(p, li, a, code, pre) {
+    overflow-wrap: anywhere;
+  }
+
+  main :where(.flex, .grid) > * {
+    min-width: 0;
+  }
+
+  main :where(table) {
+    width: 100%;
+  }
+
   ::selection {
     background: color-mix(in srgb, var(--accent) 25%, transparent);
     color: var(--primary);
@@ -395,8 +415,33 @@
         border-radius: .75rem;
     }
 
+    main {
+        padding-inline: .75rem;
+    }
+
+    main :where(input, select, textarea) {
+        min-height: 2.75rem;
+        font-size: 1rem;
+    }
+
+    main :where(button, a[role="button"], .btn) {
+        min-height: 2.5rem;
+    }
+
     table {
+        display: block;
+        max-width: 100%;
+        overflow-x: auto;
+        white-space: nowrap;
         font-size: .8125rem;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    thead,
+    tbody,
+    tr {
+        width: max-content;
+        min-width: 100%;
     }
 }
 
