@@ -151,6 +151,8 @@ const providerLabel = (provider) => ({
 })[provider] || provider
 
 const csrfToken = () => {
+    if (page.props.csrf_token) return page.props.csrf_token
+
     const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
 
     if (metaToken) return metaToken
