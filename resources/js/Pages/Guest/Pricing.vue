@@ -202,12 +202,13 @@ const refreshCsrfToken = async () => {
     }
 }
 
-const createCheckout = (plan, token) => axios.post(route('subscription-checkout.store', plan.id), {
-    provider: checkoutModal.value.provider,
-    billing_interval: 'monthly',
-    coupon_code: couponCode.value,
-    accepted_terms: checkoutModal.value.accepted,
-}, {
+const createCheckout = (plan, token) => axios.get(route('subscription-checkout.start', plan.id), {
+    params: {
+        provider: checkoutModal.value.provider,
+        billing_interval: 'monthly',
+        coupon_code: couponCode.value,
+        accepted_terms: checkoutModal.value.accepted ? '1' : '',
+    },
     headers: {
         Accept: 'application/json',
         'X-CSRF-TOKEN': token,

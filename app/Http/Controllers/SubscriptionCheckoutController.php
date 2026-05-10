@@ -24,6 +24,11 @@ use Inertia\Inertia;
 
 class SubscriptionCheckoutController extends Controller
 {
+    public function start(Request $request, SubscriptionPlan $subscriptionPlan, VisitorCountry $visitorCountry)
+    {
+        return $this->store($request, $subscriptionPlan, $visitorCountry);
+    }
+
     public function store(Request $request, SubscriptionPlan $subscriptionPlan, VisitorCountry $visitorCountry)
     {
         $this->ensureSameOriginCheckout($request);
