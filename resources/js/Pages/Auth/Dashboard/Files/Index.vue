@@ -23,6 +23,7 @@ const deleteTarget = ref(null)
 const deleteType = ref('file')
 const deleteConfirmation = ref('')
 const deleteProcessing = ref(false)
+const fileInput = ref(null)
 const itemToShare = ref(null)
 const shareType = ref('file')
 const friendSearch = ref('')
@@ -77,6 +78,7 @@ const scopeOptions = [
 const activeFiles = computed(() => props.files)
 const activeFolders = computed(() => props.folders)
 const storageUsage = computed(() => page.props.auth?.user?.storage_usage || null)
+const uploadFileName = computed(() => uploadForm.file?.name || 'Datei wählen')
 const deleteTargetName = computed(() => {
     if (!deleteTarget.value) return ''
 
@@ -128,8 +130,21 @@ const submitUpload = () => {
     uploadForm.post(route('auth.files.store'), {
         forceFormData: true,
         preserveScroll: true,
-        onSuccess: () => uploadForm.reset('file'),
+        onSuccess: () => {
+            uploadForm.reset('file')
+            if (fileInput.value) {
+                fileInput.value.value = ''
+            }
+        },
     })
+}
+
+const selectUploadFile = () => {
+    fileInput.value?.click()
+}
+
+const setUploadFile = (event) => {
+    uploadForm.file = event.target.files?.[0] || null
 }
 
 const createFolder = () => {
@@ -255,19 +270,19 @@ const contextLabel = (file) => file.event?.title || file.team?.name || file.club
     <AppLayout title="Dateien">
         <Head title="Dateien" />
 
-        <div class="space-y-4">
-            <div class="flex flex-col gap-4 rounded-lg border border-border bg-card p-4 lg:flex-row lg:items-end">
-                <div class="grid flex-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="space-y-3">
+            <div class="rounded-lg border border-border bg-card p-3">
+                <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                     <label class="text-sm">
                         <span class="mb-1 block text-secondary">Bereich</span>
-                        <select v-model="scopeForm.scope" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary" @change="changeScope">
+                        <select v-model="scopeForm.scope" class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-primary" @change="changeScope">
                             <option v-for="option in scopeOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
                         </select>
                     </label>
 
                     <label v-if="scopeForm.scope === 'club'" class="text-sm">
                         <span class="mb-1 block text-secondary">Verein</span>
-                        <select v-model="scopeForm.club_id" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary" @change="changeScope">
+                        <select v-model="scopeForm.club_id" class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-primary" @change="changeScope">
                             <option :value="null">Auswählen</option>
                             <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
                         </select>
@@ -275,7 +290,7 @@ const contextLabel = (file) => file.event?.title || file.team?.name || file.club
 
                     <label v-if="scopeForm.scope === 'team'" class="text-sm">
                         <span class="mb-1 block text-secondary">Team</span>
-                        <select v-model="scopeForm.team_id" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary" @change="changeScope">
+                        <select v-model="scopeForm.team_id" class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-primary" @change="changeScope">
                             <option :value="null">Auswählen</option>
                             <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
                         </select>
@@ -283,7 +298,7 @@ const contextLabel = (file) => file.event?.title || file.team?.name || file.club
 
                     <label v-if="scopeForm.scope === 'event'" class="text-sm">
                         <span class="mb-1 block text-secondary">Event</span>
-                        <select v-model="scopeForm.event_id" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary" @change="changeScope">
+                        <select v-model="scopeForm.event_id" class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-primary" @change="changeScope">
                             <option :value="null">Auswählen</option>
                             <option v-for="event in events" :key="event.id" :value="event.id">{{ event.title }}</option>
                         </select>
@@ -291,30 +306,30 @@ const contextLabel = (file) => file.event?.title || file.team?.name || file.club
                 </div>
             </div>
 
-            <div class="grid gap-4 lg:grid-cols-[1fr_340px]">
-                <section class="rounded-lg border border-border bg-card">
-                    <div class="flex flex-col gap-3 border-b border-border p-4 md:flex-row md:items-center md:justify-between">
+            <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_260px] 2xl:grid-cols-[minmax(0,1fr)_300px]">
+                <section class="min-w-0 rounded-lg border border-border bg-card">
+                    <div class="flex flex-col gap-2 border-b border-border p-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <h1 class="text-lg font-semibold text-primary">{{ currentFolder?.name || 'Dateimanager' }}</h1>
                             <p class="text-sm text-secondary">{{ activeFolders.length }} Ordner · {{ activeFiles.length }} Dateien</p>
                         </div>
-                        <button v-if="currentFolder" class="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-inputBg" @click="openFolder(currentFolder.parent)">
+                        <button v-if="currentFolder" class="inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-sm text-primary hover:bg-inputBg" @click="openFolder(currentFolder.parent)">
                             <i class="las la-arrow-left"></i>
                             Zurück
                         </button>
                     </div>
 
-                    <div class="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2 xl:grid-cols-3">
+                    <div class="grid grid-cols-1 gap-2 p-3 lg:grid-cols-2 2xl:grid-cols-3">
                         <button v-for="folder in activeFolders" :key="folder.id" class="group flex items-center gap-3 rounded-lg border border-transparent p-3 text-left hover:border-border hover:bg-inputBg" @click="openFolder(folder)">
                             <i class="las la-folder text-3xl text-yellow-500"></i>
                             <div class="min-w-0 flex-1">
                                 <p class="truncate text-sm font-semibold text-primary">{{ folder.name }}</p>
-                                <p class="text-xs text-secondary">{{ folder.files_count || 0 }} Dateien</p>
+                                <p class="truncate whitespace-nowrap text-xs text-secondary">{{ folder.files_count || 0 }} Dateien</p>
                             </div>
-                            <span class="rounded-lg p-2 text-secondary opacity-0 group-hover:opacity-100" @click.stop="openShare(folder, 'folder')" title="Freigeben">
+                            <span class="shrink-0 rounded-lg p-2 text-secondary opacity-0 group-hover:opacity-100" @click.stop="openShare(folder, 'folder')" title="Freigeben">
                                 <i class="las la-share-alt"></i>
                             </span>
-                            <span class="rounded-lg p-2 text-secondary opacity-0 group-hover:opacity-100" @click.stop="openRename(folder, 'folder')" title="Umbenennen">
+                            <span class="shrink-0 rounded-lg p-2 text-secondary opacity-0 group-hover:opacity-100" @click.stop="openRename(folder, 'folder')" title="Umbenennen">
                                 <i class="las la-pen"></i>
                             </span>
                             <span class="rounded-lg p-2 text-secondary opacity-0 group-hover:opacity-100" @click.stop="confirmDeleteFolder(folder)" title="Löschen">
@@ -342,24 +357,24 @@ const contextLabel = (file) => file.event?.title || file.team?.name || file.club
                             </button>
                         </div>
 
-                        <div v-if="!activeFiles.length && !activeFolders.length" class="col-span-full p-8 text-center text-sm text-secondary">
+                        <div v-if="!activeFiles.length && !activeFolders.length" class="col-span-full flex min-h-40 items-center justify-center p-4 text-center text-sm text-secondary">
                             Dieser Ordner ist leer.
                         </div>
                     </div>
                 </section>
 
-                <aside class="space-y-4">
-                    <section v-if="storageUsage" class="rounded-lg border border-border bg-card p-4">
-                        <div class="flex items-start justify-between gap-3">
+                <aside class="min-w-0 space-y-3">
+                    <section v-if="storageUsage" class="rounded-lg border border-border bg-card p-3">
+                        <div class="flex items-center justify-between gap-3">
                             <div>
                                 <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Speicher</h2>
-                                <p class="mt-1 text-lg font-bold text-primary">{{ formatStorage(storageUsage.remaining_bytes) }} frei</p>
+                                <p class="mt-0.5 text-base font-bold text-primary">{{ formatStorage(storageUsage.remaining_bytes) }} frei</p>
                             </div>
-                            <span class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-primary">
+                            <span class="shrink-0 rounded-full border border-border px-2 py-1 text-xs font-semibold text-primary">
                                 {{ storageUsage.plan_name }}
                             </span>
                         </div>
-                        <div class="mt-4 h-2 rounded-full bg-inputBg">
+                        <div class="mt-3 h-2 rounded-full bg-inputBg">
                             <div
                                 class="h-2 rounded-full bg-buttonPrimary"
                                 :style="{ width: `${storageUsage.used_percent}%` }"
@@ -371,22 +386,28 @@ const contextLabel = (file) => file.event?.title || file.team?.name || file.club
                         </div>
                     </section>
 
-                    <form class="rounded-lg border border-border bg-card p-4" @submit.prevent="submitUpload">
-                        <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Upload</h2>
-                        <p class="mt-1 text-xs text-secondary">Ziel: {{ currentFolder?.name || 'Hauptebene' }}</p>
-                        <input class="mt-3 block w-full text-sm text-secondary" type="file" @change="uploadForm.file = $event.target.files?.[0] || null">
+                    <form class="rounded-lg border border-border bg-card p-3" @submit.prevent="submitUpload">
+                        <div class="flex items-center justify-between gap-2">
+                            <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Upload</h2>
+                            <span class="truncate text-xs text-secondary">{{ currentFolder?.name || 'Hauptebene' }}</span>
+                        </div>
+                        <input ref="fileInput" class="hidden" type="file" @change="setUploadFile">
+                        <button type="button" class="mt-3 flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-border bg-inputBg px-3 text-left text-sm text-primary hover:bg-muted" @click="selectUploadFile">
+                            <span class="truncate">{{ uploadFileName }}</span>
+                            <i class="las la-paperclip text-lg text-secondary"></i>
+                        </button>
                         <p v-if="uploadForm.errors.file || uploadForm.errors.general" class="mt-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs font-semibold text-error">
                             {{ uploadForm.errors.file || uploadForm.errors.general }}
                         </p>
-                        <button :disabled="uploadForm.processing || !uploadForm.file" class="mt-3 w-full rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50">
+                        <button :disabled="uploadForm.processing || !uploadForm.file" class="mt-2 h-10 w-full rounded-lg bg-buttonPrimary px-4 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50">
                             Hochladen
                         </button>
                     </form>
 
-                    <form class="rounded-lg border border-border bg-card p-4" @submit.prevent="createFolder">
+                    <form class="rounded-lg border border-border bg-card p-3" @submit.prevent="createFolder">
                         <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Neuer Ordner</h2>
-                        <input v-model="folderForm.name" class="mt-3 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Ordnername">
-                        <button :disabled="folderForm.processing || !folderForm.name.trim()" class="mt-3 w-full rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50">
+                        <input v-model="folderForm.name" class="mt-3 h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary" placeholder="Ordnername">
+                        <button :disabled="folderForm.processing || !folderForm.name.trim()" class="mt-2 h-10 w-full rounded-lg bg-buttonPrimary px-4 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50">
                             Erstellen
                         </button>
                     </form>

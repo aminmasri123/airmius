@@ -33,9 +33,11 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 
 class CommerceCheckoutController extends Controller
 {
@@ -106,6 +108,14 @@ class CommerceCheckoutController extends Controller
             'myCampaigns' => AdCampaign::query()
                 ->where('user_id', $request->user()->id)
                 ->with(['creatives', 'stats' => fn ($query) => $query->latest('date')->limit(30)])
+                ->withExists([
+                    'commerceOrders as payment_completed' => fn ($query) => $query
+                        ->where('type', 'ads_campaign')
+                        ->where('status', 'completed'),
+                    'commerceOrders as payment_pending' => fn ($query) => $query
+                        ->where('type', 'ads_campaign')
+                        ->whereIn('status', ['pending', 'awaiting_transfer']),
+                ])
                 ->latest('id')
                 ->limit(20)
                 ->get(),
@@ -630,7 +640,33 @@ class CommerceCheckoutController extends Controller
             'daily_budget_cents' => ['nullable', 'integer', 'min:0'],
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+            'provider' => ['required', Rule::in(['stripe', 'paypal', 'bank_transfer'])],
+            'accepted_terms' => ['accepted'],
+            'client_reference' => ['nullable', 'string', 'max:120'],
         ]);
+
+        if (! empty($data['club_id'])) {
+            Club::query()->visibleTo($request->user())->findOrFail($data['club_id']);
+        }
+
+        $clientReference = $data['client_reference'] ?? null;
+        if ($clientReference) {
+            $existingOrder = CommerceOrder::query()
+                ->where('user_id', $request->user()->id)
+                ->where('type', 'ads_campaign')
+                ->where('payload->ads_client_reference', $clientReference)
+                ->whereIn('status', ['pending', 'awaiting_transfer', 'completed'])
+                ->latest('id')
+                ->first();
+
+            if ($existingOrder) {
+                if ($existingOrder->status === 'completed') {
+                    return redirect()->route('auth.commerce.index')->with('success', 'Diese Ads-Zahlung wurde bereits verarbeitet.');
+                }
+
+                return $this->startCheckout($existingOrder);
+            }
+        }
 
         $data['audience'] = [
             'locations' => $this->splitCampaignList($data['audience_locations'] ?? ''),
@@ -639,7 +675,8 @@ class CommerceCheckoutController extends Controller
             'age_max' => $data['audience_age_max'] ?? null,
         ];
         $creativeRows = $data['creatives'] ?? [];
-        unset($data['audience_locations'], $data['audience_interests'], $data['audience_age_min'], $data['audience_age_max'], $data['creative_image_upload'], $data['creatives']);
+        $provider = $data['provider'];
+        unset($data['audience_locations'], $data['audience_interests'], $data['audience_age_min'], $data['audience_age_max'], $data['creative_image_upload'], $data['creatives'], $data['provider'], $data['accepted_terms'], $data['client_reference']);
 
         if ($request->hasFile('creative_image_upload')) {
             $data['creative_image_path'] = $this->mediaOptimizer->store($request->file('creative_image_upload'), 'ads/creatives')['path'];
@@ -651,12 +688,97 @@ class CommerceCheckoutController extends Controller
             'user_id' => $request->user()->id,
             'daily_budget_cents' => (int) ($data['daily_budget_cents'] ?? 0),
             'billing_event' => 'impression',
-            'status' => 'pending_review',
+            'status' => 'pending_payment',
         ]);
 
         $this->syncAdCreatives($campaign, $creativeRows);
 
-        return back()->with('success', 'Kampagne wurde zur Freigabe eingereicht.');
+        $order = CommerceOrder::create([
+            'user_id' => $request->user()->id,
+            'club_id' => $campaign->club_id,
+            'orderable_type' => $campaign::class,
+            'orderable_id' => $campaign->id,
+            'type' => 'ads_campaign',
+            'provider' => $provider,
+            'item_gross_cents' => (int) $campaign->budget_cents,
+            'net_cents' => (int) $campaign->budget_cents,
+            'tax_cents' => 0,
+            'amount_cents' => (int) $campaign->budget_cents,
+            'currency' => 'EUR',
+            'status' => 'pending',
+            'payload' => [
+                'campaign_id' => $campaign->id,
+                'campaign_name' => $campaign->name,
+                'budget_cents' => (int) $campaign->budget_cents,
+                'ads_client_reference' => $clientReference,
+            ],
+        ]);
+
+        $order->items()->create([
+            'orderable_type' => $campaign::class,
+            'orderable_id' => $campaign->id,
+            'title' => 'Ads-Kampagne: '.$campaign->name,
+            'quantity' => 1,
+            'unit_gross_cents' => (int) $campaign->budget_cents,
+            'net_cents' => (int) $campaign->budget_cents,
+            'total_cents' => (int) $campaign->budget_cents,
+            'currency' => 'EUR',
+            'is_shippable' => false,
+        ]);
+
+        return $this->startCheckout($order);
+    }
+
+    public function updateOwnCampaignStatus(Request $request, AdCampaign $campaign)
+    {
+        $this->authorizeOwnCampaign($request, $campaign);
+
+        $data = $request->validate([
+            'status' => ['required', Rule::in(['draft', 'pending_review', 'active', 'paused'])],
+        ]);
+
+        if ($data['status'] === 'active') {
+            if ($campaign->status !== 'paused' || ! $campaign->reviewed_at || ! $this->campaignPaymentCompleted($campaign)) {
+                throw ValidationException::withMessages([
+                    'campaign_status' => 'Diese Ads-Kampagne kann erst nach Zahlung und Admin-Freigabe fortgesetzt werden.',
+                ]);
+            }
+        }
+
+        if ($data['status'] === 'pending_review' && ! $this->campaignPaymentCompleted($campaign)) {
+            throw ValidationException::withMessages([
+                'campaign_status' => 'Diese Ads-Kampagne kann erst nach Zahlung zur Pruefung eingereicht werden.',
+            ]);
+        }
+
+        $campaign->forceFill([
+            'status' => $data['status'],
+        ])->save();
+
+        return back()->with('success', 'Kampagnenstatus wurde aktualisiert.');
+    }
+
+    public function destroyOwnCampaign(Request $request, AdCampaign $campaign)
+    {
+        $this->authorizeOwnCampaign($request, $campaign);
+
+        $request->validate([
+            'confirmation' => ['required', 'in:delete'],
+        ]);
+
+        $paths = collect([$campaign->creative_image_path])
+            ->merge($campaign->creatives()->pluck('creative_image_path'))
+            ->filter()
+            ->unique()
+            ->values();
+
+        foreach ($paths as $path) {
+            Storage::disk(UploadStorage::disk())->delete($path);
+        }
+
+        $campaign->delete();
+
+        return back()->with('success', 'Ads-Kampagne wurde geloescht.');
     }
 
     public function storeWebsiteRequest(Request $request)
@@ -702,6 +824,12 @@ class CommerceCheckoutController extends Controller
         abort_unless($order->user_id === $request->user()->id, 403);
 
         $order->update(['status' => 'cancelled']);
+        if ($order->type === 'ads_campaign' && $order->orderable instanceof AdCampaign) {
+            $order->orderable->forceFill([
+                'status' => 'draft',
+                'review_note' => 'Zahlung wurde abgebrochen.',
+            ])->save();
+        }
 
         return redirect()->route('auth.commerce.index')->with('success', 'Bestellung wurde abgebrochen.');
     }
@@ -961,6 +1089,21 @@ class CommerceCheckoutController extends Controller
         $todaySpent = (int) ($this->todayAdStat($campaign)?->spent_cents ?? 0);
 
         return ($todaySpent + $cost) <= (int) $campaign->daily_budget_cents;
+    }
+
+    private function campaignPaymentCompleted(AdCampaign $campaign): bool
+    {
+        return CommerceOrder::query()
+            ->where('type', 'ads_campaign')
+            ->where('orderable_type', AdCampaign::class)
+            ->where('orderable_id', $campaign->id)
+            ->where('status', 'completed')
+            ->exists();
+    }
+
+    private function authorizeOwnCampaign(Request $request, AdCampaign $campaign): void
+    {
+        abort_unless($campaign->user_id === $request->user()->id, 403);
     }
 
     private function todayAdStat(AdCampaign $campaign): ?AdCampaignStat
@@ -1265,6 +1408,13 @@ class CommerceCheckoutController extends Controller
             });
         }
 
+        if ($order->type === 'ads_campaign' && $order->orderable instanceof AdCampaign) {
+            $order->orderable->forceFill([
+                'status' => 'pending_review',
+                'review_note' => null,
+            ])->save();
+        }
+
         $order->update([
             'status' => 'completed',
             'completed_at' => now(),
@@ -1316,6 +1466,10 @@ class CommerceCheckoutController extends Controller
             : $this->createPayPalCheckout($order);
 
         $order->update(['checkout_url' => $url]);
+
+        if (request()->header('X-Inertia')) {
+            return Inertia::location($url);
+        }
 
         return redirect()->away($url);
     }

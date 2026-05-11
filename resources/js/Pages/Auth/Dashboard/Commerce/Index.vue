@@ -2,6 +2,7 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
+import { majorToCents, moneyInputAttrs, transformMoneyFields } from '@/utils/currency'
 
 defineOptions({ layout: AppLayout })
 
@@ -25,11 +26,15 @@ const props = defineProps({
 const page = usePage()
 const selectedClubId = ref(props.clubs[0]?.id || '')
 const provider = ref('bank_transfer')
+const adProvider = ref('bank_transfer')
 const interval = ref('monthly')
 const acceptedTerms = ref(false)
+const adAcceptedTerms = ref(false)
 const issueModal = ref({ open: false, order: null, note: '', mode: 'issue' })
 const showCartCheckout = ref(false)
 const activeTab = ref('marketplace')
+const campaignActionError = ref('')
+const deleteCampaignModal = ref({ open: false, campaign: null, confirmation: '' })
 const productForm = useForm({
     club_id: '',
     title: '',
@@ -49,7 +54,7 @@ const productForm = useForm({
     stock_quantity: '',
     tax_class: 'standard',
     digital_delivery_note: '',
-    price_cents: 0,
+    price_cents: '',
 })
 const productAttributeRows = ref([{ name: '', values: [] }])
 const productVariantRows = ref([])
@@ -71,10 +76,13 @@ const campaignForm = useForm({
     audience_interests: '',
     audience_age_min: '',
     audience_age_max: '',
-    budget_cents: 0,
-    daily_budget_cents: 0,
+    budget_cents: '',
+    daily_budget_cents: '',
     starts_at: '',
     ends_at: '',
+    provider: 'bank_transfer',
+    accepted_terms: false,
+    client_reference: '',
 })
 const websiteForm = useForm({
     club_id: '',
@@ -134,6 +142,14 @@ const campaignCreativeRows = ref([
     { name: 'Variante B', headline: '', primary_text: '', description: '', target_url: '', cta_label: '', creative_image_url: '', weight: 100, is_active: true },
 ])
 
+const newClientReference = () => {
+    if (window.crypto?.randomUUID) {
+        return window.crypto.randomUUID()
+    }
+
+    return `ads-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
 const presetValuesFor = (name) => attributePresets.find((preset) => preset.name === name)?.values || []
 
 const normalizeAttributeRows = (rows) => rows
@@ -148,7 +164,7 @@ const normalizeAttributeRows = (rows) => rows
 const normalizeVariantRows = (rows) => rows
     .map((row) => ({
         sku: String(row.sku || '').trim(),
-        price_cents: row.price_cents === '' || row.price_cents === null ? null : Number(row.price_cents),
+        price_cents: row.price_cents === '' || row.price_cents === null ? null : majorToCents(row.price_cents),
         stock_quantity: row.stock_quantity === '' || row.stock_quantity === null ? null : Number(row.stock_quantity),
         image_url: String(row.image_url || '').trim(),
         attributes: Object.entries(row.attributes || {})
@@ -297,7 +313,9 @@ const storeProduct = () => {
     productForm.attribute_options = normalizeAttributeRows(productAttributeRows.value)
     productForm.variants = normalizeVariantRows(productVariantRows.value)
 
-    productForm.post(route('auth.commerce.products.store'), {
+    productForm
+        .transform((data) => transformMoneyFields(data, ['price_cents']))
+        .post(route('auth.commerce.products.store'), {
         preserveScroll: true,
         forceFormData: true,
         onSuccess: () => {
@@ -305,21 +323,71 @@ const storeProduct = () => {
             productAttributeRows.value = [{ name: '', values: [] }]
             productVariantRows.value = []
         },
-    })
+        })
 }
 
 const storeCampaign = () => {
-    campaignForm.creatives = normalizeCampaignCreatives()
+    if (campaignForm.processing) {
+        return
+    }
 
-    campaignForm.post(route('auth.commerce.campaigns.store'), {
+    campaignForm.creatives = normalizeCampaignCreatives()
+    campaignForm.provider = adProvider.value
+    campaignForm.accepted_terms = adAcceptedTerms.value
+    campaignForm.client_reference ||= newClientReference()
+    campaignActionError.value = ''
+
+    campaignForm
+        .transform((data) => transformMoneyFields(data, ['budget_cents', 'daily_budget_cents']))
+        .post(route('auth.commerce.campaigns.store'), {
         preserveScroll: true,
         forceFormData: true,
         onSuccess: () => {
             campaignForm.reset('name', 'headline', 'description', 'primary_text', 'target_url', 'creative_image_url', 'creative_image_upload', 'creatives', 'audience_locations', 'audience_interests', 'audience_age_min', 'audience_age_max', 'starts_at', 'ends_at')
+            campaignForm.client_reference = ''
             campaignCreativeRows.value = [
                 { name: 'Variante A', headline: '', primary_text: '', description: '', target_url: '', cta_label: '', creative_image_url: '', weight: 100, is_active: true },
                 { name: 'Variante B', headline: '', primary_text: '', description: '', target_url: '', cta_label: '', creative_image_url: '', weight: 100, is_active: true },
             ]
+        },
+        })
+}
+
+const updateOwnCampaignStatus = (campaign, status) => {
+    campaignActionError.value = ''
+
+    router.put(route('auth.commerce.campaigns.status.update', campaign.id), { status }, {
+        preserveScroll: true,
+        onError: (errors) => {
+            campaignActionError.value = errors.campaign_status || errors.status || 'Kampagne konnte nicht aktualisiert werden.'
+        },
+    })
+}
+
+const deleteOwnCampaign = (campaign) => {
+    campaignActionError.value = ''
+    deleteCampaignModal.value = { open: true, campaign, confirmation: '' }
+}
+
+const closeDeleteCampaignModal = () => {
+    deleteCampaignModal.value = { open: false, campaign: null, confirmation: '' }
+}
+
+const confirmDeleteOwnCampaign = () => {
+    const campaign = deleteCampaignModal.value.campaign
+
+    if (!campaign || deleteCampaignModal.value.confirmation !== 'delete') {
+        return
+    }
+
+    router.delete(route('auth.commerce.campaigns.destroy', campaign.id), {
+        preserveScroll: true,
+        data: {
+            confirmation: deleteCampaignModal.value.confirmation,
+        },
+        onSuccess: closeDeleteCampaignModal,
+        onError: (errors) => {
+            campaignActionError.value = errors.confirmation || errors.campaign_status || 'Kampagne konnte nicht geloescht werden.'
         },
     })
 }
@@ -632,7 +700,7 @@ const submitOrderRequest = () => {
                         <option value="reduced">Ermäßigt</option>
                         <option value="zero">Nullsatz</option>
                     </select>
-                    <input v-model="productForm.price_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis in Cent">
+                    <input v-model="productForm.price_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis in EUR, z. B. 10,99">
                     <label class="flex items-center gap-2 text-sm text-primary">
                         <input v-model="productForm.is_shippable" type="checkbox" class="rounded border-border bg-inputBg">
                         Versandpflichtig
@@ -686,7 +754,7 @@ const submitOrderRequest = () => {
                                     <option value="">{{ attribute.name }}</option>
                                     <option v-for="value in attribute.values" :key="value" :value="value">{{ value }}</option>
                                 </select>
-                                <input v-model="variant.price_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis Cent">
+                                <input v-model="variant.price_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis in EUR">
                                 <input v-model="variant.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bestand">
                                 <input v-model="variant.sku" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Artikelnummer">
                                 <input v-model="variant.image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL">
@@ -829,8 +897,8 @@ const submitOrderRequest = () => {
                         </div>
                     </div>
                     <div class="grid gap-3 sm:grid-cols-2">
-                        <input v-model="campaignForm.budget_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Gesamtbudget Cent">
-                        <input v-model="campaignForm.daily_budget_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Tagesbudget Cent">
+                        <input v-model="campaignForm.budget_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Gesamtbudget in EUR">
+                        <input v-model="campaignForm.daily_budget_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Tagesbudget in EUR">
                         <input v-model="campaignForm.starts_at" type="datetime-local" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                         <input v-model="campaignForm.ends_at" type="datetime-local" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                     </div>
@@ -841,7 +909,26 @@ const submitOrderRequest = () => {
                     <input v-model="campaignForm.audience_locations" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Regionen, z. B. Berlin, NRW">
                     <input v-model="campaignForm.audience_interests" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interessen, z. B. Fußball, Fitness">
                     <input v-model="campaignForm.cta_label" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="CTA, z. B. Jetzt ansehen">
-                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Kampagne speichern</button>
+                    <div class="rounded-lg border border-border bg-bg p-3">
+                        <label class="text-xs font-semibold uppercase text-secondary">Zahlungsart</label>
+                        <select v-model="adProvider" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <option value="bank_transfer">Ueberweisung</option>
+                            <option value="stripe">Stripe</option>
+                            <option value="paypal">PayPal</option>
+                        </select>
+                    </div>
+                    <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
+                        <input v-model="adAcceptedTerms" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                        <span>
+                            Ich akzeptiere AGB, Widerrufshinweise und nehme zur Kenntnis, dass die Kampagne erst nach Zahlung zur Pruefung eingereicht wird.
+                            <Link :href="route('terms.show')" class="text-air-blue underline">AGB</Link>
+                            <span> - </span>
+                            <Link :href="route('legal.withdrawal')" class="text-air-blue underline">Widerruf</Link>
+                        </span>
+                    </label>
+                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="campaignForm.processing">
+                        Zahlung starten
+                    </button>
                 </form>
                 <p class="mt-4 text-sm text-secondary">{{ myCampaigns.length }} eigene Kampagnen</p>
             </article>
@@ -850,6 +937,9 @@ const submitOrderRequest = () => {
                 <div class="border-b border-border p-5">
                     <h2 class="text-lg font-semibold text-primary">Meine Ads-Kampagnen</h2>
                     <p class="mt-1 text-sm text-secondary">Status, Impressionen, Klicks und CTR deiner vorbereiteten oder aktiven Kampagnen.</p>
+                    <div v-if="campaignActionError || page.props.errors?.campaign_status" class="mt-4 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+                        {{ campaignActionError || page.props.errors.campaign_status }}
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="min-w-full text-left text-sm">
@@ -861,6 +951,7 @@ const submitOrderRequest = () => {
                                 <th class="px-5 py-3">Klicks</th>
                                 <th class="px-5 py-3">CTR</th>
                                 <th class="px-5 py-3">Budget</th>
+                                <th class="px-5 py-3 text-right">Aktionen</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border">
@@ -871,14 +962,61 @@ const submitOrderRequest = () => {
                                     <p class="text-xs text-secondary">{{ campaign.target_url || '-' }}</p>
                                     <p class="text-xs text-secondary">{{ campaign.placement }} · {{ campaign.creative_format }}</p>
                                 </td>
-                                <td class="px-5 py-3 text-secondary">{{ campaign.status }}</td>
+                                <td class="px-5 py-3">
+                                    <p class="text-secondary">{{ campaign.status }}</p>
+                                    <p v-if="campaign.payment_pending" class="mt-1 text-xs font-semibold text-warning">Zahlung offen</p>
+                                    <p v-else-if="campaign.payment_completed" class="mt-1 text-xs font-semibold text-success">Bezahlt</p>
+                                </td>
                                 <td class="px-5 py-3 text-secondary">{{ campaign.impressions || 0 }}</td>
                                 <td class="px-5 py-3 text-secondary">{{ campaign.clicks || 0 }}</td>
                                 <td class="px-5 py-3 text-secondary">{{ formatPercent(ctr(campaign.clicks, campaign.impressions)) }}</td>
                                 <td class="px-5 py-3 text-secondary">{{ formatMoney(campaign.budget_cents) }}</td>
+                                <td class="px-5 py-3 text-right">
+                                    <div class="flex flex-wrap justify-end gap-2">
+                                        <button
+                                            v-if="['active', 'pending_review'].includes(campaign.status)"
+                                            type="button"
+                                            class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary"
+                                            @click="updateOwnCampaignStatus(campaign, 'paused')"
+                                        >
+                                            Pausieren
+                                        </button>
+                                        <button
+                                            v-if="campaign.status === 'paused' && campaign.payment_completed && campaign.reviewed_at"
+                                            type="button"
+                                            class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary"
+                                            @click="updateOwnCampaignStatus(campaign, 'active')"
+                                        >
+                                            Fortsetzen
+                                        </button>
+                                        <button
+                                            v-if="campaign.status === 'paused' && campaign.payment_completed && !campaign.reviewed_at"
+                                            type="button"
+                                            class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary"
+                                            @click="updateOwnCampaignStatus(campaign, 'pending_review')"
+                                        >
+                                            Zur Pruefung
+                                        </button>
+                                        <button
+                                            v-if="['pending_review', 'paused'].includes(campaign.status)"
+                                            type="button"
+                                            class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary"
+                                            @click="updateOwnCampaignStatus(campaign, 'draft')"
+                                        >
+                                            Zurueckziehen
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="rounded-lg border border-danger/40 px-3 py-2 text-xs font-semibold text-danger"
+                                            @click="deleteOwnCampaign(campaign)"
+                                        >
+                                            Loeschen
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
                             <tr v-if="campaign.creatives?.length">
-                                <td colspan="6" class="bg-bg px-5 py-3">
+                                <td colspan="7" class="bg-bg px-5 py-3">
                                     <div class="grid gap-2 md:grid-cols-2">
                                         <div v-for="creative in campaign.creatives" :key="creative.id" class="rounded-lg border border-border bg-card p-3">
                                             <div class="flex items-start justify-between gap-3">
@@ -981,6 +1119,42 @@ const submitOrderRequest = () => {
                 <div class="mt-5 flex justify-end gap-3">
                     <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="closeIssueModal">Abbrechen</button>
                     <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="submitOrderRequest">Senden</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="deleteCampaignModal.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+            <div class="w-full max-w-lg rounded-xl border border-danger/30 bg-card p-5 shadow-2xl">
+                <h2 class="text-lg font-semibold text-primary">Ads-Kampagne loeschen</h2>
+                <p class="mt-2 text-sm text-secondary">
+                    Diese Kampagne wird dauerhaft geloescht:
+                    <span class="font-semibold text-primary">{{ deleteCampaignModal.campaign?.headline || deleteCampaignModal.campaign?.name }}</span>
+                </p>
+                <p class="mt-4 text-sm text-secondary">
+                    Bitte gib <strong class="text-primary">delete</strong> ein, um die Loeschung zu bestaetigen.
+                </p>
+                <input
+                    v-model="deleteCampaignModal.confirmation"
+                    class="mt-3 w-full rounded-lg border-border bg-inputBg text-sm text-primary"
+                    placeholder="delete"
+                    autocomplete="off"
+                >
+                <div class="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <button
+                        type="button"
+                        class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary"
+                        @click="closeDeleteCampaignModal"
+                    >
+                        Abbrechen
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-lg bg-danger px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        :disabled="deleteCampaignModal.confirmation !== 'delete'"
+                        @click="confirmDeleteOwnCampaign"
+                    >
+                        Endgueltig loeschen
+                    </button>
                 </div>
             </div>
         </div>

@@ -72,8 +72,16 @@ class FileController extends Controller
                 'event_id' => $scope['event_id'] ?? null,
                 'folder_id' => $currentFolder?->id,
             ],
-            'clubs' => Club::query()->visibleTo(auth()->user())->select(['id', 'name'])->orderBy('name')->get(),
-            'teams' => Team::query()->visibleTo(auth()->user())->select(['id', 'club_id', 'name'])->orderBy('name')->get(),
+            'clubs' => Club::query()
+                ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
+                ->select(['id', 'name'])
+                ->orderBy('name')
+                ->get(),
+            'teams' => Team::query()
+                ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
+                ->select(['id', 'club_id', 'name'])
+                ->orderBy('name')
+                ->get(),
             'users' => $request->user()
                 ->friendships()
                 ->with('friend:id,name,email')
@@ -257,7 +265,8 @@ class FileController extends Controller
 
     private function clubScope($clubId = null): array
     {
-        $query = Club::visibleTo(auth()->user());
+        $query = Club::query()
+            ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()));
         $club = $clubId ? $query->findOrFail($clubId) : $query->orderBy('name')->firstOrFail();
 
         return ['club_id' => $club->id, 'team_id' => null, 'event_id' => null];
@@ -265,7 +274,8 @@ class FileController extends Controller
 
     private function teamScope($teamId = null): array
     {
-        $query = Team::visibleTo(auth()->user());
+        $query = Team::query()
+            ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()));
         $team = $teamId ? $query->findOrFail($teamId) : $query->orderBy('name')->firstOrFail();
 
         return ['club_id' => $team->club_id, 'team_id' => $team->id, 'event_id' => null];
@@ -291,7 +301,9 @@ class FileController extends Controller
     private function targetScope(string $targetType, int $targetId): array
     {
         if ($targetType === 'team') {
-            $team = Team::visibleTo(auth()->user())->findOrFail($targetId);
+            $team = Team::query()
+                ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()))
+                ->findOrFail($targetId);
 
             return [
                 'user_id' => auth()->id(),
@@ -302,7 +314,9 @@ class FileController extends Controller
         }
 
         if ($targetType === 'club') {
-            $club = Club::visibleTo(auth()->user())->findOrFail($targetId);
+            $club = Club::query()
+                ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()))
+                ->findOrFail($targetId);
 
             return [
                 'user_id' => auth()->id(),

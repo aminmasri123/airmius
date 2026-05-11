@@ -2,6 +2,7 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
+import { centsToMajor, moneyInputAttrs, transformMoneyFields } from '@/utils/currency'
 
 defineOptions({ layout: AppLayout })
 
@@ -92,8 +93,8 @@ const formForPlan = (plan) => {
     planForms.value[plan.id] ??= useForm({
         target_actor: plan.target_actor || 'verein',
         description: plan.description || '',
-        monthly_price_cents: plan.monthly_price_cents,
-        yearly_price_cents: plan.yearly_price_cents,
+        monthly_price_cents: centsToMajor(plan.monthly_price_cents),
+        yearly_price_cents: centsToMajor(plan.yearly_price_cents),
         member_limit: plan.member_limit || '',
         team_limit: plan.team_limit || '',
         storage_gb: plan.storage_gb || 1,
@@ -106,8 +107,8 @@ const formForPlan = (plan) => {
         country_prices: (plan.country_prices || []).map((price) => ({
             country_code: price.country_code || 'DE',
             currency: price.currency || plan.currency || 'EUR',
-            monthly_price_cents: price.monthly_price_cents ?? plan.monthly_price_cents,
-            yearly_price_cents: price.yearly_price_cents ?? plan.yearly_price_cents,
+            monthly_price_cents: centsToMajor(price.monthly_price_cents ?? plan.monthly_price_cents),
+            yearly_price_cents: centsToMajor(price.yearly_price_cents ?? plan.yearly_price_cents),
             is_active: Boolean(price.is_active),
         })),
     })
@@ -119,8 +120,8 @@ const addCountryPrice = (plan) => {
     formForPlan(plan).country_prices.push({
         country_code: 'CH',
         currency: 'CHF',
-        monthly_price_cents: plan.monthly_price_cents,
-        yearly_price_cents: plan.yearly_price_cents,
+        monthly_price_cents: centsToMajor(plan.monthly_price_cents),
+        yearly_price_cents: centsToMajor(plan.yearly_price_cents),
         is_active: true,
     })
 }
@@ -155,12 +156,17 @@ const formForUserSubscription = (subscription) => {
 }
 
 const savePlan = (plan) => {
-    formForPlan(plan).put(route('admin.subscription-plans.update', plan.id), {
+    formForPlan(plan)
+        .transform((data) => ({
+            ...transformMoneyFields(data, ['monthly_price_cents', 'yearly_price_cents']),
+            country_prices: (data.country_prices || []).map((price) => transformMoneyFields(price, ['monthly_price_cents', 'yearly_price_cents'])),
+        }))
+        .put(route('admin.subscription-plans.update', plan.id), {
         preserveScroll: true,
         onSuccess: () => {
             editingPlanId.value = null
         },
-    })
+        })
 }
 
 const saveClub = (club) => {
@@ -355,12 +361,12 @@ const markTransferPaid = (checkout) => {
 
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Monat Cent</label>
-                            <input v-model="formForPlan(plan).monthly_price_cents" type="number" min="0" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <label class="text-xs font-semibold uppercase text-secondary">Monat</label>
+                            <input v-model="formForPlan(plan).monthly_price_cents" v-bind="moneyInputAttrs" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="10,99">
                         </div>
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Jahr Cent</label>
-                            <input v-model="formForPlan(plan).yearly_price_cents" type="number" min="0" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <label class="text-xs font-semibold uppercase text-secondary">Jahr</label>
+                            <input v-model="formForPlan(plan).yearly_price_cents" v-bind="moneyInputAttrs" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="99,00">
                         </div>
                         <div>
                             <label class="text-xs font-semibold uppercase text-secondary">Mitglieder</label>
@@ -422,8 +428,8 @@ const markTransferPaid = (checkout) => {
                             >
                                 <input v-model="price.country_code" maxlength="2" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="DE">
                                 <input v-model="price.currency" maxlength="3" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="EUR">
-                                <input v-model="price.monthly_price_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Monat Cent">
-                                <input v-model="price.yearly_price_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Jahr Cent">
+                                <input v-model="price.monthly_price_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Monat">
+                                <input v-model="price.yearly_price_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Jahr">
                                 <div class="flex items-center gap-2">
                                     <label class="flex items-center gap-1 text-xs text-primary">
                                         <input v-model="price.is_active" type="checkbox" class="rounded border-border bg-inputBg">

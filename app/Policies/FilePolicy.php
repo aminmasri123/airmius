@@ -10,6 +10,11 @@ use Illuminate\Support\Facades\DB;
 
 class FilePolicy extends BasePolicy
 {
+    public function before($user, $ability)
+    {
+        return null;
+    }
+
     public function viewAny(User $user)
     {
         return $user->can('file.view')
@@ -19,14 +24,15 @@ class FilePolicy extends BasePolicy
 
     public function view(User $user, File $file)
     {
-        return $file->user_id === $user->id
+        return $this->ownsPersonalFile($user, $file)
             || $this->canViewViaVisibleChatMessage($user, $file)
             || $this->canAccessScope($user, $file);
     }
 
     public function upload(User $user)
     {
-        return $user->can('file.upload')
+        return $user->can('file.view')
+            || $user->can('file.upload')
             || $this->isClubAdmin($user)
             || $this->isCoach($user)
             || $this->hasRole($user, ['media_manager']);
@@ -34,17 +40,22 @@ class FilePolicy extends BasePolicy
 
     public function delete(User $user, File $file)
     {
-        return $file->user_id === $user->id
-            || ($user->can('file.delete') && $this->canAccessScope($user, $file))
-            || $this->isClubAdmin($user);
+        return $this->ownsPersonalFile($user, $file)
+            || ($user->can('file.delete') && $this->canAccessScope($user, $file));
     }
 
     public function update(User $user, File $file)
     {
+        return $this->ownsPersonalFile($user, $file)
+            || ($user->can('file.upload') && $this->canAccessScope($user, $file));
+    }
+
+    private function ownsPersonalFile(User $user, File $file): bool
+    {
         return $file->user_id === $user->id
-            || ($user->can('file.upload') && $this->canAccessScope($user, $file))
-            || $this->isClubAdmin($user)
-            || $this->isCoach($user);
+            && ! $file->club_id
+            && ! $file->team_id
+            && ! $file->event_id;
     }
 
     private function canAccessScope(User $user, File $file): bool

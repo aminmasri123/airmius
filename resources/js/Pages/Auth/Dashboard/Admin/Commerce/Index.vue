@@ -2,6 +2,7 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
+import { centsToMajor, majorToCents, moneyInputAttrs, transformMoneyFields } from '@/utils/currency'
 
 defineOptions({ layout: AppLayout })
 
@@ -29,6 +30,7 @@ const props = defineProps({
 
 const page = usePage()
 const activeTab = ref('marketplace')
+const campaignStatusError = ref('')
 
 const couponForm = useForm({
     code: '',
@@ -46,8 +48,8 @@ const addonForm = useForm({
     slug: '',
     name: '',
     description: '',
-    monthly_price_cents: 0,
-    yearly_price_cents: 0,
+    monthly_price_cents: '',
+    yearly_price_cents: '',
     target_actor: 'verein',
     features: [],
     is_active: true,
@@ -74,7 +76,7 @@ const productForm = useForm({
     return_policy_type: 'standard',
     return_window_days: 14,
     digital_delivery_note: '',
-    price_cents: 0,
+    price_cents: '',
     currency: 'EUR',
     status: 'draft',
     commission_percent: 10,
@@ -108,20 +110,20 @@ const commerceSettingsForm = useForm({
     enable_oss: props.commerceSettings.enable_oss ?? true,
     export_vat_mode: props.commerceSettings.export_vat_mode || 'zero',
     reverse_charge_enabled: props.commerceSettings.reverse_charge_enabled ?? true,
-    ads_cpm_cents: props.commerceSettings.ads_cpm_cents ?? 500,
-    ads_cpc_cents: props.commerceSettings.ads_cpc_cents ?? 30,
-    ads_cpl_cents: props.commerceSettings.ads_cpl_cents ?? 200,
+    ads_cpm_cents: centsToMajor(props.commerceSettings.ads_cpm_cents ?? 500),
+    ads_cpc_cents: centsToMajor(props.commerceSettings.ads_cpc_cents ?? 30),
+    ads_cpl_cents: centsToMajor(props.commerceSettings.ads_cpl_cents ?? 200),
     ads_cpa_percent: props.commerceSettings.ads_cpa_percent ?? 10,
-    ads_min_budget_cents: props.commerceSettings.ads_min_budget_cents ?? 1000,
+    ads_min_budget_cents: centsToMajor(props.commerceSettings.ads_min_budget_cents ?? 1000),
 })
 
 const shippingRateForm = useForm({
     name: 'Deutschland Standardversand',
     country_code: 'DE',
     postal_code_prefix: '',
-    amount_cents: 490,
+    amount_cents: '4,90',
     currency: 'EUR',
-    free_from_cents: 10000,
+    free_from_cents: '100,00',
     is_active: true,
     priority: 10,
 })
@@ -143,9 +145,9 @@ const campaignForm = useForm({
     audience_interests: '',
     audience_age_min: '',
     audience_age_max: '',
-    budget_cents: 0,
-    daily_budget_cents: 0,
-    spent_cents: 0,
+    budget_cents: '',
+    daily_budget_cents: '',
+    spent_cents: '',
     impressions: 0,
     clicks: 0,
     status: 'draft',
@@ -194,7 +196,7 @@ const editProductForm = useForm({
     return_policy_type: 'standard',
     return_window_days: 14,
     digital_delivery_note: '',
-    price_cents: 0,
+    price_cents: '',
     currency: 'EUR',
     status: 'draft',
     rejection_reason: '',
@@ -215,7 +217,7 @@ const shippingModal = useForm({
 const refundModal = useForm({
     open: false,
     order: null,
-    amount_cents: 0,
+    amount_cents: '',
     reason: '',
 })
 
@@ -223,8 +225,6 @@ const formatMoney = (cents) => new Intl.NumberFormat('de-DE', {
     style: 'currency',
     currency: 'EUR',
 }).format(Number(cents || 0) / 100)
-
-const centsToEuro = (cents) => (Number(cents || 0) / 100).toFixed(2).replace('.', ',')
 
 const formatPercent = (value) => `${Number(value || 0).toFixed(2).replace('.', ',')} %`
 
@@ -260,27 +260,27 @@ const adPricingCards = computed(() => [
         label: 'CPM',
         title: 'Preis pro 1.000 Impressionen',
         value: commerceSettingsForm.ads_cpm_cents,
-        suffix: 'Cent / 1.000 Views',
+        suffix: 'EUR / 1.000 Views',
         formula: 'Kosten = Impressionen / 1.000 x CPM',
-        example: `10.000 Views = ${formatMoney((Number(commerceSettingsForm.ads_cpm_cents || 0) * 10))}`,
+        example: `10.000 Views = ${formatMoney((majorToCents(commerceSettingsForm.ads_cpm_cents) * 10))}`,
     },
     {
         key: 'ads_cpc_cents',
         label: 'CPC',
         title: 'Preis pro Klick',
         value: commerceSettingsForm.ads_cpc_cents,
-        suffix: 'Cent / Klick',
+        suffix: 'EUR / Klick',
         formula: 'Kosten = Klicks x CPC',
-        example: `100 Klicks = ${formatMoney((Number(commerceSettingsForm.ads_cpc_cents || 0) * 100))}`,
+        example: `100 Klicks = ${formatMoney((majorToCents(commerceSettingsForm.ads_cpc_cents) * 100))}`,
     },
     {
         key: 'ads_cpl_cents',
         label: 'CPL',
         title: 'Preis pro Lead',
         value: commerceSettingsForm.ads_cpl_cents,
-        suffix: 'Cent / Lead',
+        suffix: 'EUR / Lead',
         formula: 'Kosten = Leads x CPL',
-        example: `25 Leads = ${formatMoney((Number(commerceSettingsForm.ads_cpl_cents || 0) * 25))}`,
+        example: `25 Leads = ${formatMoney((majorToCents(commerceSettingsForm.ads_cpl_cents) * 25))}`,
     },
     {
         key: 'ads_cpa_percent',
@@ -315,7 +315,7 @@ const normalizeAttributeRows = (rows) => rows
 const normalizeVariantRows = (rows) => rows
     .map((row) => ({
         sku: String(row.sku || '').trim(),
-        price_cents: row.price_cents === '' || row.price_cents === null ? null : Number(row.price_cents),
+        price_cents: row.price_cents === '' || row.price_cents === null ? null : majorToCents(row.price_cents),
         stock_quantity: row.stock_quantity === '' || row.stock_quantity === null ? null : Number(row.stock_quantity),
         image_url: String(row.image_url || '').trim(),
         attributes: Object.entries(row.attributes || {})
@@ -460,12 +460,18 @@ const setEditProductGalleryUploads = (event) => {
     editProductForm.image_uploads = Array.from(event.target.files || [])
 }
 
-const storeCoupon = () => couponForm.post(route('admin.commerce.coupons.store'), {
+const storeCoupon = () => couponForm
+    .transform((data) => data.type === 'fixed'
+        ? transformMoneyFields(data, ['value_cents'])
+        : { ...data, value_cents: 0 })
+    .post(route('admin.commerce.coupons.store'), {
     preserveScroll: true,
     onSuccess: () => couponForm.reset('code', 'name', 'max_redemptions', 'starts_at', 'ends_at'),
 })
 
-const storeAddon = () => addonForm.post(route('admin.commerce.addons.store'), {
+const storeAddon = () => addonForm
+    .transform((data) => transformMoneyFields(data, ['monthly_price_cents', 'yearly_price_cents']))
+    .post(route('admin.commerce.addons.store'), {
     preserveScroll: true,
     onSuccess: () => addonForm.reset('slug', 'name', 'description'),
 })
@@ -476,7 +482,9 @@ const storeProduct = () => {
     productForm.attribute_options = normalizeAttributeRows(productAttributeRows.value)
     productForm.variants = normalizeVariantRows(productVariantRows.value)
 
-    productForm.post(route('admin.commerce.products.store'), {
+    productForm
+        .transform((data) => transformMoneyFields(data, ['price_cents']))
+        .post(route('admin.commerce.products.store'), {
         preserveScroll: true,
         forceFormData: true,
         onSuccess: () => {
@@ -485,7 +493,7 @@ const storeProduct = () => {
             productFeatureRows.value = ['']
             productVariantRows.value = []
         },
-    })
+        })
 }
 
 const setMarketplaceVisualUpload = (key, event) => {
@@ -505,7 +513,9 @@ const storeTaxRate = () => taxRateForm.post(route('admin.commerce.tax-rates.stor
     onSuccess: () => taxRateForm.reset('region'),
 })
 
-const updateCommerceSettings = () => commerceSettingsForm.put(route('admin.commerce.settings.update'), {
+const updateCommerceSettings = () => commerceSettingsForm
+    .transform((data) => transformMoneyFields(data, ['ads_cpm_cents', 'ads_cpc_cents', 'ads_cpl_cents', 'ads_min_budget_cents']))
+    .put(route('admin.commerce.settings.update'), {
     preserveScroll: true,
 })
 
@@ -524,7 +534,9 @@ const updateTaxRate = (rate) => {
     }, { preserveScroll: true })
 }
 
-const storeShippingRate = () => shippingRateForm.post(route('admin.commerce.shipping-rates.store'), {
+const storeShippingRate = () => shippingRateForm
+    .transform((data) => transformMoneyFields(data, ['amount_cents', 'free_from_cents']))
+    .post(route('admin.commerce.shipping-rates.store'), {
     preserveScroll: true,
     onSuccess: () => shippingRateForm.reset('postal_code_prefix'),
 })
@@ -534,9 +546,9 @@ const updateShippingRate = (rate) => {
         name: rate.name,
         country_code: rate.country_code || '',
         postal_code_prefix: rate.postal_code_prefix || '',
-        amount_cents: rate.amount_cents,
+        amount_cents: typeof rate.amount_cents === 'number' ? rate.amount_cents : majorToCents(rate.amount_cents),
         currency: rate.currency || 'EUR',
-        free_from_cents: rate.free_from_cents,
+        free_from_cents: typeof rate.free_from_cents === 'number' ? rate.free_from_cents : majorToCents(rate.free_from_cents),
         is_active: Boolean(rate.is_active),
         priority: rate.priority || 100,
     }, { preserveScroll: true })
@@ -601,7 +613,7 @@ const openEditProduct = (product) => {
     editProductForm.return_policy_type = product.return_policy_type || 'standard'
     editProductForm.return_window_days = product.return_window_days ?? 14
     editProductForm.digital_delivery_note = product.digital_delivery_note || ''
-    editProductForm.price_cents = product.price_cents || 0
+    editProductForm.price_cents = centsToMajor(product.price_cents || 0)
     editProductForm.currency = product.currency || 'EUR'
     editProductForm.status = product.status || 'draft'
     editProductForm.rejection_reason = product.rejection_reason || ''
@@ -615,7 +627,7 @@ const openEditProduct = (product) => {
     editVariantRows.value = product.variants?.length
         ? product.variants.map((variant) => ({
             sku: variant.sku || '',
-            price_cents: variant.price_cents ?? product.price_cents ?? '',
+            price_cents: centsToMajor(variant.price_cents ?? product.price_cents ?? 0),
             stock_quantity: variant.stock_quantity ?? '',
             image_url: variant.image_url || '',
             attributes: Object.fromEntries((variant.attributes || []).map((attribute) => [attribute.name, attribute.value])),
@@ -636,18 +648,22 @@ const submitEditProduct = () => {
     editProductForm.attribute_options = normalizeAttributeRows(editAttributeRows.value)
     editProductForm.variants = normalizeVariantRows(editVariantRows.value)
 
-    editProductForm.put(route('admin.commerce.products.update', editProductForm.product.id), {
+    editProductForm
+        .transform((data) => transformMoneyFields(data, ['price_cents']))
+        .put(route('admin.commerce.products.update', editProductForm.product.id), {
         preserveScroll: true,
         forceFormData: true,
         onSuccess: closeEditProduct,
-    })
+        })
 }
 
 const updateReturnRequest = (request, status, restock = false) => {
     router.put(route('admin.commerce.returns.update', request.id), {
         status,
         resolution_note: request.resolution_note || '',
-        approved_amount_cents: request.approved_amount_cents || request.requested_amount_cents,
+        approved_amount_cents: typeof request.approved_amount_cents === 'number'
+            ? request.approved_amount_cents
+            : majorToCents(request.approved_amount_cents || centsToMajor(request.requested_amount_cents)),
         restock,
     }, { preserveScroll: true })
 }
@@ -701,18 +717,42 @@ const resetCampaignCreativeRows = () => {
 const storeCampaign = () => {
     campaignForm.creatives = normalizeCampaignCreatives()
 
-    campaignForm.post(route('admin.commerce.campaigns.store'), {
+    campaignForm
+        .transform((data) => transformMoneyFields(data, ['budget_cents', 'daily_budget_cents', 'spent_cents']))
+        .post(route('admin.commerce.campaigns.store'), {
         preserveScroll: true,
         forceFormData: true,
         onSuccess: () => {
             campaignForm.reset('name', 'headline', 'description', 'primary_text', 'target_url', 'creative_image_url', 'creative_image_upload', 'creatives', 'audience_locations', 'audience_interests', 'audience_age_min', 'audience_age_max', 'starts_at', 'ends_at')
             resetCampaignCreativeRows()
         },
-    })
+        })
 }
 
 const markOrderPaid = (order) => {
     router.post(route('admin.commerce.orders.mark-paid', order.id), {}, { preserveScroll: true })
+}
+
+const updateCampaignStatus = (campaign, status) => {
+    campaignStatusError.value = ''
+
+    if (status === 'active' && campaign.user_id && !campaign.payment_completed) {
+        campaignStatusError.value = 'Diese Ads-Kampagne kann erst nach Zahlung freigegeben werden.'
+        return
+    }
+
+    router.put(route('admin.commerce.campaigns.status.update', campaign.id), {
+        status,
+        review_note: campaign.review_note || '',
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            campaignStatusError.value = ''
+        },
+        onError: (errors) => {
+            campaignStatusError.value = errors.campaign_status || errors.status || 'Status konnte nicht aktualisiert werden.'
+        },
+    })
 }
 
 const updateOrderIssue = (order, issueStatus, orderStatus = null) => {
@@ -754,7 +794,7 @@ const submitShipping = () => {
 const openRefundModal = (order) => {
     refundModal.open = true
     refundModal.order = order
-    refundModal.amount_cents = order.amount_cents || 0
+    refundModal.amount_cents = centsToMajor(order.amount_cents || 0)
     refundModal.reason = ''
 }
 
@@ -762,7 +802,7 @@ const submitRefund = () => {
     if (!refundModal.order) return
 
     router.post(route('admin.commerce.orders.refund', refundModal.order.id), {
-        amount_cents: refundModal.amount_cents,
+        amount_cents: majorToCents(refundModal.amount_cents),
         reason: refundModal.reason,
     }, {
         preserveScroll: true,
@@ -813,6 +853,9 @@ const updatePayoutProfile = (profile, status) => {
             </p>
             <div v-if="page.props.flash?.success" class="mt-4 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
                 {{ page.props.flash.success }}
+            </div>
+            <div v-if="page.props.errors?.campaign_status" class="mt-4 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+                {{ page.props.errors.campaign_status }}
             </div>
         </section>
 
@@ -976,8 +1019,8 @@ const updatePayoutProfile = (profile, status) => {
                     <input v-model="shippingRateForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Name">
                     <input v-model="shippingRateForm.country_code" maxlength="2" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="DE oder leer">
                     <input v-model="shippingRateForm.postal_code_prefix" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="PLZ-Prefix optional">
-                    <input v-model="shippingRateForm.amount_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Cent">
-                    <input v-model="shippingRateForm.free_from_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kostenfrei ab Cent">
+                    <input v-model="shippingRateForm.amount_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Versand in EUR">
+                    <input v-model="shippingRateForm.free_from_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kostenfrei ab EUR">
                     <input v-model="shippingRateForm.currency" maxlength="3" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="EUR">
                     <input v-model="shippingRateForm.priority" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Priorität">
                     <label class="flex items-center gap-2 text-sm text-primary">
@@ -992,7 +1035,7 @@ const updatePayoutProfile = (profile, status) => {
                         <input v-model="rate.name" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                         <input v-model="rate.country_code" maxlength="2" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="Alle">
                         <input v-model="rate.postal_code_prefix" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="PLZ">
-                        <input v-model="rate.amount_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <input :value="typeof rate.amount_cents === 'string' ? rate.amount_cents : centsToMajor(rate.amount_cents)" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" @input="rate.amount_cents = $event.target.value">
                         <label class="flex items-center gap-2 text-sm text-primary">
                             <input v-model="rate.is_active" type="checkbox" class="rounded border-border bg-inputBg">
                             Aktiv
@@ -1017,30 +1060,30 @@ const updatePayoutProfile = (profile, status) => {
                         <span class="text-xs font-semibold uppercase tracking-wide text-secondary">CPM</span>
                         <span class="mt-1 block text-sm font-semibold text-primary">Preis pro 1.000 Impressionen</span>
                         <div class="mt-3 flex items-center gap-2">
-                            <input v-model="commerceSettingsForm.ads_cpm_cents" type="number" min="0" max="100000" class="w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="500">
-                            <span class="shrink-0 text-sm text-secondary">Cent</span>
+                            <input v-model="commerceSettingsForm.ads_cpm_cents" v-bind="moneyInputAttrs" class="w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="5,00">
+                            <span class="shrink-0 text-sm text-secondary">EUR</span>
                         </div>
-                        <span class="mt-2 block text-xs text-secondary">{{ centsToEuro(commerceSettingsForm.ads_cpm_cents) }} EUR pro 1.000 Views</span>
+                        <span class="mt-2 block text-xs text-secondary">{{ commerceSettingsForm.ads_cpm_cents || '0,00' }} EUR pro 1.000 Views</span>
                     </label>
 
                     <label class="rounded-lg border border-border bg-card p-4">
                         <span class="text-xs font-semibold uppercase tracking-wide text-secondary">CPC</span>
                         <span class="mt-1 block text-sm font-semibold text-primary">Preis pro Klick</span>
                         <div class="mt-3 flex items-center gap-2">
-                            <input v-model="commerceSettingsForm.ads_cpc_cents" type="number" min="0" max="100000" class="w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="30">
-                            <span class="shrink-0 text-sm text-secondary">Cent</span>
+                            <input v-model="commerceSettingsForm.ads_cpc_cents" v-bind="moneyInputAttrs" class="w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="0,30">
+                            <span class="shrink-0 text-sm text-secondary">EUR</span>
                         </div>
-                        <span class="mt-2 block text-xs text-secondary">{{ centsToEuro(commerceSettingsForm.ads_cpc_cents) }} EUR pro Klick</span>
+                        <span class="mt-2 block text-xs text-secondary">{{ commerceSettingsForm.ads_cpc_cents || '0,00' }} EUR pro Klick</span>
                     </label>
 
                     <label class="rounded-lg border border-border bg-card p-4">
                         <span class="text-xs font-semibold uppercase tracking-wide text-secondary">CPL</span>
                         <span class="mt-1 block text-sm font-semibold text-primary">Preis pro Lead</span>
                         <div class="mt-3 flex items-center gap-2">
-                            <input v-model="commerceSettingsForm.ads_cpl_cents" type="number" min="0" max="100000" class="w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="200">
-                            <span class="shrink-0 text-sm text-secondary">Cent</span>
+                            <input v-model="commerceSettingsForm.ads_cpl_cents" v-bind="moneyInputAttrs" class="w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="2,00">
+                            <span class="shrink-0 text-sm text-secondary">EUR</span>
                         </div>
-                        <span class="mt-2 block text-xs text-secondary">{{ centsToEuro(commerceSettingsForm.ads_cpl_cents) }} EUR pro Lead</span>
+                        <span class="mt-2 block text-xs text-secondary">{{ commerceSettingsForm.ads_cpl_cents || '0,00' }} EUR pro Lead</span>
                     </label>
 
                     <label class="rounded-lg border border-border bg-card p-4">
@@ -1057,10 +1100,10 @@ const updatePayoutProfile = (profile, status) => {
                         <span class="text-xs font-semibold uppercase tracking-wide text-secondary">Mindestbudget</span>
                         <span class="mt-1 block text-sm font-semibold text-primary">Kleinstes Kampagnenbudget für Nutzer</span>
                         <div class="mt-3 flex items-center gap-2">
-                            <input v-model="commerceSettingsForm.ads_min_budget_cents" type="number" min="0" max="10000000" class="w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="1000">
-                            <span class="shrink-0 text-sm text-secondary">Cent</span>
+                            <input v-model="commerceSettingsForm.ads_min_budget_cents" v-bind="moneyInputAttrs" class="w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="10,00">
+                            <span class="shrink-0 text-sm text-secondary">EUR</span>
                         </div>
-                        <span class="mt-2 block text-xs text-secondary">Aktuell: {{ formatMoney(commerceSettingsForm.ads_min_budget_cents) }}</span>
+                        <span class="mt-2 block text-xs text-secondary">Aktuell: {{ formatMoney(majorToCents(commerceSettingsForm.ads_min_budget_cents)) }}</span>
                     </label>
 
                     <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary md:col-span-2" :disabled="commerceSettingsForm.processing">
@@ -1098,7 +1141,7 @@ const updatePayoutProfile = (profile, status) => {
                         <option value="fixed">Festbetrag</option>
                     </select>
                     <input v-if="couponForm.type === 'percent'" v-model="couponForm.percent_off" type="number" min="1" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Prozent">
-                    <input v-else v-model="couponForm.value_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Cent">
+                    <input v-else v-model="couponForm.value_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Betrag in EUR">
                     <input v-model="couponForm.max_redemptions" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Max. Nutzungen">
                     <label class="flex items-center gap-2 text-sm text-primary">
                         <input v-model="couponForm.is_active" type="checkbox" class="rounded border-border bg-inputBg">
@@ -1126,8 +1169,8 @@ const updatePayoutProfile = (profile, status) => {
                 <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeAddon">
                     <input v-model="addonForm.slug" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="slug">
                     <input v-model="addonForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Name">
-                    <input v-model="addonForm.monthly_price_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Monat Cent">
-                    <input v-model="addonForm.yearly_price_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Jahr Cent">
+                    <input v-model="addonForm.monthly_price_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Monat in EUR">
+                    <input v-model="addonForm.yearly_price_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Jahr in EUR">
                     <textarea v-model="addonForm.description" rows="3" class="md:col-span-2 rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung"></textarea>
                     <button class="md:col-span-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Speichern</button>
                 </form>
@@ -1145,7 +1188,7 @@ const updatePayoutProfile = (profile, status) => {
                 <h2 class="text-lg font-semibold text-primary">Marketplace-Produkt</h2>
                 <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeProduct">
                     <input v-model="productForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Titel">
-                    <input v-model="productForm.price_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis Cent">
+                    <input v-model="productForm.price_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis in EUR, z. B. 10,99">
                     <select v-model="productForm.product_type" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                         <option value="single">Einfaches Produkt</option>
                         <option value="variable">Variables Produkt</option>
@@ -1251,7 +1294,7 @@ const updatePayoutProfile = (profile, status) => {
                                         <option value="">{{ attribute.name }}</option>
                                         <option v-for="value in attribute.values" :key="value" :value="value">{{ value }}</option>
                                     </select>
-                                    <input v-model="variant.price_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis Cent">
+                                    <input v-model="variant.price_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis in EUR">
                                     <input v-model="variant.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bestand">
                                     <input v-model="variant.sku" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Artikelnummer">
                                     <input v-model="variant.image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-2" placeholder="Bild-URL für Variante">
@@ -1392,10 +1435,11 @@ const updatePayoutProfile = (profile, status) => {
                             </div>
                         </div>
                     </div>
-                    <input v-model="campaignForm.budget_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Gesamtbudget Cent">
-                    <input v-model="campaignForm.daily_budget_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Tagesbudget Cent">
+                    <input v-model="campaignForm.budget_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Gesamtbudget in EUR">
+                    <input v-model="campaignForm.daily_budget_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Tagesbudget in EUR">
                     <select v-model="campaignForm.status" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                         <option value="draft">Entwurf</option>
+                        <option value="pending_payment">Wartet auf Zahlung</option>
                         <option value="pending_review">Wartet auf Freigabe</option>
                         <option value="active">Aktiv</option>
                         <option value="paused">Pausiert</option>
@@ -1529,6 +1573,13 @@ const updatePayoutProfile = (profile, status) => {
                 </div>
             </div>
 
+            <div
+                v-if="campaignStatusError || page.props.errors?.campaign_status"
+                class="mx-5 mt-4 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
+            >
+                {{ campaignStatusError || page.props.errors.campaign_status }}
+            </div>
+
             <div class="overflow-x-auto">
                 <table class="min-w-full text-left text-sm">
                     <thead class="border-b border-border text-xs uppercase text-secondary">
@@ -1539,6 +1590,7 @@ const updatePayoutProfile = (profile, status) => {
                             <th class="px-5 py-3">Klicks</th>
                             <th class="px-5 py-3">CTR</th>
                             <th class="px-5 py-3">Budget</th>
+                            <th class="px-5 py-3 text-right">Aktionen</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border">
@@ -1548,7 +1600,12 @@ const updatePayoutProfile = (profile, status) => {
                                     <p class="font-semibold text-primary">{{ campaign.name }}</p>
                                     <p class="text-xs text-secondary">{{ campaign.target_url || '-' }}</p>
                                 </td>
-                                <td class="px-5 py-3 text-secondary">{{ campaign.status }}</td>
+                                <td class="px-5 py-3">
+                                    <p class="text-secondary">{{ campaign.status }}</p>
+                                    <p v-if="campaign.user_id && !campaign.payment_completed" class="mt-1 text-xs font-semibold text-warning">
+                                        {{ campaign.payment_pending ? 'Zahlung offen' : 'Keine Zahlung gefunden' }}
+                                    </p>
+                                </td>
                                 <td class="px-5 py-3 text-secondary">{{ campaign.impressions || 0 }}</td>
                                 <td class="px-5 py-3 text-secondary">{{ campaign.clicks || 0 }}</td>
                                 <td class="px-5 py-3 text-secondary">{{ formatPercent(ctr(campaign.clicks, campaign.impressions)) }}</td>
@@ -1558,9 +1615,48 @@ const updatePayoutProfile = (profile, status) => {
                                         <div class="h-2 rounded-full bg-air-blue" :style="{ width: `${budgetUsage(campaign.spent_cents, campaign.budget_cents)}%` }"></div>
                                     </div>
                                 </td>
+                                <td class="px-5 py-3 text-right">
+                                    <div class="flex flex-wrap justify-end gap-2">
+                                        <p v-if="campaign.user_id && !campaign.payment_completed" class="w-full text-xs text-warning">
+                                            Erst nach Zahlung freigeben.
+                                        </p>
+                                        <button
+                                            v-if="['pending_review', 'paused'].includes(campaign.status)"
+                                            type="button"
+                                            class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary"
+                                            @click="updateCampaignStatus(campaign, 'active')"
+                                        >
+                                            Freigeben
+                                        </button>
+                                        <button
+                                            v-if="campaign.status === 'active'"
+                                            type="button"
+                                            class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary"
+                                            @click="updateCampaignStatus(campaign, 'paused')"
+                                        >
+                                            Pausieren
+                                        </button>
+                                        <button
+                                            v-if="['draft', 'pending_payment', 'pending_review', 'paused', 'active'].includes(campaign.status)"
+                                            type="button"
+                                            class="rounded-lg border border-danger/40 px-3 py-2 text-xs font-semibold text-danger"
+                                            @click="updateCampaignStatus(campaign, 'rejected')"
+                                        >
+                                            Ablehnen
+                                        </button>
+                                        <button
+                                            v-if="campaign.status === 'rejected'"
+                                            type="button"
+                                            class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary"
+                                            @click="updateCampaignStatus(campaign, 'pending_review')"
+                                        >
+                                            Zur Pruefung
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
                             <tr v-if="campaign.creatives?.length">
-                                <td colspan="6" class="bg-bg px-5 py-3">
+                                <td colspan="7" class="bg-bg px-5 py-3">
                                     <div class="grid gap-2 md:grid-cols-2">
                                         <div v-for="creative in campaign.creatives" :key="creative.id" class="rounded-lg border border-border bg-card p-3">
                                             <div class="flex items-start justify-between gap-3">
@@ -1835,7 +1931,7 @@ const updatePayoutProfile = (profile, status) => {
 
                 <form class="mt-5 grid gap-3 md:grid-cols-2" @submit.prevent="submitEditProduct">
                     <input v-model="editProductForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Titel">
-                    <input v-model="editProductForm.price_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis Cent">
+                    <input v-model="editProductForm.price_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis in EUR">
                     <select v-model="editProductForm.product_type" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                         <option value="single">Einfaches Produkt</option>
                         <option value="variable">Variables Produkt</option>
@@ -1940,7 +2036,7 @@ const updatePayoutProfile = (profile, status) => {
                                         <option value="">{{ attribute.name }}</option>
                                         <option v-for="value in attribute.values" :key="value" :value="value">{{ value }}</option>
                                     </select>
-                                    <input v-model="variant.price_cents" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis Cent">
+                                    <input v-model="variant.price_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Preis in EUR">
                                     <input v-model="variant.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bestand">
                                     <input v-model="variant.sku" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Artikelnummer">
                                     <input v-model="variant.image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-2" placeholder="Bild-URL für Variante">
@@ -2015,7 +2111,7 @@ const updatePayoutProfile = (profile, status) => {
             <div class="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-2xl">
                 <h2 class="text-lg font-semibold text-primary">Erstattung dokumentieren</h2>
                 <div class="mt-4 grid gap-3">
-                    <input v-model="refundModal.amount_cents" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Betrag in Cent">
+                    <input v-model="refundModal.amount_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Betrag in EUR">
                     <textarea v-model="refundModal.reason" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Grund"></textarea>
                 </div>
                 <div class="mt-5 flex justify-end gap-3">

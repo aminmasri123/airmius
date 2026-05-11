@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 
@@ -18,6 +18,19 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+})
+
+const friendsList = ref([...props.friends])
+const receivedInvitationList = ref([...props.receivedInvitations])
+const acceptNotice = ref(null)
+const acceptingInvitationIds = ref([])
+
+watch(() => props.friends, (friends) => {
+    friendsList.value = [...friends]
+})
+
+watch(() => props.receivedInvitations, (invitations) => {
+    receivedInvitationList.value = [...invitations]
 })
 
 const inviteForm = useForm({
@@ -51,8 +64,39 @@ const declineForm = useForm({})
 const openFriendMenuId = ref(null)
 
 const accept = (invitation) => {
+    const previousInvitations = [...receivedInvitationList.value]
+    const previousFriends = [...friendsList.value]
+
+    acceptNotice.value = null
+    acceptingInvitationIds.value = [...acceptingInvitationIds.value, invitation.id]
+    receivedInvitationList.value = receivedInvitationList.value.filter((item) => item.id !== invitation.id)
+    friendsList.value = [
+        {
+            id: invitation.sender.id,
+            name: invitation.sender.name,
+            email: invitation.sender.email,
+            profile_photo_url: invitation.sender.profile_photo_url,
+            friends_since: new Date().toISOString(),
+        },
+        ...friendsList.value.filter((friend) => friend.id !== invitation.sender.id),
+    ]
+
     acceptForm.post(route('auth.friends.invitations.accept', invitation.id), {
         preserveScroll: true,
+        onSuccess: () => {
+            acceptNotice.value = { type: 'success', message: 'Freundschaft angenommen.' }
+        },
+        onError: (errors) => {
+            receivedInvitationList.value = previousInvitations
+            friendsList.value = previousFriends
+            acceptNotice.value = {
+                type: 'error',
+                message: errors.invitation || errors.message || 'Anfrage konnte nicht angenommen werden.',
+            }
+        },
+        onFinish: () => {
+            acceptingInvitationIds.value = acceptingInvitationIds.value.filter((id) => id !== invitation.id)
+        },
     })
 }
 
@@ -153,12 +197,24 @@ const initials = (name) => (name || '?')
             </p>
         </section>
 
-        <section v-if="receivedInvitations.length" class="surface-card p-5">
+        <p
+            v-if="acceptNotice"
+            :class="[
+                'rounded-lg border px-4 py-3 text-sm font-semibold',
+                acceptNotice.type === 'error'
+                    ? 'border-error/30 bg-error/10 text-error'
+                    : 'border-success/30 bg-success/10 text-success',
+            ]"
+        >
+            {{ acceptNotice.message }}
+        </p>
+
+        <section v-if="receivedInvitationList.length" class="surface-card p-5">
             <h2 class="text-lg font-semibold text-primary">Offene Anfragen</h2>
 
             <div class="mt-4 grid gap-3">
                 <div
-                    v-for="invitation in receivedInvitations"
+                    v-for="invitation in receivedInvitationList"
                     :key="invitation.id"
                     class="flex flex-col gap-3 rounded-lg border border-border bg-inputBg p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
@@ -181,10 +237,11 @@ const initials = (name) => (name || '?')
                     <div class="flex gap-2">
                         <button
                             type="button"
-                            class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover"
+                            :disabled="acceptingInvitationIds.includes(invitation.id)"
+                            class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-wait disabled:opacity-70"
                             @click="accept(invitation)"
                         >
-                            Annehmen
+                            {{ acceptingInvitationIds.includes(invitation.id) ? 'Wird angenommen...' : 'Annehmen' }}
                         </button>
                         <button
                             type="button"
@@ -202,9 +259,9 @@ const initials = (name) => (name || '?')
             <section class="surface-card p-5">
                 <h2 class="text-lg font-semibold text-primary">Meine Freunde</h2>
 
-                <div v-if="friends.length" class="mt-4 grid gap-3 sm:grid-cols-2">
+                <div v-if="friendsList.length" class="mt-4 grid gap-3 sm:grid-cols-2">
                     <div
-                        v-for="friend in friends"
+                        v-for="friend in friendsList"
                         :key="friend.id"
                         class="relative flex flex-col gap-3 rounded-lg border border-border bg-inputBg p-4 sm:flex-row sm:items-center sm:justify-between"
                     >

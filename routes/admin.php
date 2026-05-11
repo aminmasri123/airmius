@@ -113,6 +113,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/admin/commerce/shipping-rates', [AdminCommerceController::class, 'storeShippingRate'])->middleware('can:subscriptions.manage')->name('admin.commerce.shipping-rates.store');
     Route::put('/admin/commerce/shipping-rates/{shippingRate}', [AdminCommerceController::class, 'updateShippingRate'])->middleware('can:subscriptions.manage')->name('admin.commerce.shipping-rates.update');
     Route::post('/admin/commerce/campaigns', [AdminCommerceController::class, 'storeCampaign'])->middleware('can:subscriptions.manage')->name('admin.commerce.campaigns.store');
+    Route::put('/admin/commerce/campaigns/{campaign}/status', [AdminCommerceController::class, 'updateCampaignStatus'])->middleware('can:subscriptions.manage')->name('admin.commerce.campaigns.status.update');
     Route::put('/admin/commerce/campaigns/{campaign}', [AdminCommerceController::class, 'updateCampaign'])->middleware('can:subscriptions.manage')->name('admin.commerce.campaigns.update');
     Route::post('/admin/commerce/orders/{order}/mark-paid', [AdminCommerceController::class, 'markOrderPaid'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.mark-paid');
     Route::put('/admin/commerce/orders/{order}/issue', [AdminCommerceController::class, 'updateOrderIssue'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.issue');

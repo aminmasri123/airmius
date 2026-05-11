@@ -8,6 +8,11 @@ use Illuminate\Auth\Access\Response;
 
 class FolderPolicy extends BasePolicy
 {
+    public function before($user, $ability)
+    {
+        return null;
+    }
+
     public function viewAny(User $user)
     {
         return $user->can('file.view') || $this->isClubAdmin($user) || $this->isCoach($user);
@@ -15,7 +20,10 @@ class FolderPolicy extends BasePolicy
 
     public function create(User $user)
     {
-        return $user->can('file.upload') || $this->isClubAdmin($user) || $this->isCoach($user);
+        return $user->can('file.view')
+            || $user->can('file.upload')
+            || $this->isClubAdmin($user)
+            || $this->isCoach($user);
     }
 
     public function view(User $user, Folder $folder)
@@ -27,16 +35,13 @@ class FolderPolicy extends BasePolicy
     public function delete(User $user, Folder $folder)
     {
         return $folder->user_id === $user->id
-            || ($user->can('file.delete') && $this->canAccessScope($user, $folder))
-            || $this->isClubAdmin($user);
+            || ($user->can('file.delete') && $this->canAccessScope($user, $folder));
     }
 
     public function update(User $user, Folder $folder)
     {
         return $folder->user_id === $user->id
-            || ($user->can('file.upload') && $this->canAccessScope($user, $folder))
-            || $this->isClubAdmin($user)
-            || $this->isCoach($user);
+            || ($user->can('file.upload') && $this->canAccessScope($user, $folder));
     }
 
     private function canAccessScope(User $user, Folder $folder): bool

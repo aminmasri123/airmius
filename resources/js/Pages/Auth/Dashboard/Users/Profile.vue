@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
@@ -14,6 +14,17 @@ const props = defineProps({
 })
 
 const { t, te } = useI18n()
+const friendshipStatus = ref(props.viewer.friendship_status)
+const canSendFriendRequest = ref(props.viewer.can_send_friend_request)
+const friendInvitationId = ref(props.viewer.friend_invitation_id)
+const friendshipNotice = ref(null)
+const friendshipProcessing = ref(false)
+
+watch(() => props.viewer, (viewer) => {
+    friendshipStatus.value = viewer.friendship_status
+    canSendFriendRequest.value = viewer.can_send_friend_request
+    friendInvitationId.value = viewer.friend_invitation_id
+})
 
 const follow = () => {
     router.post(route('auth.users.follow', props.profileUser.id), {}, { preserveScroll: true })
@@ -24,9 +35,37 @@ const unfollow = () => {
 }
 
 const sendFriendRequest = () => {
+    const previous = {
+        status: friendshipStatus.value,
+        canSend: canSendFriendRequest.value,
+        invitationId: friendInvitationId.value,
+    }
+
+    friendshipNotice.value = null
+    friendshipProcessing.value = true
+    friendshipStatus.value = 'sent'
+    canSendFriendRequest.value = false
+
     router.post(route('auth.friends.invitations.store'), {
         user_id: props.profileUser.id,
-    }, { preserveScroll: true })
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            friendshipNotice.value = { type: 'success', message: 'Freundschaftsanfrage gesendet.' }
+        },
+        onError: (errors) => {
+            friendshipStatus.value = previous.status
+            canSendFriendRequest.value = previous.canSend
+            friendInvitationId.value = previous.invitationId
+            friendshipNotice.value = {
+                type: 'error',
+                message: errors.email || errors.user_id || 'Freundschaftsanfrage konnte nicht gesendet werden.',
+            }
+        },
+        onFinish: () => {
+            friendshipProcessing.value = false
+        },
+    })
 }
 
 const sendMessage = () => {
@@ -49,9 +88,37 @@ const unblockUser = () => {
 }
 
 const acceptFriendRequest = () => {
-    if (!props.viewer.friend_invitation_id) return
+    if (!friendInvitationId.value) return
 
-    router.post(route('auth.friends.invitations.accept', props.viewer.friend_invitation_id), {}, { preserveScroll: true })
+    const previous = {
+        status: friendshipStatus.value,
+        canSend: canSendFriendRequest.value,
+        invitationId: friendInvitationId.value,
+    }
+
+    friendshipNotice.value = null
+    friendshipProcessing.value = true
+    friendshipStatus.value = 'friends'
+    canSendFriendRequest.value = false
+
+    router.post(route('auth.friends.invitations.accept', friendInvitationId.value), {}, {
+        preserveScroll: true,
+        onSuccess: () => {
+            friendshipNotice.value = { type: 'success', message: 'Freundschaft angenommen.' }
+        },
+        onError: (errors) => {
+            friendshipStatus.value = previous.status
+            canSendFriendRequest.value = previous.canSend
+            friendInvitationId.value = previous.invitationId
+            friendshipNotice.value = {
+                type: 'error',
+                message: errors.invitation || errors.message || 'Freundschaft konnte nicht angenommen werden.',
+            }
+        },
+        onFinish: () => {
+            friendshipProcessing.value = false
+        },
+    })
 }
 
 const removeFriend = () => {
@@ -362,28 +429,30 @@ const rejectRecommendation = (recommendation) => {
                                 </button>
 
                                 <button
-                                    v-if="viewer.can_send_friend_request"
+                                    v-if="canSendFriendRequest"
                                     type="button"
-                                    class="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
+                                    :disabled="friendshipProcessing"
+                                    class="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover disabled:cursor-wait disabled:opacity-70"
                                     @click="sendFriendRequest"
                                 >
                                     <i class="las la-user-plus text-lg"></i>
                                     Freundschaft
                                 </button>
                                 <button
-                                    v-else-if="viewer.friendship_status === 'received'"
+                                    v-else-if="friendshipStatus === 'received'"
                                     type="button"
-                                    class="inline-flex items-center gap-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
+                                    :disabled="friendshipProcessing"
+                                    class="inline-flex items-center gap-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover disabled:cursor-wait disabled:opacity-70"
                                     @click="acceptFriendRequest"
                                 >
                                     <i class="las la-check text-lg"></i>
                                     Annehmen
                                 </button>
-                                <span v-else-if="viewer.friendship_status === 'sent'" class="inline-flex items-center rounded-lg border border-border px-4 py-2 text-sm text-secondary">
+                                <span v-else-if="friendshipStatus === 'sent'" class="inline-flex items-center rounded-lg border border-border px-4 py-2 text-sm text-secondary">
                                     Anfrage gesendet
                                 </span>
                                 <button
-                                    v-else-if="viewer.friendship_status === 'friends'"
+                                    v-else-if="friendshipStatus === 'friends'"
                                     type="button"
                                     class="inline-flex items-center gap-2 rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
                                     @click="removeFriend"
@@ -400,6 +469,15 @@ const rejectRecommendation = (recommendation) => {
                                     <i class="las la-flag text-lg"></i>
                                     Melden
                                 </button>
+                                <p
+                                    v-if="friendshipNotice"
+                                    :class="[
+                                        'w-full text-sm font-semibold sm:w-auto',
+                                        friendshipNotice.type === 'error' ? 'text-error' : 'text-success',
+                                    ]"
+                                >
+                                    {{ friendshipNotice.message }}
+                                </p>
                                 <button
                                     v-if="viewer.has_blocked"
                                     type="button"

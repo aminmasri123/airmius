@@ -84,6 +84,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::get('/commerce/orders/{order}/credit-note', [CommerceCheckoutController::class, 'downloadCreditNote'])->name('auth.commerce.orders.credit-note');
     Route::post('/commerce/products', [CommerceCheckoutController::class, 'storeOwnProduct'])->name('auth.commerce.products.store');
     Route::post('/commerce/campaigns', [CommerceCheckoutController::class, 'storeOwnCampaign'])->name('auth.commerce.campaigns.store');
+    Route::put('/commerce/campaigns/{campaign}/status', [CommerceCheckoutController::class, 'updateOwnCampaignStatus'])->name('auth.commerce.campaigns.status.update');
+    Route::delete('/commerce/campaigns/{campaign}', [CommerceCheckoutController::class, 'destroyOwnCampaign'])->name('auth.commerce.campaigns.destroy');
     Route::post('/commerce/website-requests', [CommerceCheckoutController::class, 'storeWebsiteRequest'])->name('auth.commerce.website-requests.store');
     Route::post('/commerce/payout-profile', [CommerceCheckoutController::class, 'storePayoutProfile'])->name('auth.commerce.payout-profile.store');
     Route::get('/outfit-subscriptions', [OutfitSubscriptionController::class, 'index'])->name('auth.outfit-subscriptions.index');

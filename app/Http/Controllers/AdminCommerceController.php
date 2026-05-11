@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class AdminCommerceController extends Controller
@@ -59,6 +60,14 @@ class AdminCommerceController extends Controller
             'products' => MarketplaceProduct::query()->latest('id')->limit(100)->get(),
             'campaigns' => AdCampaign::query()
                 ->with(['creatives', 'stats' => fn ($query) => $query->latest('date')->limit(30)])
+                ->withExists([
+                    'commerceOrders as payment_completed' => fn ($query) => $query
+                        ->where('type', 'ads_campaign')
+                        ->where('status', 'completed'),
+                    'commerceOrders as payment_pending' => fn ($query) => $query
+                        ->where('type', 'ads_campaign')
+                        ->whereIn('status', ['pending', 'awaiting_transfer']),
+                ])
                 ->latest('id')
                 ->limit(100)
                 ->get(),
@@ -400,6 +409,12 @@ class AdminCommerceController extends Controller
         $creativeRows = $data['_creative_rows'] ?? [];
         unset($data['_creative_rows']);
 
+        if (($data['status'] ?? null) === 'active' && $campaign->user_id && ! $this->campaignPaymentCompleted($campaign)) {
+            throw ValidationException::withMessages([
+                'campaign_status' => 'Diese Ads-Kampagne kann erst nach Zahlung freigegeben werden.',
+            ]);
+        }
+
         if (($data['status'] ?? null) !== $campaign->status && in_array($data['status'] ?? null, ['active', 'rejected'], true)) {
             $data['reviewed_at'] = now();
         }
@@ -408,6 +423,38 @@ class AdminCommerceController extends Controller
         $this->syncAdCreatives($campaign, $creativeRows);
 
         return back()->with('success', 'Kampagne aktualisiert.');
+    }
+
+    public function updateCampaignStatus(Request $request, AdCampaign $campaign)
+    {
+        $data = $request->validate([
+            'status' => ['required', Rule::in(['draft', 'pending_payment', 'pending_review', 'active', 'paused', 'completed', 'rejected'])],
+            'review_note' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        if ($data['status'] === 'active' && $campaign->user_id && ! $this->campaignPaymentCompleted($campaign)) {
+            throw ValidationException::withMessages([
+                'campaign_status' => 'Diese Ads-Kampagne kann erst nach Zahlung freigegeben werden.',
+            ]);
+        }
+
+        $campaign->forceFill([
+            'status' => $data['status'],
+            'review_note' => $data['review_note'] ?? $campaign->review_note,
+            'reviewed_at' => in_array($data['status'], ['active', 'rejected'], true) ? now() : $campaign->reviewed_at,
+        ])->save();
+
+        return back()->with('success', 'Kampagnenstatus wurde aktualisiert.');
+    }
+
+    private function campaignPaymentCompleted(AdCampaign $campaign): bool
+    {
+        return CommerceOrder::query()
+            ->where('type', 'ads_campaign')
+            ->where('orderable_type', AdCampaign::class)
+            ->where('orderable_id', $campaign->id)
+            ->where('status', 'completed')
+            ->exists();
     }
 
     public function markOrderPaid(CommerceOrder $order)
@@ -833,7 +880,7 @@ class AdminCommerceController extends Controller
             'spent_cents' => ['nullable', 'integer', 'min:0'],
             'impressions' => ['nullable', 'integer', 'min:0'],
             'clicks' => ['nullable', 'integer', 'min:0'],
-            'status' => ['required', Rule::in(['draft', 'pending_review', 'active', 'paused', 'completed', 'rejected'])],
+            'status' => ['required', Rule::in(['draft', 'pending_payment', 'pending_review', 'active', 'paused', 'completed', 'rejected'])],
             'review_note' => ['nullable', 'string', 'max:2000'],
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],

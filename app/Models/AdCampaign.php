@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class AdCampaign extends Model
 {
@@ -62,5 +63,10 @@ class AdCampaign extends Model
     public function creatives(): HasMany
     {
         return $this->hasMany(AdCreative::class);
+    }
+
+    public function commerceOrders(): MorphMany
+    {
+        return $this->morphMany(CommerceOrder::class, 'orderable');
     }
 }

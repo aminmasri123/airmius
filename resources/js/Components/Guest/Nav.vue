@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import LanguageDropdown from '@/Components/LanguageDropdown.vue'
 import ApplicationLogo from '@/Components/ApplicationLogo.vue'
+import UserCard from '@/Components/Auth/UserCard.vue'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -94,11 +95,15 @@ const navItems = [
 
                 <Link
                     v-if="$page.props.auth.user"
-                    :href="route('auth.dashboard')"
+                    :href="route('auth.feed.index')"
                     class="hidden sm:inline-flex items-center text-sm font-semibold text-air-blue hover:text-borderHover transition"
                 >
                     <i class="las la-rocket"></i><span class="ml-2">{{ $t("Feed") }}</span>
                 </Link>
+
+                <div v-if="$page.props.auth.user" class="hidden sm:block">
+                    <UserCard />
+                </div>
 
                 <button @click="toggleMobile" class="md:hidden text-primary hover:text-air-blue p-2">
                     <i class="las la-bars text-2xl"></i>
@@ -162,7 +167,34 @@ const navItems = [
                             <div class="border-t border-border my-4"></div>
 
                             <Link
-                                v-if="props.canLogin"
+                                v-if="$page.props.auth.user"
+                                :href="route('auth.feed.index')"
+                                @click="mobileOpen = false"
+                                class="text-left py-3 text-lg text-air-blue hover:text-borderHover transition"
+                            >
+                                {{ $t('Feed') }}
+                            </Link>
+
+                            <Link
+                                v-if="$page.props.auth.user"
+                                :href="route('auth.users.show', $page.props.auth.user.id)"
+                                @click="mobileOpen = false"
+                                class="text-left py-3 text-lg text-air-blue hover:text-borderHover transition"
+                            >
+                                {{ $t('Profile') }}
+                            </Link>
+
+                            <Link
+                                v-if="$page.props.auth.user"
+                                :href="route('auth.settings')"
+                                @click="mobileOpen = false"
+                                class="text-left py-3 text-lg text-air-blue hover:text-borderHover transition"
+                            >
+                                {{ $t('Settings') }}
+                            </Link>
+
+                            <Link
+                                v-if="props.canLogin && !$page.props.auth.user"
                                 :href="route('login')"
                                 @click="mobileOpen = false"
                                 class="text-left py-3 text-lg text-air-blue hover:text-borderHover transition"

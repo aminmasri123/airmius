@@ -1014,8 +1014,8 @@ onUnmounted(() => {
             </section>
         </div>
 
-        <div v-if="showAddMembersModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-0 sm:p-4">
-            <div class="flex h-full w-full flex-col bg-card sm:h-[min(640px,90vh)] sm:max-w-lg sm:rounded-lg">
+        <div v-if="showAddMembersModal" class="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-3">
+            <div class="flex max-h-[calc(100vh-1.5rem)] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-border bg-card shadow-2xl">
                 <div class="border-b border-border p-4">
                     <div class="flex items-center justify-between gap-3">
                         <div>
@@ -1080,8 +1080,8 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <div v-if="showNewConversationModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-0 sm:p-4">
-            <div class="flex h-full w-full flex-col bg-card sm:h-[min(720px,90vh)] sm:max-w-lg sm:rounded-lg">
+        <div v-if="showNewConversationModal" class="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-3">
+            <div class="flex max-h-[calc(100vh-1.5rem)] w-full max-w-lg flex-col overflow-hidden rounded-lg border border-border bg-card shadow-2xl">
                 <div class="border-b border-border p-4">
                     <div class="flex items-center justify-between gap-3">
                         <div>
@@ -1191,7 +1191,7 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <div v-if="showLeaveConversationModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div v-if="showLeaveConversationModal" class="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4">
             <div class="w-full max-w-md rounded-lg bg-card shadow-xl">
                 <div class="border-b border-border p-4">
                     <div class="flex items-start justify-between gap-4">
