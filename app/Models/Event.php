@@ -26,6 +26,15 @@ class Event extends Model
         'start_time',
         'end_time',
         'location',
+        'location_name',
+        'location_street',
+        'location_house_number',
+        'location_postal_code',
+        'location_city',
+        'location_country',
+        'location_latitude',
+        'location_longitude',
+        'max_participants',
         'notes',
         'recurring',
         'recurrence_days',
@@ -36,14 +45,17 @@ class Event extends Model
         'cancellation_reason',
     ];
 
-  protected $casts = [
-    'start_time' => 'datetime',
-    'end_time' => 'datetime',
-    'recurrence_days' => 'array',
-    'recurrence_ends_at' => 'datetime',
-    'reminder_at' => 'datetime',
-    'cancelled_at' => 'datetime',
-];
+    protected $casts = [
+        'start_time' => 'datetime',
+        'end_time' => 'datetime',
+        'recurrence_days' => 'array',
+        'recurrence_ends_at' => 'datetime',
+        'reminder_at' => 'datetime',
+        'cancelled_at' => 'datetime',
+        'location_latitude' => 'float',
+        'location_longitude' => 'float',
+        'max_participants' => 'integer',
+    ];
 
     public function club()
     {

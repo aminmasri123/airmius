@@ -24,6 +24,10 @@ Schedule::command('airmius:prepare-outfit-deliveries')
     ->dailyAt('08:30')
     ->withoutOverlapping();
 
+Schedule::command('airmius:send-outfit-payment-reminders')
+    ->dailyAt('09:00')
+    ->withoutOverlapping();
+
 Schedule::command('airmius:process-inactive-accounts')
     ->dailyAt('03:30')
     ->withoutOverlapping();

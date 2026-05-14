@@ -19,6 +19,12 @@ class OutfitSubscription extends Model
         'payment_reference',
         'payment_due_at',
         'payment_payload',
+        'payment_reminders_sent',
+        'last_payment_reminder_sent_at',
+        'dunning_level',
+        'last_dunning_sent_at',
+        'payment_paused_at',
+        'payment_paused_reason',
         'accepted_terms_at',
         'accepted_contract_at',
         'contract_version',
@@ -44,6 +50,11 @@ class OutfitSubscription extends Model
             'cancelled_at' => 'datetime',
             'payment_due_at' => 'datetime',
             'payment_payload' => 'array',
+            'payment_reminders_sent' => 'integer',
+            'last_payment_reminder_sent_at' => 'datetime',
+            'dunning_level' => 'integer',
+            'last_dunning_sent_at' => 'datetime',
+            'payment_paused_at' => 'datetime',
             'accepted_terms_at' => 'datetime',
             'accepted_contract_at' => 'datetime',
             'contract_snapshot' => 'array',
@@ -68,5 +79,10 @@ class OutfitSubscription extends Model
     public function deliveries()
     {
         return $this->hasMany(OutfitDelivery::class);
+    }
+
+    public function latestDelivery()
+    {
+        return $this->hasOne(OutfitDelivery::class)->latestOfMany();
     }
 }

@@ -71,6 +71,11 @@ const iconFor = (type) => ({
     'profile.recommendation_received': 'las la-star',
     'profile.trainer_mentioned': 'las la-chalkboard-teacher',
     'user.followed': 'las la-user-plus',
+    'commerce.order.created': 'las la-shopping-bag',
+    'commerce.order.issue_reported': 'las la-exclamation-circle',
+    'commerce.order.issue_replied': 'las la-comments',
+    'commerce.order.paid': 'las la-receipt',
+    'commerce.order.shipping_updated': 'las la-shipping-fast',
 }[type] || 'las la-bell')
 
 const formatNotificationDate = (value) => {

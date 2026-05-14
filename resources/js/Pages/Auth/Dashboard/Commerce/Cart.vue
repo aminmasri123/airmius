@@ -33,6 +33,7 @@ const cartCheckoutForm = useForm({
 })
 
 const addressChoice = ref(props.profileAddress ? 'profile' : (props.shippingAddresses[0] ? `saved:${props.shippingAddresses[0].id}` : 'new'))
+const checkoutError = ref('')
 const cartItems = computed(() => props.cart?.items || [])
 const cartItemCount = computed(() => cartItems.value.length)
 const savedAddressOptions = computed(() => props.shippingAddresses || [])
@@ -87,8 +88,19 @@ const removeCartItem = (item) => {
 }
 
 const checkoutCart = () => {
+    checkoutError.value = ''
+
+    if (!cartCheckoutForm.accepted_terms) {
+        checkoutError.value = 'Bitte akzeptiere AGB und Widerrufshinweise, bevor du die Bestellung abschickst.'
+        cartCheckoutForm.setError('accepted_terms', checkoutError.value)
+        return
+    }
+
     cartCheckoutForm.post(route('auth.commerce.cart.checkout'), {
         preserveScroll: true,
+        onError: () => {
+            checkoutError.value = 'Bitte prüfe die markierten Felder.'
+        },
     })
 }
 </script>
@@ -299,6 +311,12 @@ const checkoutCart = () => {
                             <Link :href="route('legal.withdrawal')" target="_blank" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>Widerrufshinweise</Link>.
                         </span>
                     </label>
+                    <p v-if="cartCheckoutForm.errors.accepted_terms" class="mt-2 rounded border border-error/30 bg-error/10 px-3 py-2 text-sm font-semibold text-error">
+                        {{ cartCheckoutForm.errors.accepted_terms }}
+                    </p>
+                    <p v-else-if="checkoutError" class="mt-2 rounded border border-error/30 bg-error/10 px-3 py-2 text-sm font-semibold text-error">
+                        {{ checkoutError }}
+                    </p>
 
                     <button class="mt-5 w-full rounded bg-buttonPrimary px-4 py-3 text-sm font-black text-buttonTextPrimary disabled:opacity-50" :disabled="cartCheckoutForm.processing">
                         {{ cartCheckoutForm.processing ? 'Checkout wird gestartet...' : 'Jetzt kaufen' }}

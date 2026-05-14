@@ -25,7 +25,15 @@ return new class extends Migration
         });
 
         DB::table('ride_users')->whereNull('status')->update(['status' => 'accepted']);
-        DB::statement('UPDATE ride_users SET created_at = COALESCE(created_at, NOW()), updated_at = COALESCE(updated_at, NOW())');
+        $now = now();
+
+        DB::table('ride_users')
+            ->whereNull('created_at')
+            ->update(['created_at' => $now]);
+
+        DB::table('ride_users')
+            ->whereNull('updated_at')
+            ->update(['updated_at' => $now]);
     }
 
     public function down(): void

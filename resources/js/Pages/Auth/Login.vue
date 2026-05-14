@@ -1,5 +1,5 @@
 <script setup>
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
 import Checkbox from '@/Components/Checkbox.vue';
 import InputError from '@/Components/InputError.vue';
@@ -14,6 +14,10 @@ const props = defineProps({
     status: String,
     loginImages: { type: Array, default: () => [] },
 });
+
+const page = usePage()
+const redirectTarget = new URLSearchParams(page.url.split('?')[1] || '').get('redirect')
+const authRouteParams = redirectTarget ? { redirect: redirectTarget } : {}
 
 const form = useForm({
     email: '',
@@ -139,7 +143,7 @@ const goBack = () => {
 
                     <div class="flex items-center justify-start my-4">
                         <SecondaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                            <Link :href="route('register')">{{ $t('Registrieren') }}?</Link>
+                            <Link :href="route('register', authRouteParams)">{{ $t('Registrieren') }}?</Link>
                         </SecondaryButton>
 
                         <PrimaryButton class="ms-4" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">

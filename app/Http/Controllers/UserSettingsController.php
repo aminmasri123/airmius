@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Activity;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\Setting;
 use App\Models\Sport;
 use App\Models\SubscriptionInvoice;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -42,9 +44,15 @@ class UserSettingsController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name', 'slug', 'category']),
             'billingHistory' => [
+                'airmius_bank' => [
+                    'bank_account_holder' => Setting::valueFor('billing_bank_account_holder', 'Airmius'),
+                    'bank_name' => Setting::valueFor('billing_bank_name', ''),
+                    'iban' => Setting::valueFor('billing_iban', ''),
+                    'bic' => Setting::valueFor('billing_bic', ''),
+                ],
                 'invoices' => Invoice::query()
                     ->where('user_id', $request->user()->id)
-                    ->with('club:id,name')
+                    ->with('club:id,name,sepa_account_holder,sepa_iban,sepa_bic')
                     ->latest('id')
                     ->limit(30)
                     ->get(),
@@ -56,7 +64,7 @@ class UserSettingsController extends Controller
                     ->get(),
                 'subscription_invoices' => SubscriptionInvoice::query()
                     ->where('user_id', $request->user()->id)
-                    ->with(['club:id,name', 'plan:id,name'])
+                    ->with(['club:id,name', 'plan:id,name', 'checkout:id,status,provider'])
                     ->latest('id')
                     ->limit(30)
                     ->get(),
@@ -191,6 +199,57 @@ class UserSettingsController extends Controller
             ]);
 
             return back()->with('success', 'Einstellungen wurden gespeichert.');
+    }
+
+    public function cancelOpenPayment(Request $request, SubscriptionInvoice $subscriptionInvoice)
+    {
+        abort_unless($subscriptionInvoice->user_id === $request->user()->id, 403);
+
+        $checkout = $subscriptionInvoice->checkout;
+        $isOpenInvoice = in_array($subscriptionInvoice->status, ['open', 'awaiting_transfer', 'overdue'], true);
+        $isOpenCheckout = $checkout && in_array($checkout->status, ['pending', 'awaiting_transfer'], true);
+
+        if (! $isOpenInvoice || ! $isOpenCheckout) {
+            return back()->with('error', 'Nur offene Airmius-Zahlungen koennen abgebrochen werden.');
+        }
+
+        DB::transaction(function () use ($subscriptionInvoice, $checkout) {
+            $checkout->forceFill([
+                'status' => 'cancelled',
+                'payload' => array_merge($checkout->payload ?? [], [
+                    'cancelled_by_user_at' => now()->toIso8601String(),
+                ]),
+            ])->save();
+
+            $subscriptionInvoice->forceFill([
+                'status' => 'cancelled',
+                'meta' => array_merge($subscriptionInvoice->meta ?? [], [
+                    'cancelled_by_user_at' => now()->toIso8601String(),
+                ]),
+            ])->save();
+        });
+
+        return back()->with('success', 'Offene Zahlung wurde abgebrochen.');
+    }
+
+    public function destroyOpenPayment(Request $request, SubscriptionInvoice $subscriptionInvoice)
+    {
+        abort_unless($subscriptionInvoice->user_id === $request->user()->id, 403);
+
+        $checkout = $subscriptionInvoice->checkout;
+        $isUnpaidInvoice = ! in_array($subscriptionInvoice->status, ['paid'], true) && ! $subscriptionInvoice->paid_at;
+        $isDisposableCheckout = ! $checkout || in_array($checkout->status, ['pending', 'awaiting_transfer', 'cancelled'], true);
+
+        if (! $isUnpaidInvoice || ! $isDisposableCheckout) {
+            return back()->with('error', 'Bezahlte oder bereits aktivierte Zahlungen koennen nicht geloescht werden.');
+        }
+
+        DB::transaction(function () use ($subscriptionInvoice, $checkout) {
+            $subscriptionInvoice->delete();
+            $checkout?->delete();
+        });
+
+        return back()->with('success', 'Offene Zahlung wurde geloescht.');
     }
 
 

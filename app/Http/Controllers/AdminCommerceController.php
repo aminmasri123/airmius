@@ -12,6 +12,7 @@ use App\Models\CommerceShippingRate;
 use App\Models\CommerceTaxRate;
 use App\Models\MarketplacePayout;
 use App\Models\MarketplaceProduct;
+use App\Models\MarketplaceSellerApplication;
 use App\Models\PayoutProfile;
 use App\Models\Setting;
 use App\Models\SubscriptionAddon;
@@ -23,6 +24,7 @@ use App\Services\MediaOptimizer;
 use App\Services\CommerceAuditService;
 use App\Services\CommerceDocumentService;
 use App\Support\UploadStorage;
+use App\Support\AppNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
@@ -58,6 +60,11 @@ class AdminCommerceController extends Controller
             'coupons' => SubscriptionCoupon::query()->latest('id')->get(),
             'addons' => SubscriptionAddon::query()->withCount('purchases')->latest('id')->get(),
             'products' => MarketplaceProduct::query()->latest('id')->limit(100)->get(),
+            'sellerApplications' => MarketplaceSellerApplication::query()
+                ->with(['user:id,name,email', 'reviewer:id,name,email'])
+                ->latest('id')
+                ->limit(100)
+                ->get(),
             'campaigns' => AdCampaign::query()
                 ->with(['creatives', 'stats' => fn ($query) => $query->latest('date')->limit(30)])
                 ->withExists([
@@ -79,7 +86,7 @@ class AdminCommerceController extends Controller
                 'active' => AdCampaign::query()->where('status', 'active')->count(),
             ],
             'orders' => CommerceOrder::query()
-                ->with(['user:id,name,email', 'club:id,name', 'orderable', 'items', 'returnRequests'])
+                ->with(['user:id,name,email', 'club:id,name', 'orderable', 'items', 'returnRequests', 'issueResponder:id,name,email'])
                 ->latest('id')
                 ->limit(50)
                 ->get(),
@@ -107,6 +114,7 @@ class AdminCommerceController extends Controller
             'marketplaceVisuals' => $this->marketplaceVisualsForAdmin(),
             'taxRates' => CommerceTaxRate::query()->orderBy('priority')->orderBy('country_code')->get(),
             'shippingRates' => CommerceShippingRate::query()->orderBy('priority')->orderBy('country_code')->get(),
+            'marketplaceCategoryCommissions' => $this->marketplaceCategoryCommissionsForAdmin(),
             'auditLogs' => CommerceAuditLog::query()
                 ->with('user:id,name,email')
                 ->latest('id')
@@ -125,6 +133,7 @@ class AdminCommerceController extends Controller
                 'ads_cpl_cents' => (int) Setting::valueFor('ads_cpl_cents', 200),
                 'ads_cpa_percent' => (int) Setting::valueFor('ads_cpa_percent', 10),
                 'ads_min_budget_cents' => (int) Setting::valueFor('ads_min_budget_cents', 1000),
+                'marketplace_default_commission_percent' => (int) Setting::valueFor('marketplace_default_commission_percent', 10),
             ],
         ]);
     }
@@ -173,6 +182,31 @@ class AdminCommerceController extends Controller
         return back()->with('success', 'Marketplace-Produkt aktualisiert.');
     }
 
+    public function updateSellerApplication(Request $request, MarketplaceSellerApplication $sellerApplication)
+    {
+        $data = $request->validate([
+            'status' => ['required', Rule::in(['pending', 'approved', 'rejected'])],
+            'review_note' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $sellerApplication->update([
+            'status' => $data['status'],
+            'review_note' => $data['review_note'] ?? null,
+            'reviewed_by' => $request->user()->id,
+            'reviewed_at' => now(),
+        ]);
+
+        AppNotification::send($sellerApplication->user_id, 'marketplace.seller_application.'.$data['status'], [
+            'title' => $data['status'] === 'approved' ? 'Shop-Zugang freigegeben' : 'Shop-Antrag aktualisiert',
+            'message' => $data['status'] === 'approved'
+                ? 'Du kannst jetzt Produkte im Marketplace verkaufen.'
+                : ($data['review_note'] ?? 'Dein Shop-Antrag wurde geprueft.'),
+            'url' => route('auth.commerce.index', ['tab' => 'create']),
+        ]);
+
+        return back()->with('success', 'Shop-Antrag wurde aktualisiert.');
+    }
+
     public function adjustProductStock(Request $request, MarketplaceProduct $product)
     {
         $data = $request->validate([
@@ -218,6 +252,36 @@ class AdminCommerceController extends Controller
         ]);
 
         return back()->with('success', 'Bestellproblem wurde aktualisiert.');
+    }
+
+    public function replyOrderIssue(Request $request, CommerceOrder $order)
+    {
+        abort_if(! $order->issue_status || $order->issue_status === 'none', 422, 'Zu dieser Bestellung gibt es keine aktive Meldung.');
+
+        $data = $request->validate([
+            'issue_response' => ['required', 'string', 'max:2000'],
+            'issue_status' => ['nullable', Rule::in(['reported', 'reviewing', 'resolved'])],
+        ]);
+
+        $order->update([
+            'issue_response' => $data['issue_response'],
+            'issue_responded_at' => now(),
+            'issue_responded_by' => $request->user()->id,
+            'issue_status' => $data['issue_status'] ?? 'reviewing',
+        ]);
+
+        $freshOrder = $order->fresh(['user']);
+
+        if ($freshOrder?->user_id) {
+            AppNotification::send($freshOrder->user_id, 'commerce.order.issue_replied', [
+                'title' => 'Antwort zu deiner Meldung',
+                'body' => 'Airmius hat auf deine Meldung zu Bestellung #'.$freshOrder->id.' geantwortet.',
+                'url' => route('auth.commerce.index', ['tab' => 'invoices']),
+                'order_id' => $freshOrder->id,
+            ]);
+        }
+
+        return back()->with('success', 'Antwort wurde gesendet.');
     }
 
     public function updateReturnRequest(Request $request, CommerceReturnRequest $returnRequest)
@@ -303,12 +367,14 @@ class AdminCommerceController extends Controller
         ]);
 
         $before = $order->only(['shipping_status', 'shipping_carrier', 'tracking_number']);
+        $previousStatus = $order->shipping_status;
         $order->update([
             ...$data,
             'shipped_at' => $data['shipping_status'] === 'shipped' && ! $order->shipped_at ? now() : $order->shipped_at,
             'delivered_at' => $data['shipping_status'] === 'delivered' && ! $order->delivered_at ? now() : $order->delivered_at,
         ]);
         $this->audit->log('shipping.updated', $order, $before, $order->fresh()->only(['shipping_status', 'shipping_carrier', 'tracking_number']));
+        $this->notifyShippingUpdated($order->fresh(), $previousStatus);
 
         return back()->with('success', 'Versandstatus wurde aktualisiert.');
     }
@@ -464,6 +530,32 @@ class AdminCommerceController extends Controller
         return back()->with('success', 'Commerce-Bestellung wurde als bezahlt markiert.');
     }
 
+    private function notifyShippingUpdated(CommerceOrder $order, ?string $previousStatus): void
+    {
+        if (! $order->user_id || $previousStatus === $order->shipping_status) {
+            return;
+        }
+
+        $statusLabel = match ($order->shipping_status) {
+            'prepared' => 'wird vorbereitet',
+            'shipped' => 'wurde versendet',
+            'delivered' => 'wurde zugestellt',
+            default => 'wurde aktualisiert',
+        };
+
+        $tracking = $order->tracking_number
+            ? ' Tracking: '.$order->tracking_number
+            : '';
+
+        AppNotification::send($order->user_id, 'commerce.order.shipping_updated', [
+            'title' => 'Versand aktualisiert',
+            'body' => 'Deine Bestellung #'.$order->id.' '.$statusLabel.'.'.$tracking,
+            'url' => route('auth.commerce.index'),
+            'order_id' => $order->id,
+            'shipping_status' => $order->shipping_status,
+        ]);
+    }
+
     public function updateWebsiteRequest(Request $request, WebsiteRequest $websiteRequest)
     {
         $websiteRequest->update($request->validate([
@@ -481,8 +573,8 @@ class AdminCommerceController extends Controller
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $orders = $this->pendingPayoutOrdersFor($user)->get();
-        abort_if($orders->isEmpty(), 422, 'Keine offenen Auszahlungen für diesen Anbieter gefunden.');
+        $orders = $this->eligiblePayoutOrdersFor($user)->get();
+        abort_if($orders->isEmpty(), 422, 'Keine auszahlbaren Verkaeufe fuer diesen Anbieter gefunden. Auszahlungen sind erst 14 Tage nach Abschluss ohne Beschwerde oder Ruecksendung moeglich.');
 
         DB::transaction(function () use ($orders, $user, $data) {
             $payout = MarketplacePayout::create([
@@ -601,6 +693,29 @@ class AdminCommerceController extends Controller
         return back()->with('success', 'Commerce-Steuerlogik wurde aktualisiert.');
     }
 
+    public function updateMarketplaceCommissions(Request $request)
+    {
+        $data = $request->validate([
+            'default_commission_percent' => ['required', 'integer', 'min:0', 'max:100'],
+            'commissions' => ['required', 'array', 'max:100'],
+            'commissions.*.category' => ['required', 'string', 'max:80'],
+            'commissions.*.commission_percent' => ['required', 'integer', 'min:0', 'max:100'],
+        ]);
+
+        $commissions = collect($data['commissions'])
+            ->mapWithKeys(function (array $row) {
+                $category = trim((string) $row['category']);
+
+                return $category === '' ? [] : [$category => max(0, min(100, (int) $row['commission_percent']))];
+            })
+            ->all();
+
+        Setting::setValue('marketplace_default_commission_percent', (int) $data['default_commission_percent']);
+        Setting::setValue('marketplace_category_commissions', json_encode($commissions));
+
+        return back()->with('success', 'Marketplace-Provisionen wurden aktualisiert.');
+    }
+
     public function storeTaxRate(Request $request)
     {
         CommerceTaxRate::create($this->taxRateData($request));
@@ -662,6 +777,58 @@ class AdminCommerceController extends Controller
         ]);
     }
 
+    private function marketplaceCategoryCommissionsForAdmin(): array
+    {
+        $defaults = [
+            'product' => 'Produkte',
+            'course' => 'Kurse / E-Learning',
+            'camp' => 'Camps',
+            'service' => 'Services',
+            'outfit_subscription' => 'Outfit-Abo',
+        ];
+
+        $existingCategories = MarketplaceProduct::query()
+            ->whereNotNull('category')
+            ->distinct()
+            ->pluck('category')
+            ->filter()
+            ->values();
+
+        $labels = collect($defaults)
+            ->merge($existingCategories->mapWithKeys(fn (string $category) => [$category => $defaults[$category] ?? str($category)->replace(['_', '-'], ' ')->title()->toString()]));
+
+        $configured = $this->marketplaceCategoryCommissionSettings();
+
+        return $labels
+            ->map(fn (string $label, string $category) => [
+                'category' => $category,
+                'label' => $label,
+                'commission_percent' => $configured[$category] ?? $this->marketplaceCommissionPercentForCategory($category),
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function marketplaceCommissionPercentForCategory(?string $category): int
+    {
+        $category = trim((string) $category);
+        $configured = $this->marketplaceCategoryCommissionSettings();
+
+        if ($category !== '' && array_key_exists($category, $configured)) {
+            return max(0, min(100, (int) $configured[$category]));
+        }
+
+        return max(0, min(100, (int) Setting::valueFor('marketplace_default_commission_percent', 10)));
+    }
+
+    private function marketplaceCategoryCommissionSettings(): array
+    {
+        $raw = Setting::valueFor('marketplace_category_commissions', '{}');
+        $decoded = is_array($raw) ? $raw : json_decode((string) $raw, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
     private function productData(Request $request): array
     {
         $data = $request->validate([
@@ -701,7 +868,7 @@ class AdminCommerceController extends Controller
             'currency' => ['required', 'string', 'size:3'],
             'status' => ['required', Rule::in(['draft', 'review', 'published', 'rejected', 'archived'])],
             'rejection_reason' => ['nullable', 'string', 'max:2000'],
-            'commission_percent' => ['required', 'integer', 'min:0', 'max:100'],
+            'commission_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
         ]);
 
         $featuresText = (string) ($data['features_text'] ?? '');
@@ -757,6 +924,7 @@ class AdminCommerceController extends Controller
         $data['product_type'] = $data['product_type'] ?? 'single';
         $data['attribute_options'] = $attributeOptions;
         $data['variants'] = $data['product_type'] === 'variable' ? $variants : [];
+        $data['commission_percent'] = $data['commission_percent'] ?? $this->marketplaceCommissionPercentForCategory($data['category']);
         if ($data['product_type'] === 'digital') {
             $data['is_shippable'] = false;
             $data['return_policy_type'] = $data['return_policy_type'] ?? 'digital';
@@ -1024,16 +1192,42 @@ class AdminCommerceController extends Controller
 
     private function pendingPayoutOrdersFor(User $user)
     {
+        return $this->eligiblePayoutOrdersFor($user);
+    }
+
+    private function eligiblePayoutOrdersFor(User $user)
+    {
+        $cutoff = now()->subDays(14);
+
         return CommerceOrder::query()
             ->whereIn('type', ['marketplace_product', 'marketplace_cart'])
             ->where('status', 'completed')
             ->where('payout_status', 'pending')
+            ->where(function ($query) {
+                $query->whereNull('issue_status')->orWhere('issue_status', 'none');
+            })
+            ->whereDoesntHave('returnRequests')
+            ->where(function ($query) use ($cutoff) {
+                $query->where(function ($noShipping) use ($cutoff) {
+                    $noShipping
+                        ->whereDoesntHave('items', fn ($items) => $items->where('is_shippable', true))
+                        ->where('completed_at', '<=', $cutoff);
+                })->orWhere(function ($shipping) use ($cutoff) {
+                    $shipping
+                        ->whereHas('items', fn ($items) => $items->where('is_shippable', true))
+                        ->where('shipping_status', 'delivered')
+                        ->where('delivered_at', '<=', $cutoff);
+                });
+            })
             ->where(function ($query) use ($user) {
                 $query->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($product) => $product->where('user_id', $user->id))
                     ->orWhereHas('items', fn ($items) => $items
                         ->where('orderable_type', MarketplaceProduct::class)
                         ->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($product) => $product->where('user_id', $user->id)));
-            });
+            })
+            ->whereDoesntHave('items', fn ($items) => $items
+                ->where('orderable_type', MarketplaceProduct::class)
+                ->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($product) => $product->where('user_id', '!=', $user->id)));
     }
 
     private function payoutCandidates(): array
@@ -1044,12 +1238,43 @@ class AdminCommerceController extends Controller
             ->where('status', 'completed')
             ->where('payout_status', 'pending')
             ->where(function ($query) {
+                $query->whereNull('issue_status')->orWhere('issue_status', 'none');
+            })
+            ->whereDoesntHave('returnRequests')
+            ->where(function ($query) {
+                $cutoff = now()->subDays(14);
+                $query->where(function ($noShipping) use ($cutoff) {
+                    $noShipping
+                        ->whereDoesntHave('items', fn ($items) => $items->where('is_shippable', true))
+                        ->where('completed_at', '<=', $cutoff);
+                })->orWhere(function ($shipping) use ($cutoff) {
+                    $shipping
+                        ->whereHas('items', fn ($items) => $items->where('is_shippable', true))
+                        ->where('shipping_status', 'delivered')
+                        ->where('delivered_at', '<=', $cutoff);
+                });
+            })
+            ->where(function ($query) {
                 $query->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($product) => $product->whereNotNull('user_id'))
                     ->orWhereHas('items', fn ($items) => $items
                         ->where('orderable_type', MarketplaceProduct::class)
                         ->whereHasMorph('orderable', [MarketplaceProduct::class], fn ($product) => $product->whereNotNull('user_id')));
             })
-            ->get();
+            ->get()
+            ->filter(function (CommerceOrder $order) {
+                $sellerIds = $order->items
+                    ->filter(fn ($item) => $item->orderable instanceof MarketplaceProduct)
+                    ->map(fn ($item) => $item->orderable->user_id)
+                    ->filter()
+                    ->unique()
+                    ->values();
+
+                if ($order->orderable instanceof MarketplaceProduct && $order->orderable->user_id) {
+                    $sellerIds->push($order->orderable->user_id);
+                }
+
+                return $sellerIds->unique()->count() === 1;
+            });
 
         return $orders
             ->groupBy(fn (CommerceOrder $order) => $order->orderable?->user_id ?: $order->items->first(fn ($item) => $item->orderable instanceof MarketplaceProduct)?->orderable?->user_id)

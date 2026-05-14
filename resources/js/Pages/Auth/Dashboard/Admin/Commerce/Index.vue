@@ -11,6 +11,7 @@ const props = defineProps({
     coupons: { type: Array, default: () => [] },
     addons: { type: Array, default: () => [] },
     products: { type: Array, default: () => [] },
+    sellerApplications: { type: Array, default: () => [] },
     campaigns: { type: Array, default: () => [] },
     adReport: { type: Object, default: () => ({}) },
     orders: { type: Array, default: () => [] },
@@ -21,6 +22,7 @@ const props = defineProps({
     marketplaceVisuals: { type: Array, default: () => [] },
     taxRates: { type: Array, default: () => [] },
     shippingRates: { type: Array, default: () => [] },
+    marketplaceCategoryCommissions: { type: Array, default: () => [] },
     commerceSettings: { type: Object, default: () => ({}) },
     returnRequests: { type: Array, default: () => [] },
     auditLogs: { type: Array, default: () => [] },
@@ -29,7 +31,8 @@ const props = defineProps({
 })
 
 const page = usePage()
-const activeTab = ref('marketplace')
+const queryTab = new URLSearchParams(String(page.url || '').split('?')[1] || '').get('tab')
+const activeTab = ref(queryTab || 'marketplace')
 const campaignStatusError = ref('')
 
 const couponForm = useForm({
@@ -117,6 +120,15 @@ const commerceSettingsForm = useForm({
     ads_min_budget_cents: centsToMajor(props.commerceSettings.ads_min_budget_cents ?? 1000),
 })
 
+const marketplaceCommissionForm = useForm({
+    default_commission_percent: props.commerceSettings.marketplace_default_commission_percent ?? 10,
+    commissions: props.marketplaceCategoryCommissions.map((row) => ({
+        category: row.category,
+        label: row.label,
+        commission_percent: row.commission_percent ?? props.commerceSettings.marketplace_default_commission_percent ?? 10,
+    })),
+})
+
 const shippingRateForm = useForm({
     name: 'Deutschland Standardversand',
     country_code: 'DE',
@@ -170,8 +182,20 @@ const campaignCreativeRows = ref([
 const rejectionModal = useForm({
     open: false,
     product: null,
+    selectedReason: '',
     reason: '',
 })
+const rejectionReasons = [
+    { value: 'missing_required_info', label: 'Pflichtangaben fehlen', text: 'Bitte ergaenze die fehlenden Pflichtangaben wie Beschreibung, Preis, Kategorie oder Lieferinformationen.' },
+    { value: 'unclear_offer', label: 'Angebot ist unklar', text: 'Das Angebot ist fuer Kaeufer noch nicht eindeutig genug beschrieben. Bitte erklaere Inhalt, Umfang und Ablauf genauer.' },
+    { value: 'invalid_category', label: 'Falsche Kategorie', text: 'Das Angebot passt nicht zur gewaehlten Kategorie. Bitte waehle die passende Marketplace-Kategorie.' },
+    { value: 'bad_images', label: 'Bilder fehlen oder sind ungeeignet', text: 'Bitte lade passende, klare Bilder hoch. Platzhalter, unscharfe oder irrefuehrende Bilder koennen nicht freigegeben werden.' },
+    { value: 'price_or_tax_issue', label: 'Preis, Steuer oder Versand unklar', text: 'Preis, Steuerklasse, Versand oder Lieferbedingungen sind nicht plausibel genug angegeben.' },
+    { value: 'prohibited_content', label: 'Nicht erlaubter Inhalt', text: 'Dieses Angebot enthaelt Inhalte oder Leistungen, die auf Airmius nicht veroeffentlicht werden koennen.' },
+    { value: 'quality_review', label: 'Qualitaetspruefung nicht bestanden', text: 'Das Angebot erfuellt aktuell nicht die Qualitaetsanforderungen fuer den Marketplace.' },
+    { value: 'duplicate', label: 'Doppeltes Angebot', text: 'Ein sehr aehnliches Angebot existiert bereits. Bitte bearbeite das bestehende Angebot statt ein neues einzureichen.' },
+    { value: 'custom', label: 'Eigener Grund', text: '' },
+]
 const editProductForm = useForm({
     open: false,
     product: null,
@@ -220,11 +244,81 @@ const refundModal = useForm({
     amount_cents: '',
     reason: '',
 })
+const issueReplyModal = useForm({
+    open: false,
+    order: null,
+    issue_response: '',
+    issue_status: 'reviewing',
+})
+const reportedOrders = computed(() => props.orders.filter((order) => order.issue_status && order.issue_status !== 'none'))
+
+const sellerApplicationStatusLabel = (status) => ({
+    pending: 'Wartet auf Pruefung',
+    approved: 'Freigegeben',
+    rejected: 'Abgelehnt',
+}[status] || status || '-')
 
 const formatMoney = (cents) => new Intl.NumberFormat('de-DE', {
     style: 'currency',
     currency: 'EUR',
 }).format(Number(cents || 0) / 100)
+
+const formatDateTime = (value) => {
+    if (!value) {
+        return '-'
+    }
+
+    return new Intl.DateTimeFormat('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(new Date(value))
+}
+
+const orderPaymentLabel = (order) => {
+    if (order.status === 'completed') {
+        return order.shipping_status === 'delivered' ? 'Abgeschlossen' : 'Bezahlt'
+    }
+
+    return {
+        pending: 'Offen',
+        awaiting_transfer: 'Wartet auf Überweisung',
+        cancelled: 'Storniert',
+        refunded: 'Erstattet',
+    }[order.status] || order.status
+}
+
+const orderPaymentHint = (order) => {
+    if (order.status === 'completed') {
+        return order.shipping_status === 'delivered'
+            ? 'Zahlung und Zustellung erledigt'
+            : 'Zahlung eingegangen, Versand läuft noch'
+    }
+
+    return {
+        pending: 'Zahlung noch offen',
+        awaiting_transfer: 'Banküberweisung muss bestätigt werden',
+        cancelled: 'Bestellung wurde storniert',
+        refunded: 'Betrag wurde erstattet',
+    }[order.status] || ''
+}
+
+const orderShippingLabel = (status) => ({
+    open: 'Offen',
+    prepared: 'Wird vorbereitet',
+    shipped: 'Versendet',
+    delivered: 'Zugestellt',
+}[status || 'open'] || status)
+
+const orderIssueLabel = (status) => ({
+    reported: 'Problem gemeldet',
+    reviewing: 'In Prüfung',
+    resolved: 'Gelöst',
+    refunded: 'Erstattet',
+    cancelled: 'Storniert',
+}[status] || status)
 
 const formatPercent = (value) => `${Number(value || 0).toFixed(2).replace('.', ',')} %`
 
@@ -245,11 +339,12 @@ const budgetUsage = (spent, budget) => {
 }
 
 const tabs = computed(() => [
-    { key: 'marketplace', label: 'Marketplace', count: props.products.length },
+    { key: 'marketplace', label: 'Marketplace', count: props.products.length + props.sellerApplications.length },
     { key: 'orders', label: 'Bestellungen', count: props.orders.length + props.returnRequests.length + props.websiteRequests.length },
     { key: 'settings', label: 'Steuern & Versand', count: props.taxRates.length + props.shippingRates.length },
     { key: 'ad-prices', label: 'Ads Preise', count: 5 },
-    { key: 'marketing', label: 'Rabatte & Ads', count: props.campaigns.length + props.coupons.length + props.addons.length },
+    { key: 'ads', label: 'Ads', count: props.campaigns.length },
+    { key: 'marketing', label: 'Rabatte & Add-ons', count: props.coupons.length + props.addons.length },
     { key: 'payouts', label: 'Auszahlungen', count: props.payoutCandidates.length + props.payouts.length },
     { key: 'reports', label: 'Reports', count: props.auditLogs.length + props.sellerReports.length },
 ])
@@ -519,6 +614,10 @@ const updateCommerceSettings = () => commerceSettingsForm
     preserveScroll: true,
 })
 
+const updateMarketplaceCommissions = () => marketplaceCommissionForm.put(route('admin.commerce.marketplace-commissions.update'), {
+    preserveScroll: true,
+})
+
 const updateTaxRate = (rate) => {
     router.put(route('admin.commerce.tax-rates.update', rate.id), {
         name: rate.name,
@@ -558,6 +657,7 @@ const updateProductStatus = (product, status) => {
     if (status === 'rejected') {
         rejectionModal.open = true
         rejectionModal.product = product
+        rejectionModal.selectedReason = ''
         rejectionModal.reason = product.rejection_reason || ''
         return
     }
@@ -577,9 +677,15 @@ const submitRejection = () => {
         onSuccess: () => {
             rejectionModal.open = false
             rejectionModal.product = null
+            rejectionModal.selectedReason = ''
             rejectionModal.reason = ''
         },
     })
+}
+
+const selectRejectionReason = () => {
+    const selected = rejectionReasons.find((reason) => reason.value === rejectionModal.selectedReason)
+    rejectionModal.reason = selected?.text || ''
 }
 
 const updateProductStock = (product) => {
@@ -587,6 +693,21 @@ const updateProductStock = (product) => {
         manages_stock: true,
         stock_quantity: Math.max(0, Number(product.stock_quantity || 0)),
     }), { preserveScroll: true })
+}
+
+const updateSellerApplication = (application, status) => {
+    const reviewNote = status === 'rejected'
+        ? window.prompt('Ablehnungsgrund fuer den Shop-Antrag') || ''
+        : ''
+
+    if (status === 'rejected' && !reviewNote.trim()) {
+        return
+    }
+
+    router.put(route('admin.commerce.seller-applications.update', application.id), {
+        status,
+        review_note: reviewNote,
+    }, { preserveScroll: true })
 }
 
 const openEditProduct = (product) => {
@@ -730,7 +851,18 @@ const storeCampaign = () => {
 }
 
 const markOrderPaid = (order) => {
-    router.post(route('admin.commerce.orders.mark-paid', order.id), {}, { preserveScroll: true })
+    router.post(route('admin.commerce.orders.mark-paid', order.id), {}, {
+        preserveScroll: true,
+        onSuccess: () => {
+            order.status = 'completed'
+            order.completed_at = new Date().toISOString()
+            router.reload({
+                only: ['orders', 'summary', 'payoutCandidates'],
+                preserveScroll: true,
+                preserveState: true,
+            })
+        },
+    })
 }
 
 const updateCampaignStatus = (campaign, status) => {
@@ -763,6 +895,40 @@ const updateOrderIssue = (order, issueStatus, orderStatus = null) => {
     }, { preserveScroll: true })
 }
 
+const openIssueReplyModal = (order) => {
+    issueReplyModal.open = true
+    issueReplyModal.order = order
+    issueReplyModal.issue_response = order.issue_response || ''
+    issueReplyModal.issue_status = order.issue_status === 'resolved' ? 'resolved' : 'reviewing'
+}
+
+const closeIssueReplyModal = () => {
+    issueReplyModal.open = false
+    issueReplyModal.order = null
+    issueReplyModal.issue_response = ''
+    issueReplyModal.issue_status = 'reviewing'
+    issueReplyModal.clearErrors()
+}
+
+const submitIssueReply = () => {
+    if (!issueReplyModal.order) return
+
+    issueReplyModal.post(route('admin.commerce.orders.issue.reply', issueReplyModal.order.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            issueReplyModal.order.issue_response = issueReplyModal.issue_response
+            issueReplyModal.order.issue_status = issueReplyModal.issue_status
+            issueReplyModal.order.issue_responded_at = new Date().toISOString()
+            closeIssueReplyModal()
+            router.reload({
+                only: ['orders'],
+                preserveScroll: true,
+                preserveState: true,
+            })
+        },
+    })
+}
+
 const openShippingModal = (order) => {
     shippingModal.open = true
     shippingModal.order = order
@@ -785,8 +951,18 @@ const submitShipping = () => {
     }, {
         preserveScroll: true,
         onSuccess: () => {
+            shippingModal.order.shipping_status = shippingModal.shipping_status
+            shippingModal.order.shipping_carrier = shippingModal.shipping_carrier
+            shippingModal.order.shipping_label_url = shippingModal.shipping_label_url
+            shippingModal.order.tracking_number = shippingModal.tracking_number
+            shippingModal.order.tracking_url = shippingModal.tracking_url
             shippingModal.open = false
             shippingModal.order = null
+            router.reload({
+                only: ['orders', 'summary', 'payoutCandidates'],
+                preserveScroll: true,
+                preserveState: true,
+            })
         },
     })
 }
@@ -904,6 +1080,15 @@ const updatePayoutProfile = (profile, status) => {
             </div>
         </nav>
 
+        <section v-if="page.props.flash?.success || page.props.errors?.campaign_status" class="surface-card px-5 py-4">
+            <div v-if="page.props.flash?.success" class="rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm font-semibold text-success">
+                {{ page.props.flash.success }}
+            </div>
+            <div v-if="page.props.errors?.campaign_status" class="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm font-semibold text-danger">
+                {{ page.props.errors.campaign_status }}
+            </div>
+        </section>
+
         <section v-show="activeTab === 'settings'" class="grid gap-6 xl:grid-cols-3">
             <article class="surface-card p-5">
                 <div class="flex items-start justify-between gap-3">
@@ -953,6 +1138,45 @@ const updatePayoutProfile = (profile, status) => {
                         Reverse-Charge
                     </label>
                     <button class="md:col-span-5 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Steuerlogik speichern</button>
+                </form>
+            </article>
+
+            <article class="surface-card p-5 xl:col-span-2">
+                <div class="flex flex-col gap-1">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Marketplace</p>
+                    <h2 class="text-lg font-semibold text-primary">Provisionen nach Kategorie</h2>
+                    <p class="text-sm text-secondary">Diese Prozente werden bei neuen Marketplace-Bestellungen zur Auszahlung berechnet. Kategorie-Regeln ueberschreiben den alten Produktwert.</p>
+                </div>
+                <form class="mt-4 space-y-4" @submit.prevent="updateMarketplaceCommissions">
+                    <label class="grid gap-2 rounded-lg border border-border bg-card p-4 md:grid-cols-[1fr_8rem] md:items-center">
+                        <span>
+                            <span class="block text-sm font-semibold text-primary">Standard-Provision</span>
+                            <span class="block text-xs text-secondary">Greift nur, wenn fuer eine neue Kategorie noch kein eigener Satz hinterlegt ist.</span>
+                        </span>
+                        <span class="flex items-center gap-2">
+                            <input v-model="marketplaceCommissionForm.default_commission_percent" type="number" min="0" max="100" class="w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <span class="text-sm text-secondary">%</span>
+                        </span>
+                    </label>
+
+                    <div class="grid gap-3 md:grid-cols-2">
+                        <label
+                            v-for="(row, index) in marketplaceCommissionForm.commissions"
+                            :key="row.category"
+                            class="rounded-lg border border-border bg-card p-4"
+                        >
+                            <span class="block text-sm font-semibold text-primary">{{ row.label }}</span>
+                            <span class="block text-xs text-secondary">{{ row.category }}</span>
+                            <span class="mt-3 flex items-center gap-2">
+                                <input v-model="marketplaceCommissionForm.commissions[index].commission_percent" type="number" min="0" max="100" class="w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                                <span class="text-sm text-secondary">%</span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="marketplaceCommissionForm.processing">
+                        Provisionen speichern
+                    </button>
                 </form>
             </article>
 
@@ -1183,7 +1407,65 @@ const updatePayoutProfile = (profile, status) => {
             </article>
         </section>
 
-        <section v-show="activeTab === 'marketplace'" class="grid gap-6 xl:grid-cols-2">
+        <section v-show="activeTab === 'marketplace'" class="grid gap-6">
+            <article class="surface-card overflow-hidden">
+                <div class="border-b border-border p-5">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Shop-Zugang</p>
+                    <h2 class="mt-1 text-lg font-semibold text-primary">Verkaeufer-Antraege</h2>
+                    <p class="mt-1 text-sm text-secondary">Erst freigegebene Nutzer koennen eigene Marketplace-Produkte erstellen.</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-left text-sm">
+                        <tbody class="divide-y divide-border">
+                            <tr v-for="application in sellerApplications" :key="application.id">
+                                <td class="px-5 py-3">
+                                    <p class="font-semibold text-primary">{{ application.user?.name || application.user?.email }}</p>
+                                    <p class="text-xs text-secondary">{{ application.user?.email || '-' }} &middot; {{ application.business_name || application.applicant_type }}</p>
+                                </td>
+                                <td class="px-5 py-3 text-secondary">
+                                    <p class="font-semibold text-primary">{{ sellerApplicationStatusLabel(application.status) }}</p>
+                                    <p class="text-xs text-secondary">Beantragt: {{ formatDateTime(application.created_at) }}</p>
+                                    <p v-if="application.review_note" class="mt-1 text-xs text-warning">{{ application.review_note }}</p>
+                                </td>
+                                <td class="px-5 py-3 text-secondary">
+                                    <p v-if="application.notes">{{ application.notes }}</p>
+                                    <p v-else>-</p>
+                                </td>
+                                <td class="px-5 py-3 text-right">
+                                    <div class="flex flex-wrap justify-end gap-2">
+                                        <button
+                                            v-if="application.status !== 'approved'"
+                                            type="button"
+                                            class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary"
+                                            @click="updateSellerApplication(application, 'approved')"
+                                        >
+                                            Freigeben
+                                        </button>
+                                        <button
+                                            v-if="application.status !== 'rejected'"
+                                            type="button"
+                                            class="rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning"
+                                            @click="updateSellerApplication(application, 'rejected')"
+                                        >
+                                            Ablehnen
+                                        </button>
+                                        <button
+                                            v-if="application.status !== 'pending'"
+                                            type="button"
+                                            class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary"
+                                            @click="updateSellerApplication(application, 'pending')"
+                                        >
+                                            Zurueck auf Pruefung
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p v-if="!sellerApplications.length" class="px-5 py-6 text-sm text-secondary">Noch keine Shop-Antraege.</p>
+                </div>
+            </article>
+
             <article class="surface-card p-5">
                 <h2 class="text-lg font-semibold text-primary">Marketplace-Produkt</h2>
                 <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeProduct">
@@ -1372,10 +1654,11 @@ const updatePayoutProfile = (profile, status) => {
                     <p v-if="!products.length" class="text-sm text-secondary">Noch keine Produkte vorbereitet.</p>
                 </div>
             </article>
+        </section>
 
-            <article class="surface-card p-5">
-                <h2 class="text-lg font-semibold text-primary">Ads-Kampagne</h2>
-                <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeCampaign">
+        <section v-show="activeTab === 'ads'" class="surface-card p-5">
+            <h2 class="text-lg font-semibold text-primary">Ads-Kampagne erstellen</h2>
+            <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeCampaign">
                     <input v-model="campaignForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Name">
                     <input v-model="campaignForm.headline" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Headline">
                     <input v-model="campaignForm.target_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Ziel-URL">
@@ -1455,9 +1738,8 @@ const updatePayoutProfile = (profile, status) => {
                     <textarea v-model="campaignForm.description" rows="3" class="md:col-span-2 rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung"></textarea>
                     <textarea v-model="campaignForm.review_note" rows="2" class="md:col-span-2 rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Review-Notiz / Ablehnungsgrund"></textarea>
                     <button class="md:col-span-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Speichern</button>
-                </form>
-                <p class="mt-4 text-sm text-secondary">{{ campaigns.length }} Kampagnen vorbereitet.</p>
-            </article>
+            </form>
+            <p class="mt-4 text-sm text-secondary">{{ campaigns.length }} Kampagnen vorbereitet.</p>
         </section>
 
         <section v-show="activeTab === 'marketplace'" class="surface-card p-5">
@@ -1543,7 +1825,7 @@ const updatePayoutProfile = (profile, status) => {
             </div>
         </section>
 
-        <section v-show="activeTab === 'marketing'" class="surface-card overflow-hidden">
+        <section v-show="activeTab === 'ads'" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
                 <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Ads Reporting</p>
                 <h2 class="mt-1 text-lg font-semibold text-primary">Kampagnenleistung</h2>
@@ -1580,6 +1862,26 @@ const updatePayoutProfile = (profile, status) => {
                 {{ campaignStatusError || page.props.errors.campaign_status }}
             </div>
 
+            <div v-if="false && reportedOrders.length" class="border-b border-border bg-warning/10 p-5">
+                <p class="text-xs font-semibold uppercase tracking-wide text-warning">Gemeldete Probleme</p>
+                <div class="mt-3 grid gap-3 lg:grid-cols-2">
+                    <article v-for="order in reportedOrders" :key="`reported-${order.id}`" class="rounded-lg border border-warning/30 bg-card p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="font-semibold text-primary">Bestellung #{{ order.id }} · {{ order.orderable?.name || order.orderable?.title || order.type }}</p>
+                                <p class="mt-1 text-xs text-secondary">{{ order.user?.email || 'Gastbestellung' }} · {{ formatMoney(order.amount_cents) }}</p>
+                                <p v-if="order.issue_note" class="mt-2 text-sm text-primary">{{ order.issue_note }}</p>
+                            </div>
+                            <span class="shrink-0 rounded-full bg-warning/15 px-2 py-1 text-xs font-semibold text-warning">{{ orderIssueLabel(order.issue_status) }}</span>
+                        </div>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <button v-if="order.issue_status === 'reported'" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="updateOrderIssue(order, 'reviewing')">Prüfen</button>
+                            <button class="rounded-lg border border-success/40 px-3 py-2 text-xs font-semibold text-success" @click="updateOrderIssue(order, 'resolved')">Gelöst</button>
+                            <button class="rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="updateOrderIssue(order, 'refunded', 'refunded')">Erstattet</button>
+                        </div>
+                    </article>
+                </div>
+            </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full text-left text-sm">
                     <thead class="border-b border-border text-xs uppercase text-secondary">
@@ -1819,6 +2121,31 @@ const updatePayoutProfile = (profile, status) => {
         <section v-show="activeTab === 'orders'" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
                 <h2 class="text-lg font-semibold text-primary">Commerce-Bestellungen</h2>
+                <div v-if="reportedOrders.length" class="mt-4 rounded-lg border border-warning/30 bg-warning/10 p-4">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-warning">Gemeldete Probleme</p>
+                    <div class="mt-3 grid gap-3 lg:grid-cols-2">
+                        <article v-for="order in reportedOrders" :key="`reported-${order.id}`" class="rounded-lg border border-warning/30 bg-card p-4">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="font-semibold text-primary">Bestellung #{{ order.id }} · {{ order.orderable?.name || order.orderable?.title || order.type }}</p>
+                                    <p class="mt-1 text-xs text-secondary">{{ order.user?.email || 'Gastbestellung' }} · {{ formatMoney(order.amount_cents) }}</p>
+                                    <p v-if="order.issue_note" class="mt-2 text-sm text-primary">{{ order.issue_note }}</p>
+                                    <div v-if="order.issue_response" class="mt-3 rounded-lg border border-border bg-bg p-3 text-sm">
+                                        <p class="text-xs font-semibold uppercase text-secondary">Antwort</p>
+                                        <p class="mt-1 text-primary">{{ order.issue_response }}</p>
+                                    </div>
+                                </div>
+                                <span class="shrink-0 rounded-full bg-warning/15 px-2 py-1 text-xs font-semibold text-warning">{{ orderIssueLabel(order.issue_status) }}</span>
+                            </div>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <button class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="openIssueReplyModal(order)">Antworten</button>
+                                <button v-if="order.issue_status === 'reported'" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="updateOrderIssue(order, 'reviewing')">Prüfen</button>
+                                <button class="rounded-lg border border-success/40 px-3 py-2 text-xs font-semibold text-success" @click="updateOrderIssue(order, 'resolved')">Gelöst</button>
+                                <button class="rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="updateOrderIssue(order, 'refunded', 'refunded')">Erstattet</button>
+                            </div>
+                        </article>
+                    </div>
+                </div>
                 <p class="mt-1 text-sm text-secondary">Offene Überweisungen für Add-ons und Marketplace manuell bestätigen.</p>
             </div>
             <div class="overflow-x-auto">
@@ -1826,23 +2153,29 @@ const updatePayoutProfile = (profile, status) => {
                     <tbody class="divide-y divide-border">
                         <tr v-for="order in orders" :key="order.id">
                             <td class="px-5 py-3 font-semibold text-primary">{{ order.orderable?.name || order.orderable?.title || order.type }}</td>
+                            <td class="px-5 py-3 text-secondary">
+                                <p class="text-xs font-semibold uppercase text-secondary">Bestellt</p>
+                                <p class="font-semibold text-primary">{{ formatDateTime(order.created_at) }}</p>
+                            </td>
                             <td class="px-5 py-3 text-secondary">{{ order.user?.email || '-' }}</td>
                             <td class="px-5 py-3 text-secondary">{{ formatMoney(order.amount_cents) }}</td>
                             <td class="px-5 py-3 text-secondary">
-                                <p>{{ order.status }}</p>
-                                <p class="text-xs text-secondary">Versand: {{ order.shipping_status || 'open' }}</p>
+                                <p class="font-semibold text-primary">{{ orderPaymentLabel(order) }}</p>
+                                <p v-if="orderPaymentHint(order)" class="text-xs text-secondary">{{ orderPaymentHint(order) }}</p>
+                                <p class="text-xs text-secondary">Versand: {{ orderShippingLabel(order.shipping_status) }}</p>
                                 <p v-if="order.tracking_number" class="text-xs text-secondary">{{ order.shipping_carrier }} · {{ order.tracking_number }}</p>
-                                <p v-if="order.issue_status && order.issue_status !== 'none'" class="text-xs text-warning">{{ order.issue_status }}</p>
+                                <p v-if="order.issue_status && order.issue_status !== 'none'" class="text-xs font-semibold text-warning">{{ orderIssueLabel(order.issue_status) }}</p>
                             </td>
                             <td class="px-5 py-3 text-right">
                                 <div class="flex flex-wrap justify-end gap-2">
-                                    <button v-if="order.status === 'awaiting_transfer'" class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="markOrderPaid(order)">
+                                    <button v-if="['pending', 'awaiting_transfer'].includes(order.status)" class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="markOrderPaid(order)">
                                         Bezahlt
                                     </button>
                                     <a v-if="order.invoice_number" :href="route('admin.commerce.orders.invoice', order.id)" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary">Rechnung</a>
                                     <a v-if="order.credit_note_number" :href="route('admin.commerce.orders.credit-note', order.id)" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary">Gutschrift</a>
                                     <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="openShippingModal(order)">Versand</button>
                                     <button class="rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="openRefundModal(order)">Teilerstattung</button>
+                                    <button v-if="order.issue_status && order.issue_status !== 'none'" class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary" @click="openIssueReplyModal(order)">Antworten</button>
                                     <button v-if="order.issue_status === 'reported'" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="updateOrderIssue(order, 'reviewing')">Prüfen</button>
                                     <button v-if="order.issue_status && order.issue_status !== 'none'" class="rounded-lg border border-success/40 px-3 py-2 text-xs font-semibold text-success" @click="updateOrderIssue(order, 'resolved')">Gelöst</button>
                                     <button v-if="order.issue_status && order.issue_status !== 'none'" class="rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="updateOrderIssue(order, 'refunded', 'refunded')">Erstattet</button>
@@ -2077,10 +2410,44 @@ const updatePayoutProfile = (profile, status) => {
         <div v-if="rejectionModal.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
             <div class="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-2xl">
                 <h2 class="text-lg font-semibold text-primary">Angebot ablehnen</h2>
-                <textarea v-model="rejectionModal.reason" rows="4" class="mt-4 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Grund eingeben"></textarea>
+                <label class="mt-4 block">
+                    <span class="text-xs font-semibold uppercase text-secondary">Grund</span>
+                    <select v-model="rejectionModal.selectedReason" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" @change="selectRejectionReason">
+                        <option value="">Grund auswaehlen</option>
+                        <option v-for="reason in rejectionReasons" :key="reason.value" :value="reason.value">
+                            {{ reason.label }}
+                        </option>
+                    </select>
+                </label>
+                <textarea v-model="rejectionModal.reason" rows="5" class="mt-3 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Ablehnungsgrund fuer den Verkaeufer"></textarea>
                 <div class="mt-5 flex justify-end gap-3">
                     <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="rejectionModal.open = false">Abbrechen</button>
-                    <button class="rounded-lg bg-warning px-4 py-2 text-sm font-semibold text-white" @click="submitRejection">Ablehnen</button>
+                    <button class="rounded-lg bg-warning px-4 py-2 text-sm font-semibold text-white" :disabled="!rejectionModal.reason.trim()" @click="submitRejection">Ablehnen</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="issueReplyModal.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+            <div class="w-full max-w-xl rounded-xl border border-border bg-card p-5 shadow-2xl">
+                <h2 class="text-lg font-semibold text-primary">Auf Meldung antworten</h2>
+                <div v-if="issueReplyModal.order" class="mt-3 rounded-lg border border-border bg-bg p-3 text-sm">
+                    <p class="text-xs font-semibold uppercase text-secondary">Meldung des Käufers</p>
+                    <p class="mt-1 text-primary">{{ issueReplyModal.order.issue_note || 'Keine Nachricht hinterlegt.' }}</p>
+                </div>
+                <div class="mt-4 grid gap-3">
+                    <textarea v-model="issueReplyModal.issue_response" rows="5" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Antwort an den Käufer schreiben"></textarea>
+                    <p v-if="issueReplyModal.errors.issue_response" class="text-sm text-danger">{{ issueReplyModal.errors.issue_response }}</p>
+                    <select v-model="issueReplyModal.issue_status" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <option value="reviewing">In Prüfung</option>
+                        <option value="resolved">Gelöst</option>
+                        <option value="reported">Weiter offen</option>
+                    </select>
+                </div>
+                <div class="mt-5 flex justify-end gap-3">
+                    <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="closeIssueReplyModal">Abbrechen</button>
+                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="issueReplyModal.processing" @click="submitIssueReply">
+                        Antwort senden
+                    </button>
                 </div>
             </div>
         </div>

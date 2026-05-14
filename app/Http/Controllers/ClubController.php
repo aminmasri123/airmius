@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Club;
 use App\Models\Post;
+use App\Models\Sponsor;
 use App\Models\Sport;
 use App\Models\UserBadge;
 use App\Models\User;
 use App\Services\ClubService;
 use App\Services\GamificationService;
 use App\Services\MediaOptimizer;
+use App\Services\PlanFeatureService;
 use App\Support\ClubRoles;
 use App\Support\UploadStorage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -30,6 +32,7 @@ class ClubController extends Controller
         private ClubService $service,
         private MediaOptimizer $mediaOptimizer,
         private GamificationService $gamification,
+        private PlanFeatureService $planFeatures,
     ) {}
 
     public function index()
@@ -78,6 +81,9 @@ class ClubController extends Controller
             'postal_code' => ['nullable', 'string', 'max:30'],
             'city' => ['nullable', 'string', 'max:255'],
             'state' => ['nullable', 'string', 'max:255'],
+            'sepa_account_holder' => ['nullable', 'string', 'max:120'],
+            'sepa_iban' => ['nullable', 'string', 'max:40'],
+            'sepa_bic' => ['nullable', 'string', 'max:20'],
             'is_listed' => ['boolean'],
             'teams_are_listed' => ['boolean'],
             'members_can_post_to_club' => ['boolean'],
@@ -190,6 +196,9 @@ class ClubController extends Controller
             'postal_code' => ['nullable', 'string', 'max:30'],
             'city' => ['nullable', 'string', 'max:255'],
             'state' => ['nullable', 'string', 'max:255'],
+            'sepa_account_holder' => ['nullable', 'string', 'max:120'],
+            'sepa_iban' => ['nullable', 'string', 'max:40'],
+            'sepa_bic' => ['nullable', 'string', 'max:20'],
             'is_listed' => ['boolean'],
             'teams_are_listed' => ['boolean'],
             'members_can_post_to_club' => ['boolean'],
@@ -197,6 +206,67 @@ class ClubController extends Controller
         ]));
 
         return back()->with('success', 'Club aktualisiert');
+    }
+
+    public function storeSponsor(Request $request, Club $club)
+    {
+        $this->authorize('update', $club);
+        $this->planFeatures->ensureAllows($club, 'sponsors');
+
+        $club->sponsors()->create($this->sponsorData($request) + [
+            'scope' => 'club',
+        ]);
+
+        return back()->with('success', 'Sponsor erstellt.');
+    }
+
+    public function updateSponsor(Request $request, Club $club, Sponsor $sponsor)
+    {
+        $this->authorize('update', $club);
+        abort_unless((int) $sponsor->club_id === (int) $club->id, 404);
+        $this->planFeatures->ensureAllows($club, 'sponsors');
+
+        $sponsor->update($this->sponsorData($request) + [
+            'scope' => 'club',
+            'club_id' => $club->id,
+        ]);
+
+        return back()->with('success', 'Sponsor aktualisiert.');
+    }
+
+    public function destroySponsor(Request $request, Club $club, Sponsor $sponsor)
+    {
+        $this->authorize('update', $club);
+        abort_unless((int) $sponsor->club_id === (int) $club->id, 404);
+        $this->planFeatures->ensureAllows($club, 'sponsors');
+
+        $sponsor->delete();
+
+        return back()->with('success', 'Sponsor geloescht.');
+    }
+
+    private function sponsorData(Request $request): array
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'contact_name' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'website' => ['nullable', 'url', 'max:255'],
+            'logo_light' => ['nullable', 'string', 'max:2048'],
+            'logo_dark' => ['nullable', 'string', 'max:2048'],
+            'amount' => ['nullable', 'numeric', 'min:0'],
+            'starts_at' => ['nullable', 'date'],
+            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+        ]);
+
+        $fallbackLogo = ($data['logo_light'] ?? null) ?: ($data['logo_dark'] ?? null);
+
+        return [
+            ...$data,
+            'logo' => $fallbackLogo,
+            'logo_light' => ($data['logo_light'] ?? null) ?: $fallbackLogo,
+            'logo_dark' => ($data['logo_dark'] ?? null) ?: $fallbackLogo,
+        ];
     }
 
     public function updateMember(Request $request, Club $club, User $user)

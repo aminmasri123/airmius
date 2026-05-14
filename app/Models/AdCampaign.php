@@ -65,6 +65,11 @@ class AdCampaign extends Model
         return $this->hasMany(AdCreative::class);
     }
 
+    public function groups(): HasMany
+    {
+        return $this->hasMany(AdGroup::class);
+    }
+
     public function commerceOrders(): MorphMany
     {
         return $this->morphMany(CommerceOrder::class, 'orderable');

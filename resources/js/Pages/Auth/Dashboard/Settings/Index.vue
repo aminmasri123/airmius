@@ -4,6 +4,7 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import { useTheme } from '@/services/useTheme'
 import LanguageDropdown from '@/Components/LanguageDropdown.vue'
+import DeleteConfirmModal from '@/Components/Auth/DeleteConfirmModal.vue'
 
 // Jetstream Components
 import DeleteUserForm from '@/Pages/Profile/Partials/DeleteUserForm.vue'
@@ -36,7 +37,7 @@ const props = defineProps({
     confirmsTwoFactorAuthentication: Boolean,
     billingHistory: {
         type: Object,
-        default: () => ({ invoices: [], payments: [], subscription_invoices: [] }),
+        default: () => ({ invoices: [], payments: [], subscription_invoices: [], airmius_bank: {} }),
     },
     currentUserSubscriptions: {
         type: Array,
@@ -66,6 +67,16 @@ const props = defineProps({
 
 // Tabs
 const activeTab = ref('profile')
+const openPaymentModal = ref({
+    show: false,
+    action: null,
+    invoice: null,
+})
+const bankTransferModal = ref({
+    show: false,
+    type: null,
+    invoice: null,
+})
 
 const tabClass = (tab) =>
     `px-4 py-2 rounded-lg text-sm font-semibold transition ${
@@ -169,6 +180,138 @@ const invoiceStatusLabel = (status) => ({
     cancels_at_period_end: 'Gekündigt zum Periodenende',
 }[status] || status)
 
+const isPayableClubInvoice = (invoice) => ['open', 'overdue', 'awaiting_transfer'].includes(invoice.status)
+const isOpenSubscriptionPayment = (invoice) => Boolean(invoice.payment_checkout_id)
+    && ['open', 'overdue', 'awaiting_transfer'].includes(invoice.status)
+    && ['pending', 'awaiting_transfer'].includes(invoice.checkout?.status)
+const canDeleteOpenSubscriptionPayment = (invoice) => Boolean(invoice.payment_checkout_id)
+    && invoice.status !== 'paid'
+    && !invoice.paid_at
+    && ['pending', 'awaiting_transfer', 'cancelled'].includes(invoice.checkout?.status)
+
+const formatIban = (value) => String(value || '')
+    .replace(/\s+/g, '')
+    .replace(/(.{4})/g, '$1 ')
+    .trim()
+
+const paymentReference = (invoice) => invoice.payment_reference || invoice.number || `Rechnung ${invoice.id}`
+
+const openBankTransferModal = (type, invoice) => {
+    bankTransferModal.value = {
+        show: true,
+        type,
+        invoice,
+    }
+}
+
+const closeBankTransferModal = () => {
+    bankTransferModal.value = {
+        show: false,
+        type: null,
+        invoice: null,
+    }
+}
+
+const hasAirmiusBank = () => Boolean(props.billingHistory.airmius_bank?.iban)
+const hasClubBank = (invoice) => Boolean(invoice.club?.sepa_iban)
+
+const bankTransferRows = () => {
+    const invoice = bankTransferModal.value.invoice
+    if (!invoice) return []
+
+    if (bankTransferModal.value.type === 'airmius') {
+        const bank = props.billingHistory.airmius_bank || {}
+
+        return [
+            ['Empfaenger', 'Airmius'],
+            ['Kontoinhaber', bank.bank_account_holder || 'Airmius'],
+            ...(bank.bank_name ? [['Bank', bank.bank_name]] : []),
+            ['IBAN', formatIban(bank.iban)],
+            ...(bank.bic ? [['BIC', bank.bic]] : []),
+            ['Betrag', formatMoney(Number(invoice.amount_cents || 0) / 100)],
+            ['Verwendungszweck', paymentReference(invoice)],
+        ]
+    }
+
+    const club = invoice.club || {}
+
+    return [
+        ['Empfaenger', club.name || '-'],
+        ['Kontoinhaber', club.sepa_account_holder || club.name || '-'],
+        ['IBAN', formatIban(club.sepa_iban)],
+        ...(club.sepa_bic ? [['BIC', club.sepa_bic]] : []),
+        ['Betrag', formatMoney(invoice.amount)],
+        ['Verwendungszweck', paymentReference(invoice)],
+    ]
+}
+
+const openPaymentActionModal = (action, invoice) => {
+    openPaymentModal.value = {
+        show: true,
+        action,
+        invoice,
+    }
+}
+
+const closeOpenPaymentModal = () => {
+    openPaymentModal.value = {
+        show: false,
+        action: null,
+        invoice: null,
+    }
+}
+
+const openPaymentModalTitle = () => openPaymentModal.value.action === 'delete'
+    ? 'Offene Zahlung loeschen'
+    : 'Offene Zahlung abbrechen'
+
+const openPaymentModalMessage = () => {
+    const invoice = openPaymentModal.value.invoice
+    const number = invoice?.number ? ` ${invoice.number}` : ''
+
+    if (openPaymentModal.value.action === 'delete') {
+        return `Die offene Zahlung${number} wird dauerhaft geloescht. Das ist nur fuer unbezahlte, nicht aktivierte Zahlungen moeglich.`
+    }
+
+    return `Die offene Zahlung${number} wird abgebrochen und als storniert markiert.`
+}
+
+const openPaymentModalConfirmText = () => openPaymentModal.value.action === 'delete'
+    ? 'delete'
+    : 'abbrechen'
+
+const confirmOpenPaymentAction = () => {
+    const invoice = openPaymentModal.value.invoice
+    const action = openPaymentModal.value.action
+
+    if (!invoice) return
+
+    if (action === 'delete') {
+        deleteOpenSubscriptionPayment(invoice)
+        return
+    }
+
+    cancelOpenSubscriptionPayment(invoice)
+}
+
+const cancelOpenSubscriptionPayment = (invoice) => {
+    if (!isOpenSubscriptionPayment(invoice)) return
+
+    router.post(route('auth.settings.subscription-invoices.cancel-open-payment', invoice.id), {}, {
+        preserveScroll: true,
+        onFinish: closeOpenPaymentModal,
+    })
+}
+
+const deleteOpenSubscriptionPayment = (invoice) => {
+    if (!canDeleteOpenSubscriptionPayment(invoice)) return
+
+    router.delete(route('auth.settings.subscription-invoices.destroy-open-payment', invoice.id), {
+        preserveScroll: true,
+        onFinish: closeOpenPaymentModal,
+    })
+}
+
 const cancelSubscription = (subscription) => {
     router.post(route('auth.user-subscriptions.cancel', subscription.id), {}, { preserveScroll: true })
 }
@@ -176,6 +319,9 @@ const cancelSubscription = (subscription) => {
 const openProviderPortal = (subscription) => {
     router.post(route('auth.user-subscriptions.provider-portal', subscription.id), {}, { preserveScroll: true })
 }
+
+const socialAccountFor = (provider) =>
+    props.socialAccounts.find((account) => account.provider === provider)
 
 const connectedAccountFor = (provider) =>
     props.sportIntegrations.accounts.find((account) => account.provider === provider)
@@ -625,7 +771,9 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                 <th class="py-2 pr-4">Betrag</th>
                                 <th class="py-2 pr-4">Fällig</th>
                                 <th class="py-2 pr-4">Status</th>
+                                <th class="py-2 pr-4">Zahlen</th>
                                 <th class="py-2 pr-4 text-right">PDF</th>
+                                <th class="py-2 pr-4 text-right">Aktion</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border">
@@ -636,10 +784,43 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                 <td class="py-3 pr-4 text-primary">{{ formatMoney(Number(invoice.amount_cents || 0) / 100) }}</td>
                                 <td class="py-3 pr-4 text-secondary">{{ formatDate(invoice.due_at) }}</td>
                                 <td class="py-3 pr-4 text-secondary">{{ invoiceStatusLabel(invoice.status) }}</td>
+                                <td class="py-3 pr-4">
+                                    <button
+                                        v-if="isPayableClubInvoice(invoice) && hasAirmiusBank()"
+                                        type="button"
+                                        class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-muted"
+                                        @click="openBankTransferModal('airmius', invoice)"
+                                    >
+                                        Bankdaten
+                                    </button>
+                                    <span v-else-if="isPayableClubInvoice(invoice)" class="text-xs text-warning">Bankdaten fehlen</span>
+                                    <span v-else class="text-xs text-secondary">-</span>
+                                </td>
                                 <td class="py-3 pr-4 text-right">
                                     <a :href="route('auth.subscription-invoices.download', invoice.id)" download class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-muted">
                                         Download
                                     </a>
+                                </td>
+                                <td class="py-3 pr-4 text-right">
+                                    <div v-if="isOpenSubscriptionPayment(invoice) || canDeleteOpenSubscriptionPayment(invoice)" class="flex flex-wrap justify-end gap-2">
+                                        <button
+                                            v-if="isOpenSubscriptionPayment(invoice)"
+                                            type="button"
+                                            class="rounded-lg border border-warning px-3 py-1 text-xs font-semibold text-warning hover:bg-warning/10"
+                                            @click="openPaymentActionModal('cancel', invoice)"
+                                        >
+                                            Abbrechen
+                                        </button>
+                                        <button
+                                            v-if="canDeleteOpenSubscriptionPayment(invoice)"
+                                            type="button"
+                                            class="rounded-lg border border-error px-3 py-1 text-xs font-semibold text-error hover:bg-error/10"
+                                            @click="openPaymentActionModal('delete', invoice)"
+                                        >
+                                            Loeschen
+                                        </button>
+                                    </div>
+                                    <span v-else class="text-xs text-secondary">-</span>
                                 </td>
                             </tr>
                         </tbody>
@@ -667,6 +848,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                 <th class="py-2 pr-4">Betrag</th>
                                 <th class="py-2 pr-4">Fällig</th>
                                 <th class="py-2 pr-4">Status</th>
+                                <th class="py-2 pr-4">Zahlen</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border">
@@ -677,6 +859,18 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                 <td class="py-3 pr-4 text-primary">{{ formatMoney(invoice.amount) }}</td>
                                 <td class="py-3 pr-4 text-secondary">{{ formatDate(invoice.due_date) }}</td>
                                 <td class="py-3 pr-4 text-secondary">{{ invoiceStatusLabel(invoice.status) }}</td>
+                                <td class="py-3 pr-4">
+                                    <button
+                                        v-if="isPayableClubInvoice(invoice) && hasClubBank(invoice)"
+                                        type="button"
+                                        class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-muted"
+                                        @click="openBankTransferModal('club', invoice)"
+                                    >
+                                        Bankdaten
+                                    </button>
+                                    <span v-else-if="isPayableClubInvoice(invoice)" class="text-xs text-warning">Bankdaten fehlen</span>
+                                    <span v-else class="text-xs text-secondary">-</span>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -727,29 +921,47 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                 </p>
 
                 <div class="mt-4 grid gap-3 md:grid-cols-2">
-                    <div class="rounded-lg border border-border bg-bg p-4">
+                    <div
+                        class="rounded-lg border p-4 transition"
+                        :class="socialAccountFor('google') ? 'border-success/40 bg-success/10' : 'border-border bg-bg'"
+                    >
                         <div class="flex items-center justify-between gap-3">
                             <div>
                                 <p class="font-semibold text-primary">Google</p>
                                 <p class="text-sm text-secondary">
-                                    {{ socialAccounts.find((account) => account.provider === 'google')?.email || 'Noch nicht verbunden' }}
+                                    {{ socialAccountFor('google')?.email || 'Noch nicht verbunden' }}
                                 </p>
                             </div>
-                            <a :href="route('social-auth.redirect', 'google')" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary">
+                            <span
+                                v-if="socialAccountFor('google')"
+                                class="rounded-lg bg-success px-3 py-2 text-sm font-semibold text-white"
+                            >
+                                Verbunden
+                            </span>
+                            <a v-else :href="route('social-auth.redirect', 'google')" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary">
                                 Verbinden
                             </a>
                         </div>
                     </div>
 
-                    <div class="rounded-lg border border-border bg-bg p-4">
+                    <div
+                        class="rounded-lg border p-4 transition"
+                        :class="socialAccountFor('microsoft') ? 'border-success/40 bg-success/10' : 'border-border bg-bg'"
+                    >
                         <div class="flex items-center justify-between gap-3">
                             <div>
                                 <p class="font-semibold text-primary">Outlook / Microsoft</p>
                                 <p class="text-sm text-secondary">
-                                    {{ socialAccounts.find((account) => account.provider === 'microsoft')?.email || 'Noch nicht verbunden' }}
+                                    {{ socialAccountFor('microsoft')?.email || 'Noch nicht verbunden' }}
                                 </p>
                             </div>
-                            <a :href="route('social-auth.redirect', 'microsoft')" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary">
+                            <span
+                                v-if="socialAccountFor('microsoft')"
+                                class="rounded-lg bg-success px-3 py-2 text-sm font-semibold text-white"
+                            >
+                                Verbunden
+                            </span>
+                            <a v-else :href="route('social-auth.redirect', 'microsoft')" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary">
                                 Verbinden
                             </a>
                         </div>
@@ -764,7 +976,12 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                 </p>
 
                 <div class="mt-4 grid gap-3 lg:grid-cols-3">
-                    <article v-for="(provider, key) in sportIntegrations.providers" :key="key" class="rounded-lg border border-border bg-bg p-4">
+                    <article
+                        v-for="(provider, key) in sportIntegrations.providers"
+                        :key="key"
+                        class="rounded-lg border p-4 transition"
+                        :class="connectedAccountFor(key) ? 'border-success/40 bg-success/10' : 'border-border bg-bg'"
+                    >
                         <div class="flex items-start justify-between gap-3">
                             <div>
                                 <p class="font-semibold text-primary">{{ provider.label }}</p>
@@ -772,7 +989,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                             </div>
                             <span
                                 v-if="connectedAccountFor(key)"
-                                class="rounded-full bg-air-blue/15 px-2 py-1 text-xs font-semibold text-air-blue"
+                                class="rounded-full bg-success px-2 py-1 text-xs font-semibold text-white"
                             >
                                 {{ integrationStatusLabel(connectedAccountFor(key).status) }}
                             </span>
@@ -845,6 +1062,51 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                     </p>
                 </div>
             </section>
+        </div>
+
+        <DeleteConfirmModal
+            :show="openPaymentModal.show"
+            :title="openPaymentModalTitle()"
+            :message="openPaymentModalMessage()"
+            :confirm-text="openPaymentModalConfirmText()"
+            cancel-text="Zurueck"
+            @confirm="confirmOpenPaymentAction"
+            @cancel="closeOpenPaymentModal"
+        />
+
+        <div
+            v-if="bankTransferModal.show"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6"
+            @click.self="closeBankTransferModal"
+        >
+            <div class="w-full max-w-lg rounded-xl border border-border bg-bg p-5 shadow-2xl">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-primary">Per Ueberweisung zahlen</h2>
+                        <p class="mt-1 text-sm text-secondary">
+                            Nutze diese Daten fuer deine Bankueberweisung.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="rounded-lg border border-border px-3 py-1 text-sm font-semibold text-primary hover:bg-muted"
+                        @click="closeBankTransferModal"
+                    >
+                        Schliessen
+                    </button>
+                </div>
+
+                <dl class="mt-5 divide-y divide-border rounded-lg border border-border bg-card">
+                    <div
+                        v-for="[label, value] in bankTransferRows()"
+                        :key="label"
+                        class="grid gap-2 px-4 py-3 text-sm sm:grid-cols-[150px_1fr]"
+                    >
+                        <dt class="text-secondary">{{ label }}</dt>
+                        <dd class="break-words font-semibold text-primary sm:text-right">{{ value }}</dd>
+                    </div>
+                </dl>
+            </div>
         </div>
 
     </div>

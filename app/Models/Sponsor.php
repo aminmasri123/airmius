@@ -11,6 +11,7 @@ class Sponsor extends Model
 
     protected $fillable = [
         'club_id',
+        'scope',
         'name',
         'contact_name',
         'email',

@@ -4,6 +4,8 @@ namespace App\Console\Commands;
 
 use App\Models\Club;
 use App\Models\Invoice;
+use App\Models\User;
+use App\Notifications\ClubInvoiceCreated;
 use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
 use Illuminate\Console\Command;
@@ -96,6 +98,12 @@ class GenerateRecurringContributionInvoices extends Command
                     'club_id' => $membership->club_id,
                     'invoice_id' => $invoice->id,
                 ]);
+
+                $recipient = User::query()->find((int) $membership->user_id);
+
+                if ($recipient?->email) {
+                    $recipient->notify(new ClubInvoiceCreated($invoice->loadMissing('club')));
+                }
 
                 $this->advanceMembership($membership, $dueDate);
                 $created++;

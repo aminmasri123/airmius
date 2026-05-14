@@ -7,6 +7,7 @@ use App\Models\Sponsor;
 use App\Services\PlanFeatureService;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class SponsorController extends Controller
@@ -25,6 +26,7 @@ class SponsorController extends Controller
                 ->through(fn (Sponsor $sponsor) => [
                     'id' => $sponsor->id,
                     'club_id' => $sponsor->club_id,
+                    'scope' => $sponsor->scope ?: ($sponsor->club_id ? 'club' : 'platform'),
                     'name' => $sponsor->name,
                     'contact_name' => $sponsor->contact_name,
                     'email' => $sponsor->email,
@@ -63,7 +65,9 @@ class SponsorController extends Controller
 
         $data = $this->validated($request);
 
-        if (! empty($data['club_id'])) {
+        $data = $this->normalizeScope($data);
+
+        if (($data['scope'] ?? 'platform') === 'club') {
             $club = Club::query()->visibleTo($request->user())->findOrFail($data['club_id']);
             $this->planFeatures->ensureAllows($club, 'sponsors');
         }
@@ -81,7 +85,9 @@ class SponsorController extends Controller
 
         $data = $this->validated($request);
 
-        if (! empty($data['club_id'])) {
+        $data = $this->normalizeScope($data);
+
+        if (($data['scope'] ?? 'platform') === 'club') {
             $club = Club::query()->visibleTo($request->user())->findOrFail($data['club_id']);
             $this->planFeatures->ensureAllows($club, 'sponsors');
         }
@@ -105,7 +111,8 @@ class SponsorController extends Controller
     private function validated(Request $request): array
     {
         return $request->validate([
-            'club_id' => ['nullable', 'exists:clubs,id'],
+            'scope' => ['required', Rule::in(['platform', 'outfit_subscription', 'club'])],
+            'club_id' => ['nullable', 'required_if:scope,club', 'exists:clubs,id'],
             'name' => ['required', 'string', 'max:255'],
             'contact_name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
@@ -117,6 +124,17 @@ class SponsorController extends Controller
             'starts_at' => ['nullable', 'date'],
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
         ]);
+    }
+
+    private function normalizeScope(array $data): array
+    {
+        $data['scope'] = $data['scope'] ?? 'platform';
+
+        if ($data['scope'] !== 'club') {
+            $data['club_id'] = null;
+        }
+
+        return $data;
     }
 
     private function normalizeLogos(array $data): array

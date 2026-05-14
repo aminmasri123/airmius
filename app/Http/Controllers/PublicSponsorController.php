@@ -36,7 +36,7 @@ class PublicSponsorController extends Controller
                     'id' => $sponsor->club->id,
                     'name' => $sponsor->club->name,
                 ] : null,
-                'scope' => $sponsor->club_id ? 'club' : 'platform',
+                'scope' => $sponsor->scope ?: ($sponsor->club_id ? 'club' : 'platform'),
             ]);
 
         return Inertia::render('Guest/Sponsors', [
@@ -46,6 +46,7 @@ class PublicSponsorController extends Controller
             'stats' => [
                 'total' => $sponsors->count(),
                 'platform' => $sponsors->where('scope', 'platform')->count(),
+                'outfit_subscription' => $sponsors->where('scope', 'outfit_subscription')->count(),
                 'club' => $sponsors->where('scope', 'club')->count(),
             ],
         ]);

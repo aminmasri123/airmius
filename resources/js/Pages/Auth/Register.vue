@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import AuthenticationCard from '@/Components/AuthenticationCard.vue';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
 import Checkbox from '@/Components/Checkbox.vue';
@@ -9,6 +9,10 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+
+const page = usePage()
+const redirectTarget = new URLSearchParams(page.url.split('?')[1] || '').get('redirect')
+const authRouteParams = redirectTarget ? { redirect: redirectTarget } : {}
 
 const form = useForm({
     first_name: '',
@@ -303,7 +307,7 @@ const submit = () => {
                 </PrimaryButton>
 
                 <SecondaryButton class="ms-4" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                    <Link :href="route('login')">{{ $t('Anmelden') }}</Link>
+                    <Link :href="route('login', authRouteParams)">{{ $t('Anmelden') }}</Link>
                 </SecondaryButton>
             </div>
         </form>

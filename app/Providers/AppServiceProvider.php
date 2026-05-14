@@ -39,6 +39,7 @@ use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
 use SocialiteProviders\Manager\SocialiteWasCalled;
 use SocialiteProviders\Microsoft\Provider as MicrosoftProvider;
+use Throwable;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -89,14 +90,23 @@ class AppServiceProvider extends ServiceProvider
             }
 
             $request = request();
+            $ipAddress = $request->ip();
+            $userAgent = substr((string) $request->userAgent(), 0, 500);
+            $notificationKey = $this->successfulLoginNotificationKey($event->user, $ipAddress, $userAgent);
 
-            $event->user->notify(new LoginSuccessfulNotification(
-                $request->ip(),
-                substr((string) $request->userAgent(), 0, 500),
-                now()->format('d.m.Y H:i')
-            ));
+            if (Cache::add($notificationKey, true, now()->addDay())) {
+                try {
+                    $event->user->notify(new LoginSuccessfulNotification(
+                        $ipAddress,
+                        $userAgent,
+                        now()->format('d.m.Y H:i')
+                    ));
+                } catch (Throwable $exception) {
+                    report($exception);
+                }
+            }
 
-            Cache::forget($this->failedLoginNotificationKey($event->user->email, $request->ip()));
+            Cache::forget($this->failedLoginNotificationKey($event->user->email, $ipAddress));
         });
 
         EventFacade::listen(Failed::class, function (Failed $event): void {
@@ -124,11 +134,15 @@ class AppServiceProvider extends ServiceProvider
                 return;
             }
 
-            $user->notify(new LoginLockoutNotification(
-                $request->ip(),
-                substr((string) $request->userAgent(), 0, 500),
-                now()->format('d.m.Y H:i')
-            ));
+            try {
+                $user->notify(new LoginLockoutNotification(
+                    $request->ip(),
+                    substr((string) $request->userAgent(), 0, 500),
+                    now()->format('d.m.Y H:i')
+                ));
+            } catch (Throwable $exception) {
+                report($exception);
+            }
         });
 
         Inertia::share([
@@ -141,5 +155,10 @@ class AppServiceProvider extends ServiceProvider
     private function failedLoginNotificationKey(string $email, ?string $ipAddress): string
     {
         return 'login-failed-notification:'.sha1(strtolower($email).'|'.($ipAddress ?: 'unknown'));
+    }
+
+    private function successfulLoginNotificationKey(User $user, ?string $ipAddress, ?string $userAgent): string
+    {
+        return 'login-success-notification:'.sha1($user->id.'|'.($ipAddress ?: 'unknown').'|'.($userAgent ?: 'unknown'));
     }
 }

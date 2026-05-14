@@ -131,7 +131,9 @@ const closeSidebar = () => {
             <NavItem v-if="can('profile.view')" @click="closeSidebar" :href="route('auth.badges.index')" label="Meine Badges" icon="las la-medal" />
             <NavItem v-if="can('settings.view')" @click="closeSidebar" :href="route('auth.settings')" label="Einstellungen" icon="las la-cog" />
             <NavItem v-if="can('guardians.children.view')" @click="closeSidebar" :href="route('guardian-access.children')" label="Elternbereich" icon="las la-user-shield" />
-            <NavItem @click="closeSidebar" :href="route('auth.commerce.index')" label="Marketplace" icon="las la-store" />
+            <NavItem @click="closeSidebar" :href="route('auth.learning.studio.index')" label="Sportschule" icon="las la-graduation-cap" />
+            <NavItem @click="closeSidebar" :href="route('guest.marketplace')" label="Marketplace" icon="las la-shopping-bag" />
+            <NavItem @click="closeSidebar" :href="route('auth.commerce.index')" label="Commerce" icon="las la-credit-card" />
             <NavItem @click="closeSidebar" :href="route('auth.outfit-subscriptions.index')" label="Outfit-Abo" icon="las la-tshirt" />
             <NavItem
                 @click="closeSidebar"

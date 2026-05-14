@@ -106,7 +106,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/admin/commerce/products', [AdminCommerceController::class, 'storeProduct'])->middleware('can:subscriptions.manage')->name('admin.commerce.products.store');
     Route::put('/admin/commerce/products/{product}', [AdminCommerceController::class, 'updateProduct'])->middleware('can:subscriptions.manage')->name('admin.commerce.products.update');
     Route::post('/admin/commerce/products/{product}/stock', [AdminCommerceController::class, 'adjustProductStock'])->middleware('can:subscriptions.manage')->name('admin.commerce.products.stock.adjust');
+    Route::put('/admin/commerce/seller-applications/{sellerApplication}', [AdminCommerceController::class, 'updateSellerApplication'])->middleware('can:subscriptions.manage')->name('admin.commerce.seller-applications.update');
     Route::post('/admin/commerce/marketplace-visuals', [AdminCommerceController::class, 'updateMarketplaceVisuals'])->middleware('can:subscriptions.manage')->name('admin.commerce.marketplace-visuals.update');
+    Route::put('/admin/commerce/marketplace-commissions', [AdminCommerceController::class, 'updateMarketplaceCommissions'])->middleware('can:subscriptions.manage')->name('admin.commerce.marketplace-commissions.update');
     Route::put('/admin/commerce/settings', [AdminCommerceController::class, 'updateCommerceSettings'])->middleware('can:subscriptions.manage')->name('admin.commerce.settings.update');
     Route::post('/admin/commerce/tax-rates', [AdminCommerceController::class, 'storeTaxRate'])->middleware('can:subscriptions.manage')->name('admin.commerce.tax-rates.store');
     Route::put('/admin/commerce/tax-rates/{taxRate}', [AdminCommerceController::class, 'updateTaxRate'])->middleware('can:subscriptions.manage')->name('admin.commerce.tax-rates.update');
@@ -117,6 +119,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/admin/commerce/campaigns/{campaign}', [AdminCommerceController::class, 'updateCampaign'])->middleware('can:subscriptions.manage')->name('admin.commerce.campaigns.update');
     Route::post('/admin/commerce/orders/{order}/mark-paid', [AdminCommerceController::class, 'markOrderPaid'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.mark-paid');
     Route::put('/admin/commerce/orders/{order}/issue', [AdminCommerceController::class, 'updateOrderIssue'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.issue');
+    Route::post('/admin/commerce/orders/{order}/issue/reply', [AdminCommerceController::class, 'replyOrderIssue'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.issue.reply');
     Route::put('/admin/commerce/orders/{order}/shipping', [AdminCommerceController::class, 'updateShipping'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.shipping');
     Route::post('/admin/commerce/orders/{order}/refund', [AdminCommerceController::class, 'refundOrder'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.refund');
     Route::get('/admin/commerce/orders/{order}/invoice', [AdminCommerceController::class, 'downloadInvoice'])->middleware('can:subscriptions.manage')->name('admin.commerce.orders.invoice');
@@ -131,8 +134,15 @@ Route::middleware(['auth'])->group(function () {
     // SPORT CLOTHING SUBSCRIPTIONS
     Route::get('/admin/outfit-subscriptions', [AdminOutfitSubscriptionPlanController::class, 'index'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscriptions.index');
     Route::post('/admin/outfit-subscriptions/{subscription}/mark-paid', [AdminOutfitSubscriptionPlanController::class, 'markSubscriptionPaid'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscriptions.mark-paid');
+    Route::post('/admin/outfit-subscriptions/{subscription}/mark-unpaid', [AdminOutfitSubscriptionPlanController::class, 'markSubscriptionUnpaid'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscriptions.mark-unpaid');
+    Route::post('/admin/outfit-subscriptions/{subscription}/payment-reminder', [AdminOutfitSubscriptionPlanController::class, 'remindPayment'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscriptions.payment-reminder');
     Route::post('/admin/outfit-subscriptions/{subscription}/cancel', [AdminOutfitSubscriptionPlanController::class, 'cancelSubscription'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscriptions.cancel');
+    Route::delete('/admin/outfit-subscriptions/{subscription}', [AdminOutfitSubscriptionPlanController::class, 'destroySubscription'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscriptions.destroy');
     Route::post('/admin/outfit-subscriptions/visuals', [AdminOutfitSubscriptionPlanController::class, 'updateVisuals'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscriptions.visuals.update');
+    Route::put('/admin/outfit-deliveries/{delivery}', [AdminOutfitSubscriptionPlanController::class, 'updateDelivery'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-deliveries.update');
+    Route::post('/admin/outfit-deliveries/{delivery}/shipped', [AdminOutfitSubscriptionPlanController::class, 'markDeliveryShipped'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-deliveries.shipped');
+    Route::post('/admin/outfit-deliveries/{delivery}/delivered', [AdminOutfitSubscriptionPlanController::class, 'markDeliveryDelivered'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-deliveries.delivered');
+    Route::delete('/admin/outfit-deliveries/{delivery}', [AdminOutfitSubscriptionPlanController::class, 'destroyDelivery'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-deliveries.destroy');
     Route::post('/admin/outfit-subscription-plans', [AdminOutfitSubscriptionPlanController::class, 'store'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscription-plans.store');
     Route::put('/admin/outfit-subscription-plans/{plan}', [AdminOutfitSubscriptionPlanController::class, 'update'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscription-plans.update');
     Route::delete('/admin/outfit-subscription-plans/{plan}', [AdminOutfitSubscriptionPlanController::class, 'destroy'])->middleware('can:outfit-subscriptions.manage')->name('admin.outfit-subscription-plans.destroy');

@@ -12,7 +12,7 @@ const props = defineProps({
     canLogin: Boolean,
     canRegister: Boolean,
     sponsors: { type: Array, default: () => [] },
-    stats: { type: Object, default: () => ({ total: 0, platform: 0, club: 0 }) },
+    stats: { type: Object, default: () => ({ total: 0, platform: 0, outfit_subscription: 0, club: 0 }) },
 })
 
 const query = ref('')
@@ -41,6 +41,18 @@ const initials = (name) => (name || 'A').split(' ').map((part) => part[0]).join(
 const sponsorLogoUrl = (sponsor) => isDark.value
     ? (sponsor.logo_dark_url || sponsor.logo_light_url || sponsor.logo_url)
     : (sponsor.logo_light_url || sponsor.logo_dark_url || sponsor.logo_url)
+
+const scopeLabel = (sponsor) => ({
+    platform: 'Airmius Plattform',
+    outfit_subscription: 'Outfit-Abo',
+    club: 'Vereins-Sponsor',
+}[sponsor.scope] || 'Airmius Plattform')
+
+const scopeDescription = (sponsor) => ({
+    platform: 'Unterstuetzt Airmius-Angebote und Plattform-Vorteile.',
+    outfit_subscription: 'Unterstuetzt Outfit-Abos und Sponsor-Deals fuer Sportler.',
+    club: 'Unterstuetzt Vereinsangebote und lokale Sportprojekte.',
+}[sponsor.scope] || 'Unterstuetzt Airmius-Angebote und Plattform-Vorteile.')
 </script>
 
 <template>
@@ -80,7 +92,7 @@ const sponsorLogoUrl = (sponsor) => isDark.value
                 </div>
 
                 <div class="rounded-xl border border-border bg-card p-4 shadow-2xl shadow-black/10">
-                    <div class="grid gap-3 sm:grid-cols-3">
+                    <div class="grid gap-3 sm:grid-cols-4">
                         <div class="rounded-lg border border-border bg-inputBg p-4">
                             <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Gesamt</p>
                             <p class="mt-2 text-3xl font-black text-primary">{{ stats.total }}</p>
@@ -88,6 +100,10 @@ const sponsorLogoUrl = (sponsor) => isDark.value
                         <div class="rounded-lg border border-border bg-inputBg p-4">
                             <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Plattform</p>
                             <p class="mt-2 text-3xl font-black text-primary">{{ stats.platform }}</p>
+                        </div>
+                        <div class="rounded-lg border border-border bg-inputBg p-4">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Outfit-Abo</p>
+                            <p class="mt-2 text-3xl font-black text-primary">{{ stats.outfit_subscription }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-inputBg p-4">
                             <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Vereine</p>
@@ -113,7 +129,7 @@ const sponsorLogoUrl = (sponsor) => isDark.value
                             placeholder="Sponsor, Verein oder Website suchen"
                         >
                     </label>
-                    <div class="grid grid-cols-3 rounded-lg border border-border bg-inputBg p-1 text-sm font-semibold">
+                    <div class="grid grid-cols-4 rounded-lg border border-border bg-inputBg p-1 text-sm font-semibold">
                         <button
                             type="button"
                             class="rounded-md px-4 py-2 transition"
@@ -129,6 +145,14 @@ const sponsorLogoUrl = (sponsor) => isDark.value
                             @click="scope = 'platform'"
                         >
                             Airmius
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-md px-4 py-2 transition"
+                            :class="scope === 'outfit_subscription' ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-secondary hover:text-primary'"
+                            @click="scope = 'outfit_subscription'"
+                        >
+                            Outfit
                         </button>
                         <button
                             type="button"
@@ -161,7 +185,7 @@ const sponsorLogoUrl = (sponsor) => isDark.value
                     <div class="p-5">
                         <div class="flex flex-wrap gap-2">
                             <span class="rounded-full bg-air-blue/10 px-3 py-1 text-xs font-semibold text-air-blue">
-                                {{ sponsor.scope === 'platform' ? 'Airmius Plattform' : 'Vereins-Sponsor' }}
+                                {{ scopeLabel(sponsor) }}
                             </span>
                             <span v-if="sponsor.club" class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">
                                 {{ sponsor.club.name }}
@@ -169,7 +193,7 @@ const sponsorLogoUrl = (sponsor) => isDark.value
                         </div>
                         <h2 class="mt-4 text-xl font-black text-primary">{{ sponsor.name }}</h2>
                         <p class="mt-2 text-sm text-secondary">
-                            {{ sponsor.scope === 'platform' ? 'Unterstuetzt Airmius-Angebote und Plattform-Vorteile.' : 'Unterstuetzt Vereinsangebote und lokale Sportprojekte.' }}
+                            {{ scopeDescription(sponsor) }}
                         </p>
                         <a
                             v-if="sponsor.website"
@@ -200,11 +224,11 @@ const sponsorLogoUrl = (sponsor) => isDark.value
                             <div class="flex flex-wrap items-center gap-2">
                                 <h2 class="truncate text-base font-bold text-primary">{{ sponsor.name }}</h2>
                                 <span class="rounded-full bg-inputBg px-2 py-0.5 text-xs font-semibold text-secondary">
-                                    {{ sponsor.scope === 'platform' ? 'Airmius' : sponsor.club?.name || 'Verein' }}
+                                    {{ sponsor.scope === 'club' ? sponsor.club?.name || 'Verein' : scopeLabel(sponsor) }}
                                 </span>
                             </div>
                             <p class="mt-1 text-sm text-secondary">
-                                {{ sponsor.scope === 'platform' ? 'Airmius-Partner' : 'Vereins-Partner' }}
+                                {{ scopeLabel(sponsor) }}
                             </p>
                         </div>
                         <a

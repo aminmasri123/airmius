@@ -8,6 +8,8 @@ import SeoHead from '@/Components/Guest/SeoHead.vue'
 defineProps({
     canLogin: Boolean,
     canRegister: Boolean,
+    learningProducts: { type: Array, default: () => [] },
+    learningCourses: { type: Array, default: () => [] },
 })
 
 const courses = [
@@ -22,6 +24,11 @@ const steps = [
     'guest.learning.steps.apply',
     'guest.learning.steps.improve',
 ]
+
+const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency,
+}).format(Number(cents || 0) / 100)
 </script>
 
 <template>
@@ -46,11 +53,10 @@ const steps = [
                     </p>
                     <div class="mt-8">
                         <Link
-                            v-if="canRegister"
-                            :href="route('register')"
+                            :href="canLogin ? route('auth.learning.studio.index') : route('register')"
                             class="inline-flex rounded-full bg-air-orange px-6 py-3 font-bold text-white transition hover:bg-orange-600"
                         >
-                            {{ $t('guest.learning.start') }}
+                            Sportschule starten
                         </Link>
                     </div>
                 </div>
@@ -68,6 +74,62 @@ const steps = [
             </section>
 
             <section class="mx-auto mt-16 max-w-7xl pb-20">
+                <div v-if="learningCourses.length" class="mb-12">
+                    <div class="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <h2 class="text-2xl font-bold text-primary">Online-Sportschule</h2>
+                            <p class="mt-2 text-secondary">Strukturierte Kurse mit Kapiteln, Lektionen, Quiz, Notizen und Tutor-Betreuung.</p>
+                        </div>
+                        <Link :href="canLogin ? route('auth.learning.studio.index') : route('register')" class="text-sm font-semibold text-air-orange">
+                            Tutor-Studio oeffnen
+                        </Link>
+                    </div>
+
+                    <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                        <article v-for="course in learningCourses" :key="course.id" class="surface-card overflow-hidden">
+                            <Link :href="course.show_url" class="block">
+                                <div class="flex aspect-[16/9] items-center justify-center bg-inputBg">
+                                    <img v-if="course.cover_image" :src="course.cover_image" :alt="course.title" class="h-full w-full object-cover">
+                                    <i v-else class="las la-graduation-cap text-5xl text-air-orange"></i>
+                                </div>
+                            </Link>
+                            <div class="p-5">
+                                <div class="mb-3 flex flex-wrap items-center gap-2">
+                                    <span class="rounded-full bg-air-orange/10 px-3 py-1 text-xs font-bold text-air-orange">{{ course.category }}</span>
+                                    <span class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">{{ course.level }}</span>
+                                </div>
+                                <Link :href="course.show_url" class="text-lg font-bold text-primary hover:text-air-orange">
+                                    {{ course.title }}
+                                </Link>
+                                <p class="mt-2 line-clamp-3 text-sm leading-relaxed text-secondary">{{ course.subtitle || course.description }}</p>
+                                <ul v-if="course.learning_goals?.length" class="mt-4 space-y-2 text-sm text-secondary">
+                                    <li v-for="goal in course.learning_goals.slice(0, 3)" :key="goal" class="flex gap-2">
+                                        <i class="las la-check mt-0.5 text-air-orange"></i>
+                                        <span>{{ goal }}</span>
+                                    </li>
+                                </ul>
+                                <div class="mt-5 flex items-center justify-between gap-3">
+                                    <div>
+                                        <p class="text-xs uppercase text-secondary">Umfang</p>
+                                        <p class="text-xl font-black text-primary">{{ course.lessons_count }} Lektionen</p>
+                                        <p class="text-xs text-secondary">{{ course.estimated_minutes }} Minuten</p>
+                                    </div>
+                                    <Link :href="course.show_url" class="rounded-full bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary">
+                                        Ansehen
+                                    </Link>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+
+                <div v-else-if="learningProducts.length" class="mb-12">
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-bold text-primary">Aktuelle Kurse und Trainingsplaene</h2>
+                        <p class="mt-2 text-secondary">Bestehende digitale Angebote, bis die Sportschule vollstaendig befuellt ist.</p>
+                    </div>
+                </div>
+
                 <div class="mb-8">
                     <h2 class="text-2xl font-bold text-primary">{{ $t('guest.learning.library') }}</h2>
                     <p class="mt-2 text-secondary">{{ $t('guest.learning.library_text') }}</p>

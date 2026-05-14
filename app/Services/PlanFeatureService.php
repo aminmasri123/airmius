@@ -277,7 +277,8 @@ class PlanFeatureService
 
         return $activePlan ?: SubscriptionPlan::query()
             ->whereIn('slug', ['sportler-free', 'free'])
-            ->orderByRaw("FIELD(slug, 'sportler-free', 'free')")
+            ->get()
+            ->sortBy(fn (SubscriptionPlan $plan) => array_search($plan->slug, ['sportler-free', 'free'], true))
             ->first();
     }
 

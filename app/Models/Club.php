@@ -45,6 +45,7 @@ class Club extends Model
         'rejected_at',
         'verified_by',
         'sepa_creditor_id',
+        'sepa_account_holder',
         'sepa_iban',
         'sepa_bic',
         'datev_consultant_number',

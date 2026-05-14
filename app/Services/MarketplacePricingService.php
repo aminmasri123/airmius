@@ -146,6 +146,27 @@ class MarketplacePricingService
             ->all();
     }
 
+    public function commissionPercentFor(MarketplaceProduct $product): int
+    {
+        $category = trim((string) $product->category);
+        $commissions = $this->categoryCommissionSettings();
+
+        if ($category !== '' && array_key_exists($category, $commissions)) {
+            return $this->clampPercent((int) $commissions[$category]);
+        }
+
+        if ($product->commission_percent !== null) {
+            return $this->clampPercent((int) $product->commission_percent);
+        }
+
+        return $this->clampPercent((int) Setting::valueFor('marketplace_default_commission_percent', 10));
+    }
+
+    public function commissionCents(MarketplaceProduct $product, int $itemGrossCents): int
+    {
+        return (int) floor(max(0, $itemGrossCents) * ($this->commissionPercentFor($product) / 100));
+    }
+
     private function taxProfile(?string $country, ?string $region = null, string $taxClass = 'standard', array $customer = []): array
     {
         $country = strtoupper((string) $country);
@@ -291,6 +312,19 @@ class MarketplacePricingService
             'AT', 'BE', 'BG', 'CY', 'CZ', 'DE', 'DK', 'EE', 'EL', 'ES', 'FI', 'FR', 'HR', 'HU', 'IE', 'IT',
             'LT', 'LU', 'LV', 'MT', 'NL', 'PL', 'PT', 'RO', 'SE', 'SI', 'SK',
         ], true);
+    }
+
+    private function categoryCommissionSettings(): array
+    {
+        $raw = Setting::valueFor('marketplace_category_commissions', '{}');
+        $decoded = is_array($raw) ? $raw : json_decode((string) $raw, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    private function clampPercent(int $percent): int
+    {
+        return max(0, min(100, $percent));
     }
 
     private function convertCents(int $amountCents, string $fromCurrency, string $toCurrency): int

@@ -71,7 +71,7 @@ class TeamController extends Controller
             ->with([
                 'admins:id,name,email',
                 'users:id,name,email,profile_photo_path',
-                'sponsors',
+                'sponsors' => fn ($query) => $query->latest('id'),
                 'jobs' => fn ($query) => $query->latest('id'),
                 'teams' => fn ($query) => $query
                     ->withCount('users')
@@ -91,6 +91,22 @@ class TeamController extends Controller
                 $club->setAttribute('can_manage_jobs', $this->canManageJobsForClub($user, $club));
                 $club->setAttribute('can_delete', $user->can('delete', $club));
                 $club->setAttribute('subscription_capabilities', $this->planFeatures->capabilities($club));
+                $club->setRelation('sponsors', $club->sponsors->map(fn ($sponsor) => [
+                    'id' => $sponsor->id,
+                    'name' => $sponsor->name,
+                    'contact_name' => $sponsor->contact_name,
+                    'email' => $sponsor->email,
+                    'website' => $sponsor->website,
+                    'logo' => $sponsor->logo,
+                    'logo_light' => $sponsor->logo_light,
+                    'logo_dark' => $sponsor->logo_dark,
+                    'logo_url' => UploadStorage::url($sponsor->logo),
+                    'logo_light_url' => UploadStorage::url($sponsor->logo_light ?: $sponsor->logo),
+                    'logo_dark_url' => UploadStorage::url($sponsor->logo_dark ?: $sponsor->logo_light ?: $sponsor->logo),
+                    'amount' => $sponsor->amount,
+                    'starts_at' => $sponsor->starts_at?->toDateString(),
+                    'ends_at' => $sponsor->ends_at?->toDateString(),
+                ]));
                 $isClubMember = $club->users->contains('id', $user->id);
                 $canSeeClubTeams = $isClubMember;
                 $teams = $club->can_manage || $canSeeClubTeams

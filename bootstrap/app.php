@@ -7,6 +7,7 @@ use App\Http\Middleware\EnsureGuardianConsentResolved;
 use App\Http\Middleware\EnsureProfileIsComplete;
 use App\Http\Middleware\SetCurrentClub;
 use App\Http\Middleware\SetLocale;
+use App\Http\Middleware\StoreIntendedUrlFromQuery;
 use App\Http\Middleware\TrackUserActivity;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Application;
@@ -41,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
             EnsureAccountIsNotSuspended::class,
             EnsureProfileIsComplete::class,
             EnsureGuardianConsentResolved::class,
+            StoreIntendedUrlFromQuery::class,
             TrackUserActivity::class,
             AddLinkHeadersForPreloadedAssets::class,
 

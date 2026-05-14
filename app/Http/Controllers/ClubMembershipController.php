@@ -13,6 +13,7 @@ use App\Models\Payment;
 use App\Models\Team;
 use App\Models\TeamJoinRequest;
 use App\Models\User;
+use App\Notifications\ClubInvoiceCreated;
 use App\Notifications\ExternalClubMembershipInvitation;
 use App\Services\ClubService;
 use App\Services\PlanFeatureService;
@@ -107,6 +108,7 @@ class ClubMembershipController extends Controller
                     'id' => $club->id,
                     'name' => $club->name,
                     'sepa_creditor_id' => $club->sepa_creditor_id,
+                    'sepa_account_holder' => $club->sepa_account_holder,
                     'sepa_iban' => $club->sepa_iban,
                     'sepa_bic' => $club->sepa_bic,
                     'datev_consultant_number' => $club->datev_consultant_number,
@@ -830,12 +832,14 @@ class ClubMembershipController extends Controller
 
         $data = $request->validate([
             'sepa_creditor_id' => ['nullable', 'string', 'max:80'],
+            'sepa_account_holder' => ['nullable', 'string', 'max:120'],
             'sepa_iban' => ['nullable', 'string', 'max:40'],
             'sepa_bic' => ['nullable', 'string', 'max:20'],
         ]);
 
         $club->update([
             'sepa_creditor_id' => $data['sepa_creditor_id'] ?? null,
+            'sepa_account_holder' => $data['sepa_account_holder'] ?? null,
             'sepa_iban' => $this->normalizeIban($data['sepa_iban'] ?? null),
             'sepa_bic' => $this->normalizeBic($data['sepa_bic'] ?? null),
         ]);
@@ -1030,7 +1034,11 @@ class ClubMembershipController extends Controller
             'invoice_id' => $invoice->id,
         ]);
 
-        return back()->with('success', 'Rechnung erstellt.');
+        if ($user->email) {
+            $user->notify(new ClubInvoiceCreated($invoice->loadMissing('club')));
+        }
+
+        return back()->with('success', 'Rechnung erstellt und per E-Mail verschickt.');
     }
 
     public function generateMemberNumber(Club $club, User $user)
@@ -2072,6 +2080,7 @@ XML);
         $paymentId = $messageId.'-PMT';
         $controlSum = $invoices->sum(fn (Invoice $invoice) => (float) $invoice->amount);
         $collectionDate = now()->addDays(3)->toDateString();
+        $creditorName = $club->sepa_account_holder ?: $club->name;
 
         $xml = new \XMLWriter();
         $xml->openMemory();
@@ -2087,7 +2096,7 @@ XML);
         $xml->writeElement('NbOfTxs', (string) $invoices->count());
         $xml->writeElement('CtrlSum', number_format($controlSum, 2, '.', ''));
         $xml->startElement('InitgPty');
-        $xml->writeElement('Nm', $club->name);
+        $xml->writeElement('Nm', $creditorName);
         $xml->endElement();
         $xml->endElement();
 
@@ -2108,7 +2117,7 @@ XML);
         $xml->endElement();
         $xml->writeElement('ReqdColltnDt', $collectionDate);
         $xml->startElement('Cdtr');
-        $xml->writeElement('Nm', $club->name);
+        $xml->writeElement('Nm', $creditorName);
         $xml->endElement();
         $xml->startElement('CdtrAcct');
         $xml->startElement('Id');

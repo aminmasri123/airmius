@@ -9,6 +9,7 @@ use App\Models\MarketplaceProduct;
 use App\Models\OutfitSubscriptionPlan;
 use App\Models\Setting;
 use App\Services\MarketplacePricingService;
+use App\Support\CommerceOrderNotifier;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -120,14 +121,41 @@ class PublicMarketplaceController extends Controller
         ]);
     }
 
+    public function learning(Request $request)
+    {
+        $country = strtoupper((string) $request->input('country', $request->user()?->country ?: 'DE'));
+        $learningProducts = $this->marketplaceProductQuery()
+            ->whereIn('offer_type', ['online_course', 'training_plan'])
+            ->latest('id')
+            ->limit(24)
+            ->get()
+            ->map(fn (MarketplaceProduct $product) => $this->productCard($product, $request, $country))
+            ->values();
+
+        return Inertia::render('Guest/E-Learning', [
+            'canLogin' => Route::has('login'),
+            'canRegister' => Route::has('register'),
+            'authUser' => $this->authUser($request),
+            'cart' => $this->cartBadge($request),
+            'learningProducts' => $learningProducts,
+        ]);
+    }
+
     private function marketplaceProductQuery(array $filters = [])
     {
         return MarketplaceProduct::query()
             ->with(['user:id,name', 'club:id,name'])
             ->where('status', 'published')
-            ->where('manages_stock', true)
-            ->whereNotNull('stock_quantity')
-            ->where('stock_quantity', '>', 0)
+            ->where(fn ($query) => $query
+                ->whereIn('offer_type', ['online_course', 'training_plan', 'service'])
+                ->orWhere('product_type', 'digital')
+                ->orWhere(fn ($query) => $query
+                    ->where('manages_stock', true)
+                    ->whereNotNull('stock_quantity')
+                    ->where('stock_quantity', '>', 0))
+                ->orWhere(fn ($query) => $query
+                    ->where('manages_stock', false)
+                    ->whereIn('category', ['camp', 'service'])))
             ->when(($filters['category'] ?? null) && $filters['category'] !== 'outfit_subscription', fn ($query, $category) => $query->where('category', $category))
             ->when(($filters['category'] ?? null) === 'outfit_subscription', fn ($query) => $query->whereRaw('1 = 0'))
             ->when($filters['segment'] ?? null, fn ($query, $segment) => $this->applySegmentFilter($query, $segment))
@@ -154,6 +182,7 @@ class PublicMarketplaceController extends Controller
             'shipping_house_number' => $request->user()?->house_number,
         ]);
         $quote = $this->pricing->quoteForRequest($product, $request, $initialAddress['country'], $initialAddress);
+        $relatedProducts = $this->relatedProducts($product, $request, $initialAddress['country']);
 
         return Inertia::render('Guest/MarketplaceProductShow', [
             'canLogin' => Route::has('login'),
@@ -166,6 +195,11 @@ class PublicMarketplaceController extends Controller
                 'description' => $product->description,
                 'features' => $product->features ?: [],
                 'product_attributes' => $product->product_attributes ?: [],
+                'offer_type' => $product->offer_type ?: 'physical_product',
+                'course_outline' => $product->course_outline ?: [],
+                'learning_goals' => $product->learning_goals ?: [],
+                'coaching_enabled' => (bool) $product->coaching_enabled,
+                'coach_feedback_instructions' => $product->coach_feedback_instructions,
                 'image_url' => $product->image_url,
                 'gallery_images' => $product->gallery_images ?: array_values(array_filter([$product->image_url])),
                 'category' => $product->category,
@@ -185,6 +219,7 @@ class PublicMarketplaceController extends Controller
             'profileAddress' => $this->profileAddressFor($request->user()),
             'shippingAddresses' => $this->shippingAddressesFor($request->user()),
             'marketplaceVisuals' => $this->marketplaceVisuals(),
+            'relatedProducts' => $relatedProducts,
         ]);
     }
 
@@ -212,7 +247,7 @@ class PublicMarketplaceController extends Controller
             'shipping_address_label' => ['nullable', 'string', 'max:80'],
         ]);
         $quantity = (int) ($data['quantity'] ?? 1);
-        if ((int) $product->stock_quantity < $quantity) {
+        if ((bool) $product->manages_stock && (int) $product->stock_quantity < $quantity) {
             throw ValidationException::withMessages([
                 'quantity' => 'So viele Artikel sind aktuell nicht auf Lager.',
             ]);
@@ -234,7 +269,7 @@ class PublicMarketplaceController extends Controller
                 'type' => 'marketplace_product',
                 'provider' => $data['provider'],
                 ...$orderAmounts,
-                'commission_cents' => (int) floor($quote['item_gross_cents'] * ($product->commission_percent / 100)),
+                'commission_cents' => $this->pricing->commissionCents($product, (int) $quote['item_gross_cents']),
                 'currency' => $quote['currency'],
                 'tax_country' => $quote['country'],
                 'tax_rate_percent' => $quote['tax_rate'],
@@ -245,6 +280,7 @@ class PublicMarketplaceController extends Controller
                 'payload' => ['pricing' => $quote, 'shipping_address' => $shippingAddress],
             ]);
             $this->createOrderItem($order, $product, $quote, $quantity);
+            app(CommerceOrderNotifier::class)->notifySalesRecipients($order);
 
             return app(CommerceCheckoutController::class)->startPublicCheckout($order);
         }
@@ -259,7 +295,7 @@ class PublicMarketplaceController extends Controller
             'type' => 'marketplace_product',
             'provider' => $data['provider'],
             ...$orderAmounts,
-            'commission_cents' => (int) floor($quote['item_gross_cents'] * ($product->commission_percent / 100)),
+            'commission_cents' => $this->pricing->commissionCents($product, (int) $quote['item_gross_cents']),
             'currency' => $quote['currency'],
             'tax_country' => $quote['country'],
             'tax_rate_percent' => $quote['tax_rate'],
@@ -270,6 +306,7 @@ class PublicMarketplaceController extends Controller
             'payload' => ['pricing' => $quote, 'shipping_address' => $shippingAddress],
         ]);
         $this->createOrderItem($order, $product, $quote, $quantity);
+        app(CommerceOrderNotifier::class)->notifySalesRecipients($order);
 
         return app(CommerceCheckoutController::class)->startPublicCheckout($order);
     }
@@ -286,6 +323,11 @@ class PublicMarketplaceController extends Controller
             'description' => $product->description,
             'features' => $product->features ?: [],
             'product_attributes' => $product->product_attributes ?: [],
+            'offer_type' => $product->offer_type ?: 'physical_product',
+            'course_outline' => $product->course_outline ?: [],
+            'learning_goals' => $product->learning_goals ?: [],
+            'coaching_enabled' => (bool) $product->coaching_enabled,
+            'coach_feedback_instructions' => $product->coach_feedback_instructions,
             'image_url' => $product->image_url,
             'gallery_images' => $product->gallery_images ?: array_values(array_filter([$product->image_url])),
             'category' => $product->category,
@@ -301,19 +343,51 @@ class PublicMarketplaceController extends Controller
             'segment' => $this->productSegment($product),
             'rating' => number_format($rating / 10, 1, ',', '.'),
             'sold_count' => 12 + ($product->id * 7 % 240),
-            'badge' => match ($product->category) {
+            'badge' => match ($product->offer_type === 'physical_product' ? $product->category : ($product->offer_type ?: $product->category)) {
+                'training_plan' => 'Coach-Plan',
+                'online_course' => 'Online-Kurs',
                 'course' => 'Top Kurs',
                 'camp' => 'Camp',
                 'service' => 'Service',
                 default => $product->id % 2 === 0 ? 'Deal' : 'Neu',
             },
-            'visual_icon' => match ($product->category) {
+            'visual_icon' => match ($product->offer_type === 'physical_product' ? $product->category : ($product->offer_type ?: $product->category)) {
+                'training_plan' => 'las la-clipboard-list',
+                'online_course' => 'las la-video',
                 'course' => 'las la-chalkboard-teacher',
                 'camp' => 'las la-campground',
                 'service' => 'las la-hands-helping',
                 default => 'las la-dumbbell',
             },
         ];
+    }
+
+    private function relatedProducts(MarketplaceProduct $product, Request $request, string $country): array
+    {
+        $sameCategory = $this->marketplaceProductQuery(['category' => $product->category])
+            ->whereKeyNot($product->id)
+            ->latest('id')
+            ->limit(5)
+            ->get();
+
+        $products = $sameCategory;
+
+        if ($products->count() < 5) {
+            $fallback = $this->marketplaceProductQuery()
+                ->whereKeyNot($product->id)
+                ->whereNotIn('id', $products->pluck('id'))
+                ->latest('id')
+                ->limit(5 - $products->count())
+                ->get();
+
+            $products = $products->concat($fallback);
+        }
+
+        return $products
+            ->take(5)
+            ->map(fn (MarketplaceProduct $relatedProduct) => $this->productCard($relatedProduct, $request, $country))
+            ->values()
+            ->all();
     }
 
     private function authUser(Request $request): ?array
@@ -452,7 +526,15 @@ class PublicMarketplaceController extends Controller
 
     private function hasSellableStock(MarketplaceProduct $product): bool
     {
-        return (bool) $product->manages_stock && (int) $product->stock_quantity > 0;
+        if (in_array($product->offer_type, ['online_course', 'training_plan', 'service'], true) || $product->product_type === 'digital') {
+            return true;
+        }
+
+        if (! (bool) $product->manages_stock) {
+            return true;
+        }
+
+        return (int) $product->stock_quantity > 0;
     }
 
     private function segmentKeywords(string $segment): array

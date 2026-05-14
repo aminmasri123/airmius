@@ -87,6 +87,13 @@ const form = useForm({
     start_time: '',
     end_time: '',
     location: '',
+    location_name: '',
+    location_street: '',
+    location_house_number: '',
+    location_postal_code: '',
+    location_city: '',
+    location_country: 'DE',
+    max_participants: '',
     notes: '',
     recurring: '',
     recurrence_days: [],
@@ -107,6 +114,7 @@ const filterForm = ref({
 })
 
 const filteredTeams = computed(() => {
+    if (form.visibility === 'private') return props.teams || []
     if (!form.club_id) return props.teams || []
 
     return (props.teams || []).filter((team) => Number(team.club_id) === Number(form.club_id))
@@ -163,6 +171,26 @@ watch(() => form.club_id, () => {
     }
 })
 
+watch(() => form.visibility, (visibility) => {
+    if (visibility === 'public') {
+        form.club_id = ''
+        form.team_id = ''
+        return
+    }
+
+    if (visibility === 'organization') {
+        form.team_id = ''
+        if (!form.club_id && props.clubs?.length) {
+            form.club_id = props.clubs[0].id
+        }
+        return
+    }
+
+    if (visibility === 'private') {
+        form.club_id = ''
+    }
+})
+
 watch(() => filterForm.value.club_id, () => {
     if (filterForm.value.team_id && !filteredFilterTeams.value.some((team) => Number(team.id) === Number(filterForm.value.team_id))) {
         filterForm.value.team_id = ''
@@ -187,6 +215,13 @@ const resetCreateForm = () => {
         'start_time',
         'end_time',
         'location',
+        'location_name',
+        'location_street',
+        'location_house_number',
+        'location_postal_code',
+        'location_city',
+        'location_country',
+        'max_participants',
         'notes',
         'recurring',
         'recurrence_days',
@@ -223,6 +258,20 @@ const prevStep = () => {
 
 const submit = () => {
     form.event_timezone = browserTimeZone()
+    form.location = [
+        form.location_name,
+        [form.location_street, form.location_house_number].filter(Boolean).join(' '),
+        [form.location_postal_code, form.location_city].filter(Boolean).join(' '),
+    ].filter(Boolean).join(', ')
+
+    if (form.visibility === 'public') {
+        form.club_id = ''
+        form.team_id = ''
+    } else if (form.visibility === 'organization') {
+        form.team_id = ''
+    } else if (form.visibility === 'private') {
+        form.club_id = ''
+    }
 
     if (!props.eventCreation?.allows_recurring) {
         form.recurring = ''
@@ -273,10 +322,15 @@ const recurrenceSummary = computed(() => {
 })
 
 const selectedClubName = computed(() => {
+    if (form.visibility === 'public') return 'Nicht erforderlich'
+    if (form.visibility === 'private') return 'Wird ueber Team gesetzt'
+
     return props.clubs?.find((club) => Number(club.id) === Number(form.club_id))?.name || '-'
 })
 
 const selectedTeamName = computed(() => {
+    if (form.visibility !== 'private') return 'Nicht erforderlich'
+
     return props.teams?.find((team) => Number(team.id) === Number(form.team_id))?.name || '-'
 })
 
@@ -367,12 +421,27 @@ const eventDateTimeLabel = (event) => {
     return `${formatDate(event.start_time, event)} · ${timeRange(event)}`
 }
 
+const acceptedParticipantsCount = (event) => Number(event.accepted_participants_count || 0)
+const hasParticipantLimit = (event) => Number(event.max_participants || 0) > 0
+const isEventFullForYes = (event) => hasParticipantLimit(event)
+    && acceptedParticipantsCount(event) >= Number(event.max_participants)
+    && event.current_participant_status !== 'yes'
+
+const participantCapacityLabel = (event) => {
+    if (!hasParticipantLimit(event)) {
+        return `${acceptedParticipantsCount(event)} Zusagen`
+    }
+
+    return `${acceptedParticipantsCount(event)}/${event.max_participants} Plätze`
+}
+
 const rsvpButtonClass = (event, status) => event.current_participant_status === status
     ? rsvpOptions.find((option) => option.value === status)?.active
     : 'border-border bg-inputBg text-secondary hover:border-borderHover hover:text-primary'
 
 const setParticipation = (event, status) => {
     if (event.status === 'cancelled') return
+    if (status === 'yes' && isEventFullForYes(event)) return
 
     router.post(route('auth.events.join', event.id), { status }, {
         preserveScroll: true,
@@ -787,8 +856,8 @@ const resetFilters = () => {
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                <div>
+                            <div v-if="form.visibility !== 'public'" class="grid grid-cols-1 gap-3">
+                                <div v-if="form.visibility === 'organization'">
                                     <label for="event-club" class="block text-sm font-semibold text-primary">
                                         {{ $t('events.fields.club') }}
                                     </label>
@@ -805,7 +874,7 @@ const resetFilters = () => {
                                     </select>
                                 </div>
 
-                                <div>
+                                <div v-if="form.visibility === 'private'">
                                     <label for="event-team" class="block text-sm font-semibold text-primary">
                                         {{ $t('events.fields.team') }}
                                     </label>
@@ -824,6 +893,10 @@ const resetFilters = () => {
                                     <p v-if="form.visibility === 'private'" class="mt-1 text-xs text-secondary">
                                         {{ $t('events.private_requires_team') }}
                                     </p>
+
+                                    <div v-if="form.errors.club_id" class="mt-1 text-sm text-error">
+                                        {{ form.errors.club_id }}
+                                    </div>
 
                                     <div v-if="form.errors.team_id" class="mt-1 text-sm text-error">
                                         {{ form.errors.team_id }}
@@ -960,14 +1033,66 @@ const resetFilters = () => {
                                 </p>
                             </div>
 
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div class="sm:col-span-2">
+                                    <label for="event-location-name" class="block text-sm font-semibold text-primary">Ort / Treffpunkt</label>
+                                    <input id="event-location-name" v-model="form.location_name"
+                                        class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
+                                        placeholder="z. B. Waldhaus, Sporthalle, Vereinsheim">
+                                </div>
+
+                                <div>
+                                    <label for="event-location-street" class="block text-sm font-semibold text-primary">Straße</label>
+                                    <input id="event-location-street" v-model="form.location_street"
+                                        class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
+                                        placeholder="Straße">
+                                </div>
+
+                                <div>
+                                    <label for="event-location-house-number" class="block text-sm font-semibold text-primary">Nr.</label>
+                                    <input id="event-location-house-number" v-model="form.location_house_number"
+                                        class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
+                                        placeholder="10">
+                                </div>
+
+                                <div>
+                                    <label for="event-location-postal-code" class="block text-sm font-semibold text-primary">PLZ</label>
+                                    <input id="event-location-postal-code" v-model="form.location_postal_code"
+                                        class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
+                                        placeholder="66119">
+                                </div>
+
+                                <div>
+                                    <label for="event-location-city" class="block text-sm font-semibold text-primary">Stadt</label>
+                                    <input id="event-location-city" v-model="form.location_city"
+                                        class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
+                                        placeholder="Saarbrücken">
+                                </div>
+
+                                <div>
+                                    <label for="event-location-country" class="block text-sm font-semibold text-primary">Land</label>
+                                    <input id="event-location-country" v-model="form.location_country" maxlength="2"
+                                        class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 uppercase text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
+                                        placeholder="DE">
+                                </div>
+                            </div>
+
                             <div>
-                                <label for="event-location" class="block text-sm font-semibold text-primary">
-                                    {{ $t('events.fields.location') }}
+                                <label for="event-max-participants" class="block text-sm font-semibold text-primary">
+                                    Maximale Teilnehmerzahl
                                 </label>
 
-                                <input id="event-location" v-model="form.location"
+                                <input id="event-max-participants" v-model="form.max_participants"
                                     class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-primary placeholder-secondary focus:border-borderHover focus:ring-borderHover"
-                                    :placeholder="$t('events.placeholders.location')">
+                                    type="number" min="1" max="100000" inputmode="numeric" placeholder="Leer lassen = unbegrenzt">
+
+                                <p class="mt-1 text-xs text-secondary">
+                                    Nur Zusagen zählen gegen diese Grenze. Vielleicht und Absagen bleiben möglich.
+                                </p>
+
+                                <div v-if="form.errors.max_participants" class="mt-1 text-sm text-error">
+                                    {{ form.errors.max_participants }}
+                                </div>
                             </div>
 
                             <div>
@@ -1084,12 +1209,21 @@ const resetFilters = () => {
 
                                     <div>
                                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
-                                            Ort
+                                            Teilnehmerlimit
                                         </p>
                                         <p class="mt-1 text-primary">
-                                            {{ form.location || '-' }}
+                                            {{ form.max_participants ? `${form.max_participants} Personen` : 'Unbegrenzt' }}
                                         </p>
                                     </div>
+
+                                        <div>
+                                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                                                Ort
+                                            </p>
+                                            <p class="mt-1 text-primary">
+                                                {{ form.location || [form.location_name, [form.location_street, form.location_house_number].filter(Boolean).join(' '), [form.location_postal_code, form.location_city].filter(Boolean).join(' ')].filter(Boolean).join(', ') || '-' }}
+                                            </p>
+                                        </div>
 
                                     <div>
                                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
@@ -1163,7 +1297,7 @@ const resetFilters = () => {
                             </div>
 
                             <span class="shrink-0 rounded-full bg-inputBg px-2 py-1 text-xs text-secondary">
-                                {{ event.participants_count }} Rückm.
+                                {{ participantCapacityLabel(event) }}
                             </span>
                         </div>
 
@@ -1176,6 +1310,9 @@ const resetFilters = () => {
                             </span>
                             <span v-if="event.comments_count" class="rounded-full bg-inputBg px-2 py-1 text-xs font-semibold text-secondary">
                                 {{ event.comments_count }} Kommentare
+                            </span>
+                            <span v-if="hasParticipantLimit(event)" class="rounded-full bg-inputBg px-2 py-1 text-xs font-semibold text-secondary">
+                                Max. {{ event.max_participants }}
                             </span>
                             <span v-if="event.can_update" class="rounded-full bg-buttonPrimary/10 px-2 py-1 text-xs font-semibold text-buttonPrimary">
                                 Bearbeitbar
@@ -1204,8 +1341,8 @@ const resetFilters = () => {
                             <button v-for="option in rsvpOptions" :key="option.value" type="button"
                                 class="rounded-lg border px-2 py-2 text-xs font-semibold transition"
                                 :class="rsvpButtonClass(event, option.value)"
-                                :disabled="event.status === 'cancelled'"
-                                :title="event.status === 'cancelled' ? 'Event ist abgesagt' : ''"
+                                :disabled="event.status === 'cancelled' || (option.value === 'yes' && isEventFullForYes(event))"
+                                :title="event.status === 'cancelled' ? 'Event ist abgesagt' : option.value === 'yes' && isEventFullForYes(event) ? 'Dieses Event ist voll' : ''"
                                 @click="setParticipation(event, option.value)">
                                 {{ $t(option.label) }}
                             </button>

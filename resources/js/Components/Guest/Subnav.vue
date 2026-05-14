@@ -1,5 +1,6 @@
 <script setup>
-import { Link } from '@inertiajs/vue3'
+import { Link, usePage } from '@inertiajs/vue3'
+import { computed } from 'vue'
 
 defineProps({
     vertical: {
@@ -16,7 +17,10 @@ const safeRoute = (name, fallback) => {
     }
 }
 
-const items = [
+const page = usePage()
+const isAuthenticated = computed(() => Boolean(page.props.auth?.user))
+const items = computed(() => [
+    ...(isAuthenticated.value ? [['las la-newspaper', 'Feed', safeRoute('auth.feed.index', '/feed')]] : []),
     ['las la-bullhorn', 'Top Inhalte', safeRoute('guest.top-inhalte', '/top-inhalte')],
     ['las la-briefcase', 'Jobs', safeRoute('guest.jobs', '/jobs')],
     ['las la-laptop-code', 'Werbung', safeRoute('guest.werbeagentur', '/werbeagentur-fuer-vereine')],
@@ -25,7 +29,7 @@ const items = [
     ['las la-warehouse', 'Vereine', safeRoute('guest.vereine', '/vereine')],
     ['las la-tags', 'Abos', safeRoute('guest.pricing', '/abos')],
     ['las la-shopping-bag', 'Shop', safeRoute('guest.marketplace', '/marketplace')],
-]
+])
 </script>
 
 <template>

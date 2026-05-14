@@ -44,6 +44,25 @@ class SubscriptionPlanController extends Controller
                     'plan' => $club->subscriptionPlan(),
                     'subscription' => $club->currentSubscription ? $this->subscriptionResource($club->currentSubscription) : null,
                 ]),
+            'users' => User::query()
+                ->with(['subscriptions' => fn ($query) => $query
+                    ->with('plan:id,name,target_actor')
+                    ->latest('id')])
+                ->orderBy('name')
+                ->get(['id', 'name', 'email', 'first_name', 'last_name'])
+                ->map(fn (User $user) => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                    'subscriptions' => $user->subscriptions
+                        ->map(fn (UserSubscription $subscription) => [
+                            ...$this->subscriptionResource($subscription),
+                            'plan' => $subscription->plan,
+                        ])
+                        ->values(),
+                ]),
             'userSubscriptions' => UserSubscription::query()
                 ->with(['user:id,name,email', 'plan:id,name,target_actor'])
                 ->latest('id')
@@ -170,6 +189,7 @@ class SubscriptionPlanController extends Controller
     public function assignUser(Request $request, User $user)
     {
         $data = $request->validate([
+            'user_subscription_id' => ['nullable', Rule::exists('user_subscriptions', 'id')],
             'subscription_plan_id' => ['required', Rule::exists('subscription_plans', 'id')],
             'status' => ['required', Rule::in(['trialing', 'active', 'past_due', 'cancelled', 'cancels_at_period_end'])],
             'trial_ends_at' => ['nullable', 'date'],

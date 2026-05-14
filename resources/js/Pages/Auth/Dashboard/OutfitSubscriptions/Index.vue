@@ -42,7 +42,7 @@ const subscribeAcceptedContract = ref(false)
 const subscribePaymentProvider = ref('bank_transfer')
 const subscribingPlanId = ref(null)
 const profileFeedback = ref(null)
-const activeSubscriptions = computed(() => props.subscriptions.filter((subscription) => ['active', 'paused'].includes(subscription.status)))
+const activeSubscriptions = computed(() => props.subscriptions.filter((subscription) => ['active', 'paused', 'payment_paused'].includes(subscription.status)))
 const nextDelivery = computed(() => activeSubscriptions.value
     .map((subscription) => subscription.next_delivery_at)
     .filter(Boolean)
@@ -106,6 +106,7 @@ const scrollToPlans = () => {
 const statusLabel = (status) => ({
     active: 'Aktiv',
     paused: 'Pausiert',
+    payment_paused: 'Wegen Zahlung pausiert',
     pending_payment: 'Zahlung offen',
     pending_confirmation: 'Wartet auf Freigabe',
     cancelled: 'Gekuendigt',
@@ -395,6 +396,13 @@ const confirmCancel = () => {
                                 </p>
                                 <p class="mt-1 text-sm text-secondary">
                                     Zahlungsart: {{ paymentProviderLabel(subscription.payment_provider) }}
+                                </p>
+                                <p v-if="subscription.dunning_level" class="mt-1 text-sm text-amber-200">
+                                    Mahnstufe {{ subscription.dunning_level }}/3
+                                    <span v-if="subscription.last_dunning_sent_at"> - letzte Mahnung: {{ formatDate(subscription.last_dunning_sent_at) }}</span>
+                                </p>
+                                <p v-if="subscription.status === 'payment_paused'" class="mt-1 text-sm text-amber-200">
+                                    Dieses Abo ist bis zum Zahlungseingang pausiert. Es werden keine weiteren Lieferungen vorbereitet.
                                 </p>
                                 <p class="mt-1 text-sm font-semibold text-primary">{{ formatMoney(subscription.monthly_price_cents, subscription.currency) }} / Monat</p>
                             </div>

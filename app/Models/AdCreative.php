@@ -13,6 +13,8 @@ class AdCreative extends Model
 
     protected $fillable = [
         'ad_campaign_id',
+        'ad_group_id',
+        'ad_name',
         'name',
         'headline',
         'description',
@@ -39,6 +41,11 @@ class AdCreative extends Model
     public function campaign(): BelongsTo
     {
         return $this->belongsTo(AdCampaign::class, 'ad_campaign_id');
+    }
+
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(AdGroup::class, 'ad_group_id');
     }
 
     public function events(): HasMany

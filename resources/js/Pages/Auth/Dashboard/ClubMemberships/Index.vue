@@ -18,6 +18,7 @@ const selectedClubId = ref(props.clubs[0]?.id || null)
 const activeTab = ref('members')
 const memberSearch = ref('')
 const memberStatusFilter = ref('all')
+const memberEndFilter = ref('all')
 const invoiceStatusFilter = ref('all')
 const transactionStatusFilter = ref('all')
 const editingMemberId = ref(null)
@@ -123,6 +124,52 @@ const recurringContributionTotal = computed(() => members.value.reduce((sum, mem
         : sum
 }, 0))
 
+const dateOnly = (value) => {
+    if (!value) return null
+    const [year, month, day] = String(value).slice(0, 10).split('-').map(Number)
+    if (!year || !month || !day) return null
+
+    return new Date(year, month - 1, day)
+}
+
+const daysUntil = (value) => {
+    const target = dateOnly(value)
+    if (!target) return null
+
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+    return Math.ceil((target.getTime() - today.getTime()) / 86400000)
+}
+
+const matchesMembershipEndFilter = (member) => {
+    const days = daysUntil(formFor(member).membership_ends_on)
+
+    if (memberEndFilter.value === 'all') return true
+    if (memberEndFilter.value === 'ending_30') return days !== null && days >= 0 && days <= 30
+    if (memberEndFilter.value === 'ending_60') return days !== null && days >= 0 && days <= 60
+    if (memberEndFilter.value === 'expired') return days !== null && days < 0
+    if (memberEndFilter.value === 'no_end') return days === null
+
+    return true
+}
+
+const endingSoonMembersCount = computed(() => members.value.filter((member) => {
+    const days = daysUntil(formFor(member).membership_ends_on)
+
+    return days !== null && days >= 0 && days <= 30
+}).length)
+
+const endLabel = (value) => {
+    const days = daysUntil(value)
+    if (days === null) return null
+    if (days < 0) return 'abgelaufen'
+    if (days === 0) return 'endet heute'
+    if (days <= 30) return `endet in ${days} Tag${days === 1 ? '' : 'en'}`
+
+    return null
+}
+
 const filteredMembers = computed(() => {
     const search = memberSearch.value.trim().toLowerCase()
 
@@ -131,6 +178,7 @@ const filteredMembers = computed(() => {
         const matchesStatus = memberStatusFilter.value === 'all' || form.membership_status === memberStatusFilter.value
 
         if (!matchesStatus) return false
+        if (!matchesMembershipEndFilter(member)) return false
         if (!search) return true
 
         return [
@@ -232,6 +280,7 @@ const formFor = (member) => {
 const sepaSettingsFor = (club) => {
     sepaSettingsForms.value[club.id] ??= {
         sepa_creditor_id: club.sepa_creditor_id || '',
+        sepa_account_holder: club.sepa_account_holder || '',
         sepa_iban: club.sepa_iban || '',
         sepa_bic: club.sepa_bic || '',
     }
@@ -646,10 +695,14 @@ const inviteExternalMember = (member) => {
                     </a>
                 </div>
 
-                <form class="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]" @submit.prevent="saveSepaSettings">
+                <form class="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_1fr_1fr_auto]" @submit.prevent="saveSepaSettings">
                     <div>
                         <label class="text-xs font-semibold uppercase text-secondary">Glaeubiger-ID</label>
                         <input v-model="sepaSettingsFor(selectedClub).sepa_creditor_id" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="DE98ZZZ09999999999">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold uppercase text-secondary">Kontoinhaber</label>
+                        <input v-model="sepaSettingsFor(selectedClub).sepa_account_holder" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Name laut Bankkonto">
                     </div>
                     <div>
                         <label class="text-xs font-semibold uppercase text-secondary">Vereins-IBAN</label>
@@ -886,7 +939,7 @@ const inviteExternalMember = (member) => {
                             </p>
                         </div>
 
-                        <div class="grid gap-2 sm:grid-cols-[minmax(13rem,1fr)_12rem]">
+                        <div class="grid gap-2 sm:grid-cols-[minmax(13rem,1fr)_12rem_14rem]">
                             <label class="flex items-center gap-2 rounded-lg border border-border bg-inputBg px-3 py-2">
                                 <i class="las la-search text-lg text-secondary"></i>
                                 <input
@@ -900,7 +953,17 @@ const inviteExternalMember = (member) => {
                                 <option value="all">Alle Status</option>
                                 <option v-for="status in membershipStatuses" :key="status" :value="status">{{ statusLabel(status) }}</option>
                             </select>
+                            <select v-model="memberEndFilter" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                <option value="all">Alle Laufzeiten</option>
+                                <option value="ending_30">Endet in 30 Tagen</option>
+                                <option value="ending_60">Endet in 60 Tagen</option>
+                                <option value="expired">Bereits abgelaufen</option>
+                                <option value="no_end">Ohne Enddatum</option>
+                            </select>
                         </div>
+                    </div>
+                    <div v-if="endingSoonMembersCount" class="mt-4 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+                        {{ endingSoonMembersCount }} Mitgliedschaft{{ endingSoonMembersCount === 1 ? '' : 'en' }} endet innerhalb der naechsten 30 Tage.
                     </div>
                 </div>
 
@@ -914,6 +977,12 @@ const inviteExternalMember = (member) => {
                                     </Link>
                                     <span class="rounded-full px-2 py-1 text-xs font-semibold" :class="statusClass(formFor(member).membership_status)">
                                         {{ statusLabel(formFor(member).membership_status) }}
+                                    </span>
+                                    <span
+                                        v-if="endLabel(formFor(member).membership_ends_on)"
+                                        class="rounded-full bg-warning/10 px-2 py-1 text-xs font-semibold text-warning"
+                                    >
+                                        {{ endLabel(formFor(member).membership_ends_on) }}
                                     </span>
                                 </div>
                                 <p class="mt-1 text-sm text-secondary">{{ member.email }}</p>

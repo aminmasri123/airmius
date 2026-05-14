@@ -45,6 +45,9 @@ class CommerceOrder extends Model
         'issue_status',
         'issue_note',
         'issue_reported_at',
+        'issue_response',
+        'issue_responded_at',
+        'issue_responded_by',
         'provider_checkout_id',
         'refund_provider_id',
         'payment_reference',
@@ -79,6 +82,7 @@ class CommerceOrder extends Model
             'delivered_at' => 'datetime',
             'confirmation_email_sent_at' => 'datetime',
             'issue_reported_at' => 'datetime',
+            'issue_responded_at' => 'datetime',
             'customer_vat_validated_at' => 'datetime',
         ];
     }
@@ -111,5 +115,10 @@ class CommerceOrder extends Model
     public function returnRequests()
     {
         return $this->hasMany(CommerceReturnRequest::class);
+    }
+
+    public function issueResponder()
+    {
+        return $this->belongsTo(User::class, 'issue_responded_by');
     }
 }

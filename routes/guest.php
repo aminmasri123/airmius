@@ -6,6 +6,7 @@ use App\Http\Controllers\KontaktController;
 use App\Http\Controllers\LegalPageController;
 use App\Http\Controllers\OrganizationJobController;
 use App\Http\Controllers\PricingController;
+use App\Http\Controllers\PublicLearningController;
 use App\Http\Controllers\PublicMarketplaceController;
 use App\Http\Controllers\PublicClubController;
 use App\Http\Controllers\PublicSponsorController;
@@ -111,10 +112,8 @@ Route::get('/werbeagentur-für-vereine', fn () => Inertia::render('Guest/Werbeag
     'canRegister' => Route::has('register'),
 ]))->name('guest.werbeagentur');
 
-Route::get('/e-learning', fn () => Inertia::render('Guest/E-Learning', [
-    'canLogin' => Route::has('login'),
-    'canRegister' => Route::has('register'),
-]))->name('guest.e-learning');
+Route::get('/e-learning', [PublicLearningController::class, 'index'])->name('guest.e-learning');
+Route::get('/e-learning/courses/{course}', [PublicLearningController::class, 'show'])->name('guest.learning.courses.show');
 
 Route::get('/gamification', fn () => Inertia::render('Guest/Gamification', [
     'canLogin' => Route::has('login'),

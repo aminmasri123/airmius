@@ -61,7 +61,11 @@ class EventController extends Controller
                     ->select('users.id', 'name'),
                 'cancelledBy:id,name',
             ])
-            ->withCount(['comments', 'participants'])
+            ->withCount([
+                'comments',
+                'participants',
+                'participantRecords as accepted_participants_count' => fn ($query) => $query->where('status', 'yes'),
+            ])
             ->where(function ($query) use ($request) {
                 $query->where('visibility', 'public')
                     ->orWhereHas('team.users', fn ($q) => $q->where('users.id', $request->user()->id))
@@ -73,6 +77,10 @@ class EventController extends Controller
                     $query
                         ->where('title', 'like', '%'.$search.'%')
                         ->orWhere('location', 'like', '%'.$search.'%')
+                        ->orWhere('location_name', 'like', '%'.$search.'%')
+                        ->orWhere('location_street', 'like', '%'.$search.'%')
+                        ->orWhere('location_postal_code', 'like', '%'.$search.'%')
+                        ->orWhere('location_city', 'like', '%'.$search.'%')
                         ->orWhere('notes', 'like', '%'.$search.'%')
                         ->orWhereHas('team', fn ($teamQuery) => $teamQuery->where('name', 'like', '%'.$search.'%'))
                         ->orWhereHas('club', fn ($clubQuery) => $clubQuery->where('name', 'like', '%'.$search.'%'));
@@ -164,6 +172,9 @@ class EventController extends Controller
             'cancelledBy:id,name',
             'participants:id,name',
             'comments' => fn ($query) => $query->with('user:id,name')->latest(),
+        ]);
+        $event->loadCount([
+            'participantRecords as accepted_participants_count' => fn ($query) => $query->where('status', 'yes'),
         ]);
 
         return Inertia::render('Auth/Dashboard/Events/Show', [
@@ -269,6 +280,18 @@ class EventController extends Controller
             return back()->with('success', 'Teilnahmemeldung entfernt.');
         }
 
+        if ($data['status'] === 'yes' && $currentStatus !== 'yes' && $event->max_participants) {
+            $acceptedCount = $event->participantRecords()
+                ->where('status', 'yes')
+                ->count();
+
+            if ($acceptedCount >= $event->max_participants) {
+                throw ValidationException::withMessages([
+                    'status' => 'Dieses Event ist bereits voll.',
+                ]);
+            }
+        }
+
         $event->participants()->syncWithoutDetaching([
             $request->user()->id => ['status' => $data['status']],
         ]);
@@ -335,6 +358,15 @@ class EventController extends Controller
             'start_time' => ['required', 'date'],
             'end_time' => ['nullable', 'date', 'after_or_equal:start_time'],
             'location' => ['nullable', 'string', 'max:255'],
+            'location_name' => ['nullable', 'string', 'max:255'],
+            'location_street' => ['nullable', 'string', 'max:255'],
+            'location_house_number' => ['nullable', 'string', 'max:40'],
+            'location_postal_code' => ['nullable', 'string', 'max:20'],
+            'location_city' => ['nullable', 'string', 'max:255'],
+            'location_country' => ['nullable', 'string', 'size:2'],
+            'location_latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'location_longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'max_participants' => ['nullable', 'integer', 'min:1', 'max:100000'],
             'notes' => ['nullable', 'string'],
             'recurring' => ['nullable', 'string', 'max:80'],
             'recurrence_days' => ['nullable', 'array'],
@@ -350,6 +382,8 @@ class EventController extends Controller
             ]);
         }
 
+        $data = $this->normalizeStructuredLocation($data);
+
         if (! empty($data['recurrence_ends_at'])) {
             $startDate = CarbonImmutable::parse($data['start_time'])->startOfDay();
             $endDate = CarbonImmutable::parse($data['recurrence_ends_at'])->startOfDay();
@@ -359,6 +393,19 @@ class EventController extends Controller
                     'recurrence_ends_at' => 'Das Wiederholungsende muss nach dem Startdatum liegen.',
                 ]);
             }
+        }
+
+        if (($data['visibility'] ?? null) === 'public') {
+            $data['club_id'] = null;
+            $data['team_id'] = null;
+        }
+
+        if (($data['visibility'] ?? null) === 'organization') {
+            $data['team_id'] = null;
+        }
+
+        if (($data['visibility'] ?? null) === 'private') {
+            $data['club_id'] = null;
         }
 
         if (! empty($data['team_id'])) {
@@ -514,13 +561,53 @@ class EventController extends Controller
             $this->orWhereAddressMatches($query, 'team.club', $postalPrefix, $city, $state, $country);
 
             if ($city !== '') {
-                $query->orWhere('location', 'like', '%'.$city.'%');
+                $query
+                    ->orWhere('location_city', 'like', '%'.$city.'%')
+                    ->orWhere('location', 'like', '%'.$city.'%');
             }
 
             if ($postalPrefix !== '') {
-                $query->orWhere('location', 'like', $postalPrefix.'%');
+                $query
+                    ->orWhere('location_postal_code', 'like', $postalPrefix.'%')
+                    ->orWhere('location', 'like', $postalPrefix.'%');
             }
         });
+    }
+
+    private function normalizeStructuredLocation(array $data): array
+    {
+        $country = strtoupper(trim((string) ($data['location_country'] ?? '')));
+        $data['location_country'] = $country ?: null;
+
+        foreach (['location_name', 'location_street', 'location_house_number', 'location_postal_code', 'location_city'] as $field) {
+            $value = trim((string) ($data[$field] ?? ''));
+            $data[$field] = $value !== '' ? $value : null;
+        }
+
+        $lineOne = trim(collect([
+            $data['location_street'] ?? null,
+            $data['location_house_number'] ?? null,
+        ])->filter()->join(' '));
+        $lineTwo = trim(collect([
+            $data['location_postal_code'] ?? null,
+            $data['location_city'] ?? null,
+        ])->filter()->join(' '));
+
+        $location = collect([
+            $data['location_name'] ?? null,
+            $lineOne !== '' ? $lineOne : null,
+            $lineTwo !== '' ? $lineTwo : null,
+        ])->filter()->join(', ');
+
+        if ($location !== '') {
+            $data['location'] = $location;
+        } elseif (! empty($data['location'])) {
+            $data['location'] = trim((string) $data['location']);
+        } else {
+            $data['location'] = null;
+        }
+
+        return $data;
     }
 
     private function orWhereAddressMatches($query, string $relationship, ?string $postalPrefix, string $city, string $state, string $country): void

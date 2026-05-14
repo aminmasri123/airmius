@@ -2,7 +2,7 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import Modal from '@/Components/Modal.vue'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
-import { Head, Link, router, usePage } from '@inertiajs/vue3'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { useI18n } from 'vue-i18n'
@@ -35,6 +35,7 @@ const selectedJobClub = ref(null)
 const openClubId = ref(null)
 const editingClubId = ref(null)
 const actionNotice = ref(null)
+const clubModalNotice = ref(null)
 const jobModalNotice = ref(null)
 const deleteTarget = ref(null)
 const deleteConfirmation = ref('')
@@ -55,7 +56,7 @@ const filtersForm = ref({
     location: props.filters.location || '',
 })
 
-const clubForm = ref({
+const defaultClubForm = () => ({
     name: '',
     sport_type: '',
     is_official: false,
@@ -70,13 +71,21 @@ const clubForm = ref({
     postal_code: '',
     city: '',
     state: '',
+    sepa_account_holder: '',
+    sepa_iban: '',
+    sepa_bic: '',
 })
+
+const clubForm = useForm(defaultClubForm())
 
 const inviteForms = ref({})
 const inviteNotices = ref({})
 const joinRequestNotices = ref({})
 const teamForms = ref({})
 const clubEditForms = ref({})
+const clubEditTabs = ref({})
+const sponsorForms = ref({})
+const editingSponsorIds = ref({})
 const jobForms = ref({})
 const editingJobId = ref(null)
 const processingJoinTeamIds = ref(new Set())
@@ -118,14 +127,31 @@ const toggleClub = (club) => {
     openClubId.value = openClubId.value === club.id ? null : club.id
 }
 
+const clubEditTabItems = [
+    { key: 'basis', label: 'Basis' },
+    { key: 'sichtbarkeit', label: 'Sichtbarkeit' },
+    { key: 'adresse', label: 'Adresse' },
+    { key: 'bank', label: 'Bankkonto' },
+    { key: 'sponsoren', label: 'Sponsoren' },
+]
+
+const activeClubEditTab = (club) => clubEditTabs.value[club.id] || 'basis'
+
+const setClubEditTab = (club, tab) => {
+    clubEditTabs.value[club.id] = tab
+}
+
 const openClubModal = () => {
     clubCreateStep.value = 1
+    clubModalNotice.value = null
+    clubForm.clearErrors()
     showClubModal.value = true
 }
 
 const closeClubModal = () => {
     showClubModal.value = false
     clubCreateStep.value = 1
+    clubModalNotice.value = null
 }
 
 const nextClubStep = () => {
@@ -141,22 +167,10 @@ const prevClubStep = () => {
 }
 
 const resetClubForm = () => {
-    clubForm.value = {
-        name: '',
-        sport_type: '',
-        is_official: false,
-        official_club_number: '',
-        country: user?.country || 'DE',
-        is_listed: true,
-        teams_are_listed: true,
-        members_can_post_to_club: true,
-        members_can_post_to_teams: true,
-        street: '',
-        house_number: '',
-        postal_code: '',
-        city: '',
-        state: '',
-    }
+    clubForm.defaults(defaultClubForm())
+    clubForm.reset()
+    clubForm.clearErrors()
+    clubModalNotice.value = null
 
     clubCreateStep.value = 1
 }
@@ -259,15 +273,25 @@ const confirmDelete = () => {
 
 const createClub = () => {
     actionNotice.value = null
+    clubModalNotice.value = null
 
-    router.post('/clubs', clubForm.value, {
+    clubForm.post(route('auth.clubs.store'), {
         preserveScroll: true,
         onSuccess: () => {
             resetClubForm()
             closeClubModal()
             setActionNotice('success', 'Verein wurde registriert.')
         },
-        onError: () => setActionNotice('error', 'Verein konnte nicht registriert werden. Bitte prüfe die Eingaben.'),
+        onError: (errors) => {
+            const firstMessage = Object.values(errors)[0]
+            clubModalNotice.value = firstMessage || 'Verein konnte nicht registriert werden. Bitte prüfe die markierten Eingaben.'
+
+            if (errors.name || errors.sport_type || errors.country || errors.official_club_number) {
+                clubCreateStep.value = 1
+            } else if (errors.city || errors.postal_code || errors.state || errors.street || errors.house_number || errors.sepa_account_holder || errors.sepa_iban || errors.sepa_bic) {
+                clubCreateStep.value = 2
+            }
+        },
     })
 }
 
@@ -440,6 +464,9 @@ const clubEditFormFor = (club) => {
         postal_code: club.postal_code || '',
         city: club.city || '',
         state: club.state || '',
+        sepa_account_holder: club.sepa_account_holder || '',
+        sepa_iban: club.sepa_iban || '',
+        sepa_bic: club.sepa_bic || '',
     }
 
     return clubEditForms.value[club.id]
@@ -447,6 +474,7 @@ const clubEditFormFor = (club) => {
 
 const editClub = (club) => {
     editingClubId.value = club.id
+    clubEditTabs.value[club.id] = 'basis'
     clubEditForms.value[club.id] = {
         name: club.name || '',
         sport_type: club.sport_type || '',
@@ -461,6 +489,9 @@ const editClub = (club) => {
         postal_code: club.postal_code || '',
         city: club.city || '',
         state: club.state || '',
+        sepa_account_holder: club.sepa_account_holder || '',
+        sepa_iban: club.sepa_iban || '',
+        sepa_bic: club.sepa_bic || '',
     }
 
     if (openClubId.value !== club.id) {
@@ -484,6 +515,75 @@ const updateClub = (club) => {
         onError: () => setActionNotice('error', 'Vereinsdaten konnten nicht gespeichert werden. Bitte prüfe die Eingaben.'),
     })
 }
+
+const emptySponsorForm = () => ({
+    name: '',
+    contact_name: '',
+    email: '',
+    website: '',
+    logo_light: '',
+    logo_dark: '',
+    amount: '',
+    starts_at: '',
+    ends_at: '',
+})
+
+const sponsorFormFor = (club) => {
+    sponsorForms.value[club.id] ??= emptySponsorForm()
+    return sponsorForms.value[club.id]
+}
+
+const resetSponsorForm = (club) => {
+    sponsorForms.value[club.id] = emptySponsorForm()
+    editingSponsorIds.value[club.id] = null
+}
+
+const editSponsor = (club, sponsor) => {
+    editingSponsorIds.value[club.id] = sponsor.id
+    sponsorForms.value[club.id] = {
+        name: sponsor.name || '',
+        contact_name: sponsor.contact_name || '',
+        email: sponsor.email || '',
+        website: sponsor.website || '',
+        logo_light: sponsor.logo_light || sponsor.logo || '',
+        logo_dark: sponsor.logo_dark || sponsor.logo_light || sponsor.logo || '',
+        amount: sponsor.amount || '',
+        starts_at: sponsor.starts_at || '',
+        ends_at: sponsor.ends_at || '',
+    }
+    setClubEditTab(club, 'sponsoren')
+}
+
+const submitSponsor = (club) => {
+    actionNotice.value = null
+
+    const sponsorId = editingSponsorIds.value[club.id]
+    const options = {
+        preserveScroll: true,
+        onSuccess: () => {
+            resetSponsorForm(club)
+            setActionNotice('success', sponsorId ? 'Sponsor wurde aktualisiert.' : 'Sponsor wurde erstellt.')
+        },
+        onError: () => setActionNotice('error', 'Sponsor konnte nicht gespeichert werden. Bitte pruefe die Eingaben.'),
+    }
+
+    sponsorId
+        ? router.put(route('auth.clubs.sponsors.update', [club.id, sponsorId]), sponsorFormFor(club), options)
+        : router.post(route('auth.clubs.sponsors.store', club.id), sponsorFormFor(club), options)
+}
+
+const deleteSponsor = (club, sponsor) => {
+    openDeleteModal({
+        title: `Sponsor "${sponsor.name}" loeschen`,
+        description: 'Der Sponsor wird aus diesem Verein entfernt. Diese Aktion kann nicht rueckgaengig gemacht werden.',
+        route: 'auth.clubs.sponsors.destroy',
+        params: [club.id, sponsor.id],
+        successMessage: 'Sponsor wurde geloescht.',
+        errorMessage: 'Sponsor konnte nicht geloescht werden.',
+    })
+}
+
+const sponsorLogoUrl = (sponsor) => sponsor.logo_light_url || sponsor.logo_url || sponsor.logo_light || sponsor.logo
 
 const updateTeamMemberRole = (team, member) => {
     actionNotice.value = null
@@ -920,13 +1020,26 @@ const deleteJob = (job) => {
                     </span>
                 </div>
 
+                <div class="mb-4 flex flex-wrap gap-2 border-b border-border pb-2">
+                    <button
+                        v-for="tab in clubEditTabItems"
+                        :key="tab.key"
+                        type="button"
+                        class="rounded-lg px-3 py-2 text-sm font-semibold transition"
+                        :class="activeClubEditTab(club) === tab.key ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-secondary hover:bg-card hover:text-primary'"
+                        @click="setClubEditTab(club, tab.key)"
+                    >
+                        {{ tab.label }}
+                    </button>
+                </div>
+
                 <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    <label class="block xl:col-span-2">
+                    <label v-show="activeClubEditTab(club) === 'basis'" class="block xl:col-span-2">
                         <span class="text-xs font-semibold uppercase text-secondary">Vereinsname</span>
                         <input v-model="clubEditFormFor(club).name" required class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </label>
 
-                    <label class="block">
+                    <label v-show="activeClubEditTab(club) === 'basis'" class="block">
                         <span class="text-xs font-semibold uppercase text-secondary">Sportart</span>
                         <SearchableSelect
                             v-model="clubEditFormFor(club).sport_type"
@@ -939,7 +1052,7 @@ const deleteJob = (job) => {
                         />
                     </label>
 
-                    <label class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
+                    <label v-show="activeClubEditTab(club) === 'sichtbarkeit'" class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
                         <input
                             v-model="clubEditFormFor(club).is_listed"
                             type="checkbox"
@@ -951,7 +1064,7 @@ const deleteJob = (job) => {
                         </span>
                     </label>
 
-                    <label class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
+                    <label v-show="activeClubEditTab(club) === 'sichtbarkeit'" class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
                         <input
                             v-model="clubEditFormFor(club).teams_are_listed"
                             type="checkbox"
@@ -963,7 +1076,7 @@ const deleteJob = (job) => {
                         </span>
                     </label>
 
-                    <label class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
+                    <label v-show="activeClubEditTab(club) === 'sichtbarkeit'" class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
                         <input
                             v-model="clubEditFormFor(club).members_can_post_to_club"
                             type="checkbox"
@@ -975,7 +1088,7 @@ const deleteJob = (job) => {
                         </span>
                     </label>
 
-                    <label class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
+                    <label v-show="activeClubEditTab(club) === 'sichtbarkeit'" class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
                         <input
                             v-model="clubEditFormFor(club).members_can_post_to_teams"
                             type="checkbox"
@@ -987,7 +1100,7 @@ const deleteJob = (job) => {
                         </span>
                     </label>
 
-                    <label class="block xl:col-span-2">
+                    <label v-show="activeClubEditTab(club) === 'basis'" class="block xl:col-span-2">
                         <span class="text-xs font-semibold uppercase text-secondary">Vereinsnummer zur Pruefung</span>
                         <input
                             v-model="clubEditFormFor(club).official_club_number"
@@ -999,7 +1112,7 @@ const deleteJob = (job) => {
                         </span>
                     </label>
 
-                    <label class="block">
+                    <label v-show="activeClubEditTab(club) === 'adresse'" class="block">
                         <span class="text-xs font-semibold uppercase text-secondary">Land</span>
                         <select v-model="clubEditFormFor(club).country" required class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                             <option value="DE">Deutschland</option>
@@ -1013,30 +1126,173 @@ const deleteJob = (job) => {
                         </select>
                     </label>
 
-                    <label class="block">
+                    <label v-show="activeClubEditTab(club) === 'adresse'" class="block">
                         <span class="text-xs font-semibold uppercase text-secondary">Stadt</span>
                         <input v-model="clubEditFormFor(club).city" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </label>
 
-                    <label class="block">
+                    <label v-show="activeClubEditTab(club) === 'adresse'" class="block">
                         <span class="text-xs font-semibold uppercase text-secondary">PLZ</span>
                         <input v-model="clubEditFormFor(club).postal_code" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </label>
 
-                    <label class="block">
+                    <label v-show="activeClubEditTab(club) === 'adresse'" class="block">
                         <span class="text-xs font-semibold uppercase text-secondary">Region</span>
                         <input v-model="clubEditFormFor(club).state" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </label>
 
-                    <label class="block">
+                    <label v-show="activeClubEditTab(club) === 'adresse'" class="block">
                         <span class="text-xs font-semibold uppercase text-secondary">Strasse</span>
                         <input v-model="clubEditFormFor(club).street" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </label>
 
-                    <label class="block">
+                    <label v-show="activeClubEditTab(club) === 'adresse'" class="block">
                         <span class="text-xs font-semibold uppercase text-secondary">Hausnummer</span>
                         <input v-model="clubEditFormFor(club).house_number" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </label>
+
+                    <div v-show="activeClubEditTab(club) === 'bank'" class="rounded-lg border border-border bg-card p-3 md:col-span-2 xl:col-span-3">
+                        <p class="text-xs font-semibold uppercase text-secondary">Bankkonto fuer Mitglieder-Ueberweisungen</p>
+                        <p class="mt-1 text-xs text-secondary">
+                            Diese Daten werden Mitgliedern bei offenen Vereinsrechnungen angezeigt.
+                        </p>
+                        <div class="mt-3 grid gap-3 md:grid-cols-3">
+                            <label class="block">
+                                <span class="text-xs font-semibold uppercase text-secondary">Kontoinhaber</span>
+                                <input
+                                    v-model="clubEditFormFor(club).sepa_account_holder"
+                                    class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                                    placeholder="Name laut Bankkonto"
+                                >
+                            </label>
+                            <label class="block">
+                                <span class="text-xs font-semibold uppercase text-secondary">IBAN</span>
+                                <input
+                                    v-model="clubEditFormFor(club).sepa_iban"
+                                    class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                                    placeholder="DE..."
+                                >
+                            </label>
+                            <label class="block">
+                                <span class="text-xs font-semibold uppercase text-secondary">BIC</span>
+                                <input
+                                    v-model="clubEditFormFor(club).sepa_bic"
+                                    class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                                    placeholder="GENODE..."
+                                >
+                            </label>
+                        </div>
+                    </div>
+
+                    <div v-show="activeClubEditTab(club) === 'sponsoren'" class="space-y-4 rounded-lg border border-border bg-card p-3 md:col-span-2 xl:col-span-3">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <p class="text-xs font-semibold uppercase text-secondary">Vereins-Sponsoren</p>
+                                <p class="mt-1 text-xs text-secondary">
+                                    Pflege Sponsoren, die oeffentlich dem Verein zugeordnet werden.
+                                </p>
+                            </div>
+                            <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-secondary">
+                                {{ club.sponsors?.length || 0 }} Sponsoren
+                            </span>
+                        </div>
+
+                        <div v-if="club.subscription_capabilities?.sponsors === false" class="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
+                            Sponsorenverwaltung ist ab dem Club-Plan verfuegbar.
+                        </div>
+
+                        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                            <label class="block">
+                                <span class="text-xs font-semibold uppercase text-secondary">Sponsorname</span>
+                                <input v-model="sponsorFormFor(club).name" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Sponsorname">
+                            </label>
+                            <label class="block">
+                                <span class="text-xs font-semibold uppercase text-secondary">Kontaktperson</span>
+                                <input v-model="sponsorFormFor(club).contact_name" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="Ansprechpartner">
+                            </label>
+                            <label class="block">
+                                <span class="text-xs font-semibold uppercase text-secondary">E-Mail</span>
+                                <input v-model="sponsorFormFor(club).email" type="email" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="sponsor@example.com">
+                            </label>
+                            <label class="block">
+                                <span class="text-xs font-semibold uppercase text-secondary">Website</span>
+                                <input v-model="sponsorFormFor(club).website" type="url" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="https://...">
+                            </label>
+                            <label class="block">
+                                <span class="text-xs font-semibold uppercase text-secondary">Budget / Betrag</span>
+                                <input v-model="sponsorFormFor(club).amount" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="0,00">
+                            </label>
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <label class="block">
+                                    <span class="text-xs font-semibold uppercase text-secondary">Start</span>
+                                    <input v-model="sponsorFormFor(club).starts_at" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                </label>
+                                <label class="block">
+                                    <span class="text-xs font-semibold uppercase text-secondary">Ende</span>
+                                    <input v-model="sponsorFormFor(club).ends_at" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                </label>
+                            </div>
+                            <label class="block md:col-span-1 xl:col-span-3">
+                                <span class="text-xs font-semibold uppercase text-secondary">Logo fuer helle Flaechen</span>
+                                <input v-model="sponsorFormFor(club).logo_light" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="sponsors/logo-light.webp oder https://...">
+                            </label>
+                            <label class="block md:col-span-1 xl:col-span-3">
+                                <span class="text-xs font-semibold uppercase text-secondary">Logo fuer dunkle Flaechen</span>
+                                <input v-model="sponsorFormFor(club).logo_dark" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="sponsors/logo-dark.webp oder https://...">
+                            </label>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50"
+                                :disabled="club.subscription_capabilities?.sponsors === false"
+                                @click="submitSponsor(club)"
+                            >
+                                {{ editingSponsorIds[club.id] ? 'Sponsor speichern' : 'Sponsor erstellen' }}
+                            </button>
+                            <button
+                                v-if="editingSponsorIds[club.id]"
+                                type="button"
+                                class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary"
+                                @click="resetSponsorForm(club)"
+                            >
+                                Abbrechen
+                            </button>
+                        </div>
+
+                        <div class="divide-y divide-border overflow-hidden rounded-lg border border-border">
+                            <div
+                                v-for="sponsor in club.sponsors || []"
+                                :key="sponsor.id"
+                                class="flex flex-col gap-3 bg-bg p-3 sm:flex-row sm:items-center sm:justify-between"
+                            >
+                                <div class="flex min-w-0 items-center gap-3">
+                                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-inputBg text-xs font-bold text-primary">
+                                        <img v-if="sponsorLogoUrl(sponsor)" :src="sponsorLogoUrl(sponsor)" :alt="sponsor.name" class="h-full w-full object-contain p-1">
+                                        <span v-else>{{ sponsor.name?.slice(0, 2)?.toUpperCase() }}</span>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-semibold text-primary">{{ sponsor.name }}</p>
+                                        <p class="text-xs text-secondary">
+                                            {{ sponsor.amount || '-' }} EUR · {{ sponsor.starts_at || '-' }} bis {{ sponsor.ends_at || '-' }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" class="rounded-lg border border-border px-3 py-1 text-sm font-semibold text-primary" @click="editSponsor(club, sponsor)">
+                                        Bearbeiten
+                                    </button>
+                                    <button type="button" class="rounded-lg border border-error px-3 py-1 text-sm font-semibold text-error" @click="deleteSponsor(club, sponsor)">
+                                        Loeschen
+                                    </button>
+                                </div>
+                            </div>
+                            <div v-if="!(club.sponsors || []).length" class="bg-bg p-4 text-sm text-secondary">
+                                Noch keine Sponsoren fuer diesen Verein vorhanden.
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -1663,6 +1919,13 @@ const deleteJob = (job) => {
                 </div>
 
                 <div class="min-h-0 flex-1 overflow-y-auto p-4">
+                    <div
+                        v-if="clubModalNotice"
+                        class="mb-4 rounded-lg border border-error/30 bg-error/10 px-4 py-3 text-sm text-error"
+                    >
+                        {{ clubModalNotice }}
+                    </div>
+
                     <section v-show="clubCreateStep === 1" class="space-y-4">
                         <div>
                             <h3 class="text-base font-semibold text-primary">
@@ -1682,8 +1945,11 @@ const deleteJob = (job) => {
                             <input
                                 v-model="clubForm.name"
                                 class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
+                                :class="clubForm.errors.name ? 'border-error' : ''"
                                 placeholder="Vereinsname"
+                                required
                             >
+                            <p v-if="clubForm.errors.name" class="mt-1 text-xs text-error">{{ clubForm.errors.name }}</p>
                         </div>
 
                         <div>
@@ -1700,6 +1966,7 @@ const deleteJob = (job) => {
                                 category-translation-prefix="sport_categories"
                                 placeholder="Sportart suchen"
                             />
+                            <p v-if="clubForm.errors.sport_type" class="mt-1 text-xs text-error">{{ clubForm.errors.sport_type }}</p>
                         </div>
 
                         <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
@@ -1722,8 +1989,10 @@ const deleteJob = (job) => {
                             <input
                                 v-model="clubForm.official_club_number"
                                 class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
+                                :class="clubForm.errors.official_club_number ? 'border-error' : ''"
                                 placeholder="z. B. Vereinsregister- oder Verbandsnummer"
                             >
+                            <p v-if="clubForm.errors.official_club_number" class="mt-1 text-xs text-error">{{ clubForm.errors.official_club_number }}</p>
                         </div>
 
                         <div>
@@ -1745,26 +2014,63 @@ const deleteJob = (job) => {
                                 <option value="TR">Türkei</option>
                                 <option value="US">USA</option>
                             </select>
+                            <p v-if="clubForm.errors.country" class="mt-1 text-xs text-error">{{ clubForm.errors.country }}</p>
                         </div>
                     </section>
 
                     <section v-show="clubCreateStep === 2" class="space-y-4">
                         <div>
                             <h3 class="text-base font-semibold text-primary">
-                                Adresse
+                                Adresse & Bankkonto
                             </h3>
 
                             <p class="mt-1 text-sm text-secondary">
-                                Optional: Standort des Vereins eintragen.
+                                Optional: Standort und Bankkonto fuer Mitglieder-Ueberweisungen eintragen.
                             </p>
                         </div>
 
                         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            <input v-model="clubForm.city" class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" placeholder="Stadt">
-                            <input v-model="clubForm.postal_code" class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" placeholder="PLZ">
-                            <input v-model="clubForm.state" class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" placeholder="Region">
-                            <input v-model="clubForm.street" class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" placeholder="Straße">
-                            <input v-model="clubForm.house_number" class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" placeholder="Hausnummer">
+                            <div>
+                                <input v-model="clubForm.city" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.city ? 'border-error' : ''" placeholder="Stadt">
+                                <p v-if="clubForm.errors.city" class="mt-1 text-xs text-error">{{ clubForm.errors.city }}</p>
+                            </div>
+                            <div>
+                                <input v-model="clubForm.postal_code" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.postal_code ? 'border-error' : ''" placeholder="PLZ">
+                                <p v-if="clubForm.errors.postal_code" class="mt-1 text-xs text-error">{{ clubForm.errors.postal_code }}</p>
+                            </div>
+                            <div>
+                                <input v-model="clubForm.state" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.state ? 'border-error' : ''" placeholder="Region">
+                                <p v-if="clubForm.errors.state" class="mt-1 text-xs text-error">{{ clubForm.errors.state }}</p>
+                            </div>
+                            <div>
+                                <input v-model="clubForm.street" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.street ? 'border-error' : ''" placeholder="Straße">
+                                <p v-if="clubForm.errors.street" class="mt-1 text-xs text-error">{{ clubForm.errors.street }}</p>
+                            </div>
+                            <div>
+                                <input v-model="clubForm.house_number" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.house_number ? 'border-error' : ''" placeholder="Hausnummer">
+                                <p v-if="clubForm.errors.house_number" class="mt-1 text-xs text-error">{{ clubForm.errors.house_number }}</p>
+                            </div>
+                            <div class="rounded-lg border border-border bg-card p-3 sm:col-span-2">
+                                <p class="text-xs font-semibold uppercase text-secondary">Bankkonto fuer Vereinsrechnungen</p>
+                                <p class="mt-1 text-xs text-secondary">
+                                    Diese Daten werden Mitgliedern angezeigt, wenn sie offene Vereinsrechnungen per Ueberweisung zahlen.
+                                </p>
+
+                                <div class="mt-3 grid gap-3 sm:grid-cols-3">
+                                    <div>
+                                        <input v-model="clubForm.sepa_account_holder" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.sepa_account_holder ? 'border-error' : ''" placeholder="Kontoinhaber">
+                                        <p v-if="clubForm.errors.sepa_account_holder" class="mt-1 text-xs text-error">{{ clubForm.errors.sepa_account_holder }}</p>
+                                    </div>
+                                    <div>
+                                        <input v-model="clubForm.sepa_iban" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.sepa_iban ? 'border-error' : ''" placeholder="IBAN">
+                                        <p v-if="clubForm.errors.sepa_iban" class="mt-1 text-xs text-error">{{ clubForm.errors.sepa_iban }}</p>
+                                    </div>
+                                    <div>
+                                        <input v-model="clubForm.sepa_bic" class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary" :class="clubForm.errors.sepa_bic ? 'border-error' : ''" placeholder="BIC">
+                                        <p v-if="clubForm.errors.sepa_bic" class="mt-1 text-xs text-error">{{ clubForm.errors.sepa_bic }}</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </section>
 
@@ -1795,6 +2101,9 @@ const deleteJob = (job) => {
                                     {{ clubForm.city || '' }}
                                 </p>
                                 <p><strong>Region:</strong> {{ clubForm.state || '-' }}</p>
+                                <p><strong>Kontoinhaber:</strong> {{ clubForm.sepa_account_holder || '-' }}</p>
+                                <p><strong>IBAN:</strong> {{ clubForm.sepa_iban || '-' }}</p>
+                                <p><strong>BIC:</strong> {{ clubForm.sepa_bic || '-' }}</p>
                             </div>
                         </div>
                     </section>
@@ -1823,10 +2132,11 @@ const deleteJob = (job) => {
                         <button
                             v-else
                             type="button"
-                            class="flex-1 rounded-lg bg-buttonPrimary px-4 py-3 font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
+                            class="flex-1 rounded-lg bg-buttonPrimary px-4 py-3 font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-60"
+                            :disabled="clubForm.processing"
                             @click="createClub"
                         >
-                            Speichern
+                            {{ clubForm.processing ? 'Speichert...' : 'Speichern' }}
                         </button>
                     </div>
                 </div>

@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Carbon\Carbon;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -96,7 +97,21 @@ class MemberController extends Controller
         $canManageRoles = request()->user()->can('assignRoles', $user);
 
         return Inertia::render('Auth/Dashboard/Users/Edit', [
-            'user' => array_merge($user->only(['id', 'name', 'email', 'profile_visibility', 'bio']), [
+            'user' => array_merge($user->only([
+                'id',
+                'name',
+                'first_name',
+                'last_name',
+                'email',
+                'birth_date',
+                'profile_visibility',
+                'bio',
+                'account_status',
+                'suspended_until',
+                'suspension_reason',
+            ]), [
+                'birth_date' => $user->birth_date?->toDateString(),
+                'suspended_until' => $user->suspended_until?->toDateTimeString(),
                 'roles' => $user->getRoleNames()->values()->all(),
                 'permissions' => $user->getAllPermissions()->pluck('name')->values()->all(),
             ]),
@@ -121,19 +136,47 @@ class MemberController extends Controller
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'first_name' => ['nullable', 'string', 'max:120'],
+            'last_name' => ['nullable', 'string', 'max:120'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'birth_date' => ['nullable', 'date', 'before_or_equal:today'],
             'profile_visibility' => ['required', Rule::in(['public', 'private'])],
             'bio' => ['nullable', 'string', 'max:1000'],
+            'suspension_action' => ['nullable', Rule::in(['', 'lift', '1', '3', '7', '10', '14', '30', '60', '90'])],
+            'suspension_reason' => ['nullable', 'string', 'max:500'],
             'roles' => [$canManageRoles ? 'array' : 'prohibited'],
             'roles.*' => ['string', 'exists:roles,name'],
         ]);
 
+        $firstName = trim((string) ($data['first_name'] ?? ''));
+        $lastName = trim((string) ($data['last_name'] ?? ''));
+        $displayName = trim($firstName.' '.$lastName);
+
         $user->update([
-            'name' => $data['name'],
+            'name' => $displayName !== '' ? $displayName : $data['name'],
+            'first_name' => $firstName !== '' ? $firstName : null,
+            'last_name' => $lastName !== '' ? $lastName : null,
             'email' => $data['email'],
+            'birth_date' => isset($data['birth_date']) && $data['birth_date'] !== ''
+                ? Carbon::parse($data['birth_date'])->toDateString()
+                : null,
             'profile_visibility' => $data['profile_visibility'],
             'bio' => $data['bio'] ?? null,
         ]);
+
+        if (($data['suspension_action'] ?? '') === 'lift') {
+            $user->forceFill([
+                'account_status' => 'active',
+                'suspended_until' => null,
+                'suspension_reason' => null,
+            ])->save();
+        } elseif (in_array((string) ($data['suspension_action'] ?? ''), ['1', '3', '7', '10', '14', '30', '60', '90'], true)) {
+            $user->forceFill([
+                'account_status' => 'suspended',
+                'suspended_until' => now()->addDays((int) $data['suspension_action']),
+                'suspension_reason' => $data['suspension_reason'] ?? null,
+            ])->save();
+        }
 
         if ($canManageRoles && array_key_exists('roles', $data)) {
             $user->syncRoles($data['roles']);

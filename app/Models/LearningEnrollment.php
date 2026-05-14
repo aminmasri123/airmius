@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class LearningEnrollment extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'learning_course_id',
+        'user_id',
+        'status',
+        'progress_percent',
+        'started_at',
+        'completed_at',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'progress_percent' => 'integer',
+            'started_at' => 'datetime',
+            'completed_at' => 'datetime',
+        ];
+    }
+
+    public function course()
+    {
+        return $this->belongsTo(LearningCourse::class, 'learning_course_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+}

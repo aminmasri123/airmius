@@ -98,6 +98,13 @@ const editForm = useForm({
     start_time: toLocalInput(props.event.start_time),
     end_time: toLocalInput(props.event.end_time),
     location: props.event.location || '',
+    location_name: props.event.location_name || '',
+    location_street: props.event.location_street || '',
+    location_house_number: props.event.location_house_number || '',
+    location_postal_code: props.event.location_postal_code || '',
+    location_city: props.event.location_city || '',
+    location_country: props.event.location_country || 'DE',
+    max_participants: props.event.max_participants || '',
     notes: props.event.notes || '',
     recurring: props.event.recurring || '',
     recurrence_days: props.event.recurrence_days || [],
@@ -168,9 +175,17 @@ const recurrenceDaysLabel = computed(() => {
 const yesCount = computed(() => props.event.participants?.filter((participant) => participant.pivot?.status === 'yes').length || 0)
 const maybeCount = computed(() => props.event.participants?.filter((participant) => participant.pivot?.status === 'maybe').length || 0)
 const noCount = computed(() => props.event.participants?.filter((participant) => participant.pivot?.status === 'no').length || 0)
+const hasParticipantLimit = computed(() => Number(props.event.max_participants || 0) > 0)
+const isFullForYes = computed(() => hasParticipantLimit.value
+    && yesCount.value >= Number(props.event.max_participants)
+    && props.currentParticipantStatus !== 'yes')
+const capacityLabel = computed(() => hasParticipantLimit.value
+    ? `${yesCount.value}/${props.event.max_participants} Plätze belegt`
+    : `${yesCount.value} Zusagen, unbegrenzt`)
 
 const setStatus = (status) => {
     if (props.event.status === 'cancelled') return
+    if (status === 'yes' && isFullForYes.value) return
 
     router.post(route('auth.events.join', props.event.id), { status }, { preserveScroll: true })
 }
@@ -184,6 +199,12 @@ const submitComment = () => {
 
 const updateEvent = () => {
     editForm.event_timezone = browserTimeZone()
+    editForm.location = [
+        editForm.location_name,
+        [editForm.location_street, editForm.location_house_number].filter(Boolean).join(' '),
+        [editForm.location_postal_code, editForm.location_city].filter(Boolean).join(' '),
+    ].filter(Boolean).join(', ')
+
     editForm.put(route('auth.events.update', props.event.id), {
         preserveScroll: true,
         onSuccess: () => {
@@ -324,6 +345,11 @@ onMounted(() => {
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Besitzer</p>
                         <p class="mt-2 text-sm font-semibold text-primary">{{ event.user?.name || 'Nicht gespeichert' }}</p>
                     </div>
+
+                    <div class="rounded-lg bg-inputBg p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Teilnehmerlimit</p>
+                        <p class="mt-2 text-sm font-semibold text-primary">{{ hasParticipantLimit ? `${event.max_participants} Personen` : 'Unbegrenzt' }}</p>
+                    </div>
                 </div>
 
                 <div class="mt-5 rounded-lg border border-border p-4">
@@ -352,6 +378,7 @@ onMounted(() => {
             <aside class="space-y-4">
                 <section class="rounded-lg border border-border bg-card p-5">
                     <h2 class="text-lg font-semibold text-primary">Teilnahme</h2>
+                    <p class="mt-1 text-sm text-secondary">{{ capacityLabel }}</p>
                     <div class="mt-4 grid grid-cols-3 gap-2 text-center">
                         <div class="rounded-lg bg-success/10 p-3 text-success">
                             <p class="text-2xl font-bold">{{ yesCount }}</p>
@@ -373,8 +400,8 @@ onMounted(() => {
                             :key="status"
                             class="rounded-lg border px-4 py-2 text-sm font-semibold"
                             :class="currentParticipantStatus === status ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary' : 'border-border text-primary hover:bg-muted'"
-                            :disabled="event.status === 'cancelled'"
-                            :title="event.status === 'cancelled' ? 'Event ist abgesagt' : ''"
+                            :disabled="event.status === 'cancelled' || (status === 'yes' && isFullForYes)"
+                            :title="event.status === 'cancelled' ? 'Event ist abgesagt' : status === 'yes' && isFullForYes ? 'Dieses Event ist voll' : ''"
                             @click="setStatus(status)"
                         >
                             {{ statusLabels[status] || status }}
@@ -516,8 +543,40 @@ onMounted(() => {
                         </div>
 
                         <div class="md:col-span-2">
-                            <label class="text-sm font-semibold text-primary" for="edit-location">Ort</label>
-                            <input id="edit-location" v-model="editForm.location" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" />
+                            <p class="text-sm font-semibold text-primary">Adresse</p>
+                            <div class="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div class="sm:col-span-2">
+                                    <label class="text-xs font-semibold uppercase text-secondary" for="edit-location-name">Ort / Treffpunkt</label>
+                                    <input id="edit-location-name" v-model="editForm.location_name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="z. B. Waldhaus, Sporthalle, Vereinsheim" />
+                                </div>
+                                <div>
+                                    <label class="text-xs font-semibold uppercase text-secondary" for="edit-location-street">Straße</label>
+                                    <input id="edit-location-street" v-model="editForm.location_street" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" />
+                                </div>
+                                <div>
+                                    <label class="text-xs font-semibold uppercase text-secondary" for="edit-location-house-number">Nr.</label>
+                                    <input id="edit-location-house-number" v-model="editForm.location_house_number" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" />
+                                </div>
+                                <div>
+                                    <label class="text-xs font-semibold uppercase text-secondary" for="edit-location-postal-code">PLZ</label>
+                                    <input id="edit-location-postal-code" v-model="editForm.location_postal_code" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" />
+                                </div>
+                                <div>
+                                    <label class="text-xs font-semibold uppercase text-secondary" for="edit-location-city">Stadt</label>
+                                    <input id="edit-location-city" v-model="editForm.location_city" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" />
+                                </div>
+                                <div>
+                                    <label class="text-xs font-semibold uppercase text-secondary" for="edit-location-country">Land</label>
+                                    <input id="edit-location-country" v-model="editForm.location_country" maxlength="2" class="mt-1 w-full rounded-lg border-border bg-inputBg uppercase text-primary" placeholder="DE" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="text-sm font-semibold text-primary" for="edit-max-participants">Maximale Teilnehmerzahl</label>
+                            <input id="edit-max-participants" v-model="editForm.max_participants" type="number" min="1" max="100000" inputmode="numeric" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Leer lassen = unbegrenzt" />
+                            <p class="mt-1 text-xs text-secondary">Nur Zusagen zählen gegen diese Grenze. Vielleicht und Absagen bleiben möglich.</p>
+                            <p v-if="editForm.errors.max_participants" class="mt-1 text-sm text-error">{{ editForm.errors.max_participants }}</p>
                         </div>
 
                         <div class="md:col-span-2">

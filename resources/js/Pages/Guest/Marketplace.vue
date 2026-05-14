@@ -5,6 +5,8 @@ import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
 import AdSlot from '@/Components/Ads/AdSlot.vue'
+import UserCard from '@/Components/Auth/UserCard.vue'
+import { useTheme } from '@/services/useTheme'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -28,7 +30,14 @@ const props = defineProps({
 })
 
 const page = usePage()
+const { isDark } = useTheme()
 const currentUser = computed(() => props.authUser || page.props.auth?.user || null)
+const marketplaceLogo = computed(() => isDark.value
+    ? '/img/logo/Logo-Dark-Airmius-Quervormat.png'
+    : '/img/logo/Logo-Airmius-Quervormat.png')
+const marketplaceReturnTo = '/marketplace'
+const loginHref = computed(() => route('login', { redirect: marketplaceReturnTo }))
+const registerHref = computed(() => route('register', { redirect: marketplaceReturnTo }))
 const form = ref({
     search: props.filters.search || '',
     category: props.filters.category || '',
@@ -194,11 +203,9 @@ const selectSegment = (segment) => {
 
         <main class="relative z-10 pb-24 pt-0 md:pb-14 xl:mx-[16vw]">
             <section class="border-b border-border bg-bg px-4 py-3 shadow-sm">
-                <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 overflow-hidden rounded-lg border border-border bg-card px-5 py-3 text-primary shadow-sm">
+                <div class="mx-auto flex max-w-7xl flex-col gap-4 rounded-lg border border-border bg-card px-5 py-3 text-primary shadow-sm sm:flex-row sm:items-center sm:justify-between">
                     <div class="flex min-w-0 items-center gap-3">
-                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary">
-                            <i class="las la-running text-2xl"></i>
-                        </div>
+                        <img :src="marketplaceLogo" alt="AIRMIUS" class="h-12 w-auto shrink-0 object-contain">
                         <div class="min-w-0">
                             <p class="font-heading text-lg font-900 leading-tight sm:text-2xl">AIRMIUS Marketplace</p>
                             <p class="truncate text-xs font-semibold text-secondary sm:text-sm">
@@ -206,7 +213,7 @@ const selectSegment = (segment) => {
                             </p>
                         </div>
                     </div>
-                    <div class="hidden items-center gap-2 text-sm font-black sm:flex">
+                    <div class="flex w-full flex-wrap items-center gap-2 text-sm font-black sm:w-auto sm:justify-end">
                         <Link
                             v-if="currentUser"
                             href="/card"
@@ -222,9 +229,23 @@ const selectSegment = (segment) => {
                                 {{ cartItemCount }}
                             </span>
                         </Link>
-                        <span v-else class="rounded-full bg-muted px-3 py-1 text-secondary">Gastbestellung moeglich</span>
-                        <span class="rounded-full bg-muted px-3 py-1 text-secondary">Vereine</span>
-                        <span class="rounded-full bg-muted px-3 py-1 text-secondary">Athleten</span>
+                        <UserCard v-if="currentUser" />
+                        <template v-else>
+                            <Link
+                                v-if="canLogin"
+                                :href="loginHref"
+                                class="rounded-full border border-border px-3 py-2 text-secondary transition hover:border-buttonPrimary hover:text-primary"
+                            >
+                                Anmelden
+                            </Link>
+                            <Link
+                                v-if="canRegister"
+                                :href="registerHref"
+                                class="rounded-full bg-buttonPrimary px-3 py-2 text-buttonTextPrimary transition hover:bg-buttonPrimaryHover"
+                            >
+                                Registrieren
+                            </Link>
+                        </template>
                     </div>
                 </div>
             </section>

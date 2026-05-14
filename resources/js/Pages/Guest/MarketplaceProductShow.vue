@@ -3,7 +3,9 @@ import { useForm, Link, router, usePage } from '@inertiajs/vue3'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
-import { computed, ref, watch } from 'vue'
+import UserCard from '@/Components/Auth/UserCard.vue'
+import { useTheme } from '@/services/useTheme'
+import { computed, nextTick, ref, watch } from 'vue'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -16,14 +18,24 @@ const props = defineProps({
     profileAddress: { type: Object, default: null },
     shippingAddresses: { type: Array, default: () => [] },
     marketplaceVisuals: { type: Object, default: () => ({}) },
+    relatedProducts: { type: Array, default: () => [] },
 })
 
 const page = usePage()
+const { isDark } = useTheme()
 const currentUser = computed(() => props.authUser || page.props.auth?.user || null)
 const isAuthenticated = computed(() => Boolean(currentUser.value))
+const marketplaceLogo = computed(() => isDark.value
+    ? '/img/logo/Logo-Dark-Airmius-Quervormat.png'
+    : '/img/logo/Logo-Airmius-Quervormat.png')
+const marketplaceReturnTo = '/marketplace'
+const loginHref = computed(() => route('login', { redirect: marketplaceReturnTo }))
+const registerHref = computed(() => route('register', { redirect: marketplaceReturnTo }))
 const cartItemCount = computed(() => Number(props.cart?.items_count || 0))
 const selectedGalleryImage = ref(null)
 const selectedAttributes = ref({})
+const showCheckout = ref(false)
+const checkoutSection = ref(null)
 const initialAddress = props.profileAddress || props.shippingAddresses[0] || props.checkoutAddress || {}
 const form = useForm({
     guest_name: currentUser.value?.name || '',
@@ -113,6 +125,15 @@ const selectedQuantity = computed(() => clampQuantity(form.quantity))
 const selectedItemGrossCents = computed(() => visiblePriceCents.value * selectedQuantity.value)
 const selectedTotalGrossCents = computed(() => selectedItemGrossCents.value + Number(price.value.shipping_gross_cents || 0))
 const savedAddressOptions = computed(() => props.shippingAddresses || [])
+const regionNames = typeof Intl !== 'undefined' && Intl.DisplayNames
+    ? new Intl.DisplayNames(['de'], { type: 'region' })
+    : null
+const deliveryCountryOptions = computed(() => props.pricingCountries.map((country) => ({
+    country: country.country,
+    label: `${country.country} - ${regionNames?.of(country.country) || country.country}`,
+})))
+const relatedProductItems = computed(() => props.relatedProducts || [])
+const isLearningProduct = computed(() => ['online_course', 'training_plan'].includes(props.product.offer_type))
 
 const applyAddress = (address) => {
     if (!address) {
@@ -130,11 +151,13 @@ const applyAddress = (address) => {
 watch(addressChoice, (choice) => {
     if (choice === 'profile') {
         applyAddress(props.profileAddress)
+        updateCountry()
         return
     }
 
     if (choice.startsWith('saved:')) {
         applyAddress(savedAddressOptions.value.find((address) => String(address.id) === choice.slice(6)))
+        updateCountry()
         return
     }
 
@@ -152,14 +175,15 @@ watch(() => form.quantity, (value) => {
     }
 })
 
+const openCheckout = async () => {
+    showCheckout.value = true
+    await nextTick()
+    checkoutSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 const checkout = () => {
     form.quantity = selectedQuantity.value
     form.accepted_terms = true
-
-    if (!isAuthenticated.value) {
-        router.visit(route('login'))
-        return
-    }
 
     form.post(isAuthenticated.value
         ? route('auth.commerce.products.checkout', props.product.id)
@@ -216,8 +240,9 @@ const updateCountry = () => {
 
         <main class="relative z-10 pb-24 pt-0 md:pb-14 xl:mx-[16vw] xl:pr-24">
             <section class="border-b border-border bg-bg px-4 py-3 shadow-sm">
-                <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 overflow-hidden rounded-lg border border-border bg-card px-5 py-3 text-primary shadow-sm">
+                <div class="mx-auto flex max-w-7xl flex-col gap-4 rounded-lg border border-border bg-card px-5 py-3 text-primary shadow-sm sm:flex-row sm:items-center sm:justify-between">
                     <Link :href="route('guest.marketplace')" class="flex min-w-0 items-center gap-3">
+                        <img :src="marketplaceLogo" alt="AIRMIUS" class="h-12 w-auto shrink-0 object-contain">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary">
                             <i class="las la-arrow-left text-xl"></i>
                         </span>
@@ -226,26 +251,45 @@ const updateCountry = () => {
                             <span class="block truncate text-xs font-semibold text-secondary sm:text-sm">Zurück zu allen Sport Deals</span>
                         </span>
                     </Link>
-                    <Link
-                        v-if="currentUser"
-                        href="/card"
-                        class="relative hidden h-10 w-10 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary sm:inline-flex"
-                        aria-label="Warenkorb"
-                        title="Warenkorb"
-                    >
-                        <i class="las la-shopping-cart text-xl"></i>
-                        <span
-                            v-if="cartItemCount"
-                            class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 text-[11px] font-black leading-none text-white ring-2 ring-card"
+                    <div class="flex w-full flex-wrap items-center gap-2 text-sm font-black sm:w-auto sm:justify-end">
+                        <Link
+                            v-if="currentUser"
+                            href="/card"
+                            class="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary"
+                            aria-label="Warenkorb"
+                            title="Warenkorb"
                         >
-                            {{ cartItemCount }}
-                        </span>
-                    </Link>
+                            <i class="las la-shopping-cart text-xl"></i>
+                            <span
+                                v-if="cartItemCount"
+                                class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 text-[11px] font-black leading-none text-white ring-2 ring-card"
+                            >
+                                {{ cartItemCount }}
+                            </span>
+                        </Link>
+                        <UserCard v-if="currentUser" />
+                        <template v-else>
+                            <Link
+                                v-if="canLogin"
+                                :href="loginHref"
+                                class="rounded-full border border-border px-3 py-2 text-secondary transition hover:border-buttonPrimary hover:text-primary"
+                            >
+                                Anmelden
+                            </Link>
+                            <Link
+                                v-if="canRegister"
+                                :href="registerHref"
+                                class="rounded-full bg-buttonPrimary px-3 py-2 text-buttonTextPrimary transition hover:bg-buttonPrimaryHover"
+                            >
+                                Registrieren
+                            </Link>
+                        </template>
+                    </div>
                 </div>
             </section>
 
             <section class="mx-auto max-w-7xl px-4 py-4">
-                <div class="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]">
+                <div :class="['grid items-start gap-4', showCheckout ? 'lg:grid-cols-[minmax(0,1fr)_24rem]' : '']">
                     <article class="overflow-hidden rounded border border-border bg-card shadow-sm">
                         <div class="grid gap-0 xl:grid-cols-[minmax(0,1fr)_20rem]">
                             <div class="relative min-h-[24rem] bg-inputBg">
@@ -285,6 +329,29 @@ const updateCountry = () => {
                                         </button>
                                     </div>
                                 </div>
+                                <div class="mt-5 rounded border border-border bg-bg p-4">
+                                    <p class="text-xs font-black uppercase tracking-wide text-secondary">Preis</p>
+                                    <p class="mt-1 text-3xl font-black text-primary">{{ formatMoney(visiblePriceCents, price.currency) }}</p>
+                                    <p class="mt-2 text-xs leading-5 text-secondary">
+                                        Steuer und Versand werden im Checkout aus Lieferadresse und Kundentyp berechnet.
+                                    </p>
+                                    <div class="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                                        <button
+                                            type="button"
+                                            class="rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
+                                            @click="openCheckout"
+                                        >
+                                            Jetzt kaufen
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted"
+                                            @click="addToCart"
+                                        >
+                                            In den Einkaufswagen
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="grid gap-5 border-t border-border p-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
@@ -293,6 +360,31 @@ const updateCountry = () => {
                                 <p class="mt-3 whitespace-pre-line text-sm leading-7 text-secondary">
                                     {{ product.description || 'Keine Beschreibung hinterlegt.' }}
                                 </p>
+                                <div v-if="isLearningProduct" class="mt-6 grid gap-4 md:grid-cols-2">
+                                    <div v-if="product.course_outline?.length" class="rounded-lg border border-border bg-bg p-4">
+                                        <h3 class="text-sm font-black uppercase text-secondary">Inhalt</h3>
+                                        <ol class="mt-3 space-y-3">
+                                            <li v-for="(item, index) in product.course_outline" :key="item" class="flex gap-3 text-sm text-primary">
+                                                <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-buttonPrimary text-xs font-black text-buttonTextPrimary">{{ index + 1 }}</span>
+                                                <span>{{ item }}</span>
+                                            </li>
+                                        </ol>
+                                    </div>
+                                    <div v-if="product.learning_goals?.length || product.coaching_enabled" class="rounded-lg border border-border bg-bg p-4">
+                                        <h3 class="text-sm font-black uppercase text-secondary">Lernziel</h3>
+                                        <ul v-if="product.learning_goals?.length" class="mt-3 space-y-2">
+                                            <li v-for="goal in product.learning_goals" :key="goal" class="flex gap-2 text-sm text-primary">
+                                                <i class="las la-check mt-0.5 text-lg text-buttonPrimary"></i>
+                                                <span>{{ goal }}</span>
+                                            </li>
+                                        </ul>
+                                        <div v-if="product.coaching_enabled" class="mt-4 rounded-lg border border-buttonPrimary/30 bg-buttonPrimary/10 p-3 text-sm text-primary">
+                                            <p class="font-bold">Trainer-Feedback inklusive</p>
+                                            <p v-if="product.coach_feedback_instructions" class="mt-2 text-secondary">{{ product.coach_feedback_instructions }}</p>
+                                            <p v-else class="mt-2 text-secondary">Athleten koennen Fortschritt und Fragen nach dem Kauf mit dem Trainer teilen.</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <div>
                                 <h2 class="text-lg font-black text-primary">Varianten</h2>
@@ -325,7 +417,7 @@ const updateCountry = () => {
                         </div>
                     </article>
 
-                    <aside class="surface-card h-full p-6">
+                    <aside v-if="showCheckout" ref="checkoutSection" class="surface-card h-full p-6">
                         <div v-if="page.props.flash?.success" class="mb-4 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm font-semibold text-success">
                             {{ page.props.flash.success }}
                         </div>
@@ -345,16 +437,6 @@ const updateCountry = () => {
 
                         <form class="mt-6 space-y-4" @submit.prevent="checkout">
                             <div class="space-y-4">
-                            <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">Lieferland</label>
-                                <select v-model="form.shipping_country" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" @change="updateCountry">
-                                    <option v-for="country in pricingCountries" :key="country.country" :value="country.country">
-                                        {{ country.label }}
-                                    </option>
-                                </select>
-                                <p v-if="form.errors.shipping_country" class="mt-1 text-sm text-red-400">{{ form.errors.shipping_country }}</p>
-                            </div>
-
                             <div v-if="isAuthenticated" class="rounded-lg border border-border bg-bg p-3">
                                 <label class="text-xs font-bold uppercase text-secondary">Adresse</label>
                                 <select v-model="addressChoice" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
@@ -366,6 +448,17 @@ const updateCountry = () => {
                                     </option>
                                     <option value="new">Neue Lieferadresse</option>
                                 </select>
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-semibold uppercase text-secondary">Land der Lieferadresse</label>
+                                <select v-model="form.shipping_country" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" @change="updateCountry">
+                                    <option v-for="country in deliveryCountryOptions" :key="country.country" :value="country.country">
+                                        {{ country.label }}
+                                    </option>
+                                </select>
+                                <p class="mt-1 text-xs text-secondary">Die Steuer wird daraus automatisch berechnet.</p>
+                                <p v-if="form.errors.shipping_country" class="mt-1 text-sm text-red-400">{{ form.errors.shipping_country }}</p>
                             </div>
 
                             <div class="grid gap-3 sm:grid-cols-[1fr_7rem]">
@@ -512,6 +605,56 @@ const updateCountry = () => {
                             </Link>
                         </form>
                     </aside>
+                </div>
+            </section>
+
+            <section v-if="relatedProductItems.length" class="mx-auto mt-4 max-w-7xl px-4">
+                <div class="rounded border border-border bg-card shadow-sm">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+                        <div>
+                            <p class="text-xs font-black uppercase tracking-wide text-secondary">Marketplace</p>
+                            <h2 class="text-lg font-black text-primary">Ähnliche Produkte</h2>
+                        </div>
+                        <Link :href="route('guest.marketplace')" class="text-sm font-bold text-buttonPrimary hover:text-buttonPrimaryHover">
+                            Alle Angebote ansehen
+                        </Link>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3 lg:grid-cols-5">
+                        <Link
+                            v-for="relatedProduct in relatedProductItems"
+                            :key="relatedProduct.id"
+                            :href="relatedProduct.show_url"
+                            class="group overflow-hidden rounded border border-border bg-bg transition hover:border-borderHover"
+                        >
+                            <div class="relative aspect-square overflow-hidden bg-inputBg">
+                                <img
+                                    v-if="relatedProduct.image_url"
+                                    :src="relatedProduct.image_url"
+                                    :alt="relatedProduct.title"
+                                    class="h-full w-full object-cover transition group-hover:scale-105"
+                                />
+                                <i v-else :class="[relatedProduct.visual_icon, 'flex h-full items-center justify-center text-5xl text-buttonPrimary']"></i>
+                                <span class="absolute left-2 top-2 rounded bg-card/90 px-2 py-1 text-[11px] font-black text-buttonPrimary">
+                                    {{ relatedProduct.badge }}
+                                </span>
+                            </div>
+                            <div class="p-3">
+                                <p class="text-[11px] font-bold uppercase tracking-wide text-secondary">
+                                    {{ categoryLabels[relatedProduct.category] || relatedProduct.category }}
+                                </p>
+                                <h3 class="mt-1 line-clamp-2 min-h-[2.5rem] text-sm font-bold text-primary group-hover:text-buttonPrimary">
+                                    {{ relatedProduct.title }}
+                                </h3>
+                                <p class="mt-3 text-lg font-black text-primary">
+                                    {{ formatMoney(relatedProduct.price?.gross_cents ?? relatedProduct.price_cents, relatedProduct.price?.currency ?? relatedProduct.currency) }}
+                                </p>
+                                <p class="mt-1 truncate text-xs text-secondary">
+                                    {{ relatedProduct.provider_name || 'Airmius Marketplace' }}
+                                </p>
+                            </div>
+                        </Link>
+                    </div>
                 </div>
             </section>
         </main>

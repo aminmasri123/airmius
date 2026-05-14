@@ -11,6 +11,7 @@ const props = defineProps({
     sponsors: { type: Array, default: () => [] },
     sports: { type: Array, default: () => [] },
     subscriptions: { type: Array, default: () => [] },
+    deliveries: { type: Array, default: () => [] },
     summary: { type: Object, default: () => ({}) },
     visuals: { type: Object, default: () => ({}) },
 })
@@ -18,11 +19,15 @@ const props = defineProps({
 const { t, te } = useI18n()
 const editingPlanId = ref(null)
 const editForms = ref({})
+const deliveryForms = ref({})
 const visualUploadInput = ref(null)
 const visualModalOpen = ref(false)
 const createPlanModalOpen = ref(false)
 const paymentModal = ref({ open: false, subscription: null, note: '' })
+const deliveryModal = ref({ open: false, subscription: null, delivery: null })
 const cancelSubscriptionModal = ref({ open: false, subscription: null, reason: '' })
+const deleteSubscriptionModal = ref({ open: false, subscription: null, confirmation: '' })
+const deleteDeliveryModal = ref({ open: false, delivery: null, confirmation: '' })
 const newSportQuery = ref('')
 const editSportQueries = ref({})
 const activeTab = ref('payments')
@@ -68,6 +73,12 @@ const tabs = computed(() => [
         count: props.summary.plans || 0,
     },
     {
+        id: 'deliveries',
+        label: 'Lieferungen',
+        icon: 'las la-shipping-fast',
+        count: props.summary.plannedDeliveries || 0,
+    },
+    {
         id: 'visuals',
         label: 'Bilder',
         icon: 'las la-image',
@@ -94,7 +105,12 @@ const statusLabel = (status) => ({
     pending_payment: 'Zahlung offen',
     active: 'Aktiv',
     paused: 'Pausiert',
+    payment_paused: 'Zahlung pausiert',
     cancelled: 'Abgebrochen',
+    planned: 'Geplant',
+    preparing: 'In Vorbereitung',
+    shipped: 'Versendet',
+    delivered: 'Geliefert',
 })[status] || status || 'Unbekannt'
 
 const paymentStatusLabel = (status) => ({
@@ -115,8 +131,13 @@ const badgeClass = (status) => ({
     pending_payment: 'border-amber-400/50 bg-amber-400/10 text-amber-200',
     paid: 'border-emerald-400/50 bg-emerald-400/10 text-emerald-200',
     active: 'border-emerald-400/50 bg-emerald-400/10 text-emerald-200',
+    payment_paused: 'border-amber-400/50 bg-amber-400/10 text-amber-200',
     cancelled: 'border-red-400/50 bg-red-400/10 text-red-200',
     failed: 'border-red-400/50 bg-red-400/10 text-red-200',
+    planned: 'border-sky-400/50 bg-sky-400/10 text-sky-200',
+    preparing: 'border-amber-400/50 bg-amber-400/10 text-amber-200',
+    shipped: 'border-blue-400/50 bg-blue-400/10 text-blue-200',
+    delivered: 'border-emerald-400/50 bg-emerald-400/10 text-emerald-200',
 })[status] || 'border-border bg-inputBg text-secondary'
 
 const toList = (value) => String(value || '')
@@ -285,6 +306,98 @@ const destroyPlan = (plan) => {
     }
 }
 
+const formForDelivery = (delivery) => {
+    deliveryForms.value[delivery.id] ??= useForm({
+        status: delivery.status || 'planned',
+        delivery_month: delivery.delivery_month || '',
+        tracking_number: delivery.tracking_number || '',
+        carrier: delivery.carrier || '',
+        items_text: (delivery.items || []).join('\n'),
+        notes: delivery.notes || '',
+    })
+
+    return deliveryForms.value[delivery.id]
+}
+
+const saveDelivery = (delivery, onSuccess = null) => {
+    formForDelivery(delivery).put(route('admin.outfit-deliveries.update', delivery.id), {
+        preserveScroll: true,
+        onSuccess,
+    })
+}
+
+const markDeliveryShipped = (delivery) => {
+    const form = formForDelivery(delivery)
+
+    router.post(route('admin.outfit-deliveries.shipped', delivery.id), {
+        tracking_number: form.tracking_number,
+        carrier: form.carrier,
+    }, {
+        preserveScroll: true,
+    })
+}
+
+const markDeliveryDelivered = (delivery) => {
+    router.post(route('admin.outfit-deliveries.delivered', delivery.id), {}, {
+        preserveScroll: true,
+    })
+}
+
+const openDeliveryModal = (subscription) => {
+    if (!subscription.latest_delivery) return
+
+    deliveryModal.value = {
+        open: true,
+        subscription,
+        delivery: subscription.latest_delivery,
+    }
+}
+
+const closeDeliveryModal = () => {
+    deliveryModal.value = { open: false, subscription: null, delivery: null }
+}
+
+const saveDeliveryModal = () => {
+    if (!deliveryModal.value.delivery) return
+
+    saveDelivery(deliveryModal.value.delivery, closeDeliveryModal)
+}
+
+const markDeliveryModalShipped = () => {
+    if (!deliveryModal.value.delivery) return
+
+    markDeliveryShipped(deliveryModal.value.delivery)
+    closeDeliveryModal()
+}
+
+const markDeliveryModalDelivered = () => {
+    if (!deliveryModal.value.delivery) return
+
+    markDeliveryDelivered(deliveryModal.value.delivery)
+    closeDeliveryModal()
+}
+
+const openDeleteDeliveryModal = (delivery) => {
+    deleteDeliveryModal.value = { open: true, delivery, confirmation: '' }
+}
+
+const closeDeleteDeliveryModal = () => {
+    deleteDeliveryModal.value = { open: false, delivery: null, confirmation: '' }
+}
+
+const deleteDelivery = () => {
+    const delivery = deleteDeliveryModal.value.delivery
+    if (!delivery || deleteDeliveryModal.value.confirmation !== 'delete') return
+
+    router.delete(route('admin.outfit-deliveries.destroy', delivery.id), {
+        data: {
+            confirmation: deleteDeliveryModal.value.confirmation,
+        },
+        preserveScroll: true,
+        onSuccess: closeDeleteDeliveryModal,
+    })
+}
+
 const setHeroUpload = (event) => {
     visualForm.hero_upload = event.target.files?.[0] || null
 }
@@ -335,6 +448,22 @@ const markSubscriptionPaid = () => {
     })
 }
 
+const remindPayment = (subscription) => {
+    if (!subscription?.can_send_payment_reminder) return
+
+    router.post(route('admin.outfit-subscriptions.payment-reminder', subscription.id), {}, {
+        preserveScroll: true,
+    })
+}
+
+const markPaymentOpen = (subscription) => {
+    if (!subscription || !confirm('Dieses laufende Abo als offene Zahlung markieren? Danach startet die Mahnlogik automatisch.')) return
+
+    router.post(route('admin.outfit-subscriptions.mark-unpaid', subscription.id), {}, {
+        preserveScroll: true,
+    })
+}
+
 const openCancelSubscriptionModal = (subscription) => {
     cancelSubscriptionModal.value = { open: true, subscription, reason: '' }
 }
@@ -352,6 +481,27 @@ const cancelSubscription = () => {
     }, {
         preserveScroll: true,
         onSuccess: closeCancelSubscriptionModal,
+    })
+}
+
+const openDeleteSubscriptionModal = (subscription) => {
+    deleteSubscriptionModal.value = { open: true, subscription, confirmation: '' }
+}
+
+const closeDeleteSubscriptionModal = () => {
+    deleteSubscriptionModal.value = { open: false, subscription: null, confirmation: '' }
+}
+
+const deleteSubscription = () => {
+    const subscription = deleteSubscriptionModal.value.subscription
+    if (!subscription || deleteSubscriptionModal.value.confirmation !== 'delete') return
+
+    router.delete(route('admin.outfit-subscriptions.destroy', subscription.id), {
+        data: {
+            confirmation: deleteSubscriptionModal.value.confirmation,
+        },
+        preserveScroll: true,
+        onSuccess: closeDeleteSubscriptionModal,
     })
 }
 </script>
@@ -399,7 +549,7 @@ const cancelSubscription = () => {
         </section>
 
         <section class="rounded-lg border border-border bg-card p-2">
-            <div class="grid gap-2 md:grid-cols-3">
+            <div class="grid gap-2 md:grid-cols-4">
                 <button
                     v-for="tab in tabs"
                     :key="tab.id"
@@ -543,6 +693,81 @@ const cancelSubscription = () => {
             </div>
         </Teleport>
 
+        <section v-if="activeTab === 'deliveries'" class="rounded-lg border border-border bg-card p-5">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <p class="text-sm font-semibold uppercase text-accent">Lieferungen</p>
+                    <h2 class="mt-1 text-lg font-bold text-primary">Outfit-Abo Lieferungen verwalten</h2>
+                    <p class="mt-1 text-sm text-secondary">
+                        Plane Boxen, pflege Paketdienst und Trackingnummer und markiere Lieferungen als versendet oder geliefert.
+                    </p>
+                </div>
+                <span class="rounded-full bg-inputBg px-3 py-1 text-sm font-semibold text-secondary">
+                    {{ deliveries.length }} letzte Lieferungen
+                </span>
+            </div>
+
+            <div v-if="deliveries.length" class="mt-5 space-y-4">
+                <article v-for="delivery in deliveries" :key="delivery.id" class="rounded-lg border border-border bg-inputBg p-4">
+                    <div class="grid gap-4 xl:grid-cols-[minmax(14rem,1.2fr)_minmax(12rem,1fr)_minmax(18rem,1.4fr)_minmax(15rem,1fr)_auto] xl:items-start">
+                        <div>
+                            <p class="font-semibold text-primary">{{ delivery.subscription?.user?.name || 'Unbekannter Kunde' }}</p>
+                            <p class="mt-1 break-all text-xs text-secondary">{{ delivery.subscription?.user?.email || '-' }}</p>
+                            <p class="mt-2 text-sm font-semibold text-primary">{{ delivery.subscription?.plan?.name || 'Plan geloescht' }}</p>
+                            <p class="mt-1 text-xs text-secondary">{{ delivery.subscription?.payment_reference || 'Keine Referenz' }}</p>
+                        </div>
+
+                        <div class="space-y-2">
+                            <span class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold" :class="badgeClass(formForDelivery(delivery).status)">
+                                {{ statusLabel(formForDelivery(delivery).status) }}
+                            </span>
+                            <select v-model="formForDelivery(delivery).status" class="w-full rounded-lg border-border bg-card text-sm text-primary">
+                                <option value="planned">Geplant</option>
+                                <option value="preparing">In Vorbereitung</option>
+                                <option value="shipped">Versendet</option>
+                                <option value="delivered">Geliefert</option>
+                                <option value="cancelled">Storniert</option>
+                            </select>
+                            <input v-model="formForDelivery(delivery).delivery_month" type="date" class="w-full rounded-lg border-border bg-card text-sm text-primary">
+                        </div>
+
+                        <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                            <input v-model="formForDelivery(delivery).carrier" class="rounded-lg border-border bg-card text-sm text-primary" placeholder="Paketdienst, z.B. DHL">
+                            <input v-model="formForDelivery(delivery).tracking_number" class="rounded-lg border-border bg-card text-sm text-primary" placeholder="Trackingnummer">
+                            <div class="text-xs text-secondary sm:col-span-2 xl:col-span-1">
+                                <p>Versendet: {{ formatDate(delivery.shipped_at) }}</p>
+                                <p>Geliefert: {{ formatDate(delivery.delivered_at) }}</p>
+                            </div>
+                        </div>
+
+                        <div class="grid gap-2">
+                            <textarea v-model="formForDelivery(delivery).items_text" rows="3" class="rounded-lg border-border bg-card text-sm text-primary" placeholder="Artikel je Zeile, z.B. Laufshirt M"></textarea>
+                            <textarea v-model="formForDelivery(delivery).notes" rows="3" class="rounded-lg border-border bg-card text-sm text-primary" placeholder="Interne Notiz"></textarea>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 xl:flex-col xl:items-end">
+                            <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="formForDelivery(delivery).processing" @click="saveDelivery(delivery)">
+                                Speichern
+                            </button>
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="markDeliveryShipped(delivery)">
+                                Versendet
+                            </button>
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="markDeliveryDelivered(delivery)">
+                                Geliefert
+                            </button>
+                            <button type="button" class="rounded-lg border border-red-500/50 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/10" @click="openDeleteDeliveryModal(delivery)">
+                                Loeschen
+                            </button>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <div v-else class="mt-5 rounded-lg border border-border bg-inputBg p-6 text-center text-secondary">
+                Noch keine Outfit-Lieferungen vorhanden.
+            </div>
+        </section>
+
         <section v-if="activeTab === 'payments'" class="rounded-lg border border-border bg-card p-5">
             <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
@@ -558,11 +783,12 @@ const cancelSubscription = () => {
             </div>
 
             <div v-if="subscriptions.length" class="mt-5 overflow-hidden rounded-lg border border-border">
-                <div class="hidden grid-cols-[minmax(12rem,1.2fr)_minmax(10rem,1fr)_9rem_9rem_12rem_10rem] gap-3 border-b border-border bg-inputBg px-4 py-3 text-xs font-semibold uppercase text-secondary lg:grid">
+                <div class="hidden grid-cols-[minmax(12rem,1.2fr)_minmax(10rem,1fr)_8rem_8rem_10rem_12rem_9rem] gap-3 border-b border-border bg-inputBg px-4 py-3 text-xs font-semibold uppercase text-secondary lg:grid">
                     <span>Kunde</span>
                     <span>Plan</span>
                     <span>Status</span>
                     <span>Zahlung</span>
+                    <span>Lieferung</span>
                     <span>Referenz</span>
                     <span class="text-right">Aktion</span>
                 </div>
@@ -570,7 +796,7 @@ const cancelSubscription = () => {
                 <article
                     v-for="subscription in subscriptions"
                     :key="subscription.id"
-                    class="grid gap-4 border-b border-border px-4 py-4 last:border-b-0 lg:grid-cols-[minmax(12rem,1.2fr)_minmax(10rem,1fr)_9rem_9rem_12rem_10rem] lg:items-center"
+                    class="grid gap-4 border-b border-border px-4 py-4 last:border-b-0 lg:grid-cols-[minmax(12rem,1.2fr)_minmax(10rem,1fr)_8rem_8rem_10rem_12rem_9rem] lg:items-center"
                 >
                     <div>
                         <p class="font-semibold text-primary">{{ subscription.user?.name || 'Unbekannter Kunde' }}</p>
@@ -595,11 +821,44 @@ const cancelSubscription = () => {
                             {{ paymentStatusLabel(subscription.payment_status) }}
                         </span>
                         <p class="mt-1 text-xs text-secondary">{{ paymentProviderLabel(subscription.payment_provider) }}</p>
+                        <p v-if="subscription.payment_status !== 'paid'" class="mt-1 text-xs text-secondary">
+                            Erinnerung: {{ subscription.last_payment_reminder_sent_at ? formatDate(subscription.last_payment_reminder_sent_at) : 'Noch nie' }}
+                        </p>
+                        <p v-if="subscription.payment_status !== 'paid'" class="mt-1 text-xs text-secondary">
+                            {{ subscription.payment_reminders_sent || 0 }}/3 gesendet
+                        </p>
+                        <p v-if="subscription.dunning_level" class="mt-1 text-xs text-amber-200">
+                            Mahnstufe {{ subscription.dunning_level }}/3
+                        </p>
+                        <p v-if="subscription.last_dunning_sent_at" class="mt-1 text-xs text-secondary">
+                            Letzte Mahnung: {{ formatDate(subscription.last_dunning_sent_at) }}
+                        </p>
+                    </div>
+
+                    <div>
+                        <button
+                            type="button"
+                            class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold transition hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
+                            :class="badgeClass(subscription.latest_delivery?.status)"
+                            :disabled="!subscription.latest_delivery"
+                            @click="openDeliveryModal(subscription)"
+                        >
+                            {{ subscription.latest_delivery ? statusLabel(subscription.latest_delivery.status) : 'Keine' }}
+                        </button>
+                        <p v-if="subscription.latest_delivery" class="mt-1 text-xs text-secondary">
+                            {{ formatDate(subscription.latest_delivery.delivery_month) }}
+                        </p>
+                        <p v-if="subscription.latest_delivery?.tracking_number" class="mt-1 break-all text-xs text-secondary">
+                            {{ subscription.latest_delivery.carrier || 'Tracking' }}: {{ subscription.latest_delivery.tracking_number }}
+                        </p>
                     </div>
 
                     <div class="text-sm">
                         <p class="font-semibold text-primary">{{ subscription.payment_reference || 'Keine Referenz' }}</p>
                         <p class="mt-1 text-xs text-secondary">Faellig: {{ formatDate(subscription.payment_due_at) }}</p>
+                        <p v-if="subscription.payment_status !== 'paid'" class="mt-1 text-xs text-secondary">
+                            Autom. Loeschung: {{ formatDate(subscription.payment_expires_at) }}
+                        </p>
                         <p v-if="subscription.bank_transfer?.iban" class="mt-1 break-all text-xs text-secondary">
                             IBAN: {{ subscription.bank_transfer.iban }}
                         </p>
@@ -615,12 +874,36 @@ const cancelSubscription = () => {
                             Bezahlt markieren
                         </button>
                         <button
+                            v-if="subscription.payment_status !== 'paid'"
+                            type="button"
+                            class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                            :disabled="!subscription.can_send_payment_reminder"
+                            @click="remindPayment(subscription)"
+                        >
+                            Erinnern
+                        </button>
+                        <button
+                            v-if="subscription.payment_status === 'paid' && subscription.status === 'active'"
+                            type="button"
+                            class="rounded-lg border border-amber-400/50 px-3 py-2 text-sm font-semibold text-amber-200 hover:bg-amber-400/10"
+                            @click="markPaymentOpen(subscription)"
+                        >
+                            Zahlung offen
+                        </button>
+                        <button
                             v-if="subscription.status !== 'cancelled'"
                             type="button"
                             class="rounded-lg border border-red-500/50 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/10"
                             @click="openCancelSubscriptionModal(subscription)"
                         >
                             Abbrechen
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-lg border border-red-500/50 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/10"
+                            @click="openDeleteSubscriptionModal(subscription)"
+                        >
+                            Loeschen
                         </button>
                     </div>
                 </article>
@@ -630,6 +913,82 @@ const cancelSubscription = () => {
                 Noch keine Outfit-Abo-Anfragen vorhanden.
             </div>
         </section>
+
+        <Teleport to="body">
+            <div v-if="deliveryModal.open" class="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm">
+                <div class="w-full max-w-3xl overflow-hidden rounded-lg border border-border bg-card shadow-2xl">
+                    <div class="flex items-start justify-between gap-4 border-b border-border p-5">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-accent">Lieferstatus bearbeiten</p>
+                            <h2 class="mt-1 text-xl font-bold text-primary">{{ deliveryModal.subscription?.plan?.name || 'Outfit-Lieferung' }}</h2>
+                            <p class="mt-2 text-sm leading-6 text-secondary">
+                                {{ deliveryModal.subscription?.user?.name || 'Kunde' }} - {{ deliveryModal.subscription?.payment_reference || 'Keine Referenz' }}
+                            </p>
+                        </div>
+                        <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="closeDeliveryModal">
+                            <i class="las la-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="grid max-h-[75vh] gap-4 overflow-y-auto p-5 md:grid-cols-2">
+                        <label class="block">
+                            <span class="text-sm font-semibold text-primary">Lieferstatus</span>
+                            <select v-model="formForDelivery(deliveryModal.delivery).status" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                                <option value="planned">Geplant</option>
+                                <option value="preparing">In Vorbereitung</option>
+                                <option value="shipped">Versendet</option>
+                                <option value="delivered">Geliefert</option>
+                                <option value="cancelled">Storniert</option>
+                            </select>
+                        </label>
+
+                        <label class="block">
+                            <span class="text-sm font-semibold text-primary">Liefermonat</span>
+                            <input v-model="formForDelivery(deliveryModal.delivery).delivery_month" type="date" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                        </label>
+
+                        <label class="block">
+                            <span class="text-sm font-semibold text-primary">Paketdienst</span>
+                            <input v-model="formForDelivery(deliveryModal.delivery).carrier" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="z.B. DHL">
+                        </label>
+
+                        <label class="block">
+                            <span class="text-sm font-semibold text-primary">Trackingnummer</span>
+                            <input v-model="formForDelivery(deliveryModal.delivery).tracking_number" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Trackingnummer">
+                        </label>
+
+                        <label class="block md:col-span-2">
+                            <span class="text-sm font-semibold text-primary">Artikel in der Lieferung</span>
+                            <textarea v-model="formForDelivery(deliveryModal.delivery).items_text" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Ein Artikel pro Zeile"></textarea>
+                        </label>
+
+                        <label class="block md:col-span-2">
+                            <span class="text-sm font-semibold text-primary">Notiz</span>
+                            <textarea v-model="formForDelivery(deliveryModal.delivery).notes" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Interne Notiz"></textarea>
+                        </label>
+                    </div>
+
+                    <div class="flex flex-col-reverse gap-2 border-t border-border p-5 sm:flex-row sm:justify-between">
+                        <div class="flex flex-col gap-2 sm:flex-row">
+                            <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="markDeliveryModalShipped">
+                                Als versendet markieren
+                            </button>
+                            <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="markDeliveryModalDelivered">
+                                Als geliefert markieren
+                            </button>
+                        </div>
+                        <div class="flex flex-col-reverse gap-2 sm:flex-row">
+                            <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeDeliveryModal">
+                                Abbrechen
+                            </button>
+                            <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="formForDelivery(deliveryModal.delivery).processing" @click="saveDeliveryModal">
+                                Speichern
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
 
         <Teleport to="body">
             <div v-if="paymentModal.open" class="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm">
@@ -716,6 +1075,90 @@ const cancelSubscription = () => {
                         </button>
                         <button type="button" class="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500/90" @click="cancelSubscription">
                             Anfrage abbrechen
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
+        <Teleport to="body">
+            <div v-if="deleteSubscriptionModal.open" class="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm">
+                <div class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-2xl">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-red-300">Outfit-Abo lÃ¶schen</p>
+                            <h2 class="mt-1 text-xl font-bold text-primary">{{ deleteSubscriptionModal.subscription?.plan?.name }}</h2>
+                            <p class="mt-2 text-sm leading-6 text-secondary">
+                                Das Abo von {{ deleteSubscriptionModal.subscription?.user?.name || 'diesem Kunden' }} wird dauerhaft entfernt. ZugehÃ¶rige Lieferungen werden ebenfalls gelÃ¶scht.
+                            </p>
+                        </div>
+                        <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="closeDeleteSubscriptionModal">
+                            <i class="las la-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <label class="mt-4 block">
+                        <span class="text-sm font-semibold text-primary">Zur BestÃ¤tigung delete eingeben</span>
+                        <input
+                            v-model="deleteSubscriptionModal.confirmation"
+                            class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"
+                            placeholder="delete"
+                        />
+                    </label>
+
+                    <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeDeleteSubscriptionModal">
+                            Abbrechen
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500/90 disabled:opacity-50"
+                            :disabled="deleteSubscriptionModal.confirmation !== 'delete'"
+                            @click="deleteSubscription"
+                        >
+                            EndgÃ¼ltig lÃ¶schen
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
+        <Teleport to="body">
+            <div v-if="deleteDeliveryModal.open" class="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm">
+                <div class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-2xl">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-red-300">Lieferung loeschen</p>
+                            <h2 class="mt-1 text-xl font-bold text-primary">{{ deleteDeliveryModal.delivery?.subscription?.plan?.name || 'Outfit-Lieferung' }}</h2>
+                            <p class="mt-2 text-sm leading-6 text-secondary">
+                                Diese Lieferung wird dauerhaft entfernt. Das Outfit-Abo selbst bleibt bestehen.
+                            </p>
+                        </div>
+                        <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="closeDeleteDeliveryModal">
+                            <i class="las la-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <label class="mt-4 block">
+                        <span class="text-sm font-semibold text-primary">Zur Bestaetigung delete eingeben</span>
+                        <input
+                            v-model="deleteDeliveryModal.confirmation"
+                            class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"
+                            placeholder="delete"
+                        />
+                    </label>
+
+                    <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeDeleteDeliveryModal">
+                            Abbrechen
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500/90 disabled:opacity-50"
+                            :disabled="deleteDeliveryModal.confirmation !== 'delete'"
+                            @click="deleteDelivery"
+                        >
+                            Endgueltig loeschen
                         </button>
                     </div>
                 </div>
