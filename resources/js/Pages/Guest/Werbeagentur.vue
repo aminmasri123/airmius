@@ -1,5 +1,6 @@
 <script setup>
-import { Link } from '@inertiajs/vue3'
+import { Link, useForm } from '@inertiajs/vue3'
+import { ref } from 'vue'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
@@ -62,6 +63,37 @@ const steps = [
     'guest.agency.steps.items.offer',
     'guest.agency.steps.items.start',
 ]
+
+const requestSent = ref(false)
+const requestModalOpen = ref(false)
+const requestForm = useForm({
+    guest_name: '',
+    guest_email: '',
+    guest_phone: '',
+    club_name: '',
+    domain: '',
+    goals: '',
+    notes: '',
+})
+
+const submitRequest = () => {
+    requestForm.post(route('guest.werbeagentur.request'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            requestSent.value = true
+            requestForm.reset()
+        },
+    })
+}
+
+const openRequestModal = () => {
+    requestSent.value = false
+    requestModalOpen.value = true
+}
+
+const closeRequestModal = () => {
+    requestModalOpen.value = false
+}
 </script>
 
 <template>
@@ -85,12 +117,13 @@ const steps = [
                         {{ $t('guest.agency.hero.subtitle') }}
                     </p>
                     <div class="mt-7 flex flex-col gap-3 sm:flex-row">
-                        <Link
-                            :href="canRegister ? route('register') : route('login')"
+                        <button
+                            type="button"
+                            @click="openRequestModal"
                             class="inline-flex items-center justify-center rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-bold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
                         >
                             {{ $t('guest.agency.cta.start') }}
-                        </Link>
+                        </button>
                         <Link
                             :href="route('guest.pricing')"
                             class="inline-flex items-center justify-center rounded-lg border border-border px-5 py-3 text-sm font-bold text-primary hover:bg-muted"
@@ -198,6 +231,71 @@ const steps = [
                     </ol>
                 </div>
             </section>
+
+            <div v-if="requestModalOpen" class="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-8" @click.self="closeRequestModal">
+                <form class="relative mx-auto grid w-full max-w-4xl gap-8 rounded-xl border border-border bg-card p-6 pr-14 shadow-2xl lg:grid-cols-[0.85fr_1.15fr]" @submit.prevent="submitRequest">
+                    <button type="button" class="absolute right-4 top-4 rounded-lg p-2 text-secondary hover:bg-muted" aria-label="Anfrage schliessen" @click="closeRequestModal">
+                        <i class="las la-times text-xl"></i>
+                    </button>
+                    <div>
+                        <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">Website-Anfrage</p>
+                        <h2 class="mt-2 text-2xl font-bold text-primary">Anfrage direkt an Airmius senden</h2>
+                        <p class="mt-3 text-sm leading-relaxed text-secondary">
+                            Gäste und eingeloggte Vereinsnutzer können hier ohne Umweg über das Dashboard eine Anfrage für Website, Sponsorenbereich oder Kampagnen stellen.
+                        </p>
+                        <p v-if="requestSent" class="mt-4 rounded-lg border border-air-green/40 bg-air-green/10 px-4 py-3 text-sm font-semibold text-air-green">
+                            Danke, deine Anfrage wurde gesendet. Airmius meldet sich bei dir.
+                        </p>
+                    </div>
+
+                    <div class="grid gap-4">
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">Name</span>
+                                <input v-model="requestForm.guest_name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Dein Name">
+                                <span v-if="requestForm.errors.guest_name" class="mt-1 block text-xs text-error">{{ requestForm.errors.guest_name }}</span>
+                            </label>
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">E-Mail</span>
+                                <input v-model="requestForm.guest_email" type="email" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="name@verein.de">
+                                <span v-if="requestForm.errors.guest_email" class="mt-1 block text-xs text-error">{{ requestForm.errors.guest_email }}</span>
+                            </label>
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">Verein</span>
+                                <input v-model="requestForm.club_name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Vereinsname">
+                                <span v-if="requestForm.errors.club_name" class="mt-1 block text-xs text-error">{{ requestForm.errors.club_name }}</span>
+                            </label>
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">Telefon optional</span>
+                                <input v-model="requestForm.guest_phone" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="+49 ...">
+                                <span v-if="requestForm.errors.guest_phone" class="mt-1 block text-xs text-error">{{ requestForm.errors.guest_phone }}</span>
+                            </label>
+                        </div>
+
+                        <label class="block">
+                            <span class="text-sm font-semibold text-primary">Domain oder Wunschadresse optional</span>
+                            <input v-model="requestForm.domain" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="z. B. meinverein.de">
+                            <span v-if="requestForm.errors.domain" class="mt-1 block text-xs text-error">{{ requestForm.errors.domain }}</span>
+                        </label>
+
+                        <label class="block">
+                            <span class="text-sm font-semibold text-primary">Was braucht der Verein?</span>
+                            <textarea v-model="requestForm.goals" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Website, Sponsorenbereich, Mitglieder gewinnen, Kampagne, Inhalte ..."></textarea>
+                            <span v-if="requestForm.errors.goals" class="mt-1 block text-xs text-error">{{ requestForm.errors.goals }}</span>
+                        </label>
+
+                        <label class="block">
+                            <span class="text-sm font-semibold text-primary">Notizen optional</span>
+                            <textarea v-model="requestForm.notes" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Zeitplan, Budget, bestehende Website oder weitere Hinweise"></textarea>
+                            <span v-if="requestForm.errors.notes" class="mt-1 block text-xs text-error">{{ requestForm.errors.notes }}</span>
+                        </label>
+
+                        <button class="rounded-lg bg-buttonPrimary px-5 py-3 text-sm font-bold text-buttonTextPrimary hover:bg-buttonPrimaryHover disabled:opacity-60" :disabled="requestForm.processing">
+                            Anfrage senden
+                        </button>
+                    </div>
+                </form>
+            </div>
         </main>
 
         <Footer />

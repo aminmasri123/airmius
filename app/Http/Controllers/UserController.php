@@ -182,7 +182,7 @@ class UserController extends Controller
                 })
                 ->with(['club:id,name', 'team:id,name,club_id'])
                 ->withCount([
-                    'comments' => fn ($query) => $query->where('moderation_status', '!=', 'removed'),
+                    'comments' => fn ($query) => $query->where('moderation_status', 'approved'),
                     'likes',
                 ])
                 ->latest('id')

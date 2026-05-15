@@ -9,8 +9,32 @@ defineOptions({ layout: AppLayout })
 const props = defineProps({
     sponsors: Object,
     clubs: { type: Array, default: () => [] },
+    stats: {
+        type: Object,
+        default: () => ({
+            total: 0,
+            platform: 0,
+            outfit_subscription: 0,
+            club: 0,
+        }),
+    },
+    filters: {
+        type: Object,
+        default: () => ({
+            scope: 'all',
+        }),
+    },
 })
 
+const scopes = [
+    { key: 'all', label: 'Alle', hint: 'Alle Sponsoren' },
+    { key: 'platform', label: 'Airmius', hint: 'Plattform-Sponsoren' },
+    { key: 'outfit_subscription', label: 'Outfit-Abo', hint: 'Abo-Sponsoren' },
+    { key: 'club', label: 'Vereine', hint: 'Vereinssponsoren' },
+]
+
+const activeScope = ref(props.filters.scope || 'all')
+const showFormModal = ref(false)
 const editingSponsor = ref(null)
 const deleteTarget = ref(null)
 const deleteConfirmation = ref('')
@@ -31,32 +55,86 @@ const form = useForm({
     ends_at: '',
 })
 
+const allSponsors = computed(() => props.sponsors?.data || [])
 const selectedClub = computed(() => props.clubs.find((club) => Number(club.id) === Number(form.club_id)) || null)
 const isClubSponsor = computed(() => form.scope === 'club')
 const canManageSponsors = computed(() => !isClubSponsor.value || selectedClub.value?.capabilities?.sponsors !== false)
+
+const filteredSponsors = computed(() => {
+    if (activeScope.value === 'all') return allSponsors.value
+
+    return allSponsors.value.filter((sponsor) => sponsorScope(sponsor) === activeScope.value)
+})
+
+const sponsorStats = computed(() => ({
+    total: props.stats.total || 0,
+    platform: props.stats.platform || 0,
+    outfit_subscription: props.stats.outfit_subscription || 0,
+    club: props.stats.club || 0,
+}))
+
+function sponsorScope(sponsor) {
+    return sponsor.scope || (sponsor.club_id ? 'club' : 'platform')
+}
 
 const scopeLabel = (sponsor) => ({
     platform: 'Airmius Plattform',
     outfit_subscription: 'Outfit-Abo',
     club: sponsor.club?.name || 'Verein',
-}[sponsor.scope || (sponsor.club_id ? 'club' : 'platform')] || 'Airmius Plattform')
+}[sponsorScope(sponsor)] || 'Airmius Plattform')
 
 const scopeBadgeClass = (sponsor) => ({
     platform: 'bg-air-blue/10 text-air-blue',
     outfit_subscription: 'bg-accent/10 text-accent',
-    club: 'bg-inputBg text-secondary',
-}[sponsor.scope || (sponsor.club_id ? 'club' : 'platform')] || 'bg-air-blue/10 text-air-blue')
+    club: 'bg-success/10 text-success',
+}[sponsorScope(sponsor)] || 'bg-air-blue/10 text-air-blue')
 
 const resetForm = () => {
     editingSponsor.value = null
     form.reset()
-    form.scope = 'platform'
+    form.clearErrors()
+    form.scope = activeScope.value === 'all' ? 'platform' : activeScope.value
     form.club_id = ''
+}
+
+const openCreateModal = (scope = activeScope.value) => {
+    resetForm()
+    form.scope = scope === 'all' ? 'platform' : scope
+    showFormModal.value = true
+}
+
+const changeScope = (scope) => {
+    activeScope.value = scope
+
+    router.get(route('sponsors.index'), {
+        scope: scope === 'all' ? undefined : scope,
+    }, {
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+        only: ['sponsors', 'filters'],
+    })
+}
+
+const visitPage = (url) => {
+    if (!url) return
+
+    router.visit(url, {
+        preserveScroll: true,
+        preserveState: true,
+        only: ['sponsors', 'filters'],
+    })
+}
+
+const closeFormModal = () => {
+    showFormModal.value = false
+    resetForm()
 }
 
 const edit = (sponsor) => {
     editingSponsor.value = sponsor
-    form.scope = sponsor.scope || (sponsor.club_id ? 'club' : 'platform')
+    form.clearErrors()
+    form.scope = sponsorScope(sponsor)
     form.club_id = sponsor.club_id || ''
     form.name = sponsor.name
     form.contact_name = sponsor.contact_name || ''
@@ -68,6 +146,7 @@ const edit = (sponsor) => {
     form.amount = sponsor.amount || ''
     form.starts_at = sponsor.starts_at || ''
     form.ends_at = sponsor.ends_at || ''
+    showFormModal.value = true
 }
 
 const openDeleteModal = (sponsor) => {
@@ -81,9 +160,7 @@ const closeDeleteModal = () => {
 }
 
 const confirmDelete = () => {
-    if (!deleteTarget.value || deleteConfirmation.value !== 'delete') {
-        return
-    }
+    if (!deleteTarget.value || deleteConfirmation.value !== 'delete') return
 
     router.delete(route('sponsors.destroy', deleteTarget.value.id), {
         preserveScroll: true,
@@ -96,7 +173,10 @@ const submit = () => {
         form.club_id = ''
     }
 
-    const options = { preserveScroll: true, onSuccess: resetForm }
+    const options = {
+        preserveScroll: true,
+        onSuccess: closeFormModal,
+    }
 
     editingSponsor.value
         ? form.put(route('sponsors.update', editingSponsor.value.id), options)
@@ -113,186 +193,302 @@ const previewUrl = (source) => {
 
     return `/storage/${source}`
 }
+
+const formatAmount = (amount) => {
+    if (amount === null || amount === undefined || amount === '') return '-'
+
+    return `${Number(amount).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR`
+}
 </script>
 
 <template>
     <Head title="Sponsoren" />
 
-    <div class="space-y-6">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-                <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">Sponsoring</p>
-                <h1 class="mt-1 text-2xl font-bold text-primary">Sponsoren verwalten</h1>
-                <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
-                    Lege Sponsoren fuer die Airmius-Plattform, Outfit-Abos oder einzelne Vereine an.
-                </p>
-            </div>
-            <div class="rounded-lg border border-border bg-card px-4 py-3">
-                <p class="text-xs uppercase text-secondary">Sponsoren gesamt</p>
-                <p class="mt-1 text-2xl font-bold text-primary">{{ sponsors.total || sponsors.data?.length || 0 }}</p>
-            </div>
-        </div>
-
-        <div v-if="!canManageSponsors" class="rounded-lg border border-border bg-inputBg p-4 text-sm text-primary">
-            Sponsorenverwaltung fuer diesen Verein ist ab dem Club-Plan verfuegbar. Waehle einen Verein mit passendem Plan oder eine Plattform-/Outfit-Abo-Zuordnung.
-        </div>
-
-        <form class="rounded-lg border border-border bg-card p-5" @submit.prevent="submit">
-            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <label class="block">
-                    <span class="text-sm font-semibold text-primary">Sponsor-Art</span>
-                    <select v-model="form.scope" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                        <option value="platform">Airmius Plattform</option>
-                        <option value="outfit_subscription">Outfit-Abo</option>
-                        <option value="club">Verein</option>
-                    </select>
-                    <p class="mt-1 text-xs text-secondary">
-                        Plattform-Sponsoren unterstuetzen Airmius allgemein. Outfit-Abo-Sponsoren koennen bei Outfit-Abo-Plaenen genutzt werden.
+    <div class="space-y-5">
+        <section class="rounded-lg border border-border bg-card p-5">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">Sponsoring</p>
+                    <h1 class="mt-1 text-2xl font-bold text-primary">Sponsoren verwalten</h1>
+                    <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
+                        Lege Sponsoren fuer Airmius, Outfit-Abos oder einzelne Vereine an und verwalte Logos, Laufzeiten und Ansprechpartner.
                     </p>
-                    <div v-if="form.errors.scope" class="mt-1 text-sm text-error">{{ form.errors.scope }}</div>
-                </label>
-
-                <label v-if="form.scope === 'club'" class="block">
-                    <span class="text-sm font-semibold text-primary">Verein</span>
-                    <select v-model="form.club_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required>
-                        <option value="">Verein auswaehlen</option>
-                        <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
-                    </select>
-                    <p class="mt-1 text-xs text-secondary">Der Sponsor wird nur diesem Verein zugeordnet.</p>
-                    <div v-if="form.errors.club_id" class="mt-1 text-sm text-error">{{ form.errors.club_id }}</div>
-                </label>
-
-                <label class="block">
-                    <span class="text-sm font-semibold text-primary">Sponsorname</span>
-                    <input v-model="form.name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Nike, Stadtwerke, ..." required>
-                    <div v-if="form.errors.name" class="mt-1 text-sm text-error">{{ form.errors.name }}</div>
-                </label>
-
-                <label class="block">
-                    <span class="text-sm font-semibold text-primary">Kontaktperson</span>
-                    <input v-model="form.contact_name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Ansprechpartner">
-                    <div v-if="form.errors.contact_name" class="mt-1 text-sm text-error">{{ form.errors.contact_name }}</div>
-                </label>
-
-                <label class="block">
-                    <span class="text-sm font-semibold text-primary">E-Mail</span>
-                    <input v-model="form.email" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="sponsor@example.com" type="email">
-                    <div v-if="form.errors.email" class="mt-1 text-sm text-error">{{ form.errors.email }}</div>
-                </label>
-
-                <label class="block">
-                    <span class="text-sm font-semibold text-primary">Website</span>
-                    <input v-model="form.website" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="https://..." type="url">
-                    <div v-if="form.errors.website" class="mt-1 text-sm text-error">{{ form.errors.website }}</div>
-                </label>
-
-                <div class="rounded-lg border border-border bg-inputBg p-4 xl:col-span-3">
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                            <p class="text-sm font-semibold text-primary">Sponsorlogos nach Farbflaeche</p>
-                            <p class="mt-1 text-xs text-secondary">
-                                Hinterlege immer zwei Varianten: dunkles Logo fuer helle Flaechen und helles Logo fuer dunkle Flaechen.
-                            </p>
-                        </div>
-                        <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-secondary">
-                            {{ isDark ? 'Aktuell: dunkle Palette' : 'Aktuell: helle Palette' }}
-                        </span>
-                    </div>
-
-                    <div class="mt-4 grid gap-4 md:grid-cols-2">
-                        <label class="block rounded-lg border border-border bg-card p-3">
-                            <span class="text-sm font-semibold text-primary">Logo fuer helle Flaechen</span>
-                            <input v-model="form.logo_light" class="mt-2 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Dunkles/farbiges Logo, z.B. sponsors/nike-light.webp">
-                            <div class="mt-3 flex h-20 items-center justify-center rounded-lg border border-border bg-white p-3">
-                                <img v-if="form.logo_light" :src="previewUrl(form.logo_light)" alt="Logo fuer helle Flaechen" class="max-h-full max-w-full object-contain">
-                                <span v-else class="text-xs text-slate-500">Vorschau helle Flaeche</span>
-                            </div>
-                        </label>
-
-                        <label class="block rounded-lg border border-border bg-card p-3">
-                            <span class="text-sm font-semibold text-primary">Logo fuer dunkle Flaechen</span>
-                            <input v-model="form.logo_dark" class="mt-2 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Helles/weisses Logo, z.B. sponsors/nike-dark.webp">
-                            <div class="mt-3 flex h-20 items-center justify-center rounded-lg border border-border bg-slate-950 p-3">
-                                <img v-if="form.logo_dark" :src="previewUrl(form.logo_dark)" alt="Logo fuer dunkle Flaechen" class="max-h-full max-w-full object-contain">
-                                <span v-else class="text-xs text-slate-400">Vorschau dunkle Flaeche</span>
-                            </div>
-                        </label>
-                    </div>
-
-                    <input v-model="form.logo" type="hidden">
                 </div>
 
-                <label class="block">
-                    <span class="text-sm font-semibold text-primary">Budget / Betrag</span>
-                    <input v-model="form.amount" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="0,00" type="number" min="0" step="0.01">
-                    <div v-if="form.errors.amount" class="mt-1 text-sm text-error">{{ form.errors.amount }}</div>
-                </label>
-
-                <label class="block">
-                    <span class="text-sm font-semibold text-primary">Start</span>
-                    <input v-model="form.starts_at" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" type="date">
-                    <div v-if="form.errors.starts_at" class="mt-1 text-sm text-error">{{ form.errors.starts_at }}</div>
-                </label>
-
-                <label class="block">
-                    <span class="text-sm font-semibold text-primary">Ende</span>
-                    <input v-model="form.ends_at" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" type="date">
-                    <div v-if="form.errors.ends_at" class="mt-1 text-sm text-error">{{ form.errors.ends_at }}</div>
-                </label>
-            </div>
-
-            <div class="mt-5 flex flex-wrap gap-2">
-                <button class="rounded-lg bg-buttonPrimary px-4 py-2 font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50" :disabled="form.processing || !canManageSponsors">
-                    {{ editingSponsor ? 'Sponsor speichern' : 'Sponsor erstellen' }}
-                </button>
-                <button v-if="editingSponsor" type="button" class="rounded-lg border border-border px-4 py-2 text-primary" @click="resetForm">
-                    Abbrechen
+                <button
+                    type="button"
+                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-buttonPrimary px-4 py-2 font-semibold text-buttonTextPrimary transition hover:bg-primary/90"
+                    @click="openCreateModal()"
+                >
+                    <i class="las la-plus text-lg"></i>
+                    Sponsor anlegen
                 </button>
             </div>
-        </form>
 
-        <div class="overflow-hidden rounded-lg border border-border bg-card">
-            <table class="min-w-full divide-y divide-border">
-                <thead>
-                    <tr class="text-left text-xs uppercase text-secondary">
-                        <th class="px-4 py-3">Sponsor</th>
-                        <th class="px-4 py-3">Zuordnung</th>
-                        <th class="px-4 py-3">Betrag</th>
-                        <th class="px-4 py-3">Laufzeit</th>
-                        <th class="px-4 py-3">Aktionen</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-border">
-                    <tr v-for="sponsor in sponsors.data" :key="sponsor.id">
-                        <td class="px-4 py-3 text-sm font-semibold text-primary">
-                            <div class="flex items-center gap-3">
-                                <img v-if="sponsorLogoUrl(sponsor)" :src="sponsorLogoUrl(sponsor)" :alt="sponsor.name" class="h-9 w-9 rounded-lg object-contain">
-                                <div v-else class="flex h-9 w-9 items-center justify-center rounded-lg bg-inputBg text-xs font-bold text-primary">
-                                    {{ sponsor.name?.slice(0, 2)?.toUpperCase() }}
-                                </div>
-                                <span>{{ sponsor.name }}</span>
-                            </div>
-                        </td>
-                        <td class="px-4 py-3 text-sm text-secondary">
-                            <span :class="['rounded-full px-2 py-1 text-xs font-semibold', scopeBadgeClass(sponsor)]">
-                                {{ scopeLabel(sponsor) }}
-                            </span>
-                        </td>
-                        <td class="px-4 py-3 text-sm text-secondary">{{ sponsor.amount || '-' }}</td>
-                        <td class="px-4 py-3 text-sm text-secondary">{{ sponsor.starts_at || '-' }} bis {{ sponsor.ends_at || '-' }}</td>
-                        <td class="px-4 py-3">
-                            <div class="flex gap-2">
-                                <button class="rounded border border-border px-3 py-1 text-sm text-primary" @click="edit(sponsor)">Bearbeiten</button>
-                                <button class="rounded bg-error px-3 py-1 text-sm text-white" @click="openDeleteModal(sponsor)">Loeschen</button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr v-if="!sponsors.data.length">
-                        <td colspan="5" class="px-4 py-6 text-center text-sm text-secondary">Noch keine Sponsoren vorhanden.</td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div class="rounded-lg border border-border bg-inputBg p-4">
+                    <p class="text-xs font-semibold uppercase text-secondary">Gesamt</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ sponsorStats.total }}</p>
+                </div>
+                <div class="rounded-lg border border-border bg-inputBg p-4">
+                    <p class="text-xs font-semibold uppercase text-secondary">Airmius</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ sponsorStats.platform }}</p>
+                </div>
+                <div class="rounded-lg border border-border bg-inputBg p-4">
+                    <p class="text-xs font-semibold uppercase text-secondary">Outfit-Abo</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ sponsorStats.outfit_subscription }}</p>
+                </div>
+                <div class="rounded-lg border border-border bg-inputBg p-4">
+                    <p class="text-xs font-semibold uppercase text-secondary">Vereine</p>
+                    <p class="mt-2 text-2xl font-bold text-primary">{{ sponsorStats.club }}</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="rounded-lg border border-border bg-card p-3">
+            <div class="flex flex-wrap gap-2">
+                <button
+                    v-for="scope in scopes"
+                    :key="scope.key"
+                    type="button"
+                    class="rounded-md px-4 py-2 text-left text-sm font-semibold transition"
+                    :class="activeScope === scope.key ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-secondary hover:bg-secondary/10 hover:text-primary'"
+                    @click="changeScope(scope.key)"
+                >
+                    {{ scope.label }}
+                    <span class="ml-2 rounded-full bg-secondary/20 px-2 py-0.5 text-xs">
+                        {{ scope.key === 'all' ? sponsorStats.total : sponsorStats[scope.key] }}
+                    </span>
+                </button>
+            </div>
+        </section>
+
+        <section class="grid gap-4 xl:grid-cols-3">
+            <article
+                v-for="sponsor in filteredSponsors"
+                :key="sponsor.id"
+                class="flex min-h-56 flex-col justify-between rounded-lg border border-border bg-card p-4"
+            >
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex min-w-0 items-center gap-3">
+                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-border bg-inputBg p-2">
+                            <img
+                                v-if="sponsorLogoUrl(sponsor)"
+                                :src="sponsorLogoUrl(sponsor)"
+                                :alt="sponsor.name"
+                                class="max-h-full max-w-full object-contain"
+                            >
+                            <span v-else class="text-sm font-bold text-primary">{{ sponsor.name?.slice(0, 2)?.toUpperCase() }}</span>
+                        </div>
+                        <div class="min-w-0">
+                            <h2 class="truncate text-lg font-semibold text-primary">{{ sponsor.name }}</h2>
+                            <p class="truncate text-sm text-secondary">{{ sponsor.contact_name || sponsor.email || 'Kein Kontakt hinterlegt' }}</p>
+                        </div>
+                    </div>
+
+                    <span :class="['shrink-0 rounded-full px-2 py-1 text-xs font-semibold', scopeBadgeClass(sponsor)]">
+                        {{ scopeLabel(sponsor) }}
+                    </span>
+                </div>
+
+                <div class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                    <div class="rounded-lg bg-inputBg p-3">
+                        <p class="text-xs uppercase text-secondary">Budget</p>
+                        <p class="mt-1 font-semibold text-primary">{{ formatAmount(sponsor.amount) }}</p>
+                    </div>
+                    <div class="rounded-lg bg-inputBg p-3">
+                        <p class="text-xs uppercase text-secondary">Laufzeit</p>
+                        <p class="mt-1 font-semibold text-primary">{{ sponsor.starts_at || '-' }} bis {{ sponsor.ends_at || '-' }}</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <a
+                        v-if="sponsor.website"
+                        :href="sponsor.website"
+                        target="_blank"
+                        rel="noopener"
+                        class="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-secondary/10"
+                    >
+                        <i class="las la-external-link-alt"></i>
+                        Website
+                    </a>
+                    <button class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-secondary/10" @click="edit(sponsor)">
+                        Bearbeiten
+                    </button>
+                    <button class="rounded-lg border border-error/40 px-3 py-2 text-sm font-semibold text-error hover:bg-error/10" @click="openDeleteModal(sponsor)">
+                        Loeschen
+                    </button>
+                </div>
+            </article>
+
+            <div v-if="filteredSponsors.length === 0" class="rounded-lg border border-dashed border-border bg-card p-8 text-center xl:col-span-3">
+                <p class="text-lg font-semibold text-primary">Keine Sponsoren in diesem Bereich</p>
+                <p class="mt-2 text-sm text-secondary">Lege den ersten Sponsor direkt im passenden Tab an.</p>
+                <button
+                    type="button"
+                    class="mt-4 rounded-lg bg-buttonPrimary px-4 py-2 font-semibold text-buttonTextPrimary"
+                    @click="openCreateModal(activeScope)"
+                >
+                    Sponsor anlegen
+                </button>
+            </div>
+        </section>
+
+        <div v-if="sponsors?.links?.length > 3" class="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p class="text-sm text-secondary">
+                Zeige {{ sponsors.from }} bis {{ sponsors.to }} von {{ sponsors.total }} Sponsoren.
+            </p>
+            <div class="flex flex-wrap gap-1">
+                <button
+                    v-for="link in sponsors.links"
+                    :key="link.label"
+                    type="button"
+                    :disabled="!link.url"
+                    class="min-w-10 rounded border border-border px-3 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
+                    :class="link.active ? 'bg-primary text-buttonTextPrimary' : 'bg-card text-primary hover:bg-secondary/20'"
+                    @click="visitPage(link.url)"
+                    v-html="link.label"
+                />
+            </div>
         </div>
+
+        <Teleport to="body">
+            <div
+                v-if="showFormModal"
+                class="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-black/60 px-4 py-6"
+                @click.self="closeFormModal"
+            >
+                <form class="w-full max-w-5xl rounded-lg border border-border bg-card shadow-2xl" @submit.prevent="submit">
+                    <div class="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border bg-card p-5">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Sponsor</p>
+                            <h2 class="mt-1 text-xl font-bold text-primary">
+                                {{ editingSponsor ? 'Sponsor bearbeiten' : 'Sponsor anlegen' }}
+                            </h2>
+                            <p class="mt-1 text-sm text-secondary">Zuordnung, Kontakt, Logo und Laufzeit an einem Ort.</p>
+                        </div>
+                        <button type="button" class="rounded-lg border border-border px-3 py-2 text-secondary hover:text-primary" @click="closeFormModal">
+                            <i class="las la-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="max-h-[75vh] overflow-y-auto p-5">
+                        <div v-if="!canManageSponsors" class="mb-4 rounded-lg border border-border bg-inputBg p-4 text-sm text-primary">
+                            Sponsorenverwaltung fuer diesen Verein ist ab dem Club-Plan verfuegbar. Waehle einen Verein mit passendem Plan oder eine Plattform-/Outfit-Abo-Zuordnung.
+                        </div>
+
+                        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">Sponsor-Art</span>
+                                <select v-model="form.scope" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                                    <option value="platform">Airmius Plattform</option>
+                                    <option value="outfit_subscription">Outfit-Abo</option>
+                                    <option value="club">Verein</option>
+                                </select>
+                                <div v-if="form.errors.scope" class="mt-1 text-sm text-error">{{ form.errors.scope }}</div>
+                            </label>
+
+                            <label v-if="form.scope === 'club'" class="block">
+                                <span class="text-sm font-semibold text-primary">Verein</span>
+                                <select v-model="form.club_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required>
+                                    <option value="">Verein auswaehlen</option>
+                                    <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
+                                </select>
+                                <div v-if="form.errors.club_id" class="mt-1 text-sm text-error">{{ form.errors.club_id }}</div>
+                            </label>
+
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">Sponsorname</span>
+                                <input v-model="form.name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Nike, Stadtwerke, ..." required>
+                                <div v-if="form.errors.name" class="mt-1 text-sm text-error">{{ form.errors.name }}</div>
+                            </label>
+
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">Kontaktperson</span>
+                                <input v-model="form.contact_name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Ansprechpartner">
+                                <div v-if="form.errors.contact_name" class="mt-1 text-sm text-error">{{ form.errors.contact_name }}</div>
+                            </label>
+
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">E-Mail</span>
+                                <input v-model="form.email" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="sponsor@example.com" type="email">
+                                <div v-if="form.errors.email" class="mt-1 text-sm text-error">{{ form.errors.email }}</div>
+                            </label>
+
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">Website</span>
+                                <input v-model="form.website" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="https://..." type="url">
+                                <div v-if="form.errors.website" class="mt-1 text-sm text-error">{{ form.errors.website }}</div>
+                            </label>
+
+                            <div class="rounded-lg border border-border bg-inputBg p-4 xl:col-span-3">
+                                <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                    <div>
+                                        <p class="text-sm font-semibold text-primary">Sponsorlogos nach Farbflaeche</p>
+                                        <p class="mt-1 text-xs text-secondary">
+                                            Hinterlege idealerweise zwei Varianten: dunkles Logo fuer helle Flaechen und helles Logo fuer dunkle Flaechen.
+                                        </p>
+                                    </div>
+                                    <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-secondary">
+                                        {{ isDark ? 'Aktuell: dunkle Palette' : 'Aktuell: helle Palette' }}
+                                    </span>
+                                </div>
+
+                                <div class="mt-4 grid gap-4 md:grid-cols-2">
+                                    <label class="block rounded-lg border border-border bg-card p-3">
+                                        <span class="text-sm font-semibold text-primary">Logo fuer helle Flaechen</span>
+                                        <input v-model="form.logo_light" class="mt-2 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="sponsors/nike-light.webp">
+                                        <div class="mt-3 flex h-20 items-center justify-center rounded-lg border border-border bg-white p-3">
+                                            <img v-if="form.logo_light" :src="previewUrl(form.logo_light)" alt="Logo fuer helle Flaechen" class="max-h-full max-w-full object-contain">
+                                            <span v-else class="text-xs text-slate-500">Vorschau helle Flaeche</span>
+                                        </div>
+                                    </label>
+
+                                    <label class="block rounded-lg border border-border bg-card p-3">
+                                        <span class="text-sm font-semibold text-primary">Logo fuer dunkle Flaechen</span>
+                                        <input v-model="form.logo_dark" class="mt-2 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="sponsors/nike-dark.webp">
+                                        <div class="mt-3 flex h-20 items-center justify-center rounded-lg border border-border bg-slate-950 p-3">
+                                            <img v-if="form.logo_dark" :src="previewUrl(form.logo_dark)" alt="Logo fuer dunkle Flaechen" class="max-h-full max-w-full object-contain">
+                                            <span v-else class="text-xs text-slate-400">Vorschau dunkle Flaeche</span>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <input v-model="form.logo" type="hidden">
+                            </div>
+
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">Budget / Betrag</span>
+                                <input v-model="form.amount" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="0,00" type="number" min="0" step="0.01">
+                                <div v-if="form.errors.amount" class="mt-1 text-sm text-error">{{ form.errors.amount }}</div>
+                            </label>
+
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">Start</span>
+                                <input v-model="form.starts_at" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" type="date">
+                                <div v-if="form.errors.starts_at" class="mt-1 text-sm text-error">{{ form.errors.starts_at }}</div>
+                            </label>
+
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">Ende</span>
+                                <input v-model="form.ends_at" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" type="date">
+                                <div v-if="form.errors.ends_at" class="mt-1 text-sm text-error">{{ form.errors.ends_at }}</div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col-reverse gap-2 border-t border-border p-5 sm:flex-row sm:justify-end">
+                        <button type="button" class="rounded-lg border border-border px-4 py-2 font-semibold text-primary" @click="closeFormModal">
+                            Abbrechen
+                        </button>
+                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50" :disabled="form.processing || !canManageSponsors">
+                            {{ editingSponsor ? 'Sponsor speichern' : 'Sponsor erstellen' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </Teleport>
 
         <Teleport to="body">
             <div
@@ -300,7 +496,7 @@ const previewUrl = (source) => {
                 class="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 px-4"
                 @click.self="closeDeleteModal"
             >
-                <div class="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-xl">
+                <div class="w-full max-w-md rounded-lg border border-border bg-card p-5 shadow-xl">
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-error">Sponsor loeschen</p>
@@ -310,7 +506,7 @@ const previewUrl = (source) => {
                             </p>
                         </div>
                         <button type="button" class="rounded-lg border border-border px-3 py-1 text-secondary hover:text-primary" @click="closeDeleteModal">
-                            x
+                            <i class="las la-times text-lg"></i>
                         </button>
                     </div>
 

@@ -9,6 +9,7 @@ use App\Models\Setting;
 use App\Models\Sport;
 use App\Models\SubscriptionInvoice;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -98,7 +99,11 @@ class UserSettingsController extends Controller
                     ->connectedSportActivities()
                     ->latest('started_at')
                     ->limit(20)
-                    ->get(['id', 'provider', 'activity_type', 'title', 'started_at', 'duration_seconds', 'distance_meters', 'calories']),
+                    ->get(['id', 'provider', 'activity_type', 'title', 'started_at', 'duration_seconds', 'distance_meters', 'calories', 'metrics', 'image_path'])
+                    ->map(fn ($activity) => [
+                        ...$activity->toArray(),
+                        'image_url' => $activity->image_path ? Storage::disk('public')->url($activity->image_path) : null,
+                    ]),
             ],
             'userRoles' => $request->user()
                 ->roles()

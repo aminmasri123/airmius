@@ -72,6 +72,32 @@ const openPaymentModal = ref({
     action: null,
     invoice: null,
 })
+const disconnectIntegrationModal = ref({
+    show: false,
+    account: null,
+})
+const sportActivityDeleteModal = ref({
+    show: false,
+    activity: null,
+    mode: null,
+})
+const sportActivityEditModal = ref({
+    show: false,
+    activity: null,
+})
+const sportActivityEditForm = useForm({
+    title: '',
+})
+const manualActivityImageInput = ref(null)
+const manualActivityForm = useForm({
+    title: '',
+    activity_type: 'Training',
+    started_at: '',
+    duration_minutes: '',
+    distance_km: '',
+    calories: '',
+    image: null,
+})
 const bankTransferModal = ref({
     show: false,
     type: null,
@@ -166,6 +192,11 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
 const formatDate = (value) => {
     if (!value) return '-'
     return new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
+}
+
+const formatTime = (value) => {
+    if (!value) return '-'
+    return new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' }).format(new Date(value))
 }
 
 const invoiceStatusLabel = (status) => ({
@@ -337,19 +368,175 @@ const syncIntegration = (account) => {
     router.post(route('auth.sport-integrations.sync', account.id), {}, { preserveScroll: true })
 }
 
+const openDisconnectIntegrationModal = (account) => {
+    disconnectIntegrationModal.value = {
+        show: true,
+        account,
+    }
+}
+
+const closeDisconnectIntegrationModal = () => {
+    disconnectIntegrationModal.value = {
+        show: false,
+        account: null,
+    }
+}
+
 const disconnectIntegration = (account) => {
-    router.delete(route('auth.sport-integrations.destroy', account.id), { preserveScroll: true })
+    router.delete(route('auth.sport-integrations.destroy', account.id), {
+        preserveScroll: true,
+        onFinish: closeDisconnectIntegrationModal,
+    })
+}
+
+const openSportActivityDeleteModal = (activity = null) => {
+    sportActivityDeleteModal.value = {
+        show: true,
+        activity,
+        mode: activity ? 'single' : 'all',
+    }
+}
+
+const closeSportActivityDeleteModal = () => {
+    sportActivityDeleteModal.value = {
+        show: false,
+        activity: null,
+        mode: null,
+    }
+}
+
+const sportActivityDeleteTitle = () => sportActivityDeleteModal.value.mode === 'all'
+    ? 'Alle importierten Aktivitaeten loeschen'
+    : 'Importierte Aktivitaet loeschen'
+
+const sportActivityDeleteMessage = () => sportActivityDeleteModal.value.mode === 'all'
+    ? 'Alle importierten Sportaktivitaeten werden dauerhaft aus deinem Airmius Konto geloescht. Die Verbindung zu Google Fit oder anderen Apps bleibt bestehen.'
+    : 'Diese importierte Sportaktivitaet wird dauerhaft aus deinem Airmius Konto geloescht.'
+
+const confirmSportActivityDelete = () => {
+    if (sportActivityDeleteModal.value.mode === 'all') {
+        router.delete(route('auth.sport-activities.destroy-all'), {
+            preserveScroll: true,
+            onFinish: closeSportActivityDeleteModal,
+        })
+
+        return
+    }
+
+    const activity = sportActivityDeleteModal.value.activity
+    if (!activity) return
+
+    router.delete(route('auth.sport-activities.destroy', activity.id), {
+        preserveScroll: true,
+        onFinish: closeSportActivityDeleteModal,
+    })
+}
+
+const openSportActivityEditModal = (activity) => {
+    sportActivityEditModal.value = {
+        show: true,
+        activity,
+    }
+    sportActivityEditForm.title = activity.title || activity.activity_type || ''
+    sportActivityEditForm.clearErrors()
+}
+
+const closeSportActivityEditModal = () => {
+    sportActivityEditModal.value = {
+        show: false,
+        activity: null,
+    }
+    sportActivityEditForm.reset()
+    sportActivityEditForm.clearErrors()
+}
+
+const updateSportActivityTitle = () => {
+    const activity = sportActivityEditModal.value.activity
+    if (!activity) return
+
+    sportActivityEditForm.put(route('auth.sport-activities.update', activity.id), {
+        preserveScroll: true,
+        onSuccess: closeSportActivityEditModal,
+    })
+}
+
+const storeManualActivity = () => {
+    manualActivityForm.post(route('auth.sport-activities.store'), {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => {
+            manualActivityForm.reset()
+            manualActivityForm.activity_type = 'Training'
+            if (manualActivityImageInput.value) {
+                manualActivityImageInput.value.value = ''
+            }
+        },
+    })
+}
+
+const setManualActivityImage = (event) => {
+    manualActivityForm.image = event.target.files?.[0] || null
 }
 
 const formatDuration = (seconds) => {
     if (!seconds) return '-'
     const minutes = Math.round(seconds / 60)
-    return `${minutes} min`
+    if (minutes < 60) return `${minutes} min`
+
+    const hours = Math.floor(minutes / 60)
+    const rest = minutes % 60
+
+    return rest > 0 ? `${hours} h ${rest} min` : `${hours} h`
 }
 
 const formatDistance = (meters) => {
     if (!meters) return '-'
     return `${(meters / 1000).toFixed(2).replace('.', ',')} km`
+}
+
+const formatProvider = (provider) => ({
+    manual: 'Manuell',
+    google_fit: 'Google Fit',
+    strava: 'Strava',
+    garmin: 'Garmin',
+    mi_fitness: 'Mi Fitness',
+    fitbit: 'Fitbit',
+    polar: 'Polar',
+}[provider] || provider)
+
+const sportActivityTitle = (activity) => {
+    if (activity.title && activity.title !== 'Google Fit Tagesaktivitaet') {
+        return activity.title
+    }
+
+    return activity.activity_type || 'Tagesaktivitaet'
+}
+
+const sportActivitySubtitle = (activity) => {
+    if (activity.metrics?.source_kind === 'manual_entry') {
+        return 'Manuell eingetragen'
+    }
+
+    if (activity.metrics?.source_kind === 'daily_summary') {
+        const parts = ['Tageszusammenfassung']
+        if (activity.metrics?.active_minutes) {
+            parts.push(`${activity.metrics.active_minutes} aktive Minuten`)
+        }
+
+        return parts.join(' · ')
+    }
+
+    return activity.metrics?.earliest_start_time
+        ? `Start ca. ${activity.metrics.earliest_start_time}`
+        : ''
+}
+
+const sportActivityTime = (activity) => {
+    if (activity.metrics?.earliest_start_time) {
+        return activity.metrics.earliest_start_time
+    }
+
+    return activity.metrics?.source_kind === 'daily_summary' ? '-' : formatTime(activity.started_at)
 }
 
 const activityLabel = (type) => ({
@@ -380,6 +567,16 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             <p class="mt-1 text-sm text-secondary">
                 Profil, Sicherheit, Design und Adresse verwalten.
             </p>
+        </div>
+
+        <div
+            v-if="$page.props.flash?.success || $page.props.flash?.error"
+            class="rounded-lg border px-4 py-3 text-sm font-semibold"
+            :class="$page.props.flash?.success
+                ? 'border-success/30 bg-success/10 text-success'
+                : 'border-error/30 bg-error/10 text-error'"
+        >
+            {{ $page.props.flash?.success || $page.props.flash?.error }}
         </div>
 
         <!-- TABS -->
@@ -980,16 +1177,16 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         v-for="(provider, key) in sportIntegrations.providers"
                         :key="key"
                         class="rounded-lg border p-4 transition"
-                        :class="connectedAccountFor(key) ? 'border-success/40 bg-success/10' : 'border-border bg-bg'"
+                        :class="connectedAccountFor(key) ? 'border-success/40 bg-bg' : 'border-border bg-bg'"
                     >
                         <div class="flex items-start justify-between gap-3">
-                            <div>
+                            <div class="min-w-0">
                                 <p class="font-semibold text-primary">{{ provider.label }}</p>
                                 <p class="mt-1 text-sm text-secondary">{{ provider.description }}</p>
                             </div>
                             <span
                                 v-if="connectedAccountFor(key)"
-                                class="rounded-full bg-success px-2 py-1 text-xs font-semibold text-white"
+                                class="shrink-0 whitespace-nowrap rounded-full border border-success/40 bg-success/15 px-2.5 py-1 text-xs font-semibold text-success"
                             >
                                 {{ integrationStatusLabel(connectedAccountFor(key).status) }}
                             </span>
@@ -1001,11 +1198,25 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         <p v-if="connectedAccountFor(key)?.sync_summary?.message" class="mt-2 text-xs text-secondary">
                             {{ connectedAccountFor(key).sync_summary.message }}
                         </p>
+                        <dl v-if="connectedAccountFor(key)?.sync_summary?.google_status || connectedAccountFor(key)?.sync_summary?.bucket_count !== undefined" class="mt-2 space-y-1 text-xs text-secondary">
+                            <div v-if="connectedAccountFor(key)?.sync_summary?.google_status" class="flex gap-2">
+                                <dt>Google Status:</dt>
+                                <dd class="font-semibold text-primary">{{ connectedAccountFor(key).sync_summary.google_status }}</dd>
+                            </div>
+                            <div v-if="connectedAccountFor(key)?.sync_summary?.google_error" class="flex gap-2">
+                                <dt>Google Fehler:</dt>
+                                <dd class="font-semibold text-primary">{{ connectedAccountFor(key).sync_summary.google_error }}</dd>
+                            </div>
+                            <div v-if="connectedAccountFor(key)?.sync_summary?.bucket_count !== undefined" class="flex gap-2">
+                                <dt>Tagesbereiche:</dt>
+                                <dd class="font-semibold text-primary">{{ connectedAccountFor(key).sync_summary.bucket_count }}</dd>
+                            </div>
+                        </dl>
 
                         <div class="mt-4 flex flex-wrap gap-2">
                             <a
                                 v-if="!connectedAccountFor(key)"
-                                :href="route('auth.sport-integrations.connect', key)"
+                                :href="route('auth.sport-integrations.connect', provider.route_key || key)"
                                 class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary"
                             >
                                 {{ provider.status === 'live_oauth' ? 'Verbinden' : 'Vormerken' }}
@@ -1022,7 +1233,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                 v-if="connectedAccountFor(key)"
                                 type="button"
                                 class="rounded-lg border border-danger/40 px-3 py-2 text-sm font-semibold text-danger"
-                                @click="disconnectIntegration(connectedAccountFor(key))"
+                                @click="openDisconnectIntegrationModal(connectedAccountFor(key))"
                             >
                                 Entfernen
                             </button>
@@ -1032,27 +1243,194 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             </section>
 
             <section class="surface-card p-5">
-                <h2 class="text-lg font-semibold text-primary">Importierte Aktivitäten</h2>
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <h2 class="text-lg font-semibold text-primary">Importierte Aktivitäten</h2>
+                    <button
+                        v-if="sportIntegrations.activities.length"
+                        type="button"
+                        class="rounded-lg border border-danger/40 px-3 py-2 text-sm font-semibold text-danger"
+                        @click="openSportActivityDeleteModal()"
+                    >
+                        Alle löschen
+                    </button>
+                </div>
+                <form class="mt-5 rounded-xl border border-border bg-muted/30 p-4" @submit.prevent="storeManualActivity">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h3 class="text-sm font-semibold uppercase tracking-wide text-secondary">Manuell eintragen</h3>
+                            <p class="mt-1 text-sm text-secondary">
+                                Fuege eigene Trainingseinheiten hinzu, auch wenn keine Sport-App verbunden ist.
+                            </p>
+                        </div>
+                        <button
+                            type="submit"
+                            class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60"
+                            :disabled="manualActivityForm.processing"
+                        >
+                            Training speichern
+                        </button>
+                    </div>
+
+                    <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        <label class="block text-sm font-semibold text-primary">
+                            Name
+                            <input
+                                v-model="manualActivityForm.title"
+                                type="text"
+                                maxlength="120"
+                                class="mt-2 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
+                                placeholder="z. B. Lauftraining"
+                                required
+                            />
+                            <span v-if="manualActivityForm.errors.title" class="mt-1 block text-xs text-danger">
+                                {{ manualActivityForm.errors.title }}
+                            </span>
+                        </label>
+
+                        <label class="block text-sm font-semibold text-primary">
+                            Sportart
+                            <select
+                                v-model="manualActivityForm.activity_type"
+                                class="mt-2 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
+                            >
+                                <option>Training</option>
+                                <option>Laufen</option>
+                                <option>Radfahren</option>
+                                <option>Schwimmen</option>
+                                <option>Fussball</option>
+                                <option>Fitness</option>
+                                <option>Krafttraining</option>
+                                <option>Yoga</option>
+                                <option>Gehen</option>
+                                <option>Sonstiges</option>
+                            </select>
+                        </label>
+
+                        <label class="block text-sm font-semibold text-primary">
+                            Datum und Zeit
+                            <input
+                                v-model="manualActivityForm.started_at"
+                                type="datetime-local"
+                                class="mt-2 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
+                                required
+                            />
+                            <span v-if="manualActivityForm.errors.started_at" class="mt-1 block text-xs text-danger">
+                                {{ manualActivityForm.errors.started_at }}
+                            </span>
+                        </label>
+
+                        <label class="block text-sm font-semibold text-primary">
+                            Bild
+                            <input
+                                ref="manualActivityImageInput"
+                                type="file"
+                                accept="image/*"
+                                class="mt-2 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary file:mr-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary"
+                                @change="setManualActivityImage"
+                            />
+                            <span v-if="manualActivityForm.errors.image" class="mt-1 block text-xs text-danger">
+                                {{ manualActivityForm.errors.image }}
+                            </span>
+                        </label>
+
+                        <label class="block text-sm font-semibold text-primary">
+                            Dauer in Minuten
+                            <input
+                                v-model="manualActivityForm.duration_minutes"
+                                type="number"
+                                min="0"
+                                max="14400"
+                                class="mt-2 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
+                                placeholder="60"
+                            />
+                        </label>
+
+                        <label class="block text-sm font-semibold text-primary">
+                            Distanz in km
+                            <input
+                                v-model="manualActivityForm.distance_km"
+                                type="number"
+                                min="0"
+                                max="10000"
+                                step="0.01"
+                                class="mt-2 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
+                                placeholder="5,00"
+                            />
+                        </label>
+
+                        <label class="block text-sm font-semibold text-primary">
+                            Kalorien
+                            <input
+                                v-model="manualActivityForm.calories"
+                                type="number"
+                                min="0"
+                                max="200000"
+                                class="mt-2 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
+                                placeholder="450"
+                            />
+                        </label>
+                    </div>
+                </form>
                 <div class="mt-4 overflow-x-auto">
                     <table class="min-w-full text-left text-sm">
                         <thead class="text-xs uppercase text-secondary">
                             <tr>
+                                <th class="py-2 pr-4">Bild</th>
                                 <th class="py-2 pr-4">Datum</th>
+                                <th class="py-2 pr-4">Zeit</th>
                                 <th class="py-2 pr-4">Quelle</th>
-                                <th class="py-2 pr-4">Aktivität</th>
+                                <th class="py-2 pr-4">Sportart</th>
                                 <th class="py-2 pr-4">Dauer</th>
                                 <th class="py-2 pr-4">Distanz</th>
                                 <th class="py-2 pr-4">Kalorien</th>
+                                <th class="py-2 pr-4 text-right">Aktion</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border">
                             <tr v-for="activity in sportIntegrations.activities" :key="activity.id">
+                                <td class="py-3 pr-4">
+                                    <img
+                                        v-if="activity.image_url"
+                                        :src="activity.image_url"
+                                        alt=""
+                                        class="h-12 w-12 rounded-lg border border-border object-cover"
+                                    />
+                                    <span v-else class="inline-flex h-12 w-12 items-center justify-center rounded-lg border border-border text-xs text-secondary">
+                                        -
+                                    </span>
+                                </td>
                                 <td class="py-3 pr-4 text-secondary">{{ formatDate(activity.started_at) }}</td>
-                                <td class="py-3 pr-4 text-secondary">{{ activity.provider }}</td>
-                                <td class="py-3 pr-4 text-primary">{{ activity.title || activity.activity_type || '-' }}</td>
+                                <td class="py-3 pr-4 text-secondary">
+                                    {{ sportActivityTime(activity) }}
+                                </td>
+                                <td class="py-3 pr-4 text-secondary">{{ formatProvider(activity.provider) }}</td>
+                                <td class="py-3 pr-4">
+                                    <p class="font-semibold text-primary">{{ sportActivityTitle(activity) }}</p>
+                                    <p v-if="sportActivitySubtitle(activity)" class="mt-1 text-xs text-secondary">
+                                        {{ sportActivitySubtitle(activity) }}
+                                    </p>
+                                </td>
                                 <td class="py-3 pr-4 text-secondary">{{ formatDuration(activity.duration_seconds) }}</td>
                                 <td class="py-3 pr-4 text-secondary">{{ formatDistance(activity.distance_meters) }}</td>
                                 <td class="py-3 pr-4 text-secondary">{{ activity.calories || '-' }}</td>
+                                <td class="py-3 pr-4">
+                                    <div class="flex justify-end gap-2">
+                                        <button
+                                            type="button"
+                                            class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary"
+                                            @click="openSportActivityEditModal(activity)"
+                                        >
+                                            Umbenennen
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="rounded-lg border border-danger/40 px-3 py-2 text-xs font-semibold text-danger"
+                                            @click="openSportActivityDeleteModal(activity)"
+                                        >
+                                            Löschen
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -1073,6 +1451,85 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             @confirm="confirmOpenPaymentAction"
             @cancel="closeOpenPaymentModal"
         />
+
+        <DeleteConfirmModal
+            :show="disconnectIntegrationModal.show"
+            title="Sport-App entfernen"
+            message="Bist du sicher, dass du diese Sport-App-Verknuepfung entfernen moechtest? Gespeicherte Tokens werden geloescht und die App muss danach neu verbunden werden."
+            confirm-text="entfernen"
+            cancel-text="Abbrechen"
+            @confirm="disconnectIntegration(disconnectIntegrationModal.account)"
+            @cancel="closeDisconnectIntegrationModal"
+        />
+
+        <DeleteConfirmModal
+            :show="sportActivityDeleteModal.show"
+            :title="sportActivityDeleteTitle()"
+            :message="sportActivityDeleteMessage()"
+            confirm-text="delete"
+            cancel-text="Zurueck"
+            @confirm="confirmSportActivityDelete"
+            @cancel="closeSportActivityDeleteModal"
+        />
+
+        <div
+            v-if="sportActivityEditModal.show"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6"
+            @click.self="closeSportActivityEditModal"
+        >
+            <form
+                class="w-full max-w-lg rounded-xl border border-border bg-bg p-5 shadow-2xl"
+                @submit.prevent="updateSportActivityTitle"
+            >
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-primary">Aktivität umbenennen</h2>
+                        <p class="mt-1 text-sm text-secondary">
+                            Der neue Name wird nur in Airmius gespeichert.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="rounded-lg border border-border px-3 py-1 text-sm font-semibold text-primary hover:bg-muted"
+                        @click="closeSportActivityEditModal"
+                    >
+                        Schliessen
+                    </button>
+                </div>
+
+                <label class="mt-5 block text-sm font-semibold text-primary" for="sport-activity-title">
+                    Name
+                </label>
+                <input
+                    id="sport-activity-title"
+                    v-model="sportActivityEditForm.title"
+                    type="text"
+                    maxlength="120"
+                    class="mt-2 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
+                    required
+                />
+                <p v-if="sportActivityEditForm.errors.title" class="mt-2 text-sm text-danger">
+                    {{ sportActivityEditForm.errors.title }}
+                </p>
+
+                <div class="mt-5 flex justify-end gap-2">
+                    <button
+                        type="button"
+                        class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary"
+                        @click="closeSportActivityEditModal"
+                    >
+                        Abbrechen
+                    </button>
+                    <button
+                        type="submit"
+                        class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60"
+                        :disabled="sportActivityEditForm.processing"
+                    >
+                        Speichern
+                    </button>
+                </div>
+            </form>
+        </div>
 
         <div
             v-if="bankTransferModal.show"

@@ -1537,6 +1537,28 @@ class CommerceCheckoutController extends Controller
         return back()->with('success', 'Website-Anfrage wurde gesendet.');
     }
 
+    public function storePublicWebsiteRequest(Request $request)
+    {
+        $data = $request->validate([
+            'guest_name' => ['required', 'string', 'max:255'],
+            'guest_email' => ['required', 'email', 'max:255'],
+            'guest_phone' => ['nullable', 'string', 'max:80'],
+            'club_name' => ['required', 'string', 'max:255'],
+            'domain' => ['nullable', 'string', 'max:255'],
+            'goals' => ['required', 'string', 'max:2000'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        WebsiteRequest::create([
+            ...$data,
+            'user_id' => $request->user()?->id,
+            'status' => 'new',
+            'package' => 'website_plus',
+        ]);
+
+        return back()->with('success', 'Website-Anfrage wurde gesendet.');
+    }
+
     public function success(Request $request, CommerceOrder $order)
     {
         abort_unless($order->user_id === $request->user()->id, 403);

@@ -43,6 +43,7 @@ const canAdmin = computed(() => hasAny([
     'users.view',
     'roles.manage',
     'blog.view',
+    'blog.manage',
     'payments.view',
     'invoices.view',
     'subscriptions.view',
@@ -111,6 +112,7 @@ const closeSidebar = () => {
             <NavItem v-if="can('feed.view')" @click="closeSidebar" :href="route('auth.feed.index')" label="Feed" icon="las la-newspaper" />
             <NavItem v-if="can('file.index')" @click="closeSidebar" :href="route('auth.files.index')" label="Dateien" icon="las la-folder-open" />
             <NavItem v-if="can('event.index')" @click="closeSidebar" :href="route('auth.events.index')" label="Events & Training" icon="las la-calendar" />
+            <NavItem @click="closeSidebar" :href="route('auth.training.index')" label="Trainingspläne" icon="las la-clipboard-list" />
             <NavItem
                 v-if="can('friends.view')"
                 @click="closeSidebar"
@@ -167,6 +169,7 @@ const closeSidebar = () => {
                 <NavItem v-if="can('users.view')" @click="closeSidebar" :href="route('members.index')" label="Users" icon="las la-user" />
                 <NavItem v-if="can('roles.manage')" @click="closeSidebar" :href="route('roles-permissions.index')" label="Rollen & Rechte" icon="las la-user-shield" />
                 <NavItem v-if="can('blog.view')" @click="closeSidebar" :href="route('blogs.index')" label="Blogs" icon="las la-pen-nib" />
+                <NavItem v-if="can('blog.manage')" @click="closeSidebar" :href="route('blog-categories.index')" label="Blog-Kategorien" icon="las la-list" />
                 <NavItem v-if="can('blog.view')" @click="closeSidebar" :href="route('admin.media-guidelines.index')" label="Bildmasse" icon="las la-ruler-combined" />
                 <NavItem v-if="can('payments.view')" @click="closeSidebar" :href="route('payments.index')" label="Payments" icon="las la-credit-card" />
                 <NavItem v-if="can('invoices.view')" @click="closeSidebar" :href="route('invoices.index')" label="Invoices" icon="las la-file-invoice" />
@@ -180,6 +183,7 @@ const closeSidebar = () => {
                 <NavItem v-if="can('system.manage')" @click="closeSidebar" :href="route('admin.club-verifications.index')" label="Vereinspruefung" icon="las la-clipboard-check" />
                 <NavItem v-if="can('system.manage')" @click="closeSidebar" :href="route('gamification-rules.index')" label="Gamification" icon="las la-trophy" />
                 <NavItem v-if="can('system.manage')" @click="closeSidebar" :href="route('admin.badges.index')" label="Badges" icon="las la-medal" />
+                <NavItem v-if="can('admin.mail-center.view')" @click="closeSidebar" :href="route('admin.mail-center.index')" label="Mail-Zentrale" icon="las la-envelope-open-text" />
                 <NavItem v-if="can('admin.settings.view')" @click="closeSidebar" :href="route('admin.settings.index')" label="Settings" icon="las la-cog" />
             </NavGroup>
         </nav>

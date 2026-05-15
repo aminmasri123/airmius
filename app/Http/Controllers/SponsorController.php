@@ -18,11 +18,28 @@ class SponsorController extends Controller
     {
         abort_unless($request->user()->can('org.manage'), 403);
 
+        $scope = (string) $request->input('scope', 'all');
+        $scope = in_array($scope, ['all', 'platform', 'outfit_subscription', 'club'], true) ? $scope : 'all';
+
+        $sponsorQuery = Sponsor::query()
+            ->with('club:id,name')
+            ->when($scope === 'platform', fn ($query) => $query->where(function ($query) {
+                $query->where('scope', 'platform')
+                    ->orWhere(function ($query) {
+                        $query->whereNull('scope')->whereNull('club_id');
+                    });
+            }))
+            ->when($scope === 'outfit_subscription', fn ($query) => $query->where('scope', 'outfit_subscription'))
+            ->when($scope === 'club', fn ($query) => $query->where(function ($query) {
+                $query->where('scope', 'club')
+                    ->orWhereNotNull('club_id');
+            }));
+
         return Inertia::render('Auth/Dashboard/Sponsors/Index', [
-            'sponsors' => Sponsor::query()
-                ->with('club:id,name')
+            'sponsors' => $sponsorQuery
                 ->latest('id')
                 ->paginate(25)
+                ->withQueryString()
                 ->through(fn (Sponsor $sponsor) => [
                     'id' => $sponsor->id,
                     'club_id' => $sponsor->club_id,
@@ -45,6 +62,23 @@ class SponsorController extends Controller
                         'name' => $sponsor->club->name,
                     ] : null,
                 ]),
+            'stats' => [
+                'total' => Sponsor::query()->count(),
+                'platform' => Sponsor::query()
+                    ->where('scope', 'platform')
+                    ->orWhere(function ($query) {
+                        $query->whereNull('scope')->whereNull('club_id');
+                    })
+                    ->count(),
+                'outfit_subscription' => Sponsor::query()->where('scope', 'outfit_subscription')->count(),
+                'club' => Sponsor::query()
+                    ->where('scope', 'club')
+                    ->orWhereNotNull('club_id')
+                    ->count(),
+            ],
+            'filters' => [
+                'scope' => $scope,
+            ],
             'clubs' => Club::query()
                 ->visibleTo($request->user())
                 ->with('currentSubscription.plan')

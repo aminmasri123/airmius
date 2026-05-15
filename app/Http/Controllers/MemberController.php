@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AccountWarning;
 use App\Models\User;
+use App\Notifications\AccountSuspendedNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -24,23 +26,48 @@ class MemberController extends Controller
         $this->authorize('viewAny', User::class);
 
         $search = trim((string) $request->input('search', ''));
+        $status = (string) $request->input('status', 'all');
 
         $users = User::query()
-            ->select(['id', 'name', 'email', 'profile_visibility', 'created_at'])
+            ->select(['id', 'name', 'email', 'profile_visibility', 'account_status', 'suspended_until', 'suspension_reason', 'created_at'])
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('name', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%");
                 });
             })
+            ->when($status === 'suspended', fn ($query) => $query->where('account_status', 'suspended'))
+            ->when($status === 'active', fn ($query) => $query->where(function ($query) {
+                $query->whereNull('account_status')
+                    ->orWhere('account_status', 'active');
+            }))
             ->latest('id')
             ->paginate(25)
             ->withQueryString();
 
         return Inertia::render('Auth/Dashboard/Users/Index', [
             'users' => $users,
+            'warnings' => AccountWarning::query()
+                ->with(['user:id,name,email,account_status,suspended_until', 'flag'])
+                ->latest()
+                ->limit(100)
+                ->get()
+                ->map(fn (AccountWarning $warning) => [
+                    'id' => $warning->id,
+                    'severity' => $warning->severity,
+                    'points' => $warning->points,
+                    'reason' => $warning->reason,
+                    'created_at' => $warning->created_at,
+                    'user' => $warning->user,
+                    'flag' => $warning->flag ? [
+                        'categories' => $warning->flag->categories ?: [],
+                        'matched_terms' => $warning->flag->matched_terms ?: [],
+                        'status' => $warning->flag->status,
+                    ] : null,
+                ]),
             'filters' => [
                 'search' => $search,
+                'status' => in_array($status, ['all', 'active', 'suspended'], true) ? $status : 'all',
             ],
         ]);
     }
@@ -171,11 +198,20 @@ class MemberController extends Controller
                 'suspension_reason' => null,
             ])->save();
         } elseif (in_array((string) ($data['suspension_action'] ?? ''), ['1', '3', '7', '10', '14', '30', '60', '90'], true)) {
+            $suspendedUntil = now()->addDays((int) $data['suspension_action']);
+            $reason = $data['suspension_reason'] ?? null;
+
             $user->forceFill([
                 'account_status' => 'suspended',
-                'suspended_until' => now()->addDays((int) $data['suspension_action']),
-                'suspension_reason' => $data['suspension_reason'] ?? null,
+                'suspended_until' => $suspendedUntil,
+                'suspension_reason' => $reason,
             ])->save();
+
+            try {
+                $user->notify(new AccountSuspendedNotification($reason, $suspendedUntil->format('d.m.Y H:i')));
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
         }
 
         if ($canManageRoles && array_key_exists('roles', $data)) {

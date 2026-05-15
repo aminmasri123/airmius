@@ -86,13 +86,13 @@ class PostController extends Controller
                 'sportSkills:id,sport_id,key,name',
                 'attachments.file:id,display_name,path,type,size',
                 'comments' => fn ($query) => $query
-                    ->where('moderation_status', '!=', 'removed')
+                    ->where('moderation_status', 'approved')
                     ->with('user:id,name,profile_photo_path')
                     ->withCount('likes')
                     ->latest('id')
                     ->limit(3),
             ])
-            ->withCount(['comments' => fn ($query) => $query->where('moderation_status', '!=', 'removed')])
+            ->withCount(['comments' => fn ($query) => $query->where('moderation_status', 'approved')])
             ->withCount('likes')
             ->withCount('helpfuls')
             ->withExists([

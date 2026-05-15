@@ -20,6 +20,10 @@ Schedule::command('airmius:send-subscription-invoice-emails')
     ->dailyAt('08:15')
     ->withoutOverlapping();
 
+Schedule::command('airmius:sync-sport-integrations')
+    ->twiceDaily(6, 18)
+    ->withoutOverlapping();
+
 Schedule::command('airmius:prepare-outfit-deliveries')
     ->dailyAt('08:30')
     ->withoutOverlapping();

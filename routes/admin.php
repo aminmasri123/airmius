@@ -1,12 +1,14 @@
 <?php
 
-use App\Http\Controllers\BlogPostController;
 use App\Http\Controllers\AdminCommerceController;
 use App\Http\Controllers\AdminOutfitSubscriptionPlanController;
 use App\Http\Controllers\BadgeController;
+use App\Http\Controllers\BlogCategoryController;
+use App\Http\Controllers\BlogPostController;
 use App\Http\Controllers\ClubVerificationController;
 use App\Http\Controllers\GamificationRuleController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\MailCenterController;
 use App\Http\Controllers\MediaGuidelineController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\ModerationController;
@@ -75,8 +77,13 @@ Route::middleware(['auth'])->group(function () {
     // BLOG CMS
     Route::get('/admin/blogs', [BlogPostController::class, 'index'])->middleware('can:blog.view')->name('blogs.index');
     Route::post('/admin/blogs', [BlogPostController::class, 'store'])->middleware('can:blog.create')->name('blogs.store');
+    Route::post('/admin/blogs/content-images', [BlogPostController::class, 'uploadContentImage'])->middleware('can:blog.view')->name('blogs.content-images.store');
     Route::put('/admin/blogs/{blogPost}', [BlogPostController::class, 'update'])->middleware('can:blog.update')->name('blogs.update');
     Route::delete('/admin/blogs/{blogPost}', [BlogPostController::class, 'destroy'])->middleware('can:blog.delete')->name('blogs.destroy');
+    Route::get('/admin/blog-categories', [BlogCategoryController::class, 'index'])->middleware('can:blog.manage')->name('blog-categories.index');
+    Route::post('/admin/blog-categories', [BlogCategoryController::class, 'store'])->middleware('can:blog.manage')->name('blog-categories.store');
+    Route::put('/admin/blog-categories/{blogCategory}', [BlogCategoryController::class, 'update'])->middleware('can:blog.manage')->name('blog-categories.update');
+    Route::delete('/admin/blog-categories/{blogCategory}', [BlogCategoryController::class, 'destroy'])->middleware('can:blog.manage')->name('blog-categories.destroy');
     Route::get('/admin/media-guidelines', [MediaGuidelineController::class, 'index'])->middleware('can:blog.view')->name('admin.media-guidelines.index');
     Route::post('/admin/media-guidelines/visuals', [MediaGuidelineController::class, 'updateVisuals'])->middleware('can:blog.view')->name('admin.media-guidelines.visuals.update');
 
@@ -150,6 +157,7 @@ Route::middleware(['auth'])->group(function () {
     // INVOICES
     Route::get('/admin/invoices', [InvoiceController::class, 'index'])->middleware('can:billing.manage')->name('invoices.index');
     Route::post('/admin/invoices', [InvoiceController::class, 'store'])->middleware('can:billing.manage')->name('invoices.store');
+    Route::put('/admin/invoices/{invoice}/status', [InvoiceController::class, 'updateStatus'])->middleware('can:billing.manage')->name('invoices.status.update');
     Route::delete('/admin/invoices/{invoice}', [InvoiceController::class, 'destroy'])->middleware('can:billing.manage')->name('invoices.destroy');
 
     // SPONSORS
@@ -159,6 +167,12 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/admin/sponsors/{sponsor}', [SponsorController::class, 'destroy'])->middleware('can:finance.edit')->name('sponsors.destroy');
 
     // SETTINGS
+    Route::get('/admin/mail-center', [MailCenterController::class, 'index'])->middleware('can:system.manage')->name('admin.mail-center.index');
+    Route::put('/admin/mail-center/preferences', [MailCenterController::class, 'updatePreferences'])->middleware('can:system.manage')->name('admin.mail-center.preferences.update');
+    Route::put('/admin/mail-center/senders/{category}', [MailCenterController::class, 'updateSender'])->middleware('can:system.manage')->name('admin.mail-center.senders.update');
+    Route::post('/admin/mail-center/senders/{category}/test', [MailCenterController::class, 'testSender'])->middleware('can:system.manage')->name('admin.mail-center.senders.test');
+    Route::post('/admin/mail-center/{mailDelivery}/resend', [MailCenterController::class, 'resend'])->middleware('can:system.manage')->name('admin.mail-center.resend');
+    Route::put('/admin/mail-center/{mailDelivery}/resolve', [MailCenterController::class, 'resolve'])->middleware('can:system.manage')->name('admin.mail-center.resolve');
     Route::get('/admin/settings', [SettingController::class, 'index'])->middleware('can:system.manage')->name('admin.settings.index');
     Route::put('/admin/settings', [SettingController::class, 'update'])->middleware('can:system.manage')->name('admin.settings.update');
 

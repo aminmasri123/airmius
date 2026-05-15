@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BlogPost;
+use App\Models\BlogCategory;
 use App\Services\MediaOptimizer;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
@@ -39,11 +40,17 @@ class BlogPostController extends Controller
                 'status' => $status ?: 'all',
                 'search' => $search ?: '',
             ],
+            'categories' => BlogCategory::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name', 'slug']),
             'can' => [
                 'create' => $this->canBlog($request, 'blog.create'),
                 'update' => $this->canBlog($request, 'blog.update'),
                 'delete' => $this->canBlog($request, 'blog.delete'),
                 'publish' => $this->canBlog($request, 'blog.publish'),
+                'manageCategories' => $this->canBlog($request, 'blog.manage'),
             ],
         ]);
     }
@@ -60,6 +67,26 @@ class BlogPostController extends Controller
         BlogPost::create($data);
 
         return back()->with('success', 'Blogbeitrag erstellt.');
+    }
+
+    public function uploadContentImage(Request $request)
+    {
+        abort_unless(
+            $this->canBlog($request, 'blog.create') || $this->canBlog($request, 'blog.update'),
+            403
+        );
+
+        $data = $request->validate([
+            'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
+            'alt' => ['nullable', 'string', 'max:160'],
+        ]);
+
+        $stored = $this->mediaOptimizer->store($request->file('image'), 'blog/content');
+
+        return response()->json([
+            'url' => UploadStorage::url($stored['path']),
+            'alt' => $data['alt'] ?? '',
+        ]);
     }
 
     public function update(Request $request, BlogPost $blogPost)
@@ -123,7 +150,7 @@ class BlogPostController extends Controller
             'content' => ['required', 'string'],
             'cover_image' => ['nullable', 'url', 'max:2048'],
             'cover_image_upload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
-            'category' => ['nullable', 'string', 'max:120'],
+            'category' => ['nullable', 'string', 'max:120', Rule::exists('blog_categories', 'name')],
             'tags' => ['nullable', 'string', 'max:500'],
             'meta_title' => ['nullable', 'string', 'max:255'],
             'meta_description' => ['nullable', 'string', 'max:500'],
@@ -132,6 +159,7 @@ class BlogPostController extends Controller
         ]);
 
         $data['slug'] = $data['slug'] ?: BlogPost::uniqueSlug($data['title'], $blogPost?->id);
+        $data['content'] = $this->sanitizeContent($data['content']);
         $data['tags'] = collect(explode(',', $data['tags'] ?? ''))
             ->map(fn ($tag) => trim($tag))
             ->filter()
@@ -140,6 +168,37 @@ class BlogPostController extends Controller
             ->all();
 
         return $data;
+    }
+
+    private function sanitizeContent(string $content): string
+    {
+        $content = preg_replace('#<(script|style|iframe|object|embed|form|input|button)[^>]*>.*?</\1>#is', '', $content) ?? '';
+        $content = strip_tags($content, '<p><br><strong><b><em><i><u><s><strike><h2><h3><h4><blockquote><ul><ol><li><a><span><pre><code><hr><div><figure><figcaption><img>');
+        $content = preg_replace('/\s(on[a-z]+|formaction)\s*=\s*(".*?"|\'.*?\'|[^\s>]+)/i', '', $content) ?? '';
+        $content = preg_replace('/\s(href|src)\s*=\s*([\'"])\s*javascript:.*?\2/i', '', $content) ?? '';
+        $content = preg_replace('/\sstyle\s*=\s*([\'"]).*?\1/is', '', $content) ?? $content;
+        $content = preg_replace_callback('/\sclass\s*=\s*([\'"])(.*?)\1/is', function (array $matches) {
+            $allowedClasses = [
+                'blog-lead',
+                'blog-callout',
+                'blog-image',
+                'blog-text-primary',
+                'blog-text-secondary',
+                'blog-text-accent',
+                'blog-text-success',
+                'blog-text-warning',
+                'blog-text-danger',
+                'blog-mark',
+            ];
+
+            $classes = collect(preg_split('/\s+/', $matches[2]) ?: [])
+                ->filter(fn ($class) => in_array($class, $allowedClasses, true))
+                ->implode(' ');
+
+            return $classes ? ' class="'.$classes.'"' : '';
+        }, $content) ?? $content;
+
+        return trim($content);
     }
 
     private function prepareCoverImage(Request $request, array $data): array

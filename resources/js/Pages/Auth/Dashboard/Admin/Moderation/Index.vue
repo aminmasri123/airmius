@@ -8,14 +8,24 @@ defineOptions({ layout: AppLayout })
 const props = defineProps({
     flags: { type: Array, default: () => [] },
     reports: { type: Array, default: () => [] },
+    warnings: { type: Array, default: () => [] },
     warningSummary: { type: Object, default: () => ({}) },
 })
 
 const page = usePage()
 const activeTab = ref('reports')
+const warningCategoryFilter = ref('all')
 
 const openReports = computed(() => props.reports.filter((item) => item.status === 'open'))
 const openFlags = computed(() => props.flags.filter((item) => item.status === 'open'))
+const warningCategories = computed(() => [...new Set(props.warnings.flatMap((warning) => warning.flag?.categories || []))].sort())
+const filteredWarnings = computed(() => {
+    if (warningCategoryFilter.value === 'all') {
+        return props.warnings
+    }
+
+    return props.warnings.filter((warning) => (warning.flag?.categories || []).includes(warningCategoryFilter.value))
+})
 const storageUrl = (path) => path?.startsWith('http') ? path : `${page.props.uploads?.url || '/storage'}/${path}`
 
 const badgeClass = (severity) => ({
@@ -74,6 +84,7 @@ const updateFlag = (flag, status, removeContent = false) => {
                     <div class="rounded-lg border border-border bg-bg px-4 py-3">
                         <p class="text-xs text-secondary">Warnungen 90 Tage</p>
                         <p class="mt-1 text-2xl font-semibold text-primary">{{ warningSummary.warnings_90_days || 0 }}</p>
+                        <p class="mt-1 text-xs text-secondary">{{ warningSummary.users_with_warnings_90_days || 0 }} Nutzer</p>
                     </div>
                     <div class="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3">
                         <p class="text-xs text-secondary">Gesperrte Konten</p>
@@ -100,6 +111,14 @@ const updateFlag = (flag, status, removeContent = false) => {
                     @click="activeTab = 'flags'"
                 >
                     Automatisch markiert
+                </button>
+                <button
+                    type="button"
+                    class="rounded-lg px-4 py-2 text-sm font-semibold"
+                    :class="activeTab === 'warnings' ? 'bg-buttonPrimary text-buttonTextPrimary' : 'bg-muted text-secondary'"
+                    @click="activeTab = 'warnings'"
+                >
+                    Warnungen
                 </button>
             </div>
 
@@ -155,7 +174,7 @@ const updateFlag = (flag, status, removeContent = false) => {
                 </div>
             </div>
 
-            <div v-else class="divide-y divide-border">
+            <div v-else-if="activeTab === 'flags'" class="divide-y divide-border">
                 <article v-for="flag in flags" :key="flag.id" class="grid gap-4 p-4 lg:grid-cols-[1fr_18rem]">
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
@@ -208,6 +227,70 @@ const updateFlag = (flag, status, removeContent = false) => {
 
                 <div v-if="!flags.length" class="p-8 text-center text-sm text-secondary">
                     Keine automatischen Treffer vorhanden.
+                </div>
+            </div>
+
+            <div v-else>
+                <div class="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-primary">User-Warnungen</h2>
+                        <p class="mt-1 text-sm text-secondary">Hier siehst du, wer bereits Warnpunkte hat und aus welcher Kategorie sie stammen.</p>
+                    </div>
+                    <select v-model="warningCategoryFilter" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <option value="all">Alle Kategorien</option>
+                        <option v-for="category in warningCategories" :key="category" :value="category">{{ category }}</option>
+                    </select>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-left text-sm">
+                        <thead class="border-b border-border bg-bg">
+                            <tr>
+                                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary">User</th>
+                                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary">Kategorie</th>
+                                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary">Severity</th>
+                                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary">Punkte</th>
+                                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary">Grund</th>
+                                <th class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary">Datum</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-border">
+                            <tr v-for="warning in filteredWarnings" :key="warning.id">
+                                <td class="px-4 py-3">
+                                    <p class="font-semibold text-primary">{{ warning.user?.name || 'Unbekannt' }}</p>
+                                    <p class="text-xs text-secondary">{{ warning.user?.email || '-' }}</p>
+                                    <p v-if="warning.user?.account_status === 'suspended'" class="mt-1 text-xs font-semibold text-error">
+                                        Gesperrt bis {{ warning.user?.suspended_until || '-' }}
+                                    </p>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <div class="flex flex-wrap gap-1">
+                                        <span v-for="category in warning.flag?.categories || []" :key="category" class="rounded bg-muted px-2 py-1 text-xs text-secondary">
+                                            {{ category }}
+                                        </span>
+                                        <span v-if="!(warning.flag?.categories || []).length" class="text-secondary">-</span>
+                                    </div>
+                                    <div v-if="(warning.flag?.matched_terms || []).length" class="mt-1 flex flex-wrap gap-1">
+                                        <span v-for="term in warning.flag.matched_terms" :key="term" class="rounded bg-warning/10 px-2 py-1 text-xs text-warning">
+                                            {{ term }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <span class="rounded border px-2 py-1 text-xs font-semibold" :class="badgeClass(warning.severity)">
+                                        {{ warning.severity }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 font-semibold text-primary">{{ warning.points }}</td>
+                                <td class="max-w-sm px-4 py-3 text-secondary">{{ warning.reason }}</td>
+                                <td class="px-4 py-3 text-secondary">{{ warning.created_at }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div v-if="!filteredWarnings.length" class="p-8 text-center text-sm text-secondary">
+                    Keine Warnungen zu diesem Filter vorhanden.
                 </div>
             </div>
         </section>

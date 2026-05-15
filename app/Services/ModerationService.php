@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\ModerationFlag;
 use App\Models\AccountWarning;
 use App\Models\User;
+use App\Notifications\AccountSuspendedNotification;
 use Illuminate\Database\Eloquent\Model;
 
 class ModerationService
@@ -201,16 +202,31 @@ class ModerationService
             return;
         }
 
-        User::query()
+        $user = User::query()
             ->whereKey($userId)
             ->where('account_status', '!=', 'suspended')
-            ->update([
-                'account_status' => 'suspended',
-                'suspended_until' => now()->addDays($highCount >= 2 ? 14 : 7),
-                'suspension_reason' => $highCount >= 2
-                    ? 'Automatische Sperre nach zwei schweren Moderationsverstoessen.'
-                    : 'Automatische Sperre nach wiederholten Moderationsverstoessen.',
-            ]);
+            ->first();
+
+        if (! $user) {
+            return;
+        }
+
+        $suspendedUntil = now()->addDays($highCount >= 2 ? 14 : 7);
+        $reason = $highCount >= 2
+            ? 'Automatische Sperre nach zwei schweren Moderationsverstoessen.'
+            : 'Automatische Sperre nach wiederholten Moderationsverstoessen.';
+
+        $user->forceFill([
+            'account_status' => 'suspended',
+            'suspended_until' => $suspendedUntil,
+            'suspension_reason' => $reason,
+        ])->save();
+
+        try {
+            $user->notify(new AccountSuspendedNotification($reason, $suspendedUntil->format('d.m.Y H:i')));
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
     }
 
     private function normalize(string $text): string

@@ -21,6 +21,7 @@ class ConnectedSportActivity extends Model
         'distance_meters',
         'calories',
         'metrics',
+        'image_path',
     ];
 
     protected function casts(): array

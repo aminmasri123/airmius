@@ -42,12 +42,136 @@ defineProps({
                     <img :src="post.cover_image" :alt="post.title" class="w-full object-cover" />
                 </div>
 
-                <div class="prose prose-invert mt-10 max-w-none whitespace-pre-line text-primary">
-                    {{ post.content }}
-                </div>
+                <div class="blog-content prose prose-invert mt-10 max-w-none text-primary" v-html="post.content"></div>
             </article>
         </main>
 
         <Footer />
     </div>
 </template>
+
+<style scoped>
+.blog-content :deep(h2) {
+    margin: 2rem 0 0.85rem;
+    font-size: clamp(1.8rem, 3vw, 2.35rem);
+    font-weight: 900;
+    line-height: 1.15;
+}
+
+.blog-content :deep(h3) {
+    margin: 1.6rem 0 0.7rem;
+    font-size: clamp(1.35rem, 2.2vw, 1.7rem);
+    font-weight: 800;
+}
+
+.blog-content :deep(h4) {
+    margin: 1.25rem 0 0.55rem;
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+.blog-content :deep(p) {
+    margin: 1rem 0;
+    line-height: 1.85;
+}
+
+.blog-content :deep(ul),
+.blog-content :deep(ol) {
+    margin: 1rem 0;
+    padding-left: 1.45rem;
+}
+
+.blog-content :deep(li) {
+    margin: 0.35rem 0;
+}
+
+.blog-content :deep(blockquote) {
+    margin: 1.5rem 0;
+    border-left: 4px solid var(--accent);
+    padding: 0.4rem 0 0.4rem 1.1rem;
+    color: var(--secondary);
+}
+
+.blog-content :deep(pre) {
+    overflow-x: auto;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--inputBg) 86%, var(--bg));
+    padding: 1rem;
+}
+
+.blog-content :deep(a) {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+.blog-content :deep(.blog-lead) {
+    color: var(--secondary);
+    font-size: clamp(1.12rem, 2vw, 1.3rem);
+    font-weight: 600;
+    line-height: 1.8;
+}
+
+.blog-content :deep(.blog-callout) {
+    margin: 1.5rem 0;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+    border-radius: 0.9rem;
+    background: color-mix(in srgb, var(--accent) 12%, var(--card));
+    padding: 1.1rem;
+}
+
+.blog-content :deep(.blog-callout strong) {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: var(--accent);
+}
+
+.blog-content :deep(.blog-image) {
+    margin: 2rem 0;
+}
+
+.blog-content :deep(.blog-image img) {
+    display: block;
+    width: 100%;
+    border-radius: 1rem;
+    object-fit: cover;
+}
+
+.blog-content :deep(.blog-image figcaption) {
+    margin-top: 0.65rem;
+    color: var(--secondary);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.blog-content :deep(.blog-text-primary) {
+    color: var(--primary);
+}
+
+.blog-content :deep(.blog-text-secondary) {
+    color: var(--secondary);
+}
+
+.blog-content :deep(.blog-text-accent) {
+    color: var(--accent);
+}
+
+.blog-content :deep(.blog-text-success) {
+    color: var(--success);
+}
+
+.blog-content :deep(.blog-text-warning) {
+    color: var(--accent-3);
+}
+
+.blog-content :deep(.blog-text-danger) {
+    color: var(--error);
+}
+
+.blog-content :deep(.blog-mark) {
+    border-radius: 0.25rem;
+    background: color-mix(in srgb, var(--accent-3) 22%, transparent);
+    color: var(--primary);
+    padding: 0.05rem 0.25rem;
+}
+</style>

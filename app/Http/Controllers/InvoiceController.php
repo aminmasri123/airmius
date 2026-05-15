@@ -9,6 +9,10 @@ use App\Models\MarketplaceProduct;
 use App\Models\OutfitSubscription;
 use App\Models\SubscriptionInvoice;
 use App\Models\User;
+use App\Notifications\AdminInvoiceCreated;
+use App\Notifications\AdminInvoiceStatusUpdated;
+use App\Support\AppNotification;
+use App\Support\TransactionalMail;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\Rule;
@@ -54,6 +58,7 @@ class InvoiceController extends Controller
         return Inertia::render('Auth/Dashboard/Admin/Invoices/Index', [
             'invoices' => $invoices,
             'summary' => $summary,
+            'invoiceTypes' => $this->manualInvoiceTypes(),
             'clubs' => Club::query()
                 ->select('id', 'name')
                 ->orderBy('name')
@@ -79,7 +84,7 @@ class InvoiceController extends Controller
                 'id' => 'membership-'.$invoice->id,
                 'raw_id' => $invoice->id,
                 'type' => 'membership',
-                'type_label' => $this->membershipTypeLabel($invoice->source),
+                'type_label' => $this->manualInvoiceTypeLabel($invoice->source),
                 'number' => $invoice->number,
                 'title' => $invoice->title,
                 'description' => $invoice->description,
@@ -93,7 +98,8 @@ class InvoiceController extends Controller
                 'paid_at' => $invoice->paid_at?->format('Y-m-d H:i'),
                 'sort_date' => optional($invoice->issued_at ?: $invoice->created_at)->toIso8601String(),
                 'download_url' => null,
-                'delete_url' => ($invoice->source === null || in_array($invoice->source, ['manual', 'recurring_contribution'], true))
+                'status_update_url' => route('invoices.status.update', $invoice),
+                'delete_url' => ($invoice->source === null || in_array($invoice->source, $this->deletableInvoiceSources(), true))
                     && ! (float) ($invoice->paid_amount ?? 0)
                         ? route('invoices.destroy', $invoice)
                         : null,
@@ -134,6 +140,7 @@ class InvoiceController extends Controller
                 'paid_at' => $invoice->paid_at?->format('Y-m-d H:i'),
                 'sort_date' => optional($invoice->issued_at ?: $invoice->created_at)->toIso8601String(),
                 'download_url' => route('admin.subscription-invoices.download', $invoice),
+                'status_update_url' => null,
                 'club' => $invoice->club ? [
                     'id' => $invoice->club->id,
                     'name' => $invoice->club->name,
@@ -171,6 +178,7 @@ class InvoiceController extends Controller
                 'paid_at' => $order->completed_at?->format('Y-m-d H:i'),
                 'sort_date' => optional($order->completed_at ?: $order->created_at)->toIso8601String(),
                 'download_url' => $order->invoice_number ? route('admin.commerce.orders.invoice', $order) : null,
+                'status_update_url' => null,
                 'club' => $order->club ? [
                     'id' => $order->club->id,
                     'name' => $order->club->name,
@@ -214,6 +222,7 @@ class InvoiceController extends Controller
                     'paid_at' => $subscription->payment_status === 'paid' ? $subscription->updated_at?->format('Y-m-d H:i') : null,
                     'sort_date' => optional($subscription->payment_due_at ?: $subscription->created_at)->toIso8601String(),
                     'download_url' => null,
+                    'status_update_url' => null,
                     'club' => null,
                     'user' => $subscription->user ? [
                         'id' => $subscription->user->id,
@@ -270,13 +279,44 @@ class InvoiceController extends Controller
         };
     }
 
-    private function membershipTypeLabel(?string $source): string
+    private function manualInvoiceTypeLabel(?string $source): string
     {
         return match ($source) {
             'recurring_contribution' => 'Mitgliedsbeitrag',
-            'manual' => 'Manuelle Rechnung',
+            'account_subscription' => 'Konto-Abo',
+            'outfit_subscription_manual' => 'Outfit-Abo',
+            'marketplace_purchase' => 'Kauf / Marketplace',
+            'elearning' => 'E-Learning / Kurs',
+            'ads' => 'ADS / Werbung',
+            'agency_website' => 'Werbeagentur - Website',
+            'agency_logo' => 'Werbeagentur - Logo',
+            'agency_branding' => 'Werbeagentur - Branding',
+            'sponsorship' => 'Sponsoring',
+            'custom' => 'Individuell',
+            'manual' => 'Sonstige Rechnung',
             default => 'Vereinsrechnung',
         };
+    }
+
+    private function manualInvoiceTypes(): array
+    {
+        return [
+            ['value' => 'account_subscription', 'label' => 'Konto-Abo', 'hint' => 'Plan, Upgrade oder Nutzerkonto'],
+            ['value' => 'outfit_subscription_manual', 'label' => 'Outfit-Abo', 'hint' => 'Sportkleidung, Box, Sponsor-Deal'],
+            ['value' => 'marketplace_purchase', 'label' => 'Kauf / Marketplace', 'hint' => 'Produkt, Bestellung oder Warenkorb'],
+            ['value' => 'elearning', 'label' => 'E-Learning / Kurs', 'hint' => 'Kursanbieter, Coach, Trainer'],
+            ['value' => 'ads', 'label' => 'ADS / Werbung', 'hint' => 'Anzeige, Kampagne, Sichtbarkeit'],
+            ['value' => 'agency_website', 'label' => 'Website', 'hint' => 'Werbeagentur Website-Projekt'],
+            ['value' => 'agency_logo', 'label' => 'Logo', 'hint' => 'Logo-Design oder Redesign'],
+            ['value' => 'agency_branding', 'label' => 'Branding', 'hint' => 'CI, Designpaket, Markenauftritt'],
+            ['value' => 'sponsorship', 'label' => 'Sponsoring', 'hint' => 'Sponsor-Paket oder Partnerschaft'],
+            ['value' => 'custom', 'label' => 'Individuell', 'hint' => 'Freier Grund'],
+        ];
+    }
+
+    private function deletableInvoiceSources(): array
+    {
+        return array_merge(['manual', 'recurring_contribution'], collect($this->manualInvoiceTypes())->pluck('value')->all());
     }
 
     private function commerceStatus(?string $status): string
@@ -314,14 +354,28 @@ class InvoiceController extends Controller
         return number_format(((int) $cents) / 100, 2, ',', '.').' '.$currency;
     }
 
-    private function nextManualInvoiceNumber(int $clubId): string
+    private function nextManualInvoiceNumber(?int $clubId = null, string $source = 'manual'): string
     {
         $next = Invoice::query()
-            ->where('club_id', $clubId)
             ->whereYear('created_at', now()->year)
             ->count() + 1;
 
-        return 'MAN-'.$clubId.'-'.now()->format('Y').'-'.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+        $prefix = match ($source) {
+            'account_subscription' => 'KONTO',
+            'outfit_subscription_manual' => 'OUTFIT',
+            'marketplace_purchase' => 'SHOP',
+            'elearning' => 'KURS',
+            'ads' => 'ADS',
+            'agency_website' => 'WEB',
+            'agency_logo' => 'LOGO',
+            'agency_branding' => 'BRAND',
+            'sponsorship' => 'SPONSOR',
+            default => 'MAN',
+        };
+
+        $owner = $clubId ? '-'.$clubId : '';
+
+        return $prefix.$owner.'-'.now()->format('Y').'-'.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -338,8 +392,9 @@ class InvoiceController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'club_id' => ['required', Rule::exists('clubs', 'id')],
-            'user_id' => ['nullable', Rule::exists('users', 'id')],
+            'source' => ['required', Rule::in(collect($this->manualInvoiceTypes())->pluck('value')->all())],
+            'club_id' => ['nullable', Rule::exists('clubs', 'id')],
+            'user_id' => ['nullable', 'required_without:club_id', Rule::exists('users', 'id')],
             'number' => ['nullable', 'string', 'max:120', Rule::unique('invoices', 'number')],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
@@ -351,19 +406,21 @@ class InvoiceController extends Controller
 
         $status = $data['status'];
 
-        Invoice::create([
-            'club_id' => $data['club_id'],
+        $invoice = Invoice::create([
+            'club_id' => $data['club_id'] ?? null,
             'user_id' => $data['user_id'] ?? null,
-            'number' => $data['number'] ?: $this->nextManualInvoiceNumber((int) $data['club_id']),
+            'number' => $data['number'] ?: $this->nextManualInvoiceNumber($data['club_id'] ? (int) $data['club_id'] : null, $data['source']),
             'title' => $data['title'],
             'description' => $data['description'] ?? null,
             'amount' => $data['amount'],
             'status' => $status,
-            'source' => 'manual',
+            'source' => $data['source'],
             'due_date' => $data['due_date'],
             'issued_at' => $data['issued_at'] ?? now(),
             'paid_at' => $status === 'paid' ? now() : null,
         ]);
+
+        $this->notifyInvoiceRecipient($invoice);
 
         return back()->with('success', 'Rechnung wurde erstellt.');
     }
@@ -392,16 +449,154 @@ class InvoiceController extends Controller
         //
     }
 
+    public function updateStatus(Request $request, Invoice $invoice)
+    {
+        $data = $request->validate([
+            'status' => ['required', Rule::in(['open', 'pending', 'paid', 'overdue', 'cancelled'])],
+        ]);
+
+        $oldStatus = $invoice->status;
+
+        $invoice->update([
+            'status' => $data['status'],
+            'paid_at' => $data['status'] === 'paid' ? ($invoice->paid_at ?? now()) : null,
+        ]);
+
+        if ($oldStatus !== $invoice->status) {
+            $this->notifyInvoiceStatusRecipient($invoice, $oldStatus);
+        }
+
+        return back()->with('success', 'Rechnungsstatus wurde aktualisiert.');
+    }
+
     /**
      * Remove the specified resource from storage.
      */
     public function destroy(Invoice $invoice)
     {
         abort_if($invoice->payments()->exists(), 422, 'Rechnungen mit Zahlungen koennen nicht geloescht werden.');
-        abort_if($invoice->source && ! in_array($invoice->source, ['manual', 'recurring_contribution'], true), 422, 'Diese Rechnungsart kann hier nicht geloescht werden.');
+        abort_if($invoice->source && ! in_array($invoice->source, $this->deletableInvoiceSources(), true), 422, 'Diese Rechnungsart kann hier nicht geloescht werden.');
 
         $invoice->delete();
 
         return back()->with('success', 'Rechnung wurde geloescht.');
+    }
+
+    private function notifyInvoiceRecipient(Invoice $invoice): void
+    {
+        $invoice->loadMissing(['user:id,name,email', 'club.owner:id,name,email']);
+
+        $recipient = $invoice->user ?: $invoice->club?->owner;
+
+        if (! $recipient) {
+            return;
+        }
+
+        AppNotification::send($recipient, 'invoice.created', [
+            'title' => 'Neue Rechnung erhalten',
+            'body' => sprintf(
+                '%s ueber %s ist jetzt in deinen Rechnungen sichtbar.',
+                $invoice->title ?: 'Eine neue Rechnung',
+                $this->moneyFromDecimal($invoice->amount),
+            ),
+            'url' => route('auth.settings').'#billing',
+            'invoice_id' => $invoice->id,
+            'invoice_number' => $invoice->number,
+            'invoice_source' => $invoice->source,
+        ]);
+
+        $this->sendInvoiceEmail($recipient, $invoice);
+    }
+
+    private function notifyInvoiceStatusRecipient(Invoice $invoice, ?string $oldStatus): void
+    {
+        $invoice->loadMissing(['user:id,name,email', 'club.owner:id,name,email']);
+
+        $recipient = $invoice->user ?: $invoice->club?->owner;
+
+        if (! $recipient) {
+            return;
+        }
+
+        AppNotification::send($recipient, 'invoice.status_updated', [
+            'title' => 'Rechnungsstatus aktualisiert',
+            'body' => sprintf(
+                '%s ist jetzt %s.',
+                $invoice->number ?: ($invoice->title ?: 'Deine Rechnung'),
+                $this->billingStatusLabel($invoice->status),
+            ),
+            'url' => route('auth.settings').'#billing',
+            'invoice_id' => $invoice->id,
+            'invoice_number' => $invoice->number,
+            'old_status' => $oldStatus,
+            'new_status' => $invoice->status,
+        ]);
+
+        $this->sendInvoiceStatusEmail($recipient, $invoice, $oldStatus);
+    }
+
+    private function sendInvoiceEmail(User $recipient, Invoice $invoice): void
+    {
+        $mailer = app(TransactionalMail::class);
+
+        $mailer->notifyWithFallback(
+            $recipient,
+            fn (array $transport) => new AdminInvoiceCreated(
+                $invoice,
+                $transport['mailer'],
+                $transport['address'],
+                $transport['name'],
+            ),
+            $mailer->invoicePrimaryCategory(),
+            $mailer->invoiceFallbackCategory(),
+            'invoice.created:'.$invoice->id.':'.$recipient->id,
+            (int) config('airmius_mail.throttle_seconds.invoice_created', 21600),
+            [
+                'mail_type' => 'invoice.created',
+                'invoice_id' => $invoice->id,
+                'recipient_id' => $recipient->id,
+            ],
+        );
+    }
+
+    private function sendInvoiceStatusEmail(User $recipient, Invoice $invoice, ?string $oldStatus): void
+    {
+        $mailer = app(TransactionalMail::class);
+
+        $mailer->notifyWithFallback(
+            $recipient,
+            fn (array $transport) => new AdminInvoiceStatusUpdated(
+                $invoice,
+                $oldStatus,
+                $transport['mailer'],
+                $transport['address'],
+                $transport['name'],
+            ),
+            $mailer->invoicePrimaryCategory(),
+            $mailer->invoiceFallbackCategory(),
+            'invoice.status_updated:'.$invoice->id.':'.$recipient->id.':'.$invoice->status,
+            (int) config('airmius_mail.throttle_seconds.invoice_status_updated', 3600),
+            [
+                'mail_type' => 'invoice.status_updated',
+                'invoice_id' => $invoice->id,
+                'recipient_id' => $recipient->id,
+                $oldStatus,
+                'new_status' => $invoice->status,
+            ],
+        );
+    }
+
+    private function billingStatusLabel(?string $status): string
+    {
+        return match ($status) {
+            'paid' => 'bezahlt',
+            'open' => 'offen',
+            'pending' => 'ausstehend',
+            'awaiting_transfer' => 'wartet auf Ueberweisung',
+            'overdue' => 'ueberfaellig',
+            'cancelled' => 'storniert',
+            'failed' => 'fehlgeschlagen',
+            default => $status ?: 'unbekannt',
+        };
     }
 }

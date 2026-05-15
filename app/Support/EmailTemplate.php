@@ -77,7 +77,7 @@ class EmailTemplate
             $message->action($actionLabel, $actionUrl);
         }
 
-        return $message;
+        return app(TransactionalMail::class)->applyToMessage($message, self::categoryFor($key));
     }
 
     public static function content(string $key, array $variables = []): array
@@ -181,6 +181,17 @@ class EmailTemplate
                     'greeting' => 'Hallo,',
                     'body' => "für dein Airmius-Konto wurden mehrere falsche Login-Versuche erkannt.\nDer Login wurde voruebergehend blockiert, um dein Konto zu schuetzen.\nZeitpunkt: {{ locked_at }}\nIP-Adresse: {{ ip_address }}\nGeraet/Browser: {{ user_agent }}\nWenn du das warst, warte bitte kurz und versuche es danach erneut.\nWenn du das nicht warst, aendere bitte dein Passwort und pruefe deine Kontosicherheit.",
                     'action_label' => '',
+                ],
+            ],
+            'account_suspended' => [
+                'label' => 'Sicherheit: Konto gesperrt',
+                'description' => 'Hinweis, wenn ein Konto automatisch oder manuell gesperrt wurde.',
+                'variables' => ['name', 'reason', 'suspended_until'],
+                'template' => [
+                    'subject' => 'Dein Airmius-Konto wurde voruebergehend gesperrt',
+                    'greeting' => 'Hallo {{ name }},',
+                    'body' => "dein Airmius-Konto wurde voruebergehend gesperrt.\nGrund: {{ reason }}\nGesperrt bis: {{ suspended_until }}\nWenn du glaubst, dass diese Sperre falsch ist, kannst du den Support kontaktieren und um Pruefung bitten.",
+                    'action_label' => 'Support kontaktieren',
                 ],
             ],
             'inactive_account_first' => [
@@ -372,5 +383,19 @@ class EmailTemplate
         }
 
         return $text;
+    }
+
+    private static function categoryFor(string $key): string
+    {
+        return match (true) {
+            str_starts_with($key, 'subscription_') => 'billing',
+            str_starts_with($key, 'commerce_') => 'marketplace',
+            str_starts_with($key, 'login_'),
+            str_starts_with($key, 'account_'),
+            str_starts_with($key, 'guardian_'),
+            $key === 'password_reset' => 'security',
+            str_starts_with($key, 'external_') => 'support',
+            default => 'system',
+        };
     }
 }

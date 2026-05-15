@@ -76,6 +76,8 @@ const iconFor = (type) => ({
     'commerce.order.issue_replied': 'las la-comments',
     'commerce.order.paid': 'las la-receipt',
     'commerce.order.shipping_updated': 'las la-shipping-fast',
+    'invoice.created': 'las la-file-invoice',
+    'invoice.status_updated': 'las la-file-invoice-dollar',
 }[type] || 'las la-bell')
 
 const formatNotificationDate = (value) => {
@@ -190,6 +192,16 @@ const requestJoin = (result) => {
         preserveScroll: true,
         onSuccess: closeSearch,
     })
+}
+
+const initialsFor = (value) => {
+    return String(value || '')
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((part) => part.charAt(0))
+        .join('')
+        .toUpperCase() || '?'
 }
 
 const bindRealtime = () => {
@@ -376,6 +388,20 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                                     <div v-else-if="searchResults.length">
                                         <div v-for="result in searchResults" :key="`${result.type}-${result.id}`"
                                             class="flex items-center gap-3 border-b border-border px-3 py-3 last:border-b-0">
+                                            <Link
+                                                :href="result.url"
+                                                class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-inputBg text-xs font-bold text-primary"
+                                                @click="closeSearch"
+                                            >
+                                                <img
+                                                    v-if="result.avatar_url"
+                                                    :src="result.avatar_url"
+                                                    :alt="result.title"
+                                                    class="h-full w-full object-cover"
+                                                >
+                                                <span v-else-if="result.type === 'user'">{{ initialsFor(result.title) }}</span>
+                                                <i v-else :class="[result.type === 'club' ? 'las la-shield-alt' : 'las la-users', 'text-lg text-secondary']"></i>
+                                            </Link>
                                             <Link :href="result.url" class="min-w-0 flex-1" @click="closeSearch">
                                                 <p class="truncate text-sm font-semibold text-primary">
                                                     {{ result.title }}
@@ -545,6 +571,20 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                             <div v-else-if="searchResults.length">
                                 <div v-for="result in searchResults" :key="`${result.type}-${result.id}`"
                                     class="flex items-center gap-3 border-b border-border px-3 py-3 last:border-b-0">
+                                    <Link
+                                        :href="result.url"
+                                        class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-inputBg text-xs font-bold text-primary"
+                                        @click="closeSearch"
+                                    >
+                                        <img
+                                            v-if="result.avatar_url"
+                                            :src="result.avatar_url"
+                                            :alt="result.title"
+                                            class="h-full w-full object-cover"
+                                        >
+                                        <span v-else-if="result.type === 'user'">{{ initialsFor(result.title) }}</span>
+                                        <i v-else :class="[result.type === 'club' ? 'las la-shield-alt' : 'las la-users', 'text-lg text-secondary']"></i>
+                                    </Link>
                                     <Link :href="result.url" class="min-w-0 flex-1" @click="closeSearch">
                                         <p class="truncate text-sm font-semibold text-primary">
                                             {{ result.title }}

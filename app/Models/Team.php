@@ -46,6 +46,11 @@ class Team extends Model
         return $this->hasMany(Event::class);
     }
 
+    public function trainingPlans()
+    {
+        return $this->hasMany(TrainingPlan::class);
+    }
+
     public function files()
     {
         return $this->hasMany(File::class);

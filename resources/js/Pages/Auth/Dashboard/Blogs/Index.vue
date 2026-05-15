@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 
 defineOptions({ layout: AppLayout })
 
@@ -9,12 +9,20 @@ const props = defineProps({
     posts: Object,
     filters: Object,
     can: Object,
+    categories: {
+        type: Array,
+        default: () => [],
+    },
 })
 
 const editingPost = ref(null)
 const filterStatus = ref(props.filters?.status || 'all')
 const search = ref(props.filters?.search || '')
 const coverUploadInput = ref(null)
+const contentImageInput = ref(null)
+const editorRef = ref(null)
+const editorDirection = ref('ltr')
+const contentImageUploading = ref(false)
 
 const form = useForm({
     title: '',
@@ -46,6 +54,8 @@ const statusOptions = computed(() => {
     return options
 })
 
+const categoryOptions = computed(() => props.categories || [])
+
 const statusClasses = {
     draft: 'bg-muted text-secondary',
     review: 'bg-air-orange/15 text-air-orange',
@@ -53,12 +63,58 @@ const statusClasses = {
     archived: 'bg-error/15 text-error',
 }
 
+const toolbarGroups = [
+    [
+        { label: 'B', title: 'Fett', command: 'bold', class: 'font-black' },
+        { label: 'I', title: 'Kursiv', command: 'italic', class: 'italic' },
+        { label: 'U', title: 'Unterstrichen', command: 'underline', class: 'underline' },
+        { label: 'S', title: 'Durchgestrichen', command: 'strikeThrough', class: 'line-through' },
+    ],
+    [
+        { icon: 'las la-list-ul', title: 'Liste', command: 'insertUnorderedList' },
+        { icon: 'las la-list-ol', title: 'Nummerierte Liste', command: 'insertOrderedList' },
+        { icon: 'las la-quote-right', title: 'Zitat', block: 'blockquote' },
+    ],
+    [
+        { icon: 'las la-align-left', title: 'Links', command: 'justifyLeft' },
+        { icon: 'las la-align-center', title: 'Zentriert', command: 'justifyCenter' },
+        { icon: 'las la-align-right', title: 'Rechts', command: 'justifyRight' },
+    ],
+]
+
+const contentStyles = [
+    ['', 'Textart wählen'],
+    ['p', 'Absatz'],
+    ['h2', 'Titel im Artikel'],
+    ['lead', 'Untertitel / Lead'],
+    ['h3', 'Abschnitt'],
+    ['h4', 'Zwischenüberschrift'],
+    ['blockquote', 'Zitat'],
+    ['callout', 'Hinweisbox'],
+    ['pre', 'Code / Notiz'],
+]
+
+const semanticInlineStyles = [
+    ['', 'Farbe / Markierung'],
+    ['blog-text-primary', 'Standardtext'],
+    ['blog-text-secondary', 'Nebeninfo'],
+    ['blog-text-accent', 'Akzent'],
+    ['blog-text-success', 'Positiv'],
+    ['blog-text-warning', 'Wichtig'],
+    ['blog-text-danger', 'Warnung'],
+    ['blog-mark', 'Markierung'],
+]
+
 const resetForm = () => {
     editingPost.value = null
     form.reset()
     form.clearErrors()
     form.status = 'draft'
     form._method = ''
+    editorDirection.value = 'ltr'
+    nextTick(() => {
+        if (editorRef.value) editorRef.value.innerHTML = ''
+    })
     if (coverUploadInput.value) coverUploadInput.value.value = null
 }
 
@@ -78,13 +134,139 @@ const edit = (post) => {
     form.published_at = post.published_at ? post.published_at.slice(0, 16) : ''
     form._method = ''
     if (coverUploadInput.value) coverUploadInput.value.value = null
+
+    nextTick(() => {
+        if (editorRef.value) {
+            editorRef.value.innerHTML = form.content
+            editorRef.value.focus()
+        }
+    })
 }
+
+const syncEditor = () => {
+    form.content = editorRef.value?.innerHTML || ''
+}
+
+const runCommand = (command, value = null) => {
+    editorRef.value?.focus()
+    document.execCommand(command, false, value)
+    syncEditor()
+}
+
+const applyBlock = (tag) => {
+    runCommand('formatBlock', tag)
+}
+
+const selectedHtml = () => {
+    const selection = window.getSelection()
+
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+        return ''
+    }
+
+    const container = document.createElement('div')
+    container.appendChild(selection.getRangeAt(0).cloneContents())
+
+    return container.innerHTML
+}
+
+const applyContentStyle = (style) => {
+    if (!style) return
+
+    if (['p', 'h2', 'h3', 'h4', 'blockquote', 'pre'].includes(style)) {
+        applyBlock(style)
+        return
+    }
+
+    editorRef.value?.focus()
+    const html = selectedHtml() || 'Text eingeben...'
+
+    if (style === 'lead') {
+        document.execCommand('insertHTML', false, `<p class="blog-lead">${html}</p>`)
+    }
+
+    if (style === 'callout') {
+        document.execCommand('insertHTML', false, `<div class="blog-callout"><strong>Hinweis</strong><p>${html}</p></div>`)
+    }
+
+    syncEditor()
+}
+
+const applySemanticInlineStyle = (styleClass) => {
+    if (!styleClass) return
+
+    editorRef.value?.focus()
+    const html = selectedHtml() || 'Text'
+    document.execCommand('insertHTML', false, `<span class="${styleClass}">${html}</span>`)
+    syncEditor()
+}
+
+const setEditorDirection = (direction) => {
+    editorDirection.value = direction
+    editorRef.value?.focus()
+    syncEditor()
+}
+
+const createLink = () => {
+    const url = window.prompt('Link einfuegen, z. B. https://airmius.com')
+
+    if (!url) return
+
+    runCommand('createLink', url)
+}
+
+const escapeHtml = (value = '') => String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+
+const selectContentImage = () => {
+    editorRef.value?.focus()
+    contentImageInput.value?.click()
+}
+
+const uploadContentImage = (event) => {
+    const file = event.target.files?.[0] || null
+
+    if (!file) return
+
+    const alt = window.prompt('Bildbeschreibung / Alt-Text', file.name.replace(/\.[^.]+$/, '')) || ''
+    const payload = new FormData()
+    payload.append('image', file)
+    payload.append('alt', alt)
+    contentImageUploading.value = true
+
+    window.axios.post(route('blogs.content-images.store'), payload, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((response) => {
+        const url = response.data?.url
+
+        if (!url) return
+
+        editorRef.value?.focus()
+        const safeAlt = escapeHtml(response.data?.alt || alt)
+        document.execCommand('insertHTML', false, `<figure class="blog-image"><img src="${url}" alt="${safeAlt}"><figcaption>${safeAlt}</figcaption></figure><p><br></p>`)
+        syncEditor()
+    }).finally(() => {
+        contentImageUploading.value = false
+        if (contentImageInput.value) contentImageInput.value.value = null
+    })
+}
+
+const stripHtml = (value = '') => value
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 
 const selectCoverUpload = (event) => {
     form.cover_image_upload = event.target.files?.[0] || null
 }
 
 const submit = () => {
+    syncEditor()
+
     const options = {
         preserveScroll: true,
         forceFormData: true,
@@ -128,44 +310,53 @@ const applyFilters = () => {
     <Head title="Blogs" />
 
     <div class="space-y-6">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-                <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">Website CMS</p>
-                <h1 class="mt-1 text-3xl font-bold text-primary">Blogs</h1>
-                <p class="mt-2 max-w-2xl text-sm text-secondary">
-                    Redaktionsbereich für Websitepersonal: Entwürfe schreiben, Reviews vorbereiten und Beiträge veröffentlichen.
-                </p>
-            </div>
+        <div class="surface-card overflow-hidden">
+            <div class="grid gap-5 p-5 lg:grid-cols-[1fr_auto] lg:items-end">
+                <div>
+                    <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">Website CMS</p>
+                    <h1 class="mt-1 text-3xl font-bold text-primary">Blog Studio</h1>
+                    <p class="mt-2 max-w-3xl text-sm leading-relaxed text-secondary">
+                        Schreibe Beiträge mit Überschriften, Listen, Markierungen, Links, Zitaten und sauberer öffentlicher Darstellung.
+                    </p>
+                </div>
 
-            <div class="flex flex-col gap-2 sm:flex-row">
-                <input
-                    v-model="search"
-                    class="rounded-lg border-border bg-inputBg text-sm text-primary"
-                    placeholder="Suchen..."
-                    @keydown.enter.prevent="applyFilters"
-                />
-                <select v-model="filterStatus" class="rounded-lg border-border bg-inputBg text-sm text-primary" @change="applyFilters">
-                    <option value="all">Alle Status</option>
-                    <option value="draft">Entwurf</option>
-                    <option value="review">Review</option>
-                    <option value="published">Veröffentlicht</option>
-                    <option value="archived">Archiviert</option>
-                </select>
-                <button class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:bg-muted" @click="applyFilters">
-                    Filtern
-                </button>
+                <div class="grid gap-2 sm:grid-cols-[auto_160px_auto_auto]">
+                    <Link
+                        v-if="can.manageCategories"
+                        :href="route('blog-categories.index')"
+                        class="inline-flex items-center justify-center rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
+                    >
+                        Kategorien
+                    </Link>
+                    <input
+                        v-model="search"
+                        class="rounded-lg border-border bg-inputBg text-sm text-primary"
+                        placeholder="Suchen..."
+                        @keydown.enter.prevent="applyFilters"
+                    />
+                    <select v-model="filterStatus" class="rounded-lg border-border bg-inputBg text-sm text-primary" @change="applyFilters">
+                        <option value="all">Alle Status</option>
+                        <option value="draft">Entwurf</option>
+                        <option value="review">Review</option>
+                        <option value="published">Veröffentlicht</option>
+                        <option value="archived">Archiviert</option>
+                    </select>
+                    <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="applyFilters">
+                        Filtern
+                    </button>
+                </div>
             </div>
         </div>
 
-        <div class="grid gap-6 xl:grid-cols-[1fr_380px]">
+        <div class="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_520px]">
             <section class="space-y-4">
                 <article
                     v-for="post in posts.data"
                     :key="post.id"
                     class="surface-card overflow-hidden transition hover:border-air-blue/50"
                 >
-                    <div class="grid gap-4 p-4 md:grid-cols-[180px_1fr]">
-                        <div class="flex h-36 items-center justify-center overflow-hidden rounded-lg bg-inputBg">
+                    <div class="grid gap-4 p-4 md:grid-cols-[190px_1fr]">
+                        <div class="flex h-40 items-center justify-center overflow-hidden rounded-lg bg-inputBg">
                             <img v-if="post.cover_image" :src="post.cover_image" :alt="post.title" class="h-full w-full object-cover" />
                             <i v-else class="las la-newspaper text-5xl text-secondary"></i>
                         </div>
@@ -175,7 +366,14 @@ const applyFilters = () => {
                                 <span :class="[statusClasses[post.status], 'rounded-full px-3 py-1 text-xs font-semibold']">
                                     {{ post.status }}
                                 </span>
-                                <span v-if="post.category" class="rounded-full border border-border px-3 py-1 text-xs text-secondary">
+                                <Link
+                                    v-if="post.category && can.manageCategories"
+                                    :href="route('blog-categories.index')"
+                                    class="rounded-full border border-border px-3 py-1 text-xs text-secondary hover:border-air-blue hover:text-air-blue"
+                                >
+                                    {{ post.category }}
+                                </Link>
+                                <span v-else-if="post.category" class="rounded-full border border-border px-3 py-1 text-xs text-secondary">
                                     {{ post.category }}
                                 </span>
                                 <span class="text-xs text-secondary">
@@ -185,13 +383,13 @@ const applyFilters = () => {
 
                             <h2 class="mt-3 text-xl font-bold text-primary">{{ post.title }}</h2>
                             <p class="mt-2 line-clamp-2 text-sm leading-relaxed text-secondary">
-                                {{ post.excerpt || post.content }}
+                                {{ post.excerpt || stripHtml(post.content) }}
                             </p>
 
                             <div class="mt-4 flex flex-wrap gap-2">
                                 <button
                                     v-if="can.update"
-                                    class="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-muted"
+                                    class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
                                     @click="edit(post)"
                                 >
                                     Bearbeiten
@@ -199,13 +397,13 @@ const applyFilters = () => {
                                 <Link
                                     v-if="post.status === 'published'"
                                     :href="route('guest.blog.show', post.slug)"
-                                    class="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-muted"
+                                    class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
                                 >
                                     Anzeigen
                                 </Link>
                                 <button
                                     v-if="can.delete"
-                                    class="rounded-lg bg-error px-3 py-2 text-sm text-white"
+                                    class="rounded-lg bg-error px-3 py-2 text-sm font-semibold text-white"
                                     @click="destroyPost(post)"
                                 >
                                     Löschen
@@ -231,22 +429,24 @@ const applyFilters = () => {
                 </div>
             </section>
 
-            <aside class="surface-card h-fit p-5">
-                <div class="mb-5 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-wider text-secondary">
-                            {{ editingPost ? 'Beitrag bearbeiten' : 'Neuer Beitrag' }}
-                        </p>
-                        <h2 class="mt-1 text-lg font-bold text-primary">
-                            {{ editingPost ? editingPost.title : 'Schreiben' }}
-                        </h2>
+            <aside class="surface-card h-fit overflow-hidden">
+                <div class="border-b border-border p-5">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-secondary">
+                                {{ editingPost ? 'Beitrag bearbeiten' : 'Neuer Beitrag' }}
+                            </p>
+                            <h2 class="mt-1 text-lg font-bold text-primary">
+                                {{ editingPost ? editingPost.title : 'Schreiben' }}
+                            </h2>
+                        </div>
+                        <button v-if="editingPost" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="resetForm">
+                            Neu
+                        </button>
                     </div>
-                    <button v-if="editingPost" class="rounded-lg border border-border px-3 py-2 text-sm text-primary" @click="resetForm">
-                        Neu
-                    </button>
                 </div>
 
-                <form class="space-y-4" @submit.prevent="submit">
+                <form class="space-y-4 p-5" @submit.prevent="submit">
                     <div>
                         <label class="text-sm font-semibold text-primary">Titel</label>
                         <input v-model="form.title" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required />
@@ -261,8 +461,23 @@ const applyFilters = () => {
 
                     <div class="grid gap-3 sm:grid-cols-2">
                         <div>
-                            <label class="text-sm font-semibold text-primary">Kategorie</label>
-                            <input v-model="form.category" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" />
+                            <div class="flex items-center justify-between gap-3">
+                                <Link
+                                    v-if="can.manageCategories"
+                                    :href="route('blog-categories.index')"
+                                    class="text-sm font-semibold text-primary hover:text-air-blue hover:underline"
+                                >
+                                    Kategorie
+                                </Link>
+                                <label v-else class="text-sm font-semibold text-primary">Kategorie</label>
+                            </div>
+                            <select v-model="form.category" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                                <option value="">Kategorie waehlen</option>
+                                <option v-for="category in categoryOptions" :key="category.id" :value="category.name">
+                                    {{ category.name }}
+                                </option>
+                            </select>
+                            <p v-if="form.errors.category" class="mt-1 text-sm text-error">{{ form.errors.category }}</p>
                         </div>
                         <div>
                             <label class="text-sm font-semibold text-primary">Status</label>
@@ -284,7 +499,86 @@ const applyFilters = () => {
 
                     <div>
                         <label class="text-sm font-semibold text-primary">Inhalt</label>
-                        <textarea v-model="form.content" rows="10" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required></textarea>
+                        <div class="mt-1 overflow-hidden rounded-lg border border-border bg-inputBg">
+                            <div class="flex flex-wrap items-center gap-1 border-b border-border bg-card/70 p-2">
+                                <select class="h-9 rounded-md border-border bg-inputBg text-xs font-semibold text-primary" @change="applyContentStyle($event.target.value)">
+                                    <option v-for="[value, label] in contentStyles" :key="value" :value="value">{{ label }}</option>
+                                </select>
+
+                                <span v-for="(group, groupIndex) in toolbarGroups" :key="groupIndex" class="ml-1 flex gap-1 border-l border-border pl-1">
+                                    <button
+                                        v-for="tool in group"
+                                        :key="tool.title"
+                                        type="button"
+                                        :title="tool.title"
+                                        class="inline-flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-sm font-semibold text-primary hover:bg-muted"
+                                        :class="tool.class"
+                                        @click="tool.block ? applyBlock(tool.block) : runCommand(tool.command)"
+                                    >
+                                        <i v-if="tool.icon" :class="tool.icon"></i>
+                                        <span v-else>{{ tool.label }}</span>
+                                    </button>
+                                </span>
+
+                                <span class="ml-1 flex gap-1 border-l border-border pl-1">
+                                    <button
+                                        type="button"
+                                        title="Links nach rechts"
+                                        class="inline-flex h-9 items-center justify-center rounded-md px-3 text-xs font-bold hover:bg-muted"
+                                        :class="editorDirection === 'ltr' ? 'bg-air-blue/15 text-air-blue' : 'text-primary'"
+                                        @click="setEditorDirection('ltr')"
+                                    >
+                                        LTR
+                                    </button>
+                                    <button
+                                        type="button"
+                                        title="Rechts nach links"
+                                        class="inline-flex h-9 items-center justify-center rounded-md px-3 text-xs font-bold hover:bg-muted"
+                                        :class="editorDirection === 'rtl' ? 'bg-air-blue/15 text-air-blue' : 'text-primary'"
+                                        @click="setEditorDirection('rtl')"
+                                    >
+                                        RTL
+                                    </button>
+                                </span>
+
+                                <select class="h-9 rounded-md border-border bg-inputBg text-xs font-semibold text-primary" @change="applySemanticInlineStyle($event.target.value)">
+                                    <option v-for="[value, label] in semanticInlineStyles" :key="value" :value="value">{{ label }}</option>
+                                </select>
+
+                                <button type="button" title="Link" class="inline-flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-sm text-primary hover:bg-muted" @click="createLink">
+                                    <i class="las la-link"></i>
+                                </button>
+                                <button
+                                    type="button"
+                                    title="Bild in Inhalt einfuegen"
+                                    class="inline-flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-sm text-primary hover:bg-muted disabled:opacity-60"
+                                    :disabled="contentImageUploading"
+                                    @click="selectContentImage"
+                                >
+                                    <i class="las la-image"></i>
+                                </button>
+                                <input
+                                    ref="contentImageInput"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    class="hidden"
+                                    @change="uploadContentImage"
+                                />
+                                <button type="button" title="Formatierung entfernen" class="inline-flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-sm text-primary hover:bg-muted" @click="runCommand('removeFormat')">
+                                    <i class="las la-eraser"></i>
+                                </button>
+                            </div>
+
+                            <div
+                                ref="editorRef"
+                                contenteditable="true"
+                                :dir="editorDirection"
+                                class="blog-editor min-h-[320px] max-h-[580px] overflow-y-auto px-4 py-3 text-primary outline-none"
+                                :class="editorDirection === 'rtl' ? 'text-right' : 'text-left'"
+                                @input="syncEditor"
+                                @blur="syncEditor"
+                            ></div>
+                        </div>
                         <p v-if="form.errors.content" class="mt-1 text-sm text-error">{{ form.errors.content }}</p>
                     </div>
 
@@ -327,3 +621,148 @@ const applyFilters = () => {
         </div>
     </div>
 </template>
+
+<style scoped>
+.blog-editor :deep(h2),
+.blog-editor h2 {
+    margin: 1.1rem 0 0.6rem;
+    font-size: 1.65rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.blog-editor :deep(h3),
+.blog-editor h3 {
+    margin: 1rem 0 0.5rem;
+    font-size: 1.3rem;
+    font-weight: 800;
+}
+
+.blog-editor :deep(h4),
+.blog-editor h4 {
+    margin: 0.9rem 0 0.4rem;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.blog-editor :deep(p),
+.blog-editor p {
+    margin: 0.7rem 0;
+    line-height: 1.75;
+}
+
+.blog-editor :deep(ul),
+.blog-editor :deep(ol),
+.blog-editor ul,
+.blog-editor ol {
+    margin: 0.8rem 0;
+    padding-left: 1.5rem;
+}
+
+.blog-editor :deep(blockquote),
+.blog-editor blockquote {
+    margin: 1rem 0;
+    border-left: 3px solid var(--accent);
+    padding-left: 1rem;
+    color: var(--secondary);
+}
+
+.blog-editor :deep(pre),
+.blog-editor pre {
+    overflow-x: auto;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--inputBg) 86%, var(--bg));
+    padding: 0.85rem;
+}
+
+.blog-editor :deep(a),
+.blog-editor a {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+.blog-editor :deep(.blog-lead),
+.blog-editor .blog-lead {
+    color: var(--secondary);
+    font-size: 1.15rem;
+    font-weight: 600;
+    line-height: 1.75;
+}
+
+.blog-editor :deep(.blog-callout),
+.blog-editor .blog-callout {
+    margin: 1rem 0;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--accent) 12%, var(--card));
+    padding: 1rem;
+}
+
+.blog-editor :deep(.blog-callout strong),
+.blog-editor .blog-callout strong {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: var(--accent);
+}
+
+.blog-editor :deep(.blog-image),
+.blog-editor .blog-image {
+    margin: 1rem 0;
+}
+
+.blog-editor :deep(.blog-image img),
+.blog-editor .blog-image img {
+    display: block;
+    width: 100%;
+    max-height: 420px;
+    border-radius: 0.75rem;
+    object-fit: cover;
+}
+
+.blog-editor :deep(.blog-image figcaption),
+.blog-editor .blog-image figcaption {
+    margin-top: 0.45rem;
+    color: var(--secondary);
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+.blog-editor :deep(.blog-text-primary),
+.blog-editor .blog-text-primary {
+    color: var(--primary);
+}
+
+.blog-editor :deep(.blog-text-secondary),
+.blog-editor .blog-text-secondary {
+    color: var(--secondary);
+}
+
+.blog-editor :deep(.blog-text-accent),
+.blog-editor .blog-text-accent {
+    color: var(--accent);
+}
+
+.blog-editor :deep(.blog-text-success),
+.blog-editor .blog-text-success {
+    color: var(--success);
+}
+
+.blog-editor :deep(.blog-text-warning),
+.blog-editor .blog-text-warning {
+    color: var(--accent-3);
+}
+
+.blog-editor :deep(.blog-text-danger),
+.blog-editor .blog-text-danger {
+    color: var(--error);
+}
+
+.blog-editor :deep(.blog-mark),
+.blog-editor .blog-mark {
+    border-radius: 0.25rem;
+    background: color-mix(in srgb, var(--accent-3) 22%, transparent);
+    color: var(--primary);
+    padding: 0.05rem 0.25rem;
+}
+</style>

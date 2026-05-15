@@ -10,6 +10,13 @@ defineProps({
     canRegister: Boolean,
     posts: Object,
 })
+
+const stripHtml = (value = '') => String(value)
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const teaserText = (post) => stripHtml(post.excerpt || post.content || '')
 </script>
 
 <template>
@@ -42,7 +49,7 @@ defineProps({
                             <span>{{ post.author?.name }}</span>
                         </div>
                         <h2 class="mt-3 text-xl font-bold text-primary">{{ post.title }}</h2>
-                        <p class="mt-3 line-clamp-3 text-sm leading-relaxed text-secondary">{{ post.excerpt || post.content }}</p>
+                        <p class="mt-3 line-clamp-3 text-sm leading-relaxed text-secondary">{{ teaserText(post) }}</p>
                         <Link :href="route('guest.blog.show', post.slug)" class="mt-5 inline-flex font-semibold text-air-blue hover:underline">
                             Lesen
                         </Link>

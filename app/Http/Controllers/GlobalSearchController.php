@@ -28,13 +28,14 @@ class GlobalSearchController extends Controller
             })
             ->orderBy('name')
             ->limit(5)
-            ->get(['id', 'name', 'email'])
+            ->get(['id', 'name', 'email', 'profile_photo_path'])
             ->map(fn (User $match) => [
                 'type' => 'user',
                 'id' => $match->id,
                 'title' => $match->name,
                 'subtitle' => $match->email,
                 'url' => route('auth.users.show', $match->id),
+                'avatar_url' => $match->profile_photo_thumb ?: $match->profile_photo_url,
             ]);
 
         $clubs = Club::query()

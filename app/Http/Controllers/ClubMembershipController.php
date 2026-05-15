@@ -20,6 +20,7 @@ use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
 use App\Support\ClubRoles;
 use App\Support\Roles;
+use App\Support\TransactionalMail;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -1034,11 +1035,37 @@ class ClubMembershipController extends Controller
             'invoice_id' => $invoice->id,
         ]);
 
-        if ($user->email) {
-            $user->notify(new ClubInvoiceCreated($invoice->loadMissing('club')));
-        }
+        $this->sendClubInvoiceCreatedEmail($user, $invoice->loadMissing('club'));
 
         return back()->with('success', 'Rechnung erstellt und per E-Mail verschickt.');
+    }
+
+    private function sendClubInvoiceCreatedEmail(User $user, Invoice $invoice): void
+    {
+        if (! $user->email) {
+            return;
+        }
+
+        $mailer = app(TransactionalMail::class);
+
+        $mailer->notifyWithFallback(
+            $user,
+            fn (array $transport) => new ClubInvoiceCreated(
+                $invoice,
+                $transport['mailer'],
+                $transport['address'],
+                $transport['name'],
+            ),
+            $mailer->invoicePrimaryCategory(),
+            $mailer->invoiceFallbackCategory(),
+            'club.invoice.created:'.$invoice->id.':'.$user->id,
+            (int) config('airmius_mail.throttle_seconds.invoice_created', 21600),
+            [
+                'mail_type' => 'club.invoice.created',
+                'invoice_id' => $invoice->id,
+                'recipient_id' => $user->id,
+            ],
+        );
     }
 
     public function generateMemberNumber(Club $club, User $user)

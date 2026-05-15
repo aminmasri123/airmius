@@ -11,7 +11,12 @@ class ClubInvoiceCreated extends Notification
 {
     use Queueable;
 
-    public function __construct(private Invoice $invoice) {}
+    public function __construct(
+        private Invoice $invoice,
+        private ?string $mailer = null,
+        private ?string $fromAddress = null,
+        private ?string $fromName = null,
+    ) {}
 
     public function via(object $notifiable): array
     {
@@ -24,7 +29,7 @@ class ClubInvoiceCreated extends Notification
         $clubName = $invoice->club?->name ?? 'deinem Verein';
         $club = $invoice->club;
 
-        return (new MailMessage)
+        $message = (new MailMessage)
             ->subject('Neue Rechnung von '.$clubName)
             ->greeting('Hallo '.$this->recipientName($notifiable).',')
             ->line('du hast eine neue Rechnung von '.$clubName.' erhalten.')
@@ -41,6 +46,16 @@ class ClubInvoiceCreated extends Notification
                 ->line('Verwendungszweck: '.($invoice->payment_reference ?: $invoice->number)))
             ->action('Rechnung ansehen', route('auth.club-memberships.index'))
             ->line('Bitte pruefe die Rechnung und begleiche sie fristgerecht.');
+
+        if ($this->mailer) {
+            $message->mailer($this->mailer);
+        }
+
+        if ($this->fromAddress) {
+            $message->from($this->fromAddress, $this->fromName ?: config('mail.from.name'));
+        }
+
+        return $message;
     }
 
     private function amount(Invoice $invoice): string

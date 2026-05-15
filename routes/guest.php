@@ -112,6 +112,8 @@ Route::get('/werbeagentur-für-vereine', fn () => Inertia::render('Guest/Werbeag
     'canRegister' => Route::has('register'),
 ]))->name('guest.werbeagentur');
 
+Route::post('/werbeagentur-fuer-vereine/anfrage', [CommerceCheckoutController::class, 'storePublicWebsiteRequest'])->name('guest.werbeagentur.request');
+
 Route::get('/e-learning', [PublicLearningController::class, 'index'])->name('guest.e-learning');
 Route::get('/e-learning/courses/{course}', [PublicLearningController::class, 'show'])->name('guest.learning.courses.show');
 

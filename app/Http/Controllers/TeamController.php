@@ -279,7 +279,7 @@ class TeamController extends Controller
             })
             ->with(['user:id,name,profile_photo_path', 'club:id,name'])
             ->withCount([
-                'comments' => fn ($query) => $query->where('moderation_status', '!=', 'removed'),
+                'comments' => fn ($query) => $query->where('moderation_status', 'approved'),
                 'likes',
             ])
             ->latest('id')

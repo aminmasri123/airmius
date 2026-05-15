@@ -30,6 +30,7 @@ use App\Http\Controllers\SportIntegrationController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\SubscriptionInvoiceController;
 use App\Http\Controllers\SubscriptionPlanController;
+use App\Http\Controllers\TrainingController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserBadgeController;
 use App\Http\Controllers\UserSettingsController;
@@ -47,6 +48,13 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('auth.dashboard');
     Route::get('/workspaces', [RoleWorkspaceController::class, 'index'])->name('auth.workspaces.index');
+    Route::get('/training', [TrainingController::class, 'index'])->name('auth.training.index');
+    Route::post('/training/activities', [TrainingController::class, 'storeActivity'])->name('auth.training.activities.store');
+    Route::post('/training/plans', [TrainingController::class, 'storePlan'])->name('auth.training.plans.store');
+    Route::put('/training/plans/{plan}', [TrainingController::class, 'updatePlan'])->name('auth.training.plans.update');
+    Route::post('/training/plans/{plan}/publish', [TrainingController::class, 'publishPlan'])->name('auth.training.plans.publish');
+    Route::delete('/training/plans/{plan}', [TrainingController::class, 'destroyPlan'])->name('auth.training.plans.destroy');
+    Route::post('/training/plans/{plan}/items', [TrainingController::class, 'storePlanItem'])->name('auth.training.plans.items.store');
 
     // PROFILE
     Route::get('/users/{user}', [UserController::class, 'show'])->name('auth.users.show');
@@ -127,6 +135,14 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
         ->name('auth.sport-integrations.sync');
     Route::delete('/settings/sport-integrations/{account}', [SportIntegrationController::class, 'destroy'])
         ->name('auth.sport-integrations.destroy');
+    Route::post('/settings/sport-activities', [SportIntegrationController::class, 'storeActivity'])
+        ->name('auth.sport-activities.store');
+    Route::delete('/settings/sport-activities', [SportIntegrationController::class, 'destroyActivities'])
+        ->name('auth.sport-activities.destroy-all');
+    Route::put('/settings/sport-activities/{activity}', [SportIntegrationController::class, 'updateActivity'])
+        ->name('auth.sport-activities.update');
+    Route::delete('/settings/sport-activities/{activity}', [SportIntegrationController::class, 'destroyActivity'])
+        ->name('auth.sport-activities.destroy');
     Route::get('/search', GlobalSearchController::class)->name('auth.search');
 
 

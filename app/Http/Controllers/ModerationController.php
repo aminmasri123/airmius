@@ -27,8 +27,18 @@ class ModerationController extends Controller
                 ->limit(80)
                 ->get()
                 ->map(fn (ContentReport $report) => $this->reportPayload($report)),
+            'warnings' => AccountWarning::query()
+                ->with(['user:id,name,email,account_status,suspended_until', 'flag'])
+                ->latest()
+                ->limit(100)
+                ->get()
+                ->map(fn (AccountWarning $warning) => $this->warningPayload($warning)),
             'warningSummary' => [
                 'warnings_90_days' => AccountWarning::query()->where('created_at', '>=', now()->subDays(90))->count(),
+                'users_with_warnings_90_days' => AccountWarning::query()
+                    ->where('created_at', '>=', now()->subDays(90))
+                    ->distinct('user_id')
+                    ->count('user_id'),
                 'suspended_users' => \App\Models\User::query()->where('account_status', 'suspended')->count(),
             ],
         ]);
@@ -117,6 +127,25 @@ class ModerationController extends Controller
             'created_at' => $report->created_at,
             'reporter' => $report->reporter,
             'content' => $this->contentPayload($report->reportable),
+        ];
+    }
+
+    private function warningPayload(AccountWarning $warning): array
+    {
+        return [
+            'id' => $warning->id,
+            'severity' => $warning->severity,
+            'points' => $warning->points,
+            'reason' => $warning->reason,
+            'created_at' => $warning->created_at,
+            'user' => $warning->user,
+            'flag' => $warning->flag ? [
+                'id' => $warning->flag->id,
+                'categories' => $warning->flag->categories ?: [],
+                'matched_terms' => $warning->flag->matched_terms ?: [],
+                'status' => $warning->flag->status,
+                'automated_action' => $warning->flag->automated_action,
+            ] : null,
         ];
     }
 

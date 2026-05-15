@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Notifications\ClubInvoiceCreated;
 use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
+use App\Support\TransactionalMail;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -102,7 +103,26 @@ class GenerateRecurringContributionInvoices extends Command
                 $recipient = User::query()->find((int) $membership->user_id);
 
                 if ($recipient?->email) {
-                    $recipient->notify(new ClubInvoiceCreated($invoice->loadMissing('club')));
+                    $mailer = app(TransactionalMail::class);
+
+                    $mailer->notifyWithFallback(
+                        $recipient,
+                        fn (array $transport) => new ClubInvoiceCreated(
+                            $invoice->loadMissing('club'),
+                            $transport['mailer'],
+                            $transport['address'],
+                            $transport['name'],
+                        ),
+                        $mailer->invoicePrimaryCategory(),
+                        $mailer->invoiceFallbackCategory(),
+                        'recurring-contribution.invoice.created:'.$invoice->id.':'.$recipient->id,
+                        (int) config('airmius_mail.throttle_seconds.invoice_created', 21600),
+                        [
+                            'mail_type' => 'recurring_contribution.invoice.created',
+                            'invoice_id' => $invoice->id,
+                            'recipient_id' => $recipient->id,
+                        ],
+                    );
                 }
 
                 $this->advanceMembership($membership, $dueDate);

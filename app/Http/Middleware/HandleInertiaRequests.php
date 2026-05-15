@@ -265,6 +265,7 @@ class HandleInertiaRequests extends Middleware
             'blog.create' => $user->can('blog.create'),
             'blog.update' => $user->can('blog.update'),
             'blog.delete' => $user->can('blog.delete'),
+            'blog.manage' => $user->can('blog.manage'),
 
             'payments.view' => $user->can('billing.manage'),
             'invoices.view' => $user->can('billing.manage'),
@@ -274,6 +275,7 @@ class HandleInertiaRequests extends Middleware
             'sponsors.view' => $user->can('finance.view') || $user->can('org.manage'),
             'system.manage' => $user->can('system.manage'),
             'admin.moderation.view' => $user->can('system.manage'),
+            'admin.mail-center.view' => $user->can('system.manage'),
             'admin.settings.view' => $user->can('system.manage'),
         ];
     }

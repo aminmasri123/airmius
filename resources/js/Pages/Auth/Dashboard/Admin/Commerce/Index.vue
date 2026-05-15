@@ -2234,8 +2234,9 @@ const updatePayoutProfile = (profile, status) => {
                     <tbody class="divide-y divide-border">
                         <tr v-for="request in websiteRequests" :key="request.id">
                             <td class="px-5 py-3">
-                                <p class="font-semibold text-primary">{{ request.club?.name || 'Ohne Verein' }}</p>
-                                <p class="text-xs text-secondary">{{ request.user?.email || '-' }}</p>
+                                <p class="font-semibold text-primary">{{ request.club?.name || request.club_name || 'Ohne Verein' }}</p>
+                                <p class="text-xs text-secondary">{{ request.user?.email || request.guest_email || '-' }}</p>
+                                <p v-if="request.guest_name" class="text-xs text-secondary">{{ request.guest_name }}</p>
                             </td>
                             <td class="px-5 py-3 text-secondary">{{ request.domain || '-' }}</td>
                             <td class="px-5 py-3 text-secondary">{{ request.status }}</td>

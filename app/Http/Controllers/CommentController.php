@@ -47,7 +47,11 @@ class CommentController extends Controller
             'user_id' => auth()->id(),
             'content' => $data['content'],
         ]);
-        $this->moderation->flagIfNeeded($comment, $comment->content, auth()->id());
+        $flag = $this->moderation->flagIfNeeded($comment, $comment->content, auth()->id());
+
+        if ($flag) {
+            return back()->with('success', 'Kommentar wurde zur Moderation eingereicht.');
+        }
 
         if ($post->user_id !== auth()->id()) {
             AppNotification::send($post->user_id, 'post.comment', [
@@ -104,8 +108,16 @@ class CommentController extends Controller
             'content' => ['required', 'string', 'max:1500'],
         ]);
 
-        $comment->update($data);
-        $this->moderation->flagIfNeeded($comment, $comment->content, auth()->id());
+        $comment->forceFill([
+            ...$data,
+            'moderation_status' => 'approved',
+        ])->save();
+
+        $flag = $this->moderation->flagIfNeeded($comment, $comment->content, auth()->id());
+
+        if ($flag) {
+            return back()->with('success', 'Kommentar wurde zur Moderation eingereicht.');
+        }
 
         return back()->with('success', 'Kommentar aktualisiert.');
     }

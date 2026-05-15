@@ -12,6 +12,10 @@ class WebsiteRequest extends Model
     protected $fillable = [
         'user_id',
         'club_id',
+        'guest_name',
+        'guest_email',
+        'guest_phone',
+        'club_name',
         'status',
         'package',
         'domain',
