@@ -4,6 +4,7 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
 import { useI18n } from 'vue-i18n'
+import { confirmDialog } from '@/services/dialogService'
 
 const props = defineProps({
     profileUser: Object,
@@ -75,8 +76,15 @@ const sendMessage = () => {
     })
 }
 
-const blockUser = () => {
-    if (!window.confirm(`${props.profileUser.name} blockieren? Bestehende Freundschaften und offene Anfragen werden entfernt.`)) {
+const blockUser = async () => {
+    const confirmed = await confirmDialog({
+        title: 'Nutzer blockieren',
+        message: `${props.profileUser.name} blockieren? Bestehende Freundschaften und offene Anfragen werden entfernt.`,
+        confirmLabel: 'Blockieren',
+        danger: true,
+    })
+
+    if (!confirmed) {
         return
     }
 
@@ -121,8 +129,15 @@ const acceptFriendRequest = () => {
     })
 }
 
-const removeFriend = () => {
-    if (!window.confirm(`Freundschaft mit ${props.profileUser.name} beenden?`)) {
+const removeFriend = async () => {
+    const confirmed = await confirmDialog({
+        title: 'Freundschaft beenden',
+        message: `Möchtest du die Freundschaft mit ${props.profileUser.name} wirklich beenden?`,
+        confirmLabel: 'Beenden',
+        danger: true,
+    })
+
+    if (!confirmed) {
         return
     }
 

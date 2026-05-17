@@ -3,6 +3,7 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { confirmDialog } from '@/services/dialogService'
 
 defineOptions({ layout: AppLayout })
 
@@ -339,10 +340,17 @@ const savePlan = (plan) => {
     })
 }
 
-const destroyPlan = (plan) => {
-    if (confirm('Plan wirklich loeschen oder deaktivieren?')) {
-        router.delete(route('admin.outfit-subscription-plans.destroy', plan.id), { preserveScroll: true })
-    }
+const destroyPlan = async (plan) => {
+    const confirmed = await confirmDialog({
+        title: 'Plan löschen oder deaktivieren',
+        message: `Soll der Plan "${plan.name}" wirklich gelöscht oder deaktiviert werden?`,
+        confirmLabel: 'Fortfahren',
+        danger: true,
+    })
+
+    if (!confirmed) return
+
+    router.delete(route('admin.outfit-subscription-plans.destroy', plan.id), { preserveScroll: true })
 }
 
 const formForDelivery = (delivery) => {
@@ -514,8 +522,16 @@ const remindPayment = (subscription) => {
     })
 }
 
-const markPaymentOpen = (subscription) => {
-    if (!subscription || !confirm('Dieses laufende Abo als offene Zahlung markieren? Danach startet die Mahnlogik automatisch.')) return
+const markPaymentOpen = async (subscription) => {
+    if (!subscription) return
+
+    const confirmed = await confirmDialog({
+        title: 'Zahlung als offen markieren',
+        message: 'Dieses laufende Abo als offene Zahlung markieren? Danach startet die Mahnlogik automatisch.',
+        confirmLabel: 'Als offen markieren',
+    })
+
+    if (!confirmed) return
 
     router.post(route('admin.outfit-subscriptions.mark-unpaid', subscription.id), {}, {
         preserveScroll: true,
@@ -1349,10 +1365,10 @@ const deleteSubscription = () => {
                 <div class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-2xl">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-red-300">Outfit-Abo lÃ¶schen</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-red-300">Outfit-Abo löschen</p>
                             <h2 class="mt-1 text-xl font-bold text-primary">{{ deleteSubscriptionModal.subscription?.plan?.name }}</h2>
                             <p class="mt-2 text-sm leading-6 text-secondary">
-                                Das Abo von {{ deleteSubscriptionModal.subscription?.user?.name || 'diesem Kunden' }} wird dauerhaft entfernt. ZugehÃ¶rige Lieferungen werden ebenfalls gelÃ¶scht.
+                            Das Abo von {{ deleteSubscriptionModal.subscription?.user?.name || 'diesem Kunden' }} wird dauerhaft entfernt. Zugehörige Lieferungen werden ebenfalls gelöscht.
                             </p>
                         </div>
                         <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="closeDeleteSubscriptionModal">
@@ -1361,7 +1377,7 @@ const deleteSubscription = () => {
                     </div>
 
                     <label class="mt-4 block">
-                        <span class="text-sm font-semibold text-primary">Zur BestÃ¤tigung delete eingeben</span>
+                            <span class="text-sm font-semibold text-primary">Zur Bestätigung delete eingeben</span>
                         <input
                             v-model="deleteSubscriptionModal.confirmation"
                             class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"
@@ -1379,7 +1395,7 @@ const deleteSubscription = () => {
                             :disabled="deleteSubscriptionModal.confirmation !== 'delete'"
                             @click="deleteSubscription"
                         >
-                            EndgÃ¼ltig lÃ¶schen
+                            Endgültig löschen
                         </button>
                     </div>
                 </div>

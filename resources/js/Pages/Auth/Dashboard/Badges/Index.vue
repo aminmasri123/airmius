@@ -2,6 +2,7 @@
 import { reactive } from 'vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import { confirmDialog } from '@/services/dialogService'
 
 defineOptions({ layout: AppLayout })
 
@@ -62,8 +63,16 @@ const updateBadge = (badge) => {
     })
 }
 
-const deleteBadge = (badge) => {
-    if (!window.confirm(`${badge.name} loeschen?`)) return
+const deleteBadge = async (badge) => {
+    const confirmed = await confirmDialog({
+        title: 'Badge löschen',
+        message: `Soll der Badge "${badge.name}" wirklich gelöscht werden?`,
+        confirmLabel: 'Löschen',
+        danger: true,
+    })
+
+    if (!confirmed) return
+
     router.delete(route('admin.badges.destroy', badge.id), { preserveScroll: true })
 }
 </script>

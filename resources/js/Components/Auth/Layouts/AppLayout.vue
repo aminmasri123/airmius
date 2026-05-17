@@ -382,7 +382,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                                     </div>
 
                                     <div v-else-if="searchLoading" class="p-4 text-sm text-secondary">
-                                        Suche lÃ¤uft...
+                        Suche läuft...
                                     </div>
 
                                     <div v-else-if="searchResults.length">

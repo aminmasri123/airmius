@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
+import { confirmDialog } from '@/services/dialogService'
 
 defineOptions({ layout: AppLayout })
 
@@ -106,8 +107,15 @@ const decline = (invitation) => {
     })
 }
 
-const removeFriend = (friend) => {
-    if (!window.confirm(`Freundschaft mit ${friend.name} beenden?`)) {
+const removeFriend = async (friend) => {
+    const confirmed = await confirmDialog({
+        title: 'Freundschaft beenden',
+        message: `Möchtest du die Freundschaft mit ${friend.name} wirklich beenden?`,
+        confirmLabel: 'Beenden',
+        danger: true,
+    })
+
+    if (!confirmed) {
         return
     }
 
@@ -122,8 +130,15 @@ const toggleFriendMenu = (friend) => {
     openFriendMenuId.value = openFriendMenuId.value === friend.id ? null : friend.id
 }
 
-const reportFriend = (friend) => {
-    if (!window.confirm(`${friend.name} melden? Die Meldung wird an die Moderation gesendet.`)) {
+const reportFriend = async (friend) => {
+    const confirmed = await confirmDialog({
+        title: 'Profil melden',
+        message: `${friend.name} melden? Die Meldung wird an die Moderation gesendet.`,
+        confirmLabel: 'Melden',
+        danger: true,
+    })
+
+    if (!confirmed) {
         return
     }
 

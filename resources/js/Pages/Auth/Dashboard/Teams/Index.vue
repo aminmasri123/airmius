@@ -1030,12 +1030,12 @@ const deleteJob = (job) => {
                 </div>
 
                 <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    <label v-show="activeClubEditTab(club) === 'basis'" class="block xl:col-span-2">
+                    <label v-if="activeClubEditTab(club) === 'basis'" class="block xl:col-span-2">
                         <span class="text-xs font-semibold uppercase text-secondary">Vereinsname</span>
                         <input v-model="clubEditFormFor(club).name" required class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </label>
 
-                    <label v-show="activeClubEditTab(club) === 'basis'" class="block">
+                    <label v-if="activeClubEditTab(club) === 'basis'" class="block">
                         <span class="text-xs font-semibold uppercase text-secondary">Sportart</span>
                         <SearchableSelect
                             v-model="clubEditFormFor(club).sport_type"
@@ -1048,7 +1048,7 @@ const deleteJob = (job) => {
                         />
                     </label>
 
-                    <label v-show="activeClubEditTab(club) === 'sichtbarkeit'" class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
+                    <label v-if="activeClubEditTab(club) === 'sichtbarkeit'" class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
                         <input
                             v-model="clubEditFormFor(club).is_listed"
                             type="checkbox"
@@ -1060,7 +1060,7 @@ const deleteJob = (job) => {
                         </span>
                     </label>
 
-                    <label v-show="activeClubEditTab(club) === 'sichtbarkeit'" class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
+                    <label v-if="activeClubEditTab(club) === 'sichtbarkeit'" class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
                         <input
                             v-model="clubEditFormFor(club).teams_are_listed"
                             type="checkbox"
@@ -1072,7 +1072,7 @@ const deleteJob = (job) => {
                         </span>
                     </label>
 
-                    <label v-show="activeClubEditTab(club) === 'sichtbarkeit'" class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
+                    <label v-if="activeClubEditTab(club) === 'sichtbarkeit'" class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
                         <input
                             v-model="clubEditFormFor(club).members_can_post_to_club"
                             type="checkbox"
@@ -1084,7 +1084,7 @@ const deleteJob = (job) => {
                         </span>
                     </label>
 
-                    <label v-show="activeClubEditTab(club) === 'sichtbarkeit'" class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
+                    <label v-if="activeClubEditTab(club) === 'sichtbarkeit'" class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-primary">
                         <input
                             v-model="clubEditFormFor(club).members_can_post_to_teams"
                             type="checkbox"
@@ -1096,7 +1096,7 @@ const deleteJob = (job) => {
                         </span>
                     </label>
 
-                    <label v-show="activeClubEditTab(club) === 'basis'" class="block xl:col-span-2">
+                    <label v-if="activeClubEditTab(club) === 'basis'" class="block xl:col-span-2">
                         <span class="text-xs font-semibold uppercase text-secondary">Vereinsnummer zur Pruefung</span>
                         <input
                             v-model="clubEditFormFor(club).official_club_number"
@@ -1108,7 +1108,7 @@ const deleteJob = (job) => {
                         </span>
                     </label>
 
-                    <label v-show="activeClubEditTab(club) === 'adresse'" class="block">
+                    <label v-if="activeClubEditTab(club) === 'adresse'" class="block">
                         <span class="text-xs font-semibold uppercase text-secondary">Land</span>
                         <select v-model="clubEditFormFor(club).country" required class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                             <option value="DE">Deutschland</option>
@@ -1122,32 +1122,32 @@ const deleteJob = (job) => {
                         </select>
                     </label>
 
-                    <label v-show="activeClubEditTab(club) === 'adresse'" class="block">
+                    <label v-if="activeClubEditTab(club) === 'adresse'" class="block">
                         <span class="text-xs font-semibold uppercase text-secondary">Stadt</span>
                         <input v-model="clubEditFormFor(club).city" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </label>
 
-                    <label v-show="activeClubEditTab(club) === 'adresse'" class="block">
+                    <label v-if="activeClubEditTab(club) === 'adresse'" class="block">
                         <span class="text-xs font-semibold uppercase text-secondary">PLZ</span>
                         <input v-model="clubEditFormFor(club).postal_code" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </label>
 
-                    <label v-show="activeClubEditTab(club) === 'adresse'" class="block">
+                    <label v-if="activeClubEditTab(club) === 'adresse'" class="block">
                         <span class="text-xs font-semibold uppercase text-secondary">Region</span>
                         <input v-model="clubEditFormFor(club).state" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </label>
 
-                    <label v-show="activeClubEditTab(club) === 'adresse'" class="block">
+                    <label v-if="activeClubEditTab(club) === 'adresse'" class="block">
                         <span class="text-xs font-semibold uppercase text-secondary">Strasse</span>
                         <input v-model="clubEditFormFor(club).street" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </label>
 
-                    <label v-show="activeClubEditTab(club) === 'adresse'" class="block">
+                    <label v-if="activeClubEditTab(club) === 'adresse'" class="block">
                         <span class="text-xs font-semibold uppercase text-secondary">Hausnummer</span>
                         <input v-model="clubEditFormFor(club).house_number" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </label>
 
-                    <div v-show="activeClubEditTab(club) === 'bank'" class="rounded-lg border border-border bg-card p-3 md:col-span-2 xl:col-span-3">
+                    <div v-if="activeClubEditTab(club) === 'bank'" class="rounded-lg border border-border bg-card p-3 md:col-span-2 xl:col-span-3">
                         <p class="text-xs font-semibold uppercase text-secondary">Bankkonto fuer Mitglieder-Ueberweisungen</p>
                         <p class="mt-1 text-xs text-secondary">
                             Diese Daten werden Mitgliedern bei offenen Vereinsrechnungen angezeigt.
@@ -1180,7 +1180,7 @@ const deleteJob = (job) => {
                         </div>
                     </div>
 
-                    <div v-show="activeClubEditTab(club) === 'sponsoren'" class="space-y-4 rounded-lg border border-border bg-card p-3 md:col-span-2 xl:col-span-3">
+                    <div v-if="activeClubEditTab(club) === 'sponsoren'" class="space-y-4 rounded-lg border border-border bg-card p-3 md:col-span-2 xl:col-span-3">
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                                 <p class="text-xs font-semibold uppercase text-secondary">Vereins-Sponsoren</p>
@@ -1957,7 +1957,7 @@ const deleteJob = (job) => {
                         {{ clubModalNotice }}
                     </div>
 
-                    <section v-show="clubCreateStep === 1" class="space-y-4">
+                    <section v-if="clubCreateStep === 1" class="space-y-4">
                         <div>
                             <h3 class="text-base font-semibold text-primary">
                                 Basisdaten
@@ -2049,7 +2049,7 @@ const deleteJob = (job) => {
                         </div>
                     </section>
 
-                    <section v-show="clubCreateStep === 2" class="space-y-4">
+                    <section v-if="clubCreateStep === 2" class="space-y-4">
                         <div>
                             <h3 class="text-base font-semibold text-primary">
                                 Adresse & Bankkonto
@@ -2105,7 +2105,7 @@ const deleteJob = (job) => {
                         </div>
                     </section>
 
-                    <section v-show="clubCreateStep === 3" class="space-y-4">
+                    <section v-if="clubCreateStep === 3" class="space-y-4">
                         <div>
                             <h3 class="text-base font-semibold text-primary">
                                 Prüfen

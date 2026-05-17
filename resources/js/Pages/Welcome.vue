@@ -586,7 +586,7 @@ const onBannerSecondaryCtaClick = () => {
                 </div>
 
                 <!-- Sportler: 2 Spalten mobil -->
-                <div v-show="activeTab === 'sportler'" id="tabpanel-sportler" role="tabpanel" aria-labelledby="tab-sportler"
+                <div v-if="activeTab === 'sportler'" id="tabpanel-sportler" role="tabpanel" aria-labelledby="tab-sportler"
                     class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
                         <div
@@ -703,7 +703,7 @@ const onBannerSecondaryCtaClick = () => {
                 </div>
 
                 <!-- Trainer: 1 Spalte mobil -->
-                <div v-show="activeTab === 'trainer'" id="tabpanel-trainer" role="tabpanel" aria-labelledby="tab-trainer"
+                <div v-if="activeTab === 'trainer'" id="tabpanel-trainer" role="tabpanel" aria-labelledby="tab-trainer"
                     class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
                         <div
@@ -773,7 +773,7 @@ const onBannerSecondaryCtaClick = () => {
                 </div>
 
                 <!-- Vereine: 1 Spalte mobil -->
-                <div v-show="activeTab === 'vereine'" id="tabpanel-vereine" role="tabpanel" aria-labelledby="tab-vereine"
+                <div v-if="activeTab === 'vereine'" id="tabpanel-vereine" role="tabpanel" aria-labelledby="tab-vereine"
                     class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
                         <div

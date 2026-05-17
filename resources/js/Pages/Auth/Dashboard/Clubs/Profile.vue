@@ -3,6 +3,7 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { ref } from 'vue'
+import { confirmDialog } from '@/services/dialogService'
 
 const props = defineProps({
     clubProfile: Object,
@@ -104,8 +105,13 @@ const requestPause = () => {
     })
 }
 
-const leaveClub = () => {
-    const confirmed = window.confirm(`Verein "${props.clubProfile.name}" wirklich verlassen? Du wirst auch aus allen Teams dieses Vereins entfernt. Das ist nur moeglich, wenn keine offenen Rechnungen bestehen.`)
+const leaveClub = async () => {
+    const confirmed = await confirmDialog({
+        title: 'Verein verlassen',
+        message: `Möchtest du den Verein "${props.clubProfile.name}" wirklich verlassen? Du wirst auch aus allen Teams dieses Vereins entfernt. Das ist nur möglich, wenn keine offenen Rechnungen bestehen.`,
+        confirmLabel: 'Verlassen',
+        danger: true,
+    })
 
     if (!confirmed) return
 

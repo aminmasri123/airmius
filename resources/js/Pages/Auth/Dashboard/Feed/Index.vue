@@ -777,7 +777,7 @@ const visitPage = (url) => url && router.visit(url, {
                         class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white"
                         @click="confirmDeleteComment"
                     >
-                        Kommentar lÃ¶schen
+                                Kommentar löschen
                     </button>
                 </div>
             </div>

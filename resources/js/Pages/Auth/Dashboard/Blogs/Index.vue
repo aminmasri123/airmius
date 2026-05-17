@@ -2,6 +2,7 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { computed, nextTick, ref } from 'vue'
+import { confirmDialog, promptDialog } from '@/services/dialogService'
 
 defineOptions({ layout: AppLayout })
 
@@ -209,8 +210,15 @@ const setEditorDirection = (direction) => {
     syncEditor()
 }
 
-const createLink = () => {
-    const url = window.prompt('Link einfuegen, z. B. https://airmius.com')
+const createLink = async () => {
+    const url = await promptDialog({
+        title: 'Link einfügen',
+        message: 'Füge die vollständige URL ein, die im Artikel verlinkt werden soll.',
+        inputLabel: 'URL',
+        placeholder: 'https://airmius.com',
+        confirmLabel: 'Einfügen',
+        required: true,
+    })
 
     if (!url) return
 
@@ -229,12 +237,24 @@ const selectContentImage = () => {
     contentImageInput.value?.click()
 }
 
-const uploadContentImage = (event) => {
+const uploadContentImage = async (event) => {
     const file = event.target.files?.[0] || null
 
     if (!file) return
 
-    const alt = window.prompt('Bildbeschreibung / Alt-Text', file.name.replace(/\.[^.]+$/, '')) || ''
+    const alt = await promptDialog({
+        title: 'Bildbeschreibung',
+        message: 'Der Alt-Text hilft bei Barrierefreiheit und SEO.',
+        inputLabel: 'Alt-Text',
+        defaultValue: file.name.replace(/\.[^.]+$/, ''),
+        confirmLabel: 'Bild hochladen',
+    })
+
+    if (alt === null) {
+        if (contentImageInput.value) contentImageInput.value.value = null
+        return
+    }
+
     const payload = new FormData()
     payload.append('image', file)
     payload.append('alt', alt)
@@ -355,8 +375,15 @@ const submit = () => {
     form.post(route('blogs.store'), options)
 }
 
-const destroyPost = (post) => {
-    if (!confirm(`Blogbeitrag "${post.title}" wirklich löschen?`)) {
+const destroyPost = async (post) => {
+    const confirmed = await confirmDialog({
+        title: 'Blogbeitrag löschen',
+        message: `Soll der Blogbeitrag "${post.title}" wirklich gelöscht werden?`,
+        confirmLabel: 'Löschen',
+        danger: true,
+    })
+
+    if (!confirmed) {
         return
     }
 

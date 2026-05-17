@@ -1122,7 +1122,7 @@ const resetFilters = () => {
                     <!-- Modal Body -->
                     <form class="min-h-0 flex-1 overflow-y-auto p-4" @submit.prevent="submit">
                         <!-- STEP 1 -->
-                        <section v-show="createStep === 1" class="space-y-4">
+                        <section v-if="createStep === 1" class="space-y-4">
                             <div>
                                 <h3 class="text-base font-semibold text-primary">
                                     Basisdaten
@@ -1241,7 +1241,7 @@ const resetFilters = () => {
                         </section>
 
                         <!-- STEP 2 -->
-                        <section v-show="createStep === 2" class="space-y-4">
+                        <section v-if="createStep === 2" class="space-y-4">
                             <div>
                                 <h3 class="text-base font-semibold text-primary">
                                     Zeit
@@ -1300,7 +1300,7 @@ const resetFilters = () => {
                         </section>
 
                         <!-- STEP 3 -->
-                        <section v-show="createStep === 3" class="space-y-4">
+                        <section v-if="createStep === 3" class="space-y-4">
                             <div>
                                 <h3 class="text-base font-semibold text-primary">
                                     Details & Wiederholung
@@ -1442,7 +1442,7 @@ const resetFilters = () => {
                         </section>
 
                         <!-- STEP 4 -->
-                        <section v-show="createStep === 4" class="space-y-4">
+                        <section v-if="createStep === 4" class="space-y-4">
                             <div>
                                 <h3 class="text-base font-semibold text-primary">
                                     Prüfen

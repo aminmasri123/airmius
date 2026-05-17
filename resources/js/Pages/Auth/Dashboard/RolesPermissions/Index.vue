@@ -3,6 +3,7 @@ import { Head, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { confirmDialog } from '@/services/dialogService'
 
 const props = defineProps({
     roles: {
@@ -85,10 +86,17 @@ const createPermission = () => {
     })
 }
 
-const deleteRole = () => {
+const deleteRole = async () => {
     if (!selectedRole.value || selectedRole.value.is_system) return
 
-    if (!window.confirm(t('roles.confirm_delete', { role: selectedRole.value.name }))) return
+    const confirmed = await confirmDialog({
+        title: 'Rolle löschen',
+        message: t('roles.confirm_delete', { role: selectedRole.value.name }),
+        confirmLabel: 'Löschen',
+        danger: true,
+    })
+
+    if (!confirmed) return
 
     router.delete(route('roles.destroy', selectedRole.value.id), {
         preserveScroll: true,

@@ -22,6 +22,7 @@ const rtlLocales = ['ar'];
 const autoTranslatedTextNodes = new WeakMap();
 const autoTranslatedAttributes = new WeakMap();
 const autoTranslateAttributes = ['placeholder', 'title', 'aria-label', 'alt'];
+let autoTranslationTouched = false;
 
 const applyDocumentLocale = (locale) => {
     const normalizedLocale = locale || 'de';
@@ -68,6 +69,11 @@ const autoTranslateVisibleText = (root, i18n) => {
     }
 
     const locale = i18n.global.locale.value || 'de';
+
+    if (locale === 'de' && !autoTranslationTouched) {
+        return;
+    }
+
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
         acceptNode(node) {
             const parent = node.parentElement;
@@ -115,11 +121,19 @@ const autoTranslateVisibleText = (root, i18n) => {
             element.setAttribute(attribute, locale === 'de' ? originals[attribute] : translated);
         });
     });
+
+    autoTranslationTouched = locale !== 'de';
 };
 
 const installAutoTranslation = (root, i18n) => {
     let pending = false;
     const run = () => {
+        const locale = i18n.global.locale.value || 'de';
+
+        if (locale === 'de' && !autoTranslationTouched) {
+            return;
+        }
+
         if (pending) {
             return;
         }

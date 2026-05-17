@@ -3,6 +3,7 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { centsToMajor, majorToCents, moneyInputAttrs, transformMoneyFields } from '@/utils/currency'
+import { confirmDialog } from '@/services/dialogService'
 
 defineOptions({ layout: AppLayout })
 
@@ -1316,9 +1317,16 @@ const openPurchaseDetails = (purchase) => {
     }
 }
 
-const cancelOrder = (order) => {
+const cancelOrder = async (order) => {
     if (!orderCanCancel(order)) return
-    if (!confirm('Bestellung wirklich stornieren? Das ist nur moeglich, solange sie noch nicht versendet wurde.')) return
+    const confirmed = await confirmDialog({
+        title: 'Bestellung stornieren',
+        message: 'Bestellung wirklich stornieren? Das ist nur möglich, solange sie noch nicht versendet wurde.',
+        confirmLabel: 'Stornieren',
+        danger: true,
+    })
+
+    if (!confirmed) return
 
     router.post(route('auth.commerce.orders.cancel', order.id), {}, {
         preserveScroll: true,
@@ -1373,7 +1381,7 @@ onMounted(() => {
             </div>
         </section>
 
-        <section v-show="activeTab === 'cart'" class="surface-card overflow-hidden">
+        <section v-if="activeTab === 'cart'" class="surface-card overflow-hidden">
             <div class="border-b border-border bg-card p-5">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -1450,7 +1458,7 @@ onMounted(() => {
             </div>
         </section>
 
-        <section v-show="activeTab === 'shop'" class="surface-card p-5">
+        <section v-if="activeTab === 'shop'" class="surface-card p-5">
             <div class="mb-5 flex gap-2 overflow-x-auto">
                 <button
                     v-for="category in shopCategoryTabs"
@@ -1490,7 +1498,7 @@ onMounted(() => {
             </div>
         </section>
 
-        <section v-show="activeTab === 'shop' && showAccountShop" class="grid gap-5 lg:grid-cols-3">
+        <section v-if="activeTab === 'shop' && showAccountShop" class="grid gap-5 lg:grid-cols-3">
             <article v-for="plan in accountPlans" :key="plan.id" class="surface-card flex flex-col p-5">
                 <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Konto-Abo</p>
                 <div class="mt-1 flex items-start justify-between gap-3">
@@ -1555,7 +1563,7 @@ onMounted(() => {
             </article>
         </section>
 
-        <section v-show="activeTab === 'shop' && showProductShop" class="surface-card overflow-hidden">
+        <section v-if="activeTab === 'shop' && showProductShop" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
                 <h2 class="text-lg font-semibold text-primary">{{ visibleShopProductTitle }}</h2>
                 <p class="mt-1 text-sm text-secondary">{{ visibleShopProductDescription }}</p>
@@ -1587,7 +1595,7 @@ onMounted(() => {
             </div>
         </section>
 
-        <section v-show="activeTab === 'shop' && showOutfitShop" class="surface-card overflow-hidden">
+        <section v-if="activeTab === 'shop' && showOutfitShop" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
                 <h2 class="text-lg font-semibold text-primary">Sportkleidung-Abos</h2>
                 <p class="mt-1 text-sm text-secondary">Monatliche Outfit-Boxen mit Style-Profil, Lieferübersicht und optionalem Sponsor-Rabatt.</p>
@@ -1612,7 +1620,7 @@ onMounted(() => {
             </div>
         </section>
 
-        <section v-show="activeTab === 'create'" class="grid gap-6 xl:grid-cols-2">
+        <section v-if="activeTab === 'create'" class="grid gap-6 xl:grid-cols-2">
             <article class="surface-card p-5">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
@@ -2072,7 +2080,7 @@ onMounted(() => {
             </article>
         </section>
 
-        <section v-show="activeTab === 'payouts'" class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <section v-if="activeTab === 'payouts'" class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
             <article class="surface-card p-5">
                 <h2 class="text-lg font-semibold text-primary">Auszahlungsdaten</h2>
                 <p class="mt-1 text-sm text-secondary">Hinterlege IBAN oder PayPal, damit Airmius Marketplace-Erlöse nach Prüfung auszahlen kann.</p>
@@ -2157,7 +2165,7 @@ onMounted(() => {
             </aside>
         </section>
 
-        <section v-show="activeTab === 'ads'" class="grid gap-6 xl:grid-cols-[28rem_minmax(0,1fr)]">
+        <section v-if="activeTab === 'ads'" class="grid gap-6 xl:grid-cols-[28rem_minmax(0,1fr)]">
             <article class="surface-card p-5">
                 <p class="text-xs font-semibold uppercase text-air-blue">Schritt 1</p>
                 <h2 class="mt-1 text-lg font-semibold text-primary">Kampagne erstellen</h2>
@@ -2488,7 +2496,7 @@ onMounted(() => {
             </article>
         </section>
 
-        <section v-show="activeTab === 'invoices'" class="surface-card overflow-hidden">
+        <section v-if="activeTab === 'invoices'" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
                 <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Zentrale Uebersicht</p>
                 <h2 class="mt-1 text-lg font-semibold text-primary">Rechnungen und Einkaeufe</h2>
@@ -2537,7 +2545,7 @@ onMounted(() => {
             </div>
         </section>
 
-        <section v-show="activeTab === 'invoices'" class="surface-card overflow-hidden">
+        <section v-if="activeTab === 'invoices'" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
                 <h2 class="text-lg font-semibold text-primary">Bestellungen, Probleme und Ruecksendungen</h2>
                 <p class="mt-1 text-sm text-secondary">Fuer Marketplace-Bestellungen kannst du hier Rechnungen laden, Probleme melden und Ruecksendungen verfolgen.</p>
@@ -2594,7 +2602,7 @@ onMounted(() => {
             </div>
         </section>
 
-        <section v-show="activeTab === 'invoices'" class="surface-card overflow-hidden">
+        <section v-if="activeTab === 'invoices'" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
                 <h2 class="text-lg font-semibold text-primary">Meine Rücksendungen</h2>
             </div>

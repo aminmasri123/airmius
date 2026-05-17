@@ -54,13 +54,13 @@ const navItems = [
 
 <template>
     <nav id="nav" class="fixed top-0 left-0 w-full z-50 nav-blur border-b backdrop-blur">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
+        <div class="relative mx-auto flex h-16 max-w-7xl items-center px-4 sm:px-6">
             <button @click="scrollTo('hero')" class="flex items-center gap-2 font-heading font-900 text-xl tracking-tight">
                 <ApplicationLogo class="w-8 h-8" />
                 <span class="text-primary font-[--ubuntu]">AIRMIUS</span>
             </button>
 
-            <div class="hidden md:flex items-center gap-6 text-sm font-medium text-secondary">
+            <div class="absolute left-1/2 hidden -translate-x-1/2 items-center gap-6 text-sm font-medium text-secondary md:flex">
                 <button
                     v-for="[id, label] in navItems"
                     :key="id"
@@ -74,7 +74,7 @@ const navItems = [
                 </Link>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="ml-auto flex items-center gap-3">
                 <LanguageDropdown />
 
                 <Link

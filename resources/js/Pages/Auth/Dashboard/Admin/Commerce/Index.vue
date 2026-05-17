@@ -3,6 +3,7 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import { centsToMajor, majorToCents, moneyInputAttrs, transformMoneyFields } from '@/utils/currency'
+import { confirmDialog, promptDialog } from '@/services/dialogService'
 
 defineOptions({ layout: AppLayout })
 
@@ -705,7 +706,7 @@ const updateShippingRate = (rate) => {
     }, { preserveScroll: true })
 }
 
-const updateProductStatus = (product, status) => {
+const updateProductStatus = async (product, status) => {
     if (status === 'rejected') {
         rejectionModal.open = true
         rejectionModal.product = product
@@ -715,7 +716,11 @@ const updateProductStatus = (product, status) => {
     }
 
     if (status === 'published' && product.quality_issues?.length) {
-        const confirmed = window.confirm(`Dieses Produkt hat noch ${product.quality_issues.length} Qualitaetsproblem(e):\n\n${product.quality_issues.join('\n')}\n\nTrotzdem freigeben?`)
+        const confirmed = await confirmDialog({
+            title: 'Produkt trotzdem freigeben?',
+            message: `Dieses Produkt hat noch ${product.quality_issues.length} Qualitätsproblem(e):\n\n${product.quality_issues.join('\n')}\n\nTrotzdem freigeben?`,
+            confirmLabel: 'Trotzdem freigeben',
+        })
 
         if (!confirmed) {
             router.reload({ only: ['products'], preserveScroll: true })
@@ -810,12 +815,20 @@ const adjustGlobalStock = (product) => {
     })
 }
 
-const updateSellerApplication = (application, status) => {
+const updateSellerApplication = async (application, status) => {
     const reviewNote = status === 'rejected'
-        ? window.prompt('Ablehnungsgrund fuer den Shop-Antrag') || ''
+        ? await promptDialog({
+            title: 'Shop-Antrag ablehnen',
+            message: 'Bitte gib den Ablehnungsgrund ein. Diese Notiz wird für die Prüfung gespeichert.',
+            inputLabel: 'Ablehnungsgrund',
+            multiline: true,
+            required: true,
+            confirmLabel: 'Ablehnen',
+            danger: true,
+        })
         : ''
 
-    if (status === 'rejected' && !reviewNote.trim()) {
+    if (status === 'rejected' && (!reviewNote || !reviewNote.trim())) {
         return
     }
 
@@ -1209,7 +1222,7 @@ const updatePayoutProfile = (profile, status) => {
             </div>
         </section>
 
-        <section v-show="activeTab === 'settings'" class="grid gap-6 xl:grid-cols-3">
+        <section v-if="activeTab === 'settings'" class="grid gap-6 xl:grid-cols-3">
             <article class="surface-card p-5">
                 <div class="flex items-start justify-between gap-3">
                     <div>
@@ -1235,7 +1248,7 @@ const updatePayoutProfile = (profile, status) => {
             </article>
         </section>
 
-        <section v-show="activeTab === 'settings'" class="grid gap-6 xl:grid-cols-2">
+        <section v-if="activeTab === 'settings'" class="grid gap-6 xl:grid-cols-2">
             <article class="surface-card p-5 xl:col-span-2">
                 <div class="flex flex-col gap-1">
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">EU-Konformität</p>
@@ -1403,7 +1416,7 @@ const updatePayoutProfile = (profile, status) => {
             </article>
         </section>
 
-        <section v-show="activeTab === 'ad-prices'" class="grid gap-6 xl:grid-cols-3">
+        <section v-if="activeTab === 'ad-prices'" class="grid gap-6 xl:grid-cols-3">
             <article class="surface-card p-5 xl:col-span-2">
                 <div class="flex flex-col gap-1">
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Ads Abrechnung</p>
@@ -1519,7 +1532,7 @@ const updatePayoutProfile = (profile, status) => {
             </aside>
         </section>
 
-        <section v-show="activeTab === 'marketing'" class="grid gap-6 xl:grid-cols-2">
+        <section v-if="activeTab === 'marketing'" class="grid gap-6 xl:grid-cols-2">
             <article class="surface-card p-5">
                 <h2 class="text-lg font-semibold text-primary">Rabattcode erstellen</h2>
                 <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeCoupon">
@@ -1572,7 +1585,7 @@ const updatePayoutProfile = (profile, status) => {
             </article>
         </section>
 
-        <section v-show="activeTab === 'marketplace'" class="grid gap-6">
+        <section v-if="activeTab === 'marketplace'" class="grid gap-6">
             <article class="surface-card overflow-hidden">
                 <div class="border-b border-border p-5">
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Shop-Zugang</p>
@@ -1898,7 +1911,7 @@ const updatePayoutProfile = (profile, status) => {
             </article>
         </section>
 
-        <section v-show="activeTab === 'ads'" class="surface-card p-5">
+        <section v-if="activeTab === 'ads'" class="surface-card p-5">
             <h2 class="text-lg font-semibold text-primary">Ads-Kampagne erstellen</h2>
             <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeCampaign">
                     <div class="md:col-span-2 grid gap-3 rounded-lg border border-air-blue/30 bg-air-blue/10 p-3 sm:grid-cols-2">
@@ -2005,7 +2018,7 @@ const updatePayoutProfile = (profile, status) => {
             <p class="mt-4 text-sm text-secondary">{{ campaigns.length }} Kampagnen vorbereitet.</p>
         </section>
 
-        <section v-show="activeTab === 'marketplace'" class="surface-card p-5">
+        <section v-if="activeTab === 'marketplace'" class="surface-card p-5">
             <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Marketplace</p>
@@ -2099,7 +2112,7 @@ const updatePayoutProfile = (profile, status) => {
             </div>
         </section>
 
-        <section v-show="activeTab === 'ads'" class="surface-card overflow-hidden">
+        <section v-if="activeTab === 'ads'" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
                 <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Ads Reporting</p>
                 <h2 class="mt-1 text-lg font-semibold text-primary">Kampagnenleistung</h2>
@@ -2334,7 +2347,7 @@ const updatePayoutProfile = (profile, status) => {
             </div>
         </section>
 
-        <section v-show="activeTab === 'payouts'" class="surface-card overflow-hidden">
+        <section v-if="activeTab === 'payouts'" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
                 <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Marketplace</p>
                 <h2 class="mt-1 text-lg font-semibold text-primary">Auszahlungen</h2>
@@ -2423,7 +2436,7 @@ const updatePayoutProfile = (profile, status) => {
             </div>
         </section>
 
-        <section v-show="activeTab === 'orders'" class="surface-card overflow-hidden">
+        <section v-if="activeTab === 'orders'" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
                 <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">After Sales</p>
                 <h2 class="mt-1 text-lg font-semibold text-primary">Rücksendungen und Erstattungen</h2>
@@ -2455,7 +2468,7 @@ const updatePayoutProfile = (profile, status) => {
             </div>
         </section>
 
-        <section v-show="activeTab === 'orders'" class="surface-card overflow-hidden">
+        <section v-if="activeTab === 'orders'" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
                 <h2 class="text-lg font-semibold text-primary">Commerce-Bestellungen</h2>
                 <div v-if="reportedOrders.length" class="mt-4 rounded-lg border border-warning/30 bg-warning/10 p-4">
@@ -2525,7 +2538,7 @@ const updatePayoutProfile = (profile, status) => {
             </div>
         </section>
 
-        <section v-show="activeTab === 'reports'" class="grid gap-6 xl:grid-cols-2">
+        <section v-if="activeTab === 'reports'" class="grid gap-6 xl:grid-cols-2">
             <article class="surface-card overflow-hidden">
                 <div class="border-b border-border p-5">
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Verkäufer</p>
@@ -2566,7 +2579,7 @@ const updatePayoutProfile = (profile, status) => {
             </article>
         </section>
 
-        <section v-show="activeTab === 'orders'" class="surface-card overflow-hidden">
+        <section v-if="activeTab === 'orders'" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
                 <h2 class="text-lg font-semibold text-primary">Website-Anfragen</h2>
                 <p class="mt-1 text-sm text-secondary">Vereine, die eine Website von Airmius erstellen lassen möchten.</p>

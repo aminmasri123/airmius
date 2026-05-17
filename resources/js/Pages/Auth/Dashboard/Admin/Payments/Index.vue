@@ -1,6 +1,7 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
+import { confirmDialog } from '@/services/dialogService'
 
 defineOptions({ layout: AppLayout })
 
@@ -59,8 +60,19 @@ const userLabel = (user) => user.email
 
 const invoiceLabel = (invoice) => `${invoice.number || `#${invoice.id}`} - ${invoice.title || 'Rechnung'} (${invoice.amount})`
 
-const deletePayment = (payment) => {
-    if (!payment.delete_url || !window.confirm(`Zahlung #${payment.id} wirklich loeschen?`)) {
+const deletePayment = async (payment) => {
+    if (!payment.delete_url) {
+        return
+    }
+
+    const confirmed = await confirmDialog({
+        title: 'Zahlung löschen',
+        message: `Soll Zahlung #${payment.id} wirklich gelöscht werden?`,
+        confirmLabel: 'Löschen',
+        danger: true,
+    })
+
+    if (!confirmed) {
         return
     }
 

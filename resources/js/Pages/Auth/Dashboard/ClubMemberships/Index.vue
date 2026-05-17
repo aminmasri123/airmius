@@ -4,6 +4,7 @@ import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
 import Modal from '@/Components/Modal.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
+import { confirmDialog } from '@/services/dialogService'
 
 defineOptions({ layout: AppLayout })
 
@@ -418,10 +419,15 @@ const generateMemberNumber = (member) => {
     })
 }
 
-const removeMember = (member) => {
+const removeMember = async (member) => {
     if (!selectedClub.value) return
 
-    const confirmed = window.confirm(`${member.name} wirklich aus dem Verein entfernen? Die Person wird auch aus allen Teams dieses Vereins entfernt.`)
+    const confirmed = await confirmDialog({
+        title: 'Mitglied entfernen',
+        message: `${member.name} wirklich aus dem Verein entfernen? Die Person wird auch aus allen Teams dieses Vereins entfernt.`,
+        confirmLabel: 'Entfernen',
+        danger: true,
+    })
 
     if (!confirmed) return
 

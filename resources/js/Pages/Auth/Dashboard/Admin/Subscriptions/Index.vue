@@ -388,7 +388,7 @@ const markTransferPaid = (checkout) => {
                             {{ plan.user_subscriptions_count }} Nutzer
                         </span>
                         <span class="rounded-full bg-muted px-2 py-1 font-semibold text-secondary">
-                            {{ plan.country_prices?.length || 0 }} LÃ¤nderpreise
+                                    {{ plan.country_prices?.length || 0 }} Länderpreise
                         </span>
                     </div>
                 </div>
@@ -465,7 +465,7 @@ const markTransferPaid = (checkout) => {
                     <div class="rounded-lg border border-border bg-bg p-3">
                         <div class="flex items-center justify-between gap-3">
                             <div>
-                                <p class="text-xs font-semibold uppercase text-secondary">LÃ¤nderpreise</p>
+                            <p class="text-xs font-semibold uppercase text-secondary">Länderpreise</p>
                                 <p class="mt-1 text-xs text-secondary">Land, Währung und Preis pro Plan steuern.</p>
                             </div>
                             <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted" @click="addCountryPrice(plan)">
@@ -494,7 +494,7 @@ const markTransferPaid = (checkout) => {
                                 </div>
                             </div>
                             <p v-if="!formForPlan(plan).country_prices.length" class="text-xs text-secondary">
-                                Ohne LÃ¤nderpreis wird der Standardpreis des Plans verwendet.
+                            Ohne Länderpreis wird der Standardpreis des Plans verwendet.
                             </p>
                         </div>
                     </div>
@@ -699,8 +699,8 @@ const markTransferPaid = (checkout) => {
                                     <option value="trialing">Testphase</option>
                                     <option value="active">Aktiv</option>
                                     <option value="past_due">Zahlung offen</option>
-                                    <option value="cancels_at_period_end">GekÃ¼ndigt zum Ende</option>
-                                    <option value="cancelled">GekÃ¼ndigt</option>
+                                    <option value="cancels_at_period_end">Gekündigt zum Ende</option>
+                                    <option value="cancelled">Gekündigt</option>
                                 </select>
                                 <input v-model="formForUser(user).payment_provider" class="mt-2 min-w-44 rounded-lg border-border bg-inputBg text-xs text-primary" placeholder="Zahlungsart">
                             </td>
@@ -717,7 +717,7 @@ const markTransferPaid = (checkout) => {
                                         +1M
                                     </button>
                                     <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted disabled:opacity-50" :disabled="!subscriptionForUser(user)" @click="cancelUserSubscription(subscriptionForUser(user), 'period_end')">
-                                        KÃ¼ndigen
+                                    Kündigen
                                     </button>
                                     <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="formForUser(user).processing || !selectedUserPlans.length" @click="saveUser(user)">
                                         Speichern
@@ -732,7 +732,7 @@ const markTransferPaid = (checkout) => {
                     Keine Nutzer gefunden.
                 </p>
                 <p v-else-if="!selectedUserPlans.length" class="px-5 pb-5 text-sm text-warning">
-                    Fuer {{ actorLabels[selectedActor] }} sind noch keine Abo-PlÃ¤ne vorhanden.
+                    Fuer {{ actorLabels[selectedActor] }} sind noch keine Abo-Pläne vorhanden.
                 </p>
             </div>
         </section>

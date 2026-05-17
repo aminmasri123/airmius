@@ -3,6 +3,7 @@ import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import { majorToCents } from '@/utils/currency'
+import { confirmDialog } from '@/services/dialogService'
 
 defineOptions({ layout: AppLayout })
 
@@ -387,8 +388,17 @@ const moveLesson = (section, lesson, direction) => {
     }, { preserveScroll: true })
 }
 
-const deleteLesson = (lesson) => {
-    if (!props.selectedCourse || !window.confirm('Lektion wirklich loeschen?')) return
+const deleteLesson = async (lesson) => {
+    if (!props.selectedCourse) return
+
+    const confirmed = await confirmDialog({
+        title: 'Lektion löschen',
+        message: `Soll die Lektion "${lesson.title}" wirklich gelöscht werden?`,
+        confirmLabel: 'Löschen',
+        danger: true,
+    })
+
+    if (!confirmed) return
 
     router.delete(route('auth.learning.studio.lessons.destroy', [props.selectedCourse.id, lesson.id]), { preserveScroll: true })
 }
@@ -401,8 +411,17 @@ const createQuiz = () => {
     })
 }
 
-const deleteQuiz = (quiz) => {
-    if (!props.selectedCourse || !window.confirm('Quiz wirklich loeschen?')) return
+const deleteQuiz = async (quiz) => {
+    if (!props.selectedCourse) return
+
+    const confirmed = await confirmDialog({
+        title: 'Quiz löschen',
+        message: `Soll das Quiz "${quiz.title}" wirklich gelöscht werden?`,
+        confirmLabel: 'Löschen',
+        danger: true,
+    })
+
+    if (!confirmed) return
 
     router.delete(route('auth.learning.studio.quizzes.destroy', [props.selectedCourse.id, quiz.id]), { preserveScroll: true })
 }
@@ -431,8 +450,18 @@ const grantEnrollment = () => {
     })
 }
 
-const revokeEnrollment = (enrollment) => {
-    if (!props.selectedCourse || !window.confirm('Zugang wirklich deaktivieren?')) return
+const revokeEnrollment = async (enrollment) => {
+    if (!props.selectedCourse) return
+
+    const confirmed = await confirmDialog({
+        title: 'Zugang deaktivieren',
+        message: 'Soll der Zugang wirklich deaktiviert werden?',
+        confirmLabel: 'Deaktivieren',
+        danger: true,
+    })
+
+    if (!confirmed) return
+
     router.put(route('auth.learning.studio.enrollments.revoke', [props.selectedCourse.id, enrollment.id]), {}, { preserveScroll: true })
 }
 

@@ -2,6 +2,7 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
+import { confirmDialog } from '@/services/dialogService'
 
 defineOptions({ layout: AppLayout })
 
@@ -163,8 +164,19 @@ const statusOptions = [
     { value: 'cancelled', label: 'Storniert', hint: 'Rechnung ist nicht mehr aktiv.' },
 ]
 
-const deleteInvoice = (invoice) => {
-    if (!invoice.delete_url || !window.confirm(`Rechnung ${invoice.number || invoice.id} wirklich loeschen?`)) {
+const deleteInvoice = async (invoice) => {
+    if (!invoice.delete_url) {
+        return
+    }
+
+    const confirmed = await confirmDialog({
+        title: 'Rechnung löschen',
+        message: `Soll Rechnung ${invoice.number || invoice.id} wirklich gelöscht werden?`,
+        confirmLabel: 'Löschen',
+        danger: true,
+    })
+
+    if (!confirmed) {
         return
     }
 

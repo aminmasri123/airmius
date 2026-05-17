@@ -2,6 +2,7 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
+import { confirmDialog } from '@/services/dialogService'
 
 defineOptions({ layout: AppLayout })
 
@@ -51,8 +52,15 @@ const submit = () => {
     form.post(route('blog-categories.store'), options)
 }
 
-const destroyCategory = (category) => {
-    if (!confirm(`Kategorie "${category.name}" wirklich loeschen?`)) {
+const destroyCategory = async (category) => {
+    const confirmed = await confirmDialog({
+        title: 'Kategorie löschen',
+        message: `Soll die Kategorie "${category.name}" wirklich gelöscht werden?`,
+        confirmLabel: 'Löschen',
+        danger: true,
+    })
+
+    if (!confirmed) {
         return
     }
 
