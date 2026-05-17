@@ -26,6 +26,9 @@ const mediaInput = ref(null)
 const storyViewer = ref(null)
 const storyVideo = ref(null)
 const storyPaused = ref(false)
+const storyUploadNotice = ref(null)
+const storyUploading = ref(false)
+let storyUploadNoticeTimer = null
 
 const storyForm = useForm({
     visibility: props.visibilities.includes('public') ? 'public' : props.visibilities[0] || 'organization',
@@ -177,6 +180,10 @@ onBeforeUnmount(() => {
     if (mediaPreview.value) {
         URL.revokeObjectURL(mediaPreview.value)
     }
+
+    if (storyUploadNoticeTimer) {
+        window.clearTimeout(storyUploadNoticeTimer)
+    }
 })
 
 const openCreate = () => {
@@ -215,14 +222,45 @@ const handleMedia = (event) => {
     mediaPreview.value = file ? URL.createObjectURL(file) : null
 }
 
+const showStoryUploadNotice = (type, message) => {
+    storyUploadNotice.value = { type, message }
+
+    if (storyUploadNoticeTimer) {
+        window.clearTimeout(storyUploadNoticeTimer)
+    }
+
+    if (type !== 'info') {
+        storyUploadNoticeTimer = window.setTimeout(() => {
+            storyUploadNotice.value = null
+        }, 4200)
+    }
+}
+
 const submitStory = () => {
     if (!storyForm.media) return
+
+    storyForm.clearErrors()
 
     storyForm.post(route('auth.stories.store'), {
         forceFormData: true,
         preserveScroll: true,
-        only: ['stories', 'notificationCenter', 'auth', 'errors'],
-        onSuccess: closeCreate,
+        only: ['stories', 'notificationCenter', 'auth', 'flash', 'errors'],
+        onStart: () => {
+            storyUploading.value = true
+            showCreateModal.value = false
+            showStoryUploadNotice('info', 'Story wird hochgeladen...')
+        },
+        onSuccess: () => {
+            resetForm()
+            showStoryUploadNotice('success', 'Story wurde gepostet.')
+        },
+        onError: () => {
+            showCreateModal.value = true
+            showStoryUploadNotice('error', 'Story konnte nicht gepostet werden. Bitte pruefe die Felder.')
+        },
+        onFinish: () => {
+            storyUploading.value = false
+        },
     })
 }
 
@@ -444,6 +482,32 @@ const reactToStory = (reaction) => {
 
         <Teleport to="body">
             <div
+                v-if="storyUploadNotice"
+                role="status"
+                aria-live="polite"
+                class="fixed inset-x-3 top-4 z-[90] mx-auto flex max-w-sm items-center gap-3 rounded-xl border px-4 py-3 text-sm font-semibold shadow-xl backdrop-blur"
+                :class="storyUploadNotice.type === 'success'
+                    ? 'border-success/30 bg-success/95 text-white'
+                    : storyUploadNotice.type === 'error'
+                        ? 'border-error/30 bg-error/95 text-white'
+                        : 'border-border bg-card/95 text-primary'"
+            >
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15">
+                    <i
+                        :class="[
+                            storyUploadNotice.type === 'success'
+                                ? 'las la-check'
+                                : storyUploadNotice.type === 'error'
+                                    ? 'las la-exclamation-triangle'
+                                    : 'las la-spinner la-spin',
+                            'text-lg',
+                        ]"
+                    ></i>
+                </span>
+                <span>{{ storyUploadNotice.message }}</span>
+            </div>
+
+            <div
                 v-if="showCreateModal"
                 class="fixed inset-0 z-[70] flex items-end bg-black/70 sm:items-center sm:p-4"
                 @click.self="closeCreate"
@@ -558,7 +622,7 @@ const reactToStory = (reaction) => {
                         <button
                             type="submit"
                             class="rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50"
-                            :disabled="storyForm.processing || !hasMedia || (storyForm.visibility === 'organization' && !storyForm.club_id) || (storyForm.visibility === 'team' && !storyForm.team_id)"
+                            :disabled="storyUploading || storyForm.processing || !hasMedia || (storyForm.visibility === 'organization' && !storyForm.club_id) || (storyForm.visibility === 'team' && !storyForm.team_id)"
                         >
                             Story posten
                         </button>

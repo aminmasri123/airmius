@@ -72,7 +72,7 @@ class SportIntegrationController extends Controller
                     'display_name' => $definition['label'],
                     'status' => 'requested',
                     'scopes' => $definition['scopes'],
-                    'sync_summary' => ['message' => 'Verknuepfung vorgemerkt. Anbieterfreigabe/API-Zugang fehlt noch.'],
+                    'sync_summary' => ['message' => 'Verknuepfung vorgemerkt. Wir informieren dich, sobald dieser Anbieter freigeschaltet ist.'],
                 ],
             );
 

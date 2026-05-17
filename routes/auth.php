@@ -27,6 +27,7 @@ use App\Http\Controllers\ProfileGamificationController;
 use App\Http\Controllers\RideController;
 use App\Http\Controllers\RoleWorkspaceController;
 use App\Http\Controllers\SportIntegrationController;
+use App\Http\Controllers\SportMapController;
 use App\Http\Controllers\StoryController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\SubscriptionInvoiceController;
@@ -68,6 +69,16 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::put('/training/plans/{plan}/items/{item}', [TrainingController::class, 'updatePlanItem'])->name('auth.training.plans.items.update');
     Route::post('/training/plans/{plan}/items/{item}/duplicate', [TrainingController::class, 'duplicatePlanItem'])->name('auth.training.plans.items.duplicate');
     Route::delete('/training/plans/{plan}/items/{item}', [TrainingController::class, 'destroyPlanItem'])->name('auth.training.plans.items.destroy');
+    Route::get('/sport-map', [SportMapController::class, 'index'])->name('auth.sport-map.index');
+    Route::post('/sport-routes', [SportMapController::class, 'storeRoute'])->name('auth.sport-routes.store');
+    Route::put('/sport-routes/{sportRoute}', [SportMapController::class, 'updateRoute'])->name('auth.sport-routes.update');
+    Route::delete('/sport-routes/{sportRoute}', [SportMapController::class, 'destroyRoute'])->name('auth.sport-routes.destroy');
+    Route::post('/sport-tracks', [SportMapController::class, 'storeTrack'])->name('auth.sport-tracks.store');
+    Route::put('/sport-tracks/{sportRouteTrack}', [SportMapController::class, 'updateTrack'])->name('auth.sport-tracks.update');
+    Route::delete('/sport-tracks/{sportRouteTrack}', [SportMapController::class, 'destroyTrack'])->name('auth.sport-tracks.destroy');
+    Route::post('/sport-places', [SportMapController::class, 'storePlace'])->name('auth.sport-places.store');
+    Route::put('/sport-places/{sportPlace}', [SportMapController::class, 'updatePlace'])->name('auth.sport-places.update');
+    Route::delete('/sport-places/{sportPlace}', [SportMapController::class, 'destroyPlace'])->name('auth.sport-places.destroy');
 
     // PROFILE
     Route::get('/users/{user}', [UserController::class, 'show'])->name('auth.users.show');

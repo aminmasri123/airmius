@@ -121,6 +121,7 @@ const closeSidebar = () => {
             <NavItem v-if="can('file.index')" @navigate="closeSidebar" :href="route('auth.files.index')" label="Dateien" icon="las la-folder-open" />
             <NavItem v-if="can('event.index')" @navigate="closeSidebar" :href="route('auth.events.index')" label="Events & Training" icon="las la-calendar" />
             <NavItem @navigate="closeSidebar" :href="route('auth.training.index')" label="Trainingspläne" icon="las la-clipboard-list" />
+            <NavItem @navigate="closeSidebar" :href="route('auth.sport-map.index')" label="Sportkarte" icon="las la-route" />
             <NavItem
                 v-if="can('friends.view')"
                 @navigate="closeSidebar"

@@ -3,7 +3,6 @@
   "Teams": "Teams",
   "Feed": "Feed",
   "Dateien": "Files",
-  "Events": "Events",
   "Events & Training": "Events & Training",
   "Statistiken": "Statistics",
   "Freunde": "Friends",
@@ -11,9 +10,9 @@
   "Fahrgemeinschaften": "Rides",
   "Dateimanager": "File manager",
   "Benachrichtigungen": "Notifications",
-  "Notifications": "Notifications",
   "Equipment": "Equipment",
   "Einstellungen": "Settings",
+  "Sportkarte": "Sport map",
   "Settings": "Settings",
   "Admin": "Admin",
   "Users": "Users",
@@ -51,7 +50,6 @@
   "Angemeldet bleiben": "Remember me",
   "Sport Plattform": "Sports platform",
   "Team Management · Kommunikation · Events": "Team management · Communication · Events",
-  "Passwort Zurücksetzen": "Reset password",
   "Passwort zurücksetzen": "Reset password",
   "cta": "Get started",
   "common": {
@@ -83,7 +81,121 @@
     "new": "New notification",
     "empty": "No notifications"
   },
+  "sport_map": {
+    "eyebrow": "Routes, tracking and sport places",
+    "title": "Sport map",
+    "subtitle": "Plan routes, track outdoor training and share sport places like football pitches, running tracks or skateparks with the community.",
+    "map_preview": "Map preview",
+    "map_hint": "Offline-ready preview from your waypoints, tracks and sport places.",
+    "points": "Points",
+    "empty_map": "No map points yet",
+    "empty_map_hint": "Plan a route, start tracking or add a sport place.",
+    "any_sport": "Any sport",
+    "elevation_gain_meters": "{meters} m climb",
+    "sport_types": {
+      "running": "Running",
+      "trail_running": "Trail running",
+      "cycling": "Cycling",
+      "mountainbike": "Mountain biking",
+      "walking": "Walking",
+      "wandern": "Hiking",
+      "football": "Football",
+      "skateboard": "Skateboarding",
+      "fitness": "Outdoor fitness",
+      "other": "Other sport"
+    },
+    "place_types": {
+      "football_pitch": "Football pitch",
+      "running_track": "Running track",
+      "skatepark": "Skatepark",
+      "basketball_court": "Basketball court",
+      "tennis_court": "Tennis court",
+      "calisthenics_park": "Calisthenics park",
+      "swimming_pool": "Swimming pool",
+      "climbing_spot": "Climbing spot",
+      "trailhead": "Trailhead",
+      "sports_hall": "Sports hall",
+      "other": "Other sport place"
+    },
+    "tabs": {
+      "routes": "Routes",
+      "tracks": "Tracking",
+      "places": "Sport places"
+    },
+    "stats": {
+      "routes": "Routes",
+      "tracks": "Tracks",
+      "places": "Places"
+    },
+    "form": {
+      "title": "Title",
+      "name": "Name",
+      "sport": "Sport",
+      "visibility": "Visibility",
+      "team": "Team",
+      "description": "Description",
+      "latitude": "Latitude",
+      "longitude": "Longitude"
+    },
+    "visibility": {
+      "private": "Private",
+      "public": "Public",
+      "team": "Team"
+    },
+    "routes": {
+      "create_title": "Plan route",
+      "create_hint": "Set at least start and finish. More waypoints generate navigation cues for web and Flutter.",
+      "waypoints": "Waypoints",
+      "add_waypoint": "Add point",
+      "save": "Save route",
+      "saved_title": "Planned routes",
+      "start_point": "Start",
+      "finish_point": "Finish",
+      "point_name": "Point {number}",
+      "cues_count": "{count} cues",
+      "tracks_count": "{count} tracks"
+    },
+    "tracks": {
+      "title": "Track route",
+      "hint": "Use browser location, save points and optionally link the track to a planned route.",
+      "route_optional": "Planned route optional",
+      "free_track": "Free track",
+      "distance": "Distance",
+      "status": "Status",
+      "start": "Start",
+      "stop": "Stop",
+      "save": "Save track",
+      "saved_title": "Saved tracks",
+      "live": "Live",
+      "points_count": "{count} points",
+      "location_unsupported": "Geolocation is not supported by this browser.",
+      "location_error": "Location could not be read. Please check location permission.",
+      "statuses": {
+        "recording": "Recording",
+        "paused": "Paused",
+        "completed": "Completed",
+        "discarded": "Discarded"
+      }
+    },
+    "places": {
+      "create_title": "Add sport place",
+      "create_hint": "Add places so other athletes can find nearby training spots faster.",
+      "type": "Type",
+      "use_location": "Use current location",
+      "city": "City",
+      "address": "Address",
+      "sports_placeholder": "Sports, comma-separated",
+      "amenities_placeholder": "Amenities, comma-separated",
+      "surfaces_placeholder": "Surfaces, comma-separated",
+      "opening_hours": "Opening hours",
+      "save": "Save sport place",
+      "saved_title": "Sport places",
+      "no_city": "No city",
+      "location_error": "Location could not be read. Please check location permission."
+    }
+  },
   "events": {
+    "title": "Events",
     "subtitle": "Training sessions, matches, meetings and public events.",
     "create": "Create event",
     "public_scope": "Public",

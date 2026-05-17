@@ -17,4 +17,25 @@ export default defineConfig({
             },
         }),
     ],
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    if (!id.includes('node_modules')) {
+                        return undefined;
+                    }
+
+                    if (id.includes('vue') || id.includes('@inertiajs')) {
+                        return 'vendor-vue';
+                    }
+
+                    if (id.includes('line-awesome')) {
+                        return 'vendor-icons';
+                    }
+
+                    return 'vendor';
+                },
+            },
+        },
+    },
 });

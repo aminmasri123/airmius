@@ -9,42 +9,38 @@ class LegalPageController extends Controller
 {
     public function imprint(): Response
     {
+        $legal = $this->legalProfile();
+
         return $this->render('Impressum', [
             [
                 'title' => 'Angaben nach § 5 DDG',
-                'body' => [
-                    'Airmius',
-                    'TODO: Name/Firma des Diensteanbieters',
-                    'TODO: Straße und Hausnummer',
-                    'TODO: PLZ und Ort',
-                    'Deutschland',
-                ],
+                'body' => $this->addressLines($legal),
             ],
             [
                 'title' => 'Kontakt',
                 'body' => [
-                    'E-Mail: TODO: kontakt@airmius.com',
-                    'Telefon: TODO: Telefonnummer, falls vorhanden',
+                    'E-Mail: '.$legal['email'],
+                    'Telefon: '.$legal['phone'],
                 ],
             ],
             [
                 'title' => 'Vertretungsberechtigte Person',
                 'body' => [
-                    'TODO: Vor- und Nachname der vertretungsberechtigten Person.',
+                    $legal['representative'],
                 ],
             ],
             [
                 'title' => 'Register, Umsatzsteuer und Aufsicht',
                 'body' => [
-                    'Registereintrag: TODO: falls vorhanden, Registergericht und Registernummer eintragen.',
-                    'Umsatzsteuer-ID: TODO: falls vorhanden eintragen.',
-                    'Aufsichtsbehörde: TODO: nur falls eine erlaubnispflichtige Tätigkeit vorliegt.',
+                    'Registereintrag: '.$legal['register'],
+                    'Umsatzsteuer-ID: '.$legal['vat_id'],
+                    'Aufsichtsbehörde: '.$legal['supervisory_authority'],
                 ],
             ],
             [
                 'title' => 'Verantwortlich für Inhalte',
                 'body' => [
-                    'TODO: Name und Anschrift der inhaltlich verantwortlichen Person, falls erforderlich.',
+                    $legal['content_responsible'],
                 ],
             ],
         ], 'Letzte Aktualisierung: 02.05.2026');
@@ -52,12 +48,14 @@ class LegalPageController extends Controller
 
     public function privacy(): Response
     {
+        $legal = $this->legalProfile();
+
         return $this->render('Datenschutzerklärung', [
             [
                 'title' => '1. Verantwortlicher',
                 'body' => [
-                    'Verantwortlich für die Verarbeitung personenbezogener Daten ist: TODO: Name/Firma, Anschrift, E-Mail.',
-                    'Datenschutzkontakt: TODO: datenschutz@airmius.com.',
+                    'Verantwortlich für die Verarbeitung personenbezogener Daten ist: '.$legal['provider_name'].', '.$this->singleLineAddress($legal).', E-Mail: '.$legal['email'].'.',
+                    'Datenschutzkontakt: '.$legal['privacy_email'].'.',
                 ],
             ],
             [
@@ -363,6 +361,8 @@ class LegalPageController extends Controller
 
     public function minors(): Response
     {
+        $legal = $this->legalProfile();
+
         return $this->render('Jugendschutz und Elternzustimmung', [
             [
                 'title' => 'Warum Zustimmung erforderlich ist',
@@ -393,7 +393,7 @@ class LegalPageController extends Controller
                     'Beim Widerruf werden soziale Funktionen des Kindes wieder gesperrt, bis eine neue wirksame Zustimmung vorliegt.',
                     'Fragen zu vereinsinternen Beiträgen, Rechnungen oder Mitgliedsnummern sollten zusätzlich direkt mit dem jeweiligen Verein geklärt werden.',
                     'Der Widerruf kann über den Elternbereich erfolgen oder über den Support angefragt werden.',
-                    'Bitte kontaktiere dafür TODO: datenschutz@airmius.com oder den Support.',
+                    'Bitte kontaktiere dafür '.$legal['privacy_email'].' oder den Support unter '.$legal['support_email'].'.',
                 ],
             ],
             [
@@ -427,7 +427,7 @@ class LegalPageController extends Controller
                     'Wenn du personalisierte Werbung erlaubst, kann Airmius einfache Marketplace-Interessen und Anzeigeninteraktionen verwenden, um passendere Anzeigen auszuspielen.',
                     'Wenn du Conversion-Messung erlaubst, kann Airmius erkennen, ob aus einem Anzeigenkontakt später eine Registrierung, Anfrage, Warenkorb-Aktion, Bestellung oder Zahlung entstanden ist.',
                     'Cloudflare wird hier für technisch erforderliche Speicherung, Sicherheit und CDN-Auslieferung genannt, nicht als Marketing- oder Analyse-Cookie-Anbieter.',
-                    'TODO: Falls Analytics, Pixel, externe Videos, Karten oder Drittanbieter eingebunden werden, Anbieter, Zweck, Speicherdauer und Widerrufsmöglichkeit ergänzen.',
+                    'Weitere optionale Anbieter werden erst nach ausdrücklicher Benennung auf dieser Seite und nach erforderlicher Einwilligung eingesetzt.',
                 ],
             ],
             [
@@ -435,7 +435,7 @@ class LegalPageController extends Controller
                 'body' => [
                     'Soweit optionale Cookies oder einwilligungspflichtige Werbe-/Messfunktionen eingesetzt werden, kannst du deine Einwilligung jederzeit über die Cookie-Einstellungen oder in den Datenschutzeinstellungen widerrufen.',
                     'Nach dem Widerruf werden neue personalisierte Ads- und Conversion-Signale nicht mehr verarbeitet. Notwendige Cookies für Login, Warenkorb, Sicherheit und CSRF-Schutz bleiben aktiv.',
-                    'TODO: Cookie-Einstellungslink ergänzen, sobald ein Consent-Banner eingebaut ist.',
+                    'Aktuell kannst du Werbe- und Mess-Einwilligungen in den Datenschutzeinstellungen deines Kontos verwalten.',
                 ],
             ],
         ]);
@@ -443,6 +443,8 @@ class LegalPageController extends Controller
 
     public function withdrawal(): Response
     {
+        $legal = $this->legalProfile();
+
         return $this->render('Widerrufsbelehrung', [
             [
                 'title' => 'Hinweis',
@@ -463,7 +465,7 @@ class LegalPageController extends Controller
                 'title' => 'Ausübung des Widerrufs',
                 'body' => [
                     'Um das Widerrufsrecht auszuüben, musst du Airmius mittels eindeutiger Erklärung informieren.',
-                    'Kontakt: TODO: Anbieteranschrift und support@airmius.com.',
+                    'Kontakt: '.$legal['provider_name'].', '.$this->singleLineAddress($legal).', '.$legal['support_email'].'.',
                     'Zur Fristwahrung genügt die rechtzeitige Absendung der Widerrufserklärung.',
                 ],
             ],
@@ -480,13 +482,15 @@ class LegalPageController extends Controller
 
     public function reporting(): Response
     {
+        $legal = $this->legalProfile();
+
         return $this->render('Kontakt, Support und Inhalte melden', [
             [
                 'title' => 'Support',
                 'body' => [
-                    'Allgemeine Fragen: TODO: support@airmius.com',
-                    'Datenschutz: TODO: datenschutz@airmius.com',
-                    'Rechtliche Hinweise: TODO: legal@airmius.com',
+                    'Allgemeine Fragen: '.$legal['support_email'],
+                    'Datenschutz: '.$legal['privacy_email'],
+                    'Rechtliche Hinweise: '.$legal['legal_email'],
                 ],
             ],
             [
@@ -514,5 +518,40 @@ class LegalPageController extends Controller
             'sections' => $sections,
             'note' => $note,
         ]);
+    }
+
+    private function legalProfile(): array
+    {
+        return [
+            'provider_name' => (string) config('legal.provider_name'),
+            'street' => (string) config('legal.street'),
+            'city' => (string) config('legal.city'),
+            'country' => (string) config('legal.country'),
+            'email' => (string) config('legal.email'),
+            'support_email' => (string) config('legal.support_email'),
+            'privacy_email' => (string) config('legal.privacy_email'),
+            'legal_email' => (string) config('legal.legal_email'),
+            'phone' => (string) config('legal.phone'),
+            'representative' => (string) config('legal.representative'),
+            'register' => (string) config('legal.register'),
+            'vat_id' => (string) config('legal.vat_id'),
+            'supervisory_authority' => (string) config('legal.supervisory_authority'),
+            'content_responsible' => (string) config('legal.content_responsible'),
+        ];
+    }
+
+    private function addressLines(array $legal): array
+    {
+        return array_values(array_filter([
+            $legal['provider_name'],
+            $legal['street'],
+            $legal['city'],
+            $legal['country'],
+        ]));
+    }
+
+    private function singleLineAddress(array $legal): string
+    {
+        return implode(', ', $this->addressLines($legal));
     }
 }

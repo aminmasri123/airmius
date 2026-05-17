@@ -690,7 +690,7 @@ const resetFilters = () => {
 
 <template>
 
-    <Head :title="$t('Events')" />
+    <Head :title="$t('events.title')" />
 
     <div class="space-y-5">
         <section class="overflow-hidden rounded-lg border border-border bg-card">
@@ -704,7 +704,7 @@ const resetFilters = () => {
                     </div>
 
                     <h1 class="mt-3 text-2xl font-bold text-primary sm:text-3xl">
-                        {{ $t('Events') }}
+                        {{ $t('events.title') }}
                     </h1>
 
                     <p class="mt-2 max-w-2xl text-sm leading-6 text-secondary">

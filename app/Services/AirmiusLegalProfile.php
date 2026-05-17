@@ -6,7 +6,8 @@ use App\Models\Setting;
 
 class AirmiusLegalProfile
 {
-    private const PLACEHOLDER = 'BITTE NACH FIRMENANMELDUNG PFLEGEN';
+    private const NOT_PROVIDED = 'Nicht angegeben';
+    private const BANK_NOT_CONFIGURED = 'Bankdaten nicht hinterlegt';
 
     public function data(): array
     {
@@ -38,10 +39,10 @@ class AirmiusLegalProfile
     public function bank(): array
     {
         return [
-            'holder' => $this->settingOrPlaceholder('billing_bank_account_holder', 'Airmius'),
-            'bank_name' => $this->settingOrPlaceholder('billing_bank_name'),
-            'iban' => $this->settingOrPlaceholder('billing_iban'),
-            'bic' => $this->settingOrPlaceholder('billing_bic'),
+            'holder' => $this->settingOrDefault('billing_bank_account_holder', 'Airmius'),
+            'bank_name' => $this->settingOrDefault('billing_bank_name', self::BANK_NOT_CONFIGURED),
+            'iban' => $this->settingOrDefault('billing_iban', self::BANK_NOT_CONFIGURED),
+            'bic' => $this->settingOrDefault('billing_bic', self::BANK_NOT_CONFIGURED),
         ];
     }
 
@@ -59,10 +60,10 @@ class AirmiusLegalProfile
             return (string) $value;
         }
 
-        return $default ?? self::PLACEHOLDER;
+        return $default ?? self::NOT_PROVIDED;
     }
 
-    private function settingOrPlaceholder(string $settingKey, ?string $default = null): string
+    private function settingOrDefault(string $settingKey, ?string $default = null): string
     {
         $value = Setting::valueFor($settingKey);
 
@@ -70,6 +71,6 @@ class AirmiusLegalProfile
             return (string) $value;
         }
 
-        return $default ?? self::PLACEHOLDER;
+        return $default ?? self::NOT_PROVIDED;
     }
 }

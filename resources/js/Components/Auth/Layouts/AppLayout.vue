@@ -531,7 +531,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                         </div>
 
                         <!-- User -->
-                        <div class="hidden sm:block">
+                        <div>
                             <UserCard />
                         </div>
 

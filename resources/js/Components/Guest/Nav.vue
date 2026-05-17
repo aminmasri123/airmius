@@ -74,7 +74,7 @@ const navItems = [
                 </Link>
             </div>
 
-            <div class="ml-auto flex items-center gap-3">
+            <div class="ml-auto flex items-center gap-2 sm:gap-3">
                 <LanguageDropdown />
 
                 <Link
@@ -101,7 +101,7 @@ const navItems = [
                     <i class="las la-rocket"></i><span class="ml-2">{{ $t("Feed") }}</span>
                 </Link>
 
-                <div v-if="$page.props.auth.user" class="hidden sm:block">
+                <div v-if="$page.props.auth.user">
                     <UserCard />
                 </div>
 

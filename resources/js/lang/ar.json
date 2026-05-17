@@ -3,7 +3,6 @@
   "Teams": "الفرق",
   "Feed": "الخلاصة",
   "Dateien": "الملفات",
-  "Events": "الفعاليات",
   "Events & Training": "الفعاليات والتدريب",
   "Statistiken": "الإحصائيات",
   "Freunde": "الأصدقاء",
@@ -11,9 +10,9 @@
   "Fahrgemeinschaften": "المشاوير المشتركة",
   "Dateimanager": "مدير الملفات",
   "Benachrichtigungen": "الإشعارات",
-  "Notifications": "الإشعارات",
   "Equipment": "المعدات",
   "Einstellungen": "الإعدادات",
+  "Sportkarte": "خريطة الرياضة",
   "Settings": "الإعدادات",
   "Admin": "الإدارة",
   "Users": "المستخدمون",
@@ -40,7 +39,6 @@
   "Angemeldet bleiben": "تذكرني",
   "Sport Plattform": "منصة رياضية",
   "Team Management · Kommunikation · Events": "إدارة الفرق · التواصل · الفعاليات",
-  "Passwort Zurücksetzen": "إعادة تعيين كلمة المرور",
   "Passwort zurücksetzen": "إعادة تعيين كلمة المرور",
   "cta": "ابدأ الآن",
   "common": {
@@ -72,7 +70,121 @@
     "new": "إشعار جديد",
     "empty": "لا توجد إشعارات"
   },
+  "sport_map": {
+    "eyebrow": "المسارات والتتبع وأماكن الرياضة",
+    "title": "خريطة الرياضة",
+    "subtitle": "خطط المسارات، وتتبع التدريب الخارجي، وشارك أماكن الرياضة مثل ملاعب كرة القدم ومضامير الجري وحدائق التزلج مع المجتمع.",
+    "map_preview": "معاينة الخريطة",
+    "map_hint": "معاينة تعمل بدون اتصال من نقاط الطريق والمسارات وأماكن الرياضة.",
+    "points": "نقاط",
+    "empty_map": "لا توجد نقاط على الخريطة بعد",
+    "empty_map_hint": "خطط مسارا، ابدأ التتبع أو أضف مكانا رياضيا.",
+    "any_sport": "أي رياضة",
+    "elevation_gain_meters": "{meters} م صعود",
+    "sport_types": {
+      "running": "الجري",
+      "trail_running": "الجري على المسارات",
+      "cycling": "ركوب الدراجة",
+      "mountainbike": "الدراجات الجبلية",
+      "walking": "المشي",
+      "wandern": "المشي الجبلي",
+      "football": "كرة القدم",
+      "skateboard": "التزلج باللوح",
+      "fitness": "لياقة خارجية",
+      "other": "رياضة أخرى"
+    },
+    "place_types": {
+      "football_pitch": "ملعب كرة قدم",
+      "running_track": "مضمار جري",
+      "skatepark": "حديقة تزلج",
+      "basketball_court": "ملعب كرة سلة",
+      "tennis_court": "ملعب تنس",
+      "calisthenics_park": "حديقة تمارين",
+      "swimming_pool": "مسبح",
+      "climbing_spot": "مكان تسلق",
+      "trailhead": "بداية مسار",
+      "sports_hall": "صالة رياضية",
+      "other": "مكان رياضي آخر"
+    },
+    "tabs": {
+      "routes": "المسارات",
+      "tracks": "التتبع",
+      "places": "أماكن الرياضة"
+    },
+    "stats": {
+      "routes": "مسارات",
+      "tracks": "تتبعات",
+      "places": "أماكن"
+    },
+    "form": {
+      "title": "العنوان",
+      "name": "الاسم",
+      "sport": "الرياضة",
+      "visibility": "الظهور",
+      "team": "الفريق",
+      "description": "الوصف",
+      "latitude": "خط العرض",
+      "longitude": "خط الطول"
+    },
+    "visibility": {
+      "private": "خاص",
+      "public": "عام",
+      "team": "الفريق"
+    },
+    "routes": {
+      "create_title": "تخطيط مسار",
+      "create_hint": "حدد نقطة بداية ونهاية على الأقل. النقاط الإضافية تنشئ إرشادات للويب و Flutter.",
+      "waypoints": "نقاط الطريق",
+      "add_waypoint": "إضافة نقطة",
+      "save": "حفظ المسار",
+      "saved_title": "المسارات المخططة",
+      "start_point": "البداية",
+      "finish_point": "النهاية",
+      "point_name": "نقطة {number}",
+      "cues_count": "{count} إرشادات",
+      "tracks_count": "{count} تتبعات"
+    },
+    "tracks": {
+      "title": "تتبع المسار",
+      "hint": "استخدم موقع المتصفح، احفظ النقاط واربط التتبع اختياريا بمسار مخطط.",
+      "route_optional": "مسار مخطط اختياري",
+      "free_track": "تتبع حر",
+      "distance": "المسافة",
+      "status": "الحالة",
+      "start": "بدء",
+      "stop": "إيقاف",
+      "save": "حفظ التتبع",
+      "saved_title": "التتبعات المحفوظة",
+      "live": "مباشر",
+      "points_count": "{count} نقاط",
+      "location_unsupported": "المتصفح لا يدعم تحديد الموقع.",
+      "location_error": "تعذر قراءة الموقع. يرجى التحقق من إذن الموقع.",
+      "statuses": {
+        "recording": "قيد التسجيل",
+        "paused": "متوقف مؤقتا",
+        "completed": "مكتمل",
+        "discarded": "مهمل"
+      }
+    },
+    "places": {
+      "create_title": "إضافة مكان رياضي",
+      "create_hint": "أضف أماكن ليساعد ذلك الرياضيين الآخرين على إيجاد أماكن تدريب قريبة بسرعة.",
+      "type": "النوع",
+      "use_location": "استخدام الموقع الحالي",
+      "city": "المدينة",
+      "address": "العنوان",
+      "sports_placeholder": "رياضات مفصولة بفواصل",
+      "amenities_placeholder": "مرافق مفصولة بفواصل",
+      "surfaces_placeholder": "أسطح مفصولة بفواصل",
+      "opening_hours": "ساعات العمل",
+      "save": "حفظ المكان الرياضي",
+      "saved_title": "أماكن الرياضة",
+      "no_city": "بدون مدينة",
+      "location_error": "تعذر قراءة الموقع. يرجى التحقق من إذن الموقع."
+    }
+  },
   "events": {
+    "title": "الفعاليات",
     "subtitle": "تدريبات ومباريات واجتماعات وفعاليات عامة.",
     "create": "إنشاء فعالية",
     "public_scope": "عام",

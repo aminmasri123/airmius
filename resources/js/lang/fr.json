@@ -3,7 +3,6 @@
   "Teams": "Équipes",
   "Feed": "Fil",
   "Dateien": "Fichiers",
-  "Events": "Événements",
   "Events & Training": "Événements et entraînement",
   "Statistiken": "Statistiques",
   "Freunde": "Amis",
@@ -11,9 +10,9 @@
   "Fahrgemeinschaften": "Covoiturage",
   "Dateimanager": "Gestionnaire de fichiers",
   "Benachrichtigungen": "Notifications",
-  "Notifications": "Notifications",
   "Equipment": "Équipement",
   "Einstellungen": "Paramètres",
+  "Sportkarte": "Carte sport",
   "Settings": "Paramètres",
   "Admin": "Admin",
   "Users": "Utilisateurs",
@@ -51,7 +50,6 @@
   "Angemeldet bleiben": "Se souvenir de moi",
   "Sport Plattform": "Plateforme de sport",
   "Team Management · Kommunikation · Events": "Gestion des équipes · Communication · Événements",
-  "Passwort Zurücksetzen": "Réinitialiser le mot de passe",
   "Passwort zurücksetzen": "Réinitialiser le mot de passe",
   "cta": "Commencer",
   "common": {
@@ -83,7 +81,121 @@
     "new": "Nouvelle notification",
     "empty": "Aucune notification"
   },
+  "sport_map": {
+    "eyebrow": "Itineraires, suivi et lieux sportifs",
+    "title": "Carte sport",
+    "subtitle": "Planifie des itineraires, suis tes entrainements en exterieur et partage des lieux comme terrains de football, pistes ou skateparks avec la communaute.",
+    "map_preview": "Apercu de la carte",
+    "map_hint": "Apercu compatible hors ligne a partir des points, traces et lieux sportifs.",
+    "points": "Points",
+    "empty_map": "Aucun point sur la carte",
+    "empty_map_hint": "Planifie un itineraire, demarre un suivi ou ajoute un lieu sportif.",
+    "any_sport": "Sport libre",
+    "elevation_gain_meters": "{meters} m D+",
+    "sport_types": {
+      "running": "Course",
+      "trail_running": "Trail",
+      "cycling": "Velo",
+      "mountainbike": "VTT",
+      "walking": "Marche",
+      "wandern": "Randonnee",
+      "football": "Football",
+      "skateboard": "Skateboard",
+      "fitness": "Fitness exterieur",
+      "other": "Autre sport"
+    },
+    "place_types": {
+      "football_pitch": "Terrain de football",
+      "running_track": "Piste d'athletisme",
+      "skatepark": "Skatepark",
+      "basketball_court": "Terrain de basket",
+      "tennis_court": "Court de tennis",
+      "calisthenics_park": "Parc de calisthenics",
+      "swimming_pool": "Piscine",
+      "climbing_spot": "Spot d'escalade",
+      "trailhead": "Depart de sentier",
+      "sports_hall": "Salle de sport",
+      "other": "Autre lieu sportif"
+    },
+    "tabs": {
+      "routes": "Itineraires",
+      "tracks": "Suivi",
+      "places": "Lieux sportifs"
+    },
+    "stats": {
+      "routes": "Itineraires",
+      "tracks": "Traces",
+      "places": "Lieux"
+    },
+    "form": {
+      "title": "Titre",
+      "name": "Nom",
+      "sport": "Sport",
+      "visibility": "Visibilite",
+      "team": "Equipe",
+      "description": "Description",
+      "latitude": "Latitude",
+      "longitude": "Longitude"
+    },
+    "visibility": {
+      "private": "Prive",
+      "public": "Public",
+      "team": "Equipe"
+    },
+    "routes": {
+      "create_title": "Planifier un itineraire",
+      "create_hint": "Definis au moins un depart et une arrivee. Les points supplementaires creent des indications pour le web et Flutter.",
+      "waypoints": "Points de passage",
+      "add_waypoint": "Ajouter un point",
+      "save": "Enregistrer l'itineraire",
+      "saved_title": "Itineraires planifies",
+      "start_point": "Depart",
+      "finish_point": "Arrivee",
+      "point_name": "Point {number}",
+      "cues_count": "{count} indications",
+      "tracks_count": "{count} traces"
+    },
+    "tracks": {
+      "title": "Suivre un parcours",
+      "hint": "Utilise la localisation du navigateur, enregistre des points et lie la trace a un itineraire planifie si besoin.",
+      "route_optional": "Itineraire planifie optionnel",
+      "free_track": "Trace libre",
+      "distance": "Distance",
+      "status": "Statut",
+      "start": "Demarrer",
+      "stop": "Arreter",
+      "save": "Enregistrer la trace",
+      "saved_title": "Traces enregistrees",
+      "live": "Live",
+      "points_count": "{count} points",
+      "location_unsupported": "La geolocalisation n'est pas prise en charge par ce navigateur.",
+      "location_error": "La position n'a pas pu etre lue. Verifie l'autorisation de localisation.",
+      "statuses": {
+        "recording": "Enregistrement",
+        "paused": "En pause",
+        "completed": "Terminee",
+        "discarded": "Ignoree"
+      }
+    },
+    "places": {
+      "create_title": "Ajouter un lieu sportif",
+      "create_hint": "Ajoute des lieux pour aider les sportifs a trouver plus vite des terrains proches.",
+      "type": "Type",
+      "use_location": "Utiliser la position actuelle",
+      "city": "Ville",
+      "address": "Adresse",
+      "sports_placeholder": "Sports, separes par virgules",
+      "amenities_placeholder": "Equipements, separes par virgules",
+      "surfaces_placeholder": "Surfaces, separees par virgules",
+      "opening_hours": "Horaires",
+      "save": "Enregistrer le lieu",
+      "saved_title": "Lieux sportifs",
+      "no_city": "Sans ville",
+      "location_error": "La position n'a pas pu etre lue. Verifie l'autorisation de localisation."
+    }
+  },
   "events": {
+    "title": "Événements",
     "subtitle": "Entraînements, matchs, réunions et événements publics.",
     "create": "Créer un événement",
     "public_scope": "Public",

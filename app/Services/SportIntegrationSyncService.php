@@ -24,7 +24,7 @@ class SportIntegrationSyncService
         $account->update([
             'last_synced_at' => now(),
             'sync_summary' => [
-                'message' => 'Noch keine Live-Schnittstelle aktiv. Anbieterfreigabe/API-Zugang fehlt.',
+                'message' => 'Synchronisation vorgemerkt. Wir aktivieren den Anbieter, sobald die Freigabe bereitsteht.',
             ],
         ]);
 

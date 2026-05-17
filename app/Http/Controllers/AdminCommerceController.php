@@ -491,12 +491,13 @@ class AdminCommerceController extends Controller
             'reason' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        abort_if((int) $data['amount_cents'] > (int) $order->amount_cents, 422, 'Die Erstattung darf die Bestellung nicht uebersteigen.');
+        $remainingCents = max(0, (int) $order->amount_cents - (int) $order->refunded_cents);
+        abort_if((int) $data['amount_cents'] > $remainingCents, 422, 'Die Erstattung darf den offenen Restbetrag nicht uebersteigen.');
 
         $providerRefundId = $this->refundViaProvider($order, (int) $data['amount_cents']);
         $before = $order->only(['status', 'refunded_cents', 'refund_provider_id']);
         $order->update([
-            'status' => (int) $data['amount_cents'] >= (int) $order->amount_cents ? 'refunded' : $order->status,
+            'status' => (int) $data['amount_cents'] >= $remainingCents ? 'refunded' : $order->status,
             'issue_status' => 'refunded',
             'refunded_cents' => (int) $order->refunded_cents + (int) $data['amount_cents'],
             'refund_provider_id' => $providerRefundId ?: $order->refund_provider_id,
@@ -1462,7 +1463,7 @@ class AdminCommerceController extends Controller
         return [
             ...$data,
             'country_code' => strtoupper($data['country_code']),
-            'tax_class' => $data['tax_class'] ?: 'standard',
+            'tax_class' => ($data['tax_class'] ?? null) ?: 'standard',
             'currency' => strtoupper($data['currency']),
             'is_default' => (bool) ($data['is_default'] ?? false),
             'is_active' => (bool) ($data['is_active'] ?? false),

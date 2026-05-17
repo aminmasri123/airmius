@@ -273,6 +273,21 @@ class User extends Authenticatable
         return $this->hasMany(ConnectedSportActivity::class);
     }
 
+    public function sportRoutes()
+    {
+        return $this->hasMany(SportRoute::class);
+    }
+
+    public function sportRouteTracks()
+    {
+        return $this->hasMany(SportRouteTrack::class);
+    }
+
+    public function sportPlaces()
+    {
+        return $this->hasMany(SportPlace::class);
+    }
+
     public function createdTrainingPlans()
     {
         return $this->hasMany(TrainingPlan::class, 'created_by');

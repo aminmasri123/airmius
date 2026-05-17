@@ -1,11 +1,11 @@
 <?php
 
-use App\Http\Middleware\HandleInertiaRequests;
-use App\Http\Middleware\HardenAdminArea;
-use App\Http\Middleware\EnsureApplicationIsNotInMaintenance;
 use App\Http\Middleware\EnsureAccountIsNotSuspended;
+use App\Http\Middleware\EnsureApplicationIsNotInMaintenance;
 use App\Http\Middleware\EnsureGuardianConsentResolved;
 use App\Http\Middleware\EnsureProfileIsComplete;
+use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\HardenAdminArea;
 use App\Http\Middleware\SetCurrentClub;
 use App\Http\Middleware\SetLocale;
 use App\Http\Middleware\StoreIntendedUrlFromQuery;
@@ -14,8 +14,8 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Http\Request;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
+use Illuminate\Http\Request;
 use Illuminate\Session\TokenMismatchException;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
@@ -30,14 +30,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-
-        // 🔥 WICHTIG: zuerst ausführen
-        $middleware->web(prepend: [
+        // Mobile/API clients can send X-Locale, X-App-Locale, or Accept-Language.
+        $middleware->api(prepend: [
             SetLocale::class,
         ]);
 
-        // normale Middleware danach
+        // Locale must run after the default web session middleware and before Inertia.
         $middleware->web(append: [
+            SetLocale::class,
             HandleInertiaRequests::class,
             EnsureApplicationIsNotInMaintenance::class,
             EnsureAccountIsNotSuspended::class,
@@ -46,7 +46,6 @@ return Application::configure(basePath: dirname(__DIR__))
             StoreIntendedUrlFromQuery::class,
             TrackUserActivity::class,
             AddLinkHeadersForPreloadedAssets::class,
-
         ]);
 
         $middleware->alias([
@@ -62,7 +61,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhooks/outfit-subscriptions/paypal',
             'checkout/subscriptions/*',
         ]);
-
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (TokenMismatchException $exception, Request $request) {

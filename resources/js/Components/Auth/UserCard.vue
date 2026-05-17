@@ -43,7 +43,7 @@ onBeforeUnmount(() => {
         <!-- Button -->
         <button
             @click="open = !open"
-            class="flex items-center gap-3 rounded-xl p-2 hover:bg-muted transition"
+            class="flex items-center gap-1 rounded-xl p-1.5 transition hover:bg-muted sm:gap-3 sm:p-2"
         >
             <!-- Avatar -->
             <div>
@@ -51,11 +51,11 @@ onBeforeUnmount(() => {
                     v-if="user.profile_photo_thumb"
                     :src="user.profile_photo_thumb"
                     :alt="user.name"
-                    class="h-10 w-10 rounded-full object-cover"
+                    class="h-9 w-9 rounded-full object-cover sm:h-10 sm:w-10"
                 />
                 <div
                     v-else
-                    class="flex h-10 w-10 items-center justify-center rounded-full bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary"
+                    class="flex h-9 w-9 items-center justify-center rounded-full bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary sm:h-10 sm:w-10"
                 >
                     {{ initials(user.name) }}
                 </div>
@@ -67,7 +67,7 @@ onBeforeUnmount(() => {
                 <div class="text-xs text-secondary">{{ user.roles?.[0] || $t('Member') }}</div>
             </div>
 
-            <i class="las la-chevron-down text-lg text-secondary"></i>
+            <i class="las la-chevron-down hidden text-lg text-secondary sm:block"></i>
         </button>
 
         <!-- Dropdown -->
