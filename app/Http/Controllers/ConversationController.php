@@ -3,12 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Events\ChatTyping;
+use App\Events\ChatConversationUpdated;
 use App\Models\Conversation;
+use App\Models\ConversationInvitation;
+use App\Models\Message;
 use App\Models\MessageReceipt;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\ChatService;
 use App\Services\ModerationService;
+use App\Support\AppNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -56,6 +60,8 @@ class ConversationController extends Controller
             'team_id' => ['nullable', 'required_if:type,team', 'exists:teams,id'],
             'participant_ids' => ['nullable', 'array'],
             'participant_ids.*' => ['integer', 'exists:users,id'],
+            'name' => ['nullable', 'string', 'max:120'],
+            'description' => ['nullable', 'string', 'max:500'],
             'message' => ['nullable', 'string', 'max:4000'],
         ]);
 
@@ -99,11 +105,22 @@ class ConversationController extends Controller
                 $conversation->users()->attach($participantIds, ['joined_at' => now()]);
             }
         } else {
+            $this->authorizeGroupParticipants($request, $participantIds->reject(fn ($id) => (int) $id === auth()->id()));
+
             $conversation = Conversation::create([
                 'type' => 'group',
                 'club_id' => $data['club_id'] ?? null,
+                'owner_id' => auth()->id(),
+                'name' => filled($data['name'] ?? null) ? trim($data['name']) : null,
+                'description' => filled($data['description'] ?? null) ? trim($data['description']) : null,
             ]);
             $conversation->users()->attach($participantIds, ['joined_at' => now()]);
+            $this->addSystemMessage(
+                $conversation,
+                $request->user(),
+                $request->user()->name.' hat die Gruppe erstellt.',
+                'group.created'
+            );
         }
 
         if (!empty($data['message'])) {
@@ -152,6 +169,7 @@ class ConversationController extends Controller
     {
         abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
         abort_if($conversation->type !== 'group', 422, 'Mitglieder koennen nur zu Gruppenchats hinzugefuegt werden.');
+        abort_unless($this->canManageGroup($conversation), 403);
 
         $data = $request->validate([
             'participant_ids' => ['required', 'array', 'min:1'],
@@ -165,9 +183,56 @@ class ConversationController extends Controller
 
         abort_if($participantIds->isEmpty(), 422, 'Bitte mindestens eine weitere Person auswaehlen.');
 
-        $this->attachNewParticipantsWithJoinedAt($conversation, $participantIds);
+        $this->authorizeGroupParticipants($request, $participantIds);
+        $existingIds = $conversation->users()
+            ->whereIn('users.id', $participantIds)
+            ->pluck('users.id')
+            ->map(fn ($id) => (int) $id);
 
-        return back()->with('success', 'Mitglieder wurden hinzugefuegt.');
+        $invitedIds = $participantIds->diff($existingIds)->values();
+
+        $invitedIds->each(function (int $recipientId) use ($conversation, $request) {
+            $invitation = ConversationInvitation::updateOrCreate(
+                [
+                    'conversation_id' => $conversation->id,
+                    'recipient_id' => $recipientId,
+                ],
+                [
+                    'inviter_id' => $request->user()->id,
+                    'status' => 'pending',
+                    'responded_at' => null,
+                ]
+            );
+
+            AppNotification::send($recipientId, 'chat.group_invite', [
+                'title' => $request->user()->name.' hat dich in eine Chatgruppe eingeladen',
+                'body' => $conversation->name ?: 'Neue Gruppeneinladung',
+                'url' => route('auth.conversations.index'),
+                'actor_id' => $request->user()->id,
+                'actor_name' => $request->user()->name,
+                'conversation_id' => $conversation->id,
+                'invitation_id' => $invitation->id,
+            ]);
+        });
+
+        if ($invitedIds->isNotEmpty()) {
+            $inviteeNames = User::query()
+                ->whereIn('id', $invitedIds)
+                ->pluck('name')
+                ->all();
+
+            $this->addSystemMessage(
+                $conversation,
+                $request->user(),
+                $request->user()->name.' hat '.implode(', ', $inviteeNames).' eingeladen.',
+                'group.invitation.created',
+                ['recipient_ids' => $invitedIds->all()]
+            );
+
+            broadcast(new ChatConversationUpdated($conversation, 'invitations.created', $invitedIds->all()))->toOthers();
+        }
+
+        return back()->with('success', $invitedIds->isEmpty() ? 'Keine neuen Einladungen gesendet.' : 'Einladungen wurden gesendet.');
     }
 
     public function leave(Request $request, Conversation $conversation)
@@ -179,7 +244,9 @@ class ConversationController extends Controller
             'delete_conversation' => ['nullable', 'boolean'],
         ]);
 
-        DB::transaction(function () use ($conversation, $data) {
+        $broadcastUserIds = $conversation->users()->pluck('users.id')->all();
+
+        DB::transaction(function () use ($conversation, $data, $request) {
             $conversation->loadCount('users');
             $remainingAfterLeave = max(0, $conversation->users_count - 1);
 
@@ -189,8 +256,26 @@ class ConversationController extends Controller
                 return;
             }
 
+            $remainingUserIds = $conversation->users()
+                ->where('users.id', '!=', $request->user()->id)
+                ->pluck('users.id');
+
+            $this->addSystemMessage(
+                $conversation,
+                $request->user(),
+                $request->user()->name.' hat die Gruppe verlassen.',
+                'group.member.left',
+                ['user_id' => $request->user()->id]
+            );
+
+            if ((int) $conversation->owner_id === (int) $request->user()->id) {
+                $conversation->update(['owner_id' => $remainingUserIds->first()]);
+            }
+
             $conversation->users()->detach(auth()->id());
         });
+
+        broadcast(new ChatConversationUpdated($conversation, 'member.left', $broadcastUserIds))->toOthers();
 
         return redirect()
             ->route('auth.conversations.index')
@@ -210,7 +295,30 @@ class ConversationController extends Controller
      */
     public function update(Request $request, Conversation $conversation)
     {
-        //
+        abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
+        abort_if($conversation->type !== 'group', 422, 'Nur Gruppenchats koennen bearbeitet werden.');
+        abort_unless($this->canManageGroup($conversation), 403);
+
+        $data = $request->validate([
+            'name' => ['nullable', 'string', 'max:120'],
+            'description' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $conversation->update([
+            'name' => filled($data['name'] ?? null) ? trim($data['name']) : null,
+            'description' => filled($data['description'] ?? null) ? trim($data['description']) : null,
+        ]);
+
+        $this->addSystemMessage(
+            $conversation,
+            $request->user(),
+            $request->user()->name.' hat das Gruppenprofil aktualisiert.',
+            'group.profile.updated'
+        );
+
+        broadcast(new ChatConversationUpdated($conversation, 'profile.updated'))->toOthers();
+
+        return back()->with('success', 'Gruppenprofil wurde aktualisiert.');
     }
 
     /**
@@ -221,10 +329,180 @@ class ConversationController extends Controller
         //
     }
 
+    public function mute(Request $request, Conversation $conversation)
+    {
+        abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
+
+        $data = $request->validate([
+            'minutes' => ['nullable', 'integer', 'in:0,60,480,1440,10080'],
+        ]);
+
+        $mutedUntil = ((int) ($data['minutes'] ?? 0)) > 0
+            ? now()->addMinutes((int) $data['minutes'])
+            : null;
+
+        $conversation->users()->updateExistingPivot(auth()->id(), [
+            'muted_until' => $mutedUntil,
+        ]);
+
+        return back()->with('success', $mutedUntil ? 'Chat wurde stummgeschaltet.' : 'Chat-Benachrichtigungen sind wieder aktiv.');
+    }
+
+    public function acceptInvitation(Request $request, ConversationInvitation $invitation)
+    {
+        abort_unless($invitation->recipient_id === $request->user()->id, 403);
+        abort_unless($invitation->status === 'pending', 422);
+
+        $conversation = $invitation->conversation;
+
+        abort_if(! $conversation || $conversation->type !== 'group', 422);
+        abort_unless($conversation->users()->where('users.id', $invitation->inviter_id)->exists(), 403);
+
+        DB::transaction(function () use ($conversation, $invitation) {
+            $conversation->users()->syncWithoutDetaching([
+                $invitation->recipient_id => ['joined_at' => now()],
+            ]);
+
+            $invitation->update([
+                'status' => 'accepted',
+                'responded_at' => now(),
+            ]);
+        });
+
+        AppNotification::send($invitation->inviter_id, 'chat.group_invite.accepted', [
+            'title' => $request->user()->name.' hat deine Gruppeneinladung angenommen',
+            'body' => $conversation->name ?: 'Gruppeneinladung angenommen',
+            'url' => route('auth.conversations.index', ['conversation' => $conversation->id]),
+            'actor_id' => $request->user()->id,
+            'actor_name' => $request->user()->name,
+            'conversation_id' => $conversation->id,
+            'invitation_id' => $invitation->id,
+        ]);
+
+        $this->addSystemMessage(
+            $conversation,
+            $request->user(),
+            $request->user()->name.' ist der Gruppe beigetreten.',
+            'group.member.joined',
+            ['user_id' => $request->user()->id]
+        );
+
+        broadcast(new ChatConversationUpdated($conversation, 'member.joined', [
+            $invitation->recipient_id,
+            $invitation->inviter_id,
+        ]))->toOthers();
+
+        return redirect()
+            ->route('auth.conversations.index', ['conversation' => $conversation->id])
+            ->with('success', 'Einladung angenommen.');
+    }
+
+    public function declineInvitation(Request $request, ConversationInvitation $invitation)
+    {
+        abort_unless($invitation->recipient_id === $request->user()->id, 403);
+        abort_unless($invitation->status === 'pending', 422);
+
+        $invitation->update([
+            'status' => 'declined',
+            'responded_at' => now(),
+        ]);
+
+        $conversation = $invitation->conversation;
+
+        if ($conversation) {
+            $this->addSystemMessage(
+                $conversation,
+                $request->user(),
+                $request->user()->name.' hat die Gruppeneinladung abgelehnt.',
+                'group.invitation.declined',
+                ['user_id' => $request->user()->id]
+            );
+
+            broadcast(new ChatConversationUpdated($conversation, 'invitation.declined', [
+                $invitation->recipient_id,
+                $invitation->inviter_id,
+            ]))->toOthers();
+        }
+
+        return back()->with('success', 'Einladung abgelehnt.');
+    }
+
+    public function removeMember(Request $request, Conversation $conversation, User $user)
+    {
+        abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
+        abort_if($conversation->type !== 'group', 422, 'Mitglieder koennen nur aus Gruppenchats entfernt werden.');
+        abort_unless($this->canManageGroup($conversation), 403);
+        abort_if($user->id === auth()->id(), 422, 'Nutze Gruppe verlassen, um dich selbst zu entfernen.');
+        abort_if((int) $conversation->owner_id === (int) $user->id, 422, 'Der Owner kann nicht entfernt werden.');
+        abort_unless($conversation->users()->where('users.id', $user->id)->exists(), 404);
+
+        $conversation->users()->detach($user->id);
+
+        $this->addSystemMessage(
+            $conversation,
+            $request->user(),
+            $request->user()->name.' hat '.$user->name.' aus der Gruppe entfernt.',
+            'group.member.removed',
+            ['user_id' => $user->id]
+        );
+
+        broadcast(new ChatConversationUpdated($conversation, 'member.removed', [$user->id]))->toOthers();
+
+        AppNotification::send($user, 'chat.group_removed', [
+            'title' => 'Du wurdest aus einer Chatgruppe entfernt',
+            'body' => $conversation->name ?: 'Gruppenchat',
+            'url' => route('auth.conversations.index'),
+            'actor_id' => $request->user()->id,
+            'actor_name' => $request->user()->name,
+            'conversation_id' => $conversation->id,
+        ]);
+
+        return back()->with('success', 'Mitglied wurde entfernt.');
+    }
+
+    public function transferOwner(Request $request, Conversation $conversation)
+    {
+        abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
+        abort_if($conversation->type !== 'group', 422, 'Owner kann nur fuer Gruppenchats uebertragen werden.');
+        abort_unless($this->canManageGroup($conversation), 403);
+
+        $data = $request->validate([
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+        ]);
+
+        abort_if((int) $data['user_id'] === auth()->id(), 422, 'Du bist bereits Owner.');
+        abort_unless($conversation->users()->where('users.id', $data['user_id'])->exists(), 422, 'Neuer Owner muss Mitglied der Gruppe sein.');
+
+        $conversation->update(['owner_id' => (int) $data['user_id']]);
+        $newOwner = User::find((int) $data['user_id']);
+
+        $this->addSystemMessage(
+            $conversation,
+            $request->user(),
+            $request->user()->name.' hat '.$newOwner?->name.' zum Owner gemacht.',
+            'group.owner.transferred',
+            ['user_id' => (int) $data['user_id']]
+        );
+
+        broadcast(new ChatConversationUpdated($conversation, 'owner.transferred', [(int) $data['user_id']]))->toOthers();
+
+        AppNotification::send((int) $data['user_id'], 'chat.group_owner_transferred', [
+            'title' => 'Du bist jetzt Owner einer Chatgruppe',
+            'body' => $conversation->name ?: 'Gruppenchat',
+            'url' => route('auth.conversations.index', ['conversation' => $conversation->id]),
+            'actor_id' => $request->user()->id,
+            'actor_name' => $request->user()->name,
+            'conversation_id' => $conversation->id,
+        ]);
+
+        return back()->with('success', 'Owner wurde uebertragen.');
+    }
+
     private function renderIndex(?Conversation $selectedConversation = null, ?Request $request = null)
     {
         $request ??= request();
         $messageLimit = min(500, max(50, (int) $request->integer('message_limit', 50)));
+        $messageSearch = trim((string) $request->query('message_search', ''));
         $userConversationIds = Conversation::query()
             ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()))
             ->pluck('id');
@@ -237,18 +515,28 @@ class ConversationController extends Controller
 
         $conversations = Conversation::query()
             ->whereHas('users', fn ($query) => $query->where('users.id', auth()->id()))
-            ->with(['users:id,name', 'team:id,name', 'event:id,conversation_id,title'])
+            ->with(['users:id,name', 'owner:id,name', 'team:id,name', 'event:id,conversation_id,title'])
+            ->withCount([
+                'messages as unread_count' => fn ($query) => $query->whereHas(
+                    'receipts',
+                    fn ($receiptQuery) => $receiptQuery
+                        ->where('user_id', auth()->id())
+                        ->whereNull('read_at')
+                ),
+            ])
             ->withMax('messages', 'created_at')
             ->orderByDesc('messages_max_created_at')
             ->orderByDesc('id')
             ->get();
 
+        $this->attachLatestVisibleMessages($conversations);
+
         $readConversationIds = $selectedConversation
             ? collect([$selectedConversation->id])
-            : $userConversationIds;
+            : collect();
 
         if ($readConversationIds->isNotEmpty()) {
-            MessageReceipt::query()
+            $readMessageIds = MessageReceipt::query()
                 ->where('user_id', auth()->id())
                 ->whereNull('read_at')
                 ->whereHas('message', function ($query) use ($readConversationIds, $selectedConversation) {
@@ -256,10 +544,21 @@ class ConversationController extends Controller
 
                     $this->onlyMessagesVisibleSinceGroupJoin($query, $selectedConversation);
                 })
+                ->pluck('message_id')
+                ->all();
+
+            MessageReceipt::query()
+                ->where('user_id', auth()->id())
+                ->whereIn('message_id', $readMessageIds)
+                ->whereNull('read_at')
                 ->update([
                     'delivered_at' => now(),
                     'read_at' => now(),
                 ]);
+
+            if ($selectedConversation && $readMessageIds) {
+                broadcast(new \App\Events\MessageReceiptsUpdated($selectedConversation, $readMessageIds))->toOthers();
+            }
 
             auth()->user()
                 ->appNotifications()
@@ -278,12 +577,19 @@ class ConversationController extends Controller
         if ($selectedConversation) {
             $selectedConversation->load([
                 'users:id,name',
+                'owner:id,name',
+                'invitations' => fn ($query) => $query
+                    ->where('status', 'pending')
+                    ->with(['recipient:id,name,email', 'inviter:id,name'])
+                    ->latest('id'),
                 'team:id,name',
                 'event:id,conversation_id,title',
             ]);
 
             $messagesQuery = $selectedConversation->messages()
                 ->where('moderation_status', '!=', 'removed')
+                ->whereDoesntHave('hides', fn ($query) => $query->where('user_id', auth()->id()))
+                ->when($messageSearch !== '', fn ($query) => $query->where('message', 'like', '%'.$messageSearch.'%'))
                 ->with([
                     'sender:id,name',
                     'receipts:id,message_id,user_id,delivered_at,read_at',
@@ -314,6 +620,16 @@ class ConversationController extends Controller
             'conversations' => $conversations,
             'selectedConversation' => $selectedConversation,
             'messagePage' => $messagePage,
+            'messageSearch' => $messageSearch,
+            'groupInvitations' => ConversationInvitation::query()
+                ->where('recipient_id', auth()->id())
+                ->where('status', 'pending')
+                ->with([
+                    'inviter:id,name',
+                    'conversation' => fn ($query) => $query->with(['users:id,name', 'owner:id,name']),
+                ])
+                ->latest('id')
+                ->get(),
             'typingUsers' => $selectedConversation
                 ? $selectedConversation->users
                     ->where('id', '!=', auth()->id())
@@ -384,6 +700,91 @@ class ConversationController extends Controller
         if ($newParticipantIds->isNotEmpty()) {
             $conversation->users()->syncWithoutDetaching($this->participantsWithJoinedAt($newParticipantIds));
         }
+    }
+
+    private function attachLatestVisibleMessages($conversations): void
+    {
+        if ($conversations->isEmpty()) {
+            return;
+        }
+
+        $joinedAtByConversation = DB::table('conversation_users')
+            ->where('user_id', auth()->id())
+            ->whereIn('conversation_id', $conversations->pluck('id'))
+            ->pluck('joined_at', 'conversation_id');
+
+        $conversations->each(function (Conversation $conversation) use ($joinedAtByConversation) {
+            $query = Message::query()
+                ->where('conversation_id', $conversation->id)
+                ->where('moderation_status', '!=', 'removed')
+                ->with(['sender:id,name', 'attachments.file:id,display_name,path,thumbnail_path,type,size'])
+                ->latest('id');
+
+            if ($conversation->type === 'group' && $joinedAtByConversation->get($conversation->id)) {
+                $query->where('created_at', '>=', $joinedAtByConversation->get($conversation->id));
+            }
+
+            $conversation->setRelation('latestVisibleMessage', $query->first());
+        });
+    }
+
+    private function addSystemMessage(Conversation $conversation, User $actor, string $text, string $event, array $metadata = []): Message
+    {
+        $message = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_id' => $actor->id,
+            'message' => $text,
+            'kind' => 'system',
+            'metadata' => [
+                'event' => $event,
+                'actor_id' => $actor->id,
+                ...$metadata,
+            ],
+            'status' => 'sent',
+        ]);
+
+        $conversation->users()
+            ->where('users.id', '!=', $actor->id)
+            ->pluck('users.id')
+            ->each(fn ($recipientId) => $message->receipts()->create([
+                'user_id' => $recipientId,
+            ]));
+
+        return $message;
+    }
+
+    private function authorizeGroupParticipants(Request $request, $participantIds): void
+    {
+        $participantIds = collect($participantIds)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($participantIds->isEmpty()) {
+            return;
+        }
+
+        $participants = User::query()
+            ->whereIn('id', $participantIds)
+            ->get()
+            ->keyBy('id');
+
+        abort_if($participants->count() !== $participantIds->count(), 422, 'Mindestens eine ausgewaehlte Person wurde nicht gefunden.');
+
+        $actor = $request->user();
+
+        foreach ($participants as $participant) {
+            abort_unless(
+                $actor->isFriendsWith($participant) && $participant->allowsDirectMessagesFrom($actor),
+                403,
+                'Gruppenchats koennen nur mit Personen gestartet werden, die Nachrichten von dir erlauben und mit dir befreundet sind.'
+            );
+        }
+    }
+
+    private function canManageGroup(Conversation $conversation): bool
+    {
+        return ! $conversation->owner_id || (int) $conversation->owner_id === auth()->id();
     }
 
     private function onlyMessagesVisibleSinceGroupJoin($query, ?Conversation $conversation): void

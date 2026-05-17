@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
 import Modal from '@/Components/Modal.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
@@ -566,6 +567,11 @@ const inviteExternalMember = (member) => {
         >
             {{ pageError }}
         </div>
+
+        <ClubWorkspaceNav
+            active="memberships"
+            description="Mitgliedschaft, Beiträge, Abrechnung und Exporte."
+        />
 
         <section class="surface-card overflow-hidden">
             <div class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-end">

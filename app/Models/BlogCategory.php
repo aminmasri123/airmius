@@ -25,7 +25,7 @@ class BlogCategory extends Model
 
     public function posts(): HasMany
     {
-        return $this->hasMany(BlogPost::class, 'category', 'name');
+        return $this->hasMany(BlogPost::class, 'blog_category_id');
     }
 
     public static function uniqueSlug(string $name, ?int $ignoreId = null): string

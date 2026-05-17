@@ -244,9 +244,12 @@ class UserController extends Controller
                     'next_level_xp' => $gamification['next_level_xp'],
                     'current_level_xp' => $gamification['current_level_xp'],
                     'progress' => $gamification['progress'],
+                    'xp_to_next_level' => $gamification['xp_to_next_level'],
+                    'earned_today' => $gamification['earned_today'],
                     'trust_score' => $gamification['trust_score'],
                     'trust_multiplier' => $gamification['trust_multiplier'],
                     'streak_days' => $gamification['streak_days'],
+                    'health_label' => $gamification['health_label'],
                 ],
                 'badges' => UserBadge::query()
                     ->where('awardable_type', User::class)

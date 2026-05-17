@@ -14,6 +14,8 @@ class SubscriptionInvoice extends Model
         'user_id',
         'club_id',
         'subscription_plan_id',
+        'subscription_type',
+        'subscription_id',
         'number',
         'title',
         'description',
@@ -30,6 +32,8 @@ class SubscriptionInvoice extends Model
         'invoice_email_sent_at',
         'payment_confirmation_email_sent_at',
         'reminder_email_sent_at',
+        'reminder_count',
+        'last_reminder_sent_at',
         'meta',
     ];
 
@@ -44,6 +48,8 @@ class SubscriptionInvoice extends Model
             'invoice_email_sent_at' => 'datetime',
             'payment_confirmation_email_sent_at' => 'datetime',
             'reminder_email_sent_at' => 'datetime',
+            'reminder_count' => 'integer',
+            'last_reminder_sent_at' => 'datetime',
             'meta' => 'array',
         ];
     }

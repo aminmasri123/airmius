@@ -42,6 +42,8 @@ class SendSubscriptionInvoiceEmails extends Command
                     $invoice->forceFill([
                         'status' => 'overdue',
                         'reminder_email_sent_at' => now(),
+                        'last_reminder_sent_at' => now(),
+                        'reminder_count' => max(1, (int) $invoice->reminder_count),
                     ])->save();
 
                     $sent++;

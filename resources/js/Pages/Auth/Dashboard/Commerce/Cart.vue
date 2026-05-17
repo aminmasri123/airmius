@@ -38,10 +38,10 @@ const cartItems = computed(() => props.cart?.items || [])
 const cartItemCount = computed(() => cartItems.value.length)
 const savedAddressOptions = computed(() => props.shippingAddresses || [])
 const sideBannerUrl = computed(() => props.marketplaceVisuals.side_banner || '/images/marketplace/airmius-marketplace-side-banner.png')
-const sideBannerDimensions = computed(() => props.marketplaceVisuals.dimensions?.side_banner || { width: 306, height: 786 })
+const sideBannerDimensions = computed(() => props.marketplaceVisuals.dimensions?.side_banner || { width: 192, height: 1080 })
 const sideBannerStyle = computed(() => ({
-    backgroundImage: `linear-gradient(180deg, rgba(5, 11, 22, 0.08), rgba(5, 11, 22, 0.18) 45%, rgba(5, 11, 22, 0.75)), url("${sideBannerUrl.value}")`,
-    width: `${Math.max(208, Math.min(288, Number(sideBannerDimensions.value.width || 306)))}px`,
+    backgroundImage: `linear-gradient(180deg, rgba(5, 11, 22, 0.28), rgba(5, 11, 22, 0.45)), url("${sideBannerUrl.value}")`,
+    width: `${Math.max(148, Math.min(192, Number(sideBannerDimensions.value.width || 192)))}px`,
 }))
 
 const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {

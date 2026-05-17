@@ -64,6 +64,8 @@ class RolePermissionController extends Controller
             'permissions.*' => ['string', 'exists:permissions,name'],
         ]);
 
+        $this->assertAllowedPermissionSelection($request, $data['permissions'] ?? []);
+
         DB::transaction(function () use ($data) {
             $role = Role::create([
                 'name' => $data['name'],
@@ -82,12 +84,15 @@ class RolePermissionController extends Controller
     public function updateRole(Request $request, Role $role)
     {
         $this->authorizeAccess($request);
+        $this->authorizeSystemRoleMutation($request, $role);
 
         $data = $request->validate([
             'description' => ['nullable', 'string', 'max:255'],
             'permissions' => ['array'],
             'permissions.*' => ['string', 'exists:permissions,name'],
         ]);
+
+        $this->assertAllowedPermissionSelection($request, $data['permissions'] ?? []);
 
         $role->update([
             'description' => $data['description'] ?? null,
@@ -115,6 +120,7 @@ class RolePermissionController extends Controller
     public function storePermission(Request $request)
     {
         $this->authorizeAccess($request);
+        abort_unless($request->user()->hasRole('super_admin'), 403, 'Nur Super-Admins koennen neue Berechtigungen erstellen.');
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9_.-]+$/', Rule::unique('permissions', 'name')],
@@ -137,6 +143,47 @@ class RolePermissionController extends Controller
         abort_unless(
             $request->user()->can('user.manage') || $request->user()->can('users.assign_roles'),
             403
+        );
+    }
+
+    private function authorizeSystemRoleMutation(Request $request, Role $role): void
+    {
+        if (! in_array($role->name, ['super_admin', 'admin', 'system_admin'], true)) {
+            return;
+        }
+
+        abort_unless(
+            $request->user()->hasRole('super_admin'),
+            403,
+            'Systemrollen duerfen nur von Super-Admins bearbeitet werden.'
+        );
+    }
+
+    private function assertAllowedPermissionSelection(Request $request, array $permissions): void
+    {
+        if ($request->user()->hasRole('super_admin')) {
+            return;
+        }
+
+        $restricted = [
+            'user.manage',
+            'users.assign_roles',
+            'system.manage',
+            'security.manage',
+            'logs.view',
+            'api.manage',
+            'billing.manage',
+            'subscriptions.manage',
+            'finance.edit',
+            'outfit-subscriptions.manage',
+        ];
+
+        $selectedRestricted = array_values(array_intersect($permissions, $restricted));
+
+        abort_if(
+            $selectedRestricted !== [],
+            403,
+            'Diese Hochrisiko-Berechtigungen duerfen nur Super-Admins vergeben: '.implode(', ', $selectedRestricted)
         );
     }
 }

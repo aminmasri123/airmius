@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\AccountWarning;
+use App\Models\MailDelivery;
 use App\Models\User;
 use App\Notifications\AccountSuspendedNotification;
+use App\Notifications\InactiveAccountNotice;
+use App\Support\TransactionalMail;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -27,9 +30,16 @@ class MemberController extends Controller
 
         $search = trim((string) $request->input('search', ''));
         $status = (string) $request->input('status', 'all');
+        $canManageInactivity = (bool) $request->user()?->can('system.manage');
+        $tab = (string) $request->input('tab', 'users');
+        if ($tab === 'inactivity' && ! $canManageInactivity) {
+            $tab = 'users';
+        }
+        $inactiveSearch = trim((string) $request->input('inactive_search', ''));
+        $inactiveStage = (string) $request->input('inactive_stage', 'all');
 
         $users = User::query()
-            ->select(['id', 'name', 'email', 'profile_visibility', 'account_status', 'suspended_until', 'suspension_reason', 'created_at'])
+            ->select(['id', 'name', 'email', 'profile_visibility', 'account_status', 'suspended_until', 'suspension_reason', 'last_login_at', 'last_seen_at', 'created_at'])
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('name', 'like', "%{$search}%")
@@ -45,8 +55,16 @@ class MemberController extends Controller
             ->paginate(25)
             ->withQueryString();
 
+        $inactiveUsers = $canManageInactivity
+            ? $this->inactiveUsers($inactiveSearch, $inactiveStage)
+            : ['data' => [], 'links' => [], 'from' => null, 'to' => null, 'total' => 0];
+
         return Inertia::render('Auth/Dashboard/Users/Index', [
             'users' => $users,
+            'inactiveUsers' => $inactiveUsers,
+            'inactiveSummary' => $canManageInactivity ? $this->inactiveSummary() : [],
+            'inactiveRules' => $canManageInactivity ? $this->inactiveRules() : [],
+            'canManageInactivity' => $canManageInactivity,
             'warnings' => AccountWarning::query()
                 ->with(['user:id,name,email,account_status,suspended_until', 'flag'])
                 ->latest()
@@ -68,8 +86,56 @@ class MemberController extends Controller
             'filters' => [
                 'search' => $search,
                 'status' => in_array($status, ['all', 'active', 'suspended'], true) ? $status : 'all',
+                'tab' => in_array($tab, ['users', 'warnings', 'inactivity'], true) ? $tab : 'users',
+                'inactive_search' => $inactiveSearch,
+                'inactive_stage' => in_array($inactiveStage, ['all', '12', '18', '24', '36', 'mail_failed'], true) ? $inactiveStage : 'all',
             ],
         ]);
+    }
+
+    public function sendInactivityNotice(Request $request, User $user, TransactionalMail $mail)
+    {
+        $this->authorize('viewAny', User::class);
+
+        $data = $request->validate([
+            'stage' => ['required', Rule::in(['first', 'second', 'scheduled'])],
+        ]);
+
+        abort_if($user->privacy_status === 'anonymized', 422, 'Anonymisierte Nutzer koennen nicht mehr angeschrieben werden.');
+
+        $scheduledAt = $data['stage'] === 'scheduled'
+            ? $this->anonymizationDateFor($user)
+            : null;
+
+        $sent = $mail->notifyWithFallback(
+            $user,
+            fn (array $transport) => new InactiveAccountNotice(
+                $data['stage'],
+                $scheduledAt?->format('d.m.Y'),
+                $transport['mailer'],
+                $transport['address'],
+                $transport['name'],
+            ),
+            'support',
+            'billing',
+            'inactive-account:manual:'.$data['stage'].':'.$user->id.':'.now()->timestamp,
+            10,
+            [
+                'mail_type' => 'inactive_account.'.$data['stage'],
+                'manual' => true,
+                'user_id' => $user->id,
+                'sent_by' => $request->user()?->id,
+                'scheduled_at' => $scheduledAt?->toDateString(),
+            ],
+        );
+
+        if (! $sent) {
+            return back()->with('error', 'Inaktivitaets-Mail konnte nicht gesendet werden. Details stehen in der Mail-Zentrale.');
+        }
+
+        $this->markInactivityNoticeSent($user, $data['stage'], $scheduledAt);
+
+        return back()->with('success', 'Inaktivitaets-Mail wurde gesendet und protokolliert.');
     }
 
     /**
@@ -231,5 +297,201 @@ class MemberController extends Controller
         $user->delete();
 
         return redirect()->route('members.index')->with('success', 'User deleted successfully.');
+    }
+
+    private function inactiveUsers(string $search, string $stage)
+    {
+        $failedRecipientIds = $stage === 'mail_failed'
+            ? MailDelivery::query()
+                ->where('status', 'failed')
+                ->where('mail_type', 'like', 'inactive_account.%')
+                ->pluck('recipient_id')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all()
+            : [];
+
+        $users = User::query()
+            ->select([
+                'id',
+                'name',
+                'email',
+                'profile_photo_path',
+                'profile_visibility',
+                'account_status',
+                'privacy_status',
+                'last_login_at',
+                'last_seen_at',
+                'created_at',
+                'updated_at',
+                'inactivity_first_warning_sent_at',
+                'inactivity_second_warning_sent_at',
+                'deletion_scheduled_at',
+                'anonymized_at',
+            ])
+            ->where(function ($query) {
+                $query->whereNull('privacy_status')
+                    ->orWhere('privacy_status', '!=', 'anonymized');
+            })
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->when(in_array($stage, ['12', '18', '24', '36'], true), function ($query) use ($stage) {
+                $query->whereRaw('COALESCE(last_login_at, last_seen_at, updated_at, created_at) <= ?', [
+                    now()->subMonthsNoOverflow((int) $stage)->toDateTimeString(),
+                ]);
+            })
+            ->when($stage === 'mail_failed', fn ($query) => $query->whereIn('id', $failedRecipientIds ?: [0]))
+            ->orderByRaw('COALESCE(last_login_at, last_seen_at, updated_at, created_at) asc')
+            ->paginate(25, ['*'], 'inactive_page')
+            ->withQueryString();
+
+        $ids = collect($users->items())->pluck('id')->all();
+        $deliveries = MailDelivery::query()
+            ->whereIn('recipient_id', $ids ?: [0])
+            ->where('mail_type', 'like', 'inactive_account.%')
+            ->latest()
+            ->get()
+            ->groupBy('recipient_id');
+
+        return $users->through(fn (User $user) => $this->inactiveUserPayload($user, $deliveries->get($user->id, collect())));
+    }
+
+    private function inactiveUserPayload(User $user, $deliveries): array
+    {
+        $basis = $this->activityBasis($user);
+        $lastDelivery = $deliveries->first();
+
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'profile_photo_url' => $user->profile_photo_thumb ?: $user->profile_photo_url,
+            'profile_visibility' => $user->profile_visibility,
+            'account_status' => $user->account_status,
+            'privacy_status' => $user->privacy_status ?: 'active',
+            'last_login_at' => $user->last_login_at?->format('d.m.Y H:i'),
+            'last_seen_at' => $user->last_seen_at?->format('d.m.Y H:i'),
+            'inactive_days' => $basis ? (int) $basis->diffInDays(now()) : null,
+            'first_warning_sent_at' => $user->inactivity_first_warning_sent_at?->format('d.m.Y H:i'),
+            'second_warning_sent_at' => $user->inactivity_second_warning_sent_at?->format('d.m.Y H:i'),
+            'deletion_scheduled_at' => $user->deletion_scheduled_at?->format('d.m.Y H:i'),
+            'recommended_stage' => $this->recommendedInactivityStage($user, $basis),
+            'last_mail' => $lastDelivery ? [
+                'id' => $lastDelivery->id,
+                'type' => $lastDelivery->mail_type,
+                'status' => $lastDelivery->status,
+                'used_category' => $lastDelivery->used_category,
+                'from_address' => $lastDelivery->from_address,
+                'error_message' => $lastDelivery->error_message,
+                'created_at' => $lastDelivery->created_at?->format('d.m.Y H:i'),
+            ] : null,
+        ];
+    }
+
+    private function inactiveSummary(): array
+    {
+        return [
+            'inactive_12' => $this->countInactiveSince(12),
+            'inactive_18' => $this->countInactiveSince(18),
+            'inactive_24' => $this->countInactiveSince(24),
+            'inactive_36' => $this->countInactiveSince(36),
+            'mail_failed' => MailDelivery::query()
+                ->where('status', 'failed')
+                ->where('mail_type', 'like', 'inactive_account.%')
+                ->count(),
+        ];
+    }
+
+    private function inactiveRules(): array
+    {
+        return [
+            ['month' => '12 Monate', 'title' => 'Als inaktiv markieren', 'description' => 'Nutzer bleibt erhalten, wird aber im Adminbereich als inaktiv erkennbar.'],
+            ['month' => '18 Monate', 'title' => 'Reaktivierungs-Mail senden', 'description' => 'Automatisch oder manuell erinnern und Versand in der Mail-Zentrale protokollieren.'],
+            ['month' => '24 Monate', 'title' => 'Profil ausblenden', 'description' => 'Oeffentliches Profil, Suchbarkeit und Komfort-Kommunikation stoppen.'],
+            ['month' => '36 Monate', 'title' => 'Anonymisieren', 'description' => 'Nicht notwendige personenbezogene Daten entfernen oder anonymisieren.'],
+            ['month' => 'Pflichtdaten', 'title' => 'Separat archivieren', 'description' => 'Rechnungen, Zahlungen und Vertragsdaten bleiben gemaess Aufbewahrungspflichten erhalten.'],
+        ];
+    }
+
+    private function countInactiveSince(int $months): int
+    {
+        return User::query()
+            ->where(function ($query) {
+                $query->whereNull('privacy_status')
+                    ->orWhere('privacy_status', '!=', 'anonymized');
+            })
+            ->whereRaw('COALESCE(last_login_at, last_seen_at, updated_at, created_at) <= ?', [
+                now()->subMonthsNoOverflow($months)->toDateTimeString(),
+            ])
+            ->count();
+    }
+
+    private function recommendedInactivityStage(User $user, ?Carbon $basis): string
+    {
+        if (! $basis) {
+            return 'check';
+        }
+
+        $months = (int) $basis->diffInMonths(now());
+
+        if ($months >= 36) {
+            return 'anonymize';
+        }
+
+        if ($months >= 24) {
+            return 'scheduled';
+        }
+
+        if ($months >= 18) {
+            return $user->inactivity_second_warning_sent_at ? 'waiting' : 'second';
+        }
+
+        if ($months >= 12) {
+            return $user->inactivity_first_warning_sent_at ? 'waiting' : 'first';
+        }
+
+        return 'active';
+    }
+
+    private function markInactivityNoticeSent(User $user, string $stage, ?Carbon $scheduledAt): void
+    {
+        $changes = match ($stage) {
+            'first' => [
+                'privacy_status' => 'inactive_warning_sent',
+                'inactivity_first_warning_sent_at' => now(),
+            ],
+            'second' => [
+                'privacy_status' => 'inactive_warning_sent',
+                'inactivity_second_warning_sent_at' => now(),
+            ],
+            'scheduled' => [
+                'privacy_status' => 'scheduled_for_anonymization',
+                'profile_visibility' => 'private',
+                'deletion_scheduled_at' => $scheduledAt,
+            ],
+        };
+
+        $user->forceFill($changes)->save();
+    }
+
+    private function anonymizationDateFor(User $user): Carbon
+    {
+        $basis = $this->activityBasis($user) ?: now();
+        $date = $basis->copy()->addMonthsNoOverflow(36);
+
+        return $date->isPast() ? now()->addDays(30) : $date;
+    }
+
+    private function activityBasis(User $user): ?Carbon
+    {
+        return $user->last_login_at
+            ?? $user->last_seen_at
+            ?? $user->updated_at
+            ?? $user->created_at;
     }
 }

@@ -14,13 +14,17 @@ use App\Notifications\SubscriptionPaymentIssue;
 use App\Notifications\SubscriptionRenewed;
 use App\Support\AppNotification;
 use App\Support\ClubRoles;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class SubscriptionPlanController extends Controller
 {
+    use AuthorizesRequests;
+
     public function index()
     {
         return Inertia::render('Auth/Dashboard/Admin/Subscriptions/Index', [
@@ -267,7 +271,11 @@ class SubscriptionPlanController extends Controller
 
     public function cancelOwnUserSubscription(Request $request, UserSubscription $subscription)
     {
-        abort_unless($subscription->user_id === $request->user()->id, 403);
+        $this->authorize('cancel', $subscription);
+
+        if (! $this->isUserSubscriptionCancellable($subscription)) {
+            return back()->with('error', 'Das Abo wurde bereits gekuendigt.');
+        }
 
         $this->cancelSubscription($subscription, 'period_end');
 
@@ -276,30 +284,59 @@ class SubscriptionPlanController extends Controller
 
     public function providerPortal(Request $request, UserSubscription $subscription)
     {
-        abort_unless($subscription->user_id === $request->user()->id, 403);
+        $this->authorize('accessProviderPortal', $subscription);
 
-        if ($subscription->payment_provider !== 'stripe' || ! $subscription->provider_customer_id || blank(config('services.stripe.secret'))) {
-            return back()->with('success', 'Provider-Portal ist für dieses Abo noch nicht verfügbar.');
+        if (! $this->hasStripePortalConfiguration()) {
+            return back()->with('error', 'Provider-Portal ist für dieses Abo nicht verfügbar.');
         }
 
-        $response = Http::asForm()
-            ->withToken(config('services.stripe.secret'))
-            ->post('https://api.stripe.com/v1/billing_portal/sessions', [
-                'customer' => $subscription->provider_customer_id,
-                'return_url' => route('auth.settings'),
+        try {
+            $response = Http::asForm()
+                ->withToken(config('services.stripe.secret'))
+                ->post('https://api.stripe.com/v1/billing_portal/sessions', [
+                    'customer' => $subscription->provider_customer_id,
+                    'return_url' => route('auth.settings'),
+                ]);
+        } catch (\Throwable $e) {
+            Log::warning('Stripe Portal API request failed.', [
+                'user_id' => $request->user()->id,
+                'subscription_id' => $subscription->id,
+                'error' => $e->getMessage(),
             ]);
 
+            return back()->with('error', 'Provider-Portal konnte aktuell nicht gestartet werden.');
+        }
+
         if ($response->failed() || blank($response->json('url'))) {
-            return back()->with('success', 'Provider-Portal konnte nicht gestartet werden.');
+            Log::warning('Stripe Portal API returned invalid response.', [
+                'user_id' => $request->user()->id,
+                'subscription_id' => $subscription->id,
+                'status' => $response->status(),
+                'body' => $response->json(),
+            ]);
+
+            return back()->with('error', 'Provider-Portal konnte nicht gestartet werden.');
         }
 
         return redirect()->away($response->json('url'));
+    }
+
+    private function isUserSubscriptionCancellable(UserSubscription $subscription): bool
+    {
+        return ! in_array($subscription->status, ['cancelled', 'cancels_at_period_end'], true);
+    }
+
+    private function hasStripePortalConfiguration(): bool
+    {
+        return blank(config('services.stripe.secret')) === false;
     }
 
     private function cancelSubscription(ClubSubscription|UserSubscription $subscription, string $mode): void
     {
         $endsAt = $subscription->current_period_ends_at ?: now();
         $recipientId = $subscription instanceof UserSubscription ? $subscription->user_id : null;
+
+        $this->cancelProviderSubscription($subscription, $mode);
 
         if ($mode === 'now') {
             $subscription->update([
@@ -327,7 +364,80 @@ class SubscriptionPlanController extends Controller
                 'subscription_id' => $subscription->id,
             ]);
         }
+        if ($subscription instanceof ClubSubscription) {
+            $subscription->loadMissing(['club', 'plan']);
+            $clubName = $subscription->club?->name ?? 'Verein';
+
+            foreach ($this->subscriptionRecipients($subscription) as $recipient) {
+                AppNotification::send($recipient, 'club.subscription.cancelled', [
+                    'title' => $mode === 'now' ? 'Vereins-Abo beendet' : 'Vereins-Abo-Kuendigung vorgemerkt',
+                    'body' => $mode === 'now'
+                        ? "Das Abo von {$clubName} wurde beendet."
+                        : "Das Abo von {$clubName} laeuft bis zum Kuendigungsdatum weiter.",
+                    'subscription_id' => $subscription->id,
+                    'club_id' => $subscription->club_id,
+                    'club_name' => $clubName,
+                    'plan_id' => $subscription->subscription_plan_id,
+                    'plan_name' => $subscription->plan?->name,
+                    'cancels_at' => $subscription->cancels_at?->toDateString(),
+                ]);
+            }
+        }
+
         $this->sendSubscriptionEmail($subscription, new SubscriptionCancelled($subscription, $mode), 'cancellation_email_sent_at');
+    }
+
+    private function cancelProviderSubscription(ClubSubscription|UserSubscription $subscription, string $mode): void
+    {
+        if (! $subscription->provider_subscription_id) {
+            return;
+        }
+
+        if ($subscription->payment_provider === 'stripe' && filled(config('services.stripe.secret'))) {
+            $payload = $mode === 'period_end'
+                ? ['cancel_at_period_end' => 'true']
+                : [];
+
+            $request = Http::asForm()->withToken(config('services.stripe.secret'));
+            $response = $mode === 'period_end'
+                ? $request->post('https://api.stripe.com/v1/subscriptions/'.$subscription->provider_subscription_id, $payload)
+                : $request->delete('https://api.stripe.com/v1/subscriptions/'.$subscription->provider_subscription_id);
+
+            if ($response->failed()) {
+                Log::warning('Stripe subscription cancellation failed', [
+                    'subscription_id' => $subscription->id,
+                    'provider_subscription_id' => $subscription->provider_subscription_id,
+                    'status' => $response->status(),
+                    'body' => $response->json(),
+                ]);
+            }
+
+            return;
+        }
+
+        if ($subscription->payment_provider === 'paypal' && filled(config('services.paypal.client_id')) && filled(config('services.paypal.client_secret'))) {
+            try {
+                $tokenResponse = Http::asForm()
+                    ->withBasicAuth(config('services.paypal.client_id'), config('services.paypal.client_secret'))
+                    ->post((config('services.paypal.mode') === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com').'/v1/oauth2/token', [
+                        'grant_type' => 'client_credentials',
+                    ]);
+
+                if ($tokenResponse->failed()) {
+                    return;
+                }
+
+                Http::withToken($tokenResponse->json('access_token'))
+                    ->withBody(json_encode(['reason' => 'Airmius Abo wurde vom Kunden beendet.']), 'application/json')
+                    ->post((config('services.paypal.mode') === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com').'/v1/billing/subscriptions/'.$subscription->provider_subscription_id.'/cancel');
+            } catch (\Throwable $exception) {
+                Log::warning('PayPal subscription cancellation failed', [
+                    'subscription_id' => $subscription->id,
+                    'provider_subscription_id' => $subscription->provider_subscription_id,
+                    'message' => $exception->getMessage(),
+                ]);
+            }
+        }
     }
 
     private function contractualCancellationDate(ClubSubscription|UserSubscription $subscription)
@@ -429,3 +539,4 @@ class SubscriptionPlanController extends Controller
         ];
     }
 }
+

@@ -84,6 +84,11 @@ class CreateNewUser implements CreatesNewUsers
             GuardianConsentNotifier::send($user, $guardianEmail);
         }
 
+        app(\App\Http\Controllers\CommerceCheckoutController::class)->trackAttributedAdConversion(request(), 'registration', 0, [
+            'registered_user_id' => $user->id,
+            'country' => $user->country,
+        ]);
+
         return $user;
     }
 }

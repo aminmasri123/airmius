@@ -33,6 +33,8 @@ class UserSettingsController extends Controller
                 'profile_visibility',
                 'direct_message_privacy',
                 'friend_request_privacy',
+                'ads_personalization_consent',
+                'ads_measurement_consent',
             ]),
             'eventDefaults' => [
                 'radius_km' => $request->user()->event_radius_km,
@@ -79,6 +81,7 @@ class UserSettingsController extends Controller
                     'id' => $subscription->id,
                     'status' => $subscription->status,
                     'payment_provider' => $subscription->payment_provider,
+                    'provider_customer_id' => $subscription->provider_customer_id,
                     'trial_ends_at' => $subscription->trial_ends_at?->toDateString(),
                     'current_period_ends_at' => $subscription->current_period_ends_at?->toDateString(),
                     'cancel_at_period_end' => $subscription->cancel_at_period_end,
@@ -180,6 +183,8 @@ class UserSettingsController extends Controller
                 'profile_visibility' => ['nullable', 'in:public,private'],
                 'direct_message_privacy' => ['nullable', 'in:everyone,friends'],
                 'friend_request_privacy' => ['nullable', 'in:everyone,friends'],
+                'ads_personalization_consent' => ['boolean'],
+                'ads_measurement_consent' => ['boolean'],
             ]);
 
             if (empty($data['theme'])) {
@@ -201,6 +206,8 @@ class UserSettingsController extends Controller
                 'profile_visibility' => $data['profile_visibility'] ?? $request->user()->profile_visibility ?? 'public',
                 'direct_message_privacy' => $data['direct_message_privacy'] ?? $request->user()->direct_message_privacy ?? 'everyone',
                 'friend_request_privacy' => $data['friend_request_privacy'] ?? $request->user()->friend_request_privacy ?? 'everyone',
+                'ads_personalization_consent' => (bool) ($data['ads_personalization_consent'] ?? false),
+                'ads_measurement_consent' => (bool) ($data['ads_measurement_consent'] ?? false),
             ]);
 
             return back()->with('success', 'Einstellungen wurden gespeichert.');

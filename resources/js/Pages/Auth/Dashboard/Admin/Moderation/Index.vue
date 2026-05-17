@@ -27,6 +27,7 @@ const filteredWarnings = computed(() => {
     return props.warnings.filter((warning) => (warning.flag?.categories || []).includes(warningCategoryFilter.value))
 })
 const storageUrl = (path) => path?.startsWith('http') ? path : `${page.props.uploads?.url || '/storage'}/${path}`
+const isVideo = (content) => content?.media_type?.startsWith('video/')
 
 const badgeClass = (severity) => ({
     high: 'bg-error/10 text-error border-error/30',
@@ -145,8 +146,15 @@ const updateFlag = (flag, status, removeContent = false) => {
                             {{ report.content?.text || 'Kein Inhalt mehr vorhanden.' }}
                         </p>
 
+                        <video
+                            v-if="report.content?.image && isVideo(report.content)"
+                            :src="storageUrl(report.content.image)"
+                            controls
+                            class="mt-3 max-h-96 w-full rounded-lg border border-border bg-black"
+                        ></video>
+
                         <img
-                            v-if="report.content?.image"
+                            v-else-if="report.content?.image"
                             :src="storageUrl(report.content.image)"
                             alt=""
                             class="mt-3 max-h-96 w-full rounded-lg border border-border object-contain bg-bg"
@@ -196,8 +204,15 @@ const updateFlag = (flag, status, removeContent = false) => {
                             {{ flag.content?.text || 'Kein Inhalt mehr vorhanden.' }}
                         </p>
 
+                        <video
+                            v-if="flag.content?.image && isVideo(flag.content)"
+                            :src="storageUrl(flag.content.image)"
+                            controls
+                            class="mt-3 max-h-96 w-full rounded-lg border border-border bg-black"
+                        ></video>
+
                         <img
-                            v-if="flag.content?.image"
+                            v-else-if="flag.content?.image"
                             :src="storageUrl(flag.content.image)"
                             alt=""
                             class="mt-3 max-h-96 w-full rounded-lg border border-border object-contain bg-bg"

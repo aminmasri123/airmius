@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\BlogPost;
 use App\Models\BlogCategory;
+use App\Models\BlogPostRevision;
 use App\Services\MediaOptimizer;
 use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -26,12 +28,15 @@ class BlogPostController extends Controller
 
         return Inertia::render('Auth/Dashboard/Blogs/Index', [
             'posts' => BlogPost::query()
-                ->with(['author:id,name', 'publisher:id,name'])
+                ->with(['author:id,name', 'publisher:id,name', 'blogCategory:id,name,slug'])
+                ->withCount('revisions')
+                ->with('latestRevision:id,blog_post_id,user_id,seo_score,created_at')
                 ->when($status && $status !== 'all', fn ($query) => $query->where('status', $status))
                 ->when($search, fn ($query) => $query->where(function ($query) use ($search) {
                     $query->where('title', 'like', "%{$search}%")
                         ->orWhere('excerpt', 'like', "%{$search}%")
-                        ->orWhere('category', 'like', "%{$search}%");
+                        ->orWhere('category', 'like', "%{$search}%")
+                        ->orWhereHas('blogCategory', fn ($query) => $query->where('name', 'like', "%{$search}%"));
                 }))
                 ->latest('updated_at')
                 ->paginate(12)
@@ -64,7 +69,8 @@ class BlogPostController extends Controller
         $data = $this->prepareCoverImage($request, $data);
         $data = $this->preparePublishingData($request, $data);
 
-        BlogPost::create($data);
+        $blogPost = BlogPost::create($data);
+        $this->recordRevision($blogPost, $request, ['created']);
 
         return back()->with('success', 'Blogbeitrag erstellt.');
     }
@@ -93,11 +99,17 @@ class BlogPostController extends Controller
     {
         $this->authorizeBlog($request, 'blog.update');
 
+        $original = $this->revisionSnapshot($blogPost);
         $data = $this->validated($request, $blogPost);
         $data = $this->prepareCoverImage($request, $data);
         $data = $this->preparePublishingData($request, $data, $blogPost);
 
         $blogPost->update($data);
+        $changedFields = $this->changedRevisionFields($original, $this->revisionSnapshot($blogPost->fresh()));
+
+        if ($changedFields !== []) {
+            $this->recordRevision($blogPost->fresh(), $request, $changedFields);
+        }
 
         return back()->with('success', 'Blogbeitrag aktualisiert.');
     }
@@ -111,16 +123,71 @@ class BlogPostController extends Controller
         return back()->with('success', 'Blogbeitrag gelöscht.');
     }
 
-    public function publicIndex()
+    public function publicIndex(Request $request)
     {
+        return $this->publicBlogIndexPayload($request);
+    }
+
+    public function publicCategory(Request $request, BlogCategory $blogCategory)
+    {
+        abort_unless($blogCategory->is_active, 404);
+
+        return $this->publicBlogIndexPayload($request, $blogCategory);
+    }
+
+    private function publicBlogIndexPayload(Request $request, ?BlogCategory $activeCategory = null)
+    {
+        $categoryFilter = $request->query('category');
+        $search = $request->query('search');
+
+        if (! $activeCategory && $categoryFilter) {
+            $activeCategory = BlogCategory::query()
+                ->where('is_active', true)
+                ->where(function ($query) use ($categoryFilter) {
+                    $query->where('slug', $categoryFilter)
+                        ->orWhere('name', $categoryFilter);
+                })
+                ->first();
+        }
+
         return Inertia::render('Guest/Blog/Index', [
             'canLogin' => Route::has('login'),
             'canRegister' => Route::has('register'),
             'posts' => BlogPost::query()
                 ->published()
-                ->with('author:id,name')
+                ->with(['author:id,name', 'blogCategory:id,name,slug'])
+                ->when($activeCategory, fn ($query) => $query->where(function ($query) use ($activeCategory) {
+                    $query->where('blog_category_id', $activeCategory->id)
+                        ->orWhere('category', $activeCategory->name);
+                }))
+                ->when($search, fn ($query) => $query->where(function ($query) use ($search) {
+                    $query->where('title', 'like', "%{$search}%")
+                        ->orWhere('excerpt', 'like', "%{$search}%")
+                        ->orWhere('content', 'like', "%{$search}%");
+                }))
                 ->latest('published_at')
-                ->paginate(9),
+                ->paginate(9)
+                ->withQueryString(),
+            'categories' => BlogCategory::query()
+                ->where('is_active', true)
+                ->withCount(['posts' => fn ($query) => $query->published()])
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name', 'slug']),
+            'filters' => [
+                'category' => $activeCategory?->slug ?: '',
+                'search' => $search ?: '',
+            ],
+            'activeCategory' => $activeCategory,
+            'seo' => [
+                'title' => $activeCategory ? $activeCategory->name.' im Airmius Blog' : 'Airmius Blog',
+                'description' => $activeCategory?->description
+                    ?: 'Praxiswissen, Updates und Ideen fuer digitale Sportorganisation, Vereine, Trainer, Teams und Sportler.',
+                'canonical' => $activeCategory
+                    ? route('guest.blog.category', $activeCategory->slug)
+                    : route('guest.blog.index'),
+                'noindex' => filled($search),
+            ],
         ]);
     }
 
@@ -131,7 +198,43 @@ class BlogPostController extends Controller
         return Inertia::render('Guest/Blog/Show', [
             'canLogin' => Route::has('login'),
             'canRegister' => Route::has('register'),
-            'post' => $blogPost->load('author:id,name'),
+            'post' => $blogPost->load(['author:id,name', 'blogCategory:id,name,slug']),
+            'relatedPosts' => BlogPost::query()
+                ->published()
+                ->with(['author:id,name', 'blogCategory:id,name,slug'])
+                ->whereKeyNot($blogPost->id)
+                ->when($blogPost->blog_category_id || $blogPost->category, fn ($query) => $query->where(function ($query) use ($blogPost) {
+                    $query
+                        ->when($blogPost->blog_category_id, fn ($query) => $query->where('blog_category_id', $blogPost->blog_category_id))
+                        ->when($blogPost->category, fn ($query) => $query->orWhere('category', $blogPost->category));
+                }))
+                ->latest('published_at')
+                ->take(3)
+                ->get(),
+        ]);
+    }
+
+    public function preview(Request $request, BlogPost $blogPost)
+    {
+        $this->authorizeBlog($request, 'blog.view');
+
+        return Inertia::render('Guest/Blog/Show', [
+            'canLogin' => Route::has('login'),
+            'canRegister' => Route::has('register'),
+            'post' => $blogPost->load(['author:id,name', 'blogCategory:id,name,slug']),
+            'relatedPosts' => BlogPost::query()
+                ->published()
+                ->with(['author:id,name', 'blogCategory:id,name,slug'])
+                ->whereKeyNot($blogPost->id)
+                ->when($blogPost->blog_category_id || $blogPost->category, fn ($query) => $query->where(function ($query) use ($blogPost) {
+                    $query
+                        ->when($blogPost->blog_category_id, fn ($query) => $query->where('blog_category_id', $blogPost->blog_category_id))
+                        ->when($blogPost->category, fn ($query) => $query->orWhere('category', $blogPost->category));
+                }))
+                ->latest('published_at')
+                ->take(3)
+                ->get(),
+            'isPreview' => true,
         ]);
     }
 
@@ -151,6 +254,7 @@ class BlogPostController extends Controller
             'cover_image' => ['nullable', 'url', 'max:2048'],
             'cover_image_upload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
             'category' => ['nullable', 'string', 'max:120', Rule::exists('blog_categories', 'name')],
+            'blog_category_id' => ['nullable', 'integer', Rule::exists('blog_categories', 'id')->where('is_active', true)],
             'tags' => ['nullable', 'string', 'max:500'],
             'meta_title' => ['nullable', 'string', 'max:255'],
             'meta_description' => ['nullable', 'string', 'max:500'],
@@ -159,6 +263,7 @@ class BlogPostController extends Controller
         ]);
 
         $data['slug'] = $data['slug'] ?: BlogPost::uniqueSlug($data['title'], $blogPost?->id);
+        $data = $this->prepareCategoryData($data);
         $data['content'] = $this->sanitizeContent($data['content']);
         $data['tags'] = collect(explode(',', $data['tags'] ?? ''))
             ->map(fn ($tag) => trim($tag))
@@ -170,13 +275,43 @@ class BlogPostController extends Controller
         return $data;
     }
 
+    private function prepareCategoryData(array $data): array
+    {
+        $category = null;
+
+        if (filled($data['blog_category_id'] ?? null)) {
+            $category = BlogCategory::query()->find($data['blog_category_id']);
+        } elseif (filled($data['category'] ?? null)) {
+            $category = BlogCategory::query()
+                ->where('name', $data['category'])
+                ->orWhere('slug', $data['category'])
+                ->first();
+        }
+
+        $data['blog_category_id'] = $category?->id;
+        $data['category'] = $category?->name;
+
+        return $data;
+    }
+
     private function sanitizeContent(string $content): string
     {
-        $content = preg_replace('#<(script|style|iframe|object|embed|form|input|button)[^>]*>.*?</\1>#is', '', $content) ?? '';
+        $content = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]+/u', '', $content) ?? '';
+        $content = preg_replace('#<(script|style|iframe|object|embed|form|input|button)[^>]*(?:>.*?</\1\s*>|/?>)#is', '', $content) ?? '';
         $content = strip_tags($content, '<p><br><strong><b><em><i><u><s><strike><h2><h3><h4><blockquote><ul><ol><li><a><span><pre><code><hr><div><figure><figcaption><img>');
         $content = preg_replace('/\s(on[a-z]+|formaction)\s*=\s*(".*?"|\'.*?\'|[^\s>]+)/i', '', $content) ?? '';
-        $content = preg_replace('/\s(href|src)\s*=\s*([\'"])\s*javascript:.*?\2/i', '', $content) ?? '';
+        $content = preg_replace_callback('/\s(href|src)\s*=\s*(".*?"|\'.*?\'|[^\s>]+)/is', function (array $matches) {
+            $rawValue = trim($matches[2], "\"' \t\n\r\0\x0B");
+            $decodedValue = strtolower(trim(html_entity_decode($rawValue, ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+
+            if (preg_match('/^(javascript|data|vbscript):/i', $decodedValue)) {
+                return '';
+            }
+
+            return $matches[0];
+        }, $content) ?? '';
         $content = preg_replace('/\sstyle\s*=\s*([\'"]).*?\1/is', '', $content) ?? $content;
+        $content = preg_replace('/\s(srcdoc|xmlns|xlink:href|srcset|ping|poster)\s*=\s*(".*?"|\'.*?\'|[^\s>]+)/i', '', $content) ?? $content;
         $content = preg_replace_callback('/\sclass\s*=\s*([\'"])(.*?)\1/is', function (array $matches) {
             $allowedClasses = [
                 'blog-lead',
@@ -227,11 +362,76 @@ class BlogPostController extends Controller
         }
 
         $this->authorizeBlog($request, 'blog.publish');
+        $this->ensurePublishable($data);
 
         $data['published_at'] = $data['published_at'] ?? now();
         $data['published_by'] = $blogPost?->published_by ?: $request->user()->id;
 
         return $data;
+    }
+
+    private function ensurePublishable(array $data): void
+    {
+        $score = BlogPost::seoScoreFor($data);
+
+        if ($score >= 85) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'status' => "Zum Veroeffentlichen braucht der Beitrag mindestens 85% SEO-Qualitaet. Aktuell: {$score}%.",
+        ]);
+    }
+
+    private function recordRevision(BlogPost $blogPost, Request $request, array $changedFields): void
+    {
+        BlogPostRevision::query()->create([
+            ...$this->revisionSnapshot($blogPost),
+            'blog_post_id' => $blogPost->id,
+            'user_id' => $request->user()?->id,
+            'seo_score' => $blogPost->seo_score,
+            'changed_fields' => array_values($changedFields),
+            'created_at' => now(),
+        ]);
+    }
+
+    private function revisionSnapshot(BlogPost $blogPost): array
+    {
+        return [
+            'title' => $blogPost->title,
+            'slug' => $blogPost->slug,
+            'excerpt' => $blogPost->excerpt,
+            'content' => $blogPost->content,
+            'cover_image' => $blogPost->cover_image,
+            'category' => $blogPost->category,
+            'blog_category_id' => $blogPost->blog_category_id,
+            'tags' => $blogPost->tags,
+            'meta_title' => $blogPost->meta_title,
+            'meta_description' => $blogPost->meta_description,
+            'status' => $blogPost->status,
+            'published_at' => $blogPost->published_at,
+        ];
+    }
+
+    private function changedRevisionFields(array $before, array $after): array
+    {
+        return collect($after)
+            ->filter(function ($value, string $field) use ($before) {
+                $oldValue = $before[$field] ?? null;
+
+                if ($oldValue instanceof \DateTimeInterface) {
+                    $oldValue = $oldValue->format(DATE_ATOM);
+                }
+
+                if ($value instanceof \DateTimeInterface) {
+                    $value = $value->format(DATE_ATOM);
+                }
+
+                return $oldValue !== $value;
+            })
+            ->keys()
+            ->values()
+            ->all();
     }
 
     private function authorizeBlog(Request $request, string $permission): void

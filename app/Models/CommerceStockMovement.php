@@ -11,6 +11,7 @@ class CommerceStockMovement extends Model
 
     protected $fillable = [
         'marketplace_product_id',
+        'commerce_warehouse_id',
         'commerce_order_id',
         'commerce_return_request_id',
         'type',
@@ -30,5 +31,10 @@ class CommerceStockMovement extends Model
     public function product()
     {
         return $this->belongsTo(MarketplaceProduct::class, 'marketplace_product_id');
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(CommerceWarehouse::class, 'commerce_warehouse_id');
     }
 }

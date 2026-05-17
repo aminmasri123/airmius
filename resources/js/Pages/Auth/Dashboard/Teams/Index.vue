@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
 import Modal from '@/Components/Modal.vue'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
@@ -88,6 +89,7 @@ const sponsorForms = ref({})
 const editingSponsorIds = ref({})
 const jobForms = ref({})
 const editingJobId = ref(null)
+const isSubmittingJob = ref(false)
 const processingJoinTeamIds = ref(new Set())
 const processingJoinRequestIds = ref(new Set())
 
@@ -626,14 +628,6 @@ const deleteClub = (club) => {
         successMessage: 'Verein wurde geloescht.',
         errorMessage: 'Verein konnte nicht geloescht werden.',
     })
-    return
-    const message = `Verein "${club.name}" wirklich löschen? Dadurch werden auch alle Teams dieses Vereins gelöscht.`
-
-    if (!confirm(message)) return
-
-    router.delete(route('auth.clubs.destroy', club.id), {
-        preserveScroll: true,
-    })
 }
 
 const deleteTeam = (team) => {
@@ -644,12 +638,6 @@ const deleteTeam = (team) => {
         params: team.id,
         successMessage: 'Team wurde geloescht.',
         errorMessage: 'Team konnte nicht geloescht werden.',
-    })
-    return
-    if (!confirm(`Team "${team.name}" wirklich löschen?`)) return
-
-    router.delete(route('auth.teams.destroy', team.id), {
-        preserveScroll: true,
     })
 }
 
@@ -687,6 +675,7 @@ const closeJobModal = () => {
     selectedJobClub.value = null
     jobModalNotice.value = null
     editingJobId.value = null
+    isSubmittingJob.value = false
 }
 
 const editJob = (club, job) => {
@@ -710,8 +699,11 @@ const editJob = (club, job) => {
 }
 
 const submitJob = (club) => {
+    if (isSubmittingJob.value) return
+
     actionNotice.value = null
     jobModalNotice.value = null
+    isSubmittingJob.value = true
     const isEditing = Boolean(editingJobId.value)
 
     const options = {
@@ -727,6 +719,9 @@ const submitJob = (club) => {
                 message: 'Eintrag konnte nicht gespeichert werden. Bitte prüfe die markierten Felder.',
             }
         },
+        onFinish: () => {
+            isSubmittingJob.value = false
+        },
     }
 
     editingJobId.value
@@ -736,24 +731,20 @@ const submitJob = (club) => {
 
 const deleteJob = (job) => {
     openDeleteModal({
-        title: `Eintrag "${job.title}" loeschen`,
-        description: 'Der Ehrenamt- oder Berufs-Eintrag wird dauerhaft entfernt.',
+        title: `Stelle "${job.title}" löschen`,
+        description: 'Dieser Eintrag wird dauerhaft gelöscht und erscheint danach nicht mehr auf der Jobs-Seite.',
         route: 'auth.organization-jobs.destroy',
         params: job.id,
-        successMessage: 'Eintrag wurde geloescht.',
-        errorMessage: 'Eintrag konnte nicht geloescht werden.',
-    })
-    return
-    if (!confirm(`Stelle "${job.title}" wirklich löschen?`)) return
-
-    router.delete(route('auth.organization-jobs.destroy', job.id), {
-        preserveScroll: true,
+        successMessage: 'Eintrag wurde gelöscht.',
+        errorMessage: 'Eintrag konnte nicht gelöscht werden.',
+        confirmText: 'löschen',
+        buttonLabel: 'Stelle löschen',
     })
 }
 </script>
 
 <template>
-    <Head title="Teams" />
+    <Head title="Vereine & Teams" />
 
     <div class="space-y-6">
         <!-- HEADER -->
@@ -764,7 +755,7 @@ const deleteJob = (job) => {
                 </h1>
 
                 <p class="text-sm text-secondary">
-                    {{ $t('Verwalte Teams, Mitglieder und Rollen') }}
+                    {{ $t('Verwalte Vereinsstruktur, Teams, Rollen und Einladungen') }}
                 </p>
             </div>
 
@@ -789,6 +780,11 @@ const deleteJob = (job) => {
                 + {{ $t('Verein registrieren') }}
             </button>
         </div>
+
+        <ClubWorkspaceNav
+            active="structure"
+            description="Vereinsstruktur, Teams, Rollen und Einladungen."
+        />
 
         <div
             v-if="actionNotice"
@@ -1603,11 +1599,11 @@ const deleteJob = (job) => {
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Engagement</p>
                         <h2 class="mt-1 text-lg font-semibold text-primary">
-                            Ehrenamt & Berufe
+                            Jobs & Ehrenamt
                         </h2>
 
                         <p class="text-xs text-secondary">
-                            Offene Stellen dieser Organisation erscheinen nach Veröffentlichung auf der Webseite.
+                            Veröffentliche bezahlte Stellen, Ehrenamtsrollen und konkrete Aufgaben direkt auf der Jobs-Seite.
                         </p>
                     </div>
 
@@ -1621,7 +1617,7 @@ const deleteJob = (job) => {
                             class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
                             @click="openJobModal(club)"
                         >
-                            + Eintrag
+                            Eintrag hinzufügen
                         </button>
                     </div>
                 </div>
@@ -1732,7 +1728,7 @@ const deleteJob = (job) => {
                                 </h3>
 
                                 <p class="mt-1 break-words text-xs text-secondary">
-                                    {{ job.location || 'Ort offen' }} · {{ job.workload || 'Umfang offen' }}
+                                    {{ job.location || 'Ort offen' }} · {{ job.workload || 'Umfang offen' }} · {{ job.employment_type || 'Art offen' }}
                                 </p>
                             </div>
 
@@ -1748,8 +1744,31 @@ const deleteJob = (job) => {
                             {{ job.description }}
                         </p>
 
+                        <div
+                            v-if="job.contact_email || job.application_url"
+                            class="mt-3 flex flex-wrap gap-2 text-xs"
+                        >
+                            <a
+                                v-if="job.contact_email"
+                                :href="`mailto:${job.contact_email}`"
+                                class="rounded-full border border-border px-3 py-1 text-secondary hover:bg-muted hover:text-primary"
+                            >
+                                Kontakt: {{ job.contact_email }}
+                            </a>
+                            <a
+                                v-if="job.application_url"
+                                :href="job.application_url"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="rounded-full border border-air-blue/30 px-3 py-1 text-air-blue hover:bg-air-blue/10"
+                            >
+                                Bewerbungslink prüfen
+                            </a>
+                        </div>
+
                         <div v-if="club.can_manage_jobs" class="mt-4 grid grid-cols-2 gap-2 sm:flex">
                             <button
+                                type="button"
                                 class="rounded border border-border px-3 py-2 text-sm text-primary hover:bg-muted"
                                 @click="editJob(club, job)"
                             >
@@ -1757,6 +1776,7 @@ const deleteJob = (job) => {
                             </button>
 
                             <button
+                                type="button"
                                 class="rounded bg-error px-3 py-2 text-sm text-white"
                                 @click="deleteJob(job)"
                             >
@@ -1769,7 +1789,18 @@ const deleteJob = (job) => {
                         v-if="!club.jobs?.length"
                         class="rounded-lg border border-dashed border-border bg-card p-5 text-sm text-secondary lg:col-span-2"
                     >
-                        Noch keine Stellen für diese Organisation.
+                        <p class="font-semibold text-primary">Noch keine Stellen veröffentlicht.</p>
+                        <p class="mt-1">
+                            Lege den ersten Eintrag an, damit interessierte Menschen passende Jobs oder Ehrenamtsrollen finden.
+                        </p>
+                        <button
+                            v-if="club.can_manage_jobs"
+                            type="button"
+                            class="mt-4 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
+                            @click="openJobModal(club)"
+                        >
+                            Ersten Eintrag erstellen
+                        </button>
                     </div>
                 </div>
             </div>
@@ -2188,22 +2219,28 @@ const deleteJob = (job) => {
     </Modal>
 
     <Modal :show="showJobModal" max-width="xl" @close="closeJobModal">
-        <form v-if="selectedJobClub" class="space-y-5" @submit.prevent="submitJob(selectedJobClub)">
+        <form
+            v-if="selectedJobClub"
+            class="space-y-5"
+            @submit.prevent="submitJob(selectedJobClub)"
+            aria-labelledby="job-modal-title"
+        >
             <div>
                 <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
                     {{ selectedJobClub.name }}
                 </p>
-                <h2 class="mt-1 text-lg font-bold text-primary">
-                    {{ editingJobId ? 'Eintrag bearbeiten' : 'Ehrenamt oder Beruf erstellen' }}
+                <h2 id="job-modal-title" class="mt-1 text-lg font-bold text-primary">
+                    {{ editingJobId ? 'Eintrag bearbeiten' : 'Jobs- oder Ehrenamtsangebot erstellen' }}
                 </h2>
                 <p class="mt-2 text-sm text-secondary">
-                    Beschreibe kurz, wobei der Verein Hilfe braucht und wie Interessierte Kontakt aufnehmen können.
+                    Beschreibe die Aufgabe klar genug, damit Interessierte sofort verstehen, ob sie passt und wie sie Kontakt aufnehmen können.
                 </p>
             </div>
 
             <div
                 v-if="jobModalNotice"
                 class="rounded-lg border px-4 py-3 text-sm"
+                role="alert"
                 :class="jobModalNotice.type === 'success'
                     ? 'border-success/30 bg-success/10 text-success'
                     : 'border-error/30 bg-error/10 text-error'"
@@ -2220,6 +2257,7 @@ const deleteJob = (job) => {
                         <input
                             v-model="jobFormFor(selectedJobClub).title"
                             required
+                            autocomplete="off"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                             placeholder="z.B. Jugendtrainer U15"
                         >
@@ -2242,6 +2280,7 @@ const deleteJob = (job) => {
                         <span class="text-xs font-semibold uppercase text-secondary">Art</span>
                         <input
                             v-model="jobFormFor(selectedJobClub).employment_type"
+                            autocomplete="off"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                             placeholder="Teilzeit, Minijob, Ehrenamt"
                         >
@@ -2258,6 +2297,7 @@ const deleteJob = (job) => {
                         <span class="text-xs font-semibold uppercase text-secondary">Adresse / Ort</span>
                         <input
                             v-model="jobFormFor(selectedJobClub).location"
+                            autocomplete="address-line1"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                             placeholder="Sportanlage, Adresse, Stadt oder Remote"
                         >
@@ -2268,6 +2308,7 @@ const deleteJob = (job) => {
                         <span class="text-xs font-semibold uppercase text-secondary">Umfang</span>
                         <input
                             v-model="jobFormFor(selectedJobClub).workload"
+                            autocomplete="off"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                             placeholder="z.B. 6 Std./Woche"
                         >
@@ -2297,6 +2338,7 @@ const deleteJob = (job) => {
                         <input
                             v-model="jobFormFor(selectedJobClub).contact_email"
                             type="email"
+                            autocomplete="email"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                             placeholder="kontakt@verein.de"
                         >
@@ -2307,12 +2349,15 @@ const deleteJob = (job) => {
                         <span class="text-xs font-semibold uppercase text-secondary">Externer Bewerbungslink optional</span>
                         <input
                             v-model="jobFormFor(selectedJobClub).application_url"
+                            type="url"
+                            inputmode="url"
+                            autocomplete="url"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                             placeholder="https://formular.verein.de"
                         >
                         <span v-if="errors.application_url" class="mt-1 block text-xs text-error">{{ errors.application_url }}</span>
                         <span class="mt-1 block text-xs text-secondary">
-                            Nur ausfuellen, wenn Interessierte zusaetzlich auf ein externes Formular weitergeleitet werden sollen.
+                            Nur ausfüllen, wenn Interessierte zusätzlich auf ein externes Formular weitergeleitet werden sollen.
                         </span>
                     </label>
                 </div>
@@ -2325,7 +2370,7 @@ const deleteJob = (job) => {
                     class="mt-1 rounded border-border bg-inputBg"
                 >
                 <span>
-                    <span class="block font-semibold">Auf Webseite veroeffentlichen</span>
+                    <span class="block font-semibold">Auf Webseite veröffentlichen</span>
                     <span class="block text-xs text-secondary">Wenn deaktiviert, bleibt der Eintrag als Entwurf im Dashboard.</span>
                 </span>
             </label>
@@ -2338,8 +2383,12 @@ const deleteJob = (job) => {
                 >
                     Abbrechen
                 </button>
-                <button class="rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary">
-                    {{ editingJobId ? 'Aktualisieren' : 'Eintrag erstellen' }}
+                <button
+                    class="rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60"
+                    :disabled="isSubmittingJob"
+                    :aria-busy="isSubmittingJob"
+                >
+                    {{ isSubmittingJob ? 'Wird gespeichert…' : (editingJobId ? 'Aktualisieren' : 'Eintrag erstellen') }}
                 </button>
             </div>
         </form>
@@ -2353,7 +2402,7 @@ const deleteJob = (job) => {
             </div>
 
             <div class="rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error">
-                Bitte gib <strong>{{ deleteTarget.confirmText || 'delete' }}</strong> ein, um die Aktion zu bestaetigen.
+                Bitte gib <strong>{{ deleteTarget.confirmText || 'delete' }}</strong> ein, um die Aktion zu bestätigen.
             </div>
 
             <label class="block">
@@ -2367,14 +2416,14 @@ const deleteJob = (job) => {
             </label>
 
             <label v-if="deleteTarget.requiresReason" class="block">
-                <span class="text-sm font-semibold text-primary">Begruendung</span>
+                <span class="text-sm font-semibold text-primary">Begründung</span>
                 <textarea
                     v-model="deleteReason"
                     rows="4"
                     class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                     placeholder="Warum möchtest du dieses Team verlassen?"
                 ></textarea>
-                <p class="mt-1 text-xs text-secondary">Die Begruendung wird an die Vereinsverantwortlichen gesendet.</p>
+                <p class="mt-1 text-xs text-secondary">Die Begründung wird an die Vereinsverantwortlichen gesendet.</p>
             </label>
 
             <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -2391,7 +2440,7 @@ const deleteJob = (job) => {
                     :disabled="deleteConfirmation !== (deleteTarget.confirmText || 'delete')"
                     @click="confirmDelete"
                 >
-                    {{ deleteTarget.buttonLabel || 'Endgueltig loeschen' }}
+                    {{ deleteTarget.buttonLabel || 'Endgültig löschen' }}
                 </button>
             </div>
         </div>

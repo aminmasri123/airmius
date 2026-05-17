@@ -58,27 +58,41 @@ class OrganizationJobController extends Controller
 
     public function publicIndex(Request $request)
     {
-        $filters = $request->only(['sport_type', 'address']);
+        $requestFilters = $request->only(['sport_type', 'address', 'type', 'sort']);
+        $roleType = $requestFilters['type'] ?? null;
+        $sortMode = $requestFilters['sort'] ?? 'newest';
+        $hasValidRoleType = in_array($roleType, ['professional', 'volunteer'], true);
+        $filters = [
+            'type' => $hasValidRoleType ? $roleType : null,
+            'sport_type' => trim((string) ($requestFilters['sport_type'] ?? '')),
+            'address' => trim((string) ($requestFilters['address'] ?? '')),
+            'sort' => in_array($sortMode, ['newest', 'oldest'], true) ? $sortMode : 'newest',
+        ];
+        $jobsQuery = OrganizationJob::query()
+            ->published()
+            ->with('club:id,name,logo,sport_type,country,street,house_number,postal_code,city,state')
+            ->when($filters['type'], fn ($query, $type) => $query->where('type', $type))
+            ->when($filters['sport_type'], fn ($query, $sport) => $query
+                ->whereHas('club', fn ($clubQuery) => $clubQuery->where('sport_type', $sport)))
+            ->when($filters['address'], fn ($query, $address) => $query->where(function ($query) use ($address) {
+                $query->where('location', 'like', "%{$address}%")
+                    ->orWhereHas('club', fn ($clubQuery) => $clubQuery
+                        ->where('city', 'like', "%{$address}%")
+                        ->orWhere('postal_code', 'like', "%{$address}%")
+                        ->orWhere('street', 'like', "%{$address}%")
+                        ->orWhere('state', 'like', "%{$address}%")
+                        ->orWhere('country', 'like', "%{$address}%"));
+            }));
+
+        $jobs = match ($filters['sort']) {
+            'oldest' => $jobsQuery->oldest('published_at')->paginate(12),
+            default => $jobsQuery->latest('published_at')->paginate(12),
+        };
 
         return Inertia::render('Guest/Jobs', [
             'canLogin' => Route::has('login'),
             'canRegister' => Route::has('register'),
-            'jobs' => OrganizationJob::query()
-                ->published()
-                ->with('club:id,name,logo,sport_type,country,street,house_number,postal_code,city,state')
-                ->when($filters['sport_type'] ?? null, fn ($query, $sport) => $query
-                    ->whereHas('club', fn ($clubQuery) => $clubQuery->where('sport_type', $sport)))
-                ->when($filters['address'] ?? null, fn ($query, $address) => $query->where(function ($query) use ($address) {
-                    $query->where('location', 'like', "%{$address}%")
-                        ->orWhereHas('club', fn ($clubQuery) => $clubQuery
-                            ->where('city', 'like', "%{$address}%")
-                            ->orWhere('postal_code', 'like', "%{$address}%")
-                            ->orWhere('street', 'like', "%{$address}%")
-                            ->orWhere('state', 'like', "%{$address}%")
-                            ->orWhere('country', 'like', "%{$address}%"));
-                }))
-                ->latest('published_at')
-                ->get(),
+            'jobs' => $jobs->withQueryString(),
             'filters' => $filters,
             'sports' => Sport::query()
                 ->where('is_active', true)

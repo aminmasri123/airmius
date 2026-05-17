@@ -222,6 +222,7 @@ const profileStats = computed(() => [
     { label: 'Folgt', value: props.profileUser.following_count },
     { label: 'Beitraege', value: props.profileUser.posts_count },
     { label: 'Level', value: props.profileUser.gamification.level },
+    { label: 'Heute XP', value: props.profileUser.gamification.earned_today },
 ])
 
 const primarySportProfiles = computed(() => props.profileUser.sport_profiles.slice(0, 4))
@@ -546,6 +547,9 @@ const rejectRecommendation = (recommendation) => {
                                         <span class="rounded-full border border-border bg-inputBg px-3 py-1 text-xs font-semibold text-secondary">
                                             {{ profileUser.gamification.streak_days }} Tage Streak
                                         </span>
+                                        <span class="rounded-full border border-border bg-inputBg px-3 py-1 text-xs font-semibold text-secondary">
+                                            {{ profileUser.gamification.health_label }}
+                                        </span>
                                     </div>
 
                                     <div class="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -555,10 +559,14 @@ const rejectRecommendation = (recommendation) => {
                                             <div class="mt-1 text-sm text-secondary">
                                                 {{ profileUser.gamification.xp }} XP von {{ profileUser.gamification.next_level_xp }} XP
                                             </div>
+                                            <div class="mt-1 text-xs font-semibold uppercase tracking-wide text-secondary">
+                                                Noch {{ profileUser.gamification.xp_to_next_level }} XP bis zum naechsten Level
+                                            </div>
                                         </div>
                                         <div class="rounded-xl border border-border bg-inputBg px-4 py-3">
                                             <div :class="['text-2xl font-bold', trustTone]">{{ profileUser.gamification.trust_score }}</div>
                                             <div class="text-xs font-semibold uppercase tracking-wide text-secondary">Trust Score</div>
+                                            <div class="mt-1 text-xs text-secondary">Heute {{ profileUser.gamification.earned_today }} XP</div>
                                         </div>
                                     </div>
 

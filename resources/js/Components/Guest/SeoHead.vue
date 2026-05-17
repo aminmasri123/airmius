@@ -1,6 +1,6 @@
 <script setup>
 import { Head } from '@inertiajs/vue3'
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, watch } from 'vue'
 
 const props = defineProps({
     title: { type: String, required: true },
@@ -9,6 +9,7 @@ const props = defineProps({
     type: { type: String, default: 'website' },
     canonical: { type: String, default: null },
     noindex: { type: Boolean, default: false },
+    schema: { type: [Object, Array], default: null },
 })
 
 const siteName = 'Airmius'
@@ -19,6 +20,37 @@ const absoluteImage = computed(() => {
     if (props.image.startsWith('http')) return props.image
 
     return typeof window !== 'undefined' ? new URL(props.image, window.location.origin).toString() : props.image
+})
+const schemaJson = computed(() => props.schema ? JSON.stringify(props.schema) : '')
+
+const schemaScriptId = 'airmius-jsonld-schema'
+
+const updateSchemaJsonScript = () => {
+    if (typeof window === 'undefined') return
+
+    const existing = document.querySelector(`script[data-seo-schema="${schemaScriptId}"]`)
+    if (existing) {
+        existing.remove()
+    }
+
+    if (!schemaJson.value) {
+        return
+    }
+
+    const schemaScript = document.createElement('script')
+    schemaScript.type = 'application/ld+json'
+    schemaScript.textContent = schemaJson.value
+    schemaScript.setAttribute('data-seo-schema', schemaScriptId)
+    document.head.appendChild(schemaScript)
+}
+
+watch(schemaJson, updateSchemaJsonScript, { immediate: true })
+
+onBeforeUnmount(() => {
+    const existing = document.querySelector(`script[data-seo-schema="${schemaScriptId}"]`)
+    if (existing) {
+        existing.remove()
+    }
 })
 </script>
 

@@ -24,9 +24,14 @@ class PrepareOutfitDeliveries extends Command
 
         OutfitSubscription::query()
             ->with(['user:id,name,email', 'plan:id,name'])
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'cancels_at_period_end'])
+            ->where('payment_status', 'paid')
             ->whereNotNull('next_delivery_at')
             ->where('next_delivery_at', '<=', $date)
+            ->where(function ($query) {
+                $query->whereNull('current_period_ends_at')
+                    ->orWhereColumn('next_delivery_at', '<=', 'current_period_ends_at');
+            })
             ->orderBy('id')
             ->cursor()
             ->each(function (OutfitSubscription $subscription) use (&$created) {

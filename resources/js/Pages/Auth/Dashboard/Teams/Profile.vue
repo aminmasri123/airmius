@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -56,6 +57,11 @@ const uploadImage = (field, event) => {
         <Head :title="teamProfile.name" />
 
         <div class="mx-auto max-w-5xl space-y-6">
+            <ClubWorkspaceNav
+                active="structure"
+                description="Teamprofil, Zugehörigkeit, Mitglieder und sichtbare Teambeiträge."
+            />
+
             <section class="overflow-hidden rounded-lg border border-border bg-card">
                 <div class="relative h-40 bg-gradient-to-r from-buttonPrimary to-borderHover">
                     <img v-if="teamProfile.cover_image" :src="storageUrl(teamProfile.cover_image)" :alt="teamProfile.name" class="h-full w-full object-cover" />

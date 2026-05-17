@@ -31,13 +31,13 @@ const typeLabels = {
     training: 'Training',
     match: 'Spiel',
     meeting: 'Meeting',
-    public: 'Oeffentliches Event',
+    public: 'Öffentliches Event',
 }
 
 const visibilityLabels = {
     private: 'Team-intern',
     organization: 'Verein/Organisation',
-    public: 'Oeffentlich',
+    public: 'Öffentlich',
 }
 
 const statusLabels = {
@@ -53,8 +53,8 @@ const eventStatusLabels = {
 
 const recurrenceOptions = [
     { value: '', label: 'Keine' },
-    { value: 'daily', label: 'Taeglich' },
-    { value: 'weekly', label: 'Woechentlich' },
+    { value: 'daily', label: 'Täglich' },
+    { value: 'weekly', label: 'Wöchentlich' },
     { value: 'biweekly', label: 'Alle zwei Wochen' },
     { value: 'monthly', label: 'Monatlich' },
 ]
@@ -304,7 +304,7 @@ onMounted(() => {
                     @click="showDeleteModal = true"
                 >
                     <i class="las la-trash mr-1"></i>
-                    Loeschen
+                    Löschen
                 </button>
             </div>
         </div>
@@ -336,7 +336,7 @@ onMounted(() => {
                     <div class="rounded-lg bg-inputBg p-4">
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Verein / Team</p>
                         <p class="mt-2 text-sm font-semibold text-primary">
-                            {{ event.team?.name || event.club?.name || 'Oeffentliches Event' }}
+                            {{ event.team?.name || event.club?.name || 'Öffentliches Event' }}
                         </p>
                         <p v-if="event.team?.name && event.club?.name" class="mt-1 text-xs text-secondary">{{ event.club.name }}</p>
                     </div>
@@ -447,7 +447,7 @@ onMounted(() => {
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <h2 class="text-xl font-semibold text-primary">Event bearbeiten</h2>
-                            <p class="mt-1 text-sm text-secondary">Aenderungen gelten für dieses Event.</p>
+                            <p class="mt-1 text-sm text-secondary">Änderungen gelten für dieses Event.</p>
                         </div>
                         <button type="button" class="rounded-lg border border-border px-3 py-1 text-secondary hover:text-primary" @click="showEditModal = false">
                             Schließen
@@ -633,9 +633,9 @@ onMounted(() => {
 
         <ConfirmActionModal
             :show="showDeleteModal"
-            title="Event loeschen"
-            message="Moechtest du dieses Event wirklich loeschen? Teilnehmer mit Zusage werden informiert."
-            confirm-label="Event loeschen"
+            title="Event löschen"
+            message="Möchtest du dieses Event wirklich löschen? Teilnehmer mit Zusage werden informiert."
+            confirm-label="Event löschen"
             :danger="true"
             :processing="false"
             @cancel="showDeleteModal = false"

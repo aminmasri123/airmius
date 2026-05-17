@@ -10,8 +10,14 @@ class AirmiusLegalProfile
 
     public function data(): array
     {
+        $brandName = Setting::valueFor('billing_brand_name');
+        if (! filled($brandName)) {
+            $brandName = Setting::valueFor('billing_company_name', 'airmius.billing.company_name', 'Airmius');
+        }
+
         return [
             'company_name' => $this->value('billing_company_name', 'airmius.billing.company_name', 'Airmius'),
+            'brand_name' => (string) $brandName,
             'legal_name' => $this->value('billing_legal_name', 'airmius.billing.legal_name'),
             'street' => $this->value('billing_company_street', 'airmius.billing.street'),
             'postal_code' => $this->value('billing_company_postal_code', 'airmius.billing.postal_code'),

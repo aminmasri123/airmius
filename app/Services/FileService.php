@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\File;
 use App\Support\UploadStorage;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -30,11 +31,73 @@ class FileService
 
     public function delete(File $file): void
     {
-        $paths = array_filter([$file->path, $file->thumbnail_path]);
-        $file->delete();
+        $this->deleteMany([$file]);
+    }
+
+    /**
+     * @param iterable<File> $files
+     */
+    public function deleteMany(iterable $files): void
+    {
+        $fileIds = [];
+        $paths = [];
+
+        foreach ($files as $file) {
+            if (! $file instanceof File) {
+                continue;
+            }
+
+            $fileIds[] = $file->id;
+
+            if ($file->path) {
+                $paths[] = trim((string) $file->path);
+            }
+
+            if ($file->thumbnail_path) {
+                $paths[] = trim((string) $file->thumbnail_path);
+            }
+
+            $file->delete();
+        }
+
+        $this->deleteDetachedPaths(array_values(array_filter(array_unique(array_map('intval', $fileIds), SORT_NUMERIC))), $paths);
+    }
+
+    private function deleteDetachedPaths(array $fileIds, array $paths): void
+    {
+        if (empty($fileIds)) {
+            return;
+        }
+
+        $paths = array_values(array_filter(array_unique($paths), fn (string $path) => $path !== ''));
+        if (empty($paths)) {
+            return;
+        }
+
+        /** @var Collection<int, File> $usedFiles */
+        $usedFiles = File::query()
+            ->whereNotIn('id', $fileIds)
+            ->where(function ($query) use ($paths) {
+                $query->whereIn('path', $paths)
+                    ->orWhereIn('thumbnail_path', $paths);
+            })
+            ->select('path', 'thumbnail_path')
+            ->get();
+
+        $usedPaths = [];
+
+        foreach ($usedFiles as $usedFile) {
+            if ($usedFile->path) {
+                $usedPaths[$usedFile->path] = true;
+            }
+
+            if ($usedFile->thumbnail_path) {
+                $usedPaths[$usedFile->thumbnail_path] = true;
+            }
+        }
 
         foreach ($paths as $path) {
-            if (! File::where('path', $path)->orWhere('thumbnail_path', $path)->exists()) {
+            if (! isset($usedPaths[$path])) {
                 Storage::disk(UploadStorage::disk())->delete($path);
             }
         }
@@ -42,15 +105,15 @@ class FileService
 
     private function directoryFor(array $data): string
     {
-        if (!empty($data['event_id'])) {
+        if (! empty($data['event_id'])) {
             return 'events/'.$data['event_id'];
         }
 
-        if (!empty($data['team_id'])) {
+        if (! empty($data['team_id'])) {
             return 'teams/'.$data['team_id'];
         }
 
-        if (!empty($data['club_id'])) {
+        if (! empty($data['club_id'])) {
             return 'clubs/'.$data['club_id'];
         }
 
@@ -59,7 +122,7 @@ class FileService
 
     private function displayNameForUpload(UploadedFile $file): string
     {
-        $name = basename(str_replace('\\', '/', $file->getClientOriginalName()));
+        $name = basename(str_replace('\\', '/', (string) $file->getClientOriginalName()));
         $name = trim((string) preg_replace('/[\x00-\x1F\x7F]+/', '', $name));
 
         return Str::limit($name !== '' ? $name : 'Datei', 180, '');

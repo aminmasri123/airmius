@@ -21,7 +21,14 @@ class CommerceDocumentService
         $customerName = $order->customer_company ?: ($order->user?->name ?: $order->guest_name ?: '-');
         $customerEmail = $order->user?->email ?: $order->guest_email ?: '-';
 
-        $pdf->header($title, $number);
+        $pdf->header(
+            $title,
+            $number,
+            'Sport. Vereine. Wachstum.',
+            $profile['brand_name'] ?? null,
+            $type === 'credit_note' ? 'Gutschriftnummer' : 'Rechnungsnummer',
+            $type
+        );
         $pdf->card(48, 632, 150, 54, 'Datum', now()->format('d.m.Y'));
         $pdf->card(222, 632, 150, 54, 'Bestellung', '#'.$order->id);
         $pdf->card(396, 632, 150, 54, $type === 'credit_note' ? 'Erstattung' : 'Betrag', $this->money($type === 'credit_note' ? ($order->refunded_cents ?: $order->amount_cents) : $order->amount_cents, $order->currency), true);

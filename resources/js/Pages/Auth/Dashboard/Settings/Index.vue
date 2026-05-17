@@ -72,6 +72,10 @@ const openPaymentModal = ref({
     action: null,
     invoice: null,
 })
+const subscriptionCancelModal = ref({
+    show: false,
+    subscription: null,
+})
 const disconnectIntegrationModal = ref({
     show: false,
     account: null,
@@ -140,6 +144,8 @@ const form = useForm({
     profile_visibility: props.privacySettings.profile_visibility || 'public',
     direct_message_privacy: props.privacySettings.direct_message_privacy || 'everyone',
     friend_request_privacy: props.privacySettings.friend_request_privacy || 'everyone',
+    ads_personalization_consent: Boolean(props.privacySettings.ads_personalization_consent),
+    ads_measurement_consent: Boolean(props.privacySettings.ads_measurement_consent),
 })
 
 // Actions
@@ -343,12 +349,52 @@ const deleteOpenSubscriptionPayment = (invoice) => {
     })
 }
 
-const cancelSubscription = (subscription) => {
-    router.post(route('auth.user-subscriptions.cancel', subscription.id), {}, { preserveScroll: true })
-}
-
 const openProviderPortal = (subscription) => {
     router.post(route('auth.user-subscriptions.provider-portal', subscription.id), {}, { preserveScroll: true })
+}
+
+const isSubscriptionCancellable = (subscription) => !['cancelled', 'cancels_at_period_end'].includes(subscription.status)
+
+const canOpenStripePortal = (subscription) => subscription.payment_provider === 'stripe'
+    && ['trialing', 'active', 'past_due', 'cancels_at_period_end'].includes(subscription.status)
+    && Boolean(subscription.provider_customer_id)
+
+const subscriptionCancelModalMessage = () => {
+    const subscription = subscriptionCancelModal.value.subscription
+    const plan = subscription?.plan?.name || 'dieses Abo'
+    const endsAt = subscription?.current_period_ends_at || subscription?.trial_ends_at
+
+    return `Moechtest du dein ${plan} zum Ende der aktuellen Laufzeit kündigen? ${endsAt ? `Es endet am ${formatDate(endsAt)}.` : ''}`
+}
+
+const openSubscriptionCancelModal = (subscription) => {
+    subscriptionCancelModal.value = {
+        show: true,
+        subscription,
+    }
+}
+
+const closeSubscriptionCancelModal = () => {
+    subscriptionCancelModal.value = {
+        show: false,
+        subscription: null,
+    }
+}
+
+const confirmSubscriptionCancel = () => {
+    const subscription = subscriptionCancelModal.value.subscription
+    if (!subscription) return
+
+    router.post(route('auth.user-subscriptions.cancel', subscription.id), {}, {
+        preserveScroll: true,
+        onFinish: closeSubscriptionCancelModal,
+    })
+}
+
+const cancelSubscription = (subscription) => {
+    if (!isSubscriptionCancellable(subscription)) return
+
+    openSubscriptionCancelModal(subscription)
 }
 
 const socialAccountFor = (provider) =>
@@ -890,6 +936,27 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                     <p v-if="form.errors.friend_request_privacy" class="mt-1 text-sm text-error">{{ form.errors.friend_request_privacy }}</p>
                 </label>
 
+                <div class="rounded-lg border border-border bg-bg p-4">
+                    <h3 class="text-sm font-semibold text-primary">Werbung & Messung</h3>
+                    <p class="mt-1 text-sm text-secondary">
+                        Ohne Einwilligung zeigen wir nur kontextuelle Anzeigen und speichern keine personalisierten Retargeting-Signale.
+                    </p>
+                    <label class="mt-4 flex items-start gap-3 text-sm text-primary">
+                        <input v-model="form.ads_personalization_consent" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                        <span>
+                            <span class="block font-semibold">Personalisierte Anzeigen erlauben</span>
+                            <span class="text-xs text-secondary">Nutzt z. B. vorherige Marketplace-Interessen, um passendere Anzeigen zu zeigen.</span>
+                        </span>
+                    </label>
+                    <label class="mt-4 flex items-start gap-3 text-sm text-primary">
+                        <input v-model="form.ads_measurement_consent" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                        <span>
+                            <span class="block font-semibold">Conversion-Messung erlauben</span>
+                            <span class="text-xs text-secondary">Ordnet Klicks anonymisierten Kampagnenereignissen wie Checkout oder Kauf zu.</span>
+                        </span>
+                    </label>
+                </div>
+
                 <button class="btn-primary" :disabled="form.processing">
                     Privatsphaere speichern
                 </button>
@@ -912,16 +979,22 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                             </div>
                             <div class="flex shrink-0 flex-wrap justify-end gap-2">
                                 <button
-                                    v-if="subscription.payment_provider === 'stripe'"
+                                    v-if="canOpenStripePortal(subscription)"
                                     type="button"
                                     class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-muted"
                                     @click="openProviderPortal(subscription)"
                                 >
                                     Zahlungsportal
                                 </button>
+                                <p
+                                    v-else-if="subscription.payment_provider === 'stripe'"
+                                    class="text-xs text-secondary"
+                                >
+                                    Zahlungsportal ist fuer dieses Abo momentan nicht aktiv.
+                                </p>
 
                                 <button
-                                    v-if="!['cancelled', 'cancels_at_period_end'].includes(subscription.status)"
+                                    v-if="isSubscriptionCancellable(subscription)"
                                     type="button"
                                     class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-muted"
                                     @click="cancelSubscription(subscription)"
@@ -1450,6 +1523,16 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             cancel-text="Zurueck"
             @confirm="confirmOpenPaymentAction"
             @cancel="closeOpenPaymentModal"
+        />
+
+        <DeleteConfirmModal
+            :show="subscriptionCancelModal.show"
+            title="Abo kuendigen"
+            :message="subscriptionCancelModalMessage()"
+            confirm-text="kuendigen"
+            cancel-text="Zurueck"
+            @confirm="confirmSubscriptionCancel"
+            @cancel="closeSubscriptionCancelModal"
         />
 
         <DeleteConfirmModal

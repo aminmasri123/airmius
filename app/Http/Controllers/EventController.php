@@ -22,6 +22,8 @@ class EventController extends Controller
 {
     use AuthorizesRequests;
 
+    private const MAX_RECURRING_EVENTS = 370;
+
     public function __construct(
         private EventService $service,
         private GamificationService $gamification,
@@ -41,13 +43,16 @@ class EventController extends Controller
             'radius_km' => ['nullable', 'integer', 'min:1', 'max:500'],
             'sport_ids' => ['nullable', 'array'],
             'sport_ids.*' => ['integer', 'exists:sports,id'],
+            'calendar_month' => ['nullable', 'date_format:Y-m'],
         ]);
 
+        $calendarMonthFilter = $filters['calendar_month'] ?? null;
         $filterKeys = ['search', 'type', 'visibility', 'club_id', 'team_id', 'period', 'radius_km', 'sport_ids'];
         $hasManualFilters = collect($filterKeys)->contains(fn ($key) => $request->query->has($key));
         $filters = $this->normalizeEventFilters($hasManualFilters
             ? $filters
             : array_merge($this->eventDefaultFiltersFor($request->user()), $filters));
+        $filters['calendar_month'] = $calendarMonthFilter;
 
         $eventsQuery = Event::query()
             ->with([
@@ -97,17 +102,48 @@ class EventController extends Controller
         $this->applyEventSportFilter($eventsQuery, $filters['sport_ids'] ?? []);
         $this->applyEventLocationFilter($eventsQuery, $request->user(), $filters['radius_km'] ?? null);
 
-        $events = $eventsQuery
+        $calendarMonth = CarbonImmutable::createFromFormat('Y-m-d', ($filters['calendar_month'] ?? now()->format('Y-m')).'-01')
+            ?: CarbonImmutable::now();
+        $calendarStart = $calendarMonth->startOfMonth()->startOfWeek(1);
+        $calendarEnd = $calendarStart->addDays(41)->endOfDay();
+
+        $events = (clone $eventsQuery)
+            ->paginate(30)
+            ->withQueryString()
+            ->through(fn (Event $event) => $this->decorateEventForIndex($event, $request));
+
+        $calendarEvents = (clone $eventsQuery)
+            ->whereBetween('start_time', [$calendarStart, $calendarEnd])
+            ->limit(500)
             ->get()
-            ->each(function (Event $event) use ($request) {
-                $event->setAttribute('current_participant_status', $event->participants->first()?->pivot?->status);
-                $event->setAttribute('can_update', $request->user()->can('update', $event));
-                $event->setAttribute('can_delete', $request->user()->can('delete', $event));
-                $event->setAttribute('can_cancel', $request->user()->can('cancel', $event));
-            });
+            ->map(fn (Event $event) => $this->decorateEventForIndex($event, $request));
+
+        $nextEvent = (clone $eventsQuery)
+            ->where('start_time', '>=', now())
+            ->where('status', '!=', 'cancelled')
+            ->first();
 
         return Inertia::render('Auth/Dashboard/Events/Index', [
             'events' => $events,
+            'calendarEvents' => $calendarEvents,
+            'eventStats' => [
+                'upcoming' => (clone $eventsQuery)
+                    ->where('start_time', '>=', now())
+                    ->where('status', '!=', 'cancelled')
+                    ->count(),
+                'today' => (clone $eventsQuery)
+                    ->whereBetween('start_time', [now()->startOfDay(), now()->endOfDay()])
+                    ->count(),
+                'cancelled' => (clone $eventsQuery)
+                    ->where('status', 'cancelled')
+                    ->count(),
+            ],
+            'nextEvent' => $nextEvent ? $this->decorateEventForIndex($nextEvent, $request) : null,
+            'calendar' => [
+                'month' => $calendarMonth->format('Y-m'),
+                'start' => $calendarStart->toDateString(),
+                'end' => $calendarEnd->toDateString(),
+            ],
             'clubs' => Club::query()
                 ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
                 ->select(['id', 'name'])
@@ -133,6 +169,7 @@ class EventController extends Controller
                 'period' => $filters['period'] ?? 'upcoming',
                 'radius_km' => $filters['radius_km'] ?? '',
                 'sport_ids' => $filters['sport_ids'] ?? [],
+                'calendar_month' => $calendarMonth->format('Y-m'),
             ],
         ]);
     }
@@ -158,6 +195,16 @@ class EventController extends Controller
         ]);
 
         return back()->with('success', 'Event-Standardfilter gespeichert.');
+    }
+
+    private function decorateEventForIndex(Event $event, Request $request): Event
+    {
+        $event->setAttribute('current_participant_status', $event->participants->first()?->pivot?->status);
+        $event->setAttribute('can_update', $request->user()->can('update', $event));
+        $event->setAttribute('can_delete', $request->user()->can('delete', $event));
+        $event->setAttribute('can_cancel', $request->user()->can('cancel', $event));
+
+        return $event;
     }
 
     public function show(Event $event)
@@ -368,7 +415,7 @@ class EventController extends Controller
             'location_longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'max_participants' => ['nullable', 'integer', 'min:1', 'max:100000'],
             'notes' => ['nullable', 'string'],
-            'recurring' => ['nullable', 'string', 'max:80'],
+            'recurring' => ['nullable', Rule::in(['daily', 'weekly', 'biweekly', 'monthly'])],
             'recurrence_days' => ['nullable', 'array'],
             'recurrence_days.*' => ['integer', Rule::in([0, 1, 2, 3, 4, 5, 6])],
             'recurrence_ends_at' => ['nullable', 'date'],
@@ -382,6 +429,12 @@ class EventController extends Controller
             ]);
         }
 
+        if (filled($data['recurring'] ?? null) && empty($data['recurrence_ends_at'])) {
+            throw ValidationException::withMessages([
+                'recurrence_ends_at' => 'Bitte ein Enddatum für die Wiederholung angeben.',
+            ]);
+        }
+
         $data = $this->normalizeStructuredLocation($data);
 
         if (! empty($data['recurrence_ends_at'])) {
@@ -391,6 +444,12 @@ class EventController extends Controller
             if ($endDate->lt($startDate)) {
                 throw ValidationException::withMessages([
                     'recurrence_ends_at' => 'Das Wiederholungsende muss nach dem Startdatum liegen.',
+                ]);
+            }
+
+            if (filled($data['recurring'] ?? null) && $this->estimatedRecurringEventCount($data) > self::MAX_RECURRING_EVENTS) {
+                throw ValidationException::withMessages([
+                    'recurrence_ends_at' => 'Eine Serie darf maximal '.self::MAX_RECURRING_EVENTS.' Termine erzeugen.',
                 ]);
             }
         }
@@ -460,8 +519,8 @@ class EventController extends Controller
 
         if (filled($data['recurring'] ?? null)) {
             throw ValidationException::withMessages([
-                'recurring' => 'Wiederholungen und Intervalle sind im kostenlosen Konto nicht verfuegbar.',
-                'authorization' => 'Kostenlose Konten koennen einfache Events erstellen, aber keine wiederkehrenden Events.',
+                'recurring' => 'Wiederholungen und Intervalle sind im kostenlosen Konto nicht verfügbar.',
+                'authorization' => 'Kostenlose Konten können einfache Events erstellen, aber keine wiederkehrenden Events.',
             ]);
         }
 
@@ -485,6 +544,67 @@ class EventController extends Controller
             ->whereIn('status', ['active', 'trialing'])
             ->whereHas('plan', fn ($query) => $query->where('slug', '!=', 'free'))
             ->exists();
+    }
+
+    private function estimatedRecurringEventCount(array $data): int
+    {
+        if (empty($data['recurring']) || empty($data['recurrence_ends_at'])) {
+            return 1;
+        }
+
+        $timezone = $data['event_timezone'] ?? config('app.timezone', 'UTC');
+        $start = CarbonImmutable::parse($data['start_time'], $timezone);
+        $until = CarbonImmutable::parse($data['recurrence_ends_at'], $timezone)->endOfDay();
+
+        return match ($data['recurring']) {
+            'daily' => (int) $start->startOfDay()->diffInDays($until->startOfDay()) + 1,
+            'weekly', 'biweekly' => $this->estimatedWeeklyRecurringEventCount(
+                $start,
+                $until,
+                collect($data['recurrence_days'] ?? [])->map(fn ($day) => (int) $day),
+                $data['recurring'] === 'biweekly' ? 2 : 1,
+            ),
+            'monthly' => $this->estimatedMonthlyRecurringEventCount($start, $until),
+            default => 1,
+        };
+    }
+
+    private function estimatedWeeklyRecurringEventCount(CarbonImmutable $start, CarbonImmutable $until, $recurrenceDays, int $interval): int
+    {
+        $count = 0;
+        $cursor = $start->startOfDay();
+
+        while ($cursor->lte($until) && $count <= self::MAX_RECURRING_EVENTS) {
+            if ($recurrenceDays->contains($cursor->dayOfWeek)) {
+                $weeksDiff = (int) $start->startOfWeek()->diffInWeeks($cursor->startOfWeek(), false);
+
+                if ($weeksDiff >= 0 && $weeksDiff % $interval === 0) {
+                    $count++;
+                }
+            }
+
+            $cursor = $cursor->addDay();
+        }
+
+        return $count;
+    }
+
+    private function estimatedMonthlyRecurringEventCount(CarbonImmutable $start, CarbonImmutable $until): int
+    {
+        $count = 0;
+        $months = 0;
+
+        do {
+            $candidate = $start->addMonthsNoOverflow($months);
+
+            if ($candidate->lte($until)) {
+                $count++;
+            }
+
+            $months++;
+        } while ($candidate->lte($until) && $count <= self::MAX_RECURRING_EVENTS);
+
+        return $count;
     }
 
     private function eventsCreatedThisMonth(User $user): int
@@ -702,7 +822,7 @@ class EventController extends Controller
             ->reject(fn ($id) => $id === (int) auth()->id());
 
         $title = $action === 'deleted'
-            ? 'Event wurde geloescht'
+            ? 'Event wurde gelöscht'
             : 'Event wurde abgesagt';
 
         $body = $reason

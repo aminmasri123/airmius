@@ -25,6 +25,10 @@ class SubscriptionPlan extends Model
         'cancellation_notice_days',
         'cta_label',
         'badge',
+        'paypal_product_id',
+        'paypal_plan_id',
+        'paypal_plan_signature',
+        'paypal_payload',
         'sort_order',
         'is_public',
         'is_active',
@@ -36,6 +40,7 @@ class SubscriptionPlan extends Model
             'features' => 'array',
             'minimum_term_months' => 'integer',
             'cancellation_notice_days' => 'integer',
+            'paypal_payload' => 'array',
             'is_public' => 'boolean',
             'is_active' => 'boolean',
         ];

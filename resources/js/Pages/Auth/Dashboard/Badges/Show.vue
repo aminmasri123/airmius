@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { Head } from '@inertiajs/vue3'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 
@@ -29,8 +29,17 @@ defineProps({
                         <dt class="text-secondary">Grund</dt>
                         <dd class="font-semibold text-primary">{{ award?.reason || award?.badge?.trigger }}</dd>
                     </div>
+                    <div v-if="award?.meta?.xp !== undefined">
+                        <dt class="text-secondary">XP bei Vergabe</dt>
+                        <dd class="font-semibold text-primary">{{ award.meta.xp }}</dd>
+                    </div>
+                    <div v-if="award?.meta?.level !== undefined">
+                        <dt class="text-secondary">Level bei Vergabe</dt>
+                        <dd class="font-semibold text-primary">{{ award.meta.level }}</dd>
+                    </div>
                 </dl>
             </div>
         </div>
     </section>
 </template>
+

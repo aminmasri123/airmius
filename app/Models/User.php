@@ -42,6 +42,7 @@ class User extends Authenticatable
         'country',
         'athlete_license_number',
         'last_seen_at',
+        'last_login_at',
         'privacy_status',
         'inactivity_first_warning_sent_at',
         'inactivity_second_warning_sent_at',
@@ -71,6 +72,8 @@ class User extends Authenticatable
         'profile_visibility',
         'direct_message_privacy',
         'friend_request_privacy',
+        'ads_personalization_consent',
+        'ads_measurement_consent',
         'bio',
     ];
 
@@ -107,6 +110,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'birth_date' => 'date',
             'last_seen_at' => 'datetime',
+            'last_login_at' => 'datetime',
             'inactivity_first_warning_sent_at' => 'datetime',
             'inactivity_second_warning_sent_at' => 'datetime',
             'deletion_scheduled_at' => 'datetime',
@@ -120,6 +124,8 @@ class User extends Authenticatable
             'event_radius_km' => 'integer',
             'event_default_sport_ids' => 'array',
             'event_default_filters' => 'array',
+            'ads_personalization_consent' => 'boolean',
+            'ads_measurement_consent' => 'boolean',
             'password' => 'hashed',
         ];
     }
@@ -272,6 +278,16 @@ class User extends Authenticatable
         return $this->hasMany(TrainingPlan::class, 'created_by');
     }
 
+    public function trainingLogs()
+    {
+        return $this->hasMany(TrainingLog::class);
+    }
+
+    public function createdTrainingLogs()
+    {
+        return $this->hasMany(TrainingLog::class, 'created_by');
+    }
+
     public function trainingPlanAssignments()
     {
         return $this->hasMany(TrainingPlanAssignment::class);
@@ -290,7 +306,12 @@ class User extends Authenticatable
     public function conversations()
     {
         return $this->belongsToMany(Conversation::class, 'conversation_users')
-            ->withPivot('joined_at');
+            ->withPivot('joined_at', 'muted_until');
+    }
+
+    public function receivedConversationInvitations()
+    {
+        return $this->hasMany(ConversationInvitation::class, 'recipient_id');
     }
 
     public function rides()

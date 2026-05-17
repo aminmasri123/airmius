@@ -11,6 +11,7 @@ class CommerceShippingRate extends Model
 
     protected $fillable = [
         'name',
+        'origin_country_code',
         'country_code',
         'postal_code_prefix',
         'amount_cents',

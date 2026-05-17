@@ -39,6 +39,8 @@ class MessageSent implements ShouldBroadcastNow
                 'id' => $this->message->id,
                 'conversation_id' => $this->message->conversation_id,
                 'sender_id' => $this->message->sender_id,
+                'kind' => $this->message->kind,
+                'metadata' => $this->message->metadata,
                 'sender' => [
                     'id' => $this->message->sender->id,
                     'name' => $this->message->sender->name,
@@ -49,7 +51,9 @@ class MessageSent implements ShouldBroadcastNow
                     'file_id' => $attachment->file_id,
                     'file' => $attachment->file ? [
                         'id' => $attachment->file->id,
+                        'display_name' => $attachment->file->display_name,
                         'path' => $attachment->file->path,
+                        'thumbnail_path' => $attachment->file->thumbnail_path,
                         'type' => $attachment->file->type,
                         'size' => $attachment->file->size,
                     ] : null,

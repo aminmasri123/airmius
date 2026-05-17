@@ -15,9 +15,14 @@ use App\Models\CommerceOrderItem;
 use App\Models\CommerceReturnRequest;
 use App\Models\CommerceShippingAddress;
 use App\Models\CommerceStockMovement;
+use App\Models\CommerceWarehouse;
+use App\Models\LearningCourse;
+use App\Models\LearningCoupon;
+use App\Models\LearningEnrollment;
 use App\Models\MarketplacePayout;
 use App\Models\MarketplaceSellerApplication;
 use App\Models\MarketplaceProduct;
+use App\Models\MarketplaceProductInventory;
 use App\Models\OutfitSubscription;
 use App\Models\OutfitSubscriptionPlan;
 use App\Models\PaymentCheckout;
@@ -39,6 +44,7 @@ use App\Services\ModerationService;
 use App\Support\AppNotification;
 use App\Support\ClubRoles;
 use App\Support\CommerceOrderNotifier;
+use App\Support\EuVatId;
 use App\Support\Roles;
 use App\Support\UploadStorage;
 use App\Support\VisitorCountry;
@@ -73,6 +79,12 @@ class CommerceCheckoutController extends Controller
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'slug', 'name', 'category']),
+            'learningCourses' => LearningCourse::query()
+                ->where('user_id', $request->user()->id)
+                ->where('status', 'published')
+                ->where('is_public', true)
+                ->orderBy('title')
+                ->get(['id', 'title', 'status', 'is_public', 'is_free', 'price_cents']),
             'addons' => SubscriptionAddon::query()
                 ->where('is_active', true)
                 ->orderBy('name')
@@ -115,10 +127,16 @@ class CommerceCheckoutController extends Controller
                 ->where('user_id', $request->user()->id)
                 ->latest('id')
                 ->limit(30)
-                ->get(),
+                ->get()
+                ->map(function (CommerceOrder $order) {
+                    $order->setAttribute('learning_course', $this->learningCourseLinkForOrder($order));
+
+                    return $order;
+                }),
             'purchaseHistory' => $this->purchaseHistoryFor($request->user()),
             'myProducts' => MarketplaceProduct::query()
                 ->where('user_id', $request->user()->id)
+                ->with(['inventories.warehouse:id,name,country_code,city,postal_code'])
                 ->withCount('stockMovements')
                 ->latest('id')
                 ->limit(20)
@@ -281,16 +299,25 @@ class CommerceCheckoutController extends Controller
     private function marketplaceCategoryCommissionsForSeller(): array
     {
         $labels = [
-            'product' => 'Produkte',
+            'equipment' => 'Sportgeraete & Equipment',
+            'apparel' => 'Bekleidung & Schuhe',
+            'nutrition' => 'Ernaehrung & Supplements',
+            'accessories' => 'Zubehoer',
+            'digital_products' => 'Digitale Produkte',
+            'product' => 'Sonstige Produkte',
             'course' => 'Kurse / E-Learning',
             'camp' => 'Camps',
-            'service' => 'Services',
+            'service' => 'Services / Airmius intern',
             'outfit_subscription' => 'Outfit-Abo',
         ];
 
         $raw = Setting::valueFor('marketplace_category_commissions', '{}');
         $configured = is_array($raw) ? $raw : json_decode((string) $raw, true);
         $configured = is_array($configured) ? $configured : [];
+        $labelRaw = Setting::valueFor('marketplace_category_labels', '{}');
+        $customLabels = is_array($labelRaw) ? $labelRaw : json_decode((string) $labelRaw, true);
+        $customLabels = is_array($customLabels) ? $customLabels : [];
+        $labels = array_merge($labels, $customLabels);
         $default = max(0, min(100, (int) Setting::valueFor('marketplace_default_commission_percent', 10)));
 
         return collect($labels)
@@ -502,7 +529,7 @@ class CommerceCheckoutController extends Controller
 
     public function storeProduct(Request $request, MarketplaceProduct $product)
     {
-        abort_unless($product->status === 'published' && $this->hasSellableStock($product), 404);
+        abort_unless($product->status === 'published', 404);
         $data = $request->validate([
             'provider' => ['required', Rule::in(['stripe', 'paypal', 'bank_transfer'])],
             'accepted_terms' => ['accepted'],
@@ -518,18 +545,29 @@ class CommerceCheckoutController extends Controller
             'customer_vat_id' => ['nullable', 'string', 'max:40'],
             'save_shipping_address' => ['boolean'],
             'shipping_address_label' => ['nullable', 'string', 'max:80'],
+            'coupon_code' => ['nullable', 'string', 'max:40'],
         ]);
         $quantity = (int) ($data['quantity'] ?? 1);
-        if ((bool) $product->manages_stock && (int) $product->stock_quantity < $quantity) {
+        $shippingAddress = $this->shippingAddressForAuthenticatedUser($request, $data);
+        if (! $this->hasSellableStock($product, $shippingAddress['country'], $quantity)) {
             throw ValidationException::withMessages([
                 'quantity' => 'So viele Artikel sind aktuell nicht auf Lager.',
             ]);
         }
+        $fulfillmentInventory = $this->fulfillmentInventoryFor($product, $shippingAddress['country'], $quantity);
 
-        $shippingAddress = $this->shippingAddressForAuthenticatedUser($request, $data);
         $this->saveShippingAddressIfRequested($request, $data, $shippingAddress);
-        $quote = $this->pricing->quoteForRequest($product, $request, $shippingAddress['country'], $shippingAddress);
+        $quote = $this->pricing->quoteForRequest($product, $request, $shippingAddress['country'], [
+            ...$shippingAddress,
+            'origin_country' => $fulfillmentInventory?->warehouse?->country_code,
+        ]);
         $quote = $this->quoteWithQuantity($quote, $quantity);
+        $quote = $this->applyLearningCoupon($product, $quote, $data['coupon_code'] ?? null);
+        $quote['fulfillment_inventory'] = $fulfillmentInventory ? [
+            'id' => $fulfillmentInventory->id,
+            'commerce_warehouse_id' => $fulfillmentInventory->commerce_warehouse_id,
+            'country_code' => $fulfillmentInventory->country_code,
+        ] : null;
         $customer = $this->customerFromData($data);
 
         $order = CommerceOrder::create([
@@ -547,11 +585,20 @@ class CommerceCheckoutController extends Controller
             'customer_type' => $customer['type'],
             'customer_company' => $customer['company'] ?: null,
             'customer_vat_id' => $customer['vat_id'] ?: null,
+            'customer_vat_is_valid' => $customer['vat_id'] ? $customer['vat_id_is_valid'] : null,
+            'customer_vat_validated_at' => $customer['vat_id'] ? now() : null,
             'status' => 'pending',
             'payload' => ['pricing' => $quote, 'shipping_address' => $shippingAddress],
         ]);
         $this->createOrderItem($order, $product, $quote, $quantity);
         app(CommerceOrderNotifier::class)->notifySalesRecipients($order);
+        $this->rememberMarketplaceInterest($request, $product, 'checkout_started');
+        $this->trackAttributedAdConversion($request, 'checkout_started', (int) ($quote['gross_cents'] ?? $order->amount_cents), [
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'product_category' => $product->category,
+            'quantity' => $quantity,
+        ]);
 
         return $this->startCheckout($order);
     }
@@ -559,7 +606,8 @@ class CommerceCheckoutController extends Controller
     public function addCartItem(Request $request, MarketplaceProduct $product)
     {
         abort_unless($product->status === 'published', 404);
-        abort_unless($this->hasSellableStock($product), 404);
+        $country = strtoupper((string) ($request->user()?->country ?: 'DE'));
+        abort_unless($this->hasSellableStock($product, $country), 404);
 
         $data = $request->validate([
             'quantity' => ['nullable', 'integer', 'min:1'],
@@ -570,13 +618,19 @@ class CommerceCheckoutController extends Controller
         $item = $cart->items()->firstOrNew(['marketplace_product_id' => $product->id]);
         $item->quantity = (int) $item->quantity + $quantity;
 
-        if ((bool) $product->manages_stock && $item->quantity > (int) $product->stock_quantity) {
+        if (! $this->hasSellableStock($product, $country, (int) $item->quantity)) {
             throw ValidationException::withMessages([
                 'quantity' => 'So viele Artikel sind aktuell nicht auf Lager.',
             ]);
         }
 
         $item->save();
+        $this->rememberMarketplaceInterest($request, $product, 'cart_add');
+        $this->trackAttributedAdConversion($request, 'cart_add', (int) $product->price_cents, [
+            'product_id' => $product->id,
+            'product_category' => $product->category,
+            'quantity' => $quantity,
+        ]);
 
         return back()->with('success', 'Artikel wurde in den Einkaufswagen gelegt.');
     }
@@ -590,8 +644,9 @@ class CommerceCheckoutController extends Controller
         ]);
 
         $product = $item->product;
-        abort_unless($product && $this->hasSellableStock($product), 404);
-        if ((bool) $product->manages_stock && (int) $data['quantity'] > (int) $product->stock_quantity) {
+        $country = strtoupper((string) ($request->user()?->country ?: 'DE'));
+        abort_unless($product && $this->hasSellableStock($product, $country), 404);
+        if (! $this->hasSellableStock($product, $country, (int) $data['quantity'])) {
             throw ValidationException::withMessages([
                 'quantity' => 'So viele Artikel sind aktuell nicht auf Lager.',
             ]);
@@ -634,11 +689,10 @@ class CommerceCheckoutController extends Controller
         $customer = $this->customerFromData($data);
         $summary = $this->cartQuote($cart, $request, $shippingAddress, $customer);
 
-        DB::transaction(function () use ($cart) {
+        DB::transaction(function () use ($cart, $shippingAddress) {
             foreach ($cart->items as $item) {
                 $product = MarketplaceProduct::query()->lockForUpdate()->findOrFail($item->marketplace_product_id);
-                abort_unless($product->status === 'published' && $this->hasSellableStock($product), 422, $product->title.' ist nicht mehr verfuegbar.');
-                abort_if((bool) $product->manages_stock && (int) $product->stock_quantity < (int) $item->quantity, 422, $product->title.' ist nicht ausreichend auf Lager.');
+                abort_unless($product->status === 'published' && $this->hasSellableStock($product, $shippingAddress['country'], (int) $item->quantity), 422, $product->title.' ist nicht mehr verfuegbar.');
             }
         });
 
@@ -658,7 +712,7 @@ class CommerceCheckoutController extends Controller
             'customer_type' => $customer['type'],
             'customer_company' => $customer['company'] ?: null,
             'customer_vat_id' => $customer['vat_id'] ?: null,
-            'customer_vat_is_valid' => $customer['vat_id'] ? $this->looksLikeEuVatId($customer['vat_id']) : null,
+            'customer_vat_is_valid' => $customer['vat_id'] ? $customer['vat_id_is_valid'] : null,
             'customer_vat_validated_at' => $customer['vat_id'] ? now() : null,
             'status' => 'pending',
             'payload' => ['pricing' => $summary, 'shipping_address' => $shippingAddress, 'cart_id' => $cart->id],
@@ -666,10 +720,20 @@ class CommerceCheckoutController extends Controller
 
         foreach ($summary['items'] as $item) {
             $this->createOrderItem($order, $item['product'], $item['quote'], $item['quantity']);
+            $this->rememberMarketplaceInterest($request, $item['product'], 'checkout_started');
         }
 
         $cart->items()->delete();
         app(CommerceOrderNotifier::class)->notifySalesRecipients($order);
+        $this->trackAttributedAdConversion($request, 'checkout_started', (int) $summary['amount_cents'], [
+            'order_id' => $order->id,
+            'cart_id' => $cart->id,
+            'items' => collect($summary['items'])->map(fn ($item) => [
+                'product_id' => $item['product']->id,
+                'category' => $item['product']->category,
+                'quantity' => $item['quantity'],
+            ])->values()->all(),
+        ]);
 
         return $this->startCheckout($order);
     }
@@ -684,6 +748,10 @@ class CommerceCheckoutController extends Controller
 
         $data = $request->validate([
             'club_id' => ['nullable', Rule::exists('clubs', 'id')],
+            'learning_course_id' => [
+                'nullable',
+                Rule::exists('learning_courses', 'id')->where('user_id', $request->user()->id),
+            ],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
             'attributes_text' => ['nullable', 'string', 'max:2000'],
@@ -704,7 +772,7 @@ class CommerceCheckoutController extends Controller
             'image_upload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
             'image_uploads' => ['nullable', 'array', 'max:8'],
             'image_uploads.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
-            'category' => ['required', Rule::in(['product', 'course', 'camp', 'service'])],
+            'category' => ['required', 'string', 'max:80'],
             'offer_type' => ['nullable', Rule::in(['physical_product', 'online_course', 'training_plan', 'camp', 'service'])],
             'product_type' => ['nullable', Rule::in(['single', 'variable', 'digital'])],
             'sku' => ['nullable', 'string', 'max:80'],
@@ -717,6 +785,13 @@ class CommerceCheckoutController extends Controller
                 'integer',
                 'min:1',
             ],
+            'inventories' => ['nullable', 'array', 'max:20'],
+            'inventories.*.country_code' => ['required_with:inventories', 'string', 'size:2'],
+            'inventories.*.stock_quantity' => ['nullable', 'integer', 'min:0'],
+            'inventories.*.low_stock_threshold' => ['nullable', 'integer', 'min:0'],
+            'inventories.*.lead_time_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'inventories.*.city' => ['nullable', 'string', 'max:120'],
+            'inventories.*.postal_code' => ['nullable', 'string', 'max:30'],
             'tax_class' => ['nullable', 'string', 'max:30'],
             'return_policy_type' => ['nullable', Rule::in(['standard', 'digital', 'service', 'hygiene', 'custom'])],
             'return_window_days' => ['nullable', 'integer', 'min:0', 'max:365'],
@@ -733,6 +808,7 @@ class CommerceCheckoutController extends Controller
         $imageUrlsText = (string) ($data['image_urls_text'] ?? '');
         $courseOutlineText = (string) ($data['course_outline_text'] ?? '');
         $learningGoalsText = (string) ($data['learning_goals_text'] ?? '');
+        $inventories = $data['inventories'] ?? [];
         $offerType = $data['offer_type'] ?? match ($data['category']) {
             'course' => 'online_course',
             'camp' => 'camp',
@@ -741,20 +817,44 @@ class CommerceCheckoutController extends Controller
         };
 
         if (in_array($offerType, ['online_course', 'training_plan'], true)) {
-            $data['category'] = 'course';
+            $data['category'] = $data['category'] === 'course' ? 'course' : ($data['category'] ?: 'course');
             $data['product_type'] = 'digital';
             $data['is_shippable'] = false;
             $data['manages_stock'] = false;
             $data['stock_quantity'] = null;
         } elseif ($offerType === 'camp') {
             $data['category'] = 'camp';
+            $data['learning_course_id'] = null;
         } elseif ($offerType === 'service') {
-            $data['category'] = 'service';
+            throw ValidationException::withMessages([
+                'offer_type' => 'Dienstleistungen werden aktuell nur intern von Airmius angelegt.',
+            ]);
         } else {
-            $data['category'] = 'product';
+            $data['learning_course_id'] = null;
+            if (in_array($data['category'], ['course', 'camp', 'service', 'outfit_subscription'], true)) {
+                $data['category'] = 'equipment';
+            }
             if (($data['product_type'] ?? 'single') !== 'digital') {
                 $data['manages_stock'] = true;
                 $data['stock_quantity'] = max(1, (int) ($data['stock_quantity'] ?? 0));
+            }
+        }
+
+        if (($data['learning_course_id'] ?? null) && $offerType !== 'online_course') {
+            throw ValidationException::withMessages([
+                'learning_course_id' => 'Ein Learning-Kurs kann nur mit einem Kurs / E-Learning Angebot verknuepft werden.',
+            ]);
+        }
+
+        if ($data['learning_course_id'] ?? null) {
+            $linkedCourse = LearningCourse::query()
+                ->where('user_id', $request->user()->id)
+                ->find($data['learning_course_id']);
+
+            if (! $linkedCourse || $linkedCourse->status !== 'published' || ! $linkedCourse->is_public) {
+                throw ValidationException::withMessages([
+                    'learning_course_id' => 'Bitte verknuepfe nur veroeffentlichte und oeffentliche Sportschule-Kurse.',
+                ]);
             }
         }
 
@@ -765,6 +865,7 @@ class CommerceCheckoutController extends Controller
         unset($data['learning_goals_text']);
         unset($data['attribute_options']);
         unset($data['variants']);
+        unset($data['inventories']);
         unset($data['image_urls_text']);
         unset($data['image_upload']);
         unset($data['image_uploads']);
@@ -799,29 +900,35 @@ class CommerceCheckoutController extends Controller
         $data['gallery_images'] = $galleryImages;
         $data['image_url'] = ($data['image_url'] ?? null) ?: ($galleryImages[0] ?? null);
 
-        $product = MarketplaceProduct::create([
-            ...$data,
-            'product_attributes' => $this->productAttributesFromText($attributesText),
-            'attribute_options' => $attributeOptions,
-            'variants' => ($data['product_type'] ?? 'single') === 'variable' ? $variants : [],
-            'product_type' => $data['product_type'] ?? 'single',
-            'offer_type' => $offerType,
-            'course_outline' => $this->linesFromText($courseOutlineText, 20),
-            'learning_goals' => $this->linesFromText($learningGoalsText, 12),
-            'coaching_enabled' => $offerType === 'training_plan' ? (bool) ($data['coaching_enabled'] ?? true) : (bool) ($data['coaching_enabled'] ?? false),
-            'coach_feedback_instructions' => $data['coach_feedback_instructions'] ?? null,
-            'user_id' => $request->user()->id,
-            'currency' => 'EUR',
-            'is_shippable' => ($data['product_type'] ?? 'single') === 'digital' ? false : (bool) ($data['is_shippable'] ?? $data['category'] === 'product'),
-            'manages_stock' => (bool) ($data['manages_stock'] ?? false),
-            'tax_class' => $data['tax_class'] ?? 'standard',
-            'return_policy_type' => ($data['product_type'] ?? 'single') === 'digital' ? 'digital' : ($data['return_policy_type'] ?? 'standard'),
-            'return_window_days' => ($data['product_type'] ?? 'single') === 'digital' ? 0 : (int) ($data['return_window_days'] ?? 14),
-            'status' => 'published',
-            'moderation_status' => 'approved',
-            'commission_percent' => $this->pricing->commissionPercentFor((new MarketplaceProduct)->forceFill(['category' => $data['category']])),
-            'payout_status' => 'pending_sales',
-        ]);
+        $product = DB::transaction(function () use ($request, $data, $attributesText, $attributeOptions, $variants, $offerType, $courseOutlineText, $learningGoalsText, $inventories) {
+            $product = MarketplaceProduct::create([
+                ...$data,
+                'product_attributes' => $this->productAttributesFromText($attributesText),
+                'attribute_options' => $attributeOptions,
+                'variants' => ($data['product_type'] ?? 'single') === 'variable' ? $variants : [],
+                'product_type' => $data['product_type'] ?? 'single',
+                'offer_type' => $offerType,
+                'course_outline' => $this->linesFromText($courseOutlineText, 20),
+                'learning_goals' => $this->linesFromText($learningGoalsText, 12),
+                'coaching_enabled' => $offerType === 'training_plan' ? (bool) ($data['coaching_enabled'] ?? true) : (bool) ($data['coaching_enabled'] ?? false),
+                'coach_feedback_instructions' => $data['coach_feedback_instructions'] ?? null,
+                'user_id' => $request->user()->id,
+                'currency' => 'EUR',
+                'is_shippable' => ($data['product_type'] ?? 'single') === 'digital' ? false : (bool) ($data['is_shippable'] ?? $data['category'] === 'product'),
+                'manages_stock' => (bool) ($data['manages_stock'] ?? false),
+                'tax_class' => $data['tax_class'] ?? 'standard',
+                'return_policy_type' => ($data['product_type'] ?? 'single') === 'digital' ? 'digital' : ($data['return_policy_type'] ?? 'standard'),
+                'return_window_days' => ($data['product_type'] ?? 'single') === 'digital' ? 0 : (int) ($data['return_window_days'] ?? 14),
+                'status' => 'published',
+                'moderation_status' => 'approved',
+                'commission_percent' => $this->pricing->commissionPercentFor((new MarketplaceProduct)->forceFill(['category' => $data['category']])),
+                'payout_status' => 'pending_sales',
+            ]);
+
+            $this->syncSellerInventories($product, $inventories);
+
+            return $product;
+        });
 
         $this->moderation->flagIfNeeded(
             $product,
@@ -840,6 +947,83 @@ class CommerceCheckoutController extends Controller
         return back()->with('success', $product->fresh()->status === 'published'
             ? 'Produkt wurde automatisch geprueft und im Marketplace veroeffentlicht.'
             : 'Produkt wurde automatisch geprueft und abgelehnt.');
+    }
+
+    private function syncSellerInventories(MarketplaceProduct $product, array $inventories): void
+    {
+        if (! (bool) $product->manages_stock || $product->isDigitalDelivery()) {
+            $product->inventories()->update(['is_active' => false]);
+            $product->forceFill(['available_countries' => null])->save();
+
+            return;
+        }
+
+        $activeIds = [];
+        $totalStock = 0;
+        $countries = [];
+
+        foreach ($inventories as $inventoryData) {
+            $country = strtoupper(trim((string) ($inventoryData['country_code'] ?? '')));
+
+            if (! preg_match('/^[A-Z]{2}$/', $country)) {
+                continue;
+            }
+
+            $stock = max(0, (int) ($inventoryData['stock_quantity'] ?? 0));
+            $warehouse = CommerceWarehouse::query()->firstOrCreate(
+                [
+                    'user_id' => $product->user_id,
+                    'club_id' => $product->club_id,
+                    'country_code' => $country,
+                    'name' => 'Marketplace Lager '.$country,
+                ],
+                [
+                    'city' => trim((string) ($inventoryData['city'] ?? '')) ?: null,
+                    'postal_code' => trim((string) ($inventoryData['postal_code'] ?? '')) ?: null,
+                    'is_active' => true,
+                ],
+            );
+
+            $warehouse->forceFill([
+                'city' => trim((string) ($inventoryData['city'] ?? '')) ?: $warehouse->city,
+                'postal_code' => trim((string) ($inventoryData['postal_code'] ?? '')) ?: $warehouse->postal_code,
+                'is_active' => true,
+            ])->save();
+
+            $inventory = MarketplaceProductInventory::query()->updateOrCreate(
+                [
+                    'marketplace_product_id' => $product->id,
+                    'commerce_warehouse_id' => $warehouse->id,
+                    'country_code' => $country,
+                ],
+                [
+                    'stock_quantity' => $stock,
+                    'reserved_quantity' => 0,
+                    'low_stock_threshold' => max(0, (int) ($inventoryData['low_stock_threshold'] ?? 0)),
+                    'lead_time_days' => ($inventoryData['lead_time_days'] ?? null) === null || $inventoryData['lead_time_days'] === ''
+                        ? null
+                        : max(0, (int) $inventoryData['lead_time_days']),
+                    'is_active' => true,
+                ],
+            );
+
+            $activeIds[] = $inventory->id;
+            $totalStock += $stock;
+            if ($stock > 0) {
+                $countries[] = $country;
+            }
+        }
+
+        $product->inventories()
+            ->when($activeIds !== [], fn ($query) => $query->whereNotIn('id', $activeIds))
+            ->update(['is_active' => false]);
+
+        if ($activeIds !== []) {
+            $product->forceFill([
+                'stock_quantity' => $totalStock,
+                'available_countries' => array_values(array_unique($countries)),
+            ])->save();
+        }
     }
 
     public function downloadProductImportTemplate(Request $request)
@@ -929,6 +1113,13 @@ class CommerceCheckoutController extends Controller
             'price_cents' => ['required', 'integer', 'min:0'],
             'manages_stock' => ['boolean'],
             'stock_quantity' => ['nullable', 'integer', 'min:0'],
+            'inventories' => ['nullable', 'array', 'max:20'],
+            'inventories.*.country_code' => ['required_with:inventories', 'string', 'size:2'],
+            'inventories.*.stock_quantity' => ['nullable', 'integer', 'min:0'],
+            'inventories.*.low_stock_threshold' => ['nullable', 'integer', 'min:0'],
+            'inventories.*.lead_time_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'inventories.*.city' => ['nullable', 'string', 'max:120'],
+            'inventories.*.postal_code' => ['nullable', 'string', 'max:30'],
         ]);
 
         if ($request->hasFile('image_upload')) {
@@ -947,8 +1138,13 @@ class CommerceCheckoutController extends Controller
             ->all();
         $data['status'] = $product->status === 'archived' ? 'archived' : 'review';
         $data['rejection_reason'] = null;
+        $inventories = $data['inventories'] ?? [];
+        unset($data['inventories']);
 
-        $product->update($data);
+        DB::transaction(function () use ($product, $data, $inventories) {
+            $product->update($data);
+            $this->syncSellerInventories($product->fresh(), $inventories);
+        });
 
         return back()->with('success', 'Produkt wurde aktualisiert und zur Pruefung eingereicht.');
     }
@@ -1009,6 +1205,7 @@ class CommerceCheckoutController extends Controller
         $product->load(['user:id,name', 'club:id,name']);
         $shippingAddress = $this->shippingAddressForAuthenticatedUser($request, []);
         $quote = $this->pricing->quoteForRequest($product, $request, $shippingAddress['country'], $shippingAddress);
+        $this->rememberMarketplaceInterest($request, $product, 'view');
 
         return inertia('Auth/Dashboard/Commerce/ProductShow', [
             'product' => [
@@ -1053,10 +1250,12 @@ class CommerceCheckoutController extends Controller
         abort_if(in_array($order->shipping_status, ['shipped', 'delivered'], true), 422, 'Nach dem Versand ist eine Stornierung nicht mehr moeglich. Nach Zustellung kannst du eine Ruecksendung anfragen.');
 
         $order->loadMissing(['items.orderable', 'orderable', 'user']);
-        abort_unless($order->items->contains(fn (CommerceOrderItem $item) => (bool) $item->is_shippable), 422, 'Diese Bestellung kann nicht ueber den Versand-Storno storniert werden.');
+        $hasShippableItems = $order->items->contains(fn (CommerceOrderItem $item) => (bool) $item->is_shippable);
+        $hasLearningProduct = $this->learningProductsForOrder($order)->isNotEmpty();
+        abort_unless($hasShippableItems || $hasLearningProduct, 422, 'Diese Bestellung kann nicht ueber diesen Storno storniert werden.');
 
         DB::transaction(function () use ($order) {
-            if ($order->status === 'completed') {
+            if ($order->status === 'completed' && $order->items->contains(fn (CommerceOrderItem $item) => (bool) $item->is_shippable)) {
                 $this->restoreMarketplaceStock($order, 'Storno vor Versand Bestellung #'.$order->id);
             }
 
@@ -1068,6 +1267,8 @@ class CommerceCheckoutController extends Controller
                 'credit_note_number' => $order->credit_note_number ?: $this->nextDocumentNumber('commerce_credit_note_number_next', 'AIR-GS'),
                 'payout_status' => 'cancelled',
             ])->save();
+
+            $this->revokeLearningAccessForOrder($order, 'cancelled');
         });
 
         AppNotification::send($order->user_id, 'commerce.order.cancelled', [
@@ -1674,7 +1875,10 @@ class CommerceCheckoutController extends Controller
 
         $campaigns = AdCampaign::query()
             ->where('status', 'active')
-            ->whereColumn('spent_cents', '<', 'budget_cents')
+            ->where(function ($query) {
+                $query->where('is_internal', true)
+                    ->orWhereColumn('spent_cents', '<', 'budget_cents');
+            })
             ->where(function ($query) {
                 $query->whereNull('starts_at')->orWhere('starts_at', '<=', now());
             })
@@ -1683,13 +1887,19 @@ class CommerceCheckoutController extends Controller
             })
             ->when($placement, fn ($query) => $query->where('placement', $placement))
             ->when($objective, fn ($query) => $query->where('objective', $objective))
+            ->orderByDesc('force_priority')
+            ->orderByDesc('is_internal')
+            ->latest('id')
             ->with('creatives')
             ->with(['stats' => fn ($query) => $query->where('date', today()->toDateString())])
             ->limit(50)
             ->get()
-            ->filter(fn (AdCampaign $campaign) => $this->campaignHasBudgetFor($campaign, 'impression'));
+            ->filter(fn (AdCampaign $campaign) => $this->campaignHasBudgetFor($campaign, 'impression'))
+            ->filter(fn (AdCampaign $campaign) => $this->campaignPassesFrequencyCap($request, $campaign))
+            ->filter(fn (AdCampaign $campaign) => $this->campaignPassesBudgetPacing($campaign))
+            ->filter(fn (AdCampaign $campaign) => $this->campaignMatchesAudience($request, $campaign));
 
-        $campaign = $this->chooseCampaignForDelivery($campaigns);
+        $campaign = $this->chooseCampaignForDelivery($campaigns, $request);
 
         if (! $campaign) {
             return response()->json(null);
@@ -1719,6 +1929,7 @@ class CommerceCheckoutController extends Controller
     {
         if ($campaign->status === 'active' && $this->campaignHasBudgetFor($campaign, 'click')) {
             $this->recordAdEvent($request, $campaign, 'click', 0, [], $this->creativeFromRequest($request, $campaign));
+            $this->rememberAdClick($request, $campaign, $this->creativeFromRequest($request, $campaign));
         }
 
         $creative = $this->creativeFromRequest($request, $campaign);
@@ -1742,6 +1953,66 @@ class CommerceCheckoutController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    public function trackAttributedAdConversion(Request $request, string $conversionType, int $valueCents = 0, array $metadata = []): ?AdEvent
+    {
+        if (! $this->allowsAdMeasurement($request)) {
+            return null;
+        }
+
+        $click = $request->session()->get('last_ad_click');
+
+        if (! is_array($click) || empty($click['campaign_id']) || empty($click['clicked_at'])) {
+            return null;
+        }
+
+        if (! $this->adTimestampWithinDays($click['clicked_at'], 14)) {
+            $request->session()->forget('last_ad_click');
+
+            return null;
+        }
+
+        $campaign = AdCampaign::query()->find($click['campaign_id']);
+
+        if (! $campaign || $campaign->status !== 'active') {
+            return null;
+        }
+
+        $creative = $this->creativeFromRequest($request, $campaign, $click['creative_id'] ?? null);
+        $eventType = $conversionType === 'sale' ? 'sale' : 'lead';
+
+        return $this->recordAdEvent($request, $campaign, $eventType, $valueCents, [
+            ...$metadata,
+            'conversion_type' => $conversionType,
+            'attribution' => 'last_click',
+            'clicked_at' => $click['clicked_at'],
+            'target_url' => $click['target_url'] ?? null,
+        ], $creative);
+    }
+
+    public function rememberMarketplaceInterest(Request $request, MarketplaceProduct $product, string $eventType = 'view'): void
+    {
+        if (! $this->allowsAdPersonalization($request)) {
+            return;
+        }
+
+        $interests = collect($request->session()->get('ad_marketplace_interests', []))
+            ->filter(fn ($row) => is_array($row) && ! empty($row['at']))
+            ->filter(fn ($row) => $this->adTimestampWithinDays($row['at'], 14))
+            ->reject(fn ($row) => (int) ($row['product_id'] ?? 0) === (int) $product->id)
+            ->prepend([
+                'product_id' => $product->id,
+                'category' => $product->category,
+                'title' => $product->title,
+                'event_type' => $eventType,
+                'at' => now()->toIso8601String(),
+            ])
+            ->take(20)
+            ->values()
+            ->all();
+
+        $request->session()->put('ad_marketplace_interests', $interests);
+    }
+
     private function trackAdStat(AdCampaign $campaign, ?string $metric, int $costCents = 0): void
     {
         $stat = AdCampaignStat::query()->firstOrCreate([
@@ -1760,7 +2031,11 @@ class CommerceCheckoutController extends Controller
 
     private function recordAdEvent(Request $request, AdCampaign $campaign, string $eventType, int $valueCents = 0, array $metadata = [], ?AdCreative $creative = null): ?AdEvent
     {
-        if ($this->isDuplicateAdEvent($request, $campaign, $eventType, $creative)) {
+        if ($this->isDuplicateAdEvent($request, $campaign, $eventType, $creative, $metadata)) {
+            return null;
+        }
+
+        if ($this->isSuspiciousAdTraffic($request, $campaign, $eventType)) {
             return null;
         }
 
@@ -1807,8 +2082,61 @@ class CommerceCheckoutController extends Controller
         return $event;
     }
 
+    private function rememberAdClick(Request $request, AdCampaign $campaign, ?AdCreative $creative = null): void
+    {
+        if (! $this->allowsAdMeasurement($request) && ! $this->allowsAdPersonalization($request)) {
+            return;
+        }
+
+        $request->session()->put('last_ad_click', [
+            'campaign_id' => $campaign->id,
+            'creative_id' => $creative?->id,
+            'placement' => $campaign->placement,
+            'objective' => $campaign->objective,
+            'target_url' => $creative?->target_url ?: $campaign->target_url,
+            'clicked_at' => now()->toIso8601String(),
+        ]);
+    }
+
+    private function isSuspiciousAdTraffic(Request $request, AdCampaign $campaign, string $eventType): bool
+    {
+        if (! in_array($eventType, ['impression', 'click'], true)) {
+            return false;
+        }
+
+        $sessionHash = $this->adHash($request->session()->getId());
+        $ipHash = $this->adHash($request->ip());
+        $userAgentHash = $this->adHash((string) $request->userAgent());
+        $limit = $eventType === 'click' ? 5 : 20;
+
+        $recentEvents = AdEvent::query()
+            ->where('ad_campaign_id', $campaign->id)
+            ->where('event_type', $eventType)
+            ->where('occurred_at', '>=', now()->subMinute())
+            ->where(function ($query) use ($request, $sessionHash, $ipHash, $userAgentHash) {
+                if ($request->user()) {
+                    $query->where('user_id', $request->user()->id);
+
+                    return;
+                }
+
+                $query->where('session_hash', $sessionHash)
+                    ->orWhere(function ($fallback) use ($ipHash, $userAgentHash) {
+                        $fallback->where('ip_hash', $ipHash)
+                            ->where('user_agent_hash', $userAgentHash);
+                    });
+            })
+            ->count();
+
+        return $recentEvents >= $limit;
+    }
+
     private function costForAdEvent(AdCampaign $campaign, string $eventType, int $valueCents = 0): int
     {
+        if ($campaign->is_internal) {
+            return 0;
+        }
+
         return match ($eventType) {
             'impression' => $this->cpmImpressionCost($campaign),
             'click' => $campaign->objective === 'traffic' ? $this->adPrice('ads_cpc_cents', 30) : 0,
@@ -1833,6 +2161,10 @@ class CommerceCheckoutController extends Controller
 
     private function campaignHasBudgetFor(AdCampaign $campaign, string $eventType, ?int $costCents = null): bool
     {
+        if ($campaign->is_internal) {
+            return true;
+        }
+
         $cost = $costCents ?? $this->costForAdEvent($campaign, $eventType);
         $remaining = max(0, (int) $campaign->budget_cents - (int) $campaign->spent_cents);
 
@@ -1847,6 +2179,259 @@ class CommerceCheckoutController extends Controller
         $todaySpent = (int) ($this->todayAdStat($campaign)?->spent_cents ?? 0);
 
         return ($todaySpent + $cost) <= (int) $campaign->daily_budget_cents;
+    }
+
+    private function campaignPassesFrequencyCap(Request $request, AdCampaign $campaign): bool
+    {
+        $cap = $this->frequencyCapForPlacement((string) $campaign->placement);
+
+        if ($cap <= 0) {
+            return true;
+        }
+
+        $sessionHash = $this->adHash($request->session()->getId());
+        $ipHash = $this->adHash($request->ip());
+        $userAgentHash = $this->adHash((string) $request->userAgent());
+
+        $seenToday = AdEvent::query()
+            ->where('ad_campaign_id', $campaign->id)
+            ->where('event_type', 'impression')
+            ->where('occurred_at', '>=', today())
+            ->where(function ($query) use ($request, $sessionHash, $ipHash, $userAgentHash) {
+                if ($request->user()) {
+                    $query->where('user_id', $request->user()->id);
+
+                    return;
+                }
+
+                $query->where('session_hash', $sessionHash)
+                    ->orWhere(function ($fallback) use ($ipHash, $userAgentHash) {
+                        $fallback->where('ip_hash', $ipHash)
+                            ->where('user_agent_hash', $userAgentHash);
+                    });
+            })
+            ->count();
+
+        return $seenToday < $cap;
+    }
+
+    private function frequencyCapForPlacement(?string $placement): int
+    {
+        $fallback = (int) Setting::valueFor('ads_frequency_cap_per_day', 3);
+
+        return match ($placement) {
+            'feed' => (int) Setting::valueFor('ads_frequency_cap_feed', $fallback ?: 3),
+            'sidebar' => (int) Setting::valueFor('ads_frequency_cap_sidebar', $fallback ?: 6),
+            'marketplace_card' => (int) Setting::valueFor('ads_frequency_cap_marketplace_card', $fallback ?: 3),
+            'sponsor_section' => (int) Setting::valueFor('ads_frequency_cap_sponsor_section', $fallback ?: 4),
+            default => $fallback,
+        };
+    }
+
+    private function campaignPassesBudgetPacing(AdCampaign $campaign): bool
+    {
+        if ($campaign->is_internal || (int) $campaign->daily_budget_cents <= 0) {
+            return true;
+        }
+
+        $todaySpent = (int) ($this->todayAdStat($campaign)?->spent_cents ?? 0);
+        $minutesElapsed = max(1, now()->diffInMinutes(today()));
+        $dayProgress = min(1, $minutesElapsed / 1440);
+        $dailyBudget = (int) $campaign->daily_budget_cents;
+        $buffer = max(100, (int) round($dailyBudget * 0.12));
+        $allowedSpend = (int) round($dailyBudget * $dayProgress) + $buffer;
+
+        return $todaySpent <= $allowedSpend;
+    }
+
+    private function campaignMatchesAudience(Request $request, AdCampaign $campaign): bool
+    {
+        $score = $this->campaignAudienceScore($request, $campaign);
+
+        return $score > 0;
+    }
+
+    private function campaignAudienceScore(Request $request, AdCampaign $campaign): float
+    {
+        $audience = is_array($campaign->audience) ? $campaign->audience : [];
+
+        if ($campaign->is_internal || $audience === []) {
+            return 1.0;
+        }
+
+        $user = $request->user();
+        $locations = collect($audience['locations'] ?? [])->map(fn ($value) => Str::lower(trim((string) $value)))->filter();
+        $interests = collect($audience['interests'] ?? [])->map(fn ($value) => Str::lower(trim((string) $value)))->filter();
+        $excludedLocations = collect($audience['excluded_locations'] ?? [])->map(fn ($value) => Str::lower(trim((string) $value)))->filter();
+        $excludedInterests = collect($audience['excluded_interests'] ?? [])->map(fn ($value) => Str::lower(trim((string) $value)))->filter();
+        $devices = collect($audience['devices'] ?? [])->map(fn ($value) => Str::lower(trim((string) $value)))->filter();
+        $languages = collect($audience['languages'] ?? [])->map(fn ($value) => Str::lower(trim((string) $value)))->filter();
+        $hours = collect($audience['hours'] ?? [])->map(fn ($value) => trim((string) $value))->filter();
+        $ageMin = filled($audience['age_min'] ?? null) ? (int) $audience['age_min'] : null;
+        $ageMax = filled($audience['age_max'] ?? null) ? (int) $audience['age_max'] : null;
+
+        $hasTargeting = $locations->isNotEmpty()
+            || $interests->isNotEmpty()
+            || $excludedLocations->isNotEmpty()
+            || $excludedInterests->isNotEmpty()
+            || $devices->isNotEmpty()
+            || $languages->isNotEmpty()
+            || $hours->isNotEmpty()
+            || $ageMin
+            || $ageMax;
+
+        if (! $hasTargeting) {
+            return 1.0;
+        }
+
+        $requestDevice = $this->requestDevice($request);
+
+        if ($devices->isNotEmpty() && ! $devices->contains($requestDevice)) {
+            return 0.0;
+        }
+
+        if ($languages->isNotEmpty()) {
+            $requestLanguages = $this->requestLanguages($request);
+            $matchesLanguage = $languages->contains(function (string $language) use ($requestLanguages) {
+                return $requestLanguages->contains(fn (string $requestLanguage) => $requestLanguage === $language || Str::startsWith($requestLanguage, $language.'-') || Str::startsWith($language, $requestLanguage.'-'));
+            });
+
+            if (! $matchesLanguage) {
+                return 0.0;
+            }
+        }
+
+        if ($hours->isNotEmpty() && ! $this->matchesAnyAdHourWindow($hours)) {
+            return 0.0;
+        }
+
+        if (! $user) {
+            return ($ageMin || $ageMax || $interests->isNotEmpty()) ? 0.35 : 0.7;
+        }
+
+        $score = 1.0;
+
+        if ($devices->isNotEmpty()) {
+            $score *= 1.1;
+        }
+
+        if ($languages->isNotEmpty()) {
+            $score *= 1.08;
+        }
+
+        if ($ageMin || $ageMax) {
+            $age = $user->birth_date?->age;
+
+            if (! $age) {
+                $score *= 0.7;
+            } elseif (($ageMin && $age < $ageMin) || ($ageMax && $age > $ageMax)) {
+                return 0.0;
+            } else {
+                $score *= 1.15;
+            }
+        }
+
+        $userLocations = collect([$user->country, $user->city, $user->state])
+            ->map(fn ($value) => Str::lower(trim((string) $value)))
+            ->filter();
+
+        if ($excludedLocations->isNotEmpty() && $excludedLocations->contains(function (string $location) use ($userLocations) {
+            return $userLocations->contains(fn (string $userLocation) => $userLocation !== '' && (str_contains($userLocation, $location) || str_contains($location, $userLocation)));
+        })) {
+            return 0.0;
+        }
+
+        if ($locations->isNotEmpty()) {
+            $matchesLocation = $locations->contains(function (string $location) use ($userLocations) {
+                return $userLocations->contains(fn (string $userLocation) => $userLocation !== '' && (str_contains($userLocation, $location) || str_contains($location, $userLocation)));
+            });
+
+            if (! $matchesLocation) {
+                return 0.0;
+            }
+
+            $score *= 1.25;
+        }
+
+        $userInterests = collect($user->event_default_sport_ids ?? [])
+            ->map(fn ($value) => (string) $value)
+            ->merge($user->sportProfiles()->with('sport:id,name,slug,category')->get()->flatMap(function ($profile) {
+                return [
+                    $profile->sport_id,
+                    $profile->sport?->name,
+                    $profile->sport?->slug,
+                    $profile->sport?->category,
+                ];
+            }))
+            ->map(fn ($value) => Str::lower(trim((string) $value)))
+            ->filter()
+            ->unique();
+
+        if ($excludedInterests->isNotEmpty() && $excludedInterests->contains(function (string $interest) use ($userInterests) {
+            return $userInterests->contains(fn (string $userInterest) => $userInterest !== '' && (str_contains($userInterest, $interest) || str_contains($interest, $userInterest)));
+        })) {
+            return 0.0;
+        }
+
+        if ($interests->isNotEmpty()) {
+            $matchesInterest = $interests->contains(function (string $interest) use ($userInterests) {
+                return $userInterests->contains(fn (string $userInterest) => $userInterest !== '' && (str_contains($userInterest, $interest) || str_contains($interest, $userInterest)));
+            });
+
+            if (! $matchesInterest) {
+                $score *= 0.45;
+            } else {
+                $score *= 1.35;
+            }
+        }
+
+        return max(0.0, min(2.5, $score));
+    }
+
+    private function requestDevice(Request $request): string
+    {
+        $agent = Str::lower((string) $request->userAgent());
+
+        if (str_contains($agent, 'ipad') || str_contains($agent, 'tablet')) {
+            return 'tablet';
+        }
+
+        if (str_contains($agent, 'mobile') || str_contains($agent, 'iphone') || str_contains($agent, 'android')) {
+            return 'mobile';
+        }
+
+        return 'desktop';
+    }
+
+    private function requestLanguages(Request $request)
+    {
+        return collect(explode(',', (string) $request->header('Accept-Language')))
+            ->map(fn (string $language) => Str::lower(trim(explode(';', $language)[0] ?? '')))
+            ->filter()
+            ->flatMap(fn (string $language) => [$language, Str::before($language, '-')])
+            ->filter()
+            ->unique()
+            ->values();
+    }
+
+    private function matchesAnyAdHourWindow($windows): bool
+    {
+        $currentMinutes = ((int) now()->format('H')) * 60 + (int) now()->format('i');
+
+        return collect($windows)->contains(function (string $window) use ($currentMinutes) {
+            if (! preg_match('/^(\d{1,2})(?::(\d{2}))?\s*-\s*(\d{1,2})(?::(\d{2}))?$/', trim($window), $matches)) {
+                return false;
+            }
+
+            $start = min(23, (int) $matches[1]) * 60 + min(59, (int) ($matches[2] ?? 0));
+            $end = min(23, (int) $matches[3]) * 60 + min(59, (int) ($matches[4] ?? 59));
+
+            if ($start <= $end) {
+                return $currentMinutes >= $start && $currentMinutes <= $end;
+            }
+
+            return $currentMinutes >= $start || $currentMinutes <= $end;
+        });
     }
 
     private function campaignPaymentCompleted(AdCampaign $campaign): bool
@@ -1873,10 +2458,18 @@ class CommerceCheckoutController extends Controller
         return $campaign->stats()->where('date', today()->toDateString())->first();
     }
 
-    private function chooseCampaignForDelivery($campaigns): ?AdCampaign
+    private function chooseCampaignForDelivery($campaigns, Request $request): ?AdCampaign
     {
+        $priorityCampaigns = $campaigns
+            ->filter(fn (AdCampaign $campaign) => $campaign->is_internal && $campaign->force_priority)
+            ->values();
+
+        if ($priorityCampaigns->isNotEmpty()) {
+            return $this->chooseWeightedCampaign($priorityCampaigns, $request);
+        }
+
         $weighted = $campaigns
-            ->map(fn (AdCampaign $campaign) => ['campaign' => $campaign, 'weight' => $this->campaignDeliveryWeight($campaign)])
+            ->map(fn (AdCampaign $campaign) => ['campaign' => $campaign, 'weight' => $this->campaignDeliveryWeight($campaign, $request)])
             ->filter(fn (array $item) => $item['weight'] > 0)
             ->values();
 
@@ -1899,22 +2492,232 @@ class CommerceCheckoutController extends Controller
         return $weighted->first()['campaign'] ?? null;
     }
 
-    private function campaignDeliveryWeight(AdCampaign $campaign): int
+    private function chooseWeightedCampaign($campaigns, Request $request): ?AdCampaign
     {
+        $weighted = $campaigns
+            ->map(fn (AdCampaign $campaign) => ['campaign' => $campaign, 'weight' => $this->campaignDeliveryWeight($campaign, $request)])
+            ->filter(fn (array $item) => $item['weight'] > 0)
+            ->values();
+
+        $total = (int) $weighted->sum('weight');
+
+        if ($total <= 0) {
+            return null;
+        }
+
+        $pick = random_int(1, $total);
+
+        foreach ($weighted as $item) {
+            $pick -= $item['weight'];
+
+            if ($pick <= 0) {
+                return $item['campaign'];
+            }
+        }
+
+        return $weighted->first()['campaign'] ?? null;
+    }
+
+    private function campaignDeliveryWeight(AdCampaign $campaign, Request $request): int
+    {
+        if ($campaign->is_internal) {
+            return $campaign->force_priority ? 10000 : 500;
+        }
+
         $impressions = max(1, (int) $campaign->impressions);
         $clicks = (int) $campaign->clicks;
         $ctr = $clicks / $impressions;
         $budgetRemainingRatio = max(0.1, ((int) $campaign->budget_cents - (int) $campaign->spent_cents) / max(1, (int) $campaign->budget_cents));
         $freshnessBoost = $impressions < 100 ? 1.5 : 1;
+        $pacingBoost = $this->campaignPacingWeight($campaign);
+        $fairnessBoost = $this->campaignFairnessWeight($campaign);
+        $conversionBoost = $this->campaignConversionWeight($campaign);
+        $retargetingBoost = $this->campaignRetargetingWeight($request, $campaign);
 
         $objectiveWeight = match ($campaign->objective) {
             'traffic' => 1 + min(3, $ctr * 100),
             'awareness' => 1 + min(2, 100 / $impressions),
-            'leads', 'sales' => 1 + min(2, $ctr * 60),
+            'leads', 'sales' => 1 + min(2, $ctr * 45),
             default => 1,
         };
 
-        return max(1, (int) round(100 * $objectiveWeight * $budgetRemainingRatio * $freshnessBoost));
+        return max(1, (int) round(100 * $objectiveWeight * $budgetRemainingRatio * $freshnessBoost * $pacingBoost * $fairnessBoost * $conversionBoost * $retargetingBoost));
+    }
+
+    private function campaignPacingWeight(AdCampaign $campaign): float
+    {
+        if ((int) $campaign->daily_budget_cents <= 0) {
+            return 1.0;
+        }
+
+        $todaySpent = (int) ($this->todayAdStat($campaign)?->spent_cents ?? 0);
+        $minutesElapsed = max(1, now()->diffInMinutes(today()));
+        $expectedSpend = max(1, (int) round((int) $campaign->daily_budget_cents * min(1, $minutesElapsed / 1440)));
+
+        if ($todaySpent < $expectedSpend * 0.55) {
+            return 1.45;
+        }
+
+        if ($todaySpent > $expectedSpend * 1.25) {
+            return 0.45;
+        }
+
+        return 1.0;
+    }
+
+    private function campaignConversionWeight(AdCampaign $campaign): float
+    {
+        if ($campaign->is_internal || ! in_array($campaign->objective, ['leads', 'sales'], true)) {
+            return 1.0;
+        }
+
+        $metrics = $this->campaignRecentEventMetrics($campaign);
+        $clicks = max(1, (int) ($metrics['click'] ?? 0));
+        $leads = (int) ($metrics['lead'] ?? 0);
+        $sales = (int) ($metrics['sale'] ?? 0);
+        $conversions = $leads + ($sales * 2);
+
+        if ($clicks < 10 && $conversions === 0) {
+            return 1.0;
+        }
+
+        if ($conversions === 0) {
+            return 0.72;
+        }
+
+        return min(2.6, 1 + (($conversions / $clicks) * 7));
+    }
+
+    private function campaignRetargetingWeight(Request $request, AdCampaign $campaign): float
+    {
+        if (! $this->allowsAdPersonalization($request)) {
+            return 1.0;
+        }
+
+        $boost = 1.0;
+        $lastClick = $request->session()->get('last_ad_click');
+
+        if (is_array($lastClick) && (int) ($lastClick['campaign_id'] ?? 0) === (int) $campaign->id && ! empty($lastClick['clicked_at'])) {
+            $boost *= $this->adTimestampWithinDays($lastClick['clicked_at'], 7) ? 1.75 : 1.2;
+        }
+
+        $audience = is_array($campaign->audience) ? $campaign->audience : [];
+        $campaignInterests = collect($audience['interests'] ?? [])
+            ->map(fn ($value) => Str::lower(trim((string) $value)))
+            ->filter();
+
+        if ($campaignInterests->isNotEmpty()) {
+            $marketplaceInterests = collect($request->session()->get('ad_marketplace_interests', []))
+                ->filter(fn ($row) => is_array($row) && ! empty($row['at']) && $this->adTimestampWithinDays($row['at'], 14))
+                ->flatMap(fn ($row) => [$row['category'] ?? null, $row['title'] ?? null])
+                ->map(fn ($value) => Str::lower(trim((string) $value)))
+                ->filter();
+
+            $matches = $campaignInterests->contains(function (string $interest) use ($marketplaceInterests) {
+                return $marketplaceInterests->contains(fn (string $value) => $value !== '' && (str_contains($value, $interest) || str_contains($interest, $value)));
+            });
+
+            if ($matches) {
+                $boost *= 1.45;
+            }
+        }
+
+        return min(2.4, $boost);
+    }
+
+    private function allowsAdPersonalization(Request $request): bool
+    {
+        return (bool) $request->user()?->ads_personalization_consent;
+    }
+
+    private function allowsAdMeasurement(Request $request): bool
+    {
+        return (bool) $request->user()?->ads_measurement_consent;
+    }
+
+    private function adTimestampWithinDays(?string $timestamp, int $days): bool
+    {
+        if (! $timestamp) {
+            return false;
+        }
+
+        try {
+            return now()->diffInDays(\Illuminate\Support\Carbon::parse($timestamp)) <= $days;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    private function campaignRecentEventMetrics(AdCampaign $campaign): array
+    {
+        static $cache = [];
+
+        if (array_key_exists($campaign->id, $cache)) {
+            return $cache[$campaign->id];
+        }
+
+        return $cache[$campaign->id] = AdEvent::query()
+            ->select('event_type', DB::raw('COUNT(*) as total'))
+            ->where('ad_campaign_id', $campaign->id)
+            ->where('occurred_at', '>=', now()->subDays(14))
+            ->whereIn('event_type', ['click', 'lead', 'sale'])
+            ->groupBy('event_type')
+            ->pluck('total', 'event_type')
+            ->map(fn ($value) => (int) $value)
+            ->all();
+    }
+
+    private function campaignFairnessWeight(AdCampaign $campaign): float
+    {
+        if ($campaign->is_internal) {
+            return 1.0;
+        }
+
+        $impressions = (int) $campaign->impressions;
+        $budgetCents = max(1, (int) $campaign->budget_cents);
+        $smallBudget = $budgetCents <= (int) Setting::valueFor('ads_small_campaign_budget_cents', 5000);
+
+        if ($impressions < 50) {
+            return $smallBudget ? 1.9 : 1.35;
+        }
+
+        if ($smallBudget && $impressions < 250) {
+            return 1.35;
+        }
+
+        return 1.0;
+    }
+
+    private function creativeConversionWeight(AdCreative $creative): float
+    {
+        $metrics = $this->creativeRecentEventMetrics($creative);
+        $clicks = max(1, (int) ($metrics['click'] ?? 0));
+        $conversions = (int) ($metrics['lead'] ?? 0) + (((int) ($metrics['sale'] ?? 0)) * 2);
+
+        if ($conversions === 0) {
+            return $clicks >= 20 ? 0.82 : 1.0;
+        }
+
+        return min(2.2, 1 + (($conversions / $clicks) * 6));
+    }
+
+    private function creativeRecentEventMetrics(AdCreative $creative): array
+    {
+        static $cache = [];
+
+        if (array_key_exists($creative->id, $cache)) {
+            return $cache[$creative->id];
+        }
+
+        return $cache[$creative->id] = AdEvent::query()
+            ->select('event_type', DB::raw('COUNT(*) as total'))
+            ->where('ad_creative_id', $creative->id)
+            ->where('occurred_at', '>=', now()->subDays(14))
+            ->whereIn('event_type', ['click', 'lead', 'sale'])
+            ->groupBy('event_type')
+            ->pluck('total', 'event_type')
+            ->map(fn ($value) => (int) $value)
+            ->all();
     }
 
     private function chooseCreativeForDelivery(AdCampaign $campaign): ?AdCreative
@@ -1928,12 +2731,15 @@ class CommerceCheckoutController extends Controller
             ->map(function (AdCreative $creative) {
                 $impressions = max(1, (int) $creative->impressions);
                 $clicks = (int) $creative->clicks;
-                $ctrBoost = 1 + min(3, ($clicks / $impressions) * 100);
+                $ctr = $clicks / $impressions;
+                $ctrBoost = $impressions >= 30 ? 1 + min(3, $ctr * 100) : 1.1;
                 $freshnessBoost = $impressions < 50 ? 1.4 : 1;
+                $learningPenalty = ($impressions >= 100 && $ctr < 0.002) ? 0.45 : 1;
+                $conversionBoost = $this->creativeConversionWeight($creative);
 
                 return [
                     'creative' => $creative,
-                    'weight' => max(1, (int) round((int) $creative->weight * $ctrBoost * $freshnessBoost)),
+                    'weight' => max(1, (int) round((int) $creative->weight * $ctrBoost * $freshnessBoost * $learningPenalty * $conversionBoost)),
                 ];
             })
             ->values();
@@ -2023,7 +2829,7 @@ class CommerceCheckoutController extends Controller
         return $rows->count();
     }
 
-    private function isDuplicateAdEvent(Request $request, AdCampaign $campaign, string $eventType, ?AdCreative $creative = null): bool
+    private function isDuplicateAdEvent(Request $request, AdCampaign $campaign, string $eventType, ?AdCreative $creative = null, array $metadata = []): bool
     {
         $windowMinutes = match ($eventType) {
             'impression' => 10,
@@ -2035,6 +2841,8 @@ class CommerceCheckoutController extends Controller
             ->where('ad_campaign_id', $campaign->id)
             ->when($creative, fn ($query) => $query->where('ad_creative_id', $creative->id))
             ->where('event_type', $eventType)
+            ->when($metadata['conversion_type'] ?? null, fn ($query, $conversionType) => $query->where('metadata->conversion_type', $conversionType))
+            ->when($metadata['order_id'] ?? null, fn ($query, $orderId) => $query->where('metadata->order_id', $orderId))
             ->where('session_hash', $this->adHash($request->session()->getId()))
             ->where('occurred_at', '>=', now()->subMinutes($windowMinutes))
             ->exists();
@@ -2155,21 +2963,43 @@ class CommerceCheckoutController extends Controller
                     }
 
                     abort_unless($this->hasSellableStock($product), 422, $product->title.' ist nicht mehr verfuegbar.');
-                    abort_if((bool) $product->manages_stock && (int) $product->stock_quantity < (int) $item->quantity, 422, $product->title.' ist nicht ausreichend auf Lager.');
 
-                    $product->decrement('stock_quantity', (int) $item->quantity);
-                    $product->refresh();
+                    if (! (bool) $product->manages_stock) {
+                        continue;
+                    }
+
+                    $stockAfter = null;
+                    if ($item->commerce_warehouse_id) {
+                        $inventory = MarketplaceProductInventory::query()
+                            ->where('marketplace_product_id', $product->id)
+                            ->where('commerce_warehouse_id', $item->commerce_warehouse_id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        abort_unless($inventory && $inventory->availableQuantity() >= (int) $item->quantity, 422, $product->title.' ist nicht ausreichend im Zielland auf Lager.');
+                        $inventory->decrement('stock_quantity', (int) $item->quantity);
+                        $inventory->refresh();
+                        $stockAfter = $inventory->availableQuantity();
+                    } else {
+                        abort_if((int) $product->stock_quantity < (int) $item->quantity, 422, $product->title.' ist nicht ausreichend auf Lager.');
+                        $product->decrement('stock_quantity', (int) $item->quantity);
+                        $product->refresh();
+                        $stockAfter = $product->stock_quantity;
+                    }
 
                     CommerceStockMovement::create([
                         'marketplace_product_id' => $product->id,
+                        'commerce_warehouse_id' => $item->commerce_warehouse_id,
                         'commerce_order_id' => $order->id,
                         'type' => 'sale',
                         'quantity_delta' => -1 * (int) $item->quantity,
-                        'stock_after' => $product->stock_quantity,
+                        'stock_after' => $stockAfter,
                         'note' => 'Bestellung #'.$order->id.' bezahlt',
                     ]);
                 }
             });
+
+            $this->grantLearningAccessForOrder($order);
         }
 
         if ($order->type === 'ads_campaign' && $order->orderable instanceof AdCampaign) {
@@ -2185,8 +3015,80 @@ class CommerceCheckoutController extends Controller
             'invoice_number' => $order->invoice_number ?: $this->nextDocumentNumber('commerce_invoice_number_next', 'AIR-RE'),
             'payout_status' => in_array($order->type, ['marketplace_product', 'marketplace_cart'], true) ? 'pending' : 'not_applicable',
         ]);
+
+        if (in_array($order->type, ['marketplace_product', 'marketplace_cart'], true)) {
+            $this->trackAttributedOrderSale($order->refresh());
+        }
+
         $this->notifyOrderCompleted($order->refresh());
         $this->sendConfirmationEmail($order);
+    }
+
+    private function trackAttributedOrderSale(CommerceOrder $order): void
+    {
+        $lastAttributedLead = AdEvent::query()
+            ->when($order->user_id, fn ($query) => $query->where('user_id', $order->user_id))
+            ->where('event_type', 'lead')
+            ->where('occurred_at', '>=', now()->subDays(14))
+            ->where('metadata->conversion_type', 'checkout_started')
+            ->where('metadata->order_id', $order->id)
+            ->latest('occurred_at')
+            ->first();
+
+        if (! $lastAttributedLead) {
+            return;
+        }
+
+        $campaign = AdCampaign::query()->find($lastAttributedLead->ad_campaign_id);
+
+        if (! $campaign || $campaign->status !== 'active') {
+            return;
+        }
+
+        $creative = $lastAttributedLead->ad_creative_id
+            ? AdCreative::query()->where('ad_campaign_id', $campaign->id)->find($lastAttributedLead->ad_creative_id)
+            : null;
+        $costCents = $this->costForAdEvent($campaign, 'sale', (int) $order->amount_cents);
+
+        if ($costCents > 0 && ! $this->campaignHasBudgetFor($campaign, 'sale', $costCents)) {
+            return;
+        }
+
+        if (AdEvent::query()
+            ->where('ad_campaign_id', $campaign->id)
+            ->where('event_type', 'sale')
+            ->where('metadata->order_id', $order->id)
+            ->exists()) {
+            return;
+        }
+
+        AdEvent::create([
+            'ad_campaign_id' => $campaign->id,
+            'ad_creative_id' => $creative?->id,
+            'user_id' => $order->user_id,
+            'event_type' => 'sale',
+            'objective' => $campaign->objective,
+            'placement' => $campaign->placement,
+            'cost_cents' => $costCents,
+            'value_cents' => (int) $order->amount_cents,
+            'currency' => $order->currency ?: 'EUR',
+            'session_hash' => $lastAttributedLead->session_hash,
+            'ip_hash' => $lastAttributedLead->ip_hash,
+            'user_agent_hash' => $lastAttributedLead->user_agent_hash,
+            'metadata' => [
+                'conversion_type' => 'sale',
+                'attribution' => 'last_click',
+                'order_id' => $order->id,
+                'lead_event_id' => $lastAttributedLead->id,
+            ],
+            'occurred_at' => now(),
+        ]);
+
+        if ($costCents > 0) {
+            $campaign->increment('spent_cents', $costCents);
+            $creative?->increment('spent_cents', $costCents);
+            $this->trackAdStat($campaign, null, $costCents);
+        }
     }
 
     private function payoutSummaryFor(int $userId): array
@@ -2362,6 +3264,7 @@ class CommerceCheckoutController extends Controller
             'invoice_url' => $order->invoice_number ? route('auth.commerce.orders.invoice', $order) : null,
             'detail_url' => route('auth.commerce.index', ['tab' => 'invoices', 'order' => $order->id]),
             'order_id' => $order->id,
+            'learning_course' => $this->learningCourseLinkForOrder($order),
         ];
     }
 
@@ -2721,6 +3624,39 @@ class CommerceCheckoutController extends Controller
             'shipping_carrier' => $order->shipping_carrier,
             'tracking_number' => $order->tracking_number,
             'tracking_url' => $order->tracking_url,
+            'learning_course' => $this->learningCourseLinkForOrder($order),
+        ];
+    }
+
+    private function learningCourseLinkForOrder(CommerceOrder $order): ?array
+    {
+        if ($order->status !== 'completed') {
+            return null;
+        }
+
+        $products = collect([$order->orderable])
+            ->concat($order->items->pluck('orderable'))
+            ->filter(fn ($item) => $item instanceof MarketplaceProduct && $item->learning_course_id);
+        $courseId = $products->pluck('learning_course_id')->filter()->first();
+
+        if (! $courseId) {
+            return null;
+        }
+
+        $course = LearningCourse::query()
+            ->whereKey($courseId)
+            ->where('status', 'published')
+            ->where('is_public', true)
+            ->first(['id', 'title', 'slug']);
+
+        if (! $course) {
+            return null;
+        }
+
+        return [
+            'id' => $course->id,
+            'title' => $course->title,
+            'url' => route('guest.learning.courses.show', $course),
         ];
     }
 
@@ -2739,15 +3675,35 @@ class CommerceCheckoutController extends Controller
                 continue;
             }
 
-            $product->increment('stock_quantity', (int) $item->quantity);
-            $product->refresh();
+            $stockAfter = null;
+
+            if ($item->commerce_warehouse_id) {
+                $inventory = MarketplaceProductInventory::query()
+                    ->where('marketplace_product_id', $product->id)
+                    ->where('commerce_warehouse_id', $item->commerce_warehouse_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $inventory) {
+                    continue;
+                }
+
+                $inventory->increment('stock_quantity', (int) $item->quantity);
+                $inventory->refresh();
+                $stockAfter = $inventory->availableQuantity();
+            } else {
+                $product->increment('stock_quantity', (int) $item->quantity);
+                $product->refresh();
+                $stockAfter = $product->stock_quantity;
+            }
 
             CommerceStockMovement::create([
                 'marketplace_product_id' => $product->id,
+                'commerce_warehouse_id' => $item->commerce_warehouse_id,
                 'commerce_order_id' => $order->id,
                 'type' => 'cancellation',
                 'quantity_delta' => (int) $item->quantity,
-                'stock_after' => $product->stock_quantity,
+                'stock_after' => $stockAfter,
                 'note' => $note,
             ]);
         }
@@ -2760,6 +3716,7 @@ class CommerceCheckoutController extends Controller
         $order->items()->create([
             'orderable_type' => $product::class,
             'orderable_id' => $product->id,
+            'commerce_warehouse_id' => data_get($quote, 'fulfillment_inventory.commerce_warehouse_id'),
             'title' => $product->title,
             'sku' => $product->sku,
             'quantity' => $quantity,
@@ -2773,6 +3730,114 @@ class CommerceCheckoutController extends Controller
             'tax_class' => $product->tax_class ?: 'standard',
             'is_shippable' => (bool) $product->is_shippable,
         ]);
+    }
+
+    private function applyLearningCoupon(MarketplaceProduct $product, array $quote, ?string $code): array
+    {
+        if (! $product->learning_course_id || blank($code)) {
+            return $quote;
+        }
+
+        $coupon = LearningCoupon::query()
+            ->where('learning_course_id', $product->learning_course_id)
+            ->where('code', strtoupper(trim($code)))
+            ->first();
+
+        if (! $coupon || ! $coupon->isRedeemable()) {
+            throw ValidationException::withMessages(['coupon_code' => 'Dieser Gutschein ist ungueltig oder abgelaufen.']);
+        }
+
+        $oldItemGross = max(0, (int) ($quote['item_gross_cents'] ?? $quote['gross_cents'] ?? 0));
+        $discount = $coupon->discountFor($oldItemGross);
+        $newItemGross = max(0, $oldItemGross - $discount);
+        $ratio = $oldItemGross > 0 ? $newItemGross / $oldItemGross : 1;
+
+        $quote['item_gross_cents'] = $newItemGross;
+        $quote['item_net_cents'] = (int) round((int) ($quote['item_net_cents'] ?? $quote['net_cents'] ?? 0) * $ratio);
+        $quote['item_tax_cents'] = max(0, $newItemGross - $quote['item_net_cents']);
+        $quote['gross_cents'] = $newItemGross + (int) ($quote['shipping_gross_cents'] ?? 0);
+        $quote['net_cents'] = $quote['item_net_cents'] + (int) ($quote['shipping_net_cents'] ?? 0);
+        $quote['tax_cents'] = $quote['item_tax_cents'] + (int) ($quote['shipping_tax_cents'] ?? 0);
+        $quote['learning_coupon'] = [
+            'id' => $coupon->id,
+            'code' => $coupon->code,
+            'discount_cents' => $discount,
+        ];
+
+        return $quote;
+    }
+
+    private function grantLearningAccessForOrder(CommerceOrder $order): void
+    {
+        $userId = $order->user_id ?: User::query()
+            ->where('email', strtolower((string) $order->guest_email))
+            ->value('id');
+
+        if (! $userId) {
+            return;
+        }
+
+        $order->loadMissing('items.orderable');
+
+        foreach ($order->items as $item) {
+            if (! $item->orderable instanceof MarketplaceProduct || ! $item->orderable->learning_course_id) {
+                continue;
+            }
+
+            $enrollment = LearningEnrollment::query()->firstOrNew([
+                'learning_course_id' => $item->orderable->learning_course_id,
+                'user_id' => $userId,
+            ]);
+
+            $enrollment->forceFill([
+                'status' => 'active',
+                'started_at' => $enrollment->started_at ?: now(),
+            ])->save();
+        }
+
+        $couponId = data_get($order->payload, 'pricing.learning_coupon.id');
+        if ($couponId) {
+            LearningCoupon::query()->whereKey($couponId)->increment('redeemed_count');
+        }
+    }
+
+    private function revokeLearningAccessForOrder(CommerceOrder $order, string $status = 'refunded'): void
+    {
+        $userId = $order->user_id ?: User::query()
+            ->where('email', strtolower((string) $order->guest_email))
+            ->value('id');
+
+        if (! $userId) {
+            return;
+        }
+
+        $courseIds = $this->learningProductsForOrder($order)
+            ->pluck('learning_course_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($courseIds->isEmpty()) {
+            return;
+        }
+
+        LearningEnrollment::query()
+            ->where('user_id', $userId)
+            ->whereIn('learning_course_id', $courseIds)
+            ->update([
+                'status' => $status,
+                'completed_at' => null,
+            ]);
+    }
+
+    private function learningProductsForOrder(CommerceOrder $order)
+    {
+        $order->loadMissing('items.orderable');
+
+        return collect([$order->orderable])
+            ->concat($order->items->pluck('orderable'))
+            ->filter(fn ($item) => $item instanceof MarketplaceProduct && $item->learning_course_id)
+            ->values();
     }
 
     private function shippingAddressForAuthenticatedUser(Request $request, array $data): array
@@ -2885,7 +3950,8 @@ class CommerceCheckoutController extends Controller
         return [
             'type' => ($data['customer_type'] ?? 'consumer') === 'business' ? 'business' : 'consumer',
             'company' => trim((string) ($data['customer_company'] ?? '')),
-            'vat_id' => strtoupper(preg_replace('/\s+/', '', (string) ($data['customer_vat_id'] ?? ''))),
+            'vat_id' => EuVatId::normalize((string) ($data['customer_vat_id'] ?? '')),
+            'vat_id_is_valid' => EuVatId::looksValid((string) ($data['customer_vat_id'] ?? '')),
         ];
     }
 
@@ -2945,7 +4011,11 @@ class CommerceCheckoutController extends Controller
             $errors[] = "Zeile {$line}: Lagerbestand muss mindestens 1 sein.";
         }
 
-        if ($title === '' || $priceCents === null || ($imageUrl !== '' && ! filter_var($imageUrl, FILTER_VALIDATE_URL))) {
+        if ($offerType === 'service') {
+            $errors[] = "Zeile {$line}: Dienstleistungen werden aktuell nur intern von Airmius angelegt.";
+        }
+
+        if ($title === '' || $priceCents === null || $offerType === 'service' || ($imageUrl !== '' && ! filter_var($imageUrl, FILTER_VALIDATE_URL))) {
             return null;
         }
 
@@ -3567,18 +4637,27 @@ XML);
 
         foreach ($cart->items as $cartItem) {
             $product = $cartItem->product;
-            if (! $product || $product->status !== 'published' || ! $this->hasSellableStock($product)) {
+            $quantity = max(1, (int) $cartItem->quantity);
+            if (! $product || $product->status !== 'published' || ! $this->hasSellableStock($product, $country, $quantity)) {
                 continue;
             }
 
-            $quantity = max(1, (int) $cartItem->quantity);
-            $quote = $this->pricing->quote($product, $country, 'cart', $shippingAddress, $customer);
+            $fulfillmentInventory = $this->fulfillmentInventoryFor($product, $country, $quantity);
+            $quote = $this->pricing->quote($product, $country, 'cart', [
+                ...$shippingAddress,
+                'origin_country' => $fulfillmentInventory?->warehouse?->country_code,
+            ], $customer);
             $quote['item_gross_cents'] *= $quantity;
             $quote['item_net_cents'] *= $quantity;
             $quote['item_tax_cents'] *= $quantity;
             $quote['gross_cents'] = ($quote['item_gross_cents'] ?? 0) + ($quote['shipping_gross_cents'] ?? 0);
             $quote['net_cents'] = ($quote['item_net_cents'] ?? 0) + ($quote['shipping_net_cents'] ?? 0);
             $quote['tax_cents'] = ($quote['item_tax_cents'] ?? 0) + ($quote['shipping_tax_cents'] ?? 0);
+            $quote['fulfillment_inventory'] = $fulfillmentInventory ? [
+                'id' => $fulfillmentInventory->id,
+                'commerce_warehouse_id' => $fulfillmentInventory->commerce_warehouse_id,
+                'country_code' => $fulfillmentInventory->country_code,
+            ] : null;
             $currency = $quote['currency'] ?? $currency;
             $taxRate = max($taxRate, (float) ($quote['tax_rate'] ?? 0));
 
@@ -3606,17 +4685,36 @@ XML);
         ];
     }
 
-    private function hasSellableStock(MarketplaceProduct $product): bool
+    private function hasSellableStock(MarketplaceProduct $product, ?string $country = null, int $quantity = 1): bool
     {
         if (in_array($product->offer_type, ['online_course', 'training_plan', 'service'], true) || $product->product_type === 'digital') {
             return true;
+        }
+
+        if (! $product->isAvailableForCountry($country)) {
+            return false;
         }
 
         if (! (bool) $product->manages_stock) {
             return true;
         }
 
-        return $product->stock_quantity !== null && (int) $product->stock_quantity > 0;
+        return $product->sellableStockForCountry($country) >= max(1, $quantity);
+    }
+
+    private function fulfillmentInventoryFor(MarketplaceProduct $product, ?string $country, int $quantity): ?MarketplaceProductInventory
+    {
+        if (! (bool) $product->manages_stock || $product->isDigitalDelivery()) {
+            return null;
+        }
+
+        return $product->inventories()
+            ->with('warehouse:id,name,country_code,city,postal_code')
+            ->availableForCountry(strtoupper((string) ($country ?: 'DE')))
+            ->orderBy('lead_time_days')
+            ->orderBy('id')
+            ->get()
+            ->first(fn (MarketplaceProductInventory $inventory) => $inventory->availableQuantity() >= max(1, $quantity));
     }
 
     private function marketplaceVisuals(): array
@@ -3635,8 +4733,8 @@ XML);
 
         $visuals['dimensions'] = [
             'side_banner' => [
-                'width' => (int) Setting::valueFor('marketplace_visual_side_banner_width', 306),
-                'height' => (int) Setting::valueFor('marketplace_visual_side_banner_height', 786),
+                'width' => (int) Setting::valueFor('marketplace_visual_side_banner_width', 192),
+                'height' => (int) Setting::valueFor('marketplace_visual_side_banner_height', 1080),
             ],
         ];
 
@@ -3661,7 +4759,7 @@ XML);
 
     private function looksLikeEuVatId(?string $vatId): bool
     {
-        return (bool) preg_match('/^[A-Z]{2}[A-Z0-9]{8,12}$/', strtoupper((string) $vatId));
+        return EuVatId::looksValid($vatId);
     }
 
     private function nextDocumentNumber(string $settingKey, string $prefix): string

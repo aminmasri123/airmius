@@ -15,6 +15,18 @@ class PostPolicy extends BasePolicy
 
     public function view(User $user, Post $post)
     {
+        if ($post->moderation_status === 'removed') {
+            return false;
+        }
+
+        if ($post->moderation_status !== 'approved' && $post->user_id !== $user->id) {
+            return false;
+        }
+
+        if ($post->user_id === $user->id) {
+            return true;
+        }
+
         if ($post->visibility === 'public') {
             return true;
         }

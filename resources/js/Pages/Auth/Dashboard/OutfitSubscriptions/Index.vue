@@ -25,6 +25,12 @@ const props = defineProps({
 const { t, te } = useI18n()
 const { isDark } = useTheme()
 const page = usePage()
+const currentUser = computed(() => page.props.auth?.user || {})
+const countryCode = (value) => {
+    const code = String(value || '').trim().toUpperCase()
+
+    return code.length === 2 ? code : 'DE'
+}
 const profileForm = useForm({
     sport_focus: props.styleProfile?.sport_focus || '',
     sizes_text: (props.styleProfile?.sizes || []).join(', '),
@@ -34,15 +40,37 @@ const profileForm = useForm({
     brand_style: props.styleProfile?.brand_style || 'minimal',
     notes: props.styleProfile?.notes || '',
 })
+const issueForm = useForm({
+    issue_type: 'exchange',
+    issue_description: '',
+    issue_requested_resolution: '',
+    issue_exchange_size: '',
+})
 
 const pendingCancelSubscription = ref(null)
+const pendingIssueDelivery = ref(null)
 const pendingSubscribePlan = ref(null)
 const subscribeAcceptedTerms = ref(false)
 const subscribeAcceptedContract = ref(false)
 const subscribePaymentProvider = ref('bank_transfer')
+const shippingName = ref(currentUser.value.name || '')
+const shippingCountry = ref(countryCode(currentUser.value.country))
+const shippingStreet = ref(currentUser.value.street || '')
+const shippingHouseNumber = ref(currentUser.value.house_number || '')
+const shippingPostalCode = ref(currentUser.value.postal_code || '')
+const shippingCity = ref(currentUser.value.city || '')
+const shippingState = ref(currentUser.value.state || '')
+const shippingNote = ref('')
 const subscribingPlanId = ref(null)
 const profileFeedback = ref(null)
-const activeSubscriptions = computed(() => props.subscriptions.filter((subscription) => ['active', 'paused', 'payment_paused'].includes(subscription.status)))
+const activeSubscriptions = computed(() => props.subscriptions.filter((subscription) => ['active', 'paused', 'payment_paused', 'cancels_at_period_end'].includes(subscription.status)))
+const hasShippingAddress = computed(() => Boolean(
+    shippingName.value &&
+    shippingCountry.value &&
+    shippingStreet.value &&
+    shippingPostalCode.value &&
+    shippingCity.value
+))
 const nextDelivery = computed(() => activeSubscriptions.value
     .map((subscription) => subscription.next_delivery_at)
     .filter(Boolean)
@@ -107,6 +135,7 @@ const statusLabel = (status) => ({
     active: 'Aktiv',
     paused: 'Pausiert',
     payment_paused: 'Wegen Zahlung pausiert',
+    cancels_at_period_end: 'Gekuendigt zum Laufzeitende',
     pending_payment: 'Zahlung offen',
     pending_confirmation: 'Wartet auf Freigabe',
     cancelled: 'Gekuendigt',
@@ -117,11 +146,35 @@ const statusLabel = (status) => ({
     skipped: 'Ausgesetzt',
 }[status] || status)
 
+const issueTypeLabel = (type) => ({
+    exchange: 'Umtausch',
+    return: 'Retoure',
+    damaged: 'Beschaedigt',
+    missing_item: 'Artikel fehlt',
+    wrong_item: 'Falscher Artikel',
+    other: 'Sonstiges',
+}[type] || type || '-')
+
+const issueStatusLabel = (status) => ({
+    open: 'Offen',
+    reviewing: 'In Pruefung',
+    approved: 'Freigegeben',
+    return_waiting: 'Ruecksendung offen',
+    replacement_preparing: 'Ersatz wird vorbereitet',
+    resolved: 'Geloest',
+    rejected: 'Abgeschlossen',
+}[status] || status || '-')
+
 const paymentProviderLabel = (provider) => ({
     bank_transfer: 'Überweisung',
-    stripe: 'Kreditkarte / Stripe',
     paypal: 'PayPal',
 }[provider] || provider || '-')
+
+const shippingAddressLine = (address) => [
+    [address?.street, address?.house_number].filter(Boolean).join(' '),
+    [address?.postal_code, address?.city].filter(Boolean).join(' '),
+    [address?.state, address?.country].filter(Boolean).join(', '),
+].filter(Boolean).join(', ')
 
 const isPendingPayment = (subscription) => subscription?.status === 'pending_payment'
 
@@ -186,7 +239,7 @@ const closeSubscribeModal = () => {
 }
 
 const confirmSubscribe = () => {
-    if (!pendingSubscribePlan.value || !subscribeAcceptedTerms.value || !subscribeAcceptedContract.value) return
+    if (!pendingSubscribePlan.value || !subscribeAcceptedTerms.value || !subscribeAcceptedContract.value || !hasShippingAddress.value) return
 
     subscribingPlanId.value = pendingSubscribePlan.value.id
 
@@ -194,6 +247,14 @@ const confirmSubscribe = () => {
         accepted_terms: subscribeAcceptedTerms.value,
         accepted_contract: subscribeAcceptedContract.value,
         payment_provider: subscribePaymentProvider.value,
+        shipping_name: shippingName.value,
+        shipping_country: shippingCountry.value,
+        shipping_street: shippingStreet.value,
+        shipping_house_number: shippingHouseNumber.value,
+        shipping_postal_code: shippingPostalCode.value,
+        shipping_city: shippingCity.value,
+        shipping_state: shippingState.value,
+        shipping_note: shippingNote.value,
     }, {
         preserveScroll: true,
         onFinish: () => {
@@ -220,6 +281,27 @@ const confirmCancel = () => {
     router.post(route('auth.outfit-subscriptions.cancel', pendingCancelSubscription.value.id), {}, {
         preserveScroll: true,
         onFinish: closeCancelModal,
+    })
+}
+
+const canRequestIssue = (delivery) => ['shipped', 'delivered'].includes(delivery.status) && !['open', 'reviewing', 'approved', 'return_waiting', 'replacement_preparing'].includes(delivery.issue_status)
+const openIssueModal = (delivery) => {
+    issueForm.reset()
+    issueForm.clearErrors()
+    issueForm.issue_type = 'exchange'
+    pendingIssueDelivery.value = delivery
+}
+const closeIssueModal = () => {
+    if (issueForm.processing) return
+
+    pendingIssueDelivery.value = null
+}
+const submitIssue = () => {
+    if (!pendingIssueDelivery.value) return
+
+    issueForm.post(route('auth.outfit-deliveries.issue.request', pendingIssueDelivery.value.id), {
+        preserveScroll: true,
+        onSuccess: closeIssueModal,
     })
 }
 </script>
@@ -409,10 +491,13 @@ const confirmCancel = () => {
                             <div class="flex flex-wrap gap-2">
                                 <button v-if="subscription.status === 'active'" type="button" class="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-card" @click="pause(subscription)">Pausieren</button>
                                 <button v-if="subscription.status === 'paused'" type="button" class="rounded-lg border border-border px-3 py-2 text-sm text-primary hover:bg-card" @click="resume(subscription)">Fortsetzen</button>
-                                <button v-if="subscription.status !== 'cancelled'" type="button" class="rounded-lg border border-red-500/50 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10" @click="requestCancel(subscription)">
+                                <button v-if="!['cancelled', 'cancels_at_period_end'].includes(subscription.status)" type="button" class="rounded-lg border border-red-500/50 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10" @click="requestCancel(subscription)">
                                     {{ cancelActionLabel(subscription) }}
                                 </button>
                             </div>
+                            <p v-if="subscription.status === 'cancels_at_period_end'" class="mt-2 text-sm text-amber-200">
+                                Gekuendigt zum {{ formatDate(subscription.current_period_ends_at) }}. Bis dahin bleibt das Abo aktiv.
+                            </p>
                         </div>
 
                         <div
@@ -461,12 +546,33 @@ const confirmCancel = () => {
                             </dl>
                         </div>
 
+                        <div v-if="subscription.shipping_address" class="mt-4 rounded-lg bg-card p-3">
+                            <p class="text-xs uppercase text-secondary">Lieferadresse</p>
+                            <p class="mt-1 text-sm font-semibold text-primary">{{ subscription.shipping_address.name || '-' }}</p>
+                            <p class="text-sm text-secondary">{{ shippingAddressLine(subscription.shipping_address) || '-' }}</p>
+                            <p v-if="subscription.shipping_address.note" class="mt-1 text-xs text-secondary">{{ subscription.shipping_address.note }}</p>
+                        </div>
+
                         <div v-if="subscription.deliveries?.length" class="mt-4 grid gap-3 md:grid-cols-2">
                             <div v-for="delivery in subscription.deliveries" :key="delivery.id" class="rounded-lg bg-card p-3">
                                 <p class="text-sm font-semibold text-primary">{{ statusLabel(delivery.status) }}</p>
                                 <p class="text-xs text-secondary">{{ formatDate(delivery.delivery_month) }}</p>
                                 <p v-if="delivery.tracking_number" class="mt-1 text-xs text-secondary">{{ delivery.carrier }} - {{ delivery.tracking_number }}</p>
+                                <a v-if="delivery.tracking_url" :href="delivery.tracking_url" target="_blank" rel="noopener noreferrer" class="mt-1 inline-flex text-xs font-semibold text-accent underline underline-offset-2">
+                                    Tracking öffnen
+                                </a>
                                 <p v-if="delivery.notes" class="mt-1 text-xs text-secondary">{{ delivery.notes }}</p>
+                                <div v-if="delivery.issue_status" class="mt-3 rounded-lg border border-border bg-inputBg p-3">
+                                    <p class="text-xs font-semibold uppercase text-secondary">{{ issueTypeLabel(delivery.issue_type) }}</p>
+                                    <p class="mt-1 text-sm font-semibold text-primary">{{ issueStatusLabel(delivery.issue_status) }}</p>
+                                    <p v-if="delivery.issue_admin_note" class="mt-1 text-xs text-secondary">{{ delivery.issue_admin_note }}</p>
+                                    <a v-if="delivery.return_tracking_url" :href="delivery.return_tracking_url" target="_blank" rel="noopener noreferrer" class="mt-1 inline-flex text-xs font-semibold text-accent underline underline-offset-2">
+                                        Retouren-Tracking öffnen
+                                    </a>
+                                </div>
+                                <button v-if="canRequestIssue(delivery)" type="button" class="mt-3 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted" @click="openIssueModal(delivery)">
+                                    Problem melden
+                                </button>
                             </div>
                         </div>
                     </article>
@@ -554,13 +660,50 @@ const confirmCancel = () => {
                     <span class="text-sm font-semibold text-primary">Zahlungsart</span>
                     <select v-model="subscribePaymentProvider" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
                         <option value="bank_transfer">Überweisung</option>
-                        <option value="stripe">Kreditkarte / Stripe</option>
                         <option value="paypal">PayPal</option>
                     </select>
                     <span class="mt-1 block text-xs text-secondary">
                         Die Zahlung wird danach vorbereitet. Das Abo bleibt bis zur Zahlungsbestaetigung offen.
                     </span>
                 </label>
+
+                <div class="mt-4 rounded-lg border border-border bg-inputBg p-4">
+                    <p class="text-sm font-bold text-primary">Lieferadresse</p>
+                    <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                        <label class="block sm:col-span-2">
+                            <span class="text-xs font-semibold uppercase text-secondary">Name</span>
+                            <input v-model="shippingName" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" placeholder="Vor- und Nachname">
+                        </label>
+                        <label class="block sm:col-span-2">
+                            <span class="text-xs font-semibold uppercase text-secondary">Strasse</span>
+                            <input v-model="shippingStreet" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" placeholder="Strasse">
+                        </label>
+                        <label class="block">
+                            <span class="text-xs font-semibold uppercase text-secondary">Hausnummer</span>
+                            <input v-model="shippingHouseNumber" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" placeholder="12a">
+                        </label>
+                        <label class="block">
+                            <span class="text-xs font-semibold uppercase text-secondary">Land</span>
+                            <input v-model="shippingCountry" maxlength="2" class="mt-1 w-full rounded-lg border-border bg-card text-sm uppercase text-primary" placeholder="DE">
+                        </label>
+                        <label class="block">
+                            <span class="text-xs font-semibold uppercase text-secondary">PLZ</span>
+                            <input v-model="shippingPostalCode" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" placeholder="12345">
+                        </label>
+                        <label class="block">
+                            <span class="text-xs font-semibold uppercase text-secondary">Stadt</span>
+                            <input v-model="shippingCity" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" placeholder="Berlin">
+                        </label>
+                        <label class="block sm:col-span-2">
+                            <span class="text-xs font-semibold uppercase text-secondary">Bundesland / Region</span>
+                            <input v-model="shippingState" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" placeholder="Optional">
+                        </label>
+                        <label class="block sm:col-span-2">
+                            <span class="text-xs font-semibold uppercase text-secondary">Lieferhinweis</span>
+                            <textarea v-model="shippingNote" rows="2" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" placeholder="Optional, z.B. bei Nachbarn abgeben"></textarea>
+                        </label>
+                    </div>
+                </div>
 
                 <div class="mt-4 rounded-lg border border-border bg-inputBg p-4">
                     <div class="flex items-start justify-between gap-4">
@@ -634,7 +777,7 @@ const confirmCancel = () => {
                     <button
                         type="button"
                         class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:opacity-90 disabled:opacity-50"
-                        :disabled="!subscribeAcceptedTerms || !subscribeAcceptedContract || subscribingPlanId === pendingSubscribePlan.id"
+                        :disabled="!subscribeAcceptedTerms || !subscribeAcceptedContract || !hasShippingAddress || subscribingPlanId === pendingSubscribePlan.id"
                         @click="confirmSubscribe"
                     >
                         {{ subscribingPlanId === pendingSubscribePlan.id ? 'Wird gesendet...' : 'Kostenpflichtig anfragen' }}
@@ -674,6 +817,62 @@ const confirmCancel = () => {
                     </button>
                     <button type="button" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500" @click="confirmCancel">
                         {{ isPendingPayment(pendingCancelSubscription) ? 'Anfrage abbrechen' : 'Kuendigen' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="pendingIssueDelivery" class="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+            <div class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-2xl">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-accent">Lieferproblem melden</p>
+                        <h2 class="mt-1 text-lg font-bold text-primary">{{ statusLabel(pendingIssueDelivery.status) }} vom {{ formatDate(pendingIssueDelivery.delivery_month) }}</h2>
+                        <p class="mt-2 text-sm leading-6 text-secondary">
+                            Beschreibe kurz, was nicht passt. Das Support-Team sieht Lieferung, Tracking und dein Style-Profil direkt dazu.
+                        </p>
+                    </div>
+                    <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="closeIssueModal">
+                        <i class="las la-times text-xl"></i>
+                    </button>
+                </div>
+
+                <div class="mt-5 grid gap-4">
+                    <label class="block">
+                        <span class="text-sm font-semibold text-primary">Art des Problems</span>
+                        <select v-model="issueForm.issue_type" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                            <option value="exchange">Umtausch / andere Groesse</option>
+                            <option value="return">Retoure</option>
+                            <option value="damaged">Beschaedigt</option>
+                            <option value="missing_item">Artikel fehlt</option>
+                            <option value="wrong_item">Falscher Artikel</option>
+                            <option value="other">Sonstiges</option>
+                        </select>
+                    </label>
+
+                    <label class="block">
+                        <span class="text-sm font-semibold text-primary">Beschreibung</span>
+                        <textarea v-model="issueForm.issue_description" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Was ist passiert? Welche Artikel sind betroffen?"></textarea>
+                        <span v-if="issueForm.errors.issue_description" class="mt-1 block text-xs text-red-300">{{ issueForm.errors.issue_description }}</span>
+                    </label>
+
+                    <label class="block">
+                        <span class="text-sm font-semibold text-primary">Wunschloesung</span>
+                        <input v-model="issueForm.issue_requested_resolution" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="z.B. Ersatz, Retoure, Gutschrift">
+                    </label>
+
+                    <label class="block">
+                        <span class="text-sm font-semibold text-primary">Gewuenschte Groesse</span>
+                        <input v-model="issueForm.issue_exchange_size" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Optional, z.B. M statt L">
+                    </label>
+                </div>
+
+                <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeIssueModal">
+                        Abbrechen
+                    </button>
+                    <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:opacity-90 disabled:opacity-50" :disabled="issueForm.processing || !issueForm.issue_description" @click="submitIssue">
+                        Meldung senden
                     </button>
                 </div>
             </div>

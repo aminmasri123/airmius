@@ -197,12 +197,18 @@ class InvoiceController extends Controller
 
     private function outfitInvoices()
     {
+        $invoicedNumbers = Invoice::query()
+            ->where('source', 'outfit_subscription')
+            ->pluck('number')
+            ->all();
+
         return OutfitSubscription::query()
             ->with(['user:id,name,email', 'plan:id,name', 'sponsor:id,name'])
             ->latest()
             ->get()
+            ->reject(fn (OutfitSubscription $subscription) => in_array($subscription->payment_reference ?: 'Outfit-Abo #'.$subscription->id, $invoicedNumbers, true))
             ->map(function (OutfitSubscription $subscription) {
-                $amountCents = max(0, (int) $subscription->monthly_price_cents - (int) $subscription->sponsor_discount_cents);
+                $amountCents = max(0, (int) $subscription->monthly_price_cents);
 
                 return [
                     'id' => 'outfit-'.$subscription->id,

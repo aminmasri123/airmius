@@ -36,4 +36,24 @@ class LearningEnrollment extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function lessonProgress()
+    {
+        return $this->hasMany(LearningLessonProgress::class, 'learning_enrollment_id');
+    }
+
+    public function quizAttempts()
+    {
+        return $this->hasMany(LearningQuizAttempt::class, 'learning_enrollment_id');
+    }
+
+    public function certificate()
+    {
+        return $this->hasOne(LearningCertificate::class, 'learning_enrollment_id');
+    }
+
+    public function assignmentSubmissions()
+    {
+        return $this->hasMany(LearningAssignmentSubmission::class, 'learning_enrollment_id');
+    }
 }

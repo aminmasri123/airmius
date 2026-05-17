@@ -11,9 +11,12 @@ const props = defineProps({
     coupons: { type: Array, default: () => [] },
     addons: { type: Array, default: () => [] },
     products: { type: Array, default: () => [] },
+    warehouses: { type: Array, default: () => [] },
     sellerApplications: { type: Array, default: () => [] },
     campaigns: { type: Array, default: () => [] },
     adReport: { type: Object, default: () => ({}) },
+    adPlacementReport: { type: Array, default: () => [] },
+    adDiagnostics: { type: Array, default: () => [] },
     orders: { type: Array, default: () => [] },
     websiteRequests: { type: Array, default: () => [] },
     payoutProfiles: { type: Array, default: () => [] },
@@ -22,6 +25,7 @@ const props = defineProps({
     marketplaceVisuals: { type: Array, default: () => [] },
     taxRates: { type: Array, default: () => [] },
     shippingRates: { type: Array, default: () => [] },
+    shippingCarriers: { type: Array, default: () => [] },
     marketplaceCategoryCommissions: { type: Array, default: () => [] },
     commerceSettings: { type: Object, default: () => ({}) },
     returnRequests: { type: Array, default: () => [] },
@@ -34,6 +38,7 @@ const page = usePage()
 const queryTab = new URLSearchParams(String(page.url || '').split('?')[1] || '').get('tab')
 const activeTab = ref(queryTab || 'marketplace')
 const campaignStatusError = ref('')
+const stockAdjustments = ref({})
 
 const couponForm = useForm({
     code: '',
@@ -118,6 +123,11 @@ const commerceSettingsForm = useForm({
     ads_cpl_cents: centsToMajor(props.commerceSettings.ads_cpl_cents ?? 200),
     ads_cpa_percent: props.commerceSettings.ads_cpa_percent ?? 10,
     ads_min_budget_cents: centsToMajor(props.commerceSettings.ads_min_budget_cents ?? 1000),
+    ads_frequency_cap_per_day: props.commerceSettings.ads_frequency_cap_per_day ?? 3,
+    ads_frequency_cap_feed: props.commerceSettings.ads_frequency_cap_feed ?? 3,
+    ads_frequency_cap_sidebar: props.commerceSettings.ads_frequency_cap_sidebar ?? 6,
+    ads_frequency_cap_marketplace_card: props.commerceSettings.ads_frequency_cap_marketplace_card ?? 3,
+    ads_frequency_cap_sponsor_section: props.commerceSettings.ads_frequency_cap_sponsor_section ?? 4,
 })
 
 const marketplaceCommissionForm = useForm({
@@ -131,6 +141,7 @@ const marketplaceCommissionForm = useForm({
 
 const shippingRateForm = useForm({
     name: 'Deutschland Standardversand',
+    origin_country_code: '',
     country_code: 'DE',
     postal_code_prefix: '',
     amount_cents: '4,90',
@@ -141,6 +152,8 @@ const shippingRateForm = useForm({
 })
 
 const campaignForm = useForm({
+    is_internal: false,
+    force_priority: false,
     name: '',
     headline: '',
     description: '',
@@ -155,6 +168,11 @@ const campaignForm = useForm({
     creatives: [],
     audience_locations: '',
     audience_interests: '',
+    audience_excluded_locations: '',
+    audience_excluded_interests: '',
+    audience_devices: '',
+    audience_languages: '',
+    audience_hours: '',
     audience_age_min: '',
     audience_age_max: '',
     budget_cents: '',
@@ -312,6 +330,27 @@ const orderShippingLabel = (status) => ({
     delivered: 'Zugestellt',
 }[status || 'open'] || status)
 
+const trackingUrlFor = (carrier, trackingNumber) => {
+    const number = String(trackingNumber || '').replace(/\s+/g, '').toUpperCase()
+    const normalizedCarrier = String(carrier || '').trim().toLowerCase()
+
+    if (!number) return ''
+    if (normalizedCarrier === 'dhl') return `https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=${encodeURIComponent(number)}`
+    if (normalizedCarrier === 'ups') return `https://www.ups.com/track?tracknum=${encodeURIComponent(number)}`
+    if (normalizedCarrier === 'dpd') return `https://tracking.dpd.de/status/de_DE/parcel/${encodeURIComponent(number)}`
+    if (normalizedCarrier === 'hermes') return `https://www.myhermes.de/empfangen/sendungsverfolgung/sendungsinformation/#${encodeURIComponent(number)}`
+    if (normalizedCarrier === 'gls') return `https://gls-group.com/DE/de/paketverfolgung?match=${encodeURIComponent(number)}`
+    if (normalizedCarrier === 'fedex') return `https://www.fedex.com/fedextrack/?trknbr=${encodeURIComponent(number)}`
+
+    return ''
+}
+
+const autofillTrackingUrl = () => {
+    if (shippingModal.tracking_url) return
+
+    shippingModal.tracking_url = trackingUrlFor(shippingModal.shipping_carrier, shippingModal.tracking_number)
+}
+
 const orderIssueLabel = (status) => ({
     reported: 'Problem gemeldet',
     reviewing: 'In Prüfung',
@@ -339,7 +378,7 @@ const budgetUsage = (spent, budget) => {
 }
 
 const tabs = computed(() => [
-    { key: 'marketplace', label: 'Marketplace', count: props.products.length + props.sellerApplications.length },
+    { key: 'marketplace', label: 'Marketplace', count: props.products.length + props.sellerApplications.length + props.warehouses.length },
     { key: 'orders', label: 'Bestellungen', count: props.orders.length + props.returnRequests.length + props.websiteRequests.length },
     { key: 'settings', label: 'Steuern & Versand', count: props.taxRates.length + props.shippingRates.length },
     { key: 'ad-prices', label: 'Ads Preise', count: 5 },
@@ -618,6 +657,18 @@ const updateMarketplaceCommissions = () => marketplaceCommissionForm.put(route('
     preserveScroll: true,
 })
 
+const addMarketplaceCommissionRow = () => {
+    marketplaceCommissionForm.commissions.push({
+        category: '',
+        label: 'Neue Kategorie',
+        commission_percent: marketplaceCommissionForm.default_commission_percent || 10,
+    })
+}
+
+const removeMarketplaceCommissionRow = (index) => {
+    marketplaceCommissionForm.commissions.splice(index, 1)
+}
+
 const updateTaxRate = (rate) => {
     router.put(route('admin.commerce.tax-rates.update', rate.id), {
         name: rate.name,
@@ -643,6 +694,7 @@ const storeShippingRate = () => shippingRateForm
 const updateShippingRate = (rate) => {
     router.put(route('admin.commerce.shipping-rates.update', rate.id), {
         name: rate.name,
+        origin_country_code: rate.origin_country_code || '',
         country_code: rate.country_code || '',
         postal_code_prefix: rate.postal_code_prefix || '',
         amount_cents: typeof rate.amount_cents === 'number' ? rate.amount_cents : majorToCents(rate.amount_cents),
@@ -660,6 +712,15 @@ const updateProductStatus = (product, status) => {
         rejectionModal.selectedReason = ''
         rejectionModal.reason = product.rejection_reason || ''
         return
+    }
+
+    if (status === 'published' && product.quality_issues?.length) {
+        const confirmed = window.confirm(`Dieses Produkt hat noch ${product.quality_issues.length} Qualitaetsproblem(e):\n\n${product.quality_issues.join('\n')}\n\nTrotzdem freigeben?`)
+
+        if (!confirmed) {
+            router.reload({ only: ['products'], preserveScroll: true })
+            return
+        }
     }
 
     router.put(route('admin.commerce.products.update', product.id), productPayload(product, { status }), { preserveScroll: true })
@@ -693,6 +754,60 @@ const updateProductStock = (product) => {
         manages_stock: true,
         stock_quantity: Math.max(0, Number(product.stock_quantity || 0)),
     }), { preserveScroll: true })
+}
+
+const inventoryAdjustmentKey = (product, inventory) => `${product.id}:${inventory.id}`
+
+const inventoryAdjustment = (product, inventory) => stockAdjustments.value[inventoryAdjustmentKey(product, inventory)] || { quantity_delta: '', note: '' }
+
+const setInventoryAdjustment = (product, inventory, field, value) => {
+    const key = inventoryAdjustmentKey(product, inventory)
+    stockAdjustments.value[key] = {
+        ...inventoryAdjustment(product, inventory),
+        [field]: value,
+    }
+}
+
+const adjustInventoryStock = (product, inventory) => {
+    const adjustment = inventoryAdjustment(product, inventory)
+    const quantityDelta = Number(adjustment.quantity_delta || 0)
+
+    if (!quantityDelta) {
+        return
+    }
+
+    router.post(route('admin.commerce.products.stock.adjust', product.id), {
+        marketplace_product_inventory_id: inventory.id,
+        quantity_delta: quantityDelta,
+        note: adjustment.note || `Admin-Korrektur ${inventory.country_code}`,
+    }, {
+        preserveScroll: true,
+        only: ['products', 'summary', 'auditLogs', 'sellerReports'],
+        onSuccess: () => {
+            stockAdjustments.value[inventoryAdjustmentKey(product, inventory)] = { quantity_delta: '', note: '' }
+        },
+    })
+}
+
+const adjustGlobalStock = (product) => {
+    const key = `${product.id}:global`
+    const adjustment = stockAdjustments.value[key] || { quantity_delta: '', note: '' }
+    const quantityDelta = Number(adjustment.quantity_delta || 0)
+
+    if (!quantityDelta) {
+        return
+    }
+
+    router.post(route('admin.commerce.products.stock.adjust', product.id), {
+        quantity_delta: quantityDelta,
+        note: adjustment.note || 'Admin-Korrektur global',
+    }, {
+        preserveScroll: true,
+        only: ['products', 'summary', 'auditLogs', 'sellerReports'],
+        onSuccess: () => {
+            stockAdjustments.value[key] = { quantity_delta: '', note: '' }
+        },
+    })
 }
 
 const updateSellerApplication = (application, status) => {
@@ -837,6 +952,11 @@ const resetCampaignCreativeRows = () => {
 
 const storeCampaign = () => {
     campaignForm.creatives = normalizeCampaignCreatives()
+    if (!campaignForm.is_internal) {
+        campaignForm.force_priority = false
+    } else if (!campaignForm.budget_cents) {
+        campaignForm.budget_cents = '0'
+    }
 
     campaignForm
         .transform((data) => transformMoneyFields(data, ['budget_cents', 'daily_budget_cents', 'spent_cents']))
@@ -844,7 +964,7 @@ const storeCampaign = () => {
         preserveScroll: true,
         forceFormData: true,
         onSuccess: () => {
-            campaignForm.reset('name', 'headline', 'description', 'primary_text', 'target_url', 'creative_image_url', 'creative_image_upload', 'creatives', 'audience_locations', 'audience_interests', 'audience_age_min', 'audience_age_max', 'starts_at', 'ends_at')
+            campaignForm.reset('is_internal', 'force_priority', 'name', 'headline', 'description', 'primary_text', 'target_url', 'creative_image_url', 'creative_image_upload', 'creatives', 'audience_locations', 'audience_interests', 'audience_excluded_locations', 'audience_excluded_interests', 'audience_devices', 'audience_languages', 'audience_hours', 'audience_age_min', 'audience_age_max', 'starts_at', 'ends_at')
             resetCampaignCreativeRows()
         },
         })
@@ -954,8 +1074,8 @@ const submitShipping = () => {
             shippingModal.order.shipping_status = shippingModal.shipping_status
             shippingModal.order.shipping_carrier = shippingModal.shipping_carrier
             shippingModal.order.shipping_label_url = shippingModal.shipping_label_url
-            shippingModal.order.tracking_number = shippingModal.tracking_number
-            shippingModal.order.tracking_url = shippingModal.tracking_url
+            shippingModal.order.tracking_number = String(shippingModal.tracking_number || '').replace(/\s+/g, '').toUpperCase()
+            shippingModal.order.tracking_url = shippingModal.tracking_url || trackingUrlFor(shippingModal.shipping_carrier, shippingModal.tracking_number)
             shippingModal.open = false
             shippingModal.order = null
             router.reload({
@@ -1144,8 +1264,8 @@ const updatePayoutProfile = (profile, status) => {
             <article class="surface-card p-5 xl:col-span-2">
                 <div class="flex flex-col gap-1">
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Marketplace</p>
-                    <h2 class="text-lg font-semibold text-primary">Provisionen nach Kategorie</h2>
-                    <p class="text-sm text-secondary">Diese Prozente werden bei neuen Marketplace-Bestellungen zur Auszahlung berechnet. Kategorie-Regeln ueberschreiben den alten Produktwert.</p>
+                    <h2 class="text-lg font-semibold text-primary">Provisionen fuer externe Verkaeufer</h2>
+                    <p class="text-sm text-secondary">Diese Saetze gelten nur fuer externe Shop-Verkaeufer. Interne Airmius-Angebote und interne Services laufen ohne Marketplace-Provision.</p>
                 </div>
                 <form class="mt-4 space-y-4" @submit.prevent="updateMarketplaceCommissions">
                     <label class="grid gap-2 rounded-lg border border-border bg-card p-4 md:grid-cols-[1fr_8rem] md:items-center">
@@ -1165,8 +1285,13 @@ const updatePayoutProfile = (profile, status) => {
                             :key="row.category"
                             class="rounded-lg border border-border bg-card p-4"
                         >
-                            <span class="block text-sm font-semibold text-primary">{{ row.label }}</span>
-                            <span class="block text-xs text-secondary">{{ row.category }}</span>
+                            <span class="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                                <input v-model="marketplaceCommissionForm.commissions[index].label" class="rounded-lg border-border bg-inputBg text-sm font-semibold text-primary" placeholder="Anzeigename, z. B. Fussballschuhe">
+                                <input v-model="marketplaceCommissionForm.commissions[index].category" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="slug, z. B. football_shoes">
+                                <button type="button" class="rounded-lg border border-danger/40 px-3 py-2 text-xs font-semibold text-danger" @click="removeMarketplaceCommissionRow(index)">
+                                    Entfernen
+                                </button>
+                            </span>
                             <span class="mt-3 flex items-center gap-2">
                                 <input v-model="marketplaceCommissionForm.commissions[index].commission_percent" type="number" min="0" max="100" class="w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <span class="text-sm text-secondary">%</span>
@@ -1174,9 +1299,14 @@ const updatePayoutProfile = (profile, status) => {
                         </label>
                     </div>
 
-                    <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="marketplaceCommissionForm.processing">
-                        Provisionen speichern
-                    </button>
+                    <div class="flex flex-wrap gap-3">
+                        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="addMarketplaceCommissionRow">
+                            Kategorie hinzufuegen
+                        </button>
+                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="marketplaceCommissionForm.processing">
+                            Provisionen speichern
+                        </button>
+                    </div>
                 </form>
             </article>
 
@@ -1237,10 +1367,11 @@ const updatePayoutProfile = (profile, status) => {
                 <div class="flex flex-col gap-1">
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Checkout</p>
                     <h2 class="text-lg font-semibold text-primary">Versandkosten verwalten</h2>
-                    <p class="text-sm text-secondary">Regeln können nach Lieferland und PLZ-Prefix greifen, inklusive kostenfrei ab Warenwert.</p>
+                    <p class="text-sm text-secondary">Regeln koennen nach Ursprungslager, Lieferland und PLZ-Prefix greifen, inklusive kostenfrei ab Warenwert.</p>
                 </div>
                 <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeShippingRate">
                     <input v-model="shippingRateForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Name">
+                    <input v-model="shippingRateForm.origin_country_code" maxlength="2" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="Von Land, z. B. DE">
                     <input v-model="shippingRateForm.country_code" maxlength="2" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="DE oder leer">
                     <input v-model="shippingRateForm.postal_code_prefix" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="PLZ-Prefix optional">
                     <input v-model="shippingRateForm.amount_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Versand in EUR">
@@ -1255,8 +1386,9 @@ const updatePayoutProfile = (profile, status) => {
                 </form>
 
                 <div class="mt-5 space-y-3">
-                    <div v-for="rate in shippingRates" :key="rate.id" class="grid gap-2 rounded-lg border border-border bg-card p-3 md:grid-cols-[1fr_5rem_6rem_6rem_6rem_auto] md:items-center">
+                    <div v-for="rate in shippingRates" :key="rate.id" class="grid gap-2 rounded-lg border border-border bg-card p-3 md:grid-cols-[1fr_5rem_5rem_6rem_6rem_6rem_auto] md:items-center">
                         <input v-model="rate.name" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                        <input v-model="rate.origin_country_code" maxlength="2" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="Von">
                         <input v-model="rate.country_code" maxlength="2" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="Alle">
                         <input v-model="rate.postal_code_prefix" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="PLZ">
                         <input :value="typeof rate.amount_cents === 'string' ? rate.amount_cents : centsToMajor(rate.amount_cents)" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" @input="rate.amount_cents = $event.target.value">
@@ -1329,6 +1461,39 @@ const updatePayoutProfile = (profile, status) => {
                         </div>
                         <span class="mt-2 block text-xs text-secondary">Aktuell: {{ formatMoney(majorToCents(commerceSettingsForm.ads_min_budget_cents)) }}</span>
                     </label>
+
+                    <label class="rounded-lg border border-border bg-card p-4 md:col-span-2">
+                        <span class="text-xs font-semibold uppercase tracking-wide text-secondary">Frequency Capping</span>
+                        <span class="mt-1 block text-sm font-semibold text-primary">Max. Impressionen pro Kampagne und Tag</span>
+                        <div class="mt-3 flex items-center gap-2">
+                            <input v-model="commerceSettingsForm.ads_frequency_cap_per_day" type="number" min="0" max="100" class="w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="3">
+                            <span class="shrink-0 text-sm text-secondary">pro User/Session</span>
+                        </div>
+                        <span class="mt-2 block text-xs text-secondary">0 deaktiviert das Cap. Gilt auch fuer interne priorisierte Ads.</span>
+                    </label>
+
+                    <div class="rounded-lg border border-border bg-card p-4 md:col-span-2">
+                        <span class="text-xs font-semibold uppercase tracking-wide text-secondary">Placement Caps</span>
+                        <span class="mt-1 block text-sm font-semibold text-primary">Unterschiedliche Limits je Flaeche</span>
+                        <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                            <label class="text-xs font-semibold uppercase text-secondary">
+                                Feed
+                                <input v-model="commerceSettingsForm.ads_frequency_cap_feed" type="number" min="0" max="100" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                            </label>
+                            <label class="text-xs font-semibold uppercase text-secondary">
+                                Sidebar
+                                <input v-model="commerceSettingsForm.ads_frequency_cap_sidebar" type="number" min="0" max="100" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                            </label>
+                            <label class="text-xs font-semibold uppercase text-secondary">
+                                Marketplace Karte
+                                <input v-model="commerceSettingsForm.ads_frequency_cap_marketplace_card" type="number" min="0" max="100" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                            </label>
+                            <label class="text-xs font-semibold uppercase text-secondary">
+                                Sponsor-Bereich
+                                <input v-model="commerceSettingsForm.ads_frequency_cap_sponsor_section" type="number" min="0" max="100" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                            </label>
+                        </div>
+                    </div>
 
                     <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary md:col-span-2" :disabled="commerceSettingsForm.processing">
                         Ads-Preise speichern
@@ -1607,6 +1772,20 @@ const updatePayoutProfile = (profile, status) => {
                     <textarea v-model="productForm.description" rows="3" class="md:col-span-2 rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung"></textarea>
                     <button class="md:col-span-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Speichern</button>
                 </form>
+                <div class="mt-5 grid gap-3 md:grid-cols-3">
+                    <div v-for="warehouse in warehouses" :key="warehouse.id" class="rounded-lg border border-border bg-bg p-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="font-semibold text-primary">{{ warehouse.name }}</p>
+                                <p class="text-xs text-secondary">{{ warehouse.country_code }} · {{ warehouse.city || 'Ohne Stadt' }}</p>
+                            </div>
+                            <span class="rounded-full bg-muted px-2 py-1 text-xs font-semibold text-secondary">
+                                {{ warehouse.active_inventories_count || 0 }} aktiv
+                            </span>
+                        </div>
+                        <p class="mt-2 text-xs text-secondary">Inventories gesamt: {{ warehouse.inventories_count || 0 }}</p>
+                    </div>
+                </div>
                 <div class="mt-5 space-y-3">
                     <div v-for="product in products" :key="product.id" class="rounded-lg border border-border p-3">
                         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -1618,7 +1797,21 @@ const updatePayoutProfile = (profile, status) => {
                             </div>
                             <div>
                                 <p class="font-semibold text-primary">{{ product.title }}</p>
-                                <p class="text-xs text-secondary">{{ product.status }} · {{ product.moderation_status }} · {{ product.product_type || 'single' }} · {{ formatMoney(product.price_cents) }}</p>
+                                <div class="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                                    <span class="text-secondary">{{ product.status }} · {{ product.moderation_status }} · {{ product.product_type || 'single' }} · {{ formatMoney(product.price_cents) }}</span>
+                                    <span
+                                        :class="[
+                                            'rounded-full px-2 py-0.5 font-semibold',
+                                            product.quality_score >= 86 ? 'bg-success/10 text-success' : (product.quality_score >= 72 ? 'bg-warning/10 text-warning' : 'bg-error/10 text-error')
+                                        ]"
+                                    >
+                                        Qualitaet {{ product.quality_score ?? 0 }}%
+                                    </span>
+                                </div>
+                                <p v-if="product.seller_name" class="mt-1 text-xs text-secondary">
+                                    Anbieter {{ product.seller_name }}
+                                    <span v-if="product.seller_verified" class="font-semibold text-success">· verifiziert</span>
+                                </p>
                                 <p class="text-xs text-secondary">
                                     Artikelnummer {{ product.sku || '-' }} · Steuer {{ product.tax_class || 'standard' }} ·
                                     <span v-if="product.manages_stock">Bestand {{ product.stock_quantity ?? 0 }}</span>
@@ -1633,12 +1826,61 @@ const updatePayoutProfile = (profile, status) => {
                                 <p v-if="product.variants?.length" class="mt-1 line-clamp-1 text-xs text-secondary">
                                     Varianten: {{ product.variants.length }}
                                 </p>
+                                <div v-if="product.quality_issues?.length" class="mt-2 flex flex-wrap gap-1">
+                                    <span
+                                        v-for="issue in product.quality_issues"
+                                        :key="`${product.id}-${issue}`"
+                                        class="rounded bg-warning/10 px-2 py-1 text-[11px] font-semibold text-warning"
+                                    >
+                                        {{ issue }}
+                                    </span>
+                                </div>
+                                <div v-if="product.inventories?.length" class="mt-3 grid gap-2">
+                                    <div
+                                        v-for="inventory in product.inventories.filter((row) => row.is_active)"
+                                        :key="inventory.id"
+                                        class="grid gap-2 rounded-lg border border-border bg-card p-2 lg:grid-cols-[minmax(0,1fr)_5rem_5rem_7rem_7rem_auto]"
+                                    >
+                                        <div>
+                                            <p class="text-xs font-semibold text-primary">{{ inventory.country_code }} · {{ inventory.warehouse?.name || 'Lager' }}</p>
+                                            <p class="text-[11px] text-secondary">{{ inventory.warehouse?.city || 'Ort offen' }} · Lieferzeit {{ inventory.lead_time_days ?? '-' }} Tage</p>
+                                        </div>
+                                        <span class="rounded bg-muted px-2 py-2 text-xs font-semibold text-secondary">Bestand {{ inventory.stock_quantity }}</span>
+                                        <span class="rounded bg-muted px-2 py-2 text-xs font-semibold text-secondary">Frei {{ inventory.available_quantity }}</span>
+                                        <input
+                                            :value="inventoryAdjustment(product, inventory).quantity_delta"
+                                            type="number"
+                                            class="rounded-lg border-border bg-inputBg text-xs text-primary"
+                                            placeholder="+/-"
+                                            @input="setInventoryAdjustment(product, inventory, 'quantity_delta', $event.target.value)"
+                                        >
+                                        <input
+                                            :value="inventoryAdjustment(product, inventory).note"
+                                            class="rounded-lg border-border bg-inputBg text-xs text-primary"
+                                            placeholder="Notiz"
+                                            @input="setInventoryAdjustment(product, inventory, 'note', $event.target.value)"
+                                        >
+                                        <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="adjustInventoryStock(product, inventory)">
+                                            Buchen
+                                        </button>
+                                    </div>
+                                </div>
                                 <p v-if="product.rejection_reason" class="mt-1 text-xs text-warning">{{ product.rejection_reason }}</p>
                             </div>
                             <div class="flex flex-wrap items-center gap-2">
                                 <div v-if="product.manages_stock" class="flex items-center gap-2">
                                     <input v-model.number="product.stock_quantity" type="number" min="0" class="w-24 rounded-lg border-border bg-inputBg text-xs text-primary" placeholder="Bestand">
                                     <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="updateProductStock(product)">Bestand speichern</button>
+                                    <input
+                                        :value="(stockAdjustments[`${product.id}:global`] || {}).quantity_delta"
+                                        type="number"
+                                        class="w-20 rounded-lg border-border bg-inputBg text-xs text-primary"
+                                        placeholder="+/-"
+                                        @input="stockAdjustments[`${product.id}:global`] = { ...(stockAdjustments[`${product.id}:global`] || {}), quantity_delta: $event.target.value }"
+                                    >
+                                    <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="adjustGlobalStock(product)">
+                                        Global buchen
+                                    </button>
                                 </div>
                                 <select v-model="product.status" class="rounded-lg border-border bg-inputBg text-xs font-semibold text-primary" @change="updateProductStatus(product, product.status)">
                                     <option value="draft">Entwurf</option>
@@ -1659,6 +1901,22 @@ const updatePayoutProfile = (profile, status) => {
         <section v-show="activeTab === 'ads'" class="surface-card p-5">
             <h2 class="text-lg font-semibold text-primary">Ads-Kampagne erstellen</h2>
             <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeCampaign">
+                    <div class="md:col-span-2 grid gap-3 rounded-lg border border-air-blue/30 bg-air-blue/10 p-3 sm:grid-cols-2">
+                        <label class="flex items-start gap-3 text-sm text-primary">
+                            <input v-model="campaignForm.is_internal" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                            <span>
+                                <span class="block font-semibold">Interne Airmius Ad</span>
+                                <span class="text-xs text-secondary">Nur Admins sehen diese Steuerung. Die Anzeige selbst wird normal ausgespielt.</span>
+                            </span>
+                        </label>
+                        <label class="flex items-start gap-3 text-sm text-primary" :class="{ 'opacity-50': !campaignForm.is_internal }">
+                            <input v-model="campaignForm.force_priority" type="checkbox" class="mt-1 rounded border-border bg-inputBg" :disabled="!campaignForm.is_internal">
+                            <span>
+                                <span class="block font-semibold">Immer priorisieren</span>
+                                <span class="text-xs text-secondary">Wird vor bezahlten Ads gewählt, solange aktiv und im Zeitraum.</span>
+                            </span>
+                        </label>
+                    </div>
                     <input v-model="campaignForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Name">
                     <input v-model="campaignForm.headline" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Headline">
                     <input v-model="campaignForm.target_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Ziel-URL">
@@ -1732,6 +1990,11 @@ const updatePayoutProfile = (profile, status) => {
                     <input v-model="campaignForm.clicks" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Klicks">
                     <input v-model="campaignForm.audience_locations" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Regionen">
                     <input v-model="campaignForm.audience_interests" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interessen">
+                    <input v-model="campaignForm.audience_excluded_locations" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Regionen ausschliessen">
+                    <input v-model="campaignForm.audience_excluded_interests" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interessen ausschliessen">
+                    <input v-model="campaignForm.audience_devices" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Geraete: desktop, mobile, tablet">
+                    <input v-model="campaignForm.audience_languages" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Sprachen: de, en, fr">
+                    <input v-model="campaignForm.audience_hours" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Zeitfenster: 08-22, 18:30-23:00">
                     <input v-model="campaignForm.audience_age_min" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter von">
                     <input v-model="campaignForm.audience_age_max" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter bis">
                     <textarea v-model="campaignForm.primary_text" rows="3" class="md:col-span-2 rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Anzeigentext"></textarea>
@@ -1767,14 +2030,21 @@ const updatePayoutProfile = (profile, status) => {
                     :key="visual.key"
                     class="rounded-lg border border-border bg-card p-4"
                 >
-                    <div class="overflow-hidden rounded-lg border border-border bg-inputBg">
+                    <div
+                        class="overflow-hidden rounded-lg border border-border bg-inputBg"
+                        :class="visual.key === 'side_banner' ? 'flex h-80 items-center justify-center' : ''"
+                    >
                         <img
                             v-if="visual.url"
                             :src="visual.url"
                             :alt="visual.label"
-                            class="aspect-video w-full object-cover"
+                            :class="visual.key === 'side_banner' ? 'h-full w-auto object-cover' : 'aspect-video w-full object-cover'"
                         />
-                        <div v-else class="flex aspect-video items-center justify-center text-secondary">
+                        <div
+                            v-else
+                            class="flex items-center justify-center text-secondary"
+                            :class="visual.key === 'side_banner' ? 'h-full w-16' : 'aspect-video w-full'"
+                        >
                             <i class="las la-image text-4xl"></i>
                         </div>
                     </div>
@@ -1782,6 +2052,10 @@ const updatePayoutProfile = (profile, status) => {
                     <h3 class="mt-3 font-semibold text-primary">{{ visual.label }}</h3>
                     <p class="mt-1 text-xs leading-5 text-secondary">{{ visual.description }}</p>
                     <p class="mt-2 text-xs font-semibold text-primary">Empfohlen: {{ visual.recommended_size }}</p>
+                    <div v-if="visual.key === 'side_banner'" class="mt-3 rounded border border-air-blue/30 bg-air-blue/10 p-3 text-xs leading-5 text-secondary">
+                        <p class="font-semibold text-primary">Seitenbanner-Regel</p>
+                        <p>Kein Text, keine Logos, keine Gesichter und keine wichtigen Details am Rand. Das Bild wird gespiegelt und nur dezent als Hintergrund genutzt.</p>
+                    </div>
                     <p class="mt-1 text-xs text-secondary">Aktuelle Zielgröße: {{ marketplaceVisualForm.dimensions[visual.key]?.width }} x {{ marketplaceVisualForm.dimensions[visual.key]?.height }} px</p>
 
                     <div class="mt-4 grid grid-cols-2 gap-3">
@@ -1855,6 +2129,62 @@ const updatePayoutProfile = (profile, status) => {
                 </div>
             </div>
 
+            <div v-if="adPlacementReport.length" class="border-b border-border p-5">
+                <div class="flex flex-col gap-1">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Placement Performance</p>
+                    <h3 class="font-semibold text-primary">Welche Flaechen Ergebnisse liefern</h3>
+                </div>
+                <div class="mt-3 grid gap-3 lg:grid-cols-4">
+                    <article v-for="row in adPlacementReport" :key="row.placement" class="rounded-lg border border-border bg-bg p-4">
+                        <p class="text-sm font-semibold text-primary">{{ row.placement }}</p>
+                        <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-secondary">
+                            <span>Views</span>
+                            <strong class="text-right text-primary">{{ row.impressions }}</strong>
+                            <span>Klicks</span>
+                            <strong class="text-right text-primary">{{ row.clicks }}</strong>
+                            <span>Leads</span>
+                            <strong class="text-right text-primary">{{ row.leads }}</strong>
+                            <span>Sales</span>
+                            <strong class="text-right text-primary">{{ row.sales }}</strong>
+                            <span>CTR</span>
+                            <strong class="text-right text-primary">{{ row.ctr }}%</strong>
+                            <span>Kosten</span>
+                            <strong class="text-right text-primary">{{ formatMoney(row.cost_cents) }}</strong>
+                        </div>
+                    </article>
+                </div>
+            </div>
+
+            <div v-if="adDiagnostics.length" class="border-b border-border p-5">
+                <div class="flex flex-col gap-1">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Admin-Diagnose</p>
+                    <h3 class="font-semibold text-primary">Warum Ads ausgespielt oder gebremst werden</h3>
+                </div>
+                <div class="mt-3 grid gap-3 lg:grid-cols-2">
+                    <article v-for="diagnostic in adDiagnostics.slice(0, 8)" :key="diagnostic.id" class="rounded-lg border border-border bg-bg p-4">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <p class="font-semibold text-primary">{{ diagnostic.name }}</p>
+                                <p class="text-xs text-secondary">{{ diagnostic.placement }} · {{ diagnostic.status }}</p>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <span v-if="diagnostic.is_internal" class="rounded-full border border-air-blue/40 bg-air-blue/10 px-2 py-0.5 text-[11px] font-semibold text-air-blue">Intern</span>
+                                <span v-if="diagnostic.force_priority" class="rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 text-[11px] font-semibold text-warning">Priorisiert</span>
+                            </div>
+                        </div>
+                        <div class="mt-3 flex flex-wrap gap-2 text-xs">
+                            <span v-for="reason in diagnostic.reasons" :key="reason" class="rounded-full bg-card px-2 py-1 text-secondary">
+                                {{ reason }}
+                            </span>
+                        </div>
+                        <p v-if="diagnostic.daily_budget_cents" class="mt-3 text-xs text-secondary">
+                            Heute: {{ formatMoney(diagnostic.today_spent_cents) }} / {{ formatMoney(diagnostic.daily_budget_cents) }}
+                            <span v-if="diagnostic.allowed_spend_cents"> · Pacing erlaubt ca. {{ formatMoney(diagnostic.allowed_spend_cents) }}</span>
+                        </p>
+                    </article>
+                </div>
+            </div>
+
             <div
                 v-if="campaignStatusError || page.props.errors?.campaign_status"
                 class="mx-5 mt-4 rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
@@ -1899,12 +2229,19 @@ const updatePayoutProfile = (profile, status) => {
                         <template v-for="campaign in campaigns" :key="campaign.id">
                             <tr>
                                 <td class="px-5 py-3">
-                                    <p class="font-semibold text-primary">{{ campaign.name }}</p>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <p class="font-semibold text-primary">{{ campaign.name }}</p>
+                                        <span v-if="campaign.is_internal" class="rounded-full border border-air-blue/40 bg-air-blue/10 px-2 py-0.5 text-[11px] font-semibold text-air-blue">Intern</span>
+                                        <span v-if="campaign.force_priority" class="rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 text-[11px] font-semibold text-warning">Priorisiert</span>
+                                    </div>
                                     <p class="text-xs text-secondary">{{ campaign.target_url || '-' }}</p>
                                 </td>
                                 <td class="px-5 py-3">
                                     <p class="text-secondary">{{ campaign.status }}</p>
-                                    <p v-if="campaign.user_id && !campaign.payment_completed" class="mt-1 text-xs font-semibold text-warning">
+                                    <p v-if="campaign.is_internal" class="mt-1 text-xs font-semibold text-air-blue">
+                                        Airmius intern
+                                    </p>
+                                    <p v-else-if="campaign.user_id && !campaign.payment_completed" class="mt-1 text-xs font-semibold text-warning">
                                         {{ campaign.payment_pending ? 'Zahlung offen' : 'Keine Zahlung gefunden' }}
                                     </p>
                                 </td>
@@ -2203,6 +2540,11 @@ const updatePayoutProfile = (profile, status) => {
                         <span :class="['rounded-full px-2 py-1 text-xs font-semibold', report.low_stock ? 'bg-warning/10 text-warning' : 'bg-muted text-secondary']">
                             Bestand {{ report.manages_stock ? report.stock_quantity : 'frei' }}
                         </span>
+                        <div v-if="report.inventories?.length" class="mt-2 flex flex-wrap gap-1">
+                            <span v-for="inventory in report.inventories" :key="`${report.product_id}-${inventory.country_code}`" class="rounded-full border border-border px-2 py-1 text-[11px] font-semibold text-secondary">
+                                {{ inventory.country_code }} {{ inventory.available_quantity }}
+                            </span>
+                        </div>
                     </div>
                     <p v-if="!sellerReports.length" class="p-5 text-sm text-secondary">Noch keine Verkäuferdaten.</p>
                 </div>
@@ -2463,9 +2805,20 @@ const updatePayoutProfile = (profile, status) => {
                         <option value="shipped">Versendet</option>
                         <option value="delivered">Zugestellt</option>
                     </select>
-                    <input v-model="shippingModal.shipping_carrier" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="DHL / UPS / Hermes">
+                    <input
+                        v-model="shippingModal.shipping_carrier"
+                        list="commerce-shipping-carriers"
+                        class="rounded-lg border-border bg-inputBg text-sm text-primary"
+                        placeholder="DHL / UPS / Hermes"
+                        @change="autofillTrackingUrl"
+                    >
+                    <datalist id="commerce-shipping-carriers">
+                        <option v-for="carrier in shippingCarriers" :key="carrier.value" :value="carrier.value">
+                            {{ carrier.label }}
+                        </option>
+                    </datalist>
                     <input v-model="shippingModal.shipping_label_url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Versandlabel-URL">
-                    <input v-model="shippingModal.tracking_number" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Trackingnummer">
+                    <input v-model="shippingModal.tracking_number" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="Trackingnummer" @blur="autofillTrackingUrl">
                     <input v-model="shippingModal.tracking_url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Tracking-URL">
                 </div>
                 <div class="mt-5 flex justify-end gap-3">

@@ -43,7 +43,8 @@ class SocialAuthController extends Controller
             return redirect()->intended(route('auth.dashboard'));
         }
 
-        $user = Auth::user() ?: $this->userForSocialAccount($socialUser);
+        $created = false;
+        $user = Auth::user() ?: $this->userForSocialAccount($socialUser, $created);
 
         $account = SocialAccount::create([
             'user_id' => $user->id,
@@ -54,10 +55,18 @@ class SocialAuthController extends Controller
         $this->updateAccount($account, $socialUser);
         Auth::login($user, remember: true);
 
+        if ($created) {
+            app(CommerceCheckoutController::class)->trackAttributedAdConversion(request(), 'registration', 0, [
+                'registered_user_id' => $user->id,
+                'provider' => $provider,
+                'country' => $user->country,
+            ]);
+        }
+
         return redirect()->intended(route('auth.dashboard'));
     }
 
-    private function userForSocialAccount($socialUser): User
+    private function userForSocialAccount($socialUser, bool &$created = false): User
     {
         $email = $socialUser->getEmail();
 
@@ -67,6 +76,8 @@ class SocialAuthController extends Controller
 
         $name = $socialUser->getName() ?: $socialUser->getNickname() ?: 'Airmius User';
         [$firstName, $lastName] = array_pad(explode(' ', $name, 2), 2, '');
+
+        $created = true;
 
         return User::create([
             'name' => $name,

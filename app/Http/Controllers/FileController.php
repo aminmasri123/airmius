@@ -15,16 +15,74 @@ use App\Support\AppNotification;
 use App\Support\UploadStorage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Throwable;
 
 class FileController extends Controller
 {
     use AuthorizesRequests;
+
+    private const DEFAULT_FILES_PER_PAGE = 24;
+    private const MAX_FILES_PER_PAGE = 100;
+    private const DEFAULT_FOLDERS_PER_PAGE = 24;
+    private const MAX_FOLDERS_PER_PAGE = 100;
+    private const PAGE_SIZE_OPTIONS = [12, 24, 36, 48, 72, 100];
+    private const MAX_FILE_SIZE_KB = 51200;
+    private const FILE_NAME_MAX_LENGTH = 180;
+    private const SEARCH_QUERY_MAX_LENGTH = 200;
+    private const VALID_FILE_SORT_OPTIONS = ['name-asc', 'name-desc', 'newest', 'oldest', 'size-asc', 'size-desc'];
+    private const VALID_FOLDER_SORT_OPTIONS = ['name-asc', 'name-desc', 'newest', 'oldest'];
+
+    private const DISALLOWED_FILE_EXTENSIONS = [
+        'asp',
+        'aspx',
+        'bat',
+        'cmd',
+        'cpl',
+        'com',
+        'exe',
+        'jar',
+        'jsp',
+        'jspx',
+        'js',
+        'jse',
+        'msc',
+        'msi',
+        'php',
+        'phtml',
+        'pif',
+        'pl',
+        'ps1',
+        'py',
+        'scr',
+        'sh',
+        'vbs',
+    ];
+
+    private const DISALLOWED_MIME_TYPES = [
+        'application/x-msdownload',
+        'application/x-msdos-program',
+        'application/x-bat',
+        'application/x-msdos',
+        'application/vnd.microsoft.portable-executable',
+        'application/x-dosexec',
+        'application/x-sh',
+        'application/x-perl',
+        'text/x-perl',
+        'application/x-python-code',
+        'text/x-python',
+        'application/x-php',
+        'text/x-php',
+        'application/octet-stream',
+        'application/x-executable',
+    ];
 
     public function __construct(
         private FileService $service,
@@ -37,6 +95,23 @@ class FileController extends Controller
 
         $scope = $this->scopeData($request);
         $currentFolder = null;
+        $search = $this->normalizeSearchQuery((string) $request->input('search', ''));
+        $fileSort = $this->sanitizeFileSort((string) $request->input('file_sort', 'name-asc'));
+        $folderSort = $this->sanitizeFolderSort((string) $request->input('folder_sort', 'name-asc'));
+        $filesPerPage = $this->sanitizePerPage(
+            (int) $request->integer('per_page', self::DEFAULT_FILES_PER_PAGE),
+            self::DEFAULT_FILES_PER_PAGE,
+            self::MAX_FILES_PER_PAGE,
+            self::PAGE_SIZE_OPTIONS,
+        );
+        $filesPage = max(1, (int) $request->integer('files_page', 1));
+        $foldersPage = max(1, (int) $request->integer('folders_page', 1));
+        $foldersPerPage = $this->sanitizePerPage(
+            (int) $request->integer('folders_per_page', self::DEFAULT_FOLDERS_PER_PAGE),
+            self::DEFAULT_FOLDERS_PER_PAGE,
+            self::MAX_FOLDERS_PER_PAGE,
+            self::PAGE_SIZE_OPTIONS,
+        );
 
         if ($request->filled('folder_id')) {
             $currentFolder = Folder::query()
@@ -45,25 +120,41 @@ class FileController extends Controller
                 ->findOrFail($request->integer('folder_id'));
         }
 
+        $fileQuery = File::query()
+            ->with(['user:id,name', 'club:id,name', 'team:id,name', 'event:id,title', 'folder:id,name'])
+            ->where($scope)
+            ->where('folder_id', $currentFolder?->id)
+            ->whereDoesntHave('messages');
+
+        if ($search !== '') {
+            $this->applyDisplayNameSearch($fileQuery, $search);
+        }
+
+        $this->applyFileSort($fileQuery, $fileSort);
+
+        $folderQuery = Folder::query()
+            ->with('parent:id,name')
+            ->withCount('files')
+            ->where($scope)
+            ->where('parent_id', $currentFolder?->id);
+
+        if ($search !== '') {
+            $this->applyFolderNameSearch($folderQuery, $search);
+        }
+
+        $this->applyFolderSort($folderQuery, $folderSort);
+
+        $files = $fileQuery
+            ->paginate($filesPerPage, ['*'], 'files_page', $filesPage)
+            ->withQueryString();
+
+        $folders = $folderQuery
+            ->paginate($foldersPerPage, ['*'], 'folders_page', $foldersPage)
+            ->withQueryString();
+
         return Inertia::render('Auth/Dashboard/Files/Index', [
-            'files' => File::query()
-                ->with(['user:id,name', 'club:id,name', 'team:id,name', 'event:id,title', 'folder:id,name'])
-                ->where($scope)
-                ->where('folder_id', $currentFolder?->id)
-                ->whereDoesntHave('messages')
-                ->latest('id')
-                ->get(),
-            'folders' => Folder::query()
-                ->with('parent:id,name')
-                ->withCount('files')
-                ->where($scope)
-                ->where('parent_id', $currentFolder?->id)
-                ->orderBy('name')
-                ->get(),
-            'allFolders' => Folder::query()
-                ->where($scope)
-                ->orderBy('name')
-                ->get(['id', 'name', 'parent_id']),
+            'files' => $files,
+            'folders' => $folders,
             'currentFolder' => $currentFolder,
             'scope' => [
                 'type' => $request->input('scope', 'user'),
@@ -72,6 +163,11 @@ class FileController extends Controller
                 'event_id' => $scope['event_id'] ?? null,
                 'folder_id' => $currentFolder?->id,
             ],
+            'file_sort' => $fileSort,
+            'folder_sort' => $folderSort,
+            'search' => $search,
+            'per_page' => $filesPerPage,
+            'folders_per_page' => $foldersPerPage,
             'clubs' => Club::query()
                 ->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))
                 ->select(['id', 'name'])
@@ -115,7 +211,7 @@ class FileController extends Controller
             'team_id' => ['nullable', 'required_if:scope,team', 'exists:teams,id'],
             'event_id' => ['nullable', 'required_if:scope,event', 'exists:events,id'],
             'folder_id' => ['nullable', 'exists:folders,id'],
-            'file' => ['required', 'file', 'max:20480'],
+            'file' => ['required', 'file', 'max:'.self::MAX_FILE_SIZE_KB],
         ]);
 
         $scope = $this->authorizeScope($data);
@@ -137,7 +233,10 @@ class FileController extends Controller
                 && $folder->event_id === ($scope['event_id'] ?? null), 422);
         }
 
-        $this->service->upload(auth()->user(), $request->file('file'), array_merge($scope, [
+        $uploadFile = $request->file('file');
+        $this->assertSafeUpload($uploadFile);
+
+        $this->service->upload(auth()->user(), $uploadFile, array_merge($scope, [
             'folder_id' => $data['folder_id'] ?? null,
         ]));
 
@@ -150,7 +249,29 @@ class FileController extends Controller
 
         abort_unless(Storage::disk(UploadStorage::disk())->exists($file->path), 404);
 
-        return Storage::disk(UploadStorage::disk())->download($file->path, $file->display_name);
+        return Storage::disk(UploadStorage::disk())->download($file->path, $file->display_name, [
+            'Content-Disposition' => $this->downloadDisposition($file->display_name, false),
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    public function preview(Request $request, File $file)
+    {
+        $this->authorize('view', $file);
+
+        $path = $request->boolean('thumbnail') && $file->thumbnail_path
+            ? $file->thumbnail_path
+            : $file->path;
+
+        abort_unless($path && Storage::disk(UploadStorage::disk())->exists($path), 404);
+
+        $headers = [
+            'Content-Disposition' => $this->downloadDisposition($file->display_name, true),
+            'Cache-Control' => 'private, max-age=86400',
+            'X-Content-Type-Options' => 'nosniff',
+        ];
+
+        return Storage::disk(UploadStorage::disk())->response($path, $file->display_name, $headers);
     }
 
     public function destroy(File $file)
@@ -159,7 +280,7 @@ class FileController extends Controller
 
         $this->service->delete($file);
 
-        return back()->with('success', 'Datei gelöscht.');
+        return back()->with('success', 'Datei geloescht.');
     }
 
     public function update(Request $request, File $file)
@@ -167,11 +288,13 @@ class FileController extends Controller
         $this->authorize('update', $file);
 
         $data = $request->validate([
-            'display_name' => ['required', 'string', 'max:180'],
+            'display_name' => ['required', 'string', 'max:'.self::FILE_NAME_MAX_LENGTH],
         ]);
 
+        $safeName = $this->normalizeSafeDisplayName((string) $data['display_name']);
+
         $file->update([
-            'display_name' => trim($data['display_name']),
+            'display_name' => $safeName,
         ]);
 
         return back()->with('success', 'Datei umbenannt.');
@@ -239,7 +362,11 @@ class FileController extends Controller
 
         $share->forceFill(['downloaded_at' => now()])->save();
 
-        return Storage::disk(UploadStorage::disk())->download($share->file->path, $share->file->display_name);
+        return Storage::disk(UploadStorage::disk())->download($share->file->path, $share->file->display_name, [
+            'Content-Disposition' => $this->downloadDisposition($share->file->display_name, false),
+            'Cache-Control' => 'private, no-store, no-cache, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     private function scopeData(Request $request): array
@@ -296,6 +423,77 @@ class FileController extends Controller
             'team_id' => $event->team_id,
             'event_id' => $event->id,
         ];
+    }
+
+    private function sanitizeFileSort(string $sort): string
+    {
+        return in_array($sort, self::VALID_FILE_SORT_OPTIONS, true) ? $sort : 'name-asc';
+    }
+
+    private function sanitizeFolderSort(string $sort): string
+    {
+        return in_array($sort, self::VALID_FOLDER_SORT_OPTIONS, true) ? $sort : 'name-asc';
+    }
+
+    private function sanitizePerPage(int $perPage, int $default, int $max, array $allowedSizes): int
+    {
+        if ($perPage < 1 || $perPage > $max || ! in_array($perPage, $allowedSizes, true)) {
+            return $default;
+        }
+
+        return $perPage;
+    }
+
+    private function applyFileSort(Builder $query, string $sort): Builder
+    {
+        return match ($sort) {
+            'name-desc' => $query->orderByRaw('LOWER(display_name) DESC'),
+            'newest' => $query->orderByDesc('created_at')->orderByDesc('id'),
+            'oldest' => $query->orderBy('created_at')->orderBy('id'),
+            'size-asc' => $query->orderBy('size')->orderBy('id'),
+            'size-desc' => $query->orderByDesc('size')->orderByDesc('id'),
+            default => $query->orderByRaw('LOWER(display_name) ASC')->orderBy('id'),
+        };
+    }
+
+    private function applyFolderSort(Builder $query, string $sort): Builder
+    {
+        return match ($sort) {
+            'name-desc' => $query->orderByRaw('LOWER(name) DESC'),
+            'newest' => $query->orderByDesc('created_at')->orderByDesc('id'),
+            'oldest' => $query->orderBy('created_at')->orderBy('id'),
+            default => $query->orderByRaw('LOWER(name) ASC')->orderBy('id'),
+        };
+    }
+
+    private function applyDisplayNameSearch(Builder $query, string $search): void
+    {
+        $needle = '%' . $this->escapeLike($search) . '%';
+
+        $query->whereRaw("LOWER(display_name) LIKE ? ESCAPE '!'", [Str::lower($needle)]);
+    }
+
+    private function applyFolderNameSearch(Builder $query, string $search): void
+    {
+        $needle = '%' . $this->escapeLike($search) . '%';
+
+        $query->whereRaw("LOWER(name) LIKE ? ESCAPE '!'", [Str::lower($needle)]);
+    }
+
+    private function normalizeSearchQuery(string $search): string
+    {
+        $trimmed = trim((string) preg_replace('/[\\x00-\\x1F\\x7F]/', '', $search));
+
+        return trim((string) Str::limit($trimmed, self::SEARCH_QUERY_MAX_LENGTH, ''));
+    }
+
+    private function escapeLike(string $value): string
+    {
+        return str_replace(
+            ['!', '%', '_'],
+            ['!!', '!%', '!_'],
+            $value,
+        );
     }
 
     private function targetScope(string $targetType, int $targetId): array
@@ -366,5 +564,142 @@ class FileController extends Controller
         }
 
         return back()->with('success', 'Externe Freigabe per E-Mail gesendet.');
+    }
+
+    private function assertSafeUpload(UploadedFile $file): void
+    {
+        if (! $file->isValid()) {
+            throw ValidationException::withMessages([
+                'file' => 'Die Datei ist ungueltig oder wurde fehlerhaft uebertragen.',
+            ]);
+        }
+
+        if ((int) $file->getSize() <= 0) {
+            throw ValidationException::withMessages([
+                'file' => 'Die Datei ist leer oder wurde falsch uebertragen.',
+            ]);
+        }
+
+        $originalName = (string) $file->getClientOriginalName();
+        $extension = strtolower((string) $file->getClientOriginalExtension());
+        $dispositionParts = array_filter(
+            preg_split('/\./', strtolower((string) $originalName), -1, PREG_SPLIT_NO_EMPTY),
+            static fn (string $part): bool => $part !== '',
+        );
+
+        if (count($dispositionParts) > 1) {
+            foreach ($dispositionParts as $part) {
+                if (in_array($part, self::DISALLOWED_FILE_EXTENSIONS, true)) {
+                    throw ValidationException::withMessages([
+                        'file' => 'Dieser Dateityp ist aus Sicherheitsgruenden nicht erlaubt.',
+                    ]);
+                }
+            }
+        }
+
+        if ($extension !== '' && in_array($extension, self::DISALLOWED_FILE_EXTENSIONS, true)) {
+            throw ValidationException::withMessages([
+                'file' => 'Dieser Dateityp ist aus Sicherheitsgruenden nicht erlaubt.',
+            ]);
+        }
+
+        $dangerousMimeTypes = array_filter([
+            strtolower((string) $file->getClientMimeType()),
+            strtolower((string) $file->getMimeType()),
+        ]);
+
+        if ($this->containsDisallowedMimeType($dangerousMimeTypes)) {
+            throw ValidationException::withMessages([
+                'file' => 'Dieser Dateityp ist aus Sicherheitsgruenden nicht erlaubt.',
+            ]);
+        }
+
+        if (! $this->isSafeFileName($originalName)) {
+            throw ValidationException::withMessages([
+                'file' => 'Der Dateiname enthaelt ungueltige Zeichen.',
+            ]);
+        }
+    }
+
+    private function normalizeSafeDisplayName(string $name): string
+    {
+        $trimmed = trim((string) $name);
+
+        if ($trimmed === '') {
+            throw ValidationException::withMessages([
+                'display_name' => 'Der Dateiname darf nicht leer sein.',
+            ]);
+        }
+
+        if (! $this->isSafeFileName($trimmed)) {
+            throw ValidationException::withMessages([
+                'display_name' => 'Der Dateiname enthaelt ungueltige Zeichen.',
+            ]);
+        }
+
+        return $trimmed;
+    }
+
+    private function containsDisallowedMimeType(array $mimes): bool
+    {
+        foreach ($mimes as $mime) {
+            if (in_array($mime, self::DISALLOWED_MIME_TYPES, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isSafeFileName(string $name): bool
+    {
+        if (preg_match('/[\x00-\x1F\x7F\\\\]/', $name)) {
+            return false;
+        }
+
+        $trimmed = trim((string) $name);
+
+        if ($trimmed === '') {
+            return false;
+        }
+
+        if (str_starts_with($trimmed, '.') || str_contains($trimmed, '..')) {
+            return false;
+        }
+
+        if (str_starts_with(strtolower((string) $trimmed), 'desktop.ini')) {
+            return false;
+        }
+
+        return strlen($trimmed) <= 255;
+    }
+
+    private function downloadDisposition(string $filename, bool $inline): string
+    {
+        $safeName = $this->sanitizeFileName($filename);
+        $encodedName = rawurlencode($filename);
+
+        return ($inline ? 'inline' : 'attachment').'; filename="'.$safeName.'"; filename*=UTF-8\'\''.$encodedName;
+    }
+
+    private function sanitizeFileName(string $filename): string
+    {
+        $filtered = preg_replace('/[\\x00-\\x1F\\x7F"]/', '', (string) $filename);
+        $filtered = preg_replace('/\\\\/', '', $filtered);
+        $filtered = trim((string) $filtered);
+
+        if ($filtered === '') {
+            return 'datei';
+        }
+
+        if (strlen($filtered) > self::FILE_NAME_MAX_LENGTH) {
+            $filtered = mb_substr($filtered, 0, self::FILE_NAME_MAX_LENGTH);
+        }
+
+        if (preg_match('/[^ -~]/', $filtered)) {
+            return 'datei';
+        }
+
+        return $filtered;
     }
 }

@@ -38,4 +38,9 @@ class LearningQuiz extends Model
     {
         return $this->hasMany(LearningQuizQuestion::class)->orderBy('position')->orderBy('id');
     }
+
+    public function attempts()
+    {
+        return $this->hasMany(LearningQuizAttempt::class);
+    }
 }

@@ -54,28 +54,36 @@ class SubscriptionInvoiceController extends Controller
 
         if ($checkout) {
             if ($checkout->club_id) {
-                $checkout->club->currentSubscription()->updateOrCreate(
+                $subscription = $checkout->club->currentSubscription()->updateOrCreate(
                     ['club_id' => $checkout->club_id],
                     [
                         'subscription_plan_id' => $checkout->subscription_plan_id,
                         'status' => 'active',
                         'payment_provider' => $checkout->provider,
+                        'billing_interval' => $checkout->billing_interval,
                         'provider_subscription_id' => $checkout->provider_subscription_id,
                         'provider_customer_id' => $checkout->provider_customer_id,
                         'trial_ends_at' => null,
                         'current_period_ends_at' => $periodEndsAt,
+                        'next_invoice_at' => $periodEndsAt,
+                        'grace_period_ends_at' => null,
+                        'access_restricted_at' => null,
                     ],
                 );
             } else {
-                $checkout->user->subscriptions()->updateOrCreate(
+                $subscription = $checkout->user->subscriptions()->updateOrCreate(
                     ['subscription_plan_id' => $checkout->subscription_plan_id],
                     [
                         'status' => 'active',
                         'payment_provider' => $checkout->provider,
+                        'billing_interval' => $checkout->billing_interval,
                         'provider_subscription_id' => $checkout->provider_subscription_id,
                         'provider_customer_id' => $checkout->provider_customer_id,
                         'trial_ends_at' => null,
                         'current_period_ends_at' => $periodEndsAt,
+                        'next_invoice_at' => $periodEndsAt,
+                        'grace_period_ends_at' => null,
+                        'access_restricted_at' => null,
                     ],
                 );
             }
@@ -90,10 +98,29 @@ class SubscriptionInvoiceController extends Controller
             ])->save();
         }
 
+        if (! $checkout && $invoice->subscription_type && $invoice->subscription_id) {
+            $subscription = match ($invoice->subscription_type) {
+                'club' => \App\Models\ClubSubscription::query()->find($invoice->subscription_id),
+                'user' => \App\Models\UserSubscription::query()->find($invoice->subscription_id),
+                default => null,
+            };
+
+            if ($subscription) {
+                $subscription->forceFill([
+                    'status' => 'active',
+                    'grace_period_ends_at' => null,
+                    'access_restricted_at' => null,
+                    'payment_issue_email_sent_at' => null,
+                ])->save();
+            }
+        }
+
         $invoice->forceFill([
             'status' => 'paid',
             'paid_at' => now(),
             'payment_reference' => $invoice->payment_reference ?: $checkout?->payment_reference ?: $checkout?->provider_checkout_id,
+            'subscription_type' => $invoice->subscription_type ?: ($checkout?->club_id ? 'club' : ($checkout ? 'user' : null)),
+            'subscription_id' => $invoice->subscription_id ?: ($subscription->id ?? null),
             'meta' => array_merge($invoice->meta ?? [], [
                 'manually_marked_paid_at' => now()->toIso8601String(),
                 'manually_marked_paid_by' => $request->user()->id,
@@ -150,7 +177,14 @@ class SubscriptionInvoiceController extends Controller
         $statusLabel = $this->statusLabel($invoice->status);
         $paymentMethod = $this->paymentMethodLabel($invoice->payment_method);
 
-        $pdf->header('RECHNUNG', $invoice->number);
+        $pdf->header(
+            'RECHNUNG',
+            $invoice->number,
+            'Sport. Vereine. Wachstum.',
+            $profile['brand_name'] ?? null,
+            'Rechnungsnummer',
+            'invoice'
+        );
 
         // Meta cards
         $pdf->card(48, 632, 150, 54, 'Datum', $issuedAt);

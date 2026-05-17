@@ -24,6 +24,7 @@ const visualUploadInput = ref(null)
 const visualModalOpen = ref(false)
 const createPlanModalOpen = ref(false)
 const paymentModal = ref({ open: false, subscription: null, note: '' })
+const shippingAddressModal = ref({ open: false, subscription: null })
 const deliveryModal = ref({ open: false, subscription: null, delivery: null })
 const cancelSubscriptionModal = ref({ open: false, subscription: null, reason: '' })
 const deleteSubscriptionModal = ref({ open: false, subscription: null, confirmation: '' })
@@ -57,6 +58,17 @@ const newPlan = useForm({
 const visualForm = useForm({
     hero_source: props.visuals.hero?.source || '',
     hero_upload: null,
+})
+
+const shippingAddressForm = useForm({
+    shipping_name: '',
+    shipping_country: 'DE',
+    shipping_street: '',
+    shipping_house_number: '',
+    shipping_postal_code: '',
+    shipping_city: '',
+    shipping_state: '',
+    shipping_note: '',
 })
 
 const tabs = computed(() => [
@@ -101,9 +113,16 @@ const formatDate = (value) => {
     }).format(new Date(value))
 }
 
+const shippingAddressLine = (address) => [
+    [address?.street, address?.house_number].filter(Boolean).join(' '),
+    [address?.postal_code, address?.city].filter(Boolean).join(' '),
+    [address?.state, address?.country].filter(Boolean).join(', '),
+].filter(Boolean).join(', ')
+
 const statusLabel = (status) => ({
     pending_payment: 'Zahlung offen',
     active: 'Aktiv',
+    cancels_at_period_end: 'Gekuendigt zum Laufzeitende',
     paused: 'Pausiert',
     payment_paused: 'Zahlung pausiert',
     cancelled: 'Abgebrochen',
@@ -112,6 +131,25 @@ const statusLabel = (status) => ({
     shipped: 'Versendet',
     delivered: 'Geliefert',
 })[status] || status || 'Unbekannt'
+
+const issueTypeLabel = (type) => ({
+    exchange: 'Umtausch',
+    return: 'Retoure',
+    damaged: 'Beschaedigt',
+    missing_item: 'Artikel fehlt',
+    wrong_item: 'Falscher Artikel',
+    other: 'Sonstiges',
+})[type] || type || '-'
+
+const issueStatusLabel = (status) => ({
+    open: 'Offen',
+    reviewing: 'In Pruefung',
+    approved: 'Freigegeben',
+    return_waiting: 'Ruecksendung offen',
+    replacement_preparing: 'Ersatz wird vorbereitet',
+    resolved: 'Geloest',
+    rejected: 'Abgeschlossen',
+})[status] || status || '-'
 
 const paymentStatusLabel = (status) => ({
     pending: 'Nicht bezahlt',
@@ -131,6 +169,7 @@ const badgeClass = (status) => ({
     pending_payment: 'border-amber-400/50 bg-amber-400/10 text-amber-200',
     paid: 'border-emerald-400/50 bg-emerald-400/10 text-emerald-200',
     active: 'border-emerald-400/50 bg-emerald-400/10 text-emerald-200',
+    cancels_at_period_end: 'border-amber-400/50 bg-amber-400/10 text-amber-200',
     payment_paused: 'border-amber-400/50 bg-amber-400/10 text-amber-200',
     cancelled: 'border-red-400/50 bg-red-400/10 text-red-200',
     failed: 'border-red-400/50 bg-red-400/10 text-red-200',
@@ -311,9 +350,14 @@ const formForDelivery = (delivery) => {
         status: delivery.status || 'planned',
         delivery_month: delivery.delivery_month || '',
         tracking_number: delivery.tracking_number || '',
+        tracking_url: delivery.tracking_url || '',
         carrier: delivery.carrier || '',
         items_text: (delivery.items || []).join('\n'),
         notes: delivery.notes || '',
+        issue_status: delivery.issue?.status || 'reviewing',
+        issue_admin_note: delivery.issue?.admin_note || '',
+        return_tracking_number: delivery.issue?.return_tracking_number || '',
+        return_tracking_url: delivery.issue?.return_tracking_url || '',
     })
 
     return deliveryForms.value[delivery.id]
@@ -331,6 +375,7 @@ const markDeliveryShipped = (delivery) => {
 
     router.post(route('admin.outfit-deliveries.shipped', delivery.id), {
         tracking_number: form.tracking_number,
+        tracking_url: form.tracking_url,
         carrier: form.carrier,
     }, {
         preserveScroll: true,
@@ -339,6 +384,19 @@ const markDeliveryShipped = (delivery) => {
 
 const markDeliveryDelivered = (delivery) => {
     router.post(route('admin.outfit-deliveries.delivered', delivery.id), {}, {
+        preserveScroll: true,
+    })
+}
+
+const saveDeliveryIssue = (delivery) => {
+    const form = formForDelivery(delivery)
+
+    router.put(route('admin.outfit-deliveries.issue.update', delivery.id), {
+        issue_status: form.issue_status,
+        issue_admin_note: form.issue_admin_note,
+        return_tracking_number: form.return_tracking_number,
+        return_tracking_url: form.return_tracking_url,
+    }, {
         preserveScroll: true,
     })
 }
@@ -461,6 +519,37 @@ const markPaymentOpen = (subscription) => {
 
     router.post(route('admin.outfit-subscriptions.mark-unpaid', subscription.id), {}, {
         preserveScroll: true,
+    })
+}
+
+const openShippingAddressModal = (subscription) => {
+    const address = subscription.shipping_address || {}
+
+    shippingAddressForm.clearErrors()
+    shippingAddressForm.shipping_name = address.name || subscription.user?.name || ''
+    shippingAddressForm.shipping_country = address.country || 'DE'
+    shippingAddressForm.shipping_street = address.street || ''
+    shippingAddressForm.shipping_house_number = address.house_number || ''
+    shippingAddressForm.shipping_postal_code = address.postal_code || ''
+    shippingAddressForm.shipping_city = address.city || ''
+    shippingAddressForm.shipping_state = address.state || ''
+    shippingAddressForm.shipping_note = address.note || ''
+    shippingAddressModal.value = { open: true, subscription }
+}
+
+const closeShippingAddressModal = () => {
+    if (shippingAddressForm.processing) return
+
+    shippingAddressModal.value = { open: false, subscription: null }
+}
+
+const saveShippingAddress = () => {
+    const subscription = shippingAddressModal.value.subscription
+    if (!subscription) return
+
+    shippingAddressForm.put(route('admin.outfit-subscriptions.shipping-address.update', subscription.id), {
+        preserveScroll: true,
+        onSuccess: closeShippingAddressModal,
     })
 }
 
@@ -715,6 +804,15 @@ const deleteSubscription = () => {
                             <p class="mt-1 break-all text-xs text-secondary">{{ delivery.subscription?.user?.email || '-' }}</p>
                             <p class="mt-2 text-sm font-semibold text-primary">{{ delivery.subscription?.plan?.name || 'Plan geloescht' }}</p>
                             <p class="mt-1 text-xs text-secondary">{{ delivery.subscription?.payment_reference || 'Keine Referenz' }}</p>
+                            <p v-if="delivery.subscription?.shipping_address" class="mt-2 text-xs text-secondary">
+                                {{ delivery.subscription.shipping_address.name || 'Lieferadresse' }} - {{ shippingAddressLine(delivery.subscription.shipping_address) || '-' }}
+                            </p>
+                            <div v-if="delivery.issue" class="mt-3 rounded-lg border border-amber-400/30 bg-amber-400/10 p-3">
+                                <p class="text-xs font-semibold uppercase text-amber-200">{{ issueTypeLabel(delivery.issue.type) }}</p>
+                                <p class="mt-1 text-sm font-semibold text-primary">{{ issueStatusLabel(delivery.issue.status) }}</p>
+                                <p class="mt-1 text-xs text-secondary">{{ delivery.issue.description }}</p>
+                                <p v-if="delivery.issue.exchange_size" class="mt-1 text-xs text-secondary">Groesse: {{ delivery.issue.exchange_size }}</p>
+                            </div>
                         </div>
 
                         <div class="space-y-2">
@@ -734,6 +832,10 @@ const deleteSubscription = () => {
                         <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
                             <input v-model="formForDelivery(delivery).carrier" class="rounded-lg border-border bg-card text-sm text-primary" placeholder="Paketdienst, z.B. DHL">
                             <input v-model="formForDelivery(delivery).tracking_number" class="rounded-lg border-border bg-card text-sm text-primary" placeholder="Trackingnummer">
+                            <input v-model="formForDelivery(delivery).tracking_url" class="rounded-lg border-border bg-card text-sm text-primary" placeholder="Tracking-Link https://...">
+                            <a v-if="delivery.tracking_url" :href="delivery.tracking_url" target="_blank" rel="noopener noreferrer" class="break-all text-xs font-semibold text-accent underline underline-offset-2">
+                                Tracking öffnen
+                            </a>
                             <div class="text-xs text-secondary sm:col-span-2 xl:col-span-1">
                                 <p>Versendet: {{ formatDate(delivery.shipped_at) }}</p>
                                 <p>Geliefert: {{ formatDate(delivery.delivered_at) }}</p>
@@ -743,6 +845,20 @@ const deleteSubscription = () => {
                         <div class="grid gap-2">
                             <textarea v-model="formForDelivery(delivery).items_text" rows="3" class="rounded-lg border-border bg-card text-sm text-primary" placeholder="Artikel je Zeile, z.B. Laufshirt M"></textarea>
                             <textarea v-model="formForDelivery(delivery).notes" rows="3" class="rounded-lg border-border bg-card text-sm text-primary" placeholder="Interne Notiz"></textarea>
+                            <template v-if="delivery.issue">
+                                <select v-model="formForDelivery(delivery).issue_status" class="rounded-lg border-border bg-card text-sm text-primary">
+                                    <option value="open">Offen</option>
+                                    <option value="reviewing">In Pruefung</option>
+                                    <option value="approved">Freigegeben</option>
+                                    <option value="return_waiting">Ruecksendung offen</option>
+                                    <option value="replacement_preparing">Ersatz wird vorbereitet</option>
+                                    <option value="resolved">Geloest</option>
+                                    <option value="rejected">Abgeschlossen</option>
+                                </select>
+                                <input v-model="formForDelivery(delivery).return_tracking_number" class="rounded-lg border-border bg-card text-sm text-primary" placeholder="Retouren-Trackingnummer">
+                                <input v-model="formForDelivery(delivery).return_tracking_url" class="rounded-lg border-border bg-card text-sm text-primary" placeholder="Retouren-Link https://...">
+                                <textarea v-model="formForDelivery(delivery).issue_admin_note" rows="2" class="rounded-lg border-border bg-card text-sm text-primary" placeholder="Antwort / interne Support-Notiz"></textarea>
+                            </template>
                         </div>
 
                         <div class="flex flex-wrap gap-2 xl:flex-col xl:items-end">
@@ -754,6 +870,9 @@ const deleteSubscription = () => {
                             </button>
                             <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="markDeliveryDelivered(delivery)">
                                 Geliefert
+                            </button>
+                            <button v-if="delivery.issue" type="button" class="rounded-lg border border-amber-400/50 px-3 py-2 text-sm font-semibold text-amber-200 hover:bg-amber-400/10" @click="saveDeliveryIssue(delivery)">
+                                Support speichern
                             </button>
                             <button type="button" class="rounded-lg border border-red-500/50 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/10" @click="openDeleteDeliveryModal(delivery)">
                                 Loeschen
@@ -802,6 +921,9 @@ const deleteSubscription = () => {
                         <p class="font-semibold text-primary">{{ subscription.user?.name || 'Unbekannter Kunde' }}</p>
                         <p class="mt-1 break-all text-xs text-secondary">{{ subscription.user?.email }}</p>
                         <p class="mt-1 text-xs text-secondary">Anfrage: {{ formatDate(subscription.created_at) }}</p>
+                        <p v-if="subscription.shipping_address" class="mt-2 text-xs text-secondary">
+                            {{ subscription.shipping_address.name || 'Lieferadresse' }} - {{ shippingAddressLine(subscription.shipping_address) || '-' }}
+                        </p>
                     </div>
 
                     <div>
@@ -851,6 +973,12 @@ const deleteSubscription = () => {
                         <p v-if="subscription.latest_delivery?.tracking_number" class="mt-1 break-all text-xs text-secondary">
                             {{ subscription.latest_delivery.carrier || 'Tracking' }}: {{ subscription.latest_delivery.tracking_number }}
                         </p>
+                        <a v-if="subscription.latest_delivery?.tracking_url" :href="subscription.latest_delivery.tracking_url" target="_blank" rel="noopener noreferrer" class="mt-1 inline-flex break-all text-xs font-semibold text-accent underline underline-offset-2">
+                            Tracking öffnen
+                        </a>
+                        <p v-if="subscription.latest_delivery?.issue" class="mt-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-2 py-1 text-xs font-semibold text-amber-200">
+                            {{ issueTypeLabel(subscription.latest_delivery.issue.type) }}: {{ issueStatusLabel(subscription.latest_delivery.issue.status) }}
+                        </p>
                     </div>
 
                     <div class="text-sm">
@@ -881,6 +1009,13 @@ const deleteSubscription = () => {
                             @click="remindPayment(subscription)"
                         >
                             Erinnern
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
+                            @click="openShippingAddressModal(subscription)"
+                        >
+                            Adresse
                         </button>
                         <button
                             v-if="subscription.payment_status === 'paid' && subscription.status === 'active'"
@@ -921,9 +1056,12 @@ const deleteSubscription = () => {
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wide text-accent">Lieferstatus bearbeiten</p>
                             <h2 class="mt-1 text-xl font-bold text-primary">{{ deliveryModal.subscription?.plan?.name || 'Outfit-Lieferung' }}</h2>
-                            <p class="mt-2 text-sm leading-6 text-secondary">
-                                {{ deliveryModal.subscription?.user?.name || 'Kunde' }} - {{ deliveryModal.subscription?.payment_reference || 'Keine Referenz' }}
-                            </p>
+                        <p class="mt-2 text-sm leading-6 text-secondary">
+                            {{ deliveryModal.subscription?.user?.name || 'Kunde' }} - {{ deliveryModal.subscription?.payment_reference || 'Keine Referenz' }}
+                        </p>
+                        <p v-if="deliveryModal.subscription?.shipping_address" class="mt-2 text-xs leading-5 text-secondary">
+                            {{ deliveryModal.subscription.shipping_address.name || 'Lieferadresse' }} - {{ shippingAddressLine(deliveryModal.subscription.shipping_address) || '-' }}
+                        </p>
                         </div>
                         <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="closeDeliveryModal">
                             <i class="las la-times text-xl"></i>
@@ -958,6 +1096,11 @@ const deleteSubscription = () => {
                         </label>
 
                         <label class="block md:col-span-2">
+                            <span class="text-sm font-semibold text-primary">Tracking-Link</span>
+                            <input v-model="formForDelivery(deliveryModal.delivery).tracking_url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="https://...">
+                        </label>
+
+                        <label class="block md:col-span-2">
                             <span class="text-sm font-semibold text-primary">Artikel in der Lieferung</span>
                             <textarea v-model="formForDelivery(deliveryModal.delivery).items_text" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Ein Artikel pro Zeile"></textarea>
                         </label>
@@ -966,6 +1109,48 @@ const deleteSubscription = () => {
                             <span class="text-sm font-semibold text-primary">Notiz</span>
                             <textarea v-model="formForDelivery(deliveryModal.delivery).notes" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Interne Notiz"></textarea>
                         </label>
+
+                        <div v-if="deliveryModal.delivery?.issue" class="rounded-lg border border-amber-400/30 bg-amber-400/10 p-4 md:col-span-2">
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase text-amber-200">{{ issueTypeLabel(deliveryModal.delivery.issue.type) }}</p>
+                                    <p class="mt-1 text-sm font-semibold text-primary">{{ issueStatusLabel(deliveryModal.delivery.issue.status) }}</p>
+                                    <p class="mt-2 text-sm text-secondary">{{ deliveryModal.delivery.issue.description }}</p>
+                                    <p v-if="deliveryModal.delivery.issue.requested_resolution" class="mt-1 text-xs text-secondary">Wunsch: {{ deliveryModal.delivery.issue.requested_resolution }}</p>
+                                    <p v-if="deliveryModal.delivery.issue.exchange_size" class="mt-1 text-xs text-secondary">Groesse: {{ deliveryModal.delivery.issue.exchange_size }}</p>
+                                </div>
+                                <span class="rounded-full border border-amber-400/40 px-3 py-1 text-xs font-semibold text-amber-200">
+                                    {{ formatDate(deliveryModal.delivery.issue.requested_at) }}
+                                </span>
+                            </div>
+
+                            <div class="mt-4 grid gap-3 md:grid-cols-2">
+                                <label class="block">
+                                    <span class="text-sm font-semibold text-primary">Support-Status</span>
+                                    <select v-model="formForDelivery(deliveryModal.delivery).issue_status" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                                        <option value="open">Offen</option>
+                                        <option value="reviewing">In Pruefung</option>
+                                        <option value="approved">Freigegeben</option>
+                                        <option value="return_waiting">Ruecksendung offen</option>
+                                        <option value="replacement_preparing">Ersatz wird vorbereitet</option>
+                                        <option value="resolved">Geloest</option>
+                                        <option value="rejected">Abgeschlossen</option>
+                                    </select>
+                                </label>
+                                <label class="block">
+                                    <span class="text-sm font-semibold text-primary">Retouren-Trackingnummer</span>
+                                    <input v-model="formForDelivery(deliveryModal.delivery).return_tracking_number" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Optional">
+                                </label>
+                                <label class="block md:col-span-2">
+                                    <span class="text-sm font-semibold text-primary">Retouren-Link</span>
+                                    <input v-model="formForDelivery(deliveryModal.delivery).return_tracking_url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="https://...">
+                                </label>
+                                <label class="block md:col-span-2">
+                                    <span class="text-sm font-semibold text-primary">Antwort / Support-Notiz</span>
+                                    <textarea v-model="formForDelivery(deliveryModal.delivery).issue_admin_note" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Was soll der Kunde sehen?"></textarea>
+                                </label>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="flex flex-col-reverse gap-2 border-t border-border p-5 sm:flex-row sm:justify-between">
@@ -980,6 +1165,9 @@ const deleteSubscription = () => {
                         <div class="flex flex-col-reverse gap-2 sm:flex-row">
                             <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeDeliveryModal">
                                 Abbrechen
+                            </button>
+                            <button v-if="deliveryModal.delivery?.issue" type="button" class="rounded-lg border border-amber-400/50 px-4 py-2 text-sm font-semibold text-amber-200 hover:bg-amber-400/10" @click="saveDeliveryIssue(deliveryModal.delivery)">
+                                Support speichern
                             </button>
                             <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="formForDelivery(deliveryModal.delivery).processing" @click="saveDeliveryModal">
                                 Speichern
@@ -1037,6 +1225,81 @@ const deleteSubscription = () => {
                         </button>
                         <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:opacity-90" @click="markSubscriptionPaid">
                             Zahlung bestaetigen
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
+        <Teleport to="body">
+            <div v-if="shippingAddressModal.open" class="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm">
+                <div class="w-full max-w-2xl rounded-lg border border-border bg-card shadow-2xl">
+                    <div class="flex items-start justify-between gap-4 border-b border-border p-5">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-accent">Lieferadresse bearbeiten</p>
+                            <h2 class="mt-1 text-xl font-bold text-primary">{{ shippingAddressModal.subscription?.plan?.name }}</h2>
+                            <p class="mt-2 text-sm leading-6 text-secondary">
+                                {{ shippingAddressModal.subscription?.user?.name || 'Kunde' }} - {{ shippingAddressModal.subscription?.payment_reference || 'Keine Referenz' }}
+                            </p>
+                        </div>
+                        <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="closeShippingAddressModal">
+                            <i class="las la-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="grid max-h-[75vh] gap-4 overflow-y-auto p-5 md:grid-cols-2">
+                        <label class="block md:col-span-2">
+                            <span class="text-sm font-semibold text-primary">Name</span>
+                            <input v-model="shippingAddressForm.shipping_name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Vor- und Nachname">
+                            <span v-if="shippingAddressForm.errors.shipping_name" class="mt-1 block text-xs text-red-300">{{ shippingAddressForm.errors.shipping_name }}</span>
+                        </label>
+
+                        <label class="block md:col-span-2">
+                            <span class="text-sm font-semibold text-primary">Strasse</span>
+                            <input v-model="shippingAddressForm.shipping_street" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Strasse">
+                            <span v-if="shippingAddressForm.errors.shipping_street" class="mt-1 block text-xs text-red-300">{{ shippingAddressForm.errors.shipping_street }}</span>
+                        </label>
+
+                        <label class="block">
+                            <span class="text-sm font-semibold text-primary">Hausnummer</span>
+                            <input v-model="shippingAddressForm.shipping_house_number" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="12a">
+                        </label>
+
+                        <label class="block">
+                            <span class="text-sm font-semibold text-primary">Land</span>
+                            <input v-model="shippingAddressForm.shipping_country" maxlength="2" class="mt-1 w-full rounded-lg border-border bg-inputBg uppercase text-primary" placeholder="DE">
+                            <span v-if="shippingAddressForm.errors.shipping_country" class="mt-1 block text-xs text-red-300">{{ shippingAddressForm.errors.shipping_country }}</span>
+                        </label>
+
+                        <label class="block">
+                            <span class="text-sm font-semibold text-primary">PLZ</span>
+                            <input v-model="shippingAddressForm.shipping_postal_code" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="12345">
+                            <span v-if="shippingAddressForm.errors.shipping_postal_code" class="mt-1 block text-xs text-red-300">{{ shippingAddressForm.errors.shipping_postal_code }}</span>
+                        </label>
+
+                        <label class="block">
+                            <span class="text-sm font-semibold text-primary">Stadt</span>
+                            <input v-model="shippingAddressForm.shipping_city" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Berlin">
+                            <span v-if="shippingAddressForm.errors.shipping_city" class="mt-1 block text-xs text-red-300">{{ shippingAddressForm.errors.shipping_city }}</span>
+                        </label>
+
+                        <label class="block md:col-span-2">
+                            <span class="text-sm font-semibold text-primary">Bundesland / Region</span>
+                            <input v-model="shippingAddressForm.shipping_state" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Optional">
+                        </label>
+
+                        <label class="block md:col-span-2">
+                            <span class="text-sm font-semibold text-primary">Lieferhinweis</span>
+                            <textarea v-model="shippingAddressForm.shipping_note" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Optional, z.B. bei Nachbarn abgeben"></textarea>
+                        </label>
+                    </div>
+
+                    <div class="flex flex-col-reverse gap-2 border-t border-border p-5 sm:flex-row sm:justify-end">
+                        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeShippingAddressModal">
+                            Abbrechen
+                        </button>
+                        <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:opacity-90 disabled:opacity-50" :disabled="shippingAddressForm.processing" @click="saveShippingAddress">
+                            Adresse speichern
                         </button>
                     </div>
                 </div>

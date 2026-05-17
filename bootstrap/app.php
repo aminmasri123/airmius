@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\HardenAdminArea;
 use App\Http\Middleware\EnsureApplicationIsNotInMaintenance;
 use App\Http\Middleware\EnsureAccountIsNotSuspended;
 use App\Http\Middleware\EnsureGuardianConsentResolved;
@@ -50,6 +51,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'club' => SetCurrentClub::class,
+            'admin.harden' => HardenAdminArea::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [

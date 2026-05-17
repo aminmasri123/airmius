@@ -13,7 +13,10 @@ class InactiveAccountNotice extends Notification
 
     public function __construct(
         private string $stage,
-        private ?string $scheduledDate = null
+        private ?string $scheduledDate = null,
+        private ?string $mailer = null,
+        private ?string $fromAddress = null,
+        private ?string $fromName = null,
     ) {}
 
     public function via(object $notifiable): array
@@ -29,9 +32,19 @@ class InactiveAccountNotice extends Notification
             default => 'inactive_account_scheduled',
         };
 
-        return EmailTemplate::mail($key, [
+        $message = EmailTemplate::mail($key, [
             'name' => trim((string) ($notifiable->name ?? '')) ?: 'zusammen',
             'scheduled_date' => $this->scheduledDate ?: '-',
         ], route('login'));
+
+        if ($this->mailer) {
+            $message->mailer($this->mailer);
+        }
+
+        if ($this->fromAddress) {
+            $message->from($this->fromAddress, $this->fromName ?: config('mail.from.name'));
+        }
+
+        return $message;
     }
 }

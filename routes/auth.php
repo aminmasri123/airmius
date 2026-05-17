@@ -27,6 +27,7 @@ use App\Http\Controllers\ProfileGamificationController;
 use App\Http\Controllers\RideController;
 use App\Http\Controllers\RoleWorkspaceController;
 use App\Http\Controllers\SportIntegrationController;
+use App\Http\Controllers\StoryController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\SubscriptionInvoiceController;
 use App\Http\Controllers\SubscriptionPlanController;
@@ -50,11 +51,23 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::get('/workspaces', [RoleWorkspaceController::class, 'index'])->name('auth.workspaces.index');
     Route::get('/training', [TrainingController::class, 'index'])->name('auth.training.index');
     Route::post('/training/activities', [TrainingController::class, 'storeActivity'])->name('auth.training.activities.store');
+    Route::get('/training/logs/create', [TrainingController::class, 'createLog'])->name('auth.training.logs.create');
+    Route::post('/training/logs', [TrainingController::class, 'storeLog'])->name('auth.training.logs.store');
+    Route::put('/training/logs/{log}/draft', [TrainingController::class, 'updateDraftLog'])->name('auth.training.logs.draft.update');
+    Route::delete('/training/logs/{log}/draft', [TrainingController::class, 'destroyDraftLog'])->name('auth.training.logs.draft.destroy');
+    Route::get('/training/logs/{log}', [TrainingController::class, 'showLog'])->name('auth.training.logs.show');
+    Route::post('/training/logs/{log}/feedback', [TrainingController::class, 'storeLogFeedback'])->name('auth.training.logs.feedback.store');
     Route::post('/training/plans', [TrainingController::class, 'storePlan'])->name('auth.training.plans.store');
     Route::put('/training/plans/{plan}', [TrainingController::class, 'updatePlan'])->name('auth.training.plans.update');
     Route::post('/training/plans/{plan}/publish', [TrainingController::class, 'publishPlan'])->name('auth.training.plans.publish');
+    Route::post('/training/plans/{plan}/duplicate', [TrainingController::class, 'duplicatePlan'])->name('auth.training.plans.duplicate');
     Route::delete('/training/plans/{plan}', [TrainingController::class, 'destroyPlan'])->name('auth.training.plans.destroy');
     Route::post('/training/plans/{plan}/items', [TrainingController::class, 'storePlanItem'])->name('auth.training.plans.items.store');
+    Route::post('/training/plans/{plan}/items/{item}/missed', [TrainingController::class, 'markPlanItemMissed'])->name('auth.training.plans.items.missed');
+    Route::get('/training/plans/{plan}/items/{item}', [TrainingController::class, 'showPlanItem'])->name('auth.training.plans.items.show');
+    Route::put('/training/plans/{plan}/items/{item}', [TrainingController::class, 'updatePlanItem'])->name('auth.training.plans.items.update');
+    Route::post('/training/plans/{plan}/items/{item}/duplicate', [TrainingController::class, 'duplicatePlanItem'])->name('auth.training.plans.items.duplicate');
+    Route::delete('/training/plans/{plan}/items/{item}', [TrainingController::class, 'destroyPlanItem'])->name('auth.training.plans.items.destroy');
 
     // PROFILE
     Route::get('/users/{user}', [UserController::class, 'show'])->name('auth.users.show');
@@ -81,16 +94,36 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::post('/user-subscriptions/{subscription}/provider-portal', [SubscriptionPlanController::class, 'providerPortal'])->name('auth.user-subscriptions.provider-portal');
     Route::put('/user/status', [UserStatusController::class, 'update'])->name('auth.user.status.update');
     Route::get('/commerce', [CommerceCheckoutController::class, 'index'])->name('auth.commerce.index');
+    Route::get('/learning/my-courses', [PublicLearningController::class, 'myCourses'])->name('auth.learning.my-courses.index');
+    Route::get('/learning/certificates/{certificate}', [PublicLearningController::class, 'downloadCertificate'])->name('auth.learning.certificates.show');
     Route::get('/learning/studio', [LearningStudioController::class, 'index'])->name('auth.learning.studio.index');
     Route::post('/learning/studio/courses', [LearningStudioController::class, 'storeCourse'])->name('auth.learning.studio.courses.store');
     Route::put('/learning/studio/courses/{course}', [LearningStudioController::class, 'updateCourse'])->name('auth.learning.studio.courses.update');
+    Route::post('/learning/studio/courses/{course}/uploads', [LearningStudioController::class, 'uploadAsset'])->name('auth.learning.studio.uploads.store');
+    Route::get('/learning/studio/courses/{course}/report.csv', [LearningStudioController::class, 'exportReport'])->name('auth.learning.studio.courses.report');
+    Route::post('/learning/studio/courses/{course}/coupons', [LearningStudioController::class, 'storeCoupon'])->name('auth.learning.studio.coupons.store');
+    Route::post('/learning/studio/courses/{course}/assignments', [LearningStudioController::class, 'storeAssignment'])->name('auth.learning.studio.assignments.store');
+    Route::put('/learning/studio/courses/{course}/assignment-submissions/{submission}', [LearningStudioController::class, 'gradeAssignment'])->name('auth.learning.studio.assignment-submissions.update');
+    Route::post('/learning/studio/courses/{course}/enrollments', [LearningStudioController::class, 'grantEnrollment'])->name('auth.learning.studio.enrollments.store');
+    Route::put('/learning/studio/courses/{course}/enrollments/{enrollment}/revoke', [LearningStudioController::class, 'revokeEnrollment'])->name('auth.learning.studio.enrollments.revoke');
     Route::post('/learning/studio/courses/{course}/sections', [LearningStudioController::class, 'storeSection'])->name('auth.learning.studio.sections.store');
     Route::post('/learning/studio/courses/{course}/lessons', [LearningStudioController::class, 'storeLesson'])->name('auth.learning.studio.lessons.store');
+    Route::put('/learning/studio/courses/{course}/lessons/reorder', [LearningStudioController::class, 'reorderLessons'])->name('auth.learning.studio.lessons.reorder');
     Route::put('/learning/studio/courses/{course}/lessons/{lesson}', [LearningStudioController::class, 'updateLesson'])->name('auth.learning.studio.lessons.update');
+    Route::delete('/learning/studio/courses/{course}/lessons/{lesson}', [LearningStudioController::class, 'destroyLesson'])->name('auth.learning.studio.lessons.destroy');
     Route::post('/learning/studio/courses/{course}/quizzes', [LearningStudioController::class, 'storeQuiz'])->name('auth.learning.studio.quizzes.store');
+    Route::delete('/learning/studio/courses/{course}/quizzes/{quiz}', [LearningStudioController::class, 'destroyQuiz'])->name('auth.learning.studio.quizzes.destroy');
+    Route::put('/learning/studio/courses/{course}/comments/{comment}', [LearningStudioController::class, 'resolveComment'])->name('auth.learning.studio.comments.update');
+    Route::post('/learning/studio/courses/{course}/comments/{comment}/replies', [LearningStudioController::class, 'replyComment'])->name('auth.learning.studio.comments.replies.store');
     Route::post('/learning/courses/{course}/enroll', [PublicLearningController::class, 'enroll'])->name('auth.learning.courses.enroll');
+    Route::put('/learning/courses/{course}/lessons/{lesson}/complete', [PublicLearningController::class, 'completeLesson'])->name('auth.learning.lessons.complete');
+    Route::get('/learning/courses/{course}/lessons/{lesson}/video', [PublicLearningController::class, 'streamLessonVideo'])->name('auth.learning.lessons.video');
+    Route::put('/learning/courses/{course}/lessons/{lesson}/progress', [PublicLearningController::class, 'trackLessonProgress'])->name('auth.learning.lessons.progress.update');
     Route::post('/learning/courses/{course}/lessons/{lesson}/notes', [PublicLearningController::class, 'storeNote'])->name('auth.learning.lessons.notes.store');
     Route::post('/learning/courses/{course}/lessons/{lesson}/comments', [PublicLearningController::class, 'storeComment'])->name('auth.learning.lessons.comments.store');
+    Route::post('/learning/courses/{course}/assignments/{assignment}/submissions', [PublicLearningController::class, 'submitAssignment'])->name('auth.learning.assignments.submissions.store');
+    Route::post('/learning/courses/{course}/quizzes/{quiz}/attempts', [PublicLearningController::class, 'submitQuiz'])->name('auth.learning.quizzes.attempts.store');
+    Route::post('/learning/courses/{course}/reviews', [PublicLearningController::class, 'storeReview'])->name('auth.learning.reviews.store');
     Route::get('/card', [CommerceCheckoutController::class, 'cart'])->name('auth.commerce.cart.index');
     Route::get('/cart', fn () => redirect()->route('auth.commerce.cart.index'))->name('auth.commerce.cart.redirect');
     Route::get('/commerce/products/{product}', [CommerceCheckoutController::class, 'showProduct'])->name('auth.commerce.products.show');
@@ -127,6 +160,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::post('/outfit-subscriptions/{subscription}/pause', [OutfitSubscriptionController::class, 'pause'])->name('auth.outfit-subscriptions.pause');
     Route::post('/outfit-subscriptions/{subscription}/resume', [OutfitSubscriptionController::class, 'resume'])->name('auth.outfit-subscriptions.resume');
     Route::post('/outfit-subscriptions/{subscription}/cancel', [OutfitSubscriptionController::class, 'cancel'])->name('auth.outfit-subscriptions.cancel');
+    Route::post('/outfit-deliveries/{delivery}/issue', [OutfitSubscriptionController::class, 'requestDeliveryIssue'])->name('auth.outfit-deliveries.issue.request');
     Route::get('/settings/sport-integrations/{provider}/connect', [SportIntegrationController::class, 'redirect'])
         ->name('auth.sport-integrations.connect');
     Route::get('/settings/sport-integrations/{provider}/callback', [SportIntegrationController::class, 'callback'])
@@ -236,7 +270,14 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::delete('/posts/{post}', [PostController::class, 'destroy'])->name('auth.posts.destroy');
     Route::post('/posts/{post}/helpful', [PostHelpfulController::class, 'toggle'])->name('auth.posts.helpful');
 
+    // STORIES
+    Route::post('/stories', [StoryController::class, 'store'])->name('auth.stories.store');
+    Route::post('/stories/{story}/viewed', [StoryController::class, 'viewed'])->name('auth.stories.viewed');
+    Route::post('/stories/{story}/react', [StoryController::class, 'react'])->name('auth.stories.react');
+    Route::delete('/stories/{story}', [StoryController::class, 'destroy'])->name('auth.stories.destroy');
+
     // COMMENTS
+    Route::get('/posts/{post}/comments', [CommentController::class, 'index'])->name('auth.comments.index');
     Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->name('auth.comments.store');
     Route::put('/comments/{comment}', [CommentController::class, 'update'])->name('auth.comments.update');
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('auth.comments.destroy');
@@ -250,14 +291,21 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     // CHAT
     Route::get('/conversations', [ConversationController::class, 'index'])->name('auth.conversations.index');
     Route::get('/conversations/{conversation}', [ConversationController::class, 'show'])->name('auth.conversations.show');
-    Route::post('/conversations', [ConversationController::class, 'store'])->name('auth.conversations.store');
+    Route::post('/conversations', [ConversationController::class, 'store'])->middleware('throttle:chat-messages')->name('auth.conversations.store');
+    Route::put('/conversations/{conversation}', [ConversationController::class, 'update'])->name('auth.conversations.update');
+    Route::put('/conversations/{conversation}/mute', [ConversationController::class, 'mute'])->name('auth.conversations.mute');
     Route::delete('/conversations/{conversation}/leave', [ConversationController::class, 'leave'])->name('auth.conversations.leave');
-    Route::post('/conversations/{conversation}/members', [ConversationController::class, 'addMembers'])->name('auth.conversations.members.store');
-    Route::post('/conversations/{conversation}/typing', [ConversationController::class, 'typing'])->name('auth.conversations.typing');
+    Route::post('/conversations/{conversation}/members', [ConversationController::class, 'addMembers'])->middleware('throttle:chat-messages')->name('auth.conversations.members.store');
+    Route::delete('/conversations/{conversation}/members/{user}', [ConversationController::class, 'removeMember'])->name('auth.conversations.members.destroy');
+    Route::put('/conversations/{conversation}/owner', [ConversationController::class, 'transferOwner'])->name('auth.conversations.owner.update');
+    Route::post('/conversations/{conversation}/typing', [ConversationController::class, 'typing'])->middleware('throttle:chat-presence')->name('auth.conversations.typing');
+    Route::post('/conversation-invitations/{invitation}/accept', [ConversationController::class, 'acceptInvitation'])->name('auth.conversation-invitations.accept');
+    Route::post('/conversation-invitations/{invitation}/decline', [ConversationController::class, 'declineInvitation'])->name('auth.conversation-invitations.decline');
 
     Route::get('/messages', fn () => redirect()->route('auth.conversations.index'))->name('auth.messages.index');
-    Route::post('/messages', [MessageController::class, 'store'])->name('auth.messages.store');
+    Route::post('/messages', [MessageController::class, 'store'])->middleware('throttle:chat-messages')->name('auth.messages.store');
     Route::post('/messages/read', [MessageController::class, 'markAsRead'])->name('auth.messages.read');
+    Route::delete('/messages/{message}/hide', [MessageController::class, 'hideForMe'])->name('auth.messages.hide');
     Route::delete('/messages/{message}', [MessageController::class, 'destroy'])->name('auth.messages.destroy');
     Route::post('/messages/{message}/reactions', [MessageController::class, 'react'])->name('auth.messages.reactions.store');
 
@@ -271,17 +319,18 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
 
     // FILES
     Route::get('/files', [FileController::class, 'index'])->name('auth.files.index');
-    Route::post('/files', [FileController::class, 'store'])->name('auth.files.store');
-    Route::post('/files/{file}/share', [FileController::class, 'share'])->name('auth.files.share');
-    Route::put('/files/{file}', [FileController::class, 'update'])->name('auth.files.update');
-    Route::get('/files/{file}/download', [FileController::class, 'download'])->name('auth.files.download');
-    Route::delete('/files/{file}', [FileController::class, 'destroy'])->name('auth.files.destroy');
+    Route::post('/files', [FileController::class, 'store'])->middleware('throttle:file-uploads')->name('auth.files.store');
+    Route::post('/files/{file}/share', [FileController::class, 'share'])->middleware('throttle:file-share')->name('auth.files.share');
+    Route::put('/files/{file}', [FileController::class, 'update'])->middleware('throttle:file-update')->name('auth.files.update');
+    Route::get('/files/{file}/preview', [FileController::class, 'preview'])->middleware('throttle:file-preview')->name('auth.files.preview');
+    Route::get('/files/{file}/download', [FileController::class, 'download'])->middleware('throttle:file-downloads')->name('auth.files.download');
+    Route::delete('/files/{file}', [FileController::class, 'destroy'])->middleware('throttle:file-delete')->name('auth.files.destroy');
 
     // FOLDERS
-    Route::post('/folders', [FolderController::class, 'store'])->name('auth.folders.store');
-    Route::post('/folders/{folder}/share', [FolderController::class, 'share'])->name('auth.folders.share');
-    Route::put('/folders/{folder}', [FolderController::class, 'update'])->name('auth.folders.update');
-    Route::delete('/folders/{folder}', [FolderController::class, 'destroy'])->name('auth.folders.destroy');
+    Route::post('/folders', [FolderController::class, 'store'])->middleware('throttle:file-folder-create')->name('auth.folders.store');
+    Route::post('/folders/{folder}/share', [FolderController::class, 'share'])->middleware('throttle:file-share')->name('auth.folders.share');
+    Route::put('/folders/{folder}', [FolderController::class, 'update'])->middleware('throttle:file-folder-update')->name('auth.folders.update');
+    Route::delete('/folders/{folder}', [FolderController::class, 'destroy'])->middleware('throttle:file-folder-delete')->name('auth.folders.destroy');
 
     // RIDES
     Route::get('/rides', [RideController::class, 'index'])->name('auth.rides.index');

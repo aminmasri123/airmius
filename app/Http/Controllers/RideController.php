@@ -49,16 +49,25 @@ class RideController extends Controller
                                 ->whereIn('team_id', $teamIds));
                     });
             })
-            ->latest()
+            ->orderBy('departure_time')
+            ->orderByDesc('created_at')
             ->get()
             ->map(function (Ride $ride) use ($user) {
                 $isDriver = (int) $ride->driver_id === (int) $user->id;
-                $acceptedUsers = $ride->users->filter(fn (User $member) => $member->pivot?->status === 'accepted')->values();
-                $pendingUsers = $ride->users->filter(fn (User $member) => $member->pivot?->status === 'requested')->values();
+                $acceptedUsers = $ride->users->filter(fn (User $member) => $member->pivot?->status === Ride::MEMBER_STATUS_ACCEPTED)->values();
+                $pendingUsers = $ride->users->filter(fn (User $member) => $member->pivot?->status === Ride::MEMBER_STATUS_REQUESTED)->values();
                 $ownPivot = $ride->users->firstWhere('id', $user->id)?->pivot;
-                $isJoined = $ownPivot?->status === 'accepted';
-                $hasPendingRequest = $ownPivot?->status === 'requested';
+                $isJoined = $ownPivot?->status === Ride::MEMBER_STATUS_ACCEPTED;
+                $hasPendingRequest = $ownPivot?->status === Ride::MEMBER_STATUS_REQUESTED;
                 $canUpdate = $user->can('update', $ride);
+                $joinState = $this->resolveJoinState(
+                    $ride,
+                    $user,
+                    $acceptedUsers->count(),
+                    $isDriver,
+                    $isJoined,
+                    $hasPendingRequest,
+                );
                 $canSeePrivateDetails = $isDriver || $isJoined || $canUpdate;
 
                 return [
@@ -99,11 +108,8 @@ class RideController extends Controller
                     'is_driver' => $isDriver,
                     'is_joined' => $isJoined,
                     'has_pending_request' => $hasPendingRequest,
-                    'can_join' => ! $isDriver
-                        && ! $isJoined
-                        && ! $hasPendingRequest
-                        && $acceptedUsers->count() < (int) $ride->seats
-                        && $user->can('join', $ride),
+                    'can_join' => $joinState['can_join'],
+                    'join_block_reason' => $joinState['join_block_reason'],
                     'can_update' => $canUpdate,
                     'can_delete' => $user->can('delete', $ride),
                 ];
@@ -169,20 +175,45 @@ class RideController extends Controller
 
     public function join(Ride $ride)
     {
-        $this->authorize('join', $ride);
+        $ride->loadMissing('users:id,name');
+        $user = auth()->user();
+        $ownPivot = $ride->users->firstWhere('id', $user->id)?->pivot;
+        $isJoined = $ownPivot?->status === Ride::MEMBER_STATUS_ACCEPTED;
+        $hasPendingRequest = $ownPivot?->status === Ride::MEMBER_STATUS_REQUESTED;
+        $acceptedCount = $ride->users->filter(fn (User $member) => $member->pivot?->status === Ride::MEMBER_STATUS_ACCEPTED)->count();
+
+        $joinState = $this->resolveJoinState(
+            $ride,
+            $user,
+            $acceptedCount,
+            (int) $ride->driver_id === (int) $user->id,
+            $isJoined,
+            $hasPendingRequest,
+        );
+
+        if (! $joinState['can_join']) {
+            return back()->with('error', $this->joinBlockMessage($joinState['join_block_reason']));
+        }
 
         $data = request()->validate([
             'message' => ['nullable', 'string', 'max:500'],
         ]);
-        $alreadyRequestedOrJoined = $ride->users()
-            ->where('users.id', auth()->id())
-            ->wherePivotIn('status', ['requested', 'accepted'])
-            ->exists();
-        abort_if(! $alreadyRequestedOrJoined && $ride->acceptedUsers()->count() >= (int) $ride->seats, 422, 'Diese Fahrgemeinschaft ist bereits voll.');
 
-        $this->service->requestToJoin($ride, auth()->user(), $data['message'] ?? null);
+        $result = $this->service->requestToJoin($ride, auth()->user(), $data['message'] ?? null);
 
-        if (! $alreadyRequestedOrJoined && (int) $ride->driver_id !== (int) auth()->id()) {
+        if ($result === RideService::RESULT_FULL) {
+            return back()->with('error', 'Diese Fahrgemeinschaft ist bereits voll.');
+        }
+
+        if ($result === RideService::RESULT_ALREADY_JOINED) {
+            return back()->with('success', 'Du bist bereits Mitfahrer dieser Fahrt.');
+        }
+
+        if ($result === RideService::RESULT_ALREADY_REQUESTED) {
+            return back()->with('success', 'Deine Anfrage wurde bereits gespeichert.');
+        }
+
+        if ($result === RideService::RESULT_REQUESTED && (int) $ride->driver_id !== (int) auth()->id()) {
             AppNotification::send($ride->driver_id, 'ride.requested', [
                 'title' => 'Neue Mitfahranfrage',
                 'message' => auth()->user()->name.' moechte bei '.$ride->from.' -> '.$ride->to.' mitfahren.',
@@ -191,25 +222,48 @@ class RideController extends Controller
             ]);
         }
 
+        if ($result !== RideService::RESULT_REQUESTED
+            && $result !== RideService::RESULT_ALREADY_JOINED
+            && $result !== RideService::RESULT_ALREADY_REQUESTED
+        ) {
+            return back()->with('error', 'Die Mitfahranfrage konnte nicht verarbeitet werden.');
+        }
+
         return back()->with('success', 'Deine Mitfahranfrage wurde gesendet.');
     }
 
     public function leave(Ride $ride)
     {
         $user = auth()->user();
-        abort_if((int) $ride->driver_id === (int) $user->id, 422, 'Fahrer koennen ihre eigene Fahrt nicht verlassen. Bitte loesche die Fahrt stattdessen.');
+        $ownPivot = $ride->users()
+            ->where('users.id', $user->id)
+            ->first()?->pivot;
 
-        $wasJoined = $ride->users()->where('users.id', $user->id)->wherePivot('status', 'accepted')->exists();
-        $ride->users()->detach($user->id);
-
-        if ($wasJoined) {
-            AppNotification::send($ride->driver_id, 'ride.left', [
-                'title' => 'Mitfahrt verlassen',
-                'message' => $user->name.' hat deine Fahrgemeinschaft '.$ride->from.' -> '.$ride->to.' verlassen.',
-                'ride_id' => $ride->id,
-                'url' => route('auth.rides.index'),
-            ]);
+        if ((int) $ride->driver_id === (int) $user->id) {
+            return back()->with('error', 'Der Fahrer kann die eigene Fahrt nicht verlassen.');
         }
+
+        if (! $ownPivot) {
+            return back()->with('error', 'Du nimmst nicht an dieser Fahrgemeinschaft teil.');
+        }
+
+        if ($ownPivot->status === Ride::MEMBER_STATUS_REQUESTED) {
+            $ride->users()->detach($user->id);
+
+            return back()->with('success', 'Deine offene Mitfahranfrage wurde zurueckgezogen.');
+        }
+
+        if ($ownPivot->status !== Ride::MEMBER_STATUS_ACCEPTED) {
+            return back()->with('error', 'Die Aktion ist fuer diese Mitgliedschaft nicht moeglich.');
+        }
+
+        $ride->users()->detach($user->id);
+        AppNotification::send($ride->driver_id, 'ride.left', [
+            'title' => 'Mitfahrt verlassen',
+            'message' => $user->name.' hat deine Fahrgemeinschaft '.$ride->from.' -> '.$ride->to.' verlassen.',
+            'ride_id' => $ride->id,
+            'url' => route('auth.rides.index'),
+        ]);
 
         return back()->with('success', 'Du hast die Fahrgemeinschaft verlassen.');
     }
@@ -217,14 +271,15 @@ class RideController extends Controller
     public function approveRequest(Ride $ride, User $user)
     {
         $this->authorize('update', $ride);
-        abort_unless($ride->users()->where('users.id', $user->id)->wherePivot('status', 'requested')->exists(), 404);
-        abort_if($ride->acceptedUsers()->count() >= (int) $ride->seats, 422, 'Diese Fahrgemeinschaft ist bereits voll.');
+        $result = $this->service->approveRequest($ride, $user);
 
-        $ride->users()->updateExistingPivot($user->id, [
-            'status' => 'accepted',
-            'responded_at' => now(),
-            'updated_at' => now(),
-        ]);
+        if ($result === RideService::RESULT_FULL) {
+            return back()->with('error', 'Diese Fahrgemeinschaft ist bereits voll.');
+        }
+
+        if ($result !== RideService::RESULT_APPROVED) {
+            return back()->with('error', 'Mitfahranfrage nicht mehr vorhanden.');
+        }
 
         AppNotification::send($user, 'ride.request_approved', [
             'title' => 'Mitfahranfrage angenommen',
@@ -239,13 +294,11 @@ class RideController extends Controller
     public function rejectRequest(Ride $ride, User $user)
     {
         $this->authorize('update', $ride);
-        abort_unless($ride->users()->where('users.id', $user->id)->wherePivot('status', 'requested')->exists(), 404);
+        $updated = $this->service->rejectRequest($ride, $user);
 
-        $ride->users()->updateExistingPivot($user->id, [
-            'status' => 'rejected',
-            'responded_at' => now(),
-            'updated_at' => now(),
-        ]);
+        if (! $updated) {
+            return back()->with('error', 'Mitfahranfrage nicht mehr vorhanden.');
+        }
 
         AppNotification::send($user, 'ride.request_rejected', [
             'title' => 'Mitfahranfrage abgelehnt',
@@ -260,8 +313,21 @@ class RideController extends Controller
     public function removeMember(Ride $ride, User $user)
     {
         $this->authorize('update', $ride);
-        abort_if((int) $ride->driver_id === (int) $user->id, 422, 'Der Fahrer kann nicht aus seiner eigenen Fahrgemeinschaft entfernt werden.');
-        abort_unless($ride->users()->where('users.id', $user->id)->wherePivot('status', 'accepted')->exists(), 404);
+        $memberPivot = $ride->users()
+            ->where('users.id', $user->id)
+            ->first()?->pivot;
+
+        if (! $memberPivot) {
+            return back()->with('error', 'Der Nutzer ist keine/r aktive/r Mitfahrer/in dieser Fahrgemeinschaft.');
+        }
+
+        if ((int) $user->id === (int) $ride->driver_id) {
+            return back()->with('error', 'Der Fahrer kann nicht aus seiner eigenen Fahrgemeinschaft entfernt werden.');
+        }
+
+        if ($memberPivot->status !== Ride::MEMBER_STATUS_ACCEPTED) {
+            return back()->with('error', 'Es kann nur ein aktiver Mitfahrer entfernt werden.');
+        }
 
         $ride->users()->detach($user->id);
 
@@ -278,7 +344,7 @@ class RideController extends Controller
     public function destroy(Ride $ride)
     {
         $this->authorize('delete', $ride);
-        $participants = $ride->users()->where('users.id', '!=', $ride->driver_id)->wherePivotIn('status', ['requested', 'accepted'])->get();
+        $participants = $ride->users()->where('users.id', '!=', $ride->driver_id)->wherePivotIn('status', [Ride::MEMBER_STATUS_REQUESTED, Ride::MEMBER_STATUS_ACCEPTED])->get();
         $message = $ride->from.' -> '.$ride->to.' wurde geloescht.';
 
         foreach ($participants as $participant) {
@@ -301,8 +367,8 @@ class RideController extends Controller
             'visibility' => ['required', Rule::in(Ride::VISIBILITIES)],
             'club_id' => ['nullable', 'integer', Rule::exists('clubs', 'id')],
             'team_id' => ['nullable', 'integer', Rule::exists('teams', 'id')],
-            'from' => ['required', 'string', 'max:255'],
-            'to' => ['required', 'string', 'max:255'],
+            'from' => ['required', 'string', 'max:255', 'different:to'],
+            'to' => ['required', 'string', 'max:255', 'different:from'],
             'pickup_name' => ['nullable', 'string', 'max:255'],
             'pickup_street' => ['nullable', 'string', 'max:255'],
             'pickup_house_number' => ['nullable', 'string', 'max:40'],
@@ -310,7 +376,7 @@ class RideController extends Controller
             'pickup_city' => ['nullable', 'string', 'max:255'],
             'pickup_country' => ['nullable', 'string', 'size:2'],
             'pickup_note' => ['nullable', 'string', 'max:500'],
-            'departure_time' => ['required', 'date'],
+            'departure_time' => ['required', 'date', 'after_or_equal:' . now()->addMinutes(10)->toDateTimeString()],
             'seats' => ['required', 'integer', 'min:1', 'max:20'],
             'contact_details' => ['nullable', 'string', 'max:1000'],
         ]);
@@ -383,7 +449,7 @@ class RideController extends Controller
             ->whereDate('birth_date', '>', now()->subYears(16)->toDateString())
             ->where(function ($query) use ($user) {
                 $query->where('guardian_user_id', $user->id)
-                    ->orWhereRaw('LOWER(guardian_email) = ?', [mb_strtolower((string) $user->email)]);
+                    ->orWhere('guardian_email', mb_strtolower((string) $user->email));
             })
             ->get();
     }
@@ -427,5 +493,53 @@ class RideController extends Controller
         return $user->hasAnyRole(Roles::FULL_ACCESS)
             || $user->can('system.manage')
             || $user->can('rides.manage');
+    }
+
+    private function resolveJoinState(Ride $ride, User $user, int $acceptedCount, bool $isDriver, bool $isJoined, bool $hasPendingRequest): array
+    {
+        $canJoinByPolicy = $user->can('join', $ride);
+        $isRideFull = $acceptedCount >= (int) $ride->seats;
+        $isPastRide = (bool) $ride->departure_time && now()->gt($ride->departure_time);
+
+        $canJoin = $canJoinByPolicy
+            && ! $isDriver
+            && ! $isJoined
+            && ! $hasPendingRequest
+            && ! $isRideFull
+            && ! $isPastRide;
+
+        if ($canJoin) {
+            return [
+                'can_join' => true,
+                'join_block_reason' => null,
+            ];
+        }
+
+        return [
+            'can_join' => false,
+            'join_block_reason' => match (true) {
+                $isDriver => 'driver',
+                $isJoined => 'already_joined',
+                $hasPendingRequest => 'pending_request',
+                $isRideFull => 'full',
+                $isPastRide => 'past',
+                ! $canJoinByPolicy => 'not_allowed',
+                default => 'unavailable',
+            },
+        ];
+    }
+
+    private function joinBlockMessage(?string $reason): string
+    {
+        return match ($reason) {
+            'driver' => 'Du bist der Fahrer dieser Fahrt.',
+            'already_joined' => 'Du bist bereits beigetreten.',
+            'pending_request' => 'Deine Anfrage ist bereits offen.',
+            'full' => 'Diese Fahrgemeinschaft ist bereits voll.',
+            'past' => 'Die Abfahrtszeit liegt bereits in der Vergangenheit.',
+            'not_allowed' => 'Du hast keinen Zugriff auf diese Fahrt.',
+            'unavailable' => 'Diese Fahrt ist aktuell nicht buchbar.',
+            default => 'Diese Fahrt ist aktuell nicht buchbar.',
+        };
     }
 }

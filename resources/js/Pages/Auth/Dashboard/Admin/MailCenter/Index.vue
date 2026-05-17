@@ -236,7 +236,11 @@ const readyLabel = (sender) => {
                                 <option v-for="category in categories" :key="category" :value="category">{{ category }}</option>
                             </select>
                         </label>
-                        <button type="submit" class="self-end rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" :disabled="preferenceForm.processing">
+                        <button
+                            type="submit"
+                            class="self-end rounded-lg border border-buttonPrimary bg-buttonPrimary px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-secondary disabled:hover:brightness-100"
+                            :disabled="preferenceForm.processing"
+                        >
                             Speichern
                         </button>
                     </form>
@@ -301,14 +305,19 @@ const readyLabel = (sender) => {
 
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <label class="inline-flex items-center gap-2 text-xs font-semibold text-secondary">
-                                    <input v-model="senderForms[sender.category].active" type="checkbox" class="rounded border-border bg-inputBg">
+                                    <input v-model="senderForms[sender.category].active" type="checkbox" class="h-4 w-4 rounded border-border bg-inputBg text-buttonPrimary accent-buttonPrimary">
                                     Mailbox aktiv
                                 </label>
                                 <div class="flex gap-2">
-                                    <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted" @click="testSender(sender)">
+                                    <button type="button" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-xs font-semibold text-primary transition hover:bg-muted" @click="testSender(sender)">
                                         Testmail
                                     </button>
-                                    <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-white disabled:opacity-60" :disabled="senderForms[sender.category].processing" @click="saveSender(sender)">
+                                    <button
+                                        type="button"
+                                        class="rounded-lg border border-buttonPrimary bg-buttonPrimary px-3 py-2 text-xs font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-secondary disabled:hover:brightness-100"
+                                        :disabled="senderForms[sender.category].processing"
+                                        @click="saveSender(sender)"
+                                    >
                                         Speichern
                                     </button>
                                 </div>

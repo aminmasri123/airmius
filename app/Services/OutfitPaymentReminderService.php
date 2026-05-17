@@ -53,7 +53,7 @@ class OutfitPaymentReminderService
             'message' => 'Bitte bezahle dein Outfit-Abo '.$this->planName($subscription).', damit wir deine Box vorbereiten koennen.',
             'subscription_id' => $subscription->id,
             'payment_reference' => $subscription->payment_reference,
-            'amount_cents' => max(0, (int) $subscription->monthly_price_cents - (int) $subscription->sponsor_discount_cents),
+            'amount_cents' => max(0, (int) $subscription->monthly_price_cents),
             'currency' => $subscription->currency,
             'url' => route('auth.outfit-subscriptions.index'),
         ]);

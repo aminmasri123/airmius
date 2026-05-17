@@ -1,14 +1,19 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import FeedComments from '@/Components/Auth/Feed/FeedComments.vue'
+import FeedComposer from '@/Components/Auth/Feed/FeedComposer.vue'
+import FeedStories from '@/Components/Auth/Feed/FeedStories.vue'
 import AdSlot from '@/Components/Ads/AdSlot.vue'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
 import { usePermissions } from '@/composables/usePermissions'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
     posts: { type: Object, default: () => ({ data: [], links: [] }) },
+    stories: { type: Array, default: () => [] },
+    feedFilter: { type: String, default: 'all' },
     clubs: { type: Array, default: () => [] },
     teams: { type: Array, default: () => [] },
     visibilities: { type: Array, default: () => ['team', 'organization', 'public'] },
@@ -20,13 +25,7 @@ const { can } = usePermissions()
 const { t, te } = useI18n()
 const page = usePage()
 const user = page.props.auth?.user
-const imageInput = ref(null)
-const showPostModal = ref(false)
-
-const attachmentInput = ref(null)
-const imagePreview = ref(null)
-const commentForms = reactive({})
-const commentEditForms = reactive({})
+const commentSections = reactive({})
 const editForms = reactive({})
 const reportTarget = ref(null)
 const deleteTarget = ref(null)
@@ -38,25 +37,19 @@ const reportForm = useForm({
     reason: 'other',
     details: '',
 })
-const postForm = useForm({
-    club_id: '',
-    team_id: '',
-    visibility: 'public',
-    post_type: 'normal',
-    content_origin: 'self',
-    sport_id: '',
-    sport_skill_ids: [],
-    content: '',
-    image: null,
-    attachments: [],
-})
-
-const canPost = computed(() => Boolean(postForm.content.trim() || postForm.image || postForm.attachments.length))
 const canCreatePost = computed(() => can('post.store'))
 const canEditPost = (post) => Boolean(post.can_update)
 const canDeletePost = (post) => Boolean(post.can_delete)
-const canEditComment = (comment) => comment.user_id === user?.id
-const canDeleteComment = (post, comment) => comment.user_id === user?.id || post.user_id === user?.id || can('comment.delete')
+const activeFeedFilter = computed(() => props.feedFilter || 'all')
+const feedTabs = [
+    { key: 'all', label: 'Alle', icon: 'las la-layer-group' },
+    { key: 'team', label: 'Team', icon: 'las la-users' },
+    { key: 'organization', label: 'Verein', icon: 'las la-building' },
+    { key: 'knowledge', label: 'Wissen', icon: 'las la-lightbulb' },
+    { key: 'questions', label: 'Fragen', icon: 'las la-question-circle' },
+    { key: 'training', label: 'Training', icon: 'las la-dumbbell' },
+]
+const activeFeedFilterLabel = computed(() => feedTabs.find((tab) => tab.key === activeFeedFilter.value)?.label || 'Alle')
 const reportReasons = [
     { value: 'insult', label: 'Beleidigung' },
     { value: 'bullying', label: 'Mobbing' },
@@ -86,9 +79,6 @@ const sportLabel = (sport) => {
     const key = `sports.${sport.slug}`
     return te(key) ? t(key) : sport.name
 }
-const submitPost = () => {
-    createPost()
-}
 const postTypeLabel = (type) => ({
     normal: 'Normal',
     question: 'Frage',
@@ -99,70 +89,34 @@ const postTypeLabel = (type) => ({
     experience: 'Erfahrung',
     club_update: 'Vereinsinfo',
 }[type] || type)
+const visibilityLabel = (visibility) => ({
+    public: 'Öffentlich',
+    organization: 'Verein',
+    team: 'Team',
+}[visibility] || visibility)
 const contentOriginLabel = (origin) => ({
     self: 'Selbst erstellt',
     ai: 'Mit KI erstellt',
 }[origin] || 'Selbst erstellt')
-const selectedCreateSport = computed(() => props.sports.find((sport) => String(sport.id) === String(postForm.sport_id)))
-const createSportSkills = computed(() => selectedCreateSport.value?.skills || [])
 const skillsForSport = (sportId) => props.sports.find((sport) => String(sport.id) === String(sportId))?.skills || []
 
-watch(() => postForm.sport_id, () => {
-    postForm.sport_skill_ids = []
-})
+const changeFeedFilter = (filter) => {
+    if (filter === activeFeedFilter.value) return
 
-const handleImage = (event) => {
-    const file = event.target.files?.[0] || null
-    if (imagePreview.value) URL.revokeObjectURL(imagePreview.value)
-    postForm.image = file
-    imagePreview.value = file ? URL.createObjectURL(file) : null
+    router.get(route('auth.feed.index'), filter === 'all' ? {} : { filter }, {
+        preserveScroll: true,
+        preserveState: true,
+        only: ['posts', 'stories', 'feedFilter', 'clubs', 'teams', 'notificationCenter', 'auth'],
+    })
 }
 
-const handleAttachments = (event) => {
-    postForm.attachments = Array.from(event.target.files || [])
-}
-
-const resetCreateForm = () => {
-    if (imagePreview.value) URL.revokeObjectURL(imagePreview.value)
-    imagePreview.value = null
-    if (imageInput.value) imageInput.value.value = null
-    if (attachmentInput.value) attachmentInput.value.value = null
-    postForm.reset('content', 'image', 'attachments')
-    postForm.content_origin = 'self'
-    postForm.sport_skill_ids = []
-}
-
-const createPost = () => {
-
-    // ❌ VALIDIERUNG
-    if (postForm.visibility === 'organization' && !postForm.club_id) {
-
-
+const setCommentSection = (postId, component) => {
+    if (component) {
+        commentSections[postId] = component
         return
     }
-    if (!canPost.value) return
-    postForm.post(route('auth.posts.store'), {
-        forceFormData: true,
-        preserveScroll: true,
-        only: ['posts', 'clubs', 'teams', 'notificationCenter', 'auth', 'errors'],
-        onSuccess: () => {
-            resetCreateForm()
-            showPostModal.value = false
-        },
-    })
-}
 
-const commentFormFor = (postId) => {
-    commentForms[postId] ??= useForm({ content: '' })
-    return commentForms[postId]
-}
-
-const commentEditFormFor = (comment) => {
-    commentEditForms[comment.id] ??= useForm({
-        content: comment.content || '',
-        editing: false,
-    })
-    return commentEditForms[comment.id]
+    delete commentSections[postId]
 }
 
 const editFormFor = (post) => {
@@ -233,7 +187,7 @@ const closeReport = () => {
 const submitReport = () => {
     reportForm.post(route('auth.reports.store'), {
         preserveScroll: true,
-        only: ['posts', 'notificationCenter', 'auth', 'flash', 'errors'],
+        only: ['posts', 'stories', 'notificationCenter', 'auth', 'flash', 'errors'],
         onSuccess: closeReport,
     })
 }
@@ -268,43 +222,6 @@ const toggleHelpful = (post) => {
     })
 }
 
-const createComment = (post) => {
-    const form = commentFormFor(post.id)
-    if (!form.content.trim()) return
-    form.post(route('auth.comments.store', post.id), {
-        preserveScroll: true,
-        only: ['posts', 'notificationCenter', 'auth'],
-        onSuccess: () => form.reset(),
-    })
-}
-
-const startEditComment = (comment) => {
-    const form = commentEditFormFor(comment)
-    form.content = comment.content || ''
-    form.editing = true
-    form.clearErrors()
-}
-
-const cancelEditComment = (comment) => {
-    const form = commentEditFormFor(comment)
-    form.content = comment.content || ''
-    form.editing = false
-    form.clearErrors()
-}
-
-const updateComment = (comment) => {
-    const form = commentEditFormFor(comment)
-    if (!form.content.trim()) return
-
-    form.put(route('auth.comments.update', comment.id), {
-        preserveScroll: true,
-        only: ['posts', 'notificationCenter', 'auth', 'flash', 'errors'],
-        onSuccess: () => {
-            form.editing = false
-        },
-    })
-}
-
 const deleteComment = (comment) => {
     deleteCommentTarget.value = comment
 }
@@ -326,7 +243,7 @@ const confirmDeleteComment = () => {
 const visitPage = (url) => url && router.visit(url, {
     preserveScroll: true,
     preserveState: true,
-    only: ['posts', 'clubs', 'teams', 'notificationCenter', 'auth'],
+    only: ['posts', 'stories', 'feedFilter', 'clubs', 'teams', 'notificationCenter', 'auth'],
 })
 </script>
 
@@ -338,284 +255,42 @@ const visitPage = (url) => url && router.visit(url, {
 
         <section class="min-w-0 space-y-4">
 
-            <!-- Mobilefreundlicher Button statt großem Formular -->
-            <button
-                v-if="canCreatePost"
-                type="button"
-                class="surface-card flex w-full min-w-0 items-center gap-3 p-4 text-left"
-                @click="showPostModal = true"
-            >
-                <img
-                    v-if="user?.profile_photo_thumb"
-                    :src="user.profile_photo_thumb"
-                    :alt="user.name"
-                    class="h-10 w-10 shrink-0 rounded-full object-cover"
-                />
+            <FeedStories
+                :can-create="canCreatePost"
+                :stories="stories"
+                :clubs="clubs"
+                :teams="teams"
+                :visibilities="visibilities"
+                :user="user"
+                @report-story="openReport('story', $event)"
+            />
 
-                <div
-                    v-else
-                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary"
-                >
-                    {{ initials(user?.name) }}
+            <FeedComposer
+                :can-create="canCreatePost"
+                :clubs="clubs"
+                :teams="teams"
+                :visibilities="visibilities"
+                :post-types="postTypes"
+                :sports="sports"
+            />
+
+            <div class="surface-card overflow-hidden p-2">
+                <div class="custom-scrollbar flex gap-2 overflow-x-auto">
+                    <button
+                        v-for="tab in feedTabs"
+                        :key="tab.key"
+                        type="button"
+                        class="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition"
+                        :class="activeFeedFilter === tab.key ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-secondary hover:bg-muted hover:text-primary'"
+                        @click="changeFeedFilter(tab.key)"
+                    >
+                        <i :class="tab.icon"></i>
+                        {{ tab.label }}
+                    </button>
                 </div>
-
-                <span class="min-w-0 flex-1 truncate rounded-full border border-border bg-inputBg px-4 py-3 text-sm text-secondary">
-                    Was gibt es Neues?
-                </span>
-            </button>
+            </div>
 
             <AdSlot placement="feed" variant="banner" :fallback="false" />
-
-            <!-- Modal -->
-            <Teleport to="body">
-                <div
-                    v-if="showPostModal"
-                    class="fixed inset-0 z-50 flex items-end bg-black/60 sm:items-center sm:p-4"
-                >
-                    <div
-                        class="max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-border bg-card p-4 shadow-xl sm:mx-auto sm:max-w-2xl sm:rounded-2xl"
-                    >
-                        <div class="mb-4 flex items-center justify-between">
-                            <h2 class="text-lg font-semibold text-primary">
-                                Beitrag erstellen
-                            </h2>
-
-                            <button
-                                type="button"
-                                class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary"
-                                @click="showPostModal = false"
-                            >
-                                <i class="las la-times text-2xl"></i>
-                            </button>
-                        </div>
-
-                        <form class="space-y-3" @submit.prevent="submitPost">
-                            <div class="flex items-center gap-3">
-                                <img
-                                    v-if="user?.profile_photo_thumb"
-                                    :src="user.profile_photo_thumb"
-                                    :alt="user.name"
-                                    class="h-10 w-10 shrink-0 rounded-full object-cover"
-                                />
-
-                                <div
-                                    v-else
-                                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-buttonPrimary text-sm font-semibold text-buttonTextPrimary"
-                                >
-                                    {{ initials(user?.name) }}
-                                </div>
-
-                                <div class="min-w-0">
-                                    <p class="truncate text-sm font-semibold text-primary">
-                                        {{ user?.name }}
-                                    </p>
-                                    <p class="text-xs text-secondary">
-                                        Neuer Beitrag
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                <select
-                                    v-model="postForm.visibility"
-                                    class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                                >
-                                    <option
-                                        v-for="visibility in visibilities"
-                                        :key="visibility"
-                                        :value="visibility"
-                                    >
-                                        {{ visibility }}
-                                    </option>
-                                </select>
-
-                                <select
-                                    v-model="postForm.post_type"
-                                    class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                                >
-                                    <option
-                                        v-for="type in postTypes"
-                                        :key="type"
-                                        :value="type"
-                                    >
-                                        {{ postTypeLabel(type) }}
-                                    </option>
-                                </select>
-
-                                <select
-                                    v-model="postForm.content_origin"
-                                    class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                                >
-                                    <option value="self">Von mir selbst erstellt</option>
-                                    <option value="ai">Mit KI erstellt</option>
-                                </select>
-
-                                <select
-                                    v-model="postForm.club_id"
-                                    :class="[
-                                        'w-full rounded-lg border bg-inputBg px-3 py-3 text-sm text-primary',
-                                        postForm.visibility === 'organization' && !postForm.club_id
-                                            ? 'border-red-500'
-                                            : 'border-border'
-                                    ]"
-                                >
-                                    <option value="">No organization</option>
-                                    <option
-                                        v-for="club in clubs"
-                                        :key="club.id"
-                                        :value="club.id"
-                                    >
-                                        {{ club.name }}
-                                    </option>
-                                </select>
-
-                                <select
-                                    v-model="postForm.team_id"
-                                    :class="[
-                                        'w-full rounded-lg border bg-inputBg px-3 py-3 text-sm text-primary',
-                                        postForm.visibility === 'team' && !postForm.team_id
-                                            ? 'border-red-500'
-                                            : 'border-border'
-                                    ]"
-                                >
-                                    <option value="">No team</option>
-                                    <option
-                                        v-for="team in teams"
-                                        :key="team.id"
-                                        :value="team.id"
-                                    >
-                                        {{ team.name }}
-                                    </option>
-                                </select>
-                            </div>
-
-                            <SearchableSelect
-                                v-model="postForm.sport_id"
-                                :options="sports"
-                                value-key="id"
-                                translation-prefix="sports"
-                                category-translation-prefix="sport_categories"
-                                placeholder="Sportart zum Beitrag"
-                            />
-
-                            <div class="flex min-h-11 max-w-full flex-wrap gap-2 overflow-hidden rounded-lg border border-border bg-inputBg px-3 py-2">
-                                <label
-                                    v-for="skill in createSportSkills"
-                                    :key="skill.id"
-                                    class="inline-flex max-w-full cursor-pointer items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-xs text-primary"
-                                >
-                                    <input
-                                        v-model="postForm.sport_skill_ids"
-                                        type="checkbox"
-                                        :value="skill.id"
-                                        class="shrink-0 rounded border-border bg-inputBg"
-                                    >
-
-                                    <span class="min-w-0 truncate">
-                                        {{ skill.name }}
-                                    </span>
-                                </label>
-
-                                <span
-                                    v-if="postForm.sport_id && !createSportSkills.length"
-                                    class="min-w-0 break-words text-sm text-secondary"
-                                >
-                                    Keine Skills für diese Sportart.
-                                </span>
-
-                                <span
-                                    v-if="!postForm.sport_id"
-                                    class="min-w-0 break-words text-sm text-secondary"
-                                >
-                                    Optional: Sportart wählen, um passende Skills zu markieren.
-                                </span>
-                            </div>
-
-                            <textarea
-                                v-model="postForm.content"
-                                rows="5"
-                                placeholder="Was gibt es Neues?"
-                                class="w-full resize-none rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary placeholder-secondary"
-                            />
-
-                            <input
-                                ref="imageInput"
-                                type="file"
-                                accept="image/*"
-                                class="hidden"
-                                @change="handleImage"
-                            />
-
-                            <input
-                                ref="attachmentInput"
-                                type="file"
-                                multiple
-                                accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
-                                class="hidden"
-                                @change="handleAttachments"
-                            />
-
-                            <img
-                                v-if="imagePreview"
-                                :src="imagePreview"
-                                alt="Preview"
-                                class="max-h-[70vh] w-full rounded-xl border border-border object-cover"
-                            />
-
-                            <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                                <button
-                                    type="button"
-                                    class="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm font-semibold text-primary sm:w-auto"
-                                    @click="imageInput?.click()"
-                                >
-                                    <i class="las la-image"></i>
-                                    Bild
-                                </button>
-
-                                <button
-                                    type="button"
-                                    class="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm font-semibold text-primary sm:w-auto"
-                                    @click="attachmentInput?.click()"
-                                >
-                                    <i class="las la-video"></i>
-                                    Video / Dateien
-                                </button>
-
-                                <span
-                                    v-if="postForm.attachments.length"
-                                    class="rounded-lg bg-muted px-3 py-2 text-xs text-secondary"
-                                >
-                                    {{ postForm.attachments.length }} Datei(en)
-                                </span>
-
-                                <span class="rounded-lg bg-inputBg px-3 py-2 text-xs text-secondary">
-                                    Bilder optimiert, Videos bis 50 MB
-                                </span>
-                            </div>
-
-                            <div class="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-                                <button
-                                    type="button"
-                                    class="w-full rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary sm:w-auto"
-                                    @click="showPostModal = false"
-                                >
-                                    Abbrechen
-                                </button>
-
-                                <button
-                                    type="submit"
-                                    :disabled="postForm.processing || !canPost ||
-                                        (postForm.visibility === 'organization' && !postForm.club_id) ||
-                                        (postForm.visibility === 'team' && !postForm.team_id)"
-                                    class="w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50 sm:w-auto"
-                                >
-                                    Posten
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </Teleport>
 
             <article
                 v-for="post in posts.data"
@@ -667,7 +342,7 @@ const visitPage = (url) => url && router.visit(url, {
 
                                 <span v-else>Public</span>
 
-                                · {{ post.visibility }} · {{ formatDate(post.created_at) }}
+                                · {{ visibilityLabel(post.visibility) }} · {{ formatDate(post.created_at) }}
                             </p>
                         </div>
                     </div>
@@ -715,7 +390,7 @@ const visitPage = (url) => url && router.visit(url, {
                                 :key="visibility"
                                 :value="visibility"
                             >
-                                {{ visibility }}
+                                {{ visibilityLabel(visibility) }}
                             </option>
                         </select>
 
@@ -744,7 +419,7 @@ const visitPage = (url) => url && router.visit(url, {
                             v-model="editFormFor(post).club_id"
                             class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                         >
-                            <option value="">No organization</option>
+                            <option value="">Kein Verein</option>
                             <option
                                 v-for="club in clubs"
                                 :key="club.id"
@@ -758,7 +433,7 @@ const visitPage = (url) => url && router.visit(url, {
                             v-model="editFormFor(post).team_id"
                             class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                         >
-                            <option value="">No team</option>
+                            <option value="">Kein Team</option>
                             <option
                                 v-for="team in teams"
                                 :key="team.id"
@@ -851,6 +526,13 @@ const visitPage = (url) => url && router.visit(url, {
                                 : 'border-border text-secondary'"
                         >
                             {{ contentOriginLabel(post.content_origin) }}
+                        </span>
+
+                        <span
+                            v-if="post.user_id === user?.id && post.moderation_status && post.moderation_status !== 'approved'"
+                            class="rounded-full border border-border bg-inputBg px-3 py-1 font-semibold text-secondary"
+                        >
+                            In Prüfung
                         </span>
 
                         <span
@@ -953,142 +635,28 @@ const visitPage = (url) => url && router.visit(url, {
                     <button
                         type="button"
                         class="flex flex-col items-center justify-center gap-1 px-2 py-3 font-medium text-primary hover:bg-muted sm:flex-row sm:gap-2 sm:px-4"
-                        @click="commentFormFor(post.id)"
+                        @click="commentSections[post.id]?.focusComment()"
                     >
                         <i class="lar la-comment"></i>
                         Kommentar
                     </button>
                 </div>
 
-                <div class="space-y-3 p-4">
-                    <div
-                        v-for="comment in post.comments"
-                        :key="comment.id"
-                        class="flex gap-3"
-                    >
-                        <Link
-                            :href="route('auth.users.show', comment.user.id)"
-                            class="shrink-0"
-                        >
-                            <img
-                                v-if="comment.user?.profile_photo_thumb"
-                                :src="comment.user.profile_photo_thumb"
-                                :alt="comment.user.name"
-                                class="h-8 w-8 rounded-full object-cover"
-                            />
-
-                            <div
-                                v-else
-                                class="flex h-8 w-8 items-center justify-center rounded-full bg-buttonPrimary text-xs font-semibold text-buttonTextPrimary"
-                            >
-                                {{ initials(comment.user?.name) }}
-                            </div>
-                        </Link>
-
-                        <div class="min-w-0 flex-1 rounded-lg bg-inputBg px-3 py-2">
-                            <div class="flex items-start justify-between gap-2">
-                                <Link
-                                    :href="route('auth.users.show', comment.user.id)"
-                                    class="text-xs font-semibold text-primary hover:underline"
-                                >
-                                    {{ comment.user?.name }}
-                                </Link>
-
-                                <div class="flex shrink-0 items-center gap-1">
-                                    <button
-                                        v-if="canEditComment(comment)"
-                                        type="button"
-                                        class="rounded px-1 text-xs text-secondary hover:bg-muted hover:text-primary"
-                                        title="Kommentar bearbeiten"
-                                        @click="startEditComment(comment)"
-                                    >
-                                        <i class="las la-edit"></i>
-                                    </button>
-                                    <button
-                                        v-if="canDeleteComment(post, comment)"
-                                        type="button"
-                                        class="rounded px-1 text-xs text-secondary hover:bg-error/10 hover:text-error"
-                                        title="Kommentar löschen"
-                                        @click="deleteComment(comment)"
-                                    >
-                                        <i class="las la-trash"></i>
-                                    </button>
-                                    <button
-                                        v-if="comment.user_id !== user?.id"
-                                        type="button"
-                                        class="rounded px-1 text-xs text-secondary hover:bg-muted hover:text-primary"
-                                        title="Kommentar melden"
-                                        @click="openReport('comment', comment)"
-                                    >
-                                        <i class="las la-flag"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <form
-                                v-if="commentEditFormFor(comment).editing"
-                                class="mt-2 space-y-2"
-                                @submit.prevent="updateComment(comment)"
-                            >
-                                <textarea
-                                    v-model="commentEditFormFor(comment).content"
-                                    rows="3"
-                                    class="w-full resize-none rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
-                                />
-                                <p v-if="commentEditFormFor(comment).errors.content" class="text-xs text-error">
-                                    {{ commentEditFormFor(comment).errors.content }}
-                                </p>
-                                <div class="flex flex-wrap gap-2">
-                                    <button
-                                        type="submit"
-                                        class="rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary"
-                                        :disabled="commentEditFormFor(comment).processing || !commentEditFormFor(comment).content.trim()"
-                                    >
-                                        Speichern
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary"
-                                        @click="cancelEditComment(comment)"
-                                    >
-                                        Abbrechen
-                                    </button>
-                                </div>
-                            </form>
-
-                            <p v-else class="mt-1 whitespace-pre-line break-words text-sm text-primary">
-                                {{ comment.content }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <form
-                        class="flex gap-2"
-                        @submit.prevent="createComment(post)"
-                    >
-                        <input
-                            v-model="commentFormFor(post.id).content"
-                            type="text"
-                            placeholder="Kommentar schreiben..."
-                            class="min-w-0 flex-1 rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                        />
-
-                        <button
-                            type="submit"
-                            :disabled="commentFormFor(post.id).processing || !commentFormFor(post.id).content.trim()"
-                            class="rounded-lg bg-buttonPrimary px-4 py-3 text-buttonTextPrimary disabled:opacity-50"
-                        >
-                            <i class="las la-paper-plane"></i>
-                        </button>
-                    </form>
-                </div>
+                <FeedComments
+                    :ref="(component) => setCommentSection(post.id, component)"
+                    :post="post"
+                    :user="user"
+                    @delete-comment="deleteComment"
+                    @report-comment="openReport('comment', $event)"
+                />
             </article>
 
             <div
                 v-if="posts.data.length === 0"
                 class="surface-card p-8 text-center text-secondary"
             >
-                Noch keine Beiträge vorhanden.
+                <p class="font-semibold text-primary">Noch keine Beiträge in „{{ activeFeedFilterLabel }}”.</p>
+                <p class="mt-1 text-sm">Wechsle den Filter oder erstelle den ersten passenden Beitrag.</p>
             </div>
 
             <div

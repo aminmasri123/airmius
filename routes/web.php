@@ -35,6 +35,7 @@ Route::get('/ads/active', [CommerceCheckoutController::class, 'activeAd'])->name
 Route::get('/ads/{campaign}/click', [CommerceCheckoutController::class, 'clickAd'])->name('ads.click');
 Route::post('/ads/{campaign}/conversion', [CommerceCheckoutController::class, 'conversionAd'])->name('ads.conversion');
 Route::get('/shared-files/{token}', [FileController::class, 'sharedDownload'])
+    ->middleware('throttle:file-shared-download')
     ->name('files.shared-download');
 Route::get('/checkout/guest-commerce/{order}/{token}/success', [CommerceCheckoutController::class, 'guestSuccess'])
     ->name('commerce-checkout.guest.success');

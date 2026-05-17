@@ -29,6 +29,7 @@ class PlanFeatureServiceTest extends TestCase
             'email' => 'one@example.com',
             'token' => 'token-one',
             'status' => 'pending',
+            'invited_at' => now(),
         ]);
 
         ClubExternalMember::query()->create([

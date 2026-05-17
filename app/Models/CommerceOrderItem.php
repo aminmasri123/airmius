@@ -11,6 +11,7 @@ class CommerceOrderItem extends Model
 
     protected $fillable = [
         'commerce_order_id',
+        'commerce_warehouse_id',
         'orderable_type',
         'orderable_id',
         'title',
@@ -49,5 +50,10 @@ class CommerceOrderItem extends Model
     public function orderable()
     {
         return $this->morphTo();
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(CommerceWarehouse::class, 'commerce_warehouse_id');
     }
 }

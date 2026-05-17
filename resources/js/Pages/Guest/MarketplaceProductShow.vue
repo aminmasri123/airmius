@@ -17,6 +17,7 @@ const props = defineProps({
     checkoutAddress: { type: Object, default: () => ({}) },
     profileAddress: { type: Object, default: null },
     shippingAddresses: { type: Array, default: () => [] },
+    paymentProviders: { type: Array, default: () => [] },
     marketplaceVisuals: { type: Object, default: () => ({}) },
     relatedProducts: { type: Array, default: () => [] },
 })
@@ -40,8 +41,9 @@ const initialAddress = props.profileAddress || props.shippingAddresses[0] || pro
 const form = useForm({
     guest_name: currentUser.value?.name || '',
     guest_email: currentUser.value?.email || '',
-    provider: 'bank_transfer',
-    accepted_terms: true,
+    provider: props.paymentProviders[0]?.value || '',
+    accepted_terms: false,
+    coupon_code: '',
     quantity: 1,
     shipping_country: initialAddress.country || props.product.price?.country || 'DE',
     shipping_state: initialAddress.state || '',
@@ -71,11 +73,12 @@ const price = computed(() => props.product.price || {
     tax_label: 'Tax',
 })
 const unitGrossCents = computed(() => price.value.item_gross_cents ?? price.value.gross_cents ?? props.product.price_cents)
+const productUrl = computed(() => typeof window !== 'undefined' ? window.location.href.split('#')[0] : props.product.show_url || '')
 const sideBannerUrl = computed(() => props.marketplaceVisuals.side_banner || '/images/marketplace/airmius-marketplace-side-banner.png')
-const sideBannerDimensions = computed(() => props.marketplaceVisuals.dimensions?.side_banner || { width: 306, height: 786 })
+const sideBannerDimensions = computed(() => props.marketplaceVisuals.dimensions?.side_banner || { width: 192, height: 1080 })
 const sideBannerStyle = computed(() => ({
-    backgroundImage: `linear-gradient(180deg, rgba(5, 11, 22, 0.08), rgba(5, 11, 22, 0.18) 45%, rgba(5, 11, 22, 0.75)), url("${sideBannerUrl.value}")`,
-    width: `${Math.max(208, Math.min(288, Number(sideBannerDimensions.value.width || 306)))}px`,
+    backgroundImage: `linear-gradient(180deg, rgba(5, 11, 22, 0.28), rgba(5, 11, 22, 0.45)), url("${sideBannerUrl.value}")`,
+    width: `${Math.max(148, Math.min(192, Number(sideBannerDimensions.value.width || 192)))}px`,
 }))
 const categoryLabels = {
     product: 'Produkt',
@@ -89,6 +92,11 @@ const productFacts = computed(() => [
     ['Kategorie', categoryLabels[props.product.category] || props.product.category],
     ['Versand', props.product.is_shippable ? 'Versandpflichtig' : 'Digital / ohne Versand'],
     ['Rückgabe', `${props.product.return_window_days ?? 14} Tage (${props.product.return_policy_type || 'standard'})`],
+])
+const purchaseFacts = computed(() => [
+    { label: 'Lieferung', value: props.product.delivery_label || (props.product.is_shippable ? 'Versand nach Bestellung' : 'Digital / Termin'), icon: 'las la-truck' },
+    { label: 'Rueckgabe', value: props.product.return_label || `${props.product.return_window_days ?? 14} Tage`, icon: 'las la-undo' },
+    { label: 'Anbieter', value: props.product.provider_name || 'Airmius Anbieter', icon: 'las la-store' },
 ])
 const galleryImages = computed(() => {
     const images = props.product.gallery_images?.length ? props.product.gallery_images : [props.product.image_url]
@@ -124,6 +132,124 @@ const clampQuantity = (value) => Math.min(maxQuantity.value, Math.max(1, Math.fl
 const selectedQuantity = computed(() => clampQuantity(form.quantity))
 const selectedItemGrossCents = computed(() => visiblePriceCents.value * selectedQuantity.value)
 const selectedTotalGrossCents = computed(() => selectedItemGrossCents.value + Number(price.value.shipping_gross_cents || 0))
+const paymentProviderItems = computed(() => props.paymentProviders || [])
+const selectedPaymentProvider = computed(() => paymentProviderItems.value.find((provider) => provider.value === form.provider) || null)
+const selectedProviderLabel = computed(() => selectedPaymentProvider.value?.label || form.provider)
+const checkoutUnavailable = computed(() => !paymentProviderItems.value.length)
+const checkoutStep = ref('address')
+const checkoutSteps = [
+    { key: 'address', label: 'Adresse', icon: 'las la-map-marker-alt' },
+    { key: 'payment', label: 'Menge', icon: 'las la-shopping-bag' },
+    { key: 'review', label: 'Pruefen', icon: 'las la-clipboard-check' },
+]
+const isShippableProduct = computed(() => Boolean(props.product.is_shippable))
+const hasGuestContact = computed(() => isAuthenticated.value
+    || (String(form.guest_name || '').trim() && String(form.guest_email || '').trim()))
+const hasRequiredAddress = computed(() => {
+    if (!form.shipping_country) {
+        return false
+    }
+
+    if (!isShippableProduct.value) {
+        return true
+    }
+
+    return Boolean(
+        String(form.shipping_street || '').trim()
+        && String(form.shipping_house_number || '').trim()
+        && String(form.shipping_postal_code || '').trim()
+        && String(form.shipping_city || '').trim()
+    )
+})
+const canContinueAddress = computed(() => Boolean(hasGuestContact.value && hasRequiredAddress.value))
+const canContinuePayment = computed(() => Boolean(!checkoutUnavailable.value && form.provider && selectedQuantity.value >= 1))
+const checkoutStepHint = computed(() => {
+    if (checkoutStep.value === 'address' && !canContinueAddress.value) {
+        return 'Bitte Kontakt und Lieferdaten vervollstaendigen.'
+    }
+
+    if (checkoutStep.value === 'payment' && checkoutUnavailable.value) {
+        return 'Aktuell ist noch keine Zahlungsart fuer diesen Marketplace konfiguriert.'
+    }
+
+    if (checkoutStep.value === 'payment' && !canContinuePayment.value) {
+        return 'Bitte Zahlungsart und Menge pruefen.'
+    }
+
+    if (checkoutStep.value === 'review' && !form.accepted_terms) {
+        return 'AGB und Widerruf muessen vor dem Kauf bestaetigt werden.'
+    }
+
+    return ''
+})
+const isCheckoutStepDisabled = (stepKey) => {
+    if (stepKey === 'payment') {
+        return !canContinueAddress.value
+    }
+
+    if (stepKey === 'review') {
+        return !canContinueAddress.value || !canContinuePayment.value
+    }
+
+    return false
+}
+const goToCheckoutStep = (stepKey) => {
+    if (!isCheckoutStepDisabled(stepKey)) {
+        checkoutStep.value = stepKey
+    }
+}
+const nextCheckoutStep = () => {
+    if (checkoutStep.value === 'address' && canContinueAddress.value) {
+        checkoutStep.value = 'payment'
+        return
+    }
+
+    if (checkoutStep.value === 'payment' && canContinuePayment.value) {
+        checkoutStep.value = 'review'
+    }
+}
+const previousCheckoutStep = () => {
+    if (checkoutStep.value === 'review') {
+        checkoutStep.value = 'payment'
+        return
+    }
+
+    if (checkoutStep.value === 'payment') {
+        checkoutStep.value = 'address'
+    }
+}
+const productAvailabilitySchema = computed(() => {
+    if (props.product.manages_stock && Number(visibleStock.value || 0) <= 0) {
+        return 'https://schema.org/OutOfStock'
+    }
+
+    return 'https://schema.org/InStock'
+})
+const productSchema = computed(() => ({
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: props.product.title,
+    description: props.product.description || `Marketplace-Angebot ${props.product.title}`,
+    image: galleryImages.value,
+    sku: props.product.sku || undefined,
+    category: categoryLabels[props.product.category] || props.product.category,
+    brand: {
+        '@type': 'Brand',
+        name: props.product.provider_name || 'Airmius Marketplace',
+    },
+    offers: {
+        '@type': 'Offer',
+        url: productUrl.value,
+        priceCurrency: price.value.currency || 'EUR',
+        price: (Number(visiblePriceCents.value || 0) / 100).toFixed(2),
+        availability: productAvailabilitySchema.value,
+        itemCondition: 'https://schema.org/NewCondition',
+        seller: {
+            '@type': 'Organization',
+            name: props.product.provider_name || 'Airmius Marketplace',
+        },
+    },
+}))
 const savedAddressOptions = computed(() => props.shippingAddresses || [])
 const regionNames = typeof Intl !== 'undefined' && Intl.DisplayNames
     ? new Intl.DisplayNames(['de'], { type: 'region' })
@@ -134,6 +260,24 @@ const deliveryCountryOptions = computed(() => props.pricingCountries.map((countr
 })))
 const relatedProductItems = computed(() => props.relatedProducts || [])
 const isLearningProduct = computed(() => ['online_course', 'training_plan'].includes(props.product.offer_type))
+const productFaqItems = computed(() => [
+    {
+        question: 'Wie bekomme ich das Angebot?',
+        answer: props.product.delivery_label || (props.product.is_shippable ? 'Der Anbieter bereitet den Versand nach der Bestellung vor.' : 'Du erhaeltst nach dem Kauf die weiteren Informationen digital oder per E-Mail.'),
+    },
+    {
+        question: 'Wer ist mein Ansprechpartner?',
+        answer: `${props.product.provider_profile?.name || props.product.provider_name || 'Der Anbieter'} ist fuer Angebotsdetails und Erfuellung zustaendig. Airmius stellt Checkout, Status und Belege bereit.`,
+    },
+    {
+        question: 'Wie wird der Endpreis berechnet?',
+        answer: 'Steuer, Versand und Gesamtpreis werden anhand von Lieferland und Kundentyp vor dem Abschluss angezeigt.',
+    },
+    {
+        question: 'Welche Rueckgabe gilt?',
+        answer: props.product.return_label || 'Die Rueckgabe richtet sich nach Angebotstyp, Richtlinie und gesetzlicher Lage.',
+    },
+])
 
 const applyAddress = (address) => {
     if (!address) {
@@ -177,13 +321,13 @@ watch(() => form.quantity, (value) => {
 
 const openCheckout = async () => {
     showCheckout.value = true
+    checkoutStep.value = 'address'
     await nextTick()
     checkoutSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 const checkout = () => {
     form.quantity = selectedQuantity.value
-    form.accepted_terms = true
 
     form.post(isAuthenticated.value
         ? route('auth.commerce.products.checkout', props.product.id)
@@ -215,30 +359,31 @@ const updateCountry = () => {
     <SeoHead
         :title="`${product.title} kaufen`"
         :description="product.description || 'Marketplace-Angebot auf Airmius ansehen und als Gast bestellen.'"
+        type="product"
+        :image="activeProductImage || undefined"
+        :schema="productSchema"
     />
 
     <div class="min-h-screen bg-bg text-primary">
         <Subnav vertical />
 
         <aside
-            class="pointer-events-none fixed left-0 top-0 z-0 hidden h-screen min-w-[13rem] max-w-[18rem] overflow-hidden bg-buttonPrimary/20 bg-cover bg-center xl:block"
+            class="pointer-events-none fixed left-0 top-0 z-0 hidden h-screen overflow-hidden bg-buttonPrimary/10 bg-cover bg-center opacity-50 2xl:block"
             :style="sideBannerStyle"
+            aria-hidden="true"
         >
-            <div class="absolute inset-0 bg-buttonPrimary/10"></div>
-            <div class="absolute inset-x-4 top-72 text-center text-buttonTextPrimary drop-shadow">
-                <p class="font-heading text-3xl font-900 leading-none">AIRMIUS</p>
-                <p class="mt-2 text-sm font-black uppercase tracking-wide">Marketplace</p>
-            </div>
+            <div class="absolute inset-0 bg-bg/35"></div>
         </aside>
 
         <aside
-            class="pointer-events-none fixed right-0 top-0 z-0 hidden h-screen min-w-[13rem] max-w-[18rem] scale-x-[-1] overflow-hidden bg-buttonPrimary/20 bg-cover bg-center xl:block"
+            class="pointer-events-none fixed right-0 top-0 z-0 hidden h-screen scale-x-[-1] overflow-hidden bg-buttonPrimary/10 bg-cover bg-center opacity-50 2xl:block"
             :style="sideBannerStyle"
+            aria-hidden="true"
         >
-            <div class="absolute inset-0 bg-buttonPrimary/10"></div>
+            <div class="absolute inset-0 bg-bg/35"></div>
         </aside>
 
-        <main class="relative z-10 pb-24 pt-0 md:pb-14 xl:mx-[16vw] xl:pr-24">
+        <main class="relative z-10 mx-auto max-w-[86rem] pb-24 pt-0 md:pb-14 md:pr-28 2xl:pr-24">
             <section class="border-b border-border bg-bg px-4 py-3 shadow-sm">
                 <div class="mx-auto flex max-w-7xl flex-col gap-4 rounded-lg border border-border bg-card px-5 py-3 text-primary shadow-sm sm:flex-row sm:items-center sm:justify-between">
                     <Link :href="route('guest.marketplace')" class="flex min-w-0 items-center gap-3">
@@ -254,7 +399,7 @@ const updateCountry = () => {
                     <div class="flex w-full flex-wrap items-center gap-2 text-sm font-black sm:w-auto sm:justify-end">
                         <Link
                             v-if="currentUser"
-                            href="/card"
+                            :href="route('auth.commerce.cart.index')"
                             class="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary"
                             aria-label="Warenkorb"
                             title="Warenkorb"
@@ -291,8 +436,8 @@ const updateCountry = () => {
             <section class="mx-auto max-w-7xl px-4 py-4">
                 <div :class="['grid items-start gap-4', showCheckout ? 'lg:grid-cols-[minmax(0,1fr)_24rem]' : '']">
                     <article class="overflow-hidden rounded border border-border bg-card shadow-sm">
-                        <div class="grid gap-0 xl:grid-cols-[minmax(0,1fr)_20rem]">
-                            <div class="relative min-h-[24rem] bg-inputBg">
+                        <div class="grid items-start gap-0 xl:grid-cols-[minmax(0,1fr)_20rem]">
+                            <div class="relative h-[28rem] max-h-[68vh] min-h-[22rem] w-full bg-inputBg">
                                 <img v-if="activeProductImage" :src="activeProductImage" :alt="product.title" class="absolute inset-0 h-full w-full object-cover" />
                                 <div v-else class="absolute inset-0 flex items-center justify-center">
                                     <i class="las la-store text-7xl text-buttonPrimary"></i>
@@ -335,6 +480,16 @@ const updateCountry = () => {
                                     <p class="mt-2 text-xs leading-5 text-secondary">
                                         Steuer und Versand werden im Checkout aus Lieferadresse und Kundentyp berechnet.
                                     </p>
+                                    <div class="mt-4 grid gap-2 text-xs font-semibold text-secondary">
+                                        <p class="flex items-center gap-2">
+                                            <i class="las la-shield-alt text-lg text-buttonPrimary"></i>
+                                            Anbieter, Preis und Steuer werden vor Abschluss ausgewiesen.
+                                        </p>
+                                        <p class="flex items-center gap-2">
+                                            <i class="las la-undo text-lg text-buttonPrimary"></i>
+                                            Rueckgabe: {{ product.return_window_days ?? 14 }} Tage nach Richtlinie.
+                                        </p>
+                                    </div>
                                     <div class="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
                                         <button
                                             type="button"
@@ -352,6 +507,21 @@ const updateCountry = () => {
                                         </button>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                        <div class="grid gap-3 border-t border-border bg-bg/60 p-4 md:grid-cols-3">
+                            <div
+                                v-for="fact in purchaseFacts"
+                                :key="fact.label"
+                                class="flex items-center gap-3 rounded border border-border bg-card p-3"
+                            >
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-buttonPrimary/10 text-buttonPrimary">
+                                    <i :class="[fact.icon, 'text-xl']"></i>
+                                </span>
+                                <span class="min-w-0">
+                                    <span class="block text-[11px] font-black uppercase tracking-wide text-secondary">{{ fact.label }}</span>
+                                    <span class="block truncate text-sm font-semibold text-primary">{{ fact.value }}</span>
+                                </span>
                             </div>
                         </div>
                         <div class="grid gap-5 border-t border-border p-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
@@ -385,9 +555,61 @@ const updateCountry = () => {
                                         </div>
                                     </div>
                                 </div>
+
+                                <div class="mt-6 rounded border border-border bg-bg p-4">
+                                    <h2 class="text-lg font-black text-primary">Haeufige Fragen</h2>
+                                    <div class="mt-3 divide-y divide-border">
+                                        <details
+                                            v-for="item in productFaqItems"
+                                            :key="item.question"
+                                            class="group py-3"
+                                        >
+                                            <summary class="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-primary">
+                                                {{ item.question }}
+                                                <i class="las la-angle-down text-lg text-buttonPrimary transition group-open:rotate-180"></i>
+                                            </summary>
+                                            <p class="mt-2 text-sm leading-6 text-secondary">{{ item.answer }}</p>
+                                        </details>
+                                    </div>
+                                </div>
                             </div>
                             <div>
-                                <h2 class="text-lg font-black text-primary">Varianten</h2>
+                                <div class="rounded border border-border bg-bg p-4">
+                                    <p class="text-xs font-black uppercase tracking-wide text-secondary">Anbieter</p>
+                                    <div class="mt-3 flex items-center gap-3">
+                                        <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded bg-buttonPrimary/10 text-sm font-black text-buttonPrimary">
+                                            <img v-if="product.provider_profile?.logo_url" :src="product.provider_profile.logo_url" :alt="product.provider_profile.name" class="h-full w-full object-cover" />
+                                            <span v-else>{{ product.provider_profile?.initials || 'AM' }}</span>
+                                        </span>
+                                        <span class="min-w-0">
+                                            <span class="flex items-center gap-1 text-base font-black text-primary">
+                                                {{ product.provider_profile?.name || product.provider_name || 'Airmius Anbieter' }}
+                                                <i v-if="product.provider_profile?.verified" class="las la-check-circle text-lg text-success"></i>
+                                            </span>
+                                            <span class="mt-1 block text-xs font-semibold text-secondary">{{ product.provider_profile?.type || product.provider_type || 'Marketplace Anbieter' }}</span>
+                                            <span class="mt-1 block text-xs text-secondary">{{ product.provider_profile?.location || 'Online' }}</span>
+                                        </span>
+                                    </div>
+                                    <div class="mt-3 flex flex-wrap gap-1">
+                                        <span
+                                            v-for="badge in product.trust_badges"
+                                            :key="badge"
+                                            class="rounded bg-muted px-2 py-1 text-[11px] font-bold text-secondary"
+                                        >
+                                            {{ badge }}
+                                        </span>
+                                    </div>
+                                    <Link
+                                        v-if="product.provider_profile?.url"
+                                        :href="product.provider_profile.url"
+                                        class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded border border-buttonPrimary/40 px-3 py-2 text-xs font-black text-buttonPrimary hover:bg-buttonPrimary hover:text-buttonTextPrimary"
+                                    >
+                                        Anbieterprofil ansehen
+                                        <i class="las la-arrow-right text-base"></i>
+                                    </Link>
+                                </div>
+
+                                <h2 class="mt-6 text-lg font-black text-primary">Varianten</h2>
                                 <div v-if="displayAttributes.length" class="mt-3 grid gap-3">
                                     <label v-for="attribute in displayAttributes" :key="attribute.name" class="block">
                                         <span class="text-xs font-bold uppercase text-secondary">{{ attribute.name }}</span>
@@ -435,8 +657,30 @@ const updateCountry = () => {
                             </p>
                         </div>
 
+                        <div class="mt-5 grid grid-cols-3 gap-2">
+                            <button
+                                v-for="(step, index) in checkoutSteps"
+                                :key="step.key"
+                                type="button"
+                                class="rounded-lg border px-2 py-3 text-center text-[11px] font-black transition sm:text-xs"
+                                :class="checkoutStep === step.key
+                                    ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary'
+                                    : 'border-border bg-bg text-secondary hover:border-buttonPrimary hover:text-primary'"
+                                :disabled="isCheckoutStepDisabled(step.key)"
+                                @click="goToCheckoutStep(step.key)"
+                            >
+                                <span class="mx-auto mb-1 flex h-7 w-7 items-center justify-center rounded-full border border-current/30">
+                                    <i :class="[step.icon, 'text-base']"></i>
+                                </span>
+                                <span class="block">{{ index + 1 }}. {{ step.label }}</span>
+                            </button>
+                        </div>
+                        <p v-if="checkoutStepHint" class="mt-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-semibold text-warning">
+                            {{ checkoutStepHint }}
+                        </p>
+
                         <form class="mt-6 space-y-4" @submit.prevent="checkout">
-                            <div class="space-y-4">
+                            <section v-show="checkoutStep === 'address'" class="space-y-4">
                             <div v-if="isAuthenticated" class="rounded-lg border border-border bg-bg p-3">
                                 <label class="text-xs font-bold uppercase text-secondary">Adresse</label>
                                 <select v-model="addressChoice" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
@@ -448,6 +692,27 @@ const updateCountry = () => {
                                     </option>
                                     <option value="new">Neue Lieferadresse</option>
                                 </select>
+                            </div>
+
+                            <div class="rounded-lg border border-buttonPrimary/20 bg-buttonPrimary/10 p-3 text-sm text-primary">
+                                <p class="flex items-center gap-2 font-black">
+                                    <i class="las la-lock text-lg text-buttonPrimary"></i>
+                                    Sicherer Checkout
+                                </p>
+                                <div class="mt-3 grid gap-2 text-xs font-semibold text-secondary">
+                                    <p class="flex items-center gap-2">
+                                        <i :class="[selectedPaymentProvider?.icon || 'las la-credit-card', 'text-base text-buttonPrimary']"></i>
+                                        Zahlungsart: {{ selectedProviderLabel || 'Nicht konfiguriert' }}
+                                    </p>
+                                    <p class="flex items-center gap-2">
+                                        <i class="las la-file-invoice text-base text-buttonPrimary"></i>
+                                        Preis, Steuer und Versand werden vor Abschluss angezeigt.
+                                    </p>
+                                    <p class="flex items-center gap-2">
+                                        <i class="las la-envelope text-base text-buttonPrimary"></i>
+                                        Bestellstatus und Rechnung kommen per E-Mail.
+                                    </p>
+                                </div>
                             </div>
 
                             <div>
@@ -529,16 +794,27 @@ const updateCountry = () => {
 
                             <div>
                                 <label class="text-xs font-semibold uppercase text-secondary">Zahlungsart</label>
-                                <select v-model="form.provider" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                                    <option value="bank_transfer">Überweisung</option>
-                                    <option value="stripe">Stripe</option>
-                                    <option value="paypal">PayPal</option>
+                                <select v-model="form.provider" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :disabled="checkoutUnavailable">
+                                    <option v-if="checkoutUnavailable" value="">Keine Zahlungsart konfiguriert</option>
+                                    <option v-for="provider in paymentProviderItems" :key="provider.value" :value="provider.value">
+                                        {{ provider.label }}
+                                    </option>
                                 </select>
+                                <p v-if="selectedPaymentProvider?.description" class="mt-1 text-xs text-secondary">{{ selectedPaymentProvider.description }}</p>
                                 <p v-if="form.errors.provider" class="mt-1 text-sm text-red-400">{{ form.errors.provider }}</p>
                             </div>
 
-                            </div>
+                            <button
+                                type="button"
+                                class="w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-60"
+                                :disabled="!canContinueAddress"
+                                @click="nextCheckoutStep"
+                            >
+                                Weiter zu Menge & Preis
+                            </button>
+                            </section>
 
+                            <section v-show="checkoutStep === 'payment'" class="space-y-4">
                             <div>
                                 <label class="text-xs font-semibold uppercase text-secondary">Menge</label>
                                 <input
@@ -553,6 +829,44 @@ const updateCountry = () => {
                                 />
                                 <p class="mt-1 text-xs text-secondary">Verfuegbar: {{ maxQuantity }}</p>
                                 <p v-if="form.errors.quantity" class="mt-1 text-sm text-red-400">{{ form.errors.quantity }}</p>
+                            </div>
+
+                            <div class="flex gap-2">
+                                <button
+                                    type="button"
+                                    class="flex-1 rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted"
+                                    @click="previousCheckoutStep"
+                                >
+                                    Zurueck
+                                </button>
+                                <button
+                                    type="button"
+                                    class="flex-1 rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-60"
+                                    :disabled="!canContinuePayment"
+                                    @click="nextCheckoutStep"
+                                >
+                                    Pruefen
+                                </button>
+                            </div>
+                            </section>
+
+                            <section v-show="checkoutStep === 'review'" class="space-y-4">
+                            <div class="rounded-lg border border-buttonPrimary/20 bg-buttonPrimary/10 p-3 text-xs font-semibold text-secondary">
+                                <p class="mb-2 text-sm font-black text-primary">Bestellung pruefen</p>
+                                <div class="grid gap-2">
+                                    <p class="flex justify-between gap-3">
+                                        <span>Lieferland</span>
+                                        <span class="text-right text-primary">{{ form.shipping_country }}</span>
+                                    </p>
+                                    <p class="flex justify-between gap-3">
+                                        <span>Zahlungsart</span>
+                                        <span class="text-right text-primary">{{ selectedProviderLabel }}</span>
+                                    </p>
+                                    <p class="flex justify-between gap-3">
+                                        <span>Menge</span>
+                                        <span class="text-right text-primary">{{ selectedQuantity }}</span>
+                                    </p>
+                                </div>
                             </div>
 
                             <div class="rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
@@ -572,18 +886,36 @@ const updateCountry = () => {
                                 <p v-else-if="price.tax_rule === 'export_outside_eu'" class="mt-2 text-xs text-air-blue">Export außerhalb der EU: keine EU-MwSt. berechnet.</p>
                             </div>
 
-                            <label class="hidden items-start gap-3 text-sm text-secondary">
+                            <div v-if="product.learning_course_id" class="rounded-lg border border-border bg-bg p-3">
+                                <label class="text-xs font-semibold uppercase text-secondary">Kurs-Gutschein</label>
+                                <input v-model="form.coupon_code" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Code eingeben">
+                                <p v-if="form.errors.coupon_code" class="mt-1 text-sm text-red-400">{{ form.errors.coupon_code }}</p>
+                            </div>
+
+                            <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
                                 <input v-model="form.accepted_terms" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                                 <span>
-                                    Ich akzeptiere AGB und Widerrufshinweise. Mir ist bewusst, dass der jeweilige Anbieter für sein Angebot verantwortlich sein kann.
+                                    Ich akzeptiere
+                                    <Link :href="route('terms.show')" target="_blank" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>AGB</Link>
+                                    und
+                                    <Link :href="route('legal.withdrawal')" target="_blank" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>Widerrufshinweise</Link>.
+                                    Mir ist bewusst, dass der jeweilige Anbieter fuer sein Angebot verantwortlich sein kann.
                                 </span>
                             </label>
                             <p v-if="form.errors.accepted_terms" class="text-sm text-red-400">{{ form.errors.accepted_terms }}</p>
 
                             <button
+                                type="button"
+                                class="w-full rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted"
+                                @click="previousCheckoutStep"
+                            >
+                                Zurueck zu Menge
+                            </button>
+
+                            <button
                                 class="w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
-                                :disabled="form.processing"
-                                :class="{ 'opacity-60': form.processing }"
+                                :disabled="form.processing || !form.accepted_terms"
+                                :class="{ 'opacity-60': form.processing || !form.accepted_terms }"
                             >
                                 Jetzt kaufen
                             </button>
@@ -603,6 +935,7 @@ const updateCountry = () => {
                             <Link v-else :href="route('login')" class="hidden text-center text-sm font-semibold text-air-blue">
                                 Mit Konto anmelden
                             </Link>
+                            </section>
                         </form>
                     </aside>
                 </div>

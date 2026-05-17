@@ -31,8 +31,7 @@ class FilePolicy extends BasePolicy
 
     public function upload(User $user)
     {
-        return $user->can('file.view')
-            || $user->can('file.upload')
+        return $user->can('file.upload')
             || $this->isClubAdmin($user)
             || $this->isCoach($user)
             || $this->hasRole($user, ['media_manager']);

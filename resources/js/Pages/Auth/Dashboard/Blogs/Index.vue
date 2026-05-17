@@ -32,6 +32,7 @@ const form = useForm({
     cover_image: '',
     cover_image_upload: null,
     category: '',
+    blog_category_id: '',
     tags: '',
     meta_title: '',
     meta_description: '',
@@ -127,6 +128,7 @@ const edit = (post) => {
     form.cover_image = post.cover_image || ''
     form.cover_image_upload = null
     form.category = post.category || ''
+    form.blog_category_id = post.blog_category_id || post.blog_category?.id || ''
     form.tags = (post.tags || []).join(', ')
     form.meta_title = post.meta_title || ''
     form.meta_description = post.meta_description || ''
@@ -260,6 +262,72 @@ const stripHtml = (value = '') => value
     .replace(/\s+/g, ' ')
     .trim()
 
+const plainContent = computed(() => stripHtml(form.content))
+const contentWordCount = computed(() => plainContent.value ? plainContent.value.split(/\s+/).filter(Boolean).length : 0)
+const effectiveMetaTitle = computed(() => form.meta_title || form.title)
+const effectiveMetaDescription = computed(() => form.meta_description || form.excerpt)
+const hasCoverImage = computed(() => Boolean(form.cover_image || form.cover_image_upload))
+
+const seoChecks = computed(() => [
+    {
+        label: 'Titel ist suchfreundlich',
+        passed: effectiveMetaTitle.value.length >= 35 && effectiveMetaTitle.value.length <= 65,
+        hint: '35-65 Zeichen',
+    },
+    {
+        label: 'Meta Description ist klickstark',
+        passed: effectiveMetaDescription.value.length >= 110 && effectiveMetaDescription.value.length <= 160,
+        hint: '110-160 Zeichen',
+    },
+    {
+        label: 'Kurztext vorhanden',
+        passed: form.excerpt.trim().length >= 80,
+        hint: 'Mindestens 80 Zeichen',
+    },
+    {
+        label: 'Artikel hat genug Tiefe',
+        passed: contentWordCount.value >= 450,
+        hint: `${contentWordCount.value} Woerter`,
+    },
+    {
+        label: 'Kategorie gesetzt',
+        passed: Boolean(form.blog_category_id || form.category),
+        hint: 'Fuer Archiv, Breadcrumbs und Related Posts',
+    },
+    {
+        label: 'Cover Bild gesetzt',
+        passed: hasCoverImage.value,
+        hint: '1600 x 900 px empfohlen',
+    },
+])
+
+const seoScore = computed(() => {
+    if (!seoChecks.value.length) return 0
+
+    return Math.round((seoChecks.value.filter((check) => check.passed).length / seoChecks.value.length) * 100)
+})
+
+const seoScoreClass = computed(() => {
+    if (seoScore.value >= 85) return 'text-air-green'
+    if (seoScore.value >= 65) return 'text-air-orange'
+
+    return 'text-error'
+})
+
+const publishBlocked = computed(() => form.status === 'published' && seoScore.value < 85)
+
+const formatDateTime = (value) => {
+    if (!value) return ''
+
+    return new Intl.DateTimeFormat('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(new Date(value))
+}
+
 const selectCoverUpload = (event) => {
     form.cover_image_upload = event.target.files?.[0] || null
 }
@@ -357,7 +425,7 @@ const applyFilters = () => {
                 >
                     <div class="grid gap-4 p-4 md:grid-cols-[190px_1fr]">
                         <div class="flex h-40 items-center justify-center overflow-hidden rounded-lg bg-inputBg">
-                            <img v-if="post.cover_image" :src="post.cover_image" :alt="post.title" class="h-full w-full object-cover" />
+                            <img v-if="post.cover_image" :src="post.cover_image" :alt="post.title" loading="lazy" decoding="async" class="h-full w-full object-cover" />
                             <i v-else class="las la-newspaper text-5xl text-secondary"></i>
                         </div>
 
@@ -379,11 +447,20 @@ const applyFilters = () => {
                                 <span class="text-xs text-secondary">
                                     {{ post.author?.name || 'Unbekannt' }}
                                 </span>
+                                <span class="rounded-full border border-border px-3 py-1 text-xs text-secondary">
+                                    SEO {{ post.seo_score || 0 }}%
+                                </span>
+                                <span class="rounded-full border border-border px-3 py-1 text-xs text-secondary">
+                                    {{ post.revisions_count || 0 }} Revisionen
+                                </span>
                             </div>
 
                             <h2 class="mt-3 text-xl font-bold text-primary">{{ post.title }}</h2>
                             <p class="mt-2 line-clamp-2 text-sm leading-relaxed text-secondary">
                                 {{ post.excerpt || stripHtml(post.content) }}
+                            </p>
+                            <p v-if="post.latest_revision" class="mt-2 text-xs text-secondary">
+                                Letzte Sicherung: {{ formatDateTime(post.latest_revision.created_at) }} mit {{ post.latest_revision.seo_score }}% SEO
                             </p>
 
                             <div class="mt-4 flex flex-wrap gap-2">
@@ -400,6 +477,13 @@ const applyFilters = () => {
                                     class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
                                 >
                                     Anzeigen
+                                </Link>
+                                <Link
+                                    v-if="can.update"
+                                    :href="route('blogs.preview', post.id)"
+                                    class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
+                                >
+                                    Vorschau
                                 </Link>
                                 <button
                                     v-if="can.delete"
@@ -471,9 +555,9 @@ const applyFilters = () => {
                                 </Link>
                                 <label v-else class="text-sm font-semibold text-primary">Kategorie</label>
                             </div>
-                            <select v-model="form.category" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                            <select v-model="form.blog_category_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
                                 <option value="">Kategorie waehlen</option>
-                                <option v-for="category in categoryOptions" :key="category.id" :value="category.name">
+                                <option v-for="category in categoryOptions" :key="category.id" :value="category.id">
                                     {{ category.name }}
                                 </option>
                             </select>
@@ -605,14 +689,32 @@ const applyFilters = () => {
                     </div>
 
                     <div class="rounded-lg border border-border bg-inputBg p-3">
-                        <p class="text-sm font-semibold text-primary">SEO</p>
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="text-sm font-semibold text-primary">SEO</p>
+                            <span class="text-sm font-bold" :class="seoScoreClass">{{ seoScore }}%</span>
+                        </div>
+                        <div class="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                            <div class="h-full rounded-full bg-air-green transition-all" :style="{ width: `${seoScore}%` }"></div>
+                        </div>
                         <input v-model="form.meta_title" class="mt-3 w-full rounded-lg border-border bg-card text-primary" placeholder="Meta Title" />
                         <textarea v-model="form.meta_description" rows="2" class="mt-3 w-full rounded-lg border-border bg-card text-primary" placeholder="Meta Description"></textarea>
+                        <p v-if="publishBlocked" class="mt-3 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs font-semibold text-error">
+                            Veroeffentlichen ist ab 85% SEO-Qualitaet moeglich.
+                        </p>
+                        <div class="mt-3 grid gap-2 text-xs">
+                            <div v-for="check in seoChecks" :key="check.label" class="flex items-start gap-2">
+                                <i :class="[check.passed ? 'las la-check-circle text-air-green' : 'las la-exclamation-circle text-air-orange', 'mt-0.5 text-base']"></i>
+                                <div>
+                                    <p class="font-semibold text-primary">{{ check.label }}</p>
+                                    <p class="text-secondary">{{ check.hint }}</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <button
                         class="w-full rounded-lg bg-buttonPrimary px-4 py-3 font-semibold text-buttonTextPrimary disabled:opacity-60"
-                        :disabled="form.processing || (!editingPost && !can.create)"
+                        :disabled="form.processing || (!editingPost && !can.create) || publishBlocked"
                     >
                         {{ editingPost ? 'Aktualisieren' : 'Erstellen' }}
                     </button>

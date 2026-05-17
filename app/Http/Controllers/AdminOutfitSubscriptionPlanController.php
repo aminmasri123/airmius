@@ -9,7 +9,9 @@ use App\Models\Setting;
 use App\Models\Sponsor;
 use App\Models\Sport;
 use App\Notifications\OutfitDeliveryStatusUpdated;
+use App\Services\CommerceAuditService;
 use App\Services\MediaOptimizer;
+use App\Services\OutfitInvoiceService;
 use App\Services\OutfitPaymentReminderService;
 use App\Support\AppNotification;
 use App\Support\UploadStorage;
@@ -21,7 +23,11 @@ use Inertia\Inertia;
 
 class AdminOutfitSubscriptionPlanController extends Controller
 {
-    public function __construct(private MediaOptimizer $mediaOptimizer) {}
+    public function __construct(
+        private MediaOptimizer $mediaOptimizer,
+        private CommerceAuditService $audit,
+        private OutfitInvoiceService $outfitInvoices,
+    ) {}
 
     public function index()
     {
@@ -126,6 +132,8 @@ class AdminOutfitSubscriptionPlanController extends Controller
             'payment_note' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        $before = $this->subscriptionAuditSnapshot($subscription);
+
         $reminders->resetDunningAfterPayment($subscription);
         $subscription->refresh();
 
@@ -138,6 +146,16 @@ class AdminOutfitSubscriptionPlanController extends Controller
                 'notes' => trim('Zahlung bestaetigt. '.($data['payment_note'] ?? 'Erste personalisierte Box wird vorbereitet.')),
             ]);
         }
+
+        $this->outfitInvoices->createPaidInvoice($subscription->fresh(['plan', 'sponsor']));
+
+        $this->audit->log(
+            'outfit.subscription.marked_paid',
+            $subscription,
+            $before,
+            $this->subscriptionAuditSnapshot($subscription->fresh()),
+            $data['payment_note'] ?? null,
+        );
 
         AppNotification::send($subscription->user_id, 'outfit.subscription.paid', [
             'title' => 'Outfit-Abo aktiviert',
@@ -156,6 +174,8 @@ class AdminOutfitSubscriptionPlanController extends Controller
             'reason' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        $before = $this->subscriptionAuditSnapshot($subscription);
+
         $subscription->forceFill([
             'status' => 'active',
             'payment_status' => 'pending',
@@ -168,6 +188,14 @@ class AdminOutfitSubscriptionPlanController extends Controller
             'payment_paused_reason' => null,
         ])->save();
 
+        $this->audit->log(
+            'outfit.subscription.marked_unpaid',
+            $subscription,
+            $before,
+            $this->subscriptionAuditSnapshot($subscription->fresh()),
+            $data['reason'] ?? null,
+        );
+
         AppNotification::send($subscription->user_id, 'outfit.payment.opened_by_admin', [
             'title' => 'Outfit-Abo Zahlung offen',
             'message' => trim('Fuer dein Outfit-Abo '.$subscription->plan?->name.' wurde eine offene Zahlung hinterlegt. '.($data['reason'] ?? '')),
@@ -178,11 +206,42 @@ class AdminOutfitSubscriptionPlanController extends Controller
         return back()->with('success', 'Outfit-Abo wurde als offene Zahlung markiert. Mahnungen laufen automatisch.');
     }
 
+    public function updateShippingAddress(Request $request, OutfitSubscription $subscription)
+    {
+        $data = $this->validatedShippingAddress($request);
+        $before = $this->subscriptionAuditSnapshot($subscription);
+
+        $subscription->forceFill($data)->save();
+
+        $this->audit->log(
+            'outfit.subscription.shipping_address_updated',
+            $subscription,
+            $before,
+            $this->subscriptionAuditSnapshot($subscription->fresh()),
+        );
+
+        AppNotification::send($subscription->user_id, 'outfit.subscription.shipping_address_updated', [
+            'title' => 'Lieferadresse aktualisiert',
+            'message' => 'Die Lieferadresse fuer dein Outfit-Abo '.$subscription->plan?->name.' wurde aktualisiert.',
+            'url' => route('auth.outfit-subscriptions.index'),
+            'subscription_id' => $subscription->id,
+        ]);
+
+        return back()->with('success', 'Lieferadresse wurde aktualisiert.');
+    }
+
     public function remindPayment(OutfitSubscription $subscription, OutfitPaymentReminderService $reminders)
     {
         if (! $reminders->send($subscription)) {
             return back()->with('success', 'Erinnerung konnte nicht gesendet werden. Die Zahlung ist nicht offen oder das Limit von 3 Erinnerungen ist erreicht.');
         }
+
+        $this->audit->log(
+            'outfit.subscription.payment_reminder_sent',
+            $subscription,
+            [],
+            $this->subscriptionAuditSnapshot($subscription->fresh()),
+        );
 
         return back()->with('success', 'Zahlungserinnerung wurde per E-Mail und Benachrichtigung versendet.');
     }
@@ -197,6 +256,8 @@ class AdminOutfitSubscriptionPlanController extends Controller
             $this->cancelPayPalSubscription($subscription, $data['reason'] ?? null);
         }
 
+        $before = $this->subscriptionAuditSnapshot($subscription);
+
         $subscription->forceFill([
             'status' => 'cancelled',
             'payment_status' => $subscription->payment_status === 'paid' ? 'paid' : 'cancelled',
@@ -204,6 +265,14 @@ class AdminOutfitSubscriptionPlanController extends Controller
             'next_delivery_at' => null,
             'current_period_ends_at' => null,
         ])->save();
+
+        $this->audit->log(
+            'outfit.subscription.cancelled_by_admin',
+            $subscription,
+            $before,
+            $this->subscriptionAuditSnapshot($subscription->fresh()),
+            $data['reason'] ?? null,
+        );
 
         AppNotification::send($subscription->user_id, 'outfit.subscription.cancelled_by_admin', [
             'title' => 'Outfit-Abo-Anfrage abgebrochen',
@@ -225,6 +294,13 @@ class AdminOutfitSubscriptionPlanController extends Controller
             $this->cancelPayPalSubscription($subscription, 'Abo wurde durch Admin geloescht.');
         }
 
+        $this->audit->log(
+            'outfit.subscription.deleted_by_admin',
+            $subscription,
+            $this->subscriptionAuditSnapshot($subscription),
+            [],
+        );
+
         $subscription->delete();
 
         return back()->with('success', 'Outfit-Abo wurde geloescht.');
@@ -236,18 +312,21 @@ class AdminOutfitSubscriptionPlanController extends Controller
             'status' => ['required', 'string', 'in:planned,preparing,shipped,delivered,cancelled'],
             'delivery_month' => ['nullable', 'date'],
             'tracking_number' => ['nullable', 'string', 'max:120'],
+            'tracking_url' => ['nullable', 'url', 'max:2048'],
             'carrier' => ['nullable', 'string', 'max:120'],
             'items_text' => ['nullable', 'string', 'max:5000'],
             'notes' => ['nullable', 'string', 'max:5000'],
         ]);
 
         $previousStatus = $delivery->status;
+        $before = $this->deliveryAuditSnapshot($delivery);
         $status = $data['status'];
 
         $delivery->update([
             'status' => $status,
             'delivery_month' => $data['delivery_month'] ?? null,
             'tracking_number' => $data['tracking_number'] ?? null,
+            'tracking_url' => $data['tracking_url'] ?? null,
             'carrier' => $data['carrier'] ?? null,
             'items' => collect(preg_split('/\r\n|\r|\n/', (string) ($data['items_text'] ?? '')))
                 ->map(fn ($item) => trim($item))
@@ -263,21 +342,66 @@ class AdminOutfitSubscriptionPlanController extends Controller
             $this->notifyDeliveryStatus($delivery->fresh());
         }
 
+        $this->audit->log(
+            'outfit.delivery.updated',
+            $delivery,
+            $before,
+            $this->deliveryAuditSnapshot($delivery->fresh()),
+        );
+
         return back()->with('success', 'Lieferung wurde aktualisiert.');
+    }
+
+    public function updateDeliveryIssue(Request $request, OutfitDelivery $delivery)
+    {
+        $data = $request->validate([
+            'issue_status' => ['required', 'string', 'in:open,reviewing,approved,return_waiting,replacement_preparing,resolved,rejected'],
+            'issue_admin_note' => ['nullable', 'string', 'max:2000'],
+            'return_tracking_number' => ['nullable', 'string', 'max:120'],
+            'return_tracking_url' => ['nullable', 'url', 'max:2048'],
+        ]);
+
+        $before = $this->deliveryAuditSnapshot($delivery);
+        $previousStatus = $delivery->issue_status;
+        $resolved = in_array($data['issue_status'], ['resolved', 'rejected'], true);
+
+        $delivery->forceFill([
+            'issue_status' => $data['issue_status'],
+            'issue_admin_note' => $data['issue_admin_note'] ?? null,
+            'return_tracking_number' => $data['return_tracking_number'] ?? null,
+            'return_tracking_url' => $data['return_tracking_url'] ?? null,
+            'issue_resolved_at' => $resolved ? ($delivery->issue_resolved_at ?: now()) : null,
+        ])->save();
+
+        $this->audit->log(
+            'outfit.delivery.issue_updated',
+            $delivery,
+            $before,
+            $this->deliveryAuditSnapshot($delivery->fresh()),
+        );
+
+        if ($previousStatus !== $delivery->issue_status) {
+            $this->notifyDeliveryIssueStatus($delivery->fresh(['subscription.user', 'subscription.plan']));
+        }
+
+        return back()->with('success', 'Support-Vorgang wurde aktualisiert.');
     }
 
     public function markDeliveryShipped(Request $request, OutfitDelivery $delivery)
     {
         $data = $request->validate([
             'tracking_number' => ['nullable', 'string', 'max:120'],
+            'tracking_url' => ['nullable', 'url', 'max:2048'],
             'carrier' => ['nullable', 'string', 'max:120'],
         ]);
 
         $previousStatus = $delivery->status;
+        $before = $this->deliveryAuditSnapshot($delivery);
 
         $delivery->update([
             'status' => 'shipped',
             'tracking_number' => $data['tracking_number'] ?? $delivery->tracking_number,
+            'tracking_url' => $data['tracking_url'] ?? $delivery->tracking_url,
             'carrier' => $data['carrier'] ?? $delivery->carrier,
             'shipped_at' => $delivery->shipped_at ?: now(),
         ]);
@@ -286,12 +410,20 @@ class AdminOutfitSubscriptionPlanController extends Controller
             $this->notifyDeliveryStatus($delivery->fresh());
         }
 
+        $this->audit->log(
+            'outfit.delivery.marked_shipped',
+            $delivery,
+            $before,
+            $this->deliveryAuditSnapshot($delivery->fresh()),
+        );
+
         return back()->with('success', 'Lieferung wurde als versendet markiert.');
     }
 
     public function markDeliveryDelivered(OutfitDelivery $delivery)
     {
         $previousStatus = $delivery->status;
+        $before = $this->deliveryAuditSnapshot($delivery);
 
         $delivery->update([
             'status' => 'delivered',
@@ -303,6 +435,13 @@ class AdminOutfitSubscriptionPlanController extends Controller
             $this->notifyDeliveryStatus($delivery->fresh());
         }
 
+        $this->audit->log(
+            'outfit.delivery.marked_delivered',
+            $delivery,
+            $before,
+            $this->deliveryAuditSnapshot($delivery->fresh()),
+        );
+
         return back()->with('success', 'Lieferung wurde als geliefert markiert.');
     }
 
@@ -311,6 +450,13 @@ class AdminOutfitSubscriptionPlanController extends Controller
         $request->validate([
             'confirmation' => ['required', 'string', 'in:delete'],
         ]);
+
+        $this->audit->log(
+            'outfit.delivery.deleted_by_admin',
+            $delivery,
+            $this->deliveryAuditSnapshot($delivery),
+            [],
+        );
 
         $delivery->delete();
 
@@ -345,7 +491,7 @@ class AdminOutfitSubscriptionPlanController extends Controller
         ]);
 
         $data['sponsor_discount_cents'] = $data['sponsor_discount_cents'] ?? 0;
-        $data['contract_title'] = $data['contract_title'] ?: null;
+        $data['contract_title'] = ($data['contract_title'] ?? null) ?: null;
         $data['contract_terms'] = collect($data['contract_terms'] ?? [])
             ->map(fn ($term) => trim((string) $term))
             ->filter()
@@ -442,7 +588,47 @@ class AdminOutfitSubscriptionPlanController extends Controller
                 'name' => $subscription->sponsor->name,
             ] : null,
             'bank_transfer' => $bankTransfer,
+            'shipping_address' => $this->shippingAddressPayload($subscription),
             'latest_delivery' => $subscription->latestDelivery ? $this->deliverySummaryPayload($subscription->latestDelivery) : null,
+        ];
+    }
+
+    private function shippingAddressPayload(OutfitSubscription $subscription): array
+    {
+        return [
+            'name' => $subscription->shipping_name,
+            'country' => $subscription->shipping_country,
+            'street' => $subscription->shipping_street,
+            'house_number' => $subscription->shipping_house_number,
+            'postal_code' => $subscription->shipping_postal_code,
+            'city' => $subscription->shipping_city,
+            'state' => $subscription->shipping_state,
+            'note' => $subscription->shipping_note,
+        ];
+    }
+
+    private function validatedShippingAddress(Request $request): array
+    {
+        $data = $request->validate([
+            'shipping_name' => ['required', 'string', 'max:255'],
+            'shipping_country' => ['required', 'string', 'size:2'],
+            'shipping_street' => ['required', 'string', 'max:255'],
+            'shipping_house_number' => ['nullable', 'string', 'max:40'],
+            'shipping_postal_code' => ['required', 'string', 'max:30'],
+            'shipping_city' => ['required', 'string', 'max:255'],
+            'shipping_state' => ['nullable', 'string', 'max:255'],
+            'shipping_note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        return [
+            'shipping_name' => trim($data['shipping_name']),
+            'shipping_country' => strtoupper(trim($data['shipping_country'])),
+            'shipping_street' => trim($data['shipping_street']),
+            'shipping_house_number' => filled($data['shipping_house_number'] ?? null) ? trim($data['shipping_house_number']) : null,
+            'shipping_postal_code' => trim($data['shipping_postal_code']),
+            'shipping_city' => trim($data['shipping_city']),
+            'shipping_state' => filled($data['shipping_state'] ?? null) ? trim($data['shipping_state']) : null,
+            'shipping_note' => filled($data['shipping_note'] ?? null) ? trim($data['shipping_note']) : null,
         ];
     }
 
@@ -463,6 +649,7 @@ class AdminOutfitSubscriptionPlanController extends Controller
             'delivery_id' => $delivery->id,
             'subscription_id' => $subscription->id,
             'tracking_number' => $delivery->tracking_number,
+            'tracking_url' => $delivery->tracking_url,
             'carrier' => $delivery->carrier,
             'url' => route('auth.outfit-subscriptions.index'),
         ]);
@@ -503,11 +690,13 @@ class AdminOutfitSubscriptionPlanController extends Controller
             'status' => $delivery->status,
             'delivery_month' => optional($delivery->delivery_month)->toDateString(),
             'tracking_number' => $delivery->tracking_number,
+            'tracking_url' => $delivery->tracking_url,
             'carrier' => $delivery->carrier,
             'shipped_at' => optional($delivery->shipped_at)->toIso8601String(),
             'delivered_at' => optional($delivery->delivered_at)->toIso8601String(),
             'items' => $delivery->items ?: [],
             'notes' => $delivery->notes,
+            'issue' => $this->deliveryIssuePayload($delivery),
         ];
     }
 
@@ -520,16 +709,19 @@ class AdminOutfitSubscriptionPlanController extends Controller
             'status' => $delivery->status,
             'delivery_month' => optional($delivery->delivery_month)->toDateString(),
             'tracking_number' => $delivery->tracking_number,
+            'tracking_url' => $delivery->tracking_url,
             'carrier' => $delivery->carrier,
             'shipped_at' => optional($delivery->shipped_at)->toIso8601String(),
             'delivered_at' => optional($delivery->delivered_at)->toIso8601String(),
             'items' => $delivery->items ?: [],
             'notes' => $delivery->notes,
+            'issue' => $this->deliveryIssuePayload($delivery),
             'created_at' => optional($delivery->created_at)->toIso8601String(),
             'subscription' => $subscription ? [
                 'id' => $subscription->id,
                 'status' => $subscription->status,
                 'payment_reference' => $subscription->payment_reference,
+                'shipping_address' => $this->shippingAddressPayload($subscription),
                 'user' => $subscription->user ? [
                     'id' => $subscription->user->id,
                     'name' => $subscription->user->name,
@@ -541,6 +733,99 @@ class AdminOutfitSubscriptionPlanController extends Controller
                 ] : null,
             ] : null,
         ];
+    }
+
+    private function subscriptionAuditSnapshot(OutfitSubscription $subscription): array
+    {
+        return [
+            'id' => $subscription->id,
+            'user_id' => $subscription->user_id,
+            'outfit_subscription_plan_id' => $subscription->outfit_subscription_plan_id,
+            'status' => $subscription->status,
+            'payment_status' => $subscription->payment_status,
+            'payment_provider' => $subscription->payment_provider,
+            'payment_reference' => $subscription->payment_reference,
+            'monthly_price_cents' => (int) $subscription->monthly_price_cents,
+            'currency' => $subscription->currency,
+            'shipping_address' => $this->shippingAddressPayload($subscription),
+            'payment_due_at' => optional($subscription->payment_due_at)->toIso8601String(),
+            'next_delivery_at' => optional($subscription->next_delivery_at)->toIso8601String(),
+            'current_period_ends_at' => optional($subscription->current_period_ends_at)->toIso8601String(),
+            'cancelled_at' => optional($subscription->cancelled_at)->toIso8601String(),
+        ];
+    }
+
+    private function deliveryAuditSnapshot(OutfitDelivery $delivery): array
+    {
+        return [
+            'id' => $delivery->id,
+            'outfit_subscription_id' => $delivery->outfit_subscription_id,
+            'status' => $delivery->status,
+            'delivery_month' => optional($delivery->delivery_month)->toDateString(),
+            'tracking_number' => $delivery->tracking_number,
+            'tracking_url' => $delivery->tracking_url,
+            'carrier' => $delivery->carrier,
+            'items' => $delivery->items ?: [],
+            'notes' => $delivery->notes,
+            'issue' => $this->deliveryIssuePayload($delivery),
+            'shipped_at' => optional($delivery->shipped_at)->toIso8601String(),
+            'delivered_at' => optional($delivery->delivered_at)->toIso8601String(),
+        ];
+    }
+
+    private function deliveryIssuePayload(OutfitDelivery $delivery): ?array
+    {
+        if (! $delivery->issue_status && ! $delivery->issue_type) {
+            return null;
+        }
+
+        return [
+            'type' => $delivery->issue_type,
+            'status' => $delivery->issue_status,
+            'description' => $delivery->issue_description,
+            'requested_resolution' => $delivery->issue_requested_resolution,
+            'exchange_size' => $delivery->issue_exchange_size,
+            'admin_note' => $delivery->issue_admin_note,
+            'return_tracking_number' => $delivery->return_tracking_number,
+            'return_tracking_url' => $delivery->return_tracking_url,
+            'requested_at' => optional($delivery->issue_requested_at)->toIso8601String(),
+            'resolved_at' => optional($delivery->issue_resolved_at)->toIso8601String(),
+        ];
+    }
+
+    private function notifyDeliveryIssueStatus(OutfitDelivery $delivery): void
+    {
+        $user = $delivery->subscription?->user;
+
+        if (! $user) {
+            return;
+        }
+
+        AppNotification::send($user, 'outfit.delivery.issue_status_updated', [
+            'title' => 'Support-Vorgang aktualisiert',
+            'message' => $this->deliveryIssueStatusMessage($delivery),
+            'delivery_id' => $delivery->id,
+            'subscription_id' => $delivery->outfit_subscription_id,
+            'issue_status' => $delivery->issue_status,
+            'return_tracking_number' => $delivery->return_tracking_number,
+            'return_tracking_url' => $delivery->return_tracking_url,
+            'url' => route('auth.outfit-subscriptions.index'),
+        ]);
+    }
+
+    private function deliveryIssueStatusMessage(OutfitDelivery $delivery): string
+    {
+        $planName = $delivery->subscription?->plan?->name ?? 'Outfit-Abo';
+
+        return match ($delivery->issue_status) {
+            'reviewing' => "Deine Meldung fuer {$planName} wird geprueft.",
+            'approved' => "Deine Meldung fuer {$planName} wurde freigegeben.",
+            'return_waiting' => "Wir warten auf deine Ruecksendung fuer {$planName}.",
+            'replacement_preparing' => "Dein Ersatz fuer {$planName} wird vorbereitet.",
+            'resolved' => "Dein Support-Vorgang fuer {$planName} wurde geloest.",
+            'rejected' => "Dein Support-Vorgang fuer {$planName} wurde abgeschlossen.",
+            default => "Dein Support-Vorgang fuer {$planName} wurde aktualisiert.",
+        };
     }
 
     private function cancelPayPalSubscription(OutfitSubscription $subscription, ?string $reason = null): void

@@ -20,7 +20,32 @@ const props = defineProps({
         default: () => ({
             search: '',
             status: 'all',
+            tab: 'users',
+            inactive_search: '',
+            inactive_stage: 'all',
         }),
+    },
+    inactiveUsers: {
+        type: Object,
+        default: () => ({
+            data: [],
+            links: [],
+            from: null,
+            to: null,
+            total: 0,
+        }),
+    },
+    inactiveSummary: {
+        type: Object,
+        default: () => ({}),
+    },
+    inactiveRules: {
+        type: Array,
+        default: () => [],
+    },
+    canManageInactivity: {
+        type: Boolean,
+        default: false,
     },
     warnings: {
         type: Array,
@@ -30,10 +55,13 @@ const props = defineProps({
 
 const searchQuery = ref(props.filters.search || '')
 const statusFilter = ref(props.filters.status || 'all')
-const activeTab = ref('users')
+const activeTab = ref(props.filters.tab || 'users')
+const inactiveSearch = ref(props.filters.inactive_search || '')
+const inactiveStage = ref(props.filters.inactive_stage || 'all')
 const warningCategoryFilter = ref('all')
 const showDeleteModal = ref(false)
 const userToDelete = ref(null)
+const sendingNoticeId = ref(null)
 
 const createUser = () => {
     router.visit(route('members.create'))
@@ -44,6 +72,11 @@ const clearSearch = () => {
     statusFilter.value = 'all'
 }
 
+const clearInactiveFilters = () => {
+    inactiveSearch.value = ''
+    inactiveStage.value = 'all'
+}
+
 let searchTimeout = null
 watch([searchQuery, statusFilter], ([search, status]) => {
     clearTimeout(searchTimeout)
@@ -52,10 +85,42 @@ watch([searchQuery, statusFilter], ([search, status]) => {
         router.get(route('members.index'), {
             search: search || undefined,
             status: status !== 'all' ? status : undefined,
+            tab: activeTab.value,
         }, {
             preserveState: true,
             replace: true,
             only: ['users', 'filters'],
+        })
+    }, 300)
+})
+
+watch(activeTab, (tab) => {
+    router.get(route('members.index'), {
+        tab,
+        search: searchQuery.value || undefined,
+        status: statusFilter.value !== 'all' ? statusFilter.value : undefined,
+        inactive_search: inactiveSearch.value || undefined,
+        inactive_stage: inactiveStage.value !== 'all' ? inactiveStage.value : undefined,
+    }, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+        only: ['filters'],
+    })
+})
+
+watch([inactiveSearch, inactiveStage], ([search, stage]) => {
+    clearTimeout(searchTimeout)
+
+    searchTimeout = setTimeout(() => {
+        router.get(route('members.index'), {
+            tab: 'inactivity',
+            inactive_search: search || undefined,
+            inactive_stage: stage !== 'all' ? stage : undefined,
+        }, {
+            preserveState: true,
+            replace: true,
+            only: ['inactiveUsers', 'inactiveSummary', 'filters'],
         })
     }, 300)
 })
@@ -90,6 +155,14 @@ const handleDeleteCancel = () => {
 
 const formatDate = (value) => value ? new Date(value).toLocaleString('de-DE') : '-'
 
+const inactiveCards = computed(() => [
+    { label: '12+ Monate', value: props.inactiveSummary.inactive_12 || 0, tone: 'text-warning' },
+    { label: '18+ Monate', value: props.inactiveSummary.inactive_18 || 0, tone: 'text-warning' },
+    { label: '24+ Monate', value: props.inactiveSummary.inactive_24 || 0, tone: 'text-error' },
+    { label: '36+ Monate', value: props.inactiveSummary.inactive_36 || 0, tone: 'text-error' },
+    { label: 'Mail-Fehler', value: props.inactiveSummary.mail_failed || 0, tone: 'text-error' },
+])
+
 const statusLabel = (user) => {
     if (user.account_status === 'suspended') {
         return user.suspended_until ? `Gesperrt bis ${formatDate(user.suspended_until)}` : 'Gesperrt'
@@ -123,6 +196,49 @@ const badgeClass = (severity) => {
     if (severity === 'medium') return 'bg-warning/10 text-warning'
     return 'bg-secondary/20 text-secondary'
 }
+
+const initials = (name) => (name || '?')
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+
+const stageLabel = (stage) => ({
+    first: 'Erste Mail faellig',
+    second: 'Zweite Mail faellig',
+    scheduled: 'Profil ausblenden',
+    anonymize: 'Anonymisierung pruefen',
+    waiting: 'Warten',
+    active: 'Aktiv',
+    check: 'Pruefen',
+}[stage] || stage)
+
+const stageClass = (stage) => {
+    if (['anonymize', 'scheduled'].includes(stage)) return 'bg-error/10 text-error'
+    if (['first', 'second', 'check'].includes(stage)) return 'bg-warning/10 text-warning'
+    return 'bg-success/10 text-success'
+}
+
+const mailBadgeClass = (status) => {
+    if (status === 'sent') return 'bg-success/10 text-success'
+    if (status === 'failed') return 'bg-error/10 text-error'
+    if (status === 'skipped') return 'bg-warning/10 text-warning'
+    return 'bg-secondary/20 text-secondary'
+}
+
+const sendInactivityNotice = (user, stage) => {
+    sendingNoticeId.value = `${user.id}-${stage}`
+
+    router.post(route('admin.members.inactivity-notice', user.id), {
+        stage,
+    }, {
+        preserveScroll: true,
+        onFinish: () => {
+            sendingNoticeId.value = null
+        },
+    })
+}
 </script>
 
 <template>
@@ -140,6 +256,7 @@ const badgeClass = (severity) => {
 
             <div class="flex flex-wrap gap-2 rounded-lg border border-border bg-card p-3">
                 <button
+                    v-if="canManageInactivity"
                     type="button"
                     @click="activeTab = 'users'"
                     class="rounded-md px-4 py-2 text-sm font-semibold transition"
@@ -156,6 +273,15 @@ const badgeClass = (severity) => {
                 >
                     Warnungen
                     <span class="ml-2 rounded-full bg-secondary/20 px-2 py-0.5 text-xs">{{ warnings.length }}</span>
+                </button>
+                <button
+                    type="button"
+                    @click="activeTab = 'inactivity'"
+                    class="rounded-md px-4 py-2 text-sm font-semibold transition"
+                    :class="activeTab === 'inactivity' ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-secondary hover:bg-secondary/10 hover:text-primary'"
+                >
+                    Inaktivität & DSGVO
+                    <span class="ml-2 rounded-full bg-secondary/20 px-2 py-0.5 text-xs">{{ inactiveSummary.inactive_12 || 0 }}</span>
                 </button>
             </div>
 
@@ -265,7 +391,7 @@ const badgeClass = (severity) => {
                 </div>
             </div>
 
-            <section v-else class="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+            <section v-if="activeTab === 'warnings'" class="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
                 <div class="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h2 class="text-lg font-semibold text-primary">User-Warnungen</h2>
@@ -353,6 +479,217 @@ const badgeClass = (severity) => {
                         </tbody>
                     </table>
                 </div>
+            </section>
+
+            <section v-if="activeTab === 'inactivity'" class="space-y-4">
+                <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                    <article
+                        v-for="card in inactiveCards"
+                        :key="card.label"
+                        class="rounded-lg border border-border bg-card p-4"
+                    >
+                        <p class="text-xs font-semibold uppercase text-secondary">{{ card.label }}</p>
+                        <p class="mt-2 text-2xl font-bold" :class="card.tone">{{ card.value }}</p>
+                    </article>
+                </div>
+
+                <section class="rounded-lg border border-border bg-card p-5">
+                    <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <h2 class="text-lg font-semibold text-primary">Regeln</h2>
+                            <p class="text-sm text-secondary">
+                                Diese Regeln gelten fuer die automatische Pruefung und deine manuelle Kontrolle.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            class="rounded-md border border-border bg-inputBg px-4 py-2 text-sm font-semibold text-primary transition hover:bg-muted"
+                            @click="router.visit(route('admin.mail-center.index', { type: 'inactive_account.first' }))"
+                        >
+                            Mail-Zentrale oeffnen
+                        </button>
+                    </div>
+
+                    <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                        <article
+                            v-for="rule in inactiveRules"
+                            :key="rule.month"
+                            class="rounded-lg border border-border bg-inputBg p-4"
+                        >
+                            <p class="text-xs font-bold uppercase text-buttonPrimary">{{ rule.month }}</p>
+                            <h3 class="mt-2 text-sm font-semibold text-primary">{{ rule.title }}</h3>
+                            <p class="mt-2 text-xs leading-5 text-secondary">{{ rule.description }}</p>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+                    <div class="grid gap-3 border-b border-border p-4 lg:grid-cols-[1fr_220px_auto]">
+                        <div class="relative">
+                            <i class="las la-search absolute left-3 top-1/2 -translate-y-1/2 text-lg text-secondary"></i>
+                            <input
+                                v-model="inactiveSearch"
+                                type="search"
+                                class="w-full rounded-md border border-border bg-inputBg py-2 pl-10 pr-3 text-sm text-primary placeholder-secondary focus:border-buttonPrimary focus:ring-1 focus:ring-buttonPrimary"
+                                placeholder="Name oder E-Mail suchen"
+                            />
+                        </div>
+
+                        <select
+                            v-model="inactiveStage"
+                            class="rounded-md border border-border bg-inputBg px-3 py-2 text-sm text-primary focus:border-buttonPrimary focus:ring-1 focus:ring-buttonPrimary"
+                        >
+                            <option value="all">Alle Nutzer</option>
+                            <option value="12">12+ Monate inaktiv</option>
+                            <option value="18">18+ Monate inaktiv</option>
+                            <option value="24">24+ Monate inaktiv</option>
+                            <option value="36">36+ Monate inaktiv</option>
+                            <option value="mail_failed">Mail fehlgeschlagen</option>
+                        </select>
+
+                        <button
+                            type="button"
+                            class="rounded-md border border-border bg-inputBg px-4 py-2 text-sm font-semibold text-primary transition hover:bg-muted"
+                            @click="clearInactiveFilters"
+                        >
+                            Zuruecksetzen
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-border">
+                            <thead class="bg-card">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Nutzer</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Letzter Login</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">DSGVO-Status</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Mailstatus</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-primary">Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-border bg-table">
+                                <tr v-for="user in inactiveUsers.data" :key="user.id">
+                                    <td class="px-4 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <img
+                                                v-if="user.profile_photo_url"
+                                                :src="user.profile_photo_url"
+                                                :alt="user.name"
+                                                class="h-10 w-10 rounded-full object-cover"
+                                            />
+                                            <div
+                                                v-else
+                                                class="flex h-10 w-10 items-center justify-center rounded-full bg-buttonPrimary text-sm font-bold text-buttonTextPrimary"
+                                            >
+                                                {{ initials(user.name) }}
+                                            </div>
+                                            <div>
+                                                <p class="font-semibold text-primary">{{ user.name }}</p>
+                                                <p class="text-xs text-secondary">{{ user.email }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td class="px-4 py-4 text-sm text-primary">
+                                        <p>{{ user.last_login_at || user.last_seen_at || '-' }}</p>
+                                        <p class="mt-1 text-xs text-secondary">
+                                            {{ user.inactive_days ?? '-' }} Tage inaktiv
+                                        </p>
+                                    </td>
+
+                                    <td class="px-4 py-4 text-sm">
+                                        <span class="rounded-full px-3 py-1 text-xs font-semibold" :class="stageClass(user.recommended_stage)">
+                                            {{ stageLabel(user.recommended_stage) }}
+                                        </span>
+                                        <p class="mt-2 text-xs text-secondary">
+                                            Datenschutz: {{ user.privacy_status }} · Profil: {{ user.profile_visibility }}
+                                        </p>
+                                        <p v-if="user.deletion_scheduled_at" class="mt-1 text-xs text-error">
+                                            Anonymisierung geplant: {{ user.deletion_scheduled_at }}
+                                        </p>
+                                    </td>
+
+                                    <td class="px-4 py-4 text-sm">
+                                        <div class="space-y-1 text-xs text-secondary">
+                                            <p>12M: {{ user.first_warning_sent_at || 'nicht gesendet' }}</p>
+                                            <p>18M: {{ user.second_warning_sent_at || 'nicht gesendet' }}</p>
+                                        </div>
+                                        <div v-if="user.last_mail" class="mt-2">
+                                            <span class="rounded-full px-2 py-1 text-xs font-semibold" :class="mailBadgeClass(user.last_mail.status)">
+                                                {{ user.last_mail.status }}
+                                            </span>
+                                            <p class="mt-1 max-w-xs truncate text-xs text-secondary">
+                                                {{ user.last_mail.type }} · {{ user.last_mail.created_at }}
+                                            </p>
+                                            <p v-if="user.last_mail.error_message" class="mt-1 max-w-xs truncate text-xs text-error">
+                                                {{ user.last_mail.error_message }}
+                                            </p>
+                                        </div>
+                                    </td>
+
+                                    <td class="px-4 py-4">
+                                        <div class="flex flex-wrap gap-2">
+                                            <button
+                                                type="button"
+                                                class="rounded-md border border-border bg-inputBg px-3 py-2 text-xs font-semibold text-primary transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                                                :disabled="sendingNoticeId === `${user.id}-first`"
+                                                @click="sendInactivityNotice(user, 'first')"
+                                            >
+                                                12M-Mail
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="rounded-md border border-border bg-inputBg px-3 py-2 text-xs font-semibold text-primary transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                                                :disabled="sendingNoticeId === `${user.id}-second`"
+                                                @click="sendInactivityNotice(user, 'second')"
+                                            >
+                                                18M-Mail
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="rounded-md border border-error/40 bg-error/10 px-3 py-2 text-xs font-semibold text-error transition hover:bg-error/20 disabled:cursor-not-allowed disabled:opacity-60"
+                                                :disabled="sendingNoticeId === `${user.id}-scheduled`"
+                                                @click="sendInactivityNotice(user, 'scheduled')"
+                                            >
+                                                24M-Hinweis
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <tr v-if="inactiveUsers.data.length === 0">
+                                    <td colspan="5" class="px-4 py-8 text-center text-sm text-secondary">
+                                        Keine passenden Nutzer gefunden.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="flex flex-col gap-3 border-t border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <p class="text-sm text-secondary">
+                            <span v-if="inactiveUsers.total > 0">
+                                Zeige {{ inactiveUsers.from }} bis {{ inactiveUsers.to }} von {{ inactiveUsers.total }} Nutzern.
+                            </span>
+                            <span v-else>Keine Nutzer vorhanden.</span>
+                        </p>
+
+                        <div v-if="inactiveUsers.links.length > 3" class="flex flex-wrap gap-1">
+                            <button
+                                v-for="link in inactiveUsers.links"
+                                :key="link.label"
+                                type="button"
+                                :disabled="!link.url"
+                                @click="visitPage(link.url)"
+                                class="min-w-10 rounded border border-border px-3 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-50"
+                                :class="link.active
+                                    ? 'bg-primary text-buttonTextPrimary'
+                                    : 'bg-card text-primary hover:bg-secondary/20'"
+                                v-html="link.label"
+                            />
+                        </div>
+                    </div>
+                </section>
             </section>
         </div>
 

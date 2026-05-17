@@ -207,7 +207,7 @@ class SendMembershipAndBillingReminders extends Command
 
         ClubSubscription::query()
             ->with(['club:id,name,owner_id', 'plan:id,name'])
-            ->whereIn('status', ['active', 'trialing', 'past_due'])
+            ->whereIn('status', ['trialing', 'cancels_at_period_end'])
             ->whereNull('renewal_notified_at')
             ->where(function ($query) use ($today, $until) {
                 $query->whereBetween('current_period_ends_at', [$today, $until])
@@ -241,7 +241,7 @@ class SendMembershipAndBillingReminders extends Command
 
         UserSubscription::query()
             ->with(['user:id,name,email', 'plan:id,name'])
-            ->whereIn('status', ['active', 'trialing', 'past_due'])
+            ->whereIn('status', ['trialing', 'cancels_at_period_end'])
             ->whereNull('renewal_notified_at')
             ->where(function ($query) use ($today, $until) {
                 $query->whereBetween('current_period_ends_at', [$today, $until])

@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
+import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { ref } from 'vue'
 
@@ -120,6 +121,11 @@ const leaveClub = () => {
         <Head :title="clubProfile.name" />
 
         <div class="mx-auto max-w-5xl space-y-6">
+            <ClubWorkspaceNav
+                active="structure"
+                description="Vereinsprofil, Teams, Rollen und sichtbare Vereinsbeiträge."
+            />
+
             <section class="overflow-hidden rounded-lg border border-border bg-card">
                 <div class="relative h-40 bg-gradient-to-r from-buttonPrimary to-borderHover">
                     <img v-if="clubProfile.cover_image" :src="storageUrl(clubProfile.cover_image)"

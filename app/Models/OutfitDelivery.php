@@ -14,11 +14,22 @@ class OutfitDelivery extends Model
         'status',
         'delivery_month',
         'tracking_number',
+        'tracking_url',
         'carrier',
         'shipped_at',
         'delivered_at',
         'items',
         'notes',
+        'issue_type',
+        'issue_status',
+        'issue_description',
+        'issue_requested_resolution',
+        'issue_exchange_size',
+        'issue_admin_note',
+        'return_tracking_number',
+        'return_tracking_url',
+        'issue_requested_at',
+        'issue_resolved_at',
     ];
 
     protected function casts(): array
@@ -28,6 +39,8 @@ class OutfitDelivery extends Model
             'shipped_at' => 'datetime',
             'delivered_at' => 'datetime',
             'items' => 'array',
+            'issue_requested_at' => 'datetime',
+            'issue_resolved_at' => 'datetime',
         ];
     }
 

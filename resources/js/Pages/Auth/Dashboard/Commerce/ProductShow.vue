@@ -16,6 +16,7 @@ const selectedGalleryImage = ref(null)
 const form = useForm({
     provider: 'bank_transfer',
     accepted_terms: false,
+    coupon_code: '',
     shipping_country: props.checkoutAddress.country || props.product.price?.country || 'DE',
     shipping_state: props.checkoutAddress.state || '',
     shipping_postal_code: props.checkoutAddress.postal_code || '',
@@ -171,6 +172,12 @@ const attributeOptions = (value) => String(value || '')
                                 <option value="stripe">Stripe</option>
                                 <option value="paypal">PayPal</option>
                             </select>
+                        </div>
+
+                        <div v-if="product.learning_course_id">
+                            <label class="text-xs font-semibold uppercase text-secondary">Kurs-Gutschein</label>
+                            <input v-model="form.coupon_code" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Code eingeben">
+                            <p v-if="form.errors.coupon_code" class="mt-1 text-sm text-error">{{ form.errors.coupon_code }}</p>
                         </div>
 
                         <label class="flex items-start gap-3 text-sm text-secondary">

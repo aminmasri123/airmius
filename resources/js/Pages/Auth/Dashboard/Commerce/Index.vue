@@ -26,6 +26,7 @@ const props = defineProps({
     cart: { type: Object, default: () => ({ items: [], summary: {} }) },
     pricingCountries: { type: Array, default: () => [] },
     sports: { type: Array, default: () => [] },
+    learningCourses: { type: Array, default: () => [] },
     checkoutAddress: { type: Object, default: () => ({}) },
     marketplaceCategoryCommissions: { type: Array, default: () => [] },
 })
@@ -65,13 +66,17 @@ const productForm = useForm({
     image_urls_text: '',
     image_upload: null,
     image_uploads: [],
+    learning_course_id: '',
     offer_type: 'physical_product',
-    category: 'product',
+    category: 'equipment',
     product_type: 'single',
     sku: '',
     is_shippable: true,
     manages_stock: true,
     stock_quantity: 1,
+    inventories: [
+        { country_code: 'DE', stock_quantity: 1, low_stock_threshold: 0, lead_time_days: 2, city: '', postal_code: '' },
+    ],
     tax_class: 'standard',
     digital_delivery_note: '',
     course_outline_text: '',
@@ -106,6 +111,7 @@ const editProductForm = useForm({
     price_cents: '',
     manages_stock: false,
     stock_quantity: '',
+    inventories: [],
 })
 const campaignForm = useForm({
     club_id: '',
@@ -246,6 +252,15 @@ const offerTypeLabel = (offerType, category) => ({
 const isLearningOffer = computed(() => ['online_course', 'training_plan'].includes(productForm.offer_type))
 const productStockRequired = computed(() => productForm.offer_type === 'physical_product' && productForm.product_type !== 'digital')
 const productCommissionCategory = computed(() => productForm.category || 'product')
+const sellerMarketplaceCategories = computed(() => props.marketplaceCategoryCommissions
+    .filter((row) => !['service', 'outfit_subscription'].includes(row.category))
+    .filter((row) => productForm.offer_type === 'physical_product'
+        ? !['course', 'camp'].includes(row.category)
+        : productForm.offer_type === 'camp'
+            ? row.category === 'camp'
+            : ['online_course', 'training_plan'].includes(productForm.offer_type)
+                ? row.category === 'course' || row.category === 'digital_products'
+                : false))
 const selectedProductCommission = computed(() => props.marketplaceCategoryCommissions.find((row) => row.category === productCommissionCategory.value) || {
     category: productCommissionCategory.value,
     label: offerTypeLabel(productForm.offer_type, productForm.category),
@@ -254,10 +269,15 @@ const selectedProductCommission = computed(() => props.marketplaceCategoryCommis
 const productPricePreviewCents = computed(() => majorToCents(productForm.price_cents))
 const productCommissionPreviewCents = computed(() => Math.floor(productPricePreviewCents.value * (Number(selectedProductCommission.value.commission_percent || 0) / 100)))
 const productSellerPayoutPreviewCents = computed(() => Math.max(0, productPricePreviewCents.value - productCommissionPreviewCents.value))
+const inventoryCountries = computed(() => {
+    const countries = props.pricingCountries.map((country) => country.country).filter(Boolean)
+    return [...new Set(['DE', ...countries])]
+})
+const inventoryTotalStock = computed(() => normalizeInventoryRows(productForm.inventories).reduce((sum, row) => sum + Number(row.stock_quantity || 0), 0))
 
 watch(() => productForm.offer_type, (offerType) => {
     const map = {
-        physical_product: ['product', 'single', true],
+        physical_product: [sellerMarketplaceCategories.value[0]?.category || 'equipment', 'single', true],
         online_course: ['course', 'digital', false],
         training_plan: ['course', 'digital', false],
         camp: ['camp', 'single', false],
@@ -270,13 +290,26 @@ watch(() => productForm.offer_type, (offerType) => {
     if (offerType === 'physical_product' && productType !== 'digital') {
         productForm.manages_stock = true
         productForm.stock_quantity = productForm.stock_quantity || 1
+        if (!productForm.inventories.length) {
+            productForm.inventories = [{ country_code: 'DE', stock_quantity: productForm.stock_quantity || 1, low_stock_threshold: 0, lead_time_days: 2, city: '', postal_code: '' }]
+        }
     }
     if (productType === 'digital') {
         productForm.manages_stock = false
         productForm.stock_quantity = ''
+        productForm.inventories = []
     }
     if (offerType === 'training_plan') {
         productForm.coaching_enabled = true
+    }
+    if (offerType !== 'online_course') {
+        productForm.learning_course_id = ''
+    }
+})
+
+watch(sellerMarketplaceCategories, (categories) => {
+    if (categories.length && !categories.some((category) => category.category === productForm.category)) {
+        productForm.category = categories[0].category
     }
 })
 
@@ -284,10 +317,14 @@ watch(() => productForm.product_type, (productType) => {
     if (productForm.offer_type === 'physical_product' && productType !== 'digital') {
         productForm.manages_stock = true
         productForm.stock_quantity = productForm.stock_quantity || 1
+        if (!productForm.inventories.length) {
+            productForm.inventories = [{ country_code: 'DE', stock_quantity: productForm.stock_quantity || 1, low_stock_threshold: 0, lead_time_days: 2, city: '', postal_code: '' }]
+        }
     }
     if (productType === 'digital') {
         productForm.manages_stock = false
         productForm.stock_quantity = ''
+        productForm.inventories = []
     }
 })
 
@@ -848,10 +885,45 @@ const toLocalDateTimeInput = (value) => {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
+const normalizeInventoryRows = (rows = []) => rows
+    .map((row) => ({
+        country_code: String(row.country_code || '').toUpperCase().slice(0, 2),
+        stock_quantity: Math.max(0, Number(row.stock_quantity || 0)),
+        low_stock_threshold: Math.max(0, Number(row.low_stock_threshold || 0)),
+        lead_time_days: row.lead_time_days === '' || row.lead_time_days === null ? '' : Math.max(0, Number(row.lead_time_days || 0)),
+        city: row.city || '',
+        postal_code: row.postal_code || '',
+    }))
+    .filter((row) => row.country_code.length === 2)
+
+const addProductInventoryRow = () => {
+    productForm.inventories.push({ country_code: 'DE', stock_quantity: 0, low_stock_threshold: 0, lead_time_days: 2, city: '', postal_code: '' })
+}
+
+const removeProductInventoryRow = (index) => {
+    if (productForm.inventories.length <= 1) {
+        return
+    }
+
+    productForm.inventories.splice(index, 1)
+}
+
+const addEditProductInventoryRow = () => {
+    editProductForm.inventories.push({ country_code: 'DE', stock_quantity: 0, low_stock_threshold: 0, lead_time_days: 2, city: '', postal_code: '' })
+}
+
+const removeEditProductInventoryRow = (index) => {
+    editProductForm.inventories.splice(index, 1)
+}
+
 const storeProduct = () => {
     productForm.attributes_text = productAttributesText()
     productForm.attribute_options = normalizeAttributeRows(productAttributeRows.value)
     productForm.variants = normalizeVariantRows(productVariantRows.value)
+    productForm.inventories = productForm.manages_stock ? normalizeInventoryRows(productForm.inventories) : []
+    if (productForm.manages_stock && productForm.inventories.length) {
+        productForm.stock_quantity = productForm.inventories.reduce((sum, row) => sum + Number(row.stock_quantity || 0), 0) || productForm.stock_quantity || 1
+    }
 
     productForm
         .transform((data) => transformMoneyFields(data, ['price_cents']))
@@ -859,13 +931,14 @@ const storeProduct = () => {
         preserveScroll: true,
         forceFormData: true,
         onSuccess: () => {
-            productForm.reset('title', 'description', 'attributes_text', 'attribute_options', 'variants', 'image_url', 'image_urls_text', 'image_upload', 'image_uploads', 'sku', 'digital_delivery_note', 'course_outline_text', 'learning_goals_text', 'coach_feedback_instructions')
+            productForm.reset('title', 'description', 'attributes_text', 'attribute_options', 'variants', 'image_url', 'image_urls_text', 'image_upload', 'image_uploads', 'learning_course_id', 'sku', 'digital_delivery_note', 'course_outline_text', 'learning_goals_text', 'coach_feedback_instructions')
             productForm.offer_type = 'physical_product'
-            productForm.category = 'product'
+            productForm.category = sellerMarketplaceCategories.value[0]?.category || 'equipment'
             productForm.product_type = 'single'
             productForm.is_shippable = true
             productForm.manages_stock = true
             productForm.stock_quantity = 1
+            productForm.inventories = [{ country_code: 'DE', stock_quantity: 1, low_stock_threshold: 0, lead_time_days: 2, city: '', postal_code: '' }]
             productForm.coaching_enabled = false
             productAttributeRows.value = [{ name: '', values: [] }]
             productVariantRows.value = []
@@ -897,6 +970,14 @@ const openEditProductModal = (product) => {
     editProductForm.price_cents = centsToMajor(product.price_cents)
     editProductForm.manages_stock = Boolean(product.manages_stock)
     editProductForm.stock_quantity = product.stock_quantity ?? ''
+    editProductForm.inventories = normalizeInventoryRows(product.inventories || []).map((inventory) => ({
+        country_code: inventory.country_code,
+        stock_quantity: inventory.stock_quantity,
+        low_stock_threshold: inventory.low_stock_threshold || 0,
+        lead_time_days: inventory.lead_time_days ?? '',
+        city: inventory.warehouse?.city || '',
+        postal_code: inventory.warehouse?.postal_code || '',
+    }))
     editProductModal.value = { open: true, product }
 }
 
@@ -910,6 +991,11 @@ const submitEditProduct = () => {
 
     if (!product) {
         return
+    }
+
+    editProductForm.inventories = editProductForm.manages_stock ? normalizeInventoryRows(editProductForm.inventories) : []
+    if (editProductForm.manages_stock && editProductForm.inventories.length) {
+        editProductForm.stock_quantity = editProductForm.inventories.reduce((sum, row) => sum + Number(row.stock_quantity || 0), 0)
     }
 
     editProductForm
@@ -1671,11 +1757,19 @@ onMounted(() => {
                             <option value="online_course">Kurs / E-Learning</option>
                             <option value="training_plan">Trainingsplan mit Feedback</option>
                             <option value="camp">Camp / Workshop</option>
-                            <option value="service">Service / Analyse / Beratung</option>
                         </select>
                         <span class="text-xs text-secondary">Diese Auswahl bestimmt, in welchem Marketplace-Bereich das Angebot nach Freigabe erscheint.</span>
                     </label>
                     <p v-if="productForm.errors.offer_type" class="text-sm text-error">{{ productForm.errors.offer_type }}</p>
+                    <label class="grid gap-1">
+                        <span class="text-xs font-semibold uppercase text-secondary">Marketplace-Kategorie</span>
+                        <select v-model="productForm.category" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <option v-for="category in sellerMarketplaceCategories" :key="category.category" :value="category.category">
+                                {{ category.label }}
+                            </option>
+                        </select>
+                        <span class="text-xs text-secondary">Die Kategorie bestimmt die externe Marketplace-Provision. Dienstleistungen werden intern von Airmius angelegt.</span>
+                    </label>
                     <p v-if="productForm.errors.category" class="text-sm text-error">{{ productForm.errors.category }}</p>
                     <input v-model="productForm.sku" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Artikelnummer">
                     <p v-if="productForm.errors.sku" class="text-sm text-error">{{ productForm.errors.sku }}</p>
@@ -1694,6 +1788,17 @@ onMounted(() => {
                     ></textarea>
                     <p v-if="productForm.errors.digital_delivery_note" class="text-sm text-error">{{ productForm.errors.digital_delivery_note }}</p>
                     <div v-if="isLearningOffer" class="grid gap-3 rounded-lg border border-border bg-bg p-3">
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Mit Sportschule-Kurs verknuepfen</label>
+                            <select v-model="productForm.learning_course_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                                <option value="">Keinen Kurs automatisch freischalten</option>
+                                <option v-for="course in learningCourses" :key="course.id" :value="course.id">
+                                    {{ course.title }} - {{ course.status }}
+                                </option>
+                            </select>
+                            <p class="mt-1 text-xs text-secondary">Nach bezahlter Bestellung wird der verknuepfte Kurs automatisch fuer den Kaeufer freigeschaltet.</p>
+                            <p v-if="productForm.errors.learning_course_id" class="mt-1 text-sm text-error">{{ productForm.errors.learning_course_id }}</p>
+                        </div>
                         <div>
                             <label class="text-xs font-semibold uppercase text-secondary">Kursinhalt / Module</label>
                             <textarea v-model="productForm.course_outline_text" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Eine Lektion oder Trainingsphase pro Zeile"></textarea>
@@ -1750,11 +1855,38 @@ onMounted(() => {
                         Lagerbestand verwalten
                     </label>
                     <label v-if="productStockRequired" class="grid gap-1">
-                        <span class="text-xs font-semibold uppercase text-secondary">Lagerbestand *</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">Gesamtbestand *</span>
                         <input v-model="productForm.stock_quantity" type="number" min="1" required class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Mindestens 1">
                     </label>
                     <input v-else-if="productForm.manages_stock" v-model="productForm.stock_quantity" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lagerbestand">
                     <p v-if="productForm.errors.stock_quantity" class="text-sm text-error">{{ productForm.errors.stock_quantity }}</p>
+                    <div v-if="productForm.manages_stock && productForm.product_type !== 'digital'" class="rounded-lg border border-border bg-bg p-3">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h3 class="text-sm font-semibold text-primary">Laenderbestand</h3>
+                                <p class="text-xs text-secondary">Nur Laender mit aktivem Bestand werden im internationalen Marketplace angeboten.</p>
+                            </div>
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="addProductInventoryRow">
+                                Land hinzufuegen
+                            </button>
+                        </div>
+                        <div class="mt-3 space-y-3">
+                            <div v-for="(inventory, index) in productForm.inventories" :key="index" class="grid gap-2 rounded-lg border border-border p-3 md:grid-cols-6">
+                                <select v-model="inventory.country_code" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                                    <option v-for="country in inventoryCountries" :key="country" :value="country">{{ country }}</option>
+                                </select>
+                                <input v-model="inventory.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-1" placeholder="Bestand">
+                                <input v-model="inventory.low_stock_threshold" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-1" placeholder="Warnbestand">
+                                <input v-model="inventory.lead_time_days" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-1" placeholder="Lieferzeit Tage">
+                                <input v-model="inventory.city" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lagerstadt">
+                                <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-secondary hover:text-primary" @click="removeProductInventoryRow(index)">
+                                    Entfernen
+                                </button>
+                            </div>
+                        </div>
+                        <p class="mt-2 text-xs text-secondary">Aktueller Gesamtbestand aus Laendern: {{ inventoryTotalStock }}</p>
+                        <p v-if="productForm.errors.inventories" class="mt-2 text-sm text-error">{{ productForm.errors.inventories }}</p>
+                    </div>
                     <div class="rounded-lg border border-border bg-bg p-3">
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <div>
@@ -1845,6 +1977,15 @@ onMounted(() => {
                                     <span v-if="product.manages_stock">Bestand: {{ product.stock_quantity ?? 0 }}</span>
                                     <span v-else>Kein Lagerlimit</span>
                                 </p>
+                                <div v-if="product.inventories?.length" class="mt-2 flex flex-wrap gap-1">
+                                    <span
+                                        v-for="inventory in product.inventories.filter((row) => row.is_active)"
+                                        :key="inventory.id"
+                                        class="rounded-full border border-border px-2 py-1 text-[11px] font-semibold text-secondary"
+                                    >
+                                        {{ inventory.country_code }}: {{ inventory.stock_quantity }}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                         <div class="mt-4 flex flex-wrap gap-2">
@@ -2378,6 +2519,9 @@ onMounted(() => {
                             <td class="px-5 py-3 text-secondary">{{ purchase.status_label }}</td>
                             <td class="px-5 py-3 text-right font-semibold text-primary">{{ formatMoney(purchase.amount_cents, purchase.currency) }}</td>
                             <td class="px-5 py-3 text-right">
+                                <Link v-if="purchase.learning_course?.url" :href="purchase.learning_course.url" class="mr-2 rounded-lg border border-success/40 px-3 py-2 text-xs font-semibold text-success">
+                                    Zum Kurs
+                                </Link>
                                 <a v-if="purchase.invoice_url" :href="purchase.invoice_url" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary">
                                     Rechnung
                                 </a>
@@ -2423,6 +2567,9 @@ onMounted(() => {
                             </td>
                             <td class="px-5 py-3 text-secondary">{{ formatMoney(order.amount_cents, order.currency) }}</td>
                             <td class="px-5 py-3 text-right">
+                                <Link v-if="order.learning_course?.url" :href="order.learning_course.url" class="mr-2 rounded-lg border border-success/40 px-3 py-2 text-xs font-semibold text-success">
+                                    Zum Kurs
+                                </Link>
                                 <a v-if="order.invoice_number" :href="route('auth.commerce.orders.invoice', order.id)" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary">
                                     Rechnung
                                 </a>
@@ -2496,6 +2643,32 @@ onMounted(() => {
                     </label>
                     <input v-if="editProductForm.manages_stock" v-model="editProductForm.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bestand">
                     <textarea v-model="editProductForm.description" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary md:col-span-2" placeholder="Beschreibung"></textarea>
+                </div>
+                <div v-if="editProductForm.manages_stock" class="mt-4 rounded-lg border border-border bg-bg p-3">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h3 class="text-sm font-semibold text-primary">Laenderbestand</h3>
+                            <p class="text-xs text-secondary">Steuert, in welchen Laendern dein Produkt sichtbar und kaufbar ist.</p>
+                        </div>
+                        <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="addEditProductInventoryRow">
+                            Land hinzufuegen
+                        </button>
+                    </div>
+                    <div class="mt-3 space-y-3">
+                        <div v-for="(inventory, index) in editProductForm.inventories" :key="index" class="grid gap-2 rounded-lg border border-border p-3 md:grid-cols-6">
+                            <select v-model="inventory.country_code" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                                <option v-for="country in inventoryCountries" :key="country" :value="country">{{ country }}</option>
+                            </select>
+                            <input v-model="inventory.stock_quantity" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bestand">
+                            <input v-model="inventory.low_stock_threshold" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Warnbestand">
+                            <input v-model="inventory.lead_time_days" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lieferzeit">
+                            <input v-model="inventory.city" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lagerstadt">
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-secondary hover:text-primary" @click="removeEditProductInventoryRow(index)">
+                                Entfernen
+                            </button>
+                        </div>
+                    </div>
+                    <p v-if="!editProductForm.inventories.length" class="mt-3 text-sm text-secondary">Noch kein Laenderbestand gepflegt.</p>
                 </div>
 
                 <div v-if="Object.keys(editProductForm.errors || {}).length" class="mt-4 rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">

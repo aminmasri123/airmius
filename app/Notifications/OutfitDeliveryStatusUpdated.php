@@ -34,6 +34,10 @@ class OutfitDeliveryStatusUpdated extends Notification
             $message->line('Versand: '.trim(($delivery->carrier ?: 'Paketdienst').' '.($delivery->tracking_number ?: '')));
         }
 
+        if ($delivery->tracking_url) {
+            $message->line('Tracking-Link: '.$delivery->tracking_url);
+        }
+
         if ($delivery->notes) {
             $message->line('Hinweis: '.$delivery->notes);
         }

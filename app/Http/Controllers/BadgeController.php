@@ -47,15 +47,22 @@ class BadgeController extends Controller
 
     private function validated(Request $request, ?Badge $badge = null): array
     {
-        return $request->validate([
-            'key' => ['required', 'string', 'max:120', Rule::unique('badges', 'key')->ignore($badge)],
+        $data = $request->validate([
+            'key' => ['required', 'string', 'max:120', 'regex:/^[a-z0-9][a-z0-9_-]*$/', Rule::unique('badges', 'key')->ignore($badge)],
             'name' => ['required', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:1000'],
-            'icon' => ['nullable', 'string', 'max:80'],
+            'icon' => ['nullable', 'string', 'max:80', 'regex:/^[a-z0-9\\s_-]+$/i'],
             'actor_type' => ['required', Rule::in(['sportler', 'trainer', 'verein', 'team'])],
             'trigger' => ['required', Rule::in(['xp', 'level', 'streak', 'reason'])],
             'threshold' => ['required', 'integer', 'min:0', 'max:1000000'],
             'meta' => ['nullable', 'array'],
+            'meta.reason' => [Rule::requiredIf($request->input('trigger') === 'reason'), 'nullable', 'string', 'max:120', 'regex:/^[a-z0-9][a-z0-9_-]*$/'],
         ]);
+
+        $data['meta'] = $data['trigger'] === 'reason'
+            ? ['reason' => $data['meta']['reason']]
+            : null;
+
+        return $data;
     }
 }

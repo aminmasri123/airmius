@@ -176,12 +176,12 @@ const deleteInvoice = (invoice) => {
     <Head title="Rechnungen" />
 
     <div class="space-y-6">
-        <section class="overflow-hidden rounded-2xl border border-border bg-card">
+        <section class="overflow-hidden rounded-2xl border-l-4 border-l-air-blue border-border bg-card">
             <div class="grid gap-6 p-5 lg:grid-cols-[1fr_auto] lg:items-center lg:p-6">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-air-blue">Finanzen</p>
-                    <h1 class="mt-2 text-3xl font-black text-primary">Rechnungszentrale</h1>
-                    <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-air-blue">Finanzen</p>
+                        <h1 class="mt-2 text-3xl font-black text-primary">Rechnungszentrale</h1>
+                        <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
                         Erstelle und pruefe Rechnungen fuer Konto-Abos, Outfit-Abos, Marketplace-Kaeufe, Kurse,
                         ADS, Sponsoring und Werbeagentur-Leistungen wie Website, Logo oder Branding.
                     </p>
@@ -222,7 +222,7 @@ const deleteInvoice = (invoice) => {
             </div>
         </section>
 
-        <section class="rounded-2xl border border-border bg-card">
+        <section class="rounded-2xl border-l-4 border-l-air-blue border border-border bg-card">
             <div class="flex flex-col gap-2 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.16em] text-air-blue">Rechnungsliste</p>
@@ -239,7 +239,7 @@ const deleteInvoice = (invoice) => {
 
             <div class="hidden overflow-x-auto lg:block">
                 <table class="min-w-full text-left text-sm">
-                    <thead class="bg-bg text-xs uppercase text-secondary">
+                    <thead class="bg-bg text-xs uppercase tracking-[0.12em] text-secondary">
                         <tr>
                             <th class="px-5 py-3">Rechnung</th>
                             <th class="px-5 py-3">Empfaenger</th>
@@ -271,23 +271,23 @@ const deleteInvoice = (invoice) => {
                                 <p class="text-xs text-secondary">{{ invoice.paid_at || '-' }}</p>
                             </td>
                             <td class="px-5 py-4">
-                                <button
-                                    v-if="invoice.status_update_url"
-                                    type="button"
-                                    class="inline-flex rounded-full border px-3 py-1 text-xs font-black transition hover:scale-[1.02] hover:ring-2 hover:ring-air-blue/30"
-                                    :class="statusClasses(invoice.status)"
-                                    @click="openStatusModal(invoice)"
-                                >
-                                    {{ statusLabel(invoice.status) }}
-                                </button>
-                                <span v-else class="inline-flex rounded-full border px-3 py-1 text-xs font-black" :class="statusClasses(invoice.status)">
-                                    {{ statusLabel(invoice.status) }}
-                                </span>
+                            <button
+                                v-if="invoice.status_update_url"
+                                type="button"
+                                class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition hover:scale-[1.02] hover:ring-2 hover:ring-air-blue/30"
+                                :class="statusClasses(invoice.status)"
+                                @click="openStatusModal(invoice)"
+                            >
+                                {{ statusLabel(invoice.status) }}
+                            </button>
+                            <span v-else class="inline-flex rounded-full border px-3 py-1 text-xs font-black" :class="statusClasses(invoice.status)">
+                                {{ statusLabel(invoice.status) }}
+                            </span>
                             </td>
                             <td class="px-5 py-4 text-right">
                                 <div class="flex flex-wrap justify-end gap-2">
                                     <a v-if="invoice.download_url" :href="invoice.download_url" class="rounded-lg border border-border px-3 py-2 text-xs font-bold text-primary hover:bg-muted">PDF</a>
-                                    <button v-if="invoice.delete_url" type="button" class="rounded-lg bg-error px-3 py-2 text-xs font-bold text-white" @click="deleteInvoice(invoice)">Loeschen</button>
+                                    <button v-if="invoice.delete_url" type="button" class="rounded-lg bg-error px-3 py-2 text-xs font-semibold text-white hover:bg-error/90" @click="deleteInvoice(invoice)">Loeschen</button>
                                     <span v-if="!invoice.download_url && !invoice.delete_url" class="text-xs text-secondary">-</span>
                                 </div>
                             </td>
@@ -303,18 +303,18 @@ const deleteInvoice = (invoice) => {
                             <p class="truncate font-black text-primary">{{ invoice.number || ('#' + invoice.id) }}</p>
                             <p class="mt-1 text-sm text-secondary">{{ invoice.title || invoice.type_label }}</p>
                         </div>
-                        <button
-                            v-if="invoice.status_update_url"
-                            type="button"
-                            class="shrink-0 rounded-full border px-3 py-1 text-xs font-black"
-                            :class="statusClasses(invoice.status)"
-                            @click="openStatusModal(invoice)"
-                        >
-                            {{ statusLabel(invoice.status) }}
-                        </button>
-                        <span v-else class="shrink-0 rounded-full border px-3 py-1 text-xs font-black" :class="statusClasses(invoice.status)">
-                            {{ statusLabel(invoice.status) }}
-                        </span>
+                                    <button
+                                        v-if="invoice.status_update_url"
+                                        type="button"
+                                        class="shrink-0 rounded-full border px-3 py-1 text-xs font-semibold"
+                                        :class="statusClasses(invoice.status)"
+                                        @click="openStatusModal(invoice)"
+                                    >
+                                        {{ statusLabel(invoice.status) }}
+                                    </button>
+                                    <span v-else class="shrink-0 rounded-full border px-3 py-1 text-xs font-black" :class="statusClasses(invoice.status)">
+                                        {{ statusLabel(invoice.status) }}
+                                    </span>
                     </div>
                     <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
                         <div>
@@ -328,7 +328,7 @@ const deleteInvoice = (invoice) => {
                     </div>
                     <div class="mt-4 flex flex-wrap gap-2">
                         <a v-if="invoice.download_url" :href="invoice.download_url" class="rounded-lg border border-border px-3 py-2 text-xs font-bold text-primary">PDF</a>
-                        <button v-if="invoice.delete_url" type="button" class="rounded-lg bg-error px-3 py-2 text-xs font-bold text-white" @click="deleteInvoice(invoice)">Loeschen</button>
+                                <button v-if="invoice.delete_url" type="button" class="rounded-lg bg-error px-3 py-2 text-xs font-semibold text-white hover:bg-error/90" @click="deleteInvoice(invoice)">Loeschen</button>
                     </div>
                 </article>
             </div>

@@ -10,6 +10,7 @@ use App\Http\Controllers\PublicLearningController;
 use App\Http\Controllers\PublicMarketplaceController;
 use App\Http\Controllers\PublicClubController;
 use App\Http\Controllers\PublicSponsorController;
+use App\Models\BlogCategory;
 use App\Models\BlogPost;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
@@ -69,10 +70,23 @@ Route::get('/sitemap.xml', function () {
             'changefreq' => 'monthly',
         ]);
 
+    $blogCategoryRoutes = BlogCategory::query()
+        ->where('is_active', true)
+        ->whereHas('posts', fn ($query) => $query->published())
+        ->orderBy('sort_order')
+        ->orderBy('name')
+        ->get(['slug', 'updated_at'])
+        ->map(fn (BlogCategory $category) => [
+            'loc' => route('guest.blog.category', $category->slug),
+            'lastmod' => optional($category->updated_at)->toAtomString(),
+            'priority' => '0.6',
+            'changefreq' => 'weekly',
+        ]);
+
     $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
     $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
 
-    foreach (collect($staticRoutes)->merge($blogRoutes) as $url) {
+    foreach (collect($staticRoutes)->merge($blogCategoryRoutes)->merge($blogRoutes) as $url) {
         $xml .= "  <url>\n";
         $xml .= '    <loc>'.e($url['loc'])."</loc>\n";
         if (! empty($url['lastmod'])) {
@@ -89,6 +103,51 @@ Route::get('/sitemap.xml', function () {
         'Content-Type' => 'application/xml',
     ]);
 })->name('sitemap');
+
+Route::get('/blog/rss.xml', function () {
+    $posts = BlogPost::query()
+        ->published()
+        ->with(['author:id,name', 'blogCategory:id,name,slug'])
+        ->latest('published_at')
+        ->take(30)
+        ->get();
+
+    $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
+    $xml .= '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">'."\n";
+    $xml .= "  <channel>\n";
+    $xml .= '    <title>'.e('Airmius Blog')."</title>\n";
+    $xml .= '    <link>'.e(route('guest.blog.index'))."</link>\n";
+    $xml .= '    <description>'.e('Praxiswissen, Updates und Ideen fuer digitale Sportorganisation.')."</description>\n";
+    $xml .= '    <language>de-DE</language>'."\n";
+    $xml .= '    <atom:link href="'.e(route('guest.blog.rss')).'" rel="self" type="application/rss+xml" />'."\n";
+
+    foreach ($posts as $post) {
+        $description = $post->excerpt ?: str($post->content)->stripTags()->squish()->limit(240)->toString();
+
+        $xml .= "    <item>\n";
+        $xml .= '      <title>'.e($post->title)."</title>\n";
+        $xml .= '      <link>'.e(route('guest.blog.show', $post->slug))."</link>\n";
+        $xml .= '      <guid isPermaLink="true">'.e(route('guest.blog.show', $post->slug))."</guid>\n";
+        $xml .= '      <description>'.e($description)."</description>\n";
+        if ($post->author?->name) {
+            $xml .= '      <author>'.e($post->author->name)."</author>\n";
+        }
+        if ($post->blogCategory?->name || $post->category) {
+            $xml .= '      <category>'.e($post->blogCategory?->name ?: $post->category)."</category>\n";
+        }
+        if ($post->published_at) {
+            $xml .= '      <pubDate>'.e($post->published_at->toRfc2822String())."</pubDate>\n";
+        }
+        $xml .= "    </item>\n";
+    }
+
+    $xml .= "  </channel>\n";
+    $xml .= '</rss>';
+
+    return response($xml, 200, [
+        'Content-Type' => 'application/rss+xml; charset=UTF-8',
+    ]);
+})->name('guest.blog.rss');
 
 Route::get('/top-inhalte', fn () => Inertia::render('Guest/Top-Inhalte', [
     'canLogin' => Route::has('login'),
@@ -116,6 +175,7 @@ Route::post('/werbeagentur-fuer-vereine/anfrage', [CommerceCheckoutController::c
 
 Route::get('/e-learning', [PublicLearningController::class, 'index'])->name('guest.e-learning');
 Route::get('/e-learning/courses/{course}', [PublicLearningController::class, 'show'])->name('guest.learning.courses.show');
+Route::get('/e-learning/certificates/{code}', [PublicLearningController::class, 'verifyCertificate'])->name('guest.learning.certificates.verify');
 
 Route::get('/gamification', fn () => Inertia::render('Guest/Gamification', [
     'canLogin' => Route::has('login'),
@@ -124,11 +184,13 @@ Route::get('/gamification', fn () => Inertia::render('Guest/Gamification', [
 
 Route::get('/vereine', [PublicClubController::class, 'index'])->name('guest.vereine');
 Route::get('/marketplace', [PublicMarketplaceController::class, 'index'])->name('guest.marketplace');
+Route::get('/marketplace/providers/{type}/{id}', [PublicMarketplaceController::class, 'provider'])->name('guest.marketplace.providers.show');
 Route::get('/marketplace/products/{product}', [PublicMarketplaceController::class, 'show'])->name('guest.marketplace.products.show');
 Route::post('/marketplace/products/{product}/checkout', [PublicMarketplaceController::class, 'checkout'])->name('guest.marketplace.products.checkout');
 Route::post('/marketplace/orders/{order}/{token}/returns', [CommerceCheckoutController::class, 'guestReturn'])->name('commerce-checkout.guest.returns.store');
 
 Route::get('/blog', [BlogPostController::class, 'publicIndex'])->name('guest.blog.index');
+Route::get('/blog/kategorie/{blogCategory:slug}', [BlogPostController::class, 'publicCategory'])->name('guest.blog.category');
 Route::get('/blog/{blogPost:slug}', [BlogPostController::class, 'publicShow'])->name('guest.blog.show');
 
 Route::get('/impressum', [LegalPageController::class, 'imprint'])->name('legal.imprint');

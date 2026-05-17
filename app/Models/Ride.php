@@ -10,6 +10,11 @@ class Ride extends Model
     use HasFactory;
 
     public const VISIBILITIES = ['public', 'friends', 'club', 'team'];
+    public const MEMBER_STATUS_ACCEPTED = 'accepted';
+    public const MEMBER_STATUS_REQUESTED = 'requested';
+    public const MEMBER_STATUS_REJECTED = 'rejected';
+    public const MEMBER_STATUS_PENDING = self::MEMBER_STATUS_REQUESTED;
+    public const MEMBER_STATUS_CONFIRMED = self::MEMBER_STATUS_ACCEPTED;
 
     protected $fillable = [
         'club_id',
@@ -61,11 +66,11 @@ class Ride extends Model
 
     public function acceptedUsers()
     {
-        return $this->users()->wherePivot('status', 'accepted');
+        return $this->users()->wherePivot('status', self::MEMBER_STATUS_ACCEPTED);
     }
 
     public function pendingUsers()
     {
-        return $this->users()->wherePivot('status', 'requested');
+        return $this->users()->wherePivot('status', self::MEMBER_STATUS_REQUESTED);
     }
 }

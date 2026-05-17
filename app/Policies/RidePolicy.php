@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\Ride;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class RidePolicy extends BasePolicy
 {
@@ -34,13 +33,15 @@ class RidePolicy extends BasePolicy
         return $this->canUseRides($user)
             && $this->canSeeRide($user, $ride)
             && (int) $ride->driver_id !== (int) $user->id
-            && ! $ride->users()->where('users.id', $user->id)->wherePivotIn('status', ['requested', 'accepted'])->exists()
+            && ! $ride->users()->where('users.id', $user->id)->wherePivotIn('status', [Ride::MEMBER_STATUS_REQUESTED, Ride::MEMBER_STATUS_ACCEPTED])->exists()
+            && (! $ride->departure_time || now()->lte($ride->departure_time))
             && $ride->acceptedUsers()->count() < (int) $ride->seats;
     }
 
     private function canSeeRide(User $user, Ride $ride): bool
     {
-        if ((int) $ride->driver_id === (int) $user->id || $ride->users()->where('users.id', $user->id)->wherePivotIn('status', ['requested', 'accepted'])->exists()) {
+        if ((int) $ride->driver_id === (int) $user->id
+            || $ride->users()->where('users.id', $user->id)->wherePivotIn('status', [Ride::MEMBER_STATUS_REQUESTED, Ride::MEMBER_STATUS_ACCEPTED])->exists()) {
             return true;
         }
 
@@ -93,7 +94,7 @@ class RidePolicy extends BasePolicy
             ->whereDate('birth_date', '>', now()->subYears(16)->toDateString())
             ->where(function ($query) use ($user) {
                 $query->where('guardian_user_id', $user->id)
-                    ->orWhereRaw('LOWER(guardian_email) = ?', [mb_strtolower((string) $user->email)]);
+                    ->orWhere('guardian_email', mb_strtolower((string) $user->email));
             });
     }
 }

@@ -3,15 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Events\MessageDeleted;
+use App\Events\MessageReceiptsUpdated;
 use App\Events\MessageReactionUpdated;
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Models\MessageHide;
 use App\Models\MessageReceipt;
 use App\Models\MessageReaction;
 use App\Services\ChatService;
 use App\Services\ModerationService;
 use App\Support\AppNotification;
 use App\Support\UploadStorage;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -55,15 +58,21 @@ class MessageController extends Controller
         $conversation->users()
             ->where('users.id', '!=', auth()->id())
             ->get()
-            ->each(fn ($recipient) => AppNotification::send($recipient, 'chat.message', [
-                'title' => 'Neue Nachricht von '.auth()->user()->name,
-                'body' => str($message->message ?: 'Dateianhang')->limit(120)->toString(),
-                'url' => route('auth.conversations.index', ['conversation' => $conversation->id]),
-                'actor_id' => auth()->id(),
-                'actor_name' => auth()->user()->name,
-                'conversation_id' => $conversation->id,
-                'message_id' => $message->id,
-            ]));
+            ->each(function ($recipient) use ($conversation, $message) {
+                if ($this->recipientHasMutedConversation($recipient)) {
+                    return;
+                }
+
+                AppNotification::send($recipient, 'chat.message', [
+                    'title' => 'Neue Nachricht von '.auth()->user()->name,
+                    'body' => str($message->message ?: 'Dateianhang')->limit(120)->toString(),
+                    'url' => route('auth.conversations.index', ['conversation' => $conversation->id]),
+                    'actor_id' => auth()->id(),
+                    'actor_name' => auth()->user()->name,
+                    'conversation_id' => $conversation->id,
+                    'message_id' => $message->id,
+                ]);
+            });
 
         if ($request->expectsJson() || $request->ajax()) {
             return response()->json([
@@ -87,16 +96,38 @@ class MessageController extends Controller
 
         abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
 
-        MessageReceipt::query()
+        $messageIds = MessageReceipt::query()
             ->where('user_id', auth()->id())
             ->whereNull('read_at')
             ->whereHas('message', fn ($query) => $query->where('conversation_id', $data['conversation_id']))
+            ->pluck('message_id')
+            ->all();
+
+        MessageReceipt::query()
+            ->whereIn('message_id', $messageIds)
+            ->where('user_id', auth()->id())
             ->update([
                 'delivered_at' => now(),
                 'read_at' => now(),
             ]);
 
         $this->markChatNotificationsAsRead($request, (int) $data['conversation_id']);
+
+        if ($messageIds) {
+            broadcast(new MessageReceiptsUpdated($conversation, $messageIds))->toOthers();
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    public function hideForMe(Message $message)
+    {
+        abort_unless($this->canAccessMessage($message, auth()->id()), 403);
+
+        MessageHide::firstOrCreate([
+            'message_id' => $message->id,
+            'user_id' => auth()->id(),
+        ]);
 
         return response()->json(['success' => true]);
     }
@@ -172,6 +203,13 @@ class MessageController extends Controller
             ->where('read', false)
             ->where('data->conversation_id', $conversationId)
             ->update(['read' => true]);
+    }
+
+    private function recipientHasMutedConversation($recipient): bool
+    {
+        $mutedUntil = $recipient->pivot?->muted_until;
+
+        return $mutedUntil && Carbon::parse($mutedUntil)->isFuture();
     }
 
     private function canAccessMessage(Message $message, int $userId): bool

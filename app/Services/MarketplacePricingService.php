@@ -6,12 +6,19 @@ use App\Models\CommerceShippingRate;
 use App\Models\CommerceTaxRate;
 use App\Models\MarketplaceProduct;
 use App\Models\Setting;
+use App\Support\EuVatId;
 use App\Support\VisitorCountry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
 class MarketplacePricingService
 {
+    private ?array $taxProfiles = null;
+
+    private ?array $shippingRates = null;
+
+    private array $taxProfileCache = [];
+
     public function __construct(private VisitorCountry $visitorCountry) {}
 
     public function quoteForRequest(MarketplaceProduct $product, Request $request, ?string $country = null, ?array $address = null): array
@@ -42,7 +49,7 @@ class MarketplacePricingService
             $product->currency ?: 'EUR',
             $profile['currency'],
         );
-        $shipping = $this->shippingProfile($product, $shippingCountry, $address['postal_code'] ?? null, $grossCents, $profile['currency']);
+        $shipping = $this->shippingProfile($product, $shippingCountry, $address['postal_code'] ?? null, $grossCents, $profile['currency'], $address['origin_country'] ?? null);
         $shippingGrossCents = $this->convertCents(
             (int) $shipping['amount_cents'],
             $shipping['currency'],
@@ -85,6 +92,10 @@ class MarketplacePricingService
 
     public function taxProfiles(): array
     {
+        if ($this->taxProfiles !== null) {
+            return $this->taxProfiles;
+        }
+
         if (Schema::hasTable('commerce_tax_rates')) {
             $profiles = CommerceTaxRate::query()
                 ->where('is_active', true)
@@ -104,11 +115,11 @@ class MarketplacePricingService
                 ->all();
 
             if ($profiles !== []) {
-                return $profiles;
+                return $this->taxProfiles = $profiles;
             }
         }
 
-        return [
+        return $this->taxProfiles = [
             'DE' => ['currency' => 'EUR', 'tax_rate' => 19.0, 'tax_label' => 'MwSt.', 'is_estimate' => false],
             'AT' => ['currency' => 'EUR', 'tax_rate' => 20.0, 'tax_label' => 'USt.', 'is_estimate' => false],
             'FR' => ['currency' => 'EUR', 'tax_rate' => 20.0, 'tax_label' => 'TVA', 'is_estimate' => false],
@@ -126,17 +137,24 @@ class MarketplacePricingService
 
     public function shippingRates(): array
     {
-        if (! Schema::hasTable('commerce_shipping_rates')) {
-            return [];
+        if ($this->shippingRates !== null) {
+            return $this->shippingRates;
         }
 
-        return CommerceShippingRate::query()
+        if (! Schema::hasTable('commerce_shipping_rates')) {
+            return $this->shippingRates = [];
+        }
+
+        return $this->shippingRates = CommerceShippingRate::query()
             ->where('is_active', true)
             ->orderBy('priority')
             ->get()
             ->map(fn (CommerceShippingRate $rate) => [
                 'id' => $rate->id,
                 'name' => $rate->name,
+                'origin_country_code' => Schema::hasColumn('commerce_shipping_rates', 'origin_country_code') && $rate->origin_country_code
+                    ? strtoupper($rate->origin_country_code)
+                    : null,
                 'country_code' => $rate->country_code ? strtoupper($rate->country_code) : null,
                 'postal_code_prefix' => $rate->postal_code_prefix,
                 'amount_cents' => (int) $rate->amount_cents,
@@ -148,6 +166,10 @@ class MarketplacePricingService
 
     public function commissionPercentFor(MarketplaceProduct $product): int
     {
+        if (! $this->isExternalSellerProduct($product)) {
+            return 0;
+        }
+
         $category = trim((string) $product->category);
         $commissions = $this->categoryCommissionSettings();
 
@@ -165,6 +187,11 @@ class MarketplacePricingService
     public function commissionCents(MarketplaceProduct $product, int $itemGrossCents): int
     {
         return (int) floor(max(0, $itemGrossCents) * ($this->commissionPercentFor($product) / 100));
+    }
+
+    private function isExternalSellerProduct(MarketplaceProduct $product): bool
+    {
+        return filled($product->user_id);
     }
 
     private function taxProfile(?string $country, ?string $region = null, string $taxClass = 'standard', array $customer = []): array
@@ -192,6 +219,7 @@ class MarketplacePricingService
             Setting::boolFor('commerce_reverse_charge_enabled', true)
             && $customer['type'] === 'business'
             && filled($customer['vat_id'])
+            && $customer['vat_id_is_valid']
             && $isEuCountry
             && ! $isCompanyCountry
         ) {
@@ -204,6 +232,11 @@ class MarketplacePricingService
                 'reverse_charge' => true,
                 'is_estimate' => false,
             ];
+        }
+
+        $cacheKey = implode('|', [$country ?: 'DE', $region, $taxClass]);
+        if ($customer['type'] === 'consumer' && isset($this->taxProfileCache[$cacheKey])) {
+            return $this->taxProfileCache[$cacheKey];
         }
 
         if (Schema::hasTable('commerce_tax_rates')) {
@@ -222,7 +255,7 @@ class MarketplacePricingService
             $rate ??= CommerceTaxRate::query()->where('is_active', true)->where('is_default', true)->orderBy('priority')->first();
 
             if ($rate) {
-                return [
+                $profile = [
                     'country' => strtoupper($rate->country_code),
                     'currency' => strtoupper($rate->currency ?: 'EUR'),
                     'tax_rate' => (float) $rate->rate_percent,
@@ -231,50 +264,59 @@ class MarketplacePricingService
                     'reverse_charge' => false,
                     'is_estimate' => false,
                 ];
+
+                if ($customer['type'] === 'consumer') {
+                    $this->taxProfileCache[$cacheKey] = $profile;
+                }
+
+                return $profile;
             }
         }
 
         $profiles = $this->taxProfiles();
         $profile = $profiles[$country] ?? ['currency' => 'EUR', 'tax_rate' => 19.0, 'tax_label' => 'Tax', 'is_estimate' => true];
 
-        return ['country' => $country ?: 'DE', 'tax_rule' => 'fallback', 'reverse_charge' => false, ...$profile];
+        $profile = ['country' => $country ?: 'DE', 'tax_rule' => 'fallback', 'reverse_charge' => false, ...$profile];
+
+        if ($customer['type'] === 'consumer') {
+            $this->taxProfileCache[$cacheKey] = $profile;
+        }
+
+        return $profile;
     }
 
-    private function shippingProfile(MarketplaceProduct $product, ?string $country, ?string $postalCode, int $itemGrossCents, string $currency): array
+    private function shippingProfile(MarketplaceProduct $product, ?string $country, ?string $postalCode, int $itemGrossCents, string $currency, ?string $originCountry = null): array
     {
         if (! $this->requiresShipping($product) || blank($country)) {
             return ['name' => 'Keine Versandkosten', 'amount_cents' => 0, 'currency' => $currency];
         }
 
         $country = strtoupper((string) ($country ?: 'DE'));
+        $originCountry = strtoupper((string) $originCountry);
         $postalCode = preg_replace('/\s+/', '', (string) $postalCode);
 
-        if (Schema::hasTable('commerce_shipping_rates')) {
-            $rates = CommerceShippingRate::query()
-                ->where('is_active', true)
-                ->where(function ($query) use ($country) {
-                    $query->where('country_code', $country)->orWhereNull('country_code');
-                })
-                ->orderBy('priority')
-                ->get();
+        $rate = collect($this->shippingRates())
+            ->first(function (array $rate) use ($country, $postalCode, $originCountry) {
+                $matchesOrigin = blank($rate['origin_country_code'])
+                    || ($originCountry !== '' && $rate['origin_country_code'] === $originCountry);
+                $matchesCountry = blank($rate['country_code']) || $rate['country_code'] === $country;
+                $matchesPostalCode = blank($rate['postal_code_prefix'])
+                    || ($postalCode !== '' && str_starts_with($postalCode, (string) $rate['postal_code_prefix']));
 
-            $rate = $rates->first(function (CommerceShippingRate $rate) use ($postalCode) {
-                return blank($rate->postal_code_prefix)
-                    || ($postalCode !== '' && str_starts_with($postalCode, (string) $rate->postal_code_prefix));
+                return $matchesOrigin && $matchesCountry && $matchesPostalCode;
             });
 
-            if ($rate) {
-                $amount = (int) $rate->amount_cents;
-                if ($rate->free_from_cents !== null && $itemGrossCents >= (int) $rate->free_from_cents) {
-                    $amount = 0;
-                }
-
-                return [
-                    'name' => $amount > 0 ? $rate->name : $rate->name.' (kostenfrei)',
-                    'amount_cents' => $amount,
-                    'currency' => strtoupper($rate->currency ?: $currency),
-                ];
+        if ($rate) {
+            $amount = (int) $rate['amount_cents'];
+            if ($rate['free_from_cents'] !== null && $itemGrossCents >= (int) $rate['free_from_cents']) {
+                $amount = 0;
             }
+
+            return [
+                'name' => $amount > 0 ? $rate['name'] : $rate['name'].' (kostenfrei)',
+                'amount_cents' => $amount,
+                'currency' => strtoupper($rate['currency'] ?: $currency),
+            ];
         }
 
         return ['name' => 'Standardversand', 'amount_cents' => 0, 'currency' => $currency];
@@ -294,6 +336,7 @@ class MarketplacePricingService
             'city' => trim((string) ($address['shipping_city'] ?? $address['city'] ?? '')),
             'street' => trim((string) ($address['shipping_street'] ?? $address['street'] ?? '')),
             'house_number' => trim((string) ($address['shipping_house_number'] ?? $address['house_number'] ?? '')),
+            'origin_country' => strtoupper((string) ($address['origin_country'] ?? $address['origin_country_code'] ?? '')),
         ];
     }
 
@@ -302,7 +345,8 @@ class MarketplacePricingService
         return [
             'type' => ($customer['customer_type'] ?? $customer['type'] ?? 'consumer') === 'business' ? 'business' : 'consumer',
             'company' => trim((string) ($customer['customer_company'] ?? $customer['company'] ?? '')),
-            'vat_id' => strtoupper(preg_replace('/\s+/', '', (string) ($customer['customer_vat_id'] ?? $customer['vat_id'] ?? ''))),
+            'vat_id' => EuVatId::normalize((string) ($customer['customer_vat_id'] ?? $customer['vat_id'] ?? '')),
+            'vat_id_is_valid' => EuVatId::looksValid((string) ($customer['customer_vat_id'] ?? $customer['vat_id'] ?? '')),
         ];
     }
 

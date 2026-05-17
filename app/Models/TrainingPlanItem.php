@@ -39,4 +39,9 @@ class TrainingPlanItem extends Model
     {
         return $this->belongsTo(TrainingPlan::class, 'training_plan_id');
     }
+
+    public function logs()
+    {
+        return $this->hasMany(TrainingLog::class, 'training_plan_item_id');
+    }
 }

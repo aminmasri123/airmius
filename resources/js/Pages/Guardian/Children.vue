@@ -21,16 +21,21 @@ defineProps({
 
 const page = usePage()
 const pendingAction = ref(null)
+const processingAction = ref(false)
+const actionError = ref('')
+const backendActionError = computed(() => page.props.errors?.code || page.props.errors?.message || '')
 
 const confirmation = computed(() => {
-    if (!pendingAction.value) return null
+    if (!pendingAction.value) {
+        return null
+    }
 
     const { type, child } = pendingAction.value
 
     if (type === 'revoke') {
         return {
             title: 'Zustimmung widerrufen',
-            message: `Möchtest du die Zustimmung für ${child.name} wirklich widerrufen? Die sozialen Funktionen werden danach wieder gesperrt.`,
+            message: `Moechtest du die Zustimmung fuer ${child.name} wirklich widerrufen? Die sozialen Funktionen werden danach wieder gesperrt.`,
             confirmLabel: 'Zustimmung widerrufen',
             danger: true,
         }
@@ -39,22 +44,24 @@ const confirmation = computed(() => {
     if (child.revoked_at) {
         return {
             title: 'Zustimmung erneut erteilen',
-            message: `Möchtest du die Zustimmung für ${child.name} erneut erteilen? Das Konto wird danach wieder freigegeben.`,
+            message: `Moechtest du die Zustimmung fuer ${child.name} erneut erteilen? Das Konto wird danach wieder freigegeben.`,
             confirmLabel: 'Erneut zustimmen',
             danger: false,
         }
     }
 
     return {
-        title: 'Ablehnung zurücknehmen',
-        message: `Möchtest du die Ablehnung für ${child.name} zurücknehmen und die Zustimmung erteilen? Das Konto wird danach freigegeben.`,
-        confirmLabel: 'Zurücknehmen und zustimmen',
+        title: 'Ablehnung zuruecknehmen',
+        message: `Moechtest du die Ablehnung fuer ${child.name} zuruecknehmen und die Zustimmung erteilen? Das Konto wird danach freigegeben.`,
+        confirmLabel: 'Zuruecknehmen und zustimmen',
         danger: false,
     }
 })
 
 const formatDate = (value) => {
-    if (!value) return '-'
+    if (!value) {
+        return '-'
+    }
 
     return new Intl.DateTimeFormat('de-DE', {
         day: '2-digit',
@@ -63,16 +70,56 @@ const formatDate = (value) => {
     }).format(new Date(value))
 }
 
-const openConfirmation = (type, child) => {
-    pendingAction.value = { type, child }
+const statusBadge = (child) => {
+    if (child.approved_at) {
+        return {
+            text: `Zugestimmt am ${formatDate(child.approved_at)}`,
+            className: 'rounded border border-success/30 bg-success/10 px-2 py-1 text-success',
+        }
+    }
+
+    if (child.revoked_at) {
+        return {
+            text: `Widerrufen am ${formatDate(child.revoked_at)}`,
+            className: 'rounded border border-warning/30 bg-warning/10 px-2 py-1 text-warning',
+        }
+    }
+
+    if (child.rejected_at) {
+        return {
+            text: `Abgelehnt am ${formatDate(child.rejected_at)}`,
+            className: 'rounded border border-error/30 bg-error/10 px-2 py-1 text-error',
+        }
+    }
+
+    return {
+        text: 'Zustimmung offen',
+        className: 'rounded border border-border bg-muted px-2 py-1 text-secondary',
+    }
 }
 
 const closeConfirmation = () => {
-    pendingAction.value = null
+    if (!processingAction.value) {
+        pendingAction.value = null
+    }
+}
+
+const openConfirmation = (type, child) => {
+    if (processingAction.value) {
+        return
+    }
+
+    actionError.value = ''
+    pendingAction.value = { type, child }
 }
 
 const confirmAction = () => {
-    if (!pendingAction.value) return
+    if (!pendingAction.value || processingAction.value) {
+        return
+    }
+
+    processingAction.value = true
+    actionError.value = ''
 
     const { type, child } = pendingAction.value
     const routeName = type === 'revoke'
@@ -81,7 +128,15 @@ const confirmAction = () => {
 
     router.put(route(routeName, child.id), {}, {
         preserveScroll: true,
-        onFinish: closeConfirmation,
+        onError: (errors) => {
+            actionError.value = errors?.code || errors?.message || 'Die Aktion konnte nicht ausgefuehrt werden. Bitte versuche es erneut.'
+        },
+        onFinish: () => {
+            processingAction.value = false
+        },
+        onSuccess: () => {
+            closeConfirmation()
+        },
     })
 }
 
@@ -107,11 +162,15 @@ const logout = () => {
                     </div>
                 </div>
 
-                <button class="btn" @click="logout">Schließen</button>
+                <button class="btn" @click="logout" aria-label="Elternbereich schliessen">Schliessen</button>
             </header>
 
             <div v-if="page.props.flash?.success" class="mt-5 rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success">
                 {{ page.props.flash.success }}
+            </div>
+
+            <div v-if="actionError || backendActionError" class="mt-5 rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error" role="status" aria-live="polite">
+                {{ actionError || backendActionError }}
             </div>
 
             <section v-if="!hasAuthenticatedAccount" class="mt-5 rounded-lg border border-border bg-card p-5">
@@ -120,7 +179,7 @@ const logout = () => {
                         <h2 class="text-lg font-semibold text-primary">Eigenes Elternkonto nutzen</h2>
                         <p class="mt-1 text-sm leading-6 text-secondary">
                             Du kannst optional ein normales Airmius-Konto mit dieser E-Mail erstellen.
-                            Danach sind die Kinder dauerhaft mit deinem Elternkonto verknüpft.
+                            Danach sind die Kinder dauerhaft mit deinem Elternkonto verknuepft.
                         </p>
                     </div>
 
@@ -140,20 +199,11 @@ const logout = () => {
                         <div>
                             <h2 class="text-lg font-semibold text-primary">{{ child.name }}</h2>
                             <p class="mt-1 text-sm text-secondary">
-                                {{ child.email }} · {{ child.age }} Jahre · Geburtstag {{ formatDate(child.birth_date) }}
+                                {{ child.email }} &middot; {{ child.age || 0 }} Jahre &middot; Geburtstag {{ formatDate(child.birth_date) }}
                             </p>
                             <div class="mt-3 flex flex-wrap gap-2 text-xs">
-                                <span v-if="child.approved_at" class="rounded border border-success/30 bg-success/10 px-2 py-1 text-success">
-                                    Zugestimmt am {{ formatDate(child.approved_at) }}
-                                </span>
-                                <span v-if="child.revoked_at" class="rounded border border-warning/30 bg-warning/10 px-2 py-1 text-warning">
-                                    Widerrufen am {{ formatDate(child.revoked_at) }}
-                                </span>
-                                <span v-if="child.rejected_at" class="rounded border border-error/30 bg-error/10 px-2 py-1 text-error">
-                                    Abgelehnt am {{ formatDate(child.rejected_at) }}
-                                </span>
-                                <span v-if="!child.approved_at && !child.revoked_at && !child.rejected_at" class="rounded border border-border bg-muted px-2 py-1 text-secondary">
-                                    Zustimmung offen
+                                <span :class="statusBadge(child).className">
+                                    {{ statusBadge(child).text }}
                                 </span>
                             </div>
                         </div>
@@ -162,25 +212,21 @@ const logout = () => {
                             v-if="child.approved_at && !child.revoked_at"
                             type="button"
                             class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white"
+                            :disabled="processingAction"
+                            :aria-label="`Zustimmung fuer ${child.name} widerrufen`"
                             @click="openConfirmation('revoke', child)"
                         >
                             Zustimmung widerrufen
                         </button>
                         <button
-                            v-else-if="child.rejected_at"
+                            v-else-if="child.rejected_at || child.revoked_at"
                             type="button"
                             class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
+                            :disabled="processingAction"
+                            :aria-label="`Zustimmung fuer ${child.name} erneut erteilen`"
                             @click="openConfirmation('approve', child)"
                         >
-                            Ablehnung zurücknehmen und zustimmen
-                        </button>
-                        <button
-                            v-else-if="child.revoked_at"
-                            type="button"
-                            class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
-                            @click="openConfirmation('approve', child)"
-                        >
-                            Zustimmung erneut erteilen
+                            {{ child.rejected_at ? 'Ablehnung zuruecknehmen und zustimmen' : 'Zustimmung erneut erteilen' }}
                         </button>
                     </div>
                 </article>
@@ -201,6 +247,7 @@ const logout = () => {
             :message="confirmation?.message"
             :confirm-label="confirmation?.confirmLabel"
             :danger="confirmation?.danger"
+            :processing="processingAction"
             @cancel="closeConfirmation"
             @confirm="confirmAction"
         />

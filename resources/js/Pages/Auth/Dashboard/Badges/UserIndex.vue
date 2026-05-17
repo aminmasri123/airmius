@@ -1,5 +1,5 @@
-<script setup>
-import { Head } from '@inertiajs/vue3'
+﻿<script setup>
+import { Head, Link } from '@inertiajs/vue3'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 
 defineOptions({ layout: AppLayout })
@@ -21,7 +21,12 @@ defineProps({
         </section>
 
         <section v-if="awards.length" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <article v-for="award in awards" :key="award.id" class="surface-card p-4">
+            <Link
+                v-for="award in awards"
+                :key="award.id"
+                :href="route('auth.badges.show', award.id)"
+                class="surface-card block p-4 transition hover:-translate-y-0.5 hover:border-buttonPrimary"
+            >
                 <div class="flex items-start gap-3">
                     <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded bg-buttonPrimary text-buttonTextPrimary">
                         <i :class="[award.badge?.icon || 'las la-medal', 'text-xl']"></i>
@@ -30,11 +35,14 @@ defineProps({
                         <h2 class="font-semibold text-primary">{{ award.badge?.name }}</h2>
                         <p class="mt-1 text-sm text-secondary">{{ award.badge?.description }}</p>
                         <p class="mt-2 text-xs uppercase tracking-wide text-secondary">
-                            {{ award.badge?.actor_type }} · {{ award.reason || award.badge?.trigger }}
+                            {{ award.badge?.actor_type }} - {{ award.reason || award.badge?.trigger }}
+                        </p>
+                        <p v-if="award.meta?.xp !== undefined" class="mt-1 text-xs text-secondary">
+                            {{ award.meta.xp }} XP - Level {{ award.meta.level }}
                         </p>
                     </div>
                 </div>
-            </article>
+            </Link>
         </section>
 
         <section v-else class="surface-card p-6 text-sm text-secondary">
@@ -42,3 +50,4 @@ defineProps({
         </section>
     </div>
 </template>
+

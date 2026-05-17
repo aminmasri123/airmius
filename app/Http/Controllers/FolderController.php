@@ -8,14 +8,46 @@ use App\Models\File;
 use App\Models\Folder;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\FileService;
 use App\Support\AppNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
 
 class FolderController extends Controller
 {
     use AuthorizesRequests;
+
+    private const MAX_FOLDER_COPY_DEPTH = 200;
+    private const MAX_FOLDER_NAME_LENGTH = 120;
+    private const RESERVED_FOLDER_NAMES = [
+        'con',
+        'prn',
+        'aux',
+        'nul',
+        'com1',
+        'com2',
+        'com3',
+        'com4',
+        'com5',
+        'com6',
+        'com7',
+        'com8',
+        'com9',
+        'lpt1',
+        'lpt2',
+        'lpt3',
+        'lpt4',
+        'lpt5',
+        'lpt6',
+        'lpt7',
+        'lpt8',
+        'lpt9',
+    ];
+
+    public function __construct(private FileService $service) {}
 
     /**
      * Display a listing of the resource.
@@ -46,7 +78,14 @@ class FolderController extends Controller
             'team_id' => ['nullable', 'required_if:scope,team', 'exists:teams,id'],
             'event_id' => ['nullable', 'required_if:scope,event', 'exists:events,id'],
             'parent_id' => ['nullable', 'exists:folders,id'],
-            'name' => ['required', 'string', 'max:120'],
+            'name' => [
+                'required',
+                'string',
+                'max:'.self::MAX_FOLDER_NAME_LENGTH,
+                'not_regex:/[\\\\\/]/',
+                'not_regex:/[\\x00-\\x1F\\x7F]/',
+                'not_regex:/^\\.{1,2}$/',
+            ],
         ]);
 
         $scope = $this->authorizeScope($data);
@@ -59,8 +98,18 @@ class FolderController extends Controller
                 && $parent->event_id === ($scope['event_id'] ?? null), 422);
         }
 
+        $normalizedName = trim((string) $data['name']);
+
+        if ($normalizedName === '') {
+            throw ValidationException::withMessages([
+                'name' => 'Der Ordnername darf nicht leer sein.',
+            ]);
+        }
+
+        $this->assertSafeFolderName($normalizedName);
+
         Folder::create(array_merge($scope, [
-            'name' => $data['name'],
+            'name' => $normalizedName,
             'parent_id' => $data['parent_id'] ?? null,
         ]));
 
@@ -91,11 +140,28 @@ class FolderController extends Controller
         $this->authorize('update', $folder);
 
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:120'],
+            'name' => [
+                'required',
+                'string',
+                'max:'.self::MAX_FOLDER_NAME_LENGTH,
+                'not_regex:/[\\\\\/]/',
+                'not_regex:/[\\x00-\\x1F\\x7F]/',
+                'not_regex:/^\\.{1,2}$/',
+            ],
         ]);
 
+        $normalizedName = trim((string) $data['name']);
+
+        if ($normalizedName === '') {
+            throw ValidationException::withMessages([
+                'name' => 'Der Ordnername darf nicht leer sein.',
+            ]);
+        }
+
+        $this->assertSafeFolderName($normalizedName);
+
         $folder->update([
-            'name' => trim($data['name']),
+            'name' => $normalizedName,
         ]);
 
         return back()->with('success', 'Ordner umbenannt.');
@@ -192,46 +258,140 @@ class FolderController extends Controller
 
     private function deleteTree(Folder $folder): void
     {
-        $folder->loadMissing(['children', 'files']);
+        $folderIds = $this->collectFolderIds([$folder->id]);
 
-        foreach ($folder->children as $child) {
-            $this->deleteTree($child);
+        if (empty($folderIds)) {
+            return;
         }
 
-        $folder->files()->delete();
-        $folder->delete();
+        $files = File::query()
+            ->whereIn('folder_id', $folderIds)
+            ->get(['id', 'path', 'thumbnail_path']);
+
+        $this->service->deleteMany($files);
+        Folder::query()->whereIn('id', $folderIds)->delete();
     }
 
-    private function copyTree(Folder $source, array $scope, ?Folder $parent = null): Folder
+    private function collectFolderIds(array $rootFolderIds): array
     {
-        $target = Folder::firstOrCreate(
-            array_merge($scope, [
-                'parent_id' => $parent?->id,
-                'name' => $source->name,
-            ]),
-        );
+        $collected = [];
+        $queue = array_values(array_filter(array_unique(array_map('intval', $rootFolderIds), SORT_NUMERIC)));
 
-        $source->loadMissing(['files', 'children']);
+        while (! empty($queue)) {
+            $batch = array_slice($queue, 0, 100);
+            $queue = array_slice($queue, count($batch));
 
-        foreach ($source->files as $file) {
-            File::firstOrCreate(
-                array_merge($scope, [
-                    'folder_id' => $target->id,
-                    'path' => $file->path,
-                ]),
-                [
-                    'display_name' => $file->display_name,
-                    'type' => $file->type,
-                    'size' => $file->size,
-                ],
-            );
+            $newIds = [];
+            foreach ($batch as $id) {
+                if (! isset($collected[$id])) {
+                    $collected[$id] = true;
+                }
+            }
+
+            if (empty($batch)) {
+                continue;
+            }
+
+            $children = Folder::query()
+                ->whereIn('parent_id', $batch)
+                ->pluck('id')
+                ->all();
+
+            foreach ($children as $childId) {
+                if (! isset($collected[$childId])) {
+                    $collected[$childId] = true;
+                    $queue[] = $childId;
+                }
+            }
         }
 
-        foreach ($source->children as $child) {
-            $this->copyTree($child, $scope, $target);
+        return array_map('intval', array_keys($collected));
+    }
+
+    private function copyTree(Folder $source, array $scope, ?Folder $parent = null, array &$activePath = [], int $depth = 0): Folder
+    {
+        if ($depth >= self::MAX_FOLDER_COPY_DEPTH) {
+            throw ValidationException::withMessages([
+                'target_type' => 'Der Ordnerpfad ist zu tief verschachtelt.',
+            ]);
+        }
+
+        if (isset($activePath[$source->id])) {
+            throw ValidationException::withMessages([
+                'target_type' => 'Der Ordner enthält eine zyklische Struktur.',
+            ]);
+        }
+
+        $activePath[$source->id] = true;
+
+        try {
+            $target = Folder::create(
+                array_merge($scope, [
+                    'parent_id' => $parent?->id,
+                    'name' => $this->makeUniqueCopyName($source->name, $scope, $parent?->id),
+                ]),
+            );
+
+            $source->loadMissing(['files', 'children']);
+
+            foreach ($source->files as $file) {
+                File::firstOrCreate(
+                    array_merge($scope, [
+                        'folder_id' => $target->id,
+                        'path' => $file->path,
+                    ]),
+                    [
+                        'display_name' => $file->display_name,
+                        'type' => $file->type,
+                        'size' => $file->size,
+                    ],
+                );
+            }
+
+            foreach ($source->children as $child) {
+                $this->copyTree($child, $scope, $target, $activePath, $depth + 1);
+            }
+        } finally {
+            unset($activePath[$source->id]);
         }
 
         return $target;
+    }
+
+    private function makeUniqueCopyName(string $name, array $scope, ?int $parentId): string
+    {
+        $baseName = trim((string) $name);
+        $baseName = $baseName === '' ? 'Ordner' : $baseName;
+        $candidate = $baseName;
+        $suffix = 1;
+
+        while ($this->folderNameExists($candidate, $scope, $parentId)) {
+            $suffixLabel = $suffix === 1 ? 'Kopie' : 'Kopie ' . $suffix;
+            $candidate = "{$baseName} ({$suffixLabel})";
+            $suffix++;
+        }
+
+        return $candidate;
+    }
+
+    private function folderNameExists(string $name, array $scope, ?int $parentId): bool
+    {
+        return Folder::query()
+            ->where($scope)
+            ->where('parent_id', $parentId)
+            ->whereRaw('LOWER(name) = ?', [Str::lower(trim((string) $name))])
+            ->exists();
+    }
+
+    private function assertSafeFolderName(string $name): void
+    {
+        $normalized = strtolower(trim((string) $name));
+
+        if (in_array($normalized, self::RESERVED_FOLDER_NAMES, true) || str_starts_with($normalized, 'desktop.ini')) {
+            throw ValidationException::withMessages([
+                'name' => 'Der Ordnername ist ungueltig.',
+           ]);
+        }
     }
 
     private function targetScope(string $targetType, int $targetId): array

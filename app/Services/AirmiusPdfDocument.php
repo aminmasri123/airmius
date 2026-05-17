@@ -10,34 +10,69 @@ class AirmiusPdfDocument
     public const NAVY = [15, 23, 42];
     public const BLUE = [37, 99, 235];
     public const ORANGE = [249, 115, 22];
+    public const SKY = [239, 246, 255];
     public const SLATE = [71, 85, 105];
     public const MUTED = [100, 116, 139];
     public const BORDER = [226, 232, 240];
     public const SURFACE = [248, 250, 252];
+    public const SURFACE_MUTED = [242, 247, 253];
 
     private string $content = '';
 
-    public function header(string $title, string $reference, string $subtitle = 'Sport. Vereine. Wachstum.'): self
+    public function header(
+        string $title,
+        string $reference,
+        string $subtitle = 'Sport. Vereine. Wachstum.',
+        ?string $brandName = null,
+        string $documentLabel = 'Rechnungsnummer',
+        string $documentType = 'invoice'
+    ): self
     {
-        $this->fillColor(...self::NAVY)->rect(0, 712, self::PAGE_WIDTH, 130, true);
-        $this->fillColor(...self::BLUE)->rect(0, 712, self::PAGE_WIDTH, 8, true);
-        $this->fillColor(...self::ORANGE)->rect(0, 720, 155, 122, true);
-        $this->text('Airmius', 48, 782, 26, true, [255, 255, 255]);
-        $this->text($subtitle, 50, 760, 10, false, self::BORDER);
-        $this->text($title, 392, 785, 24, true, [255, 255, 255]);
-        $this->text($reference, 395, 762, 12, false, self::BORDER);
+        $brand = trim((string) ($brandName ?: 'Airmius'));
+        $brandBadge = $this->brandBadge($brand);
+        $subtitleText = trim($subtitle) === '' ? ' ' : $subtitle;
+        $docAccent = $documentType === 'credit_note' ? self::ORANGE : self::BLUE;
+        $docTypeLabel = $documentType === 'credit_note' ? 'GUTSCHRIFT' : 'RECHNUNG';
+        $subtitleColor = $documentType === 'credit_note' ? self::ORANGE : self::SLATE;
+
+        $this->fillColor(...self::NAVY)->rect(0, 700, self::PAGE_WIDTH, 142, true);
+        $this->fillColor(...self::BLUE)->rect(0, 824, self::PAGE_WIDTH, 18, true);
+        $this->fillColor(...self::ORANGE)->rect(0, 824, 190, 6, true);
+        $this->fillColor(...self::SURFACE)->rect(48, 748, 46, 50, true);
+        $this->strokeColor(...self::BLUE)->rect(48, 748, 46, 50);
+        $this->text($brandBadge, 57, 778, 20, true, self::NAVY);
+
+        $this->text($brand, 108, 782, 28, true, [255, 255, 255], 52);
+        $this->text($subtitleText, 108, 764, 8, false, $subtitleColor, 58);
+        $this->strokeColor(...self::BORDER)
+            ->line(108, 756, 356, 756);
+        $this->fillColor(...$docAccent)->rect(396, 772, 138, 40, true);
+        $this->fillColor(...self::SURFACE)->rect(397, 773, 136, 38, true);
+        $this->strokeColor(...self::BORDER)->rect(396, 772, 138, 40);
+        $this->text($title, 401, 798, 22, true, self::NAVY);
+        $this->text($docTypeLabel, 401, 810, 6, true, $docAccent);
+        $this->strokeColor(...self::BORDER)
+            ->line(401, 770, 529, 770);
+        $this->text($documentLabel, 401, 782, 6, true, self::MUTED);
+        $this->text($reference, 476, 782, 8, true, $docAccent, 49);
 
         return $this;
     }
 
     public function card(float $x, float $y, float $w, float $h, string $label, string $value, bool $accent = false): self
     {
-        $this->fillColor(255, 255, 255)
+        $cardBackground = $accent ? self::SKY : [255, 255, 255];
+        $labelColor = $accent ? self::BLUE : self::MUTED;
+        $valueColor = $accent ? self::NAVY : self::NAVY;
+        $stripeColor = $accent ? self::BLUE : self::BORDER;
+        $this->fillColor(...$cardBackground)
             ->rect($x, $y, $w, $h, true)
             ->strokeColor(...self::BORDER)
             ->rect($x, $y, $w, $h)
-            ->text($label, $x + 14, $y + 34, 8, true, self::MUTED)
-            ->text($value, $x + 14, $y + 15, 13, true, $accent ? self::BLUE : self::NAVY);
+            ->fillColor(...$stripeColor)
+            ->rect($x + 6, $y + $h - 10, $w - 12, 3, true)
+            ->text($label, $x + 14, $y + 32, 8, true, $labelColor)
+            ->text($value, $x + 14, $y + 14, 12, true, $valueColor);
 
         return $this;
     }
@@ -46,14 +81,18 @@ class AirmiusPdfDocument
     {
         $this->text($title, $x, $y, 11, true, self::BLUE)
             ->strokeColor(...self::BORDER)
-            ->line($x, $y - 8, $x + $lineWidth, $y - 8);
+            ->line($x, $y - 8, $x + $lineWidth, $y - 8)
+            ->fillColor(...self::SURFACE_MUTED)
+            ->rect($x - 2, $y - 9, 4, 2, true);
 
         return $this;
     }
 
     public function labelValue(string $label, string $value, float $x, float $y, float $labelWidth = 88, ?int $maxChars = 230): self
     {
-        $this->text($label, $x, $y, 8, true, self::MUTED)
+        $this->strokeColor(...self::BORDER)
+            ->line($x, $y - 3, $x + 258, $y - 3)
+            ->text($label, $x, $y, 8, true, self::MUTED)
             ->text($value, $x + $labelWidth, $y, 9, false, self::NAVY, $maxChars);
 
         return $this;
@@ -68,21 +107,36 @@ class AirmiusPdfDocument
             default => self::MUTED,
         };
 
+        $bg = match ($status) {
+            'paid' => [236, 253, 245],
+            'open', 'awaiting_transfer' => [255, 247, 237],
+            'overdue' => [254, 226, 226],
+            default => [241, 245, 249],
+        };
+
         $this->fillColor(...$color)
-            ->rect($x, $y, $width, 22, true)
-            ->text($label, $x + 12, $y + 7, 9, true, [255, 255, 255], 32);
+            ->rect($x + 1, $y + 2, $width - 2, 18, true)
+            ->fillColor(...self::NAVY)
+            ->rect($x, $y, $width, 22, false)
+            ->fillColor(...$bg)
+            ->rect($x + 2, $y + 2, $width - 4, 18, true)
+            ->strokeColor(...self::BORDER)
+            ->rect($x, $y, $width, 22, false)
+            ->text($label, $x + 12, $y + 7, 9, true, $color, 32);
 
         return $this;
     }
 
     public function invoiceTableHeader(float $x, float $y, float $width): self
     {
-        $this->fillColor(241, 245, 249)
+        $this->fillColor(...self::SURFACE_MUTED)
             ->rect($x, $y, $width, 32, true)
             ->text('Beschreibung', $x + 16, $y + 11, 10, true, [51, 65, 85])
             ->text('Zeitraum', $x + 282, $y + 11, 10, true, [51, 65, 85])
             ->text('Summe', $x + 440, $y + 11, 10, true, [51, 65, 85])
             ->strokeColor(...self::BORDER)
+            ->line($x + 270, $y + 2, $x + 270, $y + 28)
+            ->line($x + 426, $y + 2, $x + 426, $y + 28)
             ->line($x, $y, $x + $width, $y);
 
         return $this;
@@ -90,8 +144,10 @@ class AirmiusPdfDocument
 
     public function legalFooter(array $profile, string $message = 'Danke, dass du Airmius nutzt.'): self
     {
-        $this->fillColor(...self::SURFACE)->rect(0, 0, self::PAGE_WIDTH, 96, true);
-        $this->fillColor(...self::BLUE)->rect(48, 82, 80, 3, true);
+        $this->fillColor(...self::SURFACE_MUTED)->rect(0, 0, self::PAGE_WIDTH, 96, true);
+        $this->fillColor(...self::NAVY)->rect(0, 84, self::PAGE_WIDTH, 12, true);
+        $this->fillColor(...self::BLUE)->rect(48, 82, 120, 3, true);
+        $this->fillColor(...self::MUTED)->rect(0, 0, self::PAGE_WIDTH, 1, true);
         $this->text($message, 48, 64, 9, true, self::NAVY, 80);
         $this->text('Diese Rechnung wurde automatisch erstellt und ist ohne Unterschrift gueltig.', 48, 50, 7, false, self::MUTED, 100);
 
@@ -197,6 +253,22 @@ class AirmiusPdfDocument
         ];
 
         return implode(' | ', $parts);
+    }
+
+    private function brandBadge(string $brandName): string
+    {
+        $words = preg_split('/\s+/', trim($brandName));
+        $words = array_values(array_filter($words, static fn ($word) => $word !== ''));
+
+        if ($words === []) {
+            return 'AI';
+        }
+
+        if (count($words) === 1) {
+            return strtoupper(substr($words[0], 0, 2));
+        }
+
+        return strtoupper(substr($words[0], 0, 1).substr($words[1], 0, 1));
     }
 
     public function render(): string

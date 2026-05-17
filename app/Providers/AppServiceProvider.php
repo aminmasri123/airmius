@@ -14,6 +14,7 @@ use App\Models\Post;
 use App\Models\Ride;
 use App\Models\Team;
 use App\Models\User;
+use App\Models\UserSubscription;
 use App\Notifications\LoginLockoutNotification;
 use App\Notifications\LoginSuccessfulNotification;
 use App\Policies\ClubPolicy;
@@ -28,6 +29,7 @@ use App\Policies\NotificationPolicy;
 use App\Policies\PostPolicy;
 use App\Policies\RidePolicy;
 use App\Policies\TeamPolicy;
+use App\Policies\UserSubscriptionPolicy;
 use App\Policies\UserPolicy;
 use App\Support\Roles;
 use Illuminate\Auth\Events\Failed;
@@ -35,6 +37,9 @@ use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event as EventFacade;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
 use SocialiteProviders\Manager\SocialiteWasCalled;
@@ -57,6 +62,7 @@ class AppServiceProvider extends ServiceProvider
         Message::class => MessagePolicy::class,
         \App\Models\Notification::class => NotificationPolicy::class,
         User::class => UserPolicy::class,
+        UserSubscription::class => UserSubscriptionPolicy::class,
     ];
 
     /**
@@ -80,6 +86,68 @@ class AppServiceProvider extends ServiceProvider
             Gate::policy($model, $policy);
         }
 
+        RateLimiter::for('chat-messages', function (Request $request) {
+            return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('chat-presence', function (Request $request) {
+            return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('file-uploads', function (Request $request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('file-downloads', function (Request $request) {
+            return Limit::perMinute(240)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('file-preview', function (Request $request) {
+            return Limit::perMinute(240)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('file-shared-download', function (Request $request) {
+            $token = (string) $request->route('token');
+
+            $bucket = $token !== '' ? 'file-shared-download:'.sha1($token) : 'file-shared-download:'.$request->ip();
+
+            return Limit::perMinute(60)->by($bucket.'|'.$request->ip());
+        });
+
+        RateLimiter::for('file-share', function (Request $request) {
+            return Limit::perMinute(30)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('file-update', function (Request $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('file-delete', function (Request $request) {
+            return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('file-folder-create', function (Request $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('file-folder-update', function (Request $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('file-folder-delete', function (Request $request) {
+            return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('admin-area', function (Request $request) {
+            $key = $request->user()?->id
+                ? 'admin:user:'.$request->user()->id
+                : 'admin:ip:'.$request->ip();
+
+            return $request->isMethodSafe()
+                ? Limit::perMinute(600)->by($key)
+                : Limit::perMinute(45)->by($key);
+        });
+
         EventFacade::listen(function (SocialiteWasCalled $event): void {
             $event->extendSocialite('microsoft', MicrosoftProvider::class);
         });
@@ -88,6 +156,15 @@ class AppServiceProvider extends ServiceProvider
             if (! $event->user instanceof User) {
                 return;
             }
+
+            $event->user->forceFill([
+                'last_login_at' => now(),
+                'last_seen_at' => now(),
+                'privacy_status' => $event->user->privacy_status === 'anonymized' ? 'anonymized' : 'active',
+                'inactivity_first_warning_sent_at' => null,
+                'inactivity_second_warning_sent_at' => null,
+                'deletion_scheduled_at' => null,
+            ])->save();
 
             $request = request();
             $ipAddress = $request->ip();

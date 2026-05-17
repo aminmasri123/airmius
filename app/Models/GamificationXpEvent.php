@@ -13,6 +13,7 @@ class GamificationXpEvent extends Model
         'owner_id',
         'source_type',
         'source_id',
+        'idempotency_key',
         'amount',
         'base_amount',
         'trust_multiplier',

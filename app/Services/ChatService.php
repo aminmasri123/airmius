@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Events\MessageSent;
+use App\Events\ChatConversationUpdated;
 use App\Models\File;
 use App\Models\Message;
 use Illuminate\Http\UploadedFile;
@@ -52,6 +53,11 @@ class ChatService
             $message->load(['sender', 'receipts', 'attachments.file', 'reactions.user']);
 
             broadcast(new MessageSent($message))->toOthers();
+            broadcast(new ChatConversationUpdated(
+                $conversation,
+                'message.sent',
+                $message->receipts->pluck('user_id')->push($user->id)->all()
+            ))->toOthers();
 
             return $message;
         });

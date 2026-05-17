@@ -19,9 +19,18 @@ class CommentController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Post $post)
     {
-        //
+        $this->authorize('view', $post);
+
+        return response()->json([
+            'comments' => $post->comments()
+                ->where('moderation_status', 'approved')
+                ->with('user:id,name,profile_photo_path')
+                ->withCount('likes')
+                ->latest('id')
+                ->get(),
+        ]);
     }
 
     /**

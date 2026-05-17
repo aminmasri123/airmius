@@ -15,7 +15,16 @@ class LearningLessonComment extends Model
         'parent_id',
         'body',
         'visibility',
+        'status',
+        'resolved_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'resolved_at' => 'datetime',
+        ];
+    }
 
     public function lesson()
     {

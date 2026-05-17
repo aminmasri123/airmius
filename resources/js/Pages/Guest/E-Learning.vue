@@ -10,6 +10,8 @@ defineProps({
     canRegister: Boolean,
     learningProducts: { type: Array, default: () => [] },
     learningCourses: { type: Array, default: () => [] },
+    filters: { type: Object, default: () => ({}) },
+    facets: { type: Object, default: () => ({ categories: [], levels: [] }) },
 })
 
 const courses = [
@@ -84,6 +86,24 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                             Tutor-Studio oeffnen
                         </Link>
                     </div>
+
+                    <form class="mb-8 grid gap-3 rounded-lg border border-border bg-card p-4 lg:grid-cols-[minmax(0,1fr)_12rem_12rem_10rem_auto]" method="get" :action="route('guest.e-learning')">
+                        <input name="q" :value="filters.q" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kurse suchen">
+                        <select name="category" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <option value="">Alle Kategorien</option>
+                            <option v-for="category in facets.categories" :key="category" :value="category" :selected="filters.category === category">{{ category }}</option>
+                        </select>
+                        <select name="level" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <option value="">Alle Level</option>
+                            <option v-for="level in facets.levels" :key="level" :value="level" :selected="filters.level === level">{{ level }}</option>
+                        </select>
+                        <select name="price" class="rounded-lg border-border bg-inputBg text-sm text-primary">
+                            <option value="">Alle Preise</option>
+                            <option value="free" :selected="filters.price === 'free'">Kostenlos</option>
+                            <option value="paid" :selected="filters.price === 'paid'">Kostenpflichtig</option>
+                        </select>
+                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Filtern</button>
+                    </form>
 
                     <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                         <article v-for="course in learningCourses" :key="course.id" class="surface-card overflow-hidden">

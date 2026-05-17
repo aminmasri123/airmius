@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Notifications\AdminInvoiceCreated;
 use App\Notifications\AdminInvoiceStatusUpdated;
 use App\Notifications\ClubInvoiceCreated;
+use App\Notifications\InactiveAccountNotice;
 use App\Support\TransactionalMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -439,6 +440,14 @@ class MailCenterController extends Controller
 
     private function resendable(MailDelivery $delivery): bool
     {
+        if (! $delivery->recipient_id) {
+            return false;
+        }
+
+        if (str_starts_with((string) $delivery->mail_type, 'inactive_account.')) {
+            return true;
+        }
+
         return in_array($delivery->mail_type, [
             'invoice.created',
             'invoice.status_updated',
@@ -449,6 +458,18 @@ class MailCenterController extends Controller
 
     private function notificationFor(MailDelivery $delivery): ?\Closure
     {
+        if (str_starts_with((string) $delivery->mail_type, 'inactive_account.')) {
+            $stage = str($delivery->mail_type)->after('inactive_account.')->toString();
+
+            return fn (array $transport) => new InactiveAccountNotice(
+                $stage,
+                $delivery->context['scheduled_at'] ?? null,
+                $transport['mailer'],
+                $transport['address'],
+                $transport['name'],
+            );
+        }
+
         $invoiceId = $delivery->context['invoice_id'] ?? null;
         $invoice = $invoiceId ? Invoice::query()->find($invoiceId) : null;
 

@@ -30,11 +30,26 @@ const initialEmailTemplates = () => Object.fromEntries(emailTemplates.value.map(
 ]))
 
 const placeholderFor = (variable) => `{{ ${variable} }}`
+const billingBrandBadge = computed(() => {
+    const rawBrand = String(form.billing_brand_name || 'Airmius').trim()
+    const parts = rawBrand.split(/\s+/).filter(Boolean)
+
+    if (parts.length === 0) {
+        return 'AI'
+    }
+
+    if (parts.length === 1) {
+        return parts[0].slice(0, 2).toUpperCase()
+    }
+
+    return `${parts[0].slice(0, 1)}${parts[1].slice(0, 1)}`.toUpperCase()
+})
 
 const form = useForm({
     maintenance_enabled: Boolean(maintenance.value.enabled),
     maintenance_title: maintenance.value.title || 'Airmius ist gerade im Wartemodus',
     maintenance_message: maintenance.value.message || 'Wir verbessern gerade die Plattform. Bitte versuche es in Kuerze erneut.',
+    billing_brand_name: billing.value.brand_name || 'Airmius',
     billing_company_name: billing.value.company_name || 'Airmius',
     billing_legal_name: billing.value.legal_name || '',
     billing_company_street: billing.value.company_street || '',
@@ -153,6 +168,20 @@ const save = () => {
                         </div>
 
                         <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <label for="billing_brand_name" class="text-sm font-semibold text-primary">Markenname für PDF-Header</label>
+                                <input
+                                    id="billing_brand_name"
+                                    v-model="form.billing_brand_name"
+                                    type="text"
+                                    class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary"
+                                    placeholder="Airmius"
+                                    maxlength="120"
+                                >
+                                <p v-if="form.errors.billing_brand_name" class="mt-1 text-sm text-error">
+                                    {{ form.errors.billing_brand_name }}
+                                </p>
+                            </div>
                             <div>
                                 <label for="billing_company_name" class="text-sm font-semibold text-primary">Marke / Rechnungsname</label>
                                 <input id="billing_company_name" v-model="form.billing_company_name" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Airmius">
@@ -423,6 +452,20 @@ const save = () => {
                                 <dd class="text-right text-primary">{{ form.billing_payment_terms_days }} Tage</dd>
                             </div>
                         </dl>
+                    </div>
+
+                    <div class="mt-4 rounded-lg border border-border bg-card p-4 text-sm text-secondary">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">PDF-Branding Vorschau</p>
+                        <div class="mt-3 flex items-center gap-3">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-buttonPrimary/10 text-sm font-bold text-buttonTextPrimary">
+                                {{ billingBrandBadge }}
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-primary">{{ form.billing_brand_name || 'Airmius' }}</p>
+                                <p class="text-xs text-secondary">{{ form.billing_company_name || 'Airmius' }}</p>
+                                <p class="text-xs text-secondary">{{ form.billing_company_country || 'Deutschland' }}</p>
+                            </div>
+                        </div>
                     </div>
                 </aside>
             </div>

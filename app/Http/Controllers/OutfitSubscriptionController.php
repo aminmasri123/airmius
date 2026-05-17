@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\OutfitStyleProfile;
+use App\Models\OutfitDelivery;
 use App\Models\OutfitSubscription;
 use App\Models\OutfitSubscriptionPlan;
 use App\Models\Setting;
 use App\Models\Sport;
 use App\Models\User;
+use App\Services\OutfitInvoiceService;
 use App\Support\AppNotification;
 use App\Support\Roles;
 use App\Support\UploadStorage;
@@ -17,6 +19,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class OutfitSubscriptionController extends Controller
 {
@@ -77,10 +81,18 @@ class OutfitSubscriptionController extends Controller
     {
         abort_unless($plan->is_active && $plan->is_public, 404);
 
-        $request->validate([
+        $data = $request->validate([
             'accepted_terms' => ['accepted'],
             'accepted_contract' => ['accepted'],
-            'payment_provider' => ['required', Rule::in(['bank_transfer', 'stripe', 'paypal'])],
+            'payment_provider' => ['required', Rule::in(['bank_transfer', 'paypal'])],
+            'shipping_name' => ['nullable', 'string', 'max:255'],
+            'shipping_country' => ['nullable', 'string', 'size:2'],
+            'shipping_street' => ['nullable', 'string', 'max:255'],
+            'shipping_house_number' => ['nullable', 'string', 'max:40'],
+            'shipping_postal_code' => ['nullable', 'string', 'max:30'],
+            'shipping_city' => ['nullable', 'string', 'max:255'],
+            'shipping_state' => ['nullable', 'string', 'max:255'],
+            'shipping_note' => ['nullable', 'string', 'max:1000'],
         ], [
             'accepted_terms.accepted' => 'Bitte bestaetige AGB und Widerrufshinweise, bevor du das Outfit-Abo anfragst.',
             'accepted_contract.accepted' => 'Bitte bestaetige den Outfit-Abo-Vertrag, bevor du das Outfit-Abo anfragst.',
@@ -96,9 +108,23 @@ class OutfitSubscriptionController extends Controller
             return back()->with('error', 'Du hast diesen Outfit-Abo-Plan bereits angefragt oder aktiviert.');
         }
 
-        $paymentProvider = $request->input('payment_provider', 'bank_transfer');
+        $paymentProvider = $data['payment_provider'] ?? 'bank_transfer';
         $bankTransfer = $this->bankTransferSettings();
         $contractSnapshot = $this->contractSnapshot($plan, $request->user());
+        $shippingAddress = $this->shippingAddressFor($request, $data);
+        $missingAddressFields = collect([
+            'shipping_name' => 'Name',
+            'shipping_country' => 'Land',
+            'shipping_street' => 'Strasse',
+            'shipping_postal_code' => 'Postleitzahl',
+            'shipping_city' => 'Stadt',
+        ])->filter(fn ($label, $field) => blank($shippingAddress[$field] ?? null));
+
+        if ($missingAddressFields->isNotEmpty()) {
+            return back()
+                ->withErrors(['shipping_address' => 'Bitte vervollstaendige deine Lieferadresse: '.$missingAddressFields->implode(', ').'.'])
+                ->withInput();
+        }
 
         if ($paymentProvider === 'bank_transfer' && blank($bankTransfer['iban'])) {
             return back()->with('error', 'Bankverbindung für Ueberweisung ist noch nicht konfiguriert.');
@@ -114,6 +140,7 @@ class OutfitSubscriptionController extends Controller
             'monthly_price_cents' => $plan->effectiveMonthlyPriceCents(),
             'sponsor_discount_cents' => $plan->sponsor_discount_cents,
             'currency' => $plan->currency,
+            ...$shippingAddress,
             'next_delivery_at' => null,
             'current_period_ends_at' => null,
             'accepted_terms_at' => now(),
@@ -223,9 +250,18 @@ class OutfitSubscriptionController extends Controller
                 ->first();
 
             if ($subscription) {
+                $isSuspended = $eventType === 'BILLING.SUBSCRIPTION.SUSPENDED';
+                $paymentStatus = $subscription->payment_status;
+
+                if (! $isSuspended && in_array($subscription->payment_status, ['pending', 'failed'], true)) {
+                    $paymentStatus = 'cancelled';
+                }
+
                 $subscription->forceFill([
-                    'status' => $eventType === 'BILLING.SUBSCRIPTION.SUSPENDED' ? 'paused' : 'cancelled',
-                    'cancelled_at' => $eventType === 'BILLING.SUBSCRIPTION.SUSPENDED' ? $subscription->cancelled_at : now(),
+                    'status' => $isSuspended ? 'paused' : 'cancelled',
+                    'payment_status' => $paymentStatus,
+                    'cancelled_at' => $isSuspended ? $subscription->cancelled_at : now(),
+                    'next_delivery_at' => $isSuspended ? $subscription->next_delivery_at : null,
                     'payment_payload' => array_merge($subscription->payment_payload ?? [], ['paypal_webhook' => $event]),
                 ])->save();
             }
@@ -237,6 +273,12 @@ class OutfitSubscriptionController extends Controller
     public function pause(Request $request, OutfitSubscription $subscription)
     {
         $this->authorizeSubscription($request, $subscription);
+
+        $pauseAllowedAt = $this->pauseAllowedAt($subscription);
+
+        if ($pauseAllowedAt && $pauseAllowedAt->isFuture()) {
+            return back()->with('error', 'Dieses Outfit-Abo kann erst ab dem '.$pauseAllowedAt->format('d.m.Y').' pausiert werden.');
+        }
 
         if ($subscription->payment_provider === 'paypal' && $subscription->provider_subscription_id) {
             $this->suspendPayPalSubscription($subscription);
@@ -268,22 +310,117 @@ class OutfitSubscriptionController extends Controller
         $this->authorizeSubscription($request, $subscription);
 
         $wasPending = $subscription->status === 'pending_payment';
+        $minimumTermEndsAt = $this->minimumTermEndsAt($subscription);
+
+        if (! $wasPending && $minimumTermEndsAt && $minimumTermEndsAt->isFuture()) {
+            return back()->with('error', 'Dieses Outfit-Abo kann erst nach der Mindestlaufzeit ab dem '.$minimumTermEndsAt->format('d.m.Y').' gekuendigt werden.');
+        }
+
+        if ($wasPending) {
+            $subscription->update([
+                'status' => 'cancelled',
+                'payment_status' => 'cancelled',
+                'cancelled_at' => now(),
+                'next_delivery_at' => null,
+                'current_period_ends_at' => null,
+            ]);
+
+            return back()->with('success', 'Outfit-Abo-Anfrage wurde abgebrochen.');
+        }
+
+        $effectiveAt = $this->cancellationEffectiveAt($subscription);
 
         if ($subscription->payment_provider === 'paypal' && $subscription->provider_subscription_id) {
             $this->cancelPayPalSubscription($subscription);
         }
 
         $subscription->update([
-            'status' => 'cancelled',
+            'status' => $effectiveAt->isFuture() ? 'cancels_at_period_end' : 'cancelled',
             'cancelled_at' => now(),
+            'current_period_ends_at' => $effectiveAt,
+            'next_delivery_at' => $subscription->next_delivery_at && $subscription->next_delivery_at->lte($effectiveAt)
+                ? $subscription->next_delivery_at
+                : null,
         ]);
 
-        return back()->with('success', $wasPending ? 'Outfit-Abo-Anfrage wurde abgebrochen.' : 'Abo wurde gekuendigt.');
+        return back()->with('success', 'Outfit-Abo wurde zum '.$effectiveAt->format('d.m.Y').' gekuendigt.');
+    }
+
+    public function requestDeliveryIssue(Request $request, OutfitDelivery $delivery)
+    {
+        $delivery->loadMissing(['subscription.plan', 'subscription.user']);
+        $subscription = $delivery->subscription;
+
+        abort_unless($subscription && (int) $subscription->user_id === (int) $request->user()->id, 403);
+
+        if (! in_array($delivery->status, ['shipped', 'delivered'], true)) {
+            return back()->with('error', 'Ein Problem kann erst gemeldet werden, wenn die Lieferung versendet oder zugestellt wurde.');
+        }
+
+        if (in_array($delivery->issue_status, ['open', 'reviewing', 'approved', 'return_waiting', 'replacement_preparing'], true)) {
+            return back()->with('error', 'Für diese Lieferung ist bereits ein offener Vorgang vorhanden.');
+        }
+
+        $data = $request->validate([
+            'issue_type' => ['required', Rule::in(['exchange', 'return', 'damaged', 'missing_item', 'wrong_item', 'other'])],
+            'issue_description' => ['required', 'string', 'max:2000'],
+            'issue_requested_resolution' => ['nullable', 'string', 'max:1000'],
+            'issue_exchange_size' => ['nullable', 'string', 'max:60'],
+        ]);
+
+        $delivery->forceFill([
+            'issue_type' => $data['issue_type'],
+            'issue_status' => 'open',
+            'issue_description' => trim($data['issue_description']),
+            'issue_requested_resolution' => filled($data['issue_requested_resolution'] ?? null) ? trim($data['issue_requested_resolution']) : null,
+            'issue_exchange_size' => filled($data['issue_exchange_size'] ?? null) ? trim($data['issue_exchange_size']) : null,
+            'issue_admin_note' => null,
+            'return_tracking_number' => null,
+            'return_tracking_url' => null,
+            'issue_requested_at' => now(),
+            'issue_resolved_at' => null,
+        ])->save();
+
+        $this->notifyOutfitDeliveryIssueRequested($request, $delivery->fresh(['subscription.plan']));
+
+        return back()->with('success', 'Deine Meldung wurde gesendet. Unser Team prueft die Lieferung.');
     }
 
     private function authorizeSubscription(Request $request, OutfitSubscription $subscription): void
     {
         abort_unless((int) $subscription->user_id === (int) $request->user()->id, 403);
+    }
+
+    private function pauseAllowedAt(OutfitSubscription $subscription)
+    {
+        $months = (int) $this->contractRules($subscription->plan)['pause_allowed_after_months'];
+
+        if ($months <= 0) {
+            return null;
+        }
+
+        return ($subscription->accepted_contract_at ?: $subscription->created_at)?->copy()->addMonthsNoOverflow($months);
+    }
+
+    private function minimumTermEndsAt(OutfitSubscription $subscription)
+    {
+        $months = (int) $this->contractRules($subscription->plan)['minimum_term_months'];
+
+        if ($months <= 0) {
+            return null;
+        }
+
+        return ($subscription->accepted_contract_at ?: $subscription->created_at)?->copy()->addMonthsNoOverflow($months);
+    }
+
+    private function cancellationEffectiveAt(OutfitSubscription $subscription)
+    {
+        $noticeEnd = now()->addDays((int) $this->contractRules($subscription->plan)['cancellation_notice_days']);
+        $periodEnd = $subscription->current_period_ends_at && $subscription->current_period_ends_at->isFuture()
+            ? $subscription->current_period_ends_at
+            : now();
+
+        return $periodEnd->greaterThan($noticeEnd) ? $periodEnd->copy() : $noticeEnd;
     }
 
     private function planPayload(OutfitSubscriptionPlan $plan): array
@@ -341,11 +478,48 @@ class OutfitSubscriptionController extends Controller
             'next_delivery_at' => $subscription->next_delivery_at,
             'current_period_ends_at' => $subscription->current_period_ends_at,
             'cancelled_at' => $subscription->cancelled_at,
+            'shipping_address' => $this->shippingAddressPayload($subscription),
             'plan' => $subscription->plan ? $this->planPayload($subscription->plan) : null,
             'sponsor' => $subscription->sponsor,
             'deliveries' => $subscription->deliveries,
             'accepted_contract_at' => $subscription->accepted_contract_at,
             'contract_version' => $subscription->contract_version,
+        ];
+    }
+
+    private function shippingAddressFor(Request $request, array $data): array
+    {
+        $user = $request->user();
+
+        $address = [
+            'shipping_name' => $data['shipping_name'] ?? $user->name,
+            'shipping_country' => $data['shipping_country'] ?? $user->country ?? 'DE',
+            'shipping_street' => $data['shipping_street'] ?? $user->street,
+            'shipping_house_number' => $data['shipping_house_number'] ?? $user->house_number,
+            'shipping_postal_code' => $data['shipping_postal_code'] ?? $user->postal_code,
+            'shipping_city' => $data['shipping_city'] ?? $user->city,
+            'shipping_state' => $data['shipping_state'] ?? $user->state,
+            'shipping_note' => $data['shipping_note'] ?? null,
+        ];
+
+        return collect($address)
+            ->map(fn ($value, $key) => $key === 'shipping_country'
+                ? strtoupper(Str::limit(trim((string) $value), 2, ''))
+                : (filled($value) ? trim((string) $value) : null))
+            ->all();
+    }
+
+    private function shippingAddressPayload(OutfitSubscription $subscription): array
+    {
+        return [
+            'name' => $subscription->shipping_name,
+            'country' => $subscription->shipping_country,
+            'street' => $subscription->shipping_street,
+            'house_number' => $subscription->shipping_house_number,
+            'postal_code' => $subscription->shipping_postal_code,
+            'city' => $subscription->shipping_city,
+            'state' => $subscription->shipping_state,
+            'note' => $subscription->shipping_note,
         ];
     }
 
@@ -641,6 +815,8 @@ class OutfitSubscriptionController extends Controller
             ]);
         }
 
+        app(OutfitInvoiceService::class)->createPaidInvoice($subscription->fresh(['plan', 'sponsor']));
+
         AppNotification::send($subscription->user_id, 'outfit.subscription.paid', [
             'title' => 'Outfit-Abo aktiviert',
             'message' => 'Deine Zahlung für '.$subscription->plan?->name.' wurde bestaetigt. Dein Outfit-Abo ist jetzt aktiv.',
@@ -651,18 +827,7 @@ class OutfitSubscriptionController extends Controller
 
     private function notifyOutfitSubscriptionRequested(Request $request, OutfitSubscriptionPlan $plan, OutfitSubscription $subscription): void
     {
-        User::role(array_unique(array_merge(Roles::FULL_ACCESS, Roles::MARKETPLACE_OPERATIONS)))
-            ->get(['id', 'name', 'email'])
-            ->merge(User::permission([
-                'outfit-subscriptions.manage',
-                'marketplace.manage',
-                'commerce.orders.manage',
-                'subscriptions.manage',
-                'billing.manage',
-                'finance.edit',
-            ])->get(['id', 'name', 'email']))
-            ->unique('id')
-            ->values()
+        $this->outfitAdminRecipients()
             ->each(function (User $admin) use ($request, $plan, $subscription) {
                 AppNotification::send($admin, 'outfit.subscription.requested', [
                     'title' => 'Neues Outfit-Abo angefragt',
@@ -678,6 +843,59 @@ class OutfitSubscriptionController extends Controller
                     'url' => route('admin.outfit-subscriptions.index'),
                 ]);
             });
+    }
+
+    private function notifyOutfitDeliveryIssueRequested(Request $request, OutfitDelivery $delivery): void
+    {
+        $admins = $this->outfitAdminRecipients();
+
+        $admins->each(function (User $admin) use ($request, $delivery) {
+            AppNotification::send($admin, 'outfit.delivery.issue_requested', [
+                'title' => 'Outfit-Lieferung braucht Support',
+                'message' => $request->user()->name.' hat ein Problem zu einer Outfit-Lieferung gemeldet.',
+                'user_id' => $request->user()->id,
+                'user_name' => $request->user()->name,
+                'delivery_id' => $delivery->id,
+                'subscription_id' => $delivery->outfit_subscription_id,
+                'issue_type' => $delivery->issue_type,
+                'issue_status' => $delivery->issue_status,
+                'url' => route('admin.outfit-subscriptions.index'),
+            ]);
+        });
+    }
+
+    private function outfitAdminRecipients()
+    {
+        $roleNames = array_unique(array_merge(Roles::FULL_ACCESS, Roles::MARKETPLACE_OPERATIONS));
+        $permissionNames = [
+            'outfit-subscriptions.manage',
+            'marketplace.manage',
+            'commerce.orders.manage',
+            'subscriptions.manage',
+            'billing.manage',
+            'finance.edit',
+        ];
+
+        $existingRoleNames = Role::query()
+            ->whereIn('name', $roleNames)
+            ->pluck('name')
+            ->all();
+        $existingPermissionNames = Permission::query()
+            ->whereIn('name', $permissionNames)
+            ->pluck('name')
+            ->all();
+
+        $admins = collect();
+
+        if ($existingRoleNames) {
+            $admins = $admins->merge(User::role($existingRoleNames)->get(['id', 'name', 'email']));
+        }
+
+        if ($existingPermissionNames) {
+            $admins = $admins->merge(User::permission($existingPermissionNames)->get(['id', 'name', 'email']));
+        }
+
+        return $admins->unique('id')->values();
     }
 
     private function paypalAccessToken(): string
@@ -707,7 +925,7 @@ class OutfitSubscriptionController extends Controller
         $webhookId = config('services.paypal.outfit_webhook_id') ?: config('services.paypal.webhook_id');
 
         if (blank($webhookId)) {
-            return true;
+            return config('services.paypal.mode') !== 'live';
         }
 
         try {

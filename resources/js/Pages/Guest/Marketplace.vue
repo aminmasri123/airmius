@@ -24,6 +24,9 @@ const props = defineProps({
     officialStores: { type: Array, default: () => [] },
     categories: { type: Array, default: () => [] },
     segments: { type: Array, default: () => [] },
+    sortOptions: { type: Array, default: () => [] },
+    availabilityOptions: { type: Array, default: () => [] },
+    trustBenefits: { type: Array, default: () => [] },
     pricingCountries: { type: Array, default: () => [] },
     marketplaceVisuals: { type: Object, default: () => ({}) },
     filters: { type: Object, default: () => ({}) },
@@ -43,6 +46,8 @@ const form = ref({
     category: props.filters.category || '',
     segment: props.filters.segment || '',
     country: props.filters.country || '',
+    sort: props.filters.sort || 'recommended',
+    availability: props.filters.availability || '',
 })
 
 const categoryLabels = {
@@ -61,14 +66,15 @@ const cartItemCount = computed(() => Number(props.cart?.items_count || 0))
 const heroProduct = computed(() => props.featuredProducts[0] || props.flashDeals[0] || productItems.value[0] || null)
 const heroSideProducts = computed(() => (props.featuredProducts.length ? props.featuredProducts : props.flashDeals).slice(1, 4))
 const sideBannerUrl = computed(() => props.marketplaceVisuals.side_banner || '/images/marketplace/airmius-marketplace-side-banner.png')
-const sideBannerDimensions = computed(() => props.marketplaceVisuals.dimensions?.side_banner || { width: 306, height: 786 })
+const sideBannerDimensions = computed(() => props.marketplaceVisuals.dimensions?.side_banner || { width: 192, height: 1080 })
 const sideBannerStyle = computed(() => ({
-    backgroundImage: `linear-gradient(180deg, rgba(5, 11, 22, 0.08), rgba(5, 11, 22, 0.18) 45%, rgba(5, 11, 22, 0.75)), url("${sideBannerUrl.value}")`,
-    width: `${Math.max(208, Math.min(288, Number(sideBannerDimensions.value.width || 306)))}px`,
+    backgroundImage: `linear-gradient(180deg, rgba(5, 11, 22, 0.28), rgba(5, 11, 22, 0.45)), url("${sideBannerUrl.value}")`,
+    width: `${Math.max(148, Math.min(192, Number(sideBannerDimensions.value.width || 192)))}px`,
 }))
 const heroImageUrl = computed(() => props.marketplaceVisuals.hero_banner || heroProduct.value?.image_url || '')
-const saleBannerUrl = computed(() => props.marketplaceVisuals.sale_banner || '')
 const activeSegment = computed(() => props.segments.find((segment) => segment.value === form.value.segment) || props.segments[0] || null)
+const activeCategory = computed(() => props.categories.find((category) => category.value === form.value.category) || props.categories[0] || null)
+const activeAvailability = computed(() => props.availabilityOptions.find((option) => option.value === form.value.availability) || props.availabilityOptions[0] || null)
 const segmentLookup = computed(() => Object.fromEntries(props.segments.map((segment) => [segment.value || 'all', segment])))
 const productGroups = computed(() => {
     const groups = allOfferItems.value.reduce((carry, product) => {
@@ -92,7 +98,7 @@ const productGroups = computed(() => {
 })
 
 const quickTiles = computed(() => [
-    { label: 'Flash Deals', hint: 'Heute beliebt', icon: 'las la-bolt', category: '', search: '' },
+    { label: 'Aktuell', hint: 'Heute beliebt', icon: 'las la-bolt', category: '', search: '' },
     { label: 'Produkte', hint: 'Equipment', icon: 'las la-shopping-bag', category: 'product', search: '' },
     { label: 'Kurse', hint: 'Online & vor Ort', icon: 'las la-video', category: 'course', search: '' },
     { label: 'Camps', hint: 'Events & Training', icon: 'las la-campground', category: 'camp', search: '' },
@@ -122,6 +128,28 @@ const taxInfo = (item) => {
     return `${netPrice(item)} netto · ${formatPrice(quote.tax_cents, quote.currency)} ${quote.tax_label} (${quote.tax_rate}%)`
 }
 
+const availabilityLabel = (item) => {
+    if (item.category === 'outfit_subscription') {
+        return item.items_per_box ? `${item.items_per_box} Teile je Box` : 'Monatlich kuendbar'
+    }
+
+    if (item.offer_type === 'online_course' || item.offer_type === 'training_plan' || item.category === 'service') {
+        return 'Digital / Termin'
+    }
+
+    if (!item.manages_stock) {
+        return 'Auf Anfrage'
+    }
+
+    const stock = Number(item.stock_quantity || 0)
+
+    if (stock <= 0) {
+        return 'Aktuell vergriffen'
+    }
+
+    return stock <= 5 ? `Nur ${stock} verfuegbar` : 'Auf Lager'
+}
+
 const shortDescription = (text, length = 92) => {
     if (!text) return 'Sportangebot aus dem Airmius Marketplace.'
     if (text.length <= length) return text
@@ -135,6 +163,8 @@ const search = () => {
         category: form.value.category || undefined,
         segment: form.value.segment || undefined,
         country: form.value.country || undefined,
+        sort: form.value.sort && form.value.sort !== 'recommended' ? form.value.sort : undefined,
+        availability: form.value.availability || undefined,
     }, {
         preserveScroll: true,
         preserveState: true,
@@ -147,6 +177,8 @@ const reset = () => {
     form.value.category = ''
     form.value.segment = ''
     form.value.country = ''
+    form.value.sort = 'recommended'
+    form.value.availability = ''
     search()
 }
 
@@ -180,28 +212,22 @@ const selectSegment = (segment) => {
         <Subnav vertical />
 
         <aside
-            class="pointer-events-none fixed left-0 top-0 z-0 hidden h-screen w-[16vw] min-w-[13rem] max-w-[18rem] overflow-hidden bg-buttonPrimary/20 bg-cover bg-center xl:block"
+            class="pointer-events-none fixed left-0 top-0 z-0 hidden h-screen overflow-hidden bg-buttonPrimary/10 bg-cover bg-center opacity-50 2xl:block"
             :style="sideBannerStyle"
+            aria-hidden="true"
         >
-            <div class="absolute inset-0 bg-buttonPrimary/10"></div>
-            <div class="absolute inset-x-4 top-72 text-center text-buttonTextPrimary drop-shadow">
-                <p class="font-heading text-3xl font-900 leading-none">AIRMIUS</p>
-                <p class="mt-2 text-sm font-black uppercase tracking-wide">Sport Deals</p>
-            </div>
+            <div class="absolute inset-0 bg-bg/35"></div>
         </aside>
 
         <aside
-            class="pointer-events-none fixed right-0 top-0 z-0 hidden h-screen w-[16vw] min-w-[13rem] max-w-[18rem] scale-x-[-1] overflow-hidden bg-buttonPrimary/20 bg-cover bg-center xl:block"
+            class="pointer-events-none fixed right-0 top-0 z-0 hidden h-screen scale-x-[-1] overflow-hidden bg-buttonPrimary/10 bg-cover bg-center opacity-50 2xl:block"
             :style="sideBannerStyle"
+            aria-hidden="true"
         >
-            <div class="absolute inset-0 bg-buttonPrimary/10"></div>
-            <div class="absolute inset-x-4 top-72 text-center text-buttonTextPrimary drop-shadow">
-                <p class="scale-x-[-1] font-heading text-3xl font-900 leading-none">AIRMIUS</p>
-                <p class="mt-2 scale-x-[-1] text-sm font-black uppercase tracking-wide">Marketplace</p>
-            </div>
+            <div class="absolute inset-0 bg-bg/35"></div>
         </aside>
 
-        <main class="relative z-10 pb-24 pt-0 md:pb-14 xl:mx-[16vw]">
+        <main class="relative z-10 mx-auto max-w-[86rem] pb-24 pt-0 md:pb-14 md:pr-28 2xl:pr-24">
             <section class="border-b border-border bg-bg px-4 py-3 shadow-sm">
                 <div class="mx-auto flex max-w-7xl flex-col gap-4 rounded-lg border border-border bg-card px-5 py-3 text-primary shadow-sm sm:flex-row sm:items-center sm:justify-between">
                     <div class="flex min-w-0 items-center gap-3">
@@ -216,7 +242,7 @@ const selectSegment = (segment) => {
                     <div class="flex w-full flex-wrap items-center gap-2 text-sm font-black sm:w-auto sm:justify-end">
                         <Link
                             v-if="currentUser"
-                            href="/card"
+                            :href="route('auth.commerce.cart.index')"
                             class="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary"
                             aria-label="Warenkorb"
                             title="Warenkorb"
@@ -251,11 +277,11 @@ const selectSegment = (segment) => {
             </section>
 
             <section class="bg-card/70 px-4 py-4 shadow-sm backdrop-blur">
-                <form class="mx-auto flex max-w-7xl flex-col gap-3 rounded-2xl border border-border bg-bg/70 p-3 shadow-sm lg:flex-row lg:items-center" @submit.prevent="search">
-                    <div class="grid gap-3 sm:grid-cols-3 lg:w-[34rem] lg:shrink-0">
+                <form class="mx-auto flex max-w-7xl flex-col gap-3 rounded border border-border bg-bg/70 p-3 shadow-sm lg:flex-row lg:items-center" @submit.prevent="search">
+                    <div class="grid gap-3 sm:grid-cols-2 lg:w-[36rem] lg:shrink-0 xl:grid-cols-3">
                         <label class="relative block">
                             <span class="sr-only">Kategorie</span>
-                            <select v-model="form.category" class="h-12 w-full rounded-xl border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
+                            <select v-model="form.category" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
                                 <option v-for="category in categories" :key="category.value" :value="category.value">
                                     {{ category.label }}
                                 </option>
@@ -263,15 +289,31 @@ const selectSegment = (segment) => {
                         </label>
                         <label class="relative block">
                             <span class="sr-only">Bereich</span>
-                            <select v-model="form.segment" class="h-12 w-full rounded-xl border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
+                            <select v-model="form.segment" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
                                 <option v-for="segment in segments" :key="segment.value || 'all'" :value="segment.value">
                                     {{ segment.label }}
                                 </option>
                             </select>
                         </label>
                         <label class="relative block">
+                            <span class="sr-only">Verfuegbarkeit</span>
+                            <select v-model="form.availability" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
+                                <option v-for="option in availabilityOptions" :key="option.value || 'all'" :value="option.value">
+                                    {{ option.label }}
+                                </option>
+                            </select>
+                        </label>
+                        <label class="relative block">
+                            <span class="sr-only">Sortierung</span>
+                            <select v-model="form.sort" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
+                                <option v-for="option in sortOptions" :key="option.value" :value="option.value">
+                                    {{ option.label }}
+                                </option>
+                            </select>
+                        </label>
+                        <label class="relative block sm:col-span-2 xl:col-span-2">
                             <span class="sr-only">Land</span>
-                            <select v-model="form.country" class="h-12 w-full rounded-xl border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25" @change="search">
+                            <select v-model="form.country" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25" @change="search">
                                 <option value="">Land automatisch</option>
                                 <option v-for="country in pricingCountries" :key="country.country" :value="country.country">
                                     {{ country.label }}
@@ -284,7 +326,7 @@ const selectSegment = (segment) => {
                         <i class="las la-search absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-buttonPrimary"></i>
                         <input
                             v-model="form.search"
-                            class="h-13 min-h-12 w-full rounded-2xl border-border bg-inputBg py-3 pl-12 pr-12 text-sm font-semibold text-primary outline-none transition placeholder:text-secondary/70 focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25"
+                            class="h-13 min-h-12 w-full rounded border-border bg-inputBg py-3 pl-12 pr-12 text-sm font-semibold text-primary outline-none transition placeholder:text-secondary/70 focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25"
                             placeholder="Was suchst du? Laufschuhe, Camps, Kurse, Analyse..."
                         />
                         <button
@@ -299,18 +341,25 @@ const selectSegment = (segment) => {
                     </div>
 
                     <div class="grid grid-cols-[1fr_auto] gap-2 lg:w-auto lg:shrink-0">
-                        <button class="h-12 rounded-xl bg-buttonPrimary px-6 text-sm font-black text-buttonTextPrimary shadow-sm transition hover:bg-buttonPrimaryHover focus:outline-none focus:ring-2 focus:ring-buttonPrimary/30">
+                        <button class="h-12 rounded bg-buttonPrimary px-6 text-sm font-black text-buttonTextPrimary shadow-sm transition hover:bg-buttonPrimaryHover focus:outline-none focus:ring-2 focus:ring-buttonPrimary/30">
                             Suchen
                         </button>
-                        <button type="button" class="h-12 rounded-xl border border-border bg-card px-4 text-sm font-bold text-primary transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-buttonPrimary/20" @click="reset">
+                        <button type="button" class="h-12 rounded border border-border bg-card px-4 text-sm font-bold text-primary transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-buttonPrimary/20" @click="reset">
                             Reset
                         </button>
                     </div>
                 </form>
+
+                <div class="mx-auto mt-3 flex max-w-7xl flex-wrap items-center gap-2 text-xs font-semibold text-secondary">
+                    <span class="rounded bg-muted px-2 py-1">Kategorie: {{ activeCategory?.label || 'Alle' }}</span>
+                    <span class="rounded bg-muted px-2 py-1">Bereich: {{ activeSegment?.label || 'Alle Bereiche' }}</span>
+                    <span class="rounded bg-muted px-2 py-1">Status: {{ activeAvailability?.label || 'Alle' }}</span>
+                    <span class="rounded bg-muted px-2 py-1">{{ totalProducts }} Treffer</span>
+                </div>
             </section>
 
-            <section class="mx-auto grid max-w-7xl gap-4 px-4 py-4 lg:grid-cols-[13rem_1fr_13rem]">
-                <aside class="rounded bg-card p-2 shadow-sm">
+            <section class="mx-auto grid max-w-7xl gap-4 px-4 py-4 xl:grid-cols-[13rem_minmax(0,1fr)]">
+                <aside class="rounded border border-border bg-card p-2 shadow-sm">
                     <button
                         v-for="category in sportCategories"
                         :key="category.label"
@@ -322,10 +371,10 @@ const selectSegment = (segment) => {
                     </button>
                 </aside>
 
-                <section class="grid gap-4 md:grid-cols-[1fr_15rem]">
+                <section class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
                     <Link
                         :href="heroProduct?.show_url || route('guest.marketplace')"
-                        class="relative min-h-[19rem] overflow-hidden rounded bg-buttonPrimary shadow-sm"
+                            class="relative min-h-[22rem] overflow-hidden rounded border border-border bg-buttonPrimary shadow-sm"
                     >
                         <img
                             v-if="heroImageUrl"
@@ -334,12 +383,12 @@ const selectSegment = (segment) => {
                             class="absolute inset-0 h-full w-full object-cover"
                         />
                         <div class="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent"></div>
-                        <div class="relative flex min-h-[19rem] max-w-lg flex-col justify-center p-6 text-white">
+                        <div class="relative flex min-h-[22rem] max-w-2xl flex-col justify-center p-6 text-white md:p-8">
                             <p class="text-xs font-black uppercase tracking-wide text-white/80">Airmius Marketplace</p>
                             <h1 class="mt-2 font-heading text-4xl font-900 leading-tight md:text-5xl">
                                 Sport Deals für Training, Team und Wettkampf
                             </h1>
-                            <p class="mt-4 text-sm leading-6 text-white/90">
+                            <p class="mt-4 max-w-xl text-sm leading-6 text-white/90">
                                 Weniger scrollen, schneller finden: Kategorien, Aktionen und kuratierte Reihen statt alle Produkte auf einmal.
                             </p>
                             <span class="mt-5 inline-flex w-fit rounded bg-buttonPrimary px-4 py-3 text-sm font-black text-buttonTextPrimary">
@@ -349,11 +398,11 @@ const selectSegment = (segment) => {
                     </Link>
 
                     <div class="grid gap-4">
-                        <div class="rounded bg-card p-4 shadow-sm">
+                        <div class="rounded border border-border bg-card p-4 shadow-sm">
                             <p class="text-sm font-black text-primary">Hilfe & Bestellung</p>
                             <p class="mt-1 text-xs leading-5 text-secondary">Gastbestellung, Login-Bestellung und Anbieterangebote sind vorbereitet.</p>
                         </div>
-                        <Link :href="currentUser ? route('auth.commerce.index') : route('login')" class="rounded bg-card p-4 shadow-sm transition hover:bg-muted">
+                        <Link :href="currentUser ? route('auth.commerce.index') : route('login')" class="rounded border border-border bg-card p-4 shadow-sm transition hover:bg-muted">
                             <p class="text-sm font-black text-primary">Anbieter werden</p>
                             <p class="mt-1 text-xs leading-5 text-secondary">Vereine, Trainer und Shops können Angebote einstellen.</p>
                         </Link>
@@ -361,7 +410,7 @@ const selectSegment = (segment) => {
                             v-for="product in heroSideProducts"
                             :key="product.id"
                             :href="product.show_url"
-                            class="flex gap-3 rounded bg-card p-3 shadow-sm transition hover:bg-muted"
+                            class="flex gap-3 rounded border border-border bg-card p-3 shadow-sm transition hover:bg-muted"
                         >
                             <div class="h-12 w-12 shrink-0 overflow-hidden rounded bg-inputBg">
                                 <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover" />
@@ -375,36 +424,6 @@ const selectSegment = (segment) => {
                     </div>
                 </section>
 
-                <aside class="hidden lg:block">
-                    <AdSlot placement="sidebar" variant="sidebar">
-                        <template #fallback>
-                            <div class="relative min-h-[27rem] overflow-hidden rounded border border-border bg-card p-5 text-primary shadow-sm">
-                                <img v-if="saleBannerUrl" :src="saleBannerUrl" alt="" class="absolute inset-0 h-full w-full object-cover" />
-                                <div v-if="saleBannerUrl" class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/35 to-black/70"></div>
-                                <div class="relative flex min-h-[27rem] flex-col justify-between">
-                                    <div :class="saleBannerUrl ? 'text-white' : 'text-primary'">
-                                        <p class="text-xs font-black uppercase tracking-wide opacity-75">Aktion</p>
-                                        <p class="mt-2 font-heading text-2xl font-900 leading-tight">Sport Sale</p>
-                                        <p class="mt-2 text-sm font-semibold leading-6">
-                                            Produkte, Camps und Kurse aus deinem Sportnetzwerk.
-                                        </p>
-                                    </div>
-                                    <div class="rounded-lg border border-border bg-bg/95 p-4 text-primary shadow-sm">
-                                        <div class="flex items-center gap-3">
-                                            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary">
-                                                <i class="las la-bolt text-2xl"></i>
-                                            </span>
-                                            <div>
-                                                <p class="text-xs font-bold uppercase text-secondary">Deals</p>
-                                                <p class="text-2xl font-black leading-none">bis -40%</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
-                    </AdSlot>
-                </aside>
             </section>
 
             <section class="mx-auto max-w-7xl px-4">
@@ -423,6 +442,24 @@ const selectSegment = (segment) => {
                             <span class="block truncate text-xs text-secondary">{{ tile.hint }}</span>
                         </span>
                     </button>
+                </div>
+            </section>
+
+            <section class="mx-auto mt-4 max-w-7xl px-4">
+                <div class="grid gap-3 rounded border border-border bg-card p-4 shadow-sm md:grid-cols-4">
+                    <div
+                        v-for="benefit in trustBenefits"
+                        :key="benefit.label"
+                        class="flex gap-3 rounded bg-bg p-3"
+                    >
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-buttonPrimary/10 text-buttonPrimary">
+                            <i :class="[benefit.icon, 'text-xl']"></i>
+                        </span>
+                        <span class="min-w-0">
+                            <span class="block text-sm font-black text-primary">{{ benefit.label }}</span>
+                            <span class="mt-1 block text-xs leading-5 text-secondary">{{ benefit.description }}</span>
+                        </span>
+                    </div>
                 </div>
             </section>
 
@@ -456,9 +493,9 @@ const selectSegment = (segment) => {
                     <div class="flex items-center justify-between gap-4">
                         <h2 class="flex items-center gap-2 text-lg font-black">
                             <i class="las la-bolt text-2xl"></i>
-                            Flash Deals
+                            Aktuelle Angebote
                         </h2>
-                        <span class="text-sm font-bold">Limitierte Demo-Angebote</span>
+                        <span class="text-sm font-bold">Schnellvergleich nach Preis, Steuer und Anbieter</span>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-2 rounded-b bg-card p-3 shadow-sm md:grid-cols-4 xl:grid-cols-6">
@@ -471,12 +508,13 @@ const selectSegment = (segment) => {
                         <div class="relative aspect-[4/3] overflow-hidden bg-inputBg">
                             <img v-if="product.image_url" :src="product.image_url" :alt="product.title" class="h-full w-full object-cover transition group-hover:scale-105" />
                             <i v-else :class="[product.visual_icon, 'flex h-full items-center justify-center text-5xl text-buttonPrimary']"></i>
-                            <span class="absolute right-2 top-2 rounded bg-muted px-2 py-1 text-[11px] font-black text-error">-{{ 12 + (product.id % 38) }}%</span>
+                            <span class="absolute left-2 top-2 rounded bg-card/90 px-2 py-1 text-[11px] font-black text-buttonPrimary">{{ product.badge }}</span>
                         </div>
                         <div class="p-2">
                             <h3 class="line-clamp-2 min-h-[2.25rem] text-xs font-semibold text-primary">{{ product.title }}</h3>
                             <p class="mt-1 text-sm font-black text-primary">{{ grossPrice(product) }}</p>
                             <p class="text-[11px] text-secondary">brutto · {{ netPrice(product) }} netto</p>
+                            <p class="mt-1 truncate text-[11px] font-semibold text-secondary">{{ product.delivery_label }}</p>
                             <p v-if="product.old_price_cents" class="text-[11px] text-secondary line-through">{{ formatPrice(product.old_price_cents, price(product).currency) }}</p>
                         </div>
                     </Link>
@@ -601,7 +639,7 @@ const selectSegment = (segment) => {
                                 <span class="rounded bg-muted px-2 py-1 text-xs font-bold text-secondary">{{ group.items.length }} Angebote</span>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-5">
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4 xl:grid-cols-5">
                                 <article
                                     v-for="product in group.items"
                                     :key="product.id"
@@ -628,11 +666,30 @@ const selectSegment = (segment) => {
                                                 <p class="text-xs text-secondary">{{ taxInfo(product) }}</p>
                                                 <p v-if="product.old_price_cents" class="text-xs text-secondary line-through">{{ formatPrice(product.old_price_cents, price(product).currency) }}</p>
                                             </div>
-                                            <div class="mt-2 flex items-center justify-between text-xs text-secondary">
-                                                <span>{{ product.rating }} / 5</span>
-                                                <span>{{ product.sold_count }} verkauft</span>
+                                            <div class="mt-3 flex items-center justify-between gap-2 text-xs text-secondary">
+                                                <span class="inline-flex min-w-0 items-center gap-1">
+                                                    <span class="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-buttonPrimary/10 text-[9px] font-black text-buttonPrimary">
+                                                        <img v-if="product.provider_profile?.logo_url" :src="product.provider_profile.logo_url" :alt="product.provider_profile.name" class="h-full w-full object-cover" />
+                                                        <span v-else>{{ product.provider_profile?.initials || 'AM' }}</span>
+                                                    </span>
+                                                    <span class="truncate">{{ product.provider_profile?.name || product.provider_name || 'Airmius Marketplace' }}</span>
+                                                    <i v-if="product.provider_profile?.verified" class="las la-check-circle text-base text-success"></i>
+                                                </span>
+                                                <span class="shrink-0 font-semibold text-primary">{{ availabilityLabel(product) }}</span>
                                             </div>
-                                            <p class="mt-2 truncate text-xs text-secondary">{{ product.provider_name || 'Airmius Marketplace' }}</p>
+                                            <div class="mt-3 flex flex-wrap gap-1">
+                                                <span
+                                                    v-for="badge in product.trust_badges?.slice(0, 2)"
+                                                    :key="`${product.id}-${badge}`"
+                                                    class="rounded bg-muted px-2 py-1 text-[11px] font-bold text-secondary"
+                                                >
+                                                    {{ badge }}
+                                                </span>
+                                            </div>
+                                            <span class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded border border-buttonPrimary/40 px-3 py-2 text-xs font-black text-buttonPrimary transition group-hover:bg-buttonPrimary group-hover:text-buttonTextPrimary">
+                                                Details ansehen
+                                                <i class="las la-arrow-right text-base"></i>
+                                            </span>
                                         </div>
                                     </Link>
                                 </article>
@@ -640,8 +697,26 @@ const selectSegment = (segment) => {
                         </div>
 
                         <div v-if="!allOfferItems.length" class="rounded border border-border bg-muted p-8 text-center">
-                            <p class="text-lg font-bold text-primary">Keine passenden Angebote gefunden.</p>
-                            <p class="mt-2 text-sm text-secondary">Passe Suche oder Kategorie an, dann werden wieder Angebote angezeigt.</p>
+                            <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-buttonPrimary/10 text-buttonPrimary">
+                                <i class="las la-search text-3xl"></i>
+                            </span>
+                            <p class="mt-4 text-lg font-bold text-primary">Keine passenden Angebote gefunden.</p>
+                            <p class="mx-auto mt-2 max-w-xl text-sm leading-6 text-secondary">
+                                Probiere einen allgemeineren Suchbegriff, entferne Filter oder springe direkt in einen beliebten Bereich.
+                            </p>
+                            <div class="mt-5 flex flex-wrap justify-center gap-2">
+                                <button class="rounded bg-buttonPrimary px-4 py-2 text-sm font-black text-buttonTextPrimary hover:bg-buttonPrimaryHover" @click="reset">
+                                    Filter zuruecksetzen
+                                </button>
+                                <button
+                                    v-for="tile in quickTiles.slice(1, 5)"
+                                    :key="`empty-${tile.label}`"
+                                    class="rounded border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:bg-bg"
+                                    @click="selectQuickTile(tile)"
+                                >
+                                    {{ tile.label }}
+                                </button>
+                            </div>
                         </div>
                     </div>
 

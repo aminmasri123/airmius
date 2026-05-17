@@ -28,6 +28,14 @@ const statusLabel = (status) => ({
     cancelled: 'Storniert',
 }[status] || status)
 
+const statusClasses = (status) => ({
+    paid: 'bg-success/10 text-success border-success/30',
+    open: 'bg-blue-500/10 text-blue-600 dark:text-blue-300 border-blue-500/30 dark:border-blue-400/40',
+    awaiting_transfer: 'bg-orange-500/10 text-orange-600 dark:text-orange-300 border-orange-500/30 dark:border-orange-400/40',
+    overdue: 'bg-error/10 text-error border-error/30',
+    cancelled: 'bg-muted text-secondary border-border',
+}[status] || 'bg-muted text-secondary border-border')
+
 const methodLabel = (method) => ({
     stripe: 'Stripe',
     paypal: 'PayPal',
@@ -46,45 +54,49 @@ const markPaid = (invoice) => {
 <template>
     <Head title="Airmius Abo-Rechnungen" />
 
-    <div class="space-y-5">
-        <section class="surface-card p-5">
+    <div class="space-y-6">
+        <section class="surface-card border-l-4 border-air-blue p-6">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Billing</p>
-                    <h1 class="mt-1 text-2xl font-bold text-primary">Airmius Abo-Rechnungen</h1>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-air-blue">Billing</p>
+                    <h1 class="mt-1 text-3xl font-black text-primary">Airmius Abo-Rechnungen</h1>
                     <p class="mt-2 max-w-3xl text-sm text-secondary">
-                        Rechnungen für Stripe, PayPal und Überweisung zentral kontrollieren. Abo-Pläne und Nutzer-Abos verwaltest du im Abo-Bereich.
+                        Alle Abonnements-Rechnungen zentral prüfen, Status aktualisieren und PDFs direkt herunterladen.
                     </p>
                 </div>
-                <Link :href="route('admin.subscriptions.index')" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">
+                <Link :href="route('admin.subscriptions.index')" class="rounded-lg bg-buttonPrimary px-5 py-2.5 text-sm font-semibold text-buttonTextPrimary">
                     Abos verwalten
                 </Link>
             </div>
         </section>
 
-        <section class="grid gap-4 md:grid-cols-4">
+        <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div class="surface-card p-4">
                 <p class="text-xs font-semibold uppercase text-secondary">Offen</p>
-                <p class="mt-2 text-2xl font-bold text-primary">{{ summary.open || 0 }}</p>
+                <p class="mt-2 text-2xl font-black text-primary">{{ summary.open || 0 }}</p>
+                <p class="mt-2 text-xs text-secondary">Warten auf Zahlungseingang</p>
             </div>
             <div class="surface-card p-4">
                 <p class="text-xs font-semibold uppercase text-secondary">Bezahlt</p>
-                <p class="mt-2 text-2xl font-bold text-primary">{{ summary.paid || 0 }}</p>
+                <p class="mt-2 text-2xl font-black text-primary">{{ summary.paid || 0 }}</p>
+                <p class="mt-2 text-xs text-secondary">Bereits abgeschlossen</p>
             </div>
             <div class="surface-card p-4">
                 <p class="text-xs font-semibold uppercase text-secondary">Ueberfaellig</p>
-                <p class="mt-2 text-2xl font-bold text-primary">{{ summary.overdue || 0 }}</p>
+                <p class="mt-2 text-2xl font-black text-primary">{{ summary.overdue || 0 }}</p>
+                <p class="mt-2 text-xs text-secondary">Überfällige Rechnung</p>
             </div>
             <div class="surface-card p-4">
                 <p class="text-xs font-semibold uppercase text-secondary">Umsatz bezahlt</p>
-                <p class="mt-2 text-2xl font-bold text-primary">{{ formatMoney(summary.revenue_cents) }}</p>
+                <p class="mt-2 text-2xl font-black text-primary">{{ formatMoney(summary.revenue_cents) }}</p>
+                <p class="mt-2 text-xs text-secondary">Gesamt bezahlt</p>
             </div>
         </section>
 
         <section class="surface-card overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="min-w-full text-left text-sm">
-                    <thead class="bg-bg text-xs uppercase text-secondary">
+                    <thead class="bg-bg text-xs uppercase tracking-[0.12em] text-secondary">
                         <tr>
                             <th class="px-5 py-3">Rechnung</th>
                             <th class="px-5 py-3">Kunde</th>
@@ -105,14 +117,18 @@ const markPaid = (invoice) => {
                                 <p class="font-semibold text-primary">{{ invoice.club?.name || invoice.user?.name || '-' }}</p>
                                 <p class="text-xs text-secondary">{{ invoice.user?.email || '-' }}</p>
                             </td>
-                            <td class="px-5 py-3 text-secondary">{{ invoice.plan?.name || '-' }}</td>
+                            <td class="px-5 py-3">
+                                <p class="font-medium text-primary">{{ invoice.plan?.name || '-' }}</p>
+                            </td>
                             <td class="px-5 py-3">
                                 <p class="text-primary">{{ methodLabel(invoice.payment_method) }}</p>
                                 <p class="text-xs text-secondary">{{ invoice.payment_reference || '-' }}</p>
                             </td>
                             <td class="px-5 py-3 font-semibold text-primary">{{ invoice.amount }}</td>
                             <td class="px-5 py-3">
-                                <p class="text-secondary">{{ statusLabel(invoice.status) }}</p>
+                                <span class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold" :class="statusClasses(invoice.status)">
+                                    {{ statusLabel(invoice.status) }}
+                                </span>
                                 <p v-if="invoice.checkout_status" class="text-xs text-secondary">Checkout: {{ invoice.checkout_status }}</p>
                                 <p v-if="invoice.provider_checkout_id" class="text-xs text-secondary">{{ invoice.provider_checkout_id }}</p>
                             </td>
@@ -121,7 +137,7 @@ const markPaid = (invoice) => {
                                     <button
                                         v-if="canMarkPaid(invoice)"
                                         type="button"
-                                        class="rounded-lg bg-buttonPrimary px-3 py-1 text-xs font-semibold text-buttonTextPrimary"
+                                        class="rounded-lg bg-buttonPrimary px-4 py-2 text-xs font-semibold text-buttonTextPrimary"
                                         @click="markPaid(invoice)"
                                     >
                                         Als bezahlt markieren

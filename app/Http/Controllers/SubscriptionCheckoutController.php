@@ -15,6 +15,7 @@ use App\Support\ClubRoles;
 use App\Support\VisitorCountry;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -257,10 +258,10 @@ class SubscriptionCheckoutController extends Controller
         }
 
         if ($checkout->provider === 'paypal' && $checkout->status === 'pending') {
-            if (! $this->capturePayPalOrder($checkout)) {
+            if (! $this->syncPayPalSubscription($checkout, $request->query('subscription_id'))) {
                 return redirect()
                     ->route('guest.pricing', ['audience' => $checkout->plan?->target_actor ?: 'sportler'])
-                    ->with('error', 'PayPal konnte die Zahlung gerade nicht final bestaetigen. Bitte versuche es erneut oder pruefe spaeter deine Abos.');
+                    ->with('error', 'PayPal konnte das Abo gerade nicht final bestaetigen. Bitte versuche es erneut oder pruefe spaeter deine Abos.');
             }
         }
 
@@ -358,6 +359,51 @@ class SubscriptionCheckoutController extends Controller
             }
         }
 
+        if (in_array($type, ['customer.subscription.updated', 'customer.subscription.deleted'], true)) {
+            $providerSubscriptionId = $object['id'] ?? null;
+
+            if ($providerSubscriptionId) {
+                $this->syncLocalSubscriptionFromProvider(
+                    'stripe',
+                    $providerSubscriptionId,
+                    match ($object['status'] ?? null) {
+                        'active', 'trialing' => 'active',
+                        'past_due', 'unpaid' => 'past_due',
+                        'canceled', 'incomplete_expired' => 'cancelled',
+                        default => null,
+                    },
+                    $object['cancel_at_period_end'] ?? false,
+                    isset($object['current_period_end']) ? Carbon::createFromTimestamp((int) $object['current_period_end']) : null,
+                    $event
+                );
+            }
+        }
+
+        if (in_array($type, ['invoice.payment_succeeded', 'invoice.paid'], true)) {
+            $providerSubscriptionId = $object['subscription'] ?? null;
+
+            if ($providerSubscriptionId) {
+                $this->syncLocalSubscriptionFromProvider(
+                    'stripe',
+                    $providerSubscriptionId,
+                    'active',
+                    false,
+                    isset($object['lines']['data'][0]['period']['end'])
+                        ? Carbon::createFromTimestamp((int) $object['lines']['data'][0]['period']['end'])
+                        : null,
+                    $event
+                );
+            }
+        }
+
+        if (in_array($type, ['invoice.payment_failed'], true)) {
+            $providerSubscriptionId = $object['subscription'] ?? null;
+
+            if ($providerSubscriptionId) {
+                $this->syncLocalSubscriptionFromProvider('stripe', $providerSubscriptionId, 'past_due', false, null, $event);
+            }
+        }
+
         return response('ok');
     }
 
@@ -370,18 +416,32 @@ class SubscriptionCheckoutController extends Controller
         $event = $request->all();
         $eventType = $event['event_type'] ?? null;
         $resource = $event['resource'] ?? [];
-        $orderId = $resource['supplementary_data']['related_ids']['order_id'] ?? $resource['id'] ?? null;
+        $providerSubscriptionId = $resource['billing_agreement_id']
+            ?? $resource['subscription_id']
+            ?? $resource['id']
+            ?? null;
 
-        if (in_array($eventType, ['CHECKOUT.ORDER.APPROVED', 'PAYMENT.CAPTURE.COMPLETED'], true)) {
+        if (in_array($eventType, ['BILLING.SUBSCRIPTION.ACTIVATED', 'PAYMENT.SALE.COMPLETED'], true)) {
             $checkout = PaymentCheckout::query()
                 ->where('provider', 'paypal')
-                ->where('provider_checkout_id', $orderId)
+                ->where('provider_subscription_id', $providerSubscriptionId)
                 ->first();
 
             if ($checkout) {
                 $checkout->update(['payload' => array_merge($checkout->payload ?? [], ['paypal_webhook' => $event])]);
                 $this->activateCheckout($checkout);
             }
+        }
+
+        if (in_array($eventType, ['BILLING.SUBSCRIPTION.CANCELLED', 'BILLING.SUBSCRIPTION.EXPIRED', 'BILLING.SUBSCRIPTION.SUSPENDED'], true)) {
+            $this->syncLocalSubscriptionFromProvider(
+                'paypal',
+                $providerSubscriptionId,
+                $eventType === 'BILLING.SUBSCRIPTION.SUSPENDED' ? 'past_due' : 'cancelled',
+                false,
+                null,
+                $event
+            );
         }
 
         return response('ok');
@@ -425,7 +485,7 @@ class SubscriptionCheckoutController extends Controller
         $response = Http::asForm()
             ->withToken($secret)
             ->post('https://api.stripe.com/v1/checkout/sessions', [
-                'mode' => 'payment',
+                'mode' => 'subscription',
                 'success_url' => route('subscription-checkout.success', $checkout).'?session_id={CHECKOUT_SESSION_ID}',
                 'cancel_url' => route('subscription-checkout.cancel', $checkout),
                 'client_reference_id' => (string) $checkout->id,
@@ -433,10 +493,16 @@ class SubscriptionCheckoutController extends Controller
                 'line_items[0][price_data][currency]' => strtolower($checkout->currency),
                 'line_items[0][price_data][product_data][name]' => 'Airmius '.$checkout->plan->name,
                 'line_items[0][price_data][unit_amount]' => $checkout->amount_cents,
+                'line_items[0][price_data][recurring][interval]' => $checkout->billing_interval === 'yearly' ? 'year' : 'month',
+                'line_items[0][price_data][recurring][interval_count]' => 1,
                 'line_items[0][quantity]' => 1,
                 'metadata[checkout_id]' => (string) $checkout->id,
                 'metadata[plan_id]' => (string) $checkout->subscription_plan_id,
                 'metadata[club_id]' => (string) ($checkout->club_id ?? ''),
+                'subscription_data[metadata][checkout_id]' => (string) $checkout->id,
+                'subscription_data[metadata][plan_id]' => (string) $checkout->subscription_plan_id,
+                'subscription_data[metadata][club_id]' => (string) ($checkout->club_id ?? ''),
+                'subscription_data[metadata][user_id]' => (string) $checkout->user_id,
             ]);
 
         if ($response->failed()) {
@@ -503,22 +569,22 @@ class SubscriptionCheckoutController extends Controller
 
     private function createPayPalCheckout(PaymentCheckout $checkout): string
     {
-        $token = $this->paypalAccessToken();
-        $baseUrl = $this->paypalBaseUrl();
+        $planId = $this->ensurePayPalPlan($checkout);
 
-        $response = Http::withToken($token)->post($baseUrl.'/v2/checkout/orders', [
-            'intent' => 'CAPTURE',
-            'purchase_units' => [[
-                'reference_id' => 'airmius-checkout-'.$checkout->id,
-                'description' => 'Airmius '.$checkout->plan->name,
-                'amount' => [
-                    'currency_code' => $checkout->currency,
-                    'value' => number_format($checkout->amount_cents / 100, 2, '.', ''),
+        $response = Http::withToken($this->paypalAccessToken())->post($this->paypalBaseUrl().'/v1/billing/subscriptions', [
+            'plan_id' => $planId,
+            'custom_id' => 'airmius-subscription-checkout-'.$checkout->id,
+            'quantity' => '1',
+            'subscriber' => [
+                'email_address' => $checkout->user?->email,
+                'name' => [
+                    'given_name' => Str::of((string) $checkout->user?->name)->explode(' ')->first() ?: 'Airmius',
+                    'surname' => Str::of((string) $checkout->user?->name)->explode(' ')->slice(1)->implode(' ') ?: 'Kunde',
                 ],
-            ]],
+            ],
             'application_context' => [
                 'brand_name' => 'Airmius',
-                'user_action' => 'PAY_NOW',
+                'user_action' => 'SUBSCRIBE_NOW',
                 'return_url' => route('subscription-checkout.success', $checkout),
                 'cancel_url' => route('subscription-checkout.cancel', $checkout),
             ],
@@ -536,6 +602,7 @@ class SubscriptionCheckoutController extends Controller
         $payload = $response->json();
         $checkout->update([
             'provider_checkout_id' => $payload['id'] ?? null,
+            'provider_subscription_id' => $payload['id'] ?? null,
             'payload' => array_merge($checkout->payload ?? [], ['paypal' => $payload]),
         ]);
 
@@ -551,6 +618,100 @@ class SubscriptionCheckoutController extends Controller
         }
 
         return $approveLink['href'];
+    }
+
+    private function ensurePayPalPlan(PaymentCheckout $checkout): string
+    {
+        $checkout->loadMissing('plan');
+
+        $intervalUnit = $checkout->billing_interval === 'yearly' ? 'YEAR' : 'MONTH';
+        $signature = hash('sha256', implode('|', [
+            config('services.paypal.mode'),
+            $checkout->plan->id,
+            $checkout->amount_cents,
+            strtoupper($checkout->currency),
+            $intervalUnit,
+            1,
+        ]));
+
+        if ($checkout->plan->paypal_plan_id && $checkout->plan->paypal_plan_signature === $signature) {
+            return $checkout->plan->paypal_plan_id;
+        }
+
+        $productId = $checkout->plan->paypal_product_id ?: $this->createPayPalProduct($checkout->plan);
+        $amount = number_format($checkout->amount_cents / 100, 2, '.', '');
+
+        $response = Http::withToken($this->paypalAccessToken())->post($this->paypalBaseUrl().'/v1/billing/plans', [
+            'product_id' => $productId,
+            'name' => 'Airmius '.$checkout->plan->name.' '.strtoupper($checkout->currency).' '.$amount.' '.$intervalUnit,
+            'description' => Str::limit($checkout->plan->description ?: 'Airmius Abo', 120),
+            'status' => 'ACTIVE',
+            'billing_cycles' => [[
+                'frequency' => [
+                    'interval_unit' => $intervalUnit,
+                    'interval_count' => 1,
+                ],
+                'tenure_type' => 'REGULAR',
+                'sequence' => 1,
+                'total_cycles' => 0,
+                'pricing_scheme' => [
+                    'fixed_price' => [
+                        'value' => $amount,
+                        'currency_code' => strtoupper($checkout->currency),
+                    ],
+                ],
+            ]],
+            'payment_preferences' => [
+                'auto_bill_outstanding' => true,
+                'setup_fee_failure_action' => 'CONTINUE',
+                'payment_failure_threshold' => 3,
+            ],
+        ]);
+
+        if ($response->failed()) {
+            Log::warning('PayPal subscription plan failed', [
+                'checkout_id' => $checkout->id,
+                'status' => $response->status(),
+                'body' => $response->json(),
+            ]);
+            $this->checkoutError('PayPal Abo-Plan konnte nicht erstellt werden.');
+        }
+
+        $payload = $response->json();
+        $checkout->plan->forceFill([
+            'paypal_product_id' => $productId,
+            'paypal_plan_id' => $payload['id'] ?? null,
+            'paypal_plan_signature' => $signature,
+            'paypal_payload' => array_merge($checkout->plan->paypal_payload ?? [], ['plan' => $payload]),
+        ])->save();
+
+        return $checkout->plan->paypal_plan_id;
+    }
+
+    private function createPayPalProduct(SubscriptionPlan $plan): string
+    {
+        $response = Http::withToken($this->paypalAccessToken())->post($this->paypalBaseUrl().'/v1/catalogs/products', [
+            'name' => 'Airmius '.$plan->name,
+            'description' => Str::limit($plan->description ?: 'Airmius Abo', 120),
+            'type' => 'SERVICE',
+        ]);
+
+        if ($response->failed()) {
+            Log::warning('PayPal subscription product failed', [
+                'plan_id' => $plan->id,
+                'status' => $response->status(),
+                'body' => $response->json(),
+            ]);
+            $this->checkoutError('PayPal Produkt konnte nicht erstellt werden.');
+        }
+
+        $payload = $response->json();
+        $plan->forceFill([
+            'paypal_product_id' => $payload['id'] ?? null,
+            'paypal_payload' => array_merge($plan->paypal_payload ?? [], ['product' => $payload]),
+        ])->save();
+
+        return $plan->paypal_product_id;
     }
 
     private function capturePayPalOrder(PaymentCheckout $checkout): bool
@@ -593,6 +754,141 @@ class SubscriptionCheckoutController extends Controller
         ]);
 
         return false;
+    }
+
+    private function syncPayPalSubscription(PaymentCheckout $checkout, ?string $subscriptionId = null): bool
+    {
+        $providerSubscriptionId = $subscriptionId ?: $checkout->provider_subscription_id ?: $checkout->provider_checkout_id;
+
+        if (! $providerSubscriptionId) {
+            return false;
+        }
+
+        $response = Http::withToken($this->paypalAccessToken())
+            ->get($this->paypalBaseUrl().'/v1/billing/subscriptions/'.$providerSubscriptionId);
+
+        if (! $response->ok()) {
+            Log::warning('PayPal subscription sync failed', [
+                'checkout_id' => $checkout->id,
+                'paypal_subscription_id' => $providerSubscriptionId,
+                'status' => $response->status(),
+                'body' => $response->json(),
+            ]);
+
+            return false;
+        }
+
+        $checkout->update([
+            'provider_subscription_id' => $providerSubscriptionId,
+            'provider_checkout_id' => $providerSubscriptionId,
+            'payload' => array_merge($checkout->payload ?? [], ['paypal_subscription_sync' => $response->json()]),
+        ]);
+
+        if (in_array($response->json('status'), ['ACTIVE', 'APPROVAL_PENDING'], true)) {
+            if ($response->json('status') === 'ACTIVE') {
+                $this->activateCheckout($checkout);
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private function syncLocalSubscriptionFromProvider(
+        string $provider,
+        ?string $providerSubscriptionId,
+        ?string $status,
+        bool $cancelAtPeriodEnd = false,
+        ?Carbon $periodEndsAt = null,
+        array $payload = []
+    ): void {
+        if (! $providerSubscriptionId || ! $status) {
+            return;
+        }
+
+        $updates = [
+            'status' => $cancelAtPeriodEnd ? 'cancels_at_period_end' : $status,
+            'cancel_at_period_end' => $cancelAtPeriodEnd,
+        ];
+
+        if ($periodEndsAt) {
+            $updates['current_period_ends_at'] = $periodEndsAt;
+            $updates['next_invoice_at'] = $periodEndsAt;
+            $updates['cancels_at'] = $cancelAtPeriodEnd ? $periodEndsAt : null;
+        }
+
+        if ($status === 'active') {
+            $updates['grace_period_ends_at'] = null;
+            $updates['access_restricted_at'] = null;
+            $updates['payment_issue_email_sent_at'] = null;
+        }
+
+        if ($status === 'cancelled') {
+            $updates['cancelled_at'] = now();
+            $updates['cancels_at'] = $periodEndsAt ?: now();
+        }
+
+        $clubSubscription = \App\Models\ClubSubscription::query()
+            ->where('payment_provider', $provider)
+            ->where('provider_subscription_id', $providerSubscriptionId)
+            ->first();
+
+        if ($clubSubscription) {
+            $clubSubscription->forceFill($updates)->save();
+            if ($status === 'active') {
+                $this->markRecurringInvoicePaid('club', $clubSubscription->id, $provider, $payload);
+            }
+
+            return;
+        }
+
+        $userSubscription = \App\Models\UserSubscription::query()
+            ->where('payment_provider', $provider)
+            ->where('provider_subscription_id', $providerSubscriptionId)
+            ->first();
+
+        if ($userSubscription) {
+            $userSubscription->forceFill($updates)->save();
+            if ($status === 'active') {
+                $this->markRecurringInvoicePaid('user', $userSubscription->id, $provider, $payload);
+            }
+        }
+    }
+
+    private function markRecurringInvoicePaid(string $subscriptionType, int $subscriptionId, string $provider, array $payload): void
+    {
+        $providerInvoiceId = data_get($payload, 'data.object.id')
+            ?: data_get($payload, 'resource.id')
+            ?: null;
+
+        $invoice = SubscriptionInvoice::query()
+            ->where('subscription_type', $subscriptionType)
+            ->where('subscription_id', $subscriptionId)
+            ->whereIn('status', ['open', 'awaiting_transfer', 'overdue'])
+            ->latest('billing_period_start')
+            ->first();
+
+        if (! $invoice) {
+            return;
+        }
+
+        $invoice->forceFill([
+            'status' => 'paid',
+            'paid_at' => now(),
+            'payment_method' => $provider,
+            'payment_reference' => $providerInvoiceId ?: $invoice->payment_reference,
+            'meta' => array_merge($invoice->meta ?? [], [
+                'provider_invoice_id' => $providerInvoiceId,
+                'paid_from_provider_webhook' => true,
+            ]),
+        ])->save();
+
+        AppNotification::send($invoice->user_id, 'subscription.invoice.paid', [
+            'title' => 'Airmius Rechnung bezahlt',
+            'body' => $invoice->number.' wurde als bezahlt markiert.',
+            'subscription_invoice_id' => $invoice->id,
+        ]);
     }
 
     private function paypalAccessToken(): string
@@ -652,28 +948,42 @@ class SubscriptionCheckoutController extends Controller
             : now()->addMonth();
 
         if ($checkout->club_id) {
-            $checkout->club->currentSubscription()->updateOrCreate(
+            $subscription = $checkout->club->currentSubscription()->updateOrCreate(
                 ['club_id' => $checkout->club_id],
                 [
                     'subscription_plan_id' => $checkout->subscription_plan_id,
                     'status' => 'active',
                     'payment_provider' => $checkout->provider,
+                    'billing_interval' => $checkout->billing_interval,
                     'provider_subscription_id' => $checkout->provider_subscription_id,
                     'provider_customer_id' => $checkout->provider_customer_id,
                     'trial_ends_at' => null,
                     'current_period_ends_at' => $periodEndsAt,
+                    'next_invoice_at' => $periodEndsAt,
+                    'grace_period_ends_at' => null,
+                    'access_restricted_at' => null,
+                    'cancel_at_period_end' => false,
+                    'cancels_at' => null,
+                    'cancelled_at' => null,
                 ],
             );
         } else {
-            $checkout->user->subscriptions()->updateOrCreate(
+            $subscription = $checkout->user->subscriptions()->updateOrCreate(
                 ['subscription_plan_id' => $checkout->subscription_plan_id],
                 [
                     'status' => 'active',
                     'payment_provider' => $checkout->provider,
+                    'billing_interval' => $checkout->billing_interval,
                     'provider_subscription_id' => $checkout->provider_subscription_id,
                     'provider_customer_id' => $checkout->provider_customer_id,
                     'trial_ends_at' => null,
                     'current_period_ends_at' => $periodEndsAt,
+                    'next_invoice_at' => $periodEndsAt,
+                    'grace_period_ends_at' => null,
+                    'access_restricted_at' => null,
+                    'cancel_at_period_end' => false,
+                    'cancels_at' => null,
+                    'cancelled_at' => null,
                 ],
             );
         }
@@ -688,6 +998,8 @@ class SubscriptionCheckoutController extends Controller
             'paid_at' => now(),
             'payment_method' => $checkout->provider,
             'payment_reference' => $checkout->payment_reference ?: $checkout->provider_checkout_id,
+            'subscription_type' => $checkout->club_id ? 'club' : 'user',
+            'subscription_id' => $subscription->id,
             'meta' => array_merge($checkout->invoice->meta ?? [], [
                 'provider_checkout_id' => $checkout->provider_checkout_id,
                 'provider_subscription_id' => $checkout->provider_subscription_id,
@@ -742,6 +1054,7 @@ class SubscriptionCheckoutController extends Controller
                 'user_id' => $checkout->user_id,
                 'club_id' => $checkout->club_id,
                 'subscription_plan_id' => $checkout->subscription_plan_id,
+                'subscription_type' => $checkout->club_id ? 'club' : 'user',
                 'number' => $this->nextInvoiceNumber(),
                 'title' => 'Airmius '.$checkout->plan->name,
                 'description' => 'Airmius Abo '.$checkout->plan->name.' ('.($checkout->billing_interval === 'yearly' ? 'Jahreszahlung' : 'Monatszahlung').')',

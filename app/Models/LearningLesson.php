@@ -21,6 +21,7 @@ class LearningLesson extends Model
         'duration_minutes',
         'position',
         'is_preview',
+        'unlock_after_days',
     ];
 
     protected function casts(): array
@@ -30,6 +31,7 @@ class LearningLesson extends Model
             'duration_minutes' => 'integer',
             'position' => 'integer',
             'is_preview' => 'boolean',
+            'unlock_after_days' => 'integer',
         ];
     }
 
@@ -51,5 +53,15 @@ class LearningLesson extends Model
     public function notes()
     {
         return $this->hasMany(LearningLessonNote::class);
+    }
+
+    public function progress()
+    {
+        return $this->hasMany(LearningLessonProgress::class);
+    }
+
+    public function assignments()
+    {
+        return $this->hasMany(LearningAssignment::class);
     }
 }

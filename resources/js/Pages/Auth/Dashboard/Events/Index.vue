@@ -7,7 +7,11 @@ import { useI18n } from 'vue-i18n'
 defineOptions({ layout: AppLayout })
 
 const props = defineProps({
-    events: Array,
+    events: { type: Object, default: () => ({ data: [] }) },
+    calendarEvents: { type: Array, default: () => [] },
+    eventStats: { type: Object, default: () => ({ upcoming: 0, today: 0, cancelled: 0 }) },
+    nextEvent: { type: Object, default: null },
+    calendar: { type: Object, default: () => ({}) },
     clubs: Array,
     teams: Array,
     eventTypes: Array,
@@ -24,12 +28,16 @@ const page = usePage()
 const showCreateModal = ref(false)
 const filterPanelOpen = ref(false)
 const createStep = ref(1)
+const viewMode = ref('calendar')
+const eventItems = computed(() => Array.isArray(props.events) ? props.events : (props.events?.data || []))
+const eventPaginationLinks = computed(() => Array.isArray(props.events) ? [] : (props.events?.links || []))
+const calendarEventItems = computed(() => props.calendarEvents || [])
 const errors = computed(() => page.props.errors || {})
 const authorizationMessage = computed(() => errors.value.authorization || page.props.flash?.upgrade_required?.message || '')
 const freeEventLimitMessage = computed(() => {
     if (!props.eventCreation?.is_free_limited) return ''
 
-    return `Kostenloses Konto: ${props.eventCreation.remaining_this_month ?? 0} von ${props.eventCreation.monthly_limit ?? 2} Events in diesem Monat übrig. Wiederholungen sind nicht verfuegbar.`
+    return `Kostenloses Konto: ${props.eventCreation.remaining_this_month ?? 0} von ${props.eventCreation.monthly_limit ?? 2} Events in diesem Monat übrig. Wiederholungen sind nicht verfügbar.`
 })
 
 const steps = [
@@ -77,6 +85,20 @@ const rsvpOptions = [
 ]
 
 const browserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+const dateKey = (value) => {
+    const date = value instanceof Date ? value : new Date(value)
+
+    return [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0'),
+    ].join('-')
+}
+
+const initialCalendarMonth = props.filters.calendar_month || props.calendar?.month || dateKey(new Date()).slice(0, 7)
+const selectedCalendarDate = ref(dateKey(new Date()))
+const calendarCursor = ref(new Date(`${initialCalendarMonth}-01T12:00:00`))
+const calendarWeekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 
 const form = useForm({
     club_id: props.clubs?.[0]?.id || '',
@@ -111,6 +133,7 @@ const filterForm = ref({
     period: props.filters.period || 'upcoming',
     radius_km: props.filters.radius_km || '',
     sport_ids: props.filters.sport_ids || [],
+    calendar_month: initialCalendarMonth,
 })
 
 const filteredTeams = computed(() => {
@@ -143,27 +166,88 @@ const activeFilterCount = computed(() => {
     return values.length + selectedSportsCount.value + (periodChanged ? 1 : 0)
 })
 
-const todayEventsCount = computed(() => {
-    const today = new Date().toDateString()
+const todayEventsCount = computed(() => Number(props.eventStats.today || 0))
+const upcomingEventsCount = computed(() => Number(props.eventStats.upcoming || 0))
+const cancelledEventsCount = computed(() => Number(props.eventStats.cancelled || 0))
+const nextEvent = computed(() => props.nextEvent || null)
 
-    return (props.events || []).filter((event) => new Date(event.start_time).toDateString() === today).length
+const calendarMonthLabel = computed(() => new Intl.DateTimeFormat('de-DE', {
+    month: 'long',
+    year: 'numeric',
+}).format(calendarCursor.value))
+
+const calendarEventsByDate = computed(() => calendarEventItems.value.reduce((days, event) => {
+    const key = dateKey(event.start_time)
+    days[key] ||= []
+    days[key].push(event)
+
+    return days
+}, {}))
+
+const calendarDays = computed(() => {
+    const year = calendarCursor.value.getFullYear()
+    const month = calendarCursor.value.getMonth()
+    const firstOfMonth = new Date(year, month, 1)
+    const mondayOffset = (firstOfMonth.getDay() + 6) % 7
+    const start = new Date(year, month, 1 - mondayOffset)
+
+    return Array.from({ length: 42 }, (_, index) => {
+        const date = new Date(start)
+        date.setDate(start.getDate() + index)
+
+        const key = dateKey(date)
+
+        return {
+            date,
+            key,
+            day: date.getDate(),
+            isCurrentMonth: date.getMonth() === month,
+            isToday: key === dateKey(new Date()),
+            events: calendarEventsByDate.value[key] || [],
+        }
+    })
 })
 
-const upcomingEventsCount = computed(() => {
-    const now = new Date()
+const selectedCalendarEvents = computed(() => [...(calendarEventsByDate.value[selectedCalendarDate.value] || [])]
+    .sort((a, b) => new Date(a.start_time) - new Date(b.start_time)))
 
-    return (props.events || []).filter((event) => new Date(event.start_time) >= now && event.status !== 'cancelled').length
-})
+const moveCalendarMonth = (direction) => {
+    const nextCursor = new Date(
+        calendarCursor.value.getFullYear(),
+        calendarCursor.value.getMonth() + direction,
+        1,
+    )
+    const month = dateKey(nextCursor).slice(0, 7)
 
-const cancelledEventsCount = computed(() => (props.events || []).filter((event) => event.status === 'cancelled').length)
+    calendarCursor.value = nextCursor
+    filterForm.value.calendar_month = month
 
-const nextEvent = computed(() => {
-    const now = new Date()
+    router.get(route('auth.events.index'), filterPayload({ calendar_month: month }), {
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+    })
+}
 
-    return (props.events || [])
-        .filter((event) => new Date(event.start_time) >= now && event.status !== 'cancelled')
-        .sort((a, b) => new Date(a.start_time) - new Date(b.start_time))[0] || null
-})
+const selectCalendarDay = (day) => {
+    selectedCalendarDate.value = day.key
+    calendarCursor.value = new Date(day.date.getFullYear(), day.date.getMonth(), 1)
+}
+
+const jumpToToday = () => {
+    const today = new Date()
+    const month = dateKey(today).slice(0, 7)
+
+    selectedCalendarDate.value = dateKey(today)
+    calendarCursor.value = new Date(today.getFullYear(), today.getMonth(), 1)
+    filterForm.value.calendar_month = month
+
+    router.get(route('auth.events.index'), filterPayload({ calendar_month: month }), {
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+    })
+}
 
 watch(() => form.club_id, () => {
     if (form.team_id && !filteredTeams.value.some((team) => Number(team.id) === Number(form.team_id))) {
@@ -244,7 +328,88 @@ const openCreateModal = () => {
     showCreateModal.value = true
 }
 
+const stepValidationMessage = (step) => {
+    if (step === 1) {
+        if (!String(form.title || '').trim()) {
+            return 'Bitte gib einen Titel ein.'
+        }
+
+        if (form.visibility === 'private' && !form.team_id) {
+            return 'Private Events brauchen ein Team.'
+        }
+
+        if (form.visibility === 'organization' && !form.club_id) {
+            return 'Vereins-Events brauchen einen Verein.'
+        }
+    }
+
+    if (step === 2) {
+        if (!form.start_time) {
+            return 'Bitte lege einen Startzeitpunkt fest.'
+        }
+
+        if (form.end_time && new Date(form.end_time) < new Date(form.start_time)) {
+            return 'Das Ende darf nicht vor dem Start liegen.'
+        }
+
+        if (form.reminder_at && new Date(form.reminder_at) > new Date(form.start_time)) {
+            return 'Die Erinnerung muss vor dem Start liegen.'
+        }
+    }
+
+    if (step === 3) {
+        if (form.recurring && !form.recurrence_ends_at) {
+            return 'Bitte setze ein Enddatum für die Wiederholung.'
+        }
+
+        if (form.recurring && form.start_time && form.recurrence_ends_at) {
+            const startDate = new Date(form.start_time)
+            const recurrenceEnd = new Date(`${form.recurrence_ends_at}T23:59:59`)
+
+            if (recurrenceEnd < startDate) {
+                return 'Das Wiederholungsende muss nach dem Start liegen.'
+            }
+        }
+
+        if (['weekly', 'biweekly'].includes(form.recurring) && !form.recurrence_days.length) {
+            return 'Bitte wähle mindestens einen Wochentag.'
+        }
+
+        if (form.max_participants && Number(form.max_participants) < 1) {
+            return 'Die Teilnehmerzahl muss mindestens 1 sein.'
+        }
+    }
+
+    return ''
+}
+
+const currentStepValidationMessage = computed(() => stepValidationMessage(createStep.value))
+
+const canEnterStep = (step) => {
+    if (step <= createStep.value) {
+        return true
+    }
+
+    for (let index = 1; index < step; index++) {
+        if (stepValidationMessage(index)) {
+            return false
+        }
+    }
+
+    return true
+}
+
+const goToStep = (step) => {
+    if (canEnterStep(step)) {
+        createStep.value = step
+    }
+}
+
 const nextStep = () => {
+    if (currentStepValidationMessage.value) {
+        return
+    }
+
     if (createStep.value < steps.length) {
         createStep.value++
     }
@@ -257,6 +422,14 @@ const prevStep = () => {
 }
 
 const submit = () => {
+    for (let step = 1; step <= 3; step++) {
+        if (stepValidationMessage(step)) {
+            createStep.value = step
+
+            return
+        }
+    }
+
     form.event_timezone = browserTimeZone()
     form.location = [
         form.location_name,
@@ -458,17 +631,22 @@ const toggleFilterSport = (sportId) => {
         : [...selected, id]
 }
 
+const filterPayload = (extra = {}) => ({
+    search: filterForm.value.search || undefined,
+    type: filterForm.value.type || undefined,
+    visibility: filterForm.value.visibility || undefined,
+    club_id: filterForm.value.club_id || undefined,
+    team_id: filterForm.value.team_id || undefined,
+    period: filterForm.value.period || undefined,
+    radius_km: filterForm.value.radius_km || undefined,
+    sport_ids: filterForm.value.sport_ids?.length ? filterForm.value.sport_ids : undefined,
+    calendar_month: extra.calendar_month || filterForm.value.calendar_month || dateKey(calendarCursor.value).slice(0, 7),
+})
+
 const applyFilters = () => {
-    router.get(route('auth.events.index'), {
-        search: filterForm.value.search || undefined,
-        type: filterForm.value.type || undefined,
-        visibility: filterForm.value.visibility || undefined,
-        club_id: filterForm.value.club_id || undefined,
-        team_id: filterForm.value.team_id || undefined,
-        period: filterForm.value.period || undefined,
-        radius_km: filterForm.value.radius_km || undefined,
-        sport_ids: filterForm.value.sport_ids?.length ? filterForm.value.sport_ids : undefined,
-    }, {
+    filterForm.value.calendar_month = dateKey(calendarCursor.value).slice(0, 7)
+
+    router.get(route('auth.events.index'), filterPayload(), {
         preserveScroll: true,
         preserveState: true,
         replace: true,
@@ -501,7 +679,10 @@ const resetFilters = () => {
         period: 'upcoming',
         radius_km: '',
         sport_ids: [],
+        calendar_month: dateKey(new Date()).slice(0, 7),
     }
+    calendarCursor.value = new Date(`${filterForm.value.calendar_month}-01T12:00:00`)
+    selectedCalendarDate.value = dateKey(new Date())
 
     applyFilters()
 }
@@ -532,7 +713,7 @@ const resetFilters = () => {
 
                     <div v-if="nextEvent" class="mt-4 flex flex-wrap items-center gap-2 text-sm">
                         <span class="rounded-full bg-air-green/10 px-3 py-1 font-semibold text-air-green">
-                            Naechstes Event
+                            Nächstes Event
                         </span>
                         <span class="text-secondary">
                             {{ nextEvent.title }} · {{ eventDateTimeLabel(nextEvent) }}
@@ -687,7 +868,7 @@ const resetFilters = () => {
 
                         <div>
                             <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-secondary" for="event-filter-radius">
-                                Zone
+                                PLZ-/Stadt-Nähe
                             </label>
                             <div class="flex h-11 items-center gap-2 rounded-lg border border-border bg-card px-3">
                                 <input
@@ -701,6 +882,9 @@ const resetFilters = () => {
                                 >
                                 <span class="text-sm font-semibold text-secondary">km</span>
                             </div>
+                            <p class="mt-1 text-xs text-secondary">
+                                Näherung über dein Profil, PLZ und Stadt.
+                            </p>
                         </div>
 
                         <div class="md:col-span-2 xl:col-span-4">
@@ -709,7 +893,7 @@ const resetFilters = () => {
                                     Sportarten
                                 </label>
                                 <span class="text-xs font-semibold text-secondary">
-                                    {{ selectedSportsCount }} ausgewaehlt
+                                    {{ selectedSportsCount }} ausgewählt
                                 </span>
                             </div>
                             <div class="flex max-h-32 flex-wrap gap-2 overflow-y-auto rounded-lg border border-border bg-card p-2">
@@ -731,7 +915,7 @@ const resetFilters = () => {
 
                     <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:justify-end">
                         <button type="button" class="h-11 rounded-lg border border-border px-4 text-sm font-semibold text-secondary transition hover:border-borderHover hover:text-primary" @click="resetFilters">
-                            Zuruecksetzen
+                            Zurücksetzen
                         </button>
                         <button type="button" class="h-11 rounded-lg border border-buttonPrimary px-4 text-sm font-semibold text-buttonPrimary transition hover:bg-buttonPrimary/10" @click="saveDefaultFilters">
                             Als Standard speichern
@@ -742,6 +926,155 @@ const resetFilters = () => {
                     </div>
                 </div>
             </form>
+        </section>
+
+        <section v-if="eventItems.length || calendarEventItems.length" class="rounded-lg border border-border bg-card">
+            <div class="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Ansicht</p>
+                    <h2 class="mt-1 text-lg font-bold text-primary">Kalender & Liste</h2>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 rounded-lg border border-border bg-inputBg p-1">
+                    <button
+                        type="button"
+                        class="rounded-md px-3 py-2 text-sm font-semibold transition"
+                        :class="viewMode === 'calendar' ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-secondary hover:text-primary'"
+                        @click="viewMode = 'calendar'"
+                    >
+                        <i class="las la-calendar mr-1"></i>
+                        Kalender
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-md px-3 py-2 text-sm font-semibold transition"
+                        :class="viewMode === 'list' ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-secondary hover:text-primary'"
+                        @click="viewMode = 'list'"
+                    >
+                        <i class="las la-list mr-1"></i>
+                        Liste
+                    </button>
+                </div>
+            </div>
+
+            <div v-if="viewMode === 'calendar'" class="grid gap-0 lg:grid-cols-[minmax(0,1fr)_22rem]">
+                <div class="border-b border-border p-4 lg:border-b-0 lg:border-r">
+                    <div class="mb-4 flex items-center justify-between gap-3">
+                        <button
+                            type="button"
+                            class="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-secondary hover:border-borderHover hover:text-primary"
+                            aria-label="Vorheriger Monat"
+                            @click="moveCalendarMonth(-1)"
+                        >
+                            <i class="las la-angle-left text-xl"></i>
+                        </button>
+
+                        <div class="flex flex-col items-center gap-2 sm:flex-row">
+                            <h3 class="text-center text-base font-bold capitalize text-primary">
+                                {{ calendarMonthLabel }}
+                            </h3>
+                            <button
+                                type="button"
+                                class="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-secondary hover:border-borderHover hover:text-primary"
+                                @click="jumpToToday"
+                            >
+                                Heute
+                            </button>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-secondary hover:border-borderHover hover:text-primary"
+                            aria-label="Nächster Monat"
+                            @click="moveCalendarMonth(1)"
+                        >
+                            <i class="las la-angle-right text-xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-border bg-border">
+                        <div
+                            v-for="weekday in calendarWeekdays"
+                            :key="weekday"
+                            class="bg-inputBg px-2 py-2 text-center text-xs font-bold uppercase text-secondary"
+                        >
+                            {{ weekday }}
+                        </div>
+
+                        <button
+                            v-for="day in calendarDays"
+                            :key="day.key"
+                            type="button"
+                            class="min-h-24 bg-card p-2 text-left transition hover:bg-inputBg"
+                            :class="[
+                                !day.isCurrentMonth ? 'opacity-45' : '',
+                                selectedCalendarDate === day.key ? 'ring-2 ring-inset ring-buttonPrimary' : '',
+                            ]"
+                            @click="selectCalendarDay(day)"
+                        >
+                            <span
+                                class="inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold"
+                                :class="day.isToday ? 'bg-buttonPrimary text-buttonTextPrimary' : 'text-primary'"
+                            >
+                                {{ day.day }}
+                            </span>
+
+                            <div class="mt-2 space-y-1">
+                                <span
+                                    v-for="event in day.events.slice(0, 2)"
+                                    :key="event.id"
+                                    class="block truncate rounded px-2 py-1 text-[11px] font-semibold"
+                                    :class="event.status === 'cancelled' ? 'bg-error/10 text-error line-through' : 'bg-buttonPrimary/10 text-buttonPrimary'"
+                                >
+                                    {{ formatTime(event.start_time, event) }} {{ event.title }}
+                                </span>
+                                <span v-if="day.events.length > 2" class="block text-[11px] font-semibold text-secondary">
+                                    +{{ day.events.length - 2 }} mehr
+                                </span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <aside class="p-4">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                        Ausgewählter Tag
+                    </p>
+                    <h3 class="mt-1 text-lg font-bold text-primary">
+                        {{ formatDate(`${selectedCalendarDate}T12:00:00`) }}
+                    </h3>
+
+                    <div class="mt-4 space-y-3">
+                        <article
+                            v-for="event in selectedCalendarEvents"
+                            :key="event.id"
+                            class="rounded-lg border border-border bg-inputBg p-3"
+                        >
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <Link :href="route('auth.events.show', event.id)" class="font-bold text-primary hover:text-buttonPrimary hover:underline">
+                                        {{ event.title }}
+                                    </Link>
+                                    <p class="mt-1 text-sm text-secondary">
+                                        {{ eventDateTimeLabel(event) }}
+                                    </p>
+                                </div>
+                                <span class="shrink-0 rounded-full bg-card px-2 py-1 text-xs font-semibold text-secondary">
+                                    {{ participantCapacityLabel(event) }}
+                                </span>
+                            </div>
+                            <p class="mt-2 truncate text-sm text-secondary">
+                                <i class="las la-map-marker-alt text-buttonPrimary"></i>
+                                {{ event.location || 'Keine Eingabe' }}
+                            </p>
+                        </article>
+
+                        <div v-if="!selectedCalendarEvents.length" class="rounded-lg border border-dashed border-border p-5 text-center text-sm text-secondary">
+                            An diesem Tag sind keine Events im aktuellen Filter.
+                        </div>
+                    </div>
+                </aside>
+            </div>
         </section>
 
         <!-- CREATE EVENT MODAL / WIZARD -->
@@ -774,11 +1107,13 @@ const resetFilters = () => {
                         <!-- Step Indicator -->
                         <div class="mt-4 grid grid-cols-4 gap-2">
                             <button v-for="step in steps" :key="step.number" type="button"
-                                class="rounded-full px-2 py-2 text-xs font-semibold transition" :class="createStep === step.number
+                                class="rounded-full px-2 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-45" :class="createStep === step.number
                                     ? 'bg-buttonPrimary text-buttonTextPrimary'
                                     : createStep > step.number
                                         ? 'bg-air-green/15 text-air-green'
-                                        : 'bg-inputBg text-secondary'" @click="createStep = step.number">
+                                        : 'bg-inputBg text-secondary'"
+                                :disabled="!canEnterStep(step.number)"
+                                @click="goToStep(step.number)">
                                 {{ step.label }}
                             </button>
                         </div>
@@ -992,7 +1327,7 @@ const resetFilters = () => {
 
                             <div v-else class="rounded-lg border border-border bg-inputBg p-3 text-sm text-secondary">
                                 <p class="font-semibold text-primary">Keine Intervalle im kostenlosen Konto</p>
-                                <p class="mt-1">Du kannst einfache Einzel-Events erstellen. Wiederholungen sind ab einem passenden Paket verfuegbar.</p>
+                                <p class="mt-1">Du kannst einfache Einzel-Events erstellen. Wiederholungen sind ab einem passenden Paket verfügbar.</p>
                             </div>
 
                             <div v-if="form.recurring">
@@ -1240,6 +1575,10 @@ const resetFilters = () => {
 
                     <!-- Modal Footer -->
                     <div class="shrink-0 border-t border-border bg-card p-4">
+                        <div v-if="currentStepValidationMessage" class="mb-3 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-sm font-semibold text-warning">
+                            {{ currentStepValidationMessage }}
+                        </div>
+
                         <div class="flex gap-3">
                             <button type="button"
                                 class="flex-1 rounded-lg border border-border px-4 py-3 font-semibold text-secondary transition hover:border-borderHover hover:text-primary disabled:opacity-50"
@@ -1248,7 +1587,8 @@ const resetFilters = () => {
                             </button>
 
                             <button v-if="createStep < steps.length" type="button"
-                                class="flex-1 rounded-lg bg-buttonPrimary px-4 py-3 font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover"
+                                class="flex-1 rounded-lg bg-buttonPrimary px-4 py-3 font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover disabled:cursor-not-allowed disabled:opacity-50"
+                                :disabled="!!currentStepValidationMessage"
                                 @click="nextStep">
                                 Weiter
                             </button>
@@ -1265,8 +1605,8 @@ const resetFilters = () => {
         </Teleport>
 
         <!-- EVENT LIST -->
-        <div v-if="events?.length" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <article v-for="event in events" :key="event.id"
+        <div v-if="viewMode === 'list' && eventItems.length" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <article v-for="event in eventItems" :key="event.id"
                 class="group overflow-hidden rounded-lg border border-border bg-card p-4 transition hover:-translate-y-0.5 hover:border-borderHover hover:shadow-xl">
                 <div class="flex items-start gap-3">
                     <div class="flex w-16 shrink-0 flex-col items-center justify-center rounded-lg border border-border bg-inputBg py-2">
@@ -1370,7 +1710,22 @@ const resetFilters = () => {
             </article>
         </div>
 
-        <div v-else class="rounded-lg border border-dashed border-border bg-card p-10 text-center">
+        <nav v-if="viewMode === 'list' && eventPaginationLinks.length > 3" class="flex flex-wrap items-center justify-center gap-2">
+            <Link
+                v-for="link in eventPaginationLinks"
+                :key="link.label"
+                :href="link.url || '#'"
+                preserve-scroll
+                class="min-w-10 rounded-lg border px-3 py-2 text-center text-sm font-semibold transition"
+                :class="[
+                    link.active ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary' : 'border-border bg-card text-secondary hover:border-borderHover hover:text-primary',
+                    !link.url ? 'pointer-events-none opacity-45' : '',
+                ]"
+                v-html="link.label"
+            />
+        </nav>
+
+        <div v-if="!eventItems.length && !calendarEventItems.length" class="rounded-lg border border-dashed border-border bg-card p-10 text-center">
             <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-lg bg-inputBg text-secondary">
                 <i class="las la-calendar-times text-2xl"></i>
             </div>
@@ -1380,7 +1735,7 @@ const resetFilters = () => {
             </p>
             <div class="mt-5 flex flex-col justify-center gap-2 sm:flex-row">
                 <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="resetFilters">
-                    Filter zuruecksetzen
+                    Filter zurücksetzen
                 </button>
                 <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover" @click="openCreateModal">
                     Event erstellen

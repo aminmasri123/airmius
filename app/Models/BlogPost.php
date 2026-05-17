@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 class BlogPost extends Model
@@ -20,11 +22,17 @@ class BlogPost extends Model
         'content',
         'cover_image',
         'category',
+        'blog_category_id',
         'tags',
         'meta_title',
         'meta_description',
         'status',
         'published_at',
+    ];
+
+    protected $appends = [
+        'reading_time_minutes',
+        'seo_score',
     ];
 
     protected function casts(): array
@@ -45,12 +53,74 @@ class BlogPost extends Model
         return $this->belongsTo(User::class, 'published_by');
     }
 
+    public function blogCategory(): BelongsTo
+    {
+        return $this->belongsTo(BlogCategory::class);
+    }
+
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(BlogPostRevision::class);
+    }
+
+    public function latestRevision(): HasOne
+    {
+        return $this->hasOne(BlogPostRevision::class)->latestOfMany();
+    }
+
     public function scopePublished($query)
     {
         return $query
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now());
+    }
+
+    public function getReadingTimeMinutesAttribute(): int
+    {
+        $text = trim(strip_tags((string) $this->content));
+
+        if ($text === '') {
+            return 1;
+        }
+
+        preg_match_all('/[\p{L}\p{N}]+/u', $text, $matches);
+
+        return max(1, (int) ceil(count($matches[0]) / 220));
+    }
+
+    public function getSeoScoreAttribute(): int
+    {
+        return self::seoScoreFor([
+            'title' => $this->title,
+            'excerpt' => $this->excerpt,
+            'content' => $this->content,
+            'cover_image' => $this->cover_image,
+            'category' => $this->category,
+            'blog_category_id' => $this->blog_category_id,
+            'meta_title' => $this->meta_title,
+            'meta_description' => $this->meta_description,
+        ]);
+    }
+
+    public static function seoScoreFor(array $data): int
+    {
+        $title = (string) ($data['meta_title'] ?? $data['title'] ?? '');
+        $description = (string) ($data['meta_description'] ?? $data['excerpt'] ?? '');
+        $excerpt = trim((string) ($data['excerpt'] ?? ''));
+        $content = trim(strip_tags((string) ($data['content'] ?? '')));
+        preg_match_all('/[\p{L}\p{N}]+/u', $content, $matches);
+
+        $checks = [
+            mb_strlen($title) >= 35 && mb_strlen($title) <= 65,
+            mb_strlen($description) >= 110 && mb_strlen($description) <= 160,
+            mb_strlen($excerpt) >= 80,
+            count($matches[0]) >= 450,
+            filled($data['blog_category_id'] ?? null) || filled($data['category'] ?? null),
+            filled($data['cover_image'] ?? null),
+        ];
+
+        return (int) round((count(array_filter($checks)) / count($checks)) * 100);
     }
 
     public static function uniqueSlug(string $title, ?int $ignoreId = null): string

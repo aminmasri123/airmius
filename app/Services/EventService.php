@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\DB;
 
 class EventService
 {
+    private const MAX_RECURRING_EVENTS = 370;
+
     public function __construct(private ChatService $chatService) {}
 
     public function create(array $data): Event
@@ -152,11 +154,7 @@ class EventService
             ? $recurrenceDays->all()
             : null;
 
-        if (
-            ! in_array($data['recurring'] ?? '', ['weekly', 'biweekly'], true)
-            || $recurrenceDays->isEmpty()
-            || empty($data['recurrence_ends_at'])
-        ) {
+        if (empty($data['recurring']) || empty($data['recurrence_ends_at'])) {
             return [$this->normalizeEventTimes($data, $timezone)];
         }
 
@@ -168,37 +166,79 @@ class EventService
         $reminderOffset = ! empty($data['reminder_at'])
             ? Carbon::parse($data['reminder_at'], $timezone)->diffInSeconds($baseStart, false)
             : null;
-        $interval = $data['recurring'] === 'biweekly' ? 2 : 1;
+        $series = match ($data['recurring']) {
+            'daily' => $this->dailyOccurrences($baseStart, $until),
+            'weekly', 'biweekly' => $recurrenceDays->isNotEmpty()
+                ? $this->weeklyOccurrences($baseStart, $until, $recurrenceDays, $data['recurring'] === 'biweekly' ? 2 : 1)
+                : [],
+            'monthly' => $this->monthlyOccurrences($baseStart, $until),
+            default => [],
+        };
+
+        return count($series) > 0 ? array_map(
+            fn (Carbon $startTime) => $this->withoutInputTimezone(array_merge($data, [
+                'start_time' => $this->toUtcDateTimeString($startTime),
+                'end_time' => $duration !== null
+                    ? $this->toUtcDateTimeString($startTime->copy()->addSeconds($duration))
+                    : null,
+                'reminder_at' => $reminderOffset !== null
+                    ? $this->toUtcDateTimeString($startTime->copy()->subSeconds($reminderOffset))
+                    : null,
+                'conversation_id' => null,
+            ])),
+            array_slice($series, 0, self::MAX_RECURRING_EVENTS),
+        ) : [$this->normalizeEventTimes($data, $timezone)];
+    }
+
+    private function dailyOccurrences(Carbon $baseStart, Carbon $until): array
+    {
+        $series = [];
+        $cursor = $baseStart->copy();
+
+        while ($cursor->lte($until) && count($series) < self::MAX_RECURRING_EVENTS) {
+            $series[] = $cursor->copy();
+            $cursor->addDay();
+        }
+
+        return $series;
+    }
+
+    private function weeklyOccurrences(Carbon $baseStart, Carbon $until, $recurrenceDays, int $interval): array
+    {
         $series = [];
         $cursor = $baseStart->copy()->startOfDay();
 
-        while ($cursor->lte($until)) {
+        while ($cursor->lte($until) && count($series) < self::MAX_RECURRING_EVENTS) {
             if ($recurrenceDays->contains($cursor->dayOfWeek)) {
                 $weeksDiff = $baseStart->copy()->startOfWeek()->diffInWeeks($cursor->copy()->startOfWeek(), false);
 
                 if ($weeksDiff >= 0 && $weeksDiff % $interval === 0) {
-                    $startTime = $cursor->copy()->setTime($baseStart->hour, $baseStart->minute, $baseStart->second);
-
-                    $series[] = array_merge($data, [
-                        'start_time' => $this->toUtcDateTimeString($startTime),
-                        'end_time' => $duration !== null
-                            ? $this->toUtcDateTimeString($startTime->copy()->addSeconds($duration))
-                            : null,
-                        'reminder_at' => $reminderOffset !== null
-                            ? $this->toUtcDateTimeString($startTime->copy()->subSeconds($reminderOffset))
-                            : null,
-                        'conversation_id' => null,
-                    ]);
+                    $series[] = $cursor->copy()->setTime($baseStart->hour, $baseStart->minute, $baseStart->second);
                 }
             }
 
             $cursor->addDay();
         }
 
-        return count($series) > 0 ? array_map(
-            fn (array $eventData) => $this->withoutInputTimezone($eventData),
-            $series,
-        ) : [$this->normalizeEventTimes($data, $timezone)];
+        return $series;
+    }
+
+    private function monthlyOccurrences(Carbon $baseStart, Carbon $until): array
+    {
+        $series = [];
+        $months = 0;
+
+        do {
+            $startTime = $baseStart->copy()->addMonthsNoOverflow($months);
+
+            if ($startTime->lte($until)) {
+                $series[] = $startTime;
+            }
+
+            $months++;
+        } while ($startTime->lte($until) && count($series) < self::MAX_RECURRING_EVENTS);
+
+        return $series;
     }
 
     private function normalizeEventTimes(array $data, DateTimeZone|string|null $timezone = null): array

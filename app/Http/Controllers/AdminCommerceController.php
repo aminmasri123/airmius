@@ -4,14 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\AdCampaign;
 use App\Models\AdCreative;
+use App\Models\AdEvent;
 use App\Models\CommerceOrder;
 use App\Models\CommerceReturnRequest;
 use App\Models\CommerceAuditLog;
+use App\Models\CommerceWarehouse;
 use App\Models\CommerceStockMovement;
 use App\Models\CommerceShippingRate;
 use App\Models\CommerceTaxRate;
+use App\Models\LearningEnrollment;
 use App\Models\MarketplacePayout;
 use App\Models\MarketplaceProduct;
+use App\Models\MarketplaceProductInventory;
 use App\Models\MarketplaceSellerApplication;
 use App\Models\PayoutProfile;
 use App\Models\Setting;
@@ -23,6 +27,7 @@ use App\Models\WebsiteRequest;
 use App\Services\MediaOptimizer;
 use App\Services\CommerceAuditService;
 use App\Services\CommerceDocumentService;
+use App\Support\CarrierTracking;
 use App\Support\UploadStorage;
 use App\Support\AppNotification;
 use Illuminate\Http\Request;
@@ -50,6 +55,7 @@ class AdminCommerceController extends Controller
                 'coupons' => SubscriptionCoupon::query()->count(),
                 'addons' => SubscriptionAddon::query()->count(),
                 'products' => MarketplaceProduct::query()->count(),
+                'warehouses' => CommerceWarehouse::query()->count(),
                 'campaigns' => AdCampaign::query()->count(),
                 'orders' => CommerceOrder::query()->count(),
                 'commission_cents' => CommerceOrder::query()->where('status', 'completed')->sum('commission_cents'),
@@ -59,7 +65,23 @@ class AdminCommerceController extends Controller
             ],
             'coupons' => SubscriptionCoupon::query()->latest('id')->get(),
             'addons' => SubscriptionAddon::query()->withCount('purchases')->latest('id')->get(),
-            'products' => MarketplaceProduct::query()->latest('id')->limit(100)->get(),
+            'products' => MarketplaceProduct::query()
+                ->with(['user:id,name,email', 'club:id,name,verification_status', 'inventories.warehouse:id,name,country_code,city,postal_code'])
+                ->latest('id')
+                ->limit(100)
+                ->get()
+                ->map(fn (MarketplaceProduct $product) => $this->adminProductResource($product))
+                ->values(),
+            'warehouses' => CommerceWarehouse::query()
+                ->withCount([
+                    'inventories',
+                    'inventories as active_inventories_count' => fn ($query) => $query->where('is_active', true),
+                ])
+                ->orderBy('country_code')
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->limit(100)
+                ->get(),
             'sellerApplications' => MarketplaceSellerApplication::query()
                 ->with(['user:id,name,email', 'reviewer:id,name,email'])
                 ->latest('id')
@@ -85,6 +107,8 @@ class AdminCommerceController extends Controller
                 'budget_cents' => AdCampaign::query()->sum('budget_cents'),
                 'active' => AdCampaign::query()->where('status', 'active')->count(),
             ],
+            'adPlacementReport' => $this->adPlacementReport(),
+            'adDiagnostics' => $this->adDiagnostics(),
             'orders' => CommerceOrder::query()
                 ->with(['user:id,name,email', 'club:id,name', 'orderable', 'items', 'returnRequests', 'issueResponder:id,name,email'])
                 ->latest('id')
@@ -115,6 +139,7 @@ class AdminCommerceController extends Controller
             'taxRates' => CommerceTaxRate::query()->orderBy('priority')->orderBy('country_code')->get(),
             'shippingRates' => CommerceShippingRate::query()->orderBy('priority')->orderBy('country_code')->get(),
             'marketplaceCategoryCommissions' => $this->marketplaceCategoryCommissionsForAdmin(),
+            'shippingCarriers' => CarrierTracking::carriers(),
             'auditLogs' => CommerceAuditLog::query()
                 ->with('user:id,name,email')
                 ->latest('id')
@@ -133,6 +158,11 @@ class AdminCommerceController extends Controller
                 'ads_cpl_cents' => (int) Setting::valueFor('ads_cpl_cents', 200),
                 'ads_cpa_percent' => (int) Setting::valueFor('ads_cpa_percent', 10),
                 'ads_min_budget_cents' => (int) Setting::valueFor('ads_min_budget_cents', 1000),
+                'ads_frequency_cap_per_day' => (int) Setting::valueFor('ads_frequency_cap_per_day', 3),
+                'ads_frequency_cap_feed' => (int) Setting::valueFor('ads_frequency_cap_feed', 3),
+                'ads_frequency_cap_sidebar' => (int) Setting::valueFor('ads_frequency_cap_sidebar', 6),
+                'ads_frequency_cap_marketplace_card' => (int) Setting::valueFor('ads_frequency_cap_marketplace_card', 3),
+                'ads_frequency_cap_sponsor_section' => (int) Setting::valueFor('ads_frequency_cap_sponsor_section', 4),
                 'marketplace_default_commission_percent' => (int) Setting::valueFor('marketplace_default_commission_percent', 10),
             ],
         ]);
@@ -168,7 +198,11 @@ class AdminCommerceController extends Controller
 
     public function storeProduct(Request $request)
     {
-        MarketplaceProduct::create($this->productData($request));
+        MarketplaceProduct::create([
+            ...$this->productData($request),
+            'commission_percent' => 0,
+            'payout_status' => 'not_applicable',
+        ]);
 
         return back()->with('success', 'Marketplace-Produkt erstellt.');
     }
@@ -176,7 +210,13 @@ class AdminCommerceController extends Controller
     public function updateProduct(Request $request, MarketplaceProduct $product)
     {
         $before = $product->only(['title', 'price_cents', 'status', 'stock_quantity', 'tax_class']);
-        $product->update($this->productData($request));
+        $data = $this->productData($request);
+        if (! $product->user_id) {
+            $data['commission_percent'] = 0;
+            $data['payout_status'] = 'not_applicable';
+        }
+
+        $product->update($data);
         $this->audit->log('product.updated', $product, $before, $product->fresh()->only(['title', 'price_cents', 'status', 'stock_quantity', 'tax_class']));
 
         return back()->with('success', 'Marketplace-Produkt aktualisiert.');
@@ -211,6 +251,7 @@ class AdminCommerceController extends Controller
     {
         $data = $request->validate([
             'quantity_delta' => ['required', 'integer', 'not_in:0'],
+            'marketplace_product_inventory_id' => ['nullable', Rule::exists('marketplace_product_inventories', 'id')],
             'note' => ['nullable', 'string', 'max:1000'],
         ]);
 
@@ -218,19 +259,47 @@ class AdminCommerceController extends Controller
 
         DB::transaction(function () use ($product, $data) {
             $product = MarketplaceProduct::query()->lockForUpdate()->findOrFail($product->id);
-            $product->stock_quantity = max(0, (int) $product->stock_quantity + (int) $data['quantity_delta']);
-            $product->save();
+            $inventory = null;
+            $stockAfter = null;
+
+            if (! empty($data['marketplace_product_inventory_id'])) {
+                $inventory = MarketplaceProductInventory::query()
+                    ->where('marketplace_product_id', $product->id)
+                    ->lockForUpdate()
+                    ->findOrFail($data['marketplace_product_inventory_id']);
+
+                $inventory->stock_quantity = max(0, (int) $inventory->stock_quantity + (int) $data['quantity_delta']);
+                $inventory->save();
+                $stockAfter = $inventory->availableQuantity();
+
+                $product->forceFill([
+                    'stock_quantity' => $product->inventories()->where('is_active', true)->sum('stock_quantity'),
+                    'available_countries' => $product->inventories()
+                        ->where('is_active', true)
+                        ->where('stock_quantity', '>', 0)
+                        ->pluck('country_code')
+                        ->unique()
+                        ->values()
+                        ->all(),
+                ])->save();
+            } else {
+                $product->stock_quantity = max(0, (int) $product->stock_quantity + (int) $data['quantity_delta']);
+                $product->save();
+                $stockAfter = $product->stock_quantity;
+            }
 
             CommerceStockMovement::create([
                 'marketplace_product_id' => $product->id,
+                'commerce_warehouse_id' => $inventory?->commerce_warehouse_id,
                 'type' => 'manual_adjustment',
                 'quantity_delta' => (int) $data['quantity_delta'],
-                'stock_after' => $product->stock_quantity,
+                'stock_after' => $stockAfter,
                 'note' => $data['note'] ?? null,
             ]);
             $this->audit->log('stock.adjusted', $product, [], [
                 'quantity_delta' => (int) $data['quantity_delta'],
-                'stock_after' => $product->stock_quantity,
+                'commerce_warehouse_id' => $inventory?->commerce_warehouse_id,
+                'stock_after' => $stockAfter,
             ], $data['note'] ?? null);
         });
 
@@ -250,6 +319,10 @@ class AdminCommerceController extends Controller
             'issue_note' => $data['issue_note'] ?? $order->issue_note,
             'status' => $data['order_status'] ?? $order->status,
         ]);
+
+        if (in_array($data['order_status'] ?? null, ['cancelled', 'refunded'], true)) {
+            $this->revokeLearningAccessForOrder($order, $data['order_status']);
+        }
 
         return back()->with('success', 'Bestellproblem wurde aktualisiert.');
     }
@@ -323,24 +396,49 @@ class AdminCommerceController extends Controller
                     'refunded_cents' => (int) ($data['approved_amount_cents'] ?? $returnRequest->approved_amount_cents ?? $returnRequest->requested_amount_cents),
                     'credit_note_number' => $returnRequest->order->credit_note_number ?: $this->nextDocumentNumber('commerce_credit_note_number_next', 'AIR-GS'),
                 ]);
+                $this->revokeLearningAccessForOrder($returnRequest->order, 'refunded');
             }
 
             if (($data['restock'] ?? false) && $returnRequest->item?->orderable instanceof MarketplaceProduct && $returnRequest->item->orderable->manages_stock) {
                 $product = MarketplaceProduct::query()->lockForUpdate()->find($returnRequest->item->orderable_id);
 
                 if ($product) {
-                    $product->increment('stock_quantity', (int) $returnRequest->quantity);
-                    $product->refresh();
+                    $inventory = null;
+                    $stockAfter = null;
 
-                    CommerceStockMovement::create([
-                        'marketplace_product_id' => $product->id,
-                        'commerce_order_id' => $returnRequest->commerce_order_id,
-                        'commerce_return_request_id' => $returnRequest->id,
-                        'type' => 'return_restock',
-                        'quantity_delta' => (int) $returnRequest->quantity,
-                        'stock_after' => $product->stock_quantity,
-                        'note' => 'Ruecksendung #'.$returnRequest->id,
-                    ]);
+                    if ($returnRequest->item->commerce_warehouse_id) {
+                        $inventory = MarketplaceProductInventory::query()
+                            ->where('marketplace_product_id', $product->id)
+                            ->where('commerce_warehouse_id', $returnRequest->item->commerce_warehouse_id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if ($inventory) {
+                            $inventory->increment('stock_quantity', (int) $returnRequest->quantity);
+                            $inventory->refresh();
+                            $stockAfter = $inventory->availableQuantity();
+                            $product->forceFill([
+                                'stock_quantity' => $product->inventories()->where('is_active', true)->sum('stock_quantity'),
+                            ])->save();
+                        }
+                    } else {
+                        $product->increment('stock_quantity', (int) $returnRequest->quantity);
+                        $product->refresh();
+                        $stockAfter = $product->stock_quantity;
+                    }
+
+                    if ($stockAfter !== null) {
+                        CommerceStockMovement::create([
+                            'marketplace_product_id' => $product->id,
+                            'commerce_warehouse_id' => $inventory?->commerce_warehouse_id,
+                            'commerce_order_id' => $returnRequest->commerce_order_id,
+                            'commerce_return_request_id' => $returnRequest->id,
+                            'type' => 'return_restock',
+                            'quantity_delta' => (int) $returnRequest->quantity,
+                            'stock_after' => $stockAfter,
+                            'note' => 'Ruecksendung #'.$returnRequest->id,
+                        ]);
+                    }
                 }
             }
         });
@@ -365,15 +463,22 @@ class AdminCommerceController extends Controller
             'tracking_number' => ['nullable', 'string', 'max:120'],
             'tracking_url' => ['nullable', 'url', 'max:2048'],
         ]);
+        $data['shipping_carrier'] = CarrierTracking::normalizeCarrier($data['shipping_carrier'] ?? null);
+        $data['tracking_number'] = CarrierTracking::trackingNumber($data['tracking_number'] ?? null);
+        $data['tracking_url'] = CarrierTracking::trackingUrl(
+            $data['shipping_carrier'],
+            $data['tracking_number'],
+            $data['tracking_url'] ?? null,
+        );
 
-        $before = $order->only(['shipping_status', 'shipping_carrier', 'tracking_number']);
+        $before = $order->only(['shipping_status', 'shipping_carrier', 'tracking_number', 'tracking_url']);
         $previousStatus = $order->shipping_status;
         $order->update([
             ...$data,
             'shipped_at' => $data['shipping_status'] === 'shipped' && ! $order->shipped_at ? now() : $order->shipped_at,
             'delivered_at' => $data['shipping_status'] === 'delivered' && ! $order->delivered_at ? now() : $order->delivered_at,
         ]);
-        $this->audit->log('shipping.updated', $order, $before, $order->fresh()->only(['shipping_status', 'shipping_carrier', 'tracking_number']));
+        $this->audit->log('shipping.updated', $order, $before, $order->fresh()->only(['shipping_status', 'shipping_carrier', 'tracking_number', 'tracking_url']));
         $this->notifyShippingUpdated($order->fresh(), $previousStatus);
 
         return back()->with('success', 'Versandstatus wurde aktualisiert.');
@@ -397,6 +502,10 @@ class AdminCommerceController extends Controller
             'refund_provider_id' => $providerRefundId ?: $order->refund_provider_id,
             'credit_note_number' => $order->credit_note_number ?: $this->nextDocumentNumber('commerce_credit_note_number_next', 'AIR-GS'),
         ]);
+
+        if ((int) $data['amount_cents'] >= (int) $order->amount_cents) {
+            $this->revokeLearningAccessForOrder($order, 'refunded');
+        }
         $this->audit->log('order.refunded', $order, $before, $order->fresh()->only(['status', 'refunded_cents', 'refund_provider_id']), $data['reason'] ?? null);
 
         return back()->with('success', $providerRefundId ? 'Erstattung wurde beim Anbieter angestoßen.' : 'Erstattung wurde dokumentiert.');
@@ -521,6 +630,131 @@ class AdminCommerceController extends Controller
             ->where('orderable_id', $campaign->id)
             ->where('status', 'completed')
             ->exists();
+    }
+
+    private function adDiagnostics(): array
+    {
+        return AdCampaign::query()
+            ->with(['stats' => fn ($query) => $query->where('date', today()->toDateString())])
+            ->latest('id')
+            ->limit(80)
+            ->get()
+            ->map(function (AdCampaign $campaign) {
+                $reasons = [];
+                $todaySpent = (int) ($campaign->stats->first()?->spent_cents ?? 0);
+                $dailyBudget = (int) $campaign->daily_budget_cents;
+                $minutesElapsed = max(1, now()->diffInMinutes(today()));
+                $allowedSpend = $dailyBudget > 0
+                    ? (int) round($dailyBudget * min(1, $minutesElapsed / 1440)) + max(100, (int) round($dailyBudget * 0.12))
+                    : null;
+                $audience = is_array($campaign->audience) ? $campaign->audience : [];
+                $hasAudience = collect($audience)->filter(fn ($value) => filled($value) && $value !== [])->isNotEmpty();
+
+                if ($campaign->status !== 'active') {
+                    $reasons[] = 'Nicht aktiv: '.$campaign->status;
+                }
+
+                if (! $campaign->is_internal && (int) $campaign->spent_cents >= (int) $campaign->budget_cents) {
+                    $reasons[] = 'Gesamtbudget verbraucht';
+                }
+
+                if ($dailyBudget > 0 && $todaySpent > $allowedSpend) {
+                    $reasons[] = 'Pacing bremst: heute '.$this->money($todaySpent).' von erlaubt '.$this->money($allowedSpend);
+                }
+
+                if ($campaign->starts_at && $campaign->starts_at->isFuture()) {
+                    $reasons[] = 'Startet erst am '.$campaign->starts_at->format('d.m.Y H:i');
+                }
+
+                if ($campaign->ends_at && $campaign->ends_at->isPast()) {
+                    $reasons[] = 'Laufzeit beendet';
+                }
+
+                if ($hasAudience) {
+                    $audienceHints = collect([
+                        filled($audience['locations'] ?? []) ? 'Region' : null,
+                        filled($audience['excluded_locations'] ?? []) ? 'Region-Ausschluss' : null,
+                        filled($audience['interests'] ?? []) ? 'Interessen' : null,
+                        filled($audience['excluded_interests'] ?? []) ? 'Interessen-Ausschluss' : null,
+                        filled($audience['age_min'] ?? null) || filled($audience['age_max'] ?? null) ? 'Alter' : null,
+                        filled($audience['devices'] ?? []) ? 'Geraet' : null,
+                        filled($audience['languages'] ?? []) ? 'Sprache' : null,
+                        filled($audience['hours'] ?? []) ? 'Zeitfenster' : null,
+                    ])->filter()->implode(', ');
+                    $reasons[] = 'Audience aktiv: '.$audienceHints.' koennen Reichweite begrenzen';
+                }
+
+                $recentEvents = AdEvent::query()
+                    ->select('event_type', DB::raw('COUNT(*) as total'))
+                    ->where('ad_campaign_id', $campaign->id)
+                    ->where('occurred_at', '>=', now()->subDays(14))
+                    ->whereIn('event_type', ['click', 'lead', 'sale'])
+                    ->groupBy('event_type')
+                    ->pluck('total', 'event_type');
+                $recentConversions = (int) ($recentEvents['lead'] ?? 0) + (int) ($recentEvents['sale'] ?? 0);
+
+                if (in_array($campaign->objective, ['leads', 'sales'], true)) {
+                    $reasons[] = $recentConversions > 0
+                        ? 'Conversion-Boost aktiv: '.$recentConversions.' Ergebnisse in 14 Tagen'
+                        : 'Noch keine Conversions in 14 Tagen';
+                }
+
+                if ($campaign->is_internal && $campaign->force_priority) {
+                    $reasons[] = 'Interne Prioritaet aktiv, Frequency Cap gilt trotzdem';
+                }
+
+                if ($reasons === []) {
+                    $reasons[] = 'Auslieferbar';
+                }
+
+                return [
+                    'id' => $campaign->id,
+                    'name' => $campaign->name,
+                    'placement' => $campaign->placement,
+                    'status' => $campaign->status,
+                    'is_internal' => (bool) $campaign->is_internal,
+                    'force_priority' => (bool) $campaign->force_priority,
+                    'today_spent_cents' => $todaySpent,
+                    'daily_budget_cents' => $dailyBudget,
+                    'allowed_spend_cents' => $allowedSpend,
+                    'reasons' => $reasons,
+                ];
+            })
+            ->all();
+    }
+
+    private function adPlacementReport(): array
+    {
+        $rows = AdEvent::query()
+            ->select('placement', 'event_type', DB::raw('COUNT(*) as total'), DB::raw('SUM(cost_cents) as cost_cents'), DB::raw('SUM(value_cents) as value_cents'))
+            ->where('occurred_at', '>=', now()->subDays(30))
+            ->groupBy('placement', 'event_type')
+            ->get()
+            ->groupBy(fn ($row) => $row->placement ?: 'unknown');
+
+        return $rows->map(function ($events, string $placement) {
+            $byType = $events->keyBy('event_type');
+            $impressions = (int) ($byType['impression']->total ?? 0);
+            $clicks = (int) ($byType['click']->total ?? 0);
+            $leads = (int) ($byType['lead']->total ?? 0);
+            $sales = (int) ($byType['sale']->total ?? 0);
+
+            return [
+                'placement' => $placement,
+                'impressions' => $impressions,
+                'clicks' => $clicks,
+                'leads' => $leads,
+                'sales' => $sales,
+                'ctr' => $impressions > 0 ? round(($clicks / $impressions) * 100, 2) : 0,
+                'cost_cents' => (int) $events->sum('cost_cents'),
+                'value_cents' => (int) $events->sum('value_cents'),
+            ];
+        })->values()->all();
+    }
+
+    private function money(?int $cents): string
+    {
+        return number_format(((int) $cents) / 100, 2, ',', '.').' EUR';
     }
 
     public function markOrderPaid(CommerceOrder $order)
@@ -677,6 +911,11 @@ class AdminCommerceController extends Controller
             'ads_cpl_cents' => ['required', 'integer', 'min:0', 'max:100000'],
             'ads_cpa_percent' => ['required', 'integer', 'min:0', 'max:100'],
             'ads_min_budget_cents' => ['required', 'integer', 'min:0', 'max:10000000'],
+            'ads_frequency_cap_per_day' => ['required', 'integer', 'min:0', 'max:100'],
+            'ads_frequency_cap_feed' => ['required', 'integer', 'min:0', 'max:100'],
+            'ads_frequency_cap_sidebar' => ['required', 'integer', 'min:0', 'max:100'],
+            'ads_frequency_cap_marketplace_card' => ['required', 'integer', 'min:0', 'max:100'],
+            'ads_frequency_cap_sponsor_section' => ['required', 'integer', 'min:0', 'max:100'],
         ]);
 
         Setting::setValue('commerce_company_country', strtoupper($data['company_country']));
@@ -689,6 +928,11 @@ class AdminCommerceController extends Controller
         Setting::setValue('ads_cpl_cents', (int) $data['ads_cpl_cents']);
         Setting::setValue('ads_cpa_percent', (int) $data['ads_cpa_percent']);
         Setting::setValue('ads_min_budget_cents', (int) $data['ads_min_budget_cents']);
+        Setting::setValue('ads_frequency_cap_per_day', (int) $data['ads_frequency_cap_per_day']);
+        Setting::setValue('ads_frequency_cap_feed', (int) $data['ads_frequency_cap_feed']);
+        Setting::setValue('ads_frequency_cap_sidebar', (int) $data['ads_frequency_cap_sidebar']);
+        Setting::setValue('ads_frequency_cap_marketplace_card', (int) $data['ads_frequency_cap_marketplace_card']);
+        Setting::setValue('ads_frequency_cap_sponsor_section', (int) $data['ads_frequency_cap_sponsor_section']);
 
         return back()->with('success', 'Commerce-Steuerlogik wurde aktualisiert.');
     }
@@ -699,6 +943,7 @@ class AdminCommerceController extends Controller
             'default_commission_percent' => ['required', 'integer', 'min:0', 'max:100'],
             'commissions' => ['required', 'array', 'max:100'],
             'commissions.*.category' => ['required', 'string', 'max:80'],
+            'commissions.*.label' => ['nullable', 'string', 'max:120'],
             'commissions.*.commission_percent' => ['required', 'integer', 'min:0', 'max:100'],
         ]);
 
@@ -709,9 +954,18 @@ class AdminCommerceController extends Controller
                 return $category === '' ? [] : [$category => max(0, min(100, (int) $row['commission_percent']))];
             })
             ->all();
+        $labels = collect($data['commissions'])
+            ->mapWithKeys(function (array $row) {
+                $category = trim((string) $row['category']);
+                $label = trim((string) ($row['label'] ?? ''));
+
+                return $category === '' || $label === '' ? [] : [$category => $label];
+            })
+            ->all();
 
         Setting::setValue('marketplace_default_commission_percent', (int) $data['default_commission_percent']);
         Setting::setValue('marketplace_category_commissions', json_encode($commissions));
+        Setting::setValue('marketplace_category_labels', json_encode($labels));
 
         return back()->with('success', 'Marketplace-Provisionen wurden aktualisiert.');
     }
@@ -780,10 +1034,15 @@ class AdminCommerceController extends Controller
     private function marketplaceCategoryCommissionsForAdmin(): array
     {
         $defaults = [
-            'product' => 'Produkte',
+            'equipment' => 'Sportgeraete & Equipment',
+            'apparel' => 'Bekleidung & Schuhe',
+            'nutrition' => 'Ernaehrung & Supplements',
+            'accessories' => 'Zubehoer',
+            'digital_products' => 'Digitale Produkte',
+            'product' => 'Sonstige Produkte',
             'course' => 'Kurse / E-Learning',
             'camp' => 'Camps',
-            'service' => 'Services',
+            'service' => 'Services / Airmius intern',
             'outfit_subscription' => 'Outfit-Abo',
         ];
 
@@ -794,8 +1053,10 @@ class AdminCommerceController extends Controller
             ->filter()
             ->values();
 
+        $customLabels = $this->marketplaceCategoryLabelSettings();
         $labels = collect($defaults)
             ->merge($existingCategories->mapWithKeys(fn (string $category) => [$category => $defaults[$category] ?? str($category)->replace(['_', '-'], ' ')->title()->toString()]));
+        $labels = $labels->merge($customLabels);
 
         $configured = $this->marketplaceCategoryCommissionSettings();
 
@@ -824,6 +1085,14 @@ class AdminCommerceController extends Controller
     private function marketplaceCategoryCommissionSettings(): array
     {
         $raw = Setting::valueFor('marketplace_category_commissions', '{}');
+        $decoded = is_array($raw) ? $raw : json_decode((string) $raw, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    private function marketplaceCategoryLabelSettings(): array
+    {
+        $raw = Setting::valueFor('marketplace_category_labels', '{}');
         $decoded = is_array($raw) ? $raw : json_decode((string) $raw, true);
 
         return is_array($decoded) ? $decoded : [];
@@ -1015,8 +1284,11 @@ class AdminCommerceController extends Controller
     private function campaignData(Request $request): array
     {
         $minimumBudget = (int) Setting::valueFor('ads_min_budget_cents', 1000);
+        $isInternal = $request->boolean('is_internal');
 
         $data = $request->validate([
+            'is_internal' => ['boolean'],
+            'force_priority' => ['boolean'],
             'name' => ['required', 'string', 'max:255'],
             'headline' => ['nullable', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:2000'],
@@ -1041,9 +1313,14 @@ class AdminCommerceController extends Controller
             'creatives.*.is_active' => ['boolean'],
             'audience_locations' => ['nullable', 'string', 'max:255'],
             'audience_interests' => ['nullable', 'string', 'max:500'],
+            'audience_excluded_locations' => ['nullable', 'string', 'max:255'],
+            'audience_excluded_interests' => ['nullable', 'string', 'max:500'],
+            'audience_devices' => ['nullable', 'string', 'max:255'],
+            'audience_languages' => ['nullable', 'string', 'max:255'],
+            'audience_hours' => ['nullable', 'string', 'max:255'],
             'audience_age_min' => ['nullable', 'integer', 'min:13', 'max:100'],
             'audience_age_max' => ['nullable', 'integer', 'min:13', 'max:100', 'gte:audience_age_min'],
-            'budget_cents' => ['required', 'integer', 'min:'.$minimumBudget],
+            'budget_cents' => ['required', 'integer', 'min:'.($isInternal ? 0 : $minimumBudget)],
             'daily_budget_cents' => ['nullable', 'integer', 'min:0'],
             'spent_cents' => ['nullable', 'integer', 'min:0'],
             'impressions' => ['nullable', 'integer', 'min:0'],
@@ -1054,14 +1331,39 @@ class AdminCommerceController extends Controller
             'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
         ]);
 
+        $data['is_internal'] = (bool) ($data['is_internal'] ?? false);
+        $data['force_priority'] = $data['is_internal'] && (bool) ($data['force_priority'] ?? false);
+
+        if ($data['is_internal']) {
+            $data['user_id'] = null;
+            $data['club_id'] = null;
+        }
+
         $data['audience'] = [
             'locations' => $this->splitCampaignList($data['audience_locations'] ?? ''),
             'interests' => $this->splitCampaignList($data['audience_interests'] ?? ''),
+            'excluded_locations' => $this->splitCampaignList($data['audience_excluded_locations'] ?? ''),
+            'excluded_interests' => $this->splitCampaignList($data['audience_excluded_interests'] ?? ''),
+            'devices' => $this->splitCampaignList($data['audience_devices'] ?? ''),
+            'languages' => $this->splitCampaignList($data['audience_languages'] ?? ''),
+            'hours' => $this->splitCampaignList($data['audience_hours'] ?? ''),
             'age_min' => $data['audience_age_min'] ?? null,
             'age_max' => $data['audience_age_max'] ?? null,
         ];
         $data['_creative_rows'] = $data['creatives'] ?? [];
-        unset($data['audience_locations'], $data['audience_interests'], $data['audience_age_min'], $data['audience_age_max'], $data['creative_image_upload'], $data['creatives']);
+        unset(
+            $data['audience_locations'],
+            $data['audience_interests'],
+            $data['audience_excluded_locations'],
+            $data['audience_excluded_interests'],
+            $data['audience_devices'],
+            $data['audience_languages'],
+            $data['audience_hours'],
+            $data['audience_age_min'],
+            $data['audience_age_max'],
+            $data['creative_image_upload'],
+            $data['creatives']
+        );
 
         $data['daily_budget_cents'] = (int) ($data['daily_budget_cents'] ?? 0);
         $data['billing_event'] = 'impression';
@@ -1172,6 +1474,7 @@ class AdminCommerceController extends Controller
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'origin_country_code' => ['nullable', 'string', 'size:2'],
             'country_code' => ['nullable', 'string', 'size:2'],
             'postal_code_prefix' => ['nullable', 'string', 'max:20'],
             'amount_cents' => ['required', 'integer', 'min:0'],
@@ -1183,6 +1486,7 @@ class AdminCommerceController extends Controller
 
         return [
             ...$data,
+            'origin_country_code' => filled($data['origin_country_code'] ?? null) ? strtoupper($data['origin_country_code']) : null,
             'country_code' => filled($data['country_code'] ?? null) ? strtoupper($data['country_code']) : null,
             'currency' => strtoupper($data['currency']),
             'is_active' => (bool) ($data['is_active'] ?? false),
@@ -1300,22 +1604,105 @@ class AdminCommerceController extends Controller
     private function sellerReports(): array
     {
         return MarketplaceProduct::query()
-            ->with('user:id,name,email')
+            ->with(['user:id,name,email', 'inventories.warehouse:id,name,country_code,city'])
             ->withSum('stockMovements as stock_delta_sum', 'quantity_delta')
             ->latest('id')
             ->limit(100)
             ->get()
-            ->map(fn (MarketplaceProduct $product) => [
-                'product_id' => $product->id,
-                'title' => $product->title,
-                'seller' => $product->user?->name ?: $product->user?->email,
-                'stock_quantity' => $product->stock_quantity,
-                'manages_stock' => $product->manages_stock,
-                'status' => $product->status,
-                'low_stock' => $product->manages_stock && (int) $product->low_stock_threshold > 0 && (int) $product->stock_quantity <= (int) $product->low_stock_threshold,
-            ])
+            ->map(function (MarketplaceProduct $product) {
+                $activeInventories = $product->inventories->where('is_active', true);
+
+                return [
+                    'product_id' => $product->id,
+                    'title' => $product->title,
+                    'seller' => $product->user?->name ?: $product->user?->email,
+                    'stock_quantity' => $product->stock_quantity,
+                    'manages_stock' => $product->manages_stock,
+                    'status' => $product->status,
+                    'low_stock' => $product->manages_stock && (
+                        ((int) $product->low_stock_threshold > 0 && (int) $product->stock_quantity <= (int) $product->low_stock_threshold)
+                        || $activeInventories->contains(fn (MarketplaceProductInventory $inventory) => (int) $inventory->low_stock_threshold > 0 && $inventory->availableQuantity() <= (int) $inventory->low_stock_threshold)
+                    ),
+                    'inventories' => $activeInventories->map(fn (MarketplaceProductInventory $inventory) => [
+                        'country_code' => $inventory->country_code,
+                        'stock_quantity' => $inventory->stock_quantity,
+                        'available_quantity' => $inventory->availableQuantity(),
+                        'low_stock_threshold' => $inventory->low_stock_threshold,
+                        'warehouse_name' => $inventory->warehouse?->name,
+                    ])->values()->all(),
+                ];
+            })
             ->values()
             ->all();
+    }
+
+    private function adminProductResource(MarketplaceProduct $product): array
+    {
+        $resource = $product->toArray();
+        $issues = $this->productQualityIssues($product);
+        $score = max(0, 100 - (count($issues) * 14));
+
+        return [
+            ...$resource,
+            'seller_name' => $product->club?->name ?: ($product->user?->name ?: $product->user?->email),
+            'seller_verified' => $product->club?->verification_status === 'verified',
+            'inventories' => $product->inventories
+                ->map(fn (MarketplaceProductInventory $inventory) => [
+                    ...$inventory->toArray(),
+                    'available_quantity' => $inventory->availableQuantity(),
+                    'warehouse' => $inventory->warehouse ? [
+                        'id' => $inventory->warehouse->id,
+                        'name' => $inventory->warehouse->name,
+                        'country_code' => $inventory->warehouse->country_code,
+                        'city' => $inventory->warehouse->city,
+                        'postal_code' => $inventory->warehouse->postal_code,
+                    ] : null,
+                ])
+                ->values()
+                ->all(),
+            'quality_score' => $score,
+            'quality_issues' => $issues,
+            'is_market_ready' => $score >= 72 && $issues === [],
+        ];
+    }
+
+    private function productQualityIssues(MarketplaceProduct $product): array
+    {
+        $issues = [];
+
+        if (! filled($product->image_url)) {
+            $issues[] = 'Hauptbild fehlt';
+        }
+
+        if (mb_strlen(trim((string) $product->title)) < 8) {
+            $issues[] = 'Titel zu kurz';
+        }
+
+        if (mb_strlen(trim((string) $product->description)) < 80) {
+            $issues[] = 'Beschreibung zu kurz';
+        }
+
+        if (empty($product->features) || count((array) $product->features) < 2) {
+            $issues[] = 'Mindestens 2 Merkmale fehlen';
+        }
+
+        if ((int) $product->price_cents <= 0) {
+            $issues[] = 'Preis fehlt';
+        }
+
+        if ($product->product_type !== 'digital' && (bool) $product->manages_stock && (int) $product->stock_quantity <= 0) {
+            $issues[] = 'Kein Lagerbestand';
+        }
+
+        if (! filled($product->return_policy_type)) {
+            $issues[] = 'Rueckgaberichtlinie fehlt';
+        }
+
+        if (! $product->club_id && ! $product->user_id) {
+            $issues[] = 'Anbieter fehlt';
+        }
+
+        return $issues;
     }
 
     private function ossReport(): array
@@ -1400,19 +1787,61 @@ class AdminCommerceController extends Controller
         });
     }
 
+    private function revokeLearningAccessForOrder(CommerceOrder $order, string $status = 'refunded'): void
+    {
+        $userId = $order->user_id ?: User::query()
+            ->where('email', strtolower((string) $order->guest_email))
+            ->value('id');
+
+        if (! $userId) {
+            return;
+        }
+
+        $order->loadMissing('items.orderable');
+        $courseIds = collect([$order->orderable])
+            ->concat($order->items->pluck('orderable'))
+            ->filter(fn ($item) => $item instanceof MarketplaceProduct && $item->learning_course_id)
+            ->pluck('learning_course_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($courseIds->isEmpty()) {
+            return;
+        }
+
+        LearningEnrollment::query()
+            ->where('user_id', $userId)
+            ->whereIn('learning_course_id', $courseIds)
+            ->update([
+                'status' => $status,
+                'completed_at' => null,
+            ]);
+    }
+
     private function marketplaceVisualsForAdmin(): array
     {
         return collect($this->marketplaceVisualDefinitions())
-            ->map(fn (array $definition, string $key) => [
-                'key' => $key,
-                'label' => $definition['label'],
-                'description' => $definition['description'],
-                'recommended_size' => $definition['recommended_size'],
-                'width' => (int) Setting::valueFor($definition['setting_key'].'_width', $definition['default_width']),
-                'height' => (int) Setting::valueFor($definition['setting_key'].'_height', $definition['default_height']),
-                'source' => Setting::valueFor($definition['setting_key'], $definition['default']),
-                'url' => UploadStorage::url(Setting::valueFor($definition['setting_key'], $definition['default'])),
-            ])
+            ->map(function (array $definition, string $key) {
+                $width = (int) Setting::valueFor($definition['setting_key'].'_width', $definition['default_width']);
+                $height = (int) Setting::valueFor($definition['setting_key'].'_height', $definition['default_height']);
+
+                if ($key === 'side_banner' && $width === 306 && $height === 786) {
+                    $width = $definition['default_width'];
+                    $height = $definition['default_height'];
+                }
+
+                return [
+                    'key' => $key,
+                    'label' => $definition['label'],
+                    'description' => $definition['description'],
+                    'recommended_size' => $definition['recommended_size'],
+                    'width' => $width,
+                    'height' => $height,
+                    'source' => Setting::valueFor($definition['setting_key'], $definition['default']),
+                    'url' => UploadStorage::url(Setting::valueFor($definition['setting_key'], $definition['default'])),
+                ];
+            })
             ->values()
             ->all();
     }
@@ -1423,16 +1852,16 @@ class AdminCommerceController extends Controller
             'side_banner' => [
                 'setting_key' => 'marketplace_visual_side_banner',
                 'label' => 'Seitlicher Marketplace-Banner',
-                'description' => 'Wird links und rechts im Marketplace als hoher Seitenbanner verwendet.',
-                'recommended_size' => '306 x 786 px oder 768 x 1920 px',
-                'default_width' => 306,
-                'default_height' => 786,
+                'description' => 'Schmaler Hintergrund links und rechts. Bitte ohne Text, Logo oder wichtige Motive am Rand hochladen.',
+                'recommended_size' => '192 x 1080 px oder 384 x 2160 px fuer Retina',
+                'default_width' => 192,
+                'default_height' => 1080,
                 'default' => '/images/marketplace/airmius-marketplace-side-banner.png',
             ],
             'hero_banner' => [
                 'setting_key' => 'marketplace_visual_hero_banner',
                 'label' => 'Oberer Aktions-/Hero-Banner',
-                'description' => 'Optionales Hauptbild im ersten Marketplace-Bereich. Wenn leer, wird ein Produktbild verwendet.',
+                'description' => 'Optionales Hauptbild im ersten Marketplace-Bereich. Fokus links/mittig halten, da Text darueber liegen kann.',
                 'recommended_size' => '1600 x 900 px',
                 'default_width' => 1600,
                 'default_height' => 900,

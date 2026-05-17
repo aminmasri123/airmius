@@ -26,6 +26,7 @@ class SettingController extends Controller
                     ),
                 ],
                 'billing' => [
+                    'brand_name' => Setting::valueFor('billing_brand_name', config('airmius.billing.company_name')),
                     'company_name' => Setting::valueFor('billing_company_name', config('airmius.billing.company_name')),
                     'legal_name' => Setting::valueFor('billing_legal_name', config('airmius.billing.legal_name')),
                     'company_street' => Setting::valueFor('billing_company_street', config('airmius.billing.street')),
@@ -93,6 +94,7 @@ class SettingController extends Controller
             'maintenance_enabled' => ['required', 'boolean'],
             'maintenance_title' => ['required', 'string', 'max:120'],
             'maintenance_message' => ['required', 'string', 'max:500'],
+            'billing_brand_name' => ['nullable', 'string', 'max:120'],
             'billing_company_name' => ['nullable', 'string', 'max:160'],
             'billing_legal_name' => ['nullable', 'string', 'max:160'],
             'billing_company_street' => ['nullable', 'string', 'max:160'],
@@ -123,6 +125,7 @@ class SettingController extends Controller
         Setting::setValue('maintenance_mode', (bool) $data['maintenance_enabled']);
         Setting::setValue('maintenance_title', $data['maintenance_title']);
         Setting::setValue('maintenance_message', $data['maintenance_message']);
+        Setting::setValue('billing_brand_name', $data['billing_brand_name'] ?? '');
         Setting::setValue('billing_company_name', $data['billing_company_name'] ?? '');
         Setting::setValue('billing_legal_name', $data['billing_legal_name'] ?? '');
         Setting::setValue('billing_company_street', $data['billing_company_street'] ?? '');

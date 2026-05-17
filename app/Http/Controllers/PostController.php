@@ -6,6 +6,7 @@ use App\Models\Club;
 use App\Models\Post;
 use App\Models\Sport;
 use App\Models\SportSkill;
+use App\Models\Story;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\GamificationService;
@@ -33,9 +34,14 @@ class PostController extends Controller
         private ModerationService $moderation,
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
+        $filters = $request->validate([
+            'filter' => ['nullable', Rule::in(['all', 'team', 'organization', 'public', 'knowledge', 'questions', 'training'])],
+        ]);
+        $activeFilter = $filters['filter'] ?? 'all';
+
         $feedUserIds = collect([$user->id])
             ->merge($user->friendships()->pluck('friend_id'))
             ->merge($user->following()->pluck('followed_id'))
@@ -44,7 +50,163 @@ class PostController extends Controller
             ->all();
 
         $posts = Post::query()
-            ->where('moderation_status', '!=', 'removed')
+            ->where(function ($query) use ($user) {
+                $query->where('moderation_status', 'approved')
+                    ->orWhere(function ($query) use ($user) {
+                        $query->where('user_id', $user->id)
+                            ->whereIn('moderation_status', ['flagged', 'reported']);
+                    });
+            })
+            ->where(function ($query) use ($user, $feedUserIds) {
+                $query->where('user_id', $user->id)
+                    ->orWhere(function ($query) use ($feedUserIds) {
+                        $query->where('visibility', 'public')
+                            ->whereIn('user_id', $feedUserIds);
+                    })
+                    ->orWhere(function ($query) use ($user) {
+                        $query->where('visibility', 'organization')
+                            ->whereHas('club', fn ($clubQuery) => $clubQuery
+                                ->where('is_listed', true)
+                                ->whereHas('users', fn ($q) => $q->where('users.id', $user->id)));
+                    })
+                    ->orWhere(function ($query) use ($user) {
+                        $query->where('visibility', 'team')
+                            ->whereHas('team', fn ($teamQuery) => $teamQuery
+                                ->whereHas('club', fn ($clubQuery) => $clubQuery
+                                    ->where('is_listed', true)
+                                    ->where('teams_are_listed', true))
+                                ->whereHas('users', fn ($q) => $q->where('users.id', $user->id)));
+                    });
+            })
+            ->where(function ($query) {
+                $query->whereNull('club_id')
+                    ->orWhere('visibility', '!=', 'organization')
+                    ->orWhereHas('club', fn ($clubQuery) => $clubQuery->where('is_listed', true));
+            })
+            ->where(function ($query) {
+                $query->whereNull('team_id')
+                    ->orWhere('visibility', '!=', 'team')
+                    ->orWhereHas('team.club', fn ($clubQuery) => $clubQuery
+                        ->where('is_listed', true)
+                        ->where('teams_are_listed', true));
+            })
+            ->when($activeFilter !== 'all', function ($query) use ($activeFilter) {
+                match ($activeFilter) {
+                    'team' => $query->where('visibility', 'team'),
+                    'organization' => $query->where('visibility', 'organization'),
+                    'public' => $query->where('visibility', 'public'),
+                    'knowledge' => $query->where('post_type', 'knowledge'),
+                    'questions' => $query->where('post_type', 'question'),
+                    'training' => $query->whereIn('post_type', ['training_drill', 'tactic', 'analysis', 'experience']),
+                    default => null,
+                };
+            })
+            ->with([
+                'user:id,name,profile_photo_path',
+                'club' => fn ($query) => $query->select('id', 'name'),
+                'team' => fn ($query) => $query->select('id', 'name', 'club_id'),
+                'sport:id,name,slug,category',
+                'sportSkills:id,sport_id,key,name',
+                'attachments.file:id,display_name,path,type,size',
+                'comments' => fn ($query) => $query
+                    ->where('moderation_status', 'approved')
+                    ->with('user:id,name,profile_photo_path')
+                    ->withCount('likes')
+                    ->latest('id')
+                    ->limit(3),
+            ])
+            ->withCount(['comments' => fn ($query) => $query->where('moderation_status', 'approved')])
+            ->withCount('likes')
+            ->withCount('helpfuls')
+            ->withExists([
+                'likes as liked_by_me' => fn ($query) => $query->where('user_id', $user->id),
+                'helpfuls as helpful_by_me' => fn ($query) => $query->where('user_id', $user->id),
+            ])
+            ->latest('id')
+            ->paginate(10)
+            ->withQueryString()
+            ->through(function (Post $post) use ($user) {
+                $post->setAttribute('can_update', $user->can('update', $post));
+                $post->setAttribute('can_delete', $user->can('delete', $post));
+
+                return $post;
+            });
+
+        return Inertia::render('Auth/Dashboard/Feed/Index', [
+            'posts' => $posts,
+            'stories' => $this->visibleStoriesFor($user, $feedUserIds),
+            'feedFilter' => $activeFilter,
+            'clubs' => Club::query()
+                ->where('is_listed', true)
+                ->when(
+                    ! $user->hasAnyRole(Roles::FULL_ACCESS),
+                    fn ($query) => $query->where(function ($query) use ($user) {
+                        $query->where(function ($query) use ($user) {
+                            $query->where('members_can_post_to_club', true)
+                                ->where(function ($query) use ($user) {
+                                    $query->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id))
+                                        ->orWhereHas('teams.users', fn ($userQuery) => $userQuery->where('users.id', $user->id));
+                                });
+                        })->orWhereHas('users', function ($userQuery) use ($user) {
+                            $userQuery->where('users.id', $user->id);
+                            ClubRoles::whereAny($userQuery, ClubRoles::ELEVATED);
+                        });
+                    }),
+                )
+                ->select(['id', 'name', 'is_listed', 'teams_are_listed', 'members_can_post_to_club', 'members_can_post_to_teams'])
+                ->orderBy('name')
+                ->get()
+                ->map(function (Club $club) use ($user) {
+                    $club->setAttribute('can_publish_as', $this->canPublishAsClub($user, $club));
+
+                    return $club;
+                }),
+            'teams' => Team::query()
+                ->whereHas('club', fn ($clubQuery) => $clubQuery
+                    ->where('is_listed', true)
+                    ->where('teams_are_listed', true))
+                ->when(
+                    ! $user->hasAnyRole(Roles::FULL_ACCESS),
+                    fn ($query) => $query->where(function ($query) use ($user) {
+                        $query->where(function ($query) use ($user) {
+                            $query->whereHas('club', fn ($clubQuery) => $clubQuery->where('members_can_post_to_teams', true))
+                                ->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id));
+                        })->orWhereHas('club.users', function ($userQuery) use ($user) {
+                            $userQuery->where('users.id', $user->id);
+                            ClubRoles::whereAny($userQuery, ClubRoles::ELEVATED);
+                        });
+                    }),
+                )
+                ->select(['id', 'club_id', 'name'])
+                ->orderBy('name')
+                ->get()
+                ->map(function (Team $team) use ($user) {
+                    $team->setAttribute('can_publish_as', $this->canPublishAsTeam($user, $team));
+
+                    return $team;
+                }),
+            'visibilities' => Post::VISIBILITIES,
+            'postTypes' => Post::TYPES,
+            'sports' => Sport::query()
+                ->where('is_active', true)
+                ->with(['skills' => fn ($query) => $query->select('id', 'sport_id', 'key', 'name')->orderBy('sort_order')])
+                ->select(['id', 'name', 'slug', 'category'])
+                ->orderBy('sort_order')
+                ->get(),
+        ]);
+    }
+
+    private function visibleStoriesFor(User $user, array $feedUserIds)
+    {
+        return Story::query()
+            ->active()
+            ->where(function ($query) use ($user) {
+                $query->where('moderation_status', 'approved')
+                    ->orWhere(function ($query) use ($user) {
+                        $query->where('user_id', $user->id)
+                            ->whereIn('moderation_status', ['flagged', 'reported']);
+                    });
+            })
             ->where(function ($query) use ($user, $feedUserIds) {
                 $query->where('user_id', $user->id)
                     ->orWhere(function ($query) use ($feedUserIds) {
@@ -80,85 +242,89 @@ class PostController extends Controller
             })
             ->with([
                 'user:id,name,profile_photo_path',
-                'club' => fn ($query) => $query->select('id', 'name'),
-                'team' => fn ($query) => $query->select('id', 'name', 'club_id'),
-                'sport:id,name,slug,category',
-                'sportSkills:id,sport_id,key,name',
-                'attachments.file:id,display_name,path,type,size',
-                'comments' => fn ($query) => $query
-                    ->where('moderation_status', 'approved')
-                    ->with('user:id,name,profile_photo_path')
-                    ->withCount('likes')
-                    ->latest('id')
-                    ->limit(3),
+                'club:id,name',
+                'team:id,name,club_id',
+                'views.user:id,name,profile_photo_path',
+                'reactions' => fn ($query) => $query->where('user_id', $user->id)->select('id', 'story_id', 'user_id', 'reaction'),
             ])
-            ->withCount(['comments' => fn ($query) => $query->where('moderation_status', 'approved')])
-            ->withCount('likes')
-            ->withCount('helpfuls')
+            ->withCount(['views', 'reactions'])
             ->withExists([
-                'likes as liked_by_me' => fn ($query) => $query->where('user_id', $user->id),
-                'helpfuls as helpful_by_me' => fn ($query) => $query->where('user_id', $user->id),
+                'views as viewed_by_me' => fn ($query) => $query->where('user_id', $user->id),
             ])
             ->latest('id')
-            ->paginate(10)
-            ->withQueryString()
-            ->through(function (Post $post) use ($user) {
-                $post->setAttribute('can_update', $user->can('update', $post));
-                $post->setAttribute('can_delete', $user->can('delete', $post));
+            ->limit(30)
+            ->get()
+            ->map(function (Story $story) use ($user) {
+                $story->setAttribute('can_delete', $user->can('delete', $story));
+                $story->setAttribute('actor', $this->storyActor($story));
+                $story->setAttribute('my_reaction', $story->reactions->first()?->reaction);
+                $story->setAttribute('viewer_preview', $story->user_id === $user->id
+                    ? $story->views->take(8)->map(fn ($view) => [
+                        'id' => $view->user?->id,
+                        'name' => $view->user?->name,
+                        'profile_photo_thumb' => $view->user?->profile_photo_thumb,
+                    ])->values()
+                    : []);
 
-                return $post;
+                return $story;
             });
+    }
 
-        return Inertia::render('Auth/Dashboard/Feed/Index', [
-            'posts' => $posts,
-            'clubs' => Club::query()
-                ->where('is_listed', true)
-                ->when(
-                    ! $user->hasAnyRole(Roles::FULL_ACCESS),
-                    fn ($query) => $query->where(function ($query) use ($user) {
-                        $query->where(function ($query) use ($user) {
-                            $query->where('members_can_post_to_club', true)
-                                ->where(function ($query) use ($user) {
-                                    $query->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id))
-                                        ->orWhereHas('teams.users', fn ($userQuery) => $userQuery->where('users.id', $user->id));
-                                });
-                        })->orWhereHas('users', function ($userQuery) use ($user) {
-                            $userQuery->where('users.id', $user->id);
-                            ClubRoles::whereAny($userQuery, ClubRoles::ELEVATED);
-                        });
-                    }),
-                )
-                ->select(['id', 'name', 'is_listed', 'teams_are_listed', 'members_can_post_to_club', 'members_can_post_to_teams'])
-                ->orderBy('name')
-                ->get(),
-            'teams' => Team::query()
-                ->whereHas('club', fn ($clubQuery) => $clubQuery
-                    ->where('is_listed', true)
-                    ->where('teams_are_listed', true))
-                ->when(
-                    ! $user->hasAnyRole(Roles::FULL_ACCESS),
-                    fn ($query) => $query->where(function ($query) use ($user) {
-                        $query->where(function ($query) use ($user) {
-                            $query->whereHas('club', fn ($clubQuery) => $clubQuery->where('members_can_post_to_teams', true))
-                                ->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id));
-                        })->orWhereHas('club.users', function ($userQuery) use ($user) {
-                            $userQuery->where('users.id', $user->id);
-                            ClubRoles::whereAny($userQuery, ClubRoles::ELEVATED);
-                        });
-                    }),
-                )
-                ->select(['id', 'club_id', 'name'])
-                ->orderBy('name')
-                ->get(),
-            'visibilities' => Post::VISIBILITIES,
-            'postTypes' => Post::TYPES,
-            'sports' => Sport::query()
-                ->where('is_active', true)
-                ->with(['skills' => fn ($query) => $query->select('id', 'sport_id', 'key', 'name')->orderBy('sort_order')])
-                ->select(['id', 'name', 'slug', 'category'])
-                ->orderBy('sort_order')
-                ->get(),
-        ]);
+    private function storyActor(Story $story): array
+    {
+        if ($story->publisher_type === 'club' && $story->club) {
+            return [
+                'key' => 'club:'.$story->club_id,
+                'type' => 'club',
+                'name' => $story->club->name,
+                'profile_photo_thumb' => $story->club->profile_photo_thumb ?? null,
+            ];
+        }
+
+        if ($story->publisher_type === 'team' && $story->team) {
+            return [
+                'key' => 'team:'.$story->team_id,
+                'type' => 'team',
+                'name' => $story->team->name,
+                'profile_photo_thumb' => $story->team->profile_photo_thumb ?? null,
+            ];
+        }
+
+        return [
+            'key' => 'user:'.$story->user_id,
+            'type' => 'user',
+            'name' => $story->user?->name,
+            'profile_photo_thumb' => $story->user?->profile_photo_thumb,
+        ];
+    }
+
+    private function canPublishAsClub(User $user, ?Club $club): bool
+    {
+        if (! $club) {
+            return false;
+        }
+
+        if ($user->hasAnyRole(Roles::FULL_ACCESS) || $user->can('update', $club)) {
+            return true;
+        }
+
+        $query = $club->users()->where('users.id', $user->id);
+        ClubRoles::whereAny($query, ClubRoles::ELEVATED);
+
+        return $query->exists();
+    }
+
+    private function canPublishAsTeam(User $user, Team $team): bool
+    {
+        $team->loadMissing('club');
+
+        return $user->hasAnyRole(Roles::FULL_ACCESS)
+            || $user->can('update', $team)
+            || $this->canPublishAsClub($user, $team->club)
+            || $team->users()
+                ->where('users.id', $user->id)
+                ->wherePivotIn('role', ['Coach', 'Captain'])
+                ->exists();
     }
 
     public function store(Request $request)

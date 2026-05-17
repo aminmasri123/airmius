@@ -7,6 +7,7 @@ use App\Models\ContentReport;
 use App\Models\Message;
 use App\Models\ModerationFlag;
 use App\Models\Post;
+use App\Models\Story;
 use App\Models\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ class ContentReportController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'type' => ['required', Rule::in(['post', 'comment', 'message', 'user'])],
+            'type' => ['required', Rule::in(['post', 'comment', 'message', 'story', 'user'])],
             'id' => ['required', 'integer'],
             'reason' => ['required', Rule::in(['insult', 'bullying', 'hate', 'sexual', 'violence', 'threat', 'image_rights', 'spam', 'other'])],
             'details' => ['nullable', 'string', 'max:1000'],
@@ -59,6 +60,7 @@ class ContentReportController extends Controller
             'post' => Post::findOrFail($id),
             'comment' => Comment::findOrFail($id),
             'message' => Message::findOrFail($id),
+            'story' => Story::findOrFail($id),
             'user' => User::findOrFail($id),
         };
     }
@@ -79,6 +81,12 @@ class ContentReportController extends Controller
 
         if ($model instanceof Message) {
             abort_unless($model->conversation->users()->where('users.id', auth()->id())->exists(), 403);
+        }
+
+        if ($model instanceof Story) {
+            $this->authorize('view', $model);
+
+            return;
         }
 
         if ($model instanceof User) {

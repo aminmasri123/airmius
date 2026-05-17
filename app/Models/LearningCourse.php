@@ -25,8 +25,19 @@ class LearningCourse extends Model
         'learning_goals',
         'requirements',
         'target_groups',
+        'sales_points',
+        'faq_items',
+        'guarantee_text',
+        'certificate_logo_url',
+        'certificate_signature_name',
+        'certificate_footer_text',
         'tags',
         'status',
+        'quality_status',
+        'quality_note',
+        'reviewed_by',
+        'reviewed_at',
+        'featured_at',
         'is_public',
         'is_free',
         'price_cents',
@@ -41,11 +52,15 @@ class LearningCourse extends Model
             'learning_goals' => 'array',
             'requirements' => 'array',
             'target_groups' => 'array',
+            'sales_points' => 'array',
+            'faq_items' => 'array',
             'tags' => 'array',
             'is_public' => 'boolean',
             'is_free' => 'boolean',
             'price_cents' => 'integer',
             'estimated_minutes' => 'integer',
+            'reviewed_at' => 'datetime',
+            'featured_at' => 'datetime',
             'published_at' => 'datetime',
         ];
     }
@@ -103,5 +118,30 @@ class LearningCourse extends Model
     public function enrollments()
     {
         return $this->hasMany(LearningEnrollment::class);
+    }
+
+    public function marketplaceProducts()
+    {
+        return $this->hasMany(MarketplaceProduct::class);
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(LearningCourseReview::class);
+    }
+
+    public function coupons()
+    {
+        return $this->hasMany(LearningCoupon::class);
+    }
+
+    public function assignments()
+    {
+        return $this->hasMany(LearningAssignment::class);
+    }
+
+    public function certificates()
+    {
+        return $this->hasMany(LearningCertificate::class);
     }
 }

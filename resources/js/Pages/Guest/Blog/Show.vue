@@ -1,23 +1,106 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
+import { computed } from 'vue'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
 
-defineProps({
+const props = defineProps({
     canLogin: Boolean,
     canRegister: Boolean,
     post: Object,
+    isPreview: {
+        type: Boolean,
+        default: false,
+    },
+    relatedPosts: {
+        type: Array,
+        default: () => [],
+    },
 })
+
+const formatDate = (value) => {
+    if (!value) return ''
+
+    return new Intl.DateTimeFormat('de-DE', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+    }).format(new Date(value))
+}
+
+const articleSchema = computed(() => {
+    const breadcrumbs = [
+        {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Startseite',
+            item: route('welcome'),
+        },
+        {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Blog',
+            item: route('guest.blog.index'),
+        },
+    ]
+
+    if (props.post.blog_category?.slug || props.post.category) {
+        breadcrumbs.push({
+            '@type': 'ListItem',
+            position: 3,
+            name: props.post.blog_category?.name || props.post.category,
+            item: props.post.blog_category?.slug ? route('guest.blog.category', props.post.blog_category.slug) : route('guest.blog.index'),
+        })
+    }
+
+    breadcrumbs.push({
+        '@type': 'ListItem',
+        position: breadcrumbs.length + 1,
+        name: props.post.title,
+        item: route('guest.blog.show', props.post.slug),
+    })
+
+    return [
+        {
+            '@context': 'https://schema.org',
+            '@type': 'BlogPosting',
+            headline: props.post.meta_title || props.post.title,
+            description: props.post.meta_description || props.post.excerpt || '',
+            image: props.post.cover_image ? [props.post.cover_image] : undefined,
+            datePublished: props.post.published_at || undefined,
+            dateModified: props.post.updated_at || props.post.published_at || undefined,
+            author: props.post.author?.name ? {
+                '@type': 'Person',
+                name: props.post.author.name,
+            } : undefined,
+            publisher: {
+                '@type': 'Organization',
+                name: 'Airmius',
+            },
+        },
+        {
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: breadcrumbs,
+        },
+    ]
+})
+
+const categoryHref = computed(() => props.post.blog_category?.slug
+    ? route('guest.blog.category', props.post.blog_category.slug)
+    : route('guest.blog.index'))
 </script>
 
 <template>
     <SeoHead
-        :title="post.meta_title || post.title"
+        :title="isPreview ? `[Vorschau] ${post.meta_title || post.title}` : (post.meta_title || post.title)"
         :description="post.meta_description || post.excerpt || 'Artikel aus dem Airmius Blog zu Sport, Training, Vereinen und digitaler Organisation.'"
         :image="post.cover_image || '/img/logo/Logo-Airmius-Quervormat.png'"
         type="article"
+        :schema="articleSchema"
+        :noindex="isPreview"
     />
 
     <div class="min-h-screen bg-bg text-primary">
@@ -25,25 +108,53 @@ defineProps({
         <Subnav />
 
         <main class="px-4 pt-36 md:pt-44">
+            <div v-if="isPreview" class="mx-auto mb-6 max-w-4xl rounded-lg border border-air-orange/40 bg-air-orange/10 px-4 py-3 text-sm font-semibold text-air-orange">
+                Vorschau: Dieser Beitrag ist nicht oeffentlich indexierbar.
+            </div>
+
             <article class="mx-auto max-w-4xl">
-                <Link :href="route('guest.blog.index')" class="text-sm font-semibold text-air-blue hover:underline">
-                    Zurück zum Blog
-                </Link>
+                <nav class="mb-6 flex flex-wrap items-center gap-2 text-sm text-secondary" aria-label="Breadcrumb">
+                    <Link :href="route('welcome')" class="hover:text-primary">Startseite</Link>
+                    <span>/</span>
+                    <Link :href="route('guest.blog.index')" class="hover:text-primary">Blog</Link>
+                    <template v-if="post.blog_category?.name || post.category">
+                        <span>/</span>
+                        <Link :href="categoryHref" class="hover:text-primary">{{ post.blog_category?.name || post.category }}</Link>
+                    </template>
+                    <span>/</span>
+                    <span class="text-primary">{{ post.title }}</span>
+                </nav>
 
                 <div class="mt-6 flex flex-wrap items-center gap-2 text-sm text-secondary">
                     <span v-if="post.category" class="rounded-full border border-border px-3 py-1">{{ post.category }}</span>
                     <span>{{ post.author?.name }}</span>
+                    <span v-if="post.published_at">{{ formatDate(post.published_at) }}</span>
+                    <span>{{ post.reading_time_minutes || 1 }} Min. Lesezeit</span>
                 </div>
 
                 <h1 class="mt-4 font-heading text-4xl font-900 leading-tight sm:text-5xl">{{ post.title }}</h1>
                 <p v-if="post.excerpt" class="mt-5 text-lg leading-relaxed text-secondary">{{ post.excerpt }}</p>
 
                 <div v-if="post.cover_image" class="mt-8 overflow-hidden rounded-xl border border-border">
-                    <img :src="post.cover_image" :alt="post.title" class="w-full object-cover" />
+                    <img :src="post.cover_image" :alt="post.title" loading="eager" decoding="async" class="w-full object-cover" />
                 </div>
 
                 <div class="blog-content prose prose-invert mt-10 max-w-none text-primary" v-html="post.content"></div>
             </article>
+
+            <section v-if="relatedPosts.length" class="mx-auto mt-16 max-w-4xl border-t border-border pt-8">
+                <h2 class="font-heading text-2xl font-900 text-primary">Mehr aus dieser Kategorie</h2>
+                <div class="mt-5 grid gap-4 md:grid-cols-3">
+                    <article v-for="related in relatedPosts" :key="related.id" class="rounded-lg border border-border bg-card p-4">
+                        <p class="text-xs text-secondary">{{ related.blog_category?.name || related.category }}</p>
+                        <h3 class="mt-2 text-base font-bold text-primary">{{ related.title }}</h3>
+                        <p class="mt-2 line-clamp-2 text-sm leading-relaxed text-secondary">{{ related.excerpt }}</p>
+                        <Link :href="route('guest.blog.show', related.slug)" class="mt-4 inline-flex text-sm font-semibold text-air-blue hover:underline">
+                            Lesen
+                        </Link>
+                    </article>
+                </div>
+            </section>
         </main>
 
         <Footer />

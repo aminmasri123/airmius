@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\Folder;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class FolderPolicy extends BasePolicy
 {
@@ -20,8 +19,7 @@ class FolderPolicy extends BasePolicy
 
     public function create(User $user)
     {
-        return $user->can('file.view')
-            || $user->can('file.upload')
+        return $user->can('file.upload')
             || $this->isClubAdmin($user)
             || $this->isCoach($user);
     }

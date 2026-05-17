@@ -15,6 +15,8 @@ class AdCampaign extends Model
         'sponsor_id',
         'user_id',
         'club_id',
+        'is_internal',
+        'force_priority',
         'name',
         'headline',
         'description',
@@ -47,6 +49,8 @@ class AdCampaign extends Model
             'ends_at' => 'datetime',
             'reviewed_at' => 'datetime',
             'audience' => 'array',
+            'is_internal' => 'boolean',
+            'force_priority' => 'boolean',
         ];
     }
 

@@ -70,6 +70,9 @@ const submitReturn = () => {
                 <Link :href="route('guest.marketplace')" class="mt-6 inline-flex rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover">
                     Zurück zum Marketplace
                 </Link>
+                <Link v-if="order.learning_course?.url" :href="order.learning_course.url" class="ml-2 mt-6 inline-flex rounded-lg border border-success/40 px-4 py-3 text-sm font-semibold text-success hover:bg-success/10">
+                    Zum Kurs
+                </Link>
             </section>
         </main>
 

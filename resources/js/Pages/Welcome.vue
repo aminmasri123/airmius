@@ -1,7 +1,6 @@
-<script setup>
+﻿<script setup>
 import { useForm } from '@inertiajs/vue3'
-import { ref, watch, onMounted } from 'vue'
-import { Link } from '@inertiajs/vue3'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
@@ -14,22 +13,130 @@ const props = defineProps({
     phpVersion: String,
 })
 
+const safeRoute = (name, fallback = '') => {
+    try {
+        return route().has(name) ? route(name) : fallback
+    } catch (error) {
+        return fallback
+    }
+}
+
 onMounted(() => {
     const theme = localStorage.getItem('theme')
     if (theme) {
         document.documentElement.classList.remove('theme-air', 'theme-dark', 'theme-womanly', 'theme-champion', 'theme-sprint', 'theme-arena', 'theme-pulse', 'theme-trail', 'theme-bazaar')
         document.documentElement.classList.add(`theme-${theme}`)
     }
+
+    const queryVariant = new URLSearchParams(window.location.search).get('hero_variant')
+    const storedVariant = localStorage.getItem('airmius_hero_variant')
+    const resolvedVariant = (queryVariant === 'A' || queryVariant === 'B')
+        ? queryVariant
+        : (storedVariant === 'A' || storedVariant === 'B')
+            ? storedVariant
+            : (Math.random() < 0.5 ? 'A' : 'B')
+
+    heroVariant.value = resolvedVariant
+    localStorage.setItem('airmius_hero_variant', resolvedVariant)
+    trackLandingEvent('landing_view', { hero_variant: resolvedVariant, section: 'hero' })
 })
 // ========================
 // STATE
 // ========================
 const activeTab = ref('sportler')
+const trackLandingEvent = (eventName, payload = {}) => {
+    if (typeof window === 'undefined') {
+        return
+    }
+
+    if (window.dataLayer && typeof window.dataLayer.push === 'function') {
+        window.dataLayer.push({ event: 'landing_event', event_name: eventName, ...payload })
+        return
+    }
+
+    if (window.gtag && typeof window.gtag === 'function') {
+        window.gtag('event', eventName, payload)
+    }
+}
+
+const heroPrimaryCta = computed(() => {
+    return props.canRegister ? safeRoute('register', '/register') : safeRoute('login', '/login')
+})
+const heroPrimaryCtaLabel = computed(() => (props.canRegister ? heroCopy.value.primaryCta : 'Anmelden'))
+const canonicalUrl = computed(() => typeof window !== 'undefined' ? `${window.location.origin}/` : '/')
+const pageSchema = computed(() => {
+    const applicationSchema = {
+        '@type': 'SoftwareApplication',
+        name: 'Airmius',
+        description: 'Plattform für Sportvereine, Teams und Sportler: Organisation, Kommunikation und Vereinsverwaltung an einem Ort.',
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Web',
+        url: typeof window !== 'undefined' ? window.location.origin : undefined,
+    }
+
+    const organizationSchema = {
+        '@type': 'Organization',
+        name: 'Airmius',
+        url: typeof window !== 'undefined' ? `${window.location.origin}/` : undefined,
+        logo: typeof window !== 'undefined' ? `${window.location.origin}/img/logo/Logo-Airmius-Quervormat.png` : undefined,
+    }
+
+    const faqSchema = {
+        '@type': 'FAQPage',
+        mainEntity: faqItems.map((faq) => ({
+            '@type': 'Question',
+            name: faq.question,
+            acceptedAnswer: {
+                '@type': 'Answer',
+                text: faq.answer,
+            },
+        })),
+    }
+
+    return {
+        '@context': 'https://schema.org',
+        '@graph': [applicationSchema, organizationSchema, faqSchema],
+    }
+})
+const contactSubmitRoute = computed(() => safeRoute('contact.store', safeRoute('kontakt.store', '/kontakt-und-melden')))
 
 const tabs = [
-    { key: 'sportler', label: '🏃 Sportler' },
-    { key: 'trainer', label: '🎯 Trainer' },
-    { key: 'vereine', label: '🏢 Vereine' },
+    { key: 'sportler', label: 'Sportler' },
+    { key: 'trainer', label: 'Trainer' },
+    { key: 'vereine', label: 'Vereine' },
+]
+
+const heroTrustItems = [
+    {
+        icon: 'las la-bolt',
+        title: 'Schnell starten',
+        text: 'Ohne Kreditkarte testen',
+    },
+    {
+        icon: 'las la-shield-alt',
+        title: 'DSGVO-konform',
+        text: 'Rollen und Rechte im Griff',
+    },
+    {
+        icon: 'las la-layer-group',
+        title: 'Alles zentral',
+        text: 'Chat, Termine, Teams',
+    },
+]
+
+const proofPoints = [
+    {
+        value: '1 App',
+        label: 'statt WhatsApp, Excel und E-Mail',
+    },
+    {
+        value: '3 Rollen',
+        label: 'Sportler, Trainer und Vereine',
+    },
+    {
+        value: '0 Chaos',
+        label: 'durch klare Kommunikation',
+    },
 ]
 
 // Inertia Form für Validation + Loading State
@@ -38,8 +145,51 @@ const form = useForm({
     email: '',
     message: ''
 })
+const heroVariant = ref('A')
+const heroCopy = computed(() => {
+    if (heroVariant.value === 'B') {
+        return {
+            badge: 'Jetzt 14 Tage kostenlos testen',
+            title: 'Sport-Organisation ohne Chaos',
+            highlight: 'dein Team',
+            subtitle: 'Alles für Sportler, Teams und Vereine in einer App.',
+            primaryCta: 'Jetzt starten',
+            secondaryCta: 'Funktionen sehen',
+        }
+    }
 
+    return {
+        badge: 'Jetzt in der Beta - Kostenlos starten',
+        title: 'Das soziale Netzwerk für deinen',
+        highlight: 'Sport',
+        subtitle: 'Für Sportler, Teams und Vereine. Organisation, Kommunikation und Vernetzung – vereint in einer App.',
+        primaryCta: 'Jetzt kostenlos starten',
+        secondaryCta: 'Vorteile entdecken',
+    }
+})
+const nameInputRef = ref(null)
+const emailInputRef = ref(null)
+const messageInputRef = ref(null)
 const formSuccess = ref(false)
+
+const faqItems = [
+    {
+        question: 'Brauche ich technische Vorkenntnisse, um Airmius zu nutzen?',
+        answer: 'Nein. Airmius ist für Trainer, Spieler und Vereinsverantwortliche gebaut und mit gewohnten Bedienmustern wie Chat, Kalender und Listen intuitiv nutzbar.',
+    },
+    {
+        question: 'Kann ich den Wechsel von WhatsApp und Excel einfach starten?',
+        answer: 'Ja. Viele Prozesse lassen sich direkt übernehmen: Trainingstermine, Teilnahmelisten, Teamstrukturen und Nachrichten, damit nichts verloren geht.',
+    },
+    {
+        question: 'Was kostet der Einstieg?',
+        answer: 'Der Einstieg ist schnell möglich. Wir helfen dir dabei, den passenden Paketumfang passend zur Teamgröße zu finden.',
+    },
+    {
+        question: 'Wie ist der Datenschutz geregelt?',
+        answer: 'Die Plattform legt Wert auf Rollensteuerung, Datensicherheit und transparente Verwaltung durch zentrale Berechtigungen.',
+    },
+]
 
 // ========================
 // METHODS
@@ -47,6 +197,40 @@ const formSuccess = ref(false)
 
 const switchTab = (tab) => {
     activeTab.value = tab
+    trackLandingEvent('audience_tab_click', {
+        hero_variant: heroVariant.value,
+        audience: tab,
+    })
+}
+
+const onTabKeydown = (event) => {
+    const currentIndex = tabs.findIndex((tab) => tab.key === activeTab.value)
+    if (currentIndex === -1) {
+        return
+    }
+
+    const key = event.key
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) {
+        return
+    }
+
+    event.preventDefault()
+
+    let nextIndex = currentIndex
+    if (key === 'ArrowRight') {
+        nextIndex = (currentIndex + 1) % tabs.length
+    } else if (key === 'ArrowLeft') {
+        nextIndex = (currentIndex - 1 + tabs.length) % tabs.length
+    } else if (key === 'Home') {
+        nextIndex = 0
+    } else if (key === 'End') {
+        nextIndex = tabs.length - 1
+    }
+
+    activeTab.value = tabs[nextIndex].key
+    nextTick(() => {
+        document.getElementById(`tab-${tabs[nextIndex].key}`)?.focus()
+    })
 }
 
 const scrollTo = (id) => {
@@ -58,21 +242,129 @@ const scrollTo = (id) => {
 
     window.scrollTo({
         top: elementPosition - offset,
-        behavior: 'smooth',
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
     })
 }
 
+const validateContactForm = () => {
+    form.clearErrors()
+    const trimmedName = form.name.trim()
+    const trimmedEmail = form.email.trim()
+    const trimmedMessage = form.message.trim()
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+    if (!trimmedName) {
+        form.setError('name', 'Bitte gib deinen Namen ein.')
+    }
+
+    if (!trimmedEmail) {
+        form.setError('email', 'Bitte gib deine E-Mail-Adresse ein.')
+    } else if (!emailPattern.test(trimmedEmail)) {
+        form.setError('email', 'Bitte gib eine gültige E-Mail-Adresse ein.')
+    }
+
+    if (!trimmedMessage) {
+        form.setError('message', 'Bitte schreibe uns mindestens eine kurze Nachricht.')
+    } else if (trimmedMessage.length < 8) {
+        form.setError('message', 'Bitte formuliere deine Nachricht etwas ausführlicher.')
+    }
+
+    if (Object.keys(form.errors).length > 0) {
+        if (form.errors.name && nameInputRef.value) {
+            nextTick(() => nameInputRef.value.focus())
+        } else if (form.errors.email && emailInputRef.value) {
+            nextTick(() => emailInputRef.value.focus())
+        } else if (form.errors.message && messageInputRef.value) {
+            nextTick(() => messageInputRef.value.focus())
+        }
+        trackLandingEvent('contact_form_validation_error', {
+            hero_variant: heroVariant.value,
+            errors: Object.keys(form.errors).join(','),
+        })
+        return false
+    }
+
+    return true
+}
+
+const clearFieldError = (field) => {
+    if (!form.errors[field]) {
+        return
+    }
+
+    if (typeof form.clearErrors === 'function') {
+        form.clearErrors(field)
+    }
+}
+
 const submitForm = () => {
-    form.post(route('contact.store'), {
+    if (form.processing) {
+        return
+    }
+
+    if (!validateContactForm()) {
+        return
+    }
+
+    trackLandingEvent('contact_form_submit_attempt', {
+        hero_variant: heroVariant.value,
+        message_length: form.message.trim().length,
+    })
+
+    form.post(contactSubmitRoute.value, {
         preserveScroll: true,
+        preserveState: true,
         onSuccess: () => {
             form.reset()
+            form.clearErrors()
             formSuccess.value = true
+            trackLandingEvent('contact_form_submit_success', {
+                hero_variant: heroVariant.value,
+            })
             setTimeout(() => formSuccess.value = false, 3000)
+        },
+        onError: () => {
+            formSuccess.value = false
+            trackLandingEvent('contact_form_submit_error', {
+                hero_variant: heroVariant.value,
+            })
         },
     })
 }
 
+const onHeroPrimaryCtaClick = () => {
+    trackLandingEvent('hero_primary_cta_click', {
+        hero_variant: heroVariant.value,
+        location: 'hero',
+        destination: heroPrimaryCta.value,
+    })
+}
+
+const onHeroSecondaryCtaClick = () => {
+    trackLandingEvent('hero_secondary_cta_click', {
+        hero_variant: heroVariant.value,
+        location: 'hero',
+        target: 'vorteile',
+    })
+    scrollTo('vorteile')
+}
+
+const onBannerPrimaryCtaClick = () => {
+    trackLandingEvent('cta_banner_primary_click', {
+        hero_variant: heroVariant.value,
+        location: 'cta_banner',
+        destination: heroPrimaryCta.value,
+    })
+}
+
+const onBannerSecondaryCtaClick = () => {
+    trackLandingEvent('cta_banner_secondary_click', {
+        hero_variant: heroVariant.value,
+        location: 'cta_banner',
+        target: 'funktionen',
+    })
+    scrollTo('funktionen')
+}
 
 </script>
 
@@ -81,7 +373,12 @@ const submitForm = () => {
     <SeoHead
         title="Airmius - Sportvereine, Teams und Sportler digital vernetzen"
         description="Airmius ist die Plattform für Sportler, Trainer, Teams und Vereine: Organisation, Kommunikation, Trainingsplanung und Vereinsverwaltung an einem Ort."
+        :schema="pageSchema"
+        :canonical="canonicalUrl"
     />
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:bg-card focus:px-4 focus:py-2 focus:rounded-lg focus:border focus:border-border">
+        Zum Seiteninhalt springen
+    </a>
     <div id="app" class="w-full h-full bg-bg text-primary overflow-auto">
         <!-- NAV -->
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
@@ -89,47 +386,50 @@ const submitForm = () => {
         <!-- SUB NAV -->
          <Subnav />
 
-
-
+        <!-- MAIN CONTENT -->
+        <main id="main-content">
 
         <!-- HERO -->
-        <section id="hero" class="pt-24 pb-16 sm:pt-36 sm:pb-24 px-4 min-h-screen sm:h-dvh flex items-center">
+        <section id="hero" class="pt-16 pb-14 sm:pt-36 sm:pb-20 px-4 min-h-[calc(100dvh-5rem)] sm:min-h-[calc(100dvh-7rem)] flex items-center">
             <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-32">
                 <div class="flex-1 text-center lg:text-left">
                     <div
                         class="anim-fade inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-xs font-medium text-air-green mb-6">
-                        <span class="pulse-dot bg-air-green"></span> Jetzt in der Beta – Kostenlos starten
+                        <span class="pulse-dot bg-air-green"></span> {{ heroCopy.badge }}
                     </div>
                     <h1 id="hero-title"
                         class="anim-fade-d1 font-heading font-900 text-4xl sm:text-5xl lg:text-6xl leading-tight tracking-tight">
-                        Das soziale Netzwerk <br>
-                        für deinen <span
-                            class="bg-gradient-to-r from-air-blue via-air-green to-air-orange bg-clip-text text-transparent">Sport</span>
+                        {{ heroCopy.title }} <br>
+                        <span
+                            class="bg-gradient-to-r from-air-blue via-air-green to-air-orange bg-clip-text text-transparent">{{ heroCopy.highlight }}</span>
                     </h1>
                     <p id="hero-subtitle"
                         class="anim-fade-d2 mt-5 text-gray-400 text-lg sm:text-xl max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                        Für Sportler, Teams und Vereine. Organisation, Kommunikation und Vernetzung – vereint in einer
-                        App.
+                        {{ heroCopy.subtitle }}
                     </p>
                     <div class="anim-fade-d3 mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-                        <button @click="scrollTo('kontakt')"
+                        <a :href="heroPrimaryCta" :aria-label="heroPrimaryCtaLabel" @click="onHeroPrimaryCtaClick"
                             class="bg-air-blue hover:bg-blue-600 glow-blue text-white font-bold px-8 py-3.5 rounded-full text-center transition">
-                            Jetzt starten
-                        </button>
-                        <button @click="scrollTo('vorteile')"
+                            {{ heroPrimaryCtaLabel }}
+                        </a>
+                        <button type="button" @click="onHeroSecondaryCtaClick"
                             class="border border-white/15 hover:border-white/30 text-white font-semibold px-8 py-3.5 rounded-full text-center transition">
-                            Kostenlos registrieren
+                            {{ heroCopy.secondaryCta }}
                         </button>
                     </div>
-                    <!-- Badge Zeile: umbrechen erlauben -->
                     <div
                         class="anim-fade-d4 mt-8 flex flex-wrap items-center gap-4 justify-center lg:justify-start text-sm text-gray-500">
-                        <span class="flex items-center gap-1.5"><i
-                                class="las la-check-circle text-air-green"></i>Kostenlos</span>
-                        <span class="flex items-center gap-1.5"><i class="las la-check-circle text-air-green"></i>Keine
-                            Kreditkarte</span>
-                        <span class="flex items-center gap-1.5"><i
-                                class="las la-check-circle text-air-green"></i>DSGVO-konform</span>
+                        <span v-for="item in heroTrustItems" :key="item.title" class="flex items-center gap-1.5">
+                            <i class="las la-check-circle text-air-green" aria-hidden="true"></i>{{ item.title }}
+                        </span>
+                    </div>
+                    <div class="anim-fade-d4 mt-6 hidden sm:grid sm:grid-cols-3 gap-3 max-w-2xl mx-auto lg:mx-0">
+                        <div v-for="item in heroTrustItems" :key="item.text"
+                            class="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left">
+                            <i :class="[item.icon, 'text-air-green text-xl mb-2']" aria-hidden="true"></i>
+                            <div class="font-heading font-700 text-sm text-white">{{ item.title }}</div>
+                            <p class="mt-1 text-xs text-gray-500 leading-snug">{{ item.text }}</p>
+                        </div>
                     </div>
                 </div>
 
@@ -153,7 +453,7 @@ const submitForm = () => {
                                 </div>
                                 <div>
                                     <div class="text-xs text-gray-400">Team Chat</div>
-                                    <div class="text-sm font-medium">Training morgen um 18:00 👍</div>
+                                    <div class="text-sm font-medium">Training morgen um 18:00 OK</div>
                                 </div>
                             </div>
 
@@ -204,8 +504,8 @@ const submitForm = () => {
                 <div class="text-center mb-14">
                     <h2 class="font-heading font-800 text-3xl sm:text-4xl">Statt <span class="text-red-400">5
                             Tools</span> nur <span class="text-air-green">eine Lösung</span></h2>
-                    <p class="text-gray-400 mt-3 max-w-2xl mx-auto">WhatsApp, Excel, OneNote, E-Mail, Telefon⁉️</p>
-                    <p class="text-gray-400 mt-2"> Schluss mit dem Chaos❗ AIRMIUS vereint alles.</p>
+                    <p class="text-gray-400 mt-3 max-w-2xl mx-auto">WhatsApp, Excel, OneNote, E-Mail, Telefon?!</p>
+                    <p class="text-gray-400 mt-2"> Schluss mit dem Chaos! AIRMIUS vereint alles.</p>
                 </div>
                 <div class="grid sm:grid-cols-3 gap-6">
                     <div class="grad-card rounded-2xl p-6 text-center">
@@ -243,6 +543,13 @@ const submitForm = () => {
                         </div>
                     </div>
                 </div>
+                <div class="mt-10 grid sm:grid-cols-3 gap-4">
+                    <div v-for="point in proofPoints" :key="point.value"
+                        class="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4 text-center">
+                        <div class="font-heading font-800 text-2xl text-white">{{ point.value }}</div>
+                        <p class="mt-1 text-xs text-gray-500">{{ point.label }}</p>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -264,8 +571,12 @@ const submitForm = () => {
 
                 <!-- Tabs: Mobil nur Icons, horizontal scroll -->
                 <div class="mb-8 sm:mb-10 flex justify-center px-4">
-                    <div class="inline-flex bg-white/5 rounded-full p-1 gap-1 flex-wrap justify-center">
-                        <button v-for="tab in tabs" :key="tab.key" @click="switchTab(tab.key)" :class="[
+                    <div class="inline-flex bg-white/5 rounded-full p-1 gap-1 flex-wrap justify-center" role="tablist"
+                        aria-label="Zielgruppen">
+                        <button v-for="tab in tabs" :key="tab.key" type="button" :id="`tab-${tab.key}`"
+                            :aria-controls="`tabpanel-${tab.key}`" :aria-selected="activeTab === tab.key"
+                            :tabindex="activeTab === tab.key ? 0 : -1" @click="switchTab(tab.key)"
+                            @keydown="onTabKeydown" :class="[
                             'rounded-full px-4 sm:px-5 py-2.5 text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap',
                             activeTab === tab.key ? 'tab-active' : 'text-gray-400 hover:text-white'
                         ]">
@@ -275,7 +586,7 @@ const submitForm = () => {
                 </div>
 
                 <!-- Sportler: 2 Spalten mobil -->
-                <div v-show="activeTab === 'sportler'"
+                <div v-show="activeTab === 'sportler'" id="tabpanel-sportler" role="tabpanel" aria-labelledby="tab-sportler"
                     class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
                         <div
@@ -392,7 +703,7 @@ const submitForm = () => {
                 </div>
 
                 <!-- Trainer: 1 Spalte mobil -->
-                <div v-show="activeTab === 'trainer'"
+                <div v-show="activeTab === 'trainer'" id="tabpanel-trainer" role="tabpanel" aria-labelledby="tab-trainer"
                     class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
                         <div
@@ -462,7 +773,7 @@ const submitForm = () => {
                 </div>
 
                 <!-- Vereine: 1 Spalte mobil -->
-                <div v-show="activeTab === 'vereine'"
+                <div v-show="activeTab === 'vereine'" id="tabpanel-vereine" role="tabpanel" aria-labelledby="tab-vereine"
                     class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
                         <div
@@ -674,7 +985,7 @@ const submitForm = () => {
                     </div>
                     <div
                         class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-white/10 transition">
-                        <span class="text-3xl">➕</span>
+                        <span class="text-3xl">+</span>
                         <span class="font-heading font-600 text-gray-400">und viele mehr</span>
                     </div>
                 </div>
@@ -794,6 +1105,27 @@ const submitForm = () => {
             </div>
         </section>
 
+        <!-- FAQ -->
+        <section id="faq" class="py-16 sm:py-24 px-4 border-t border-white/5">
+            <div class="max-w-3xl mx-auto">
+                <div class="text-center mb-10">
+                    <span class="text-air-blue text-xs sm:text-sm font-semibold uppercase tracking-wider">FAQ</span>
+                    <h2 class="font-heading font-800 text-2xl sm:text-3xl mt-2">Häufige Fragen</h2>
+                    <p class="text-gray-400 mt-3 text-sm sm:text-base">Alles, was du vor dem Start wissen musst.</p>
+                </div>
+                <div class="space-y-3">
+                    <details v-for="faq in faqItems" :key="faq.question" class="grad-card rounded-2xl p-4 sm:p-5">
+                        <summary
+                            class="cursor-pointer list-none text-sm sm:text-base font-heading font-600 text-white flex justify-between items-center">
+                            {{ faq.question }}
+                            <span aria-hidden="true" class="ml-4 text-xs text-air-green">+</span>
+                        </summary>
+                        <p class="text-sm text-gray-400 mt-3 leading-relaxed">{{ faq.answer }}</p>
+                    </details>
+                </div>
+            </div>
+        </section>
+
         <!-- KONTAKT -->
         <section id="kontakt" class="py-16 sm:py-24 px-4 border-t border-white/5"
             style="background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(0,102,255,.08) 0%, transparent 50%);">
@@ -803,55 +1135,83 @@ const submitForm = () => {
                     <h2 class="font-heading font-800 text-3xl sm:text-4xl mt-2">Schreib uns</h2>
                     <p class="text-gray-400 mt-3">Fragen, Feedback oder Partnerschaften? Wir freuen uns auf dich.</p>
                 </div>
-                <form @submit.prevent="submitForm" class="grad-card rounded-2xl p-6 sm:p-8 space-y-5">
+                <h3 id="kontakt-form-title" class="font-heading font-700 text-lg sm:text-xl text-white mb-2">
+                    Kontakt aufnehmen</h3>
+                <p id="kontakt-form-hinweis" class="text-xs text-gray-400 mb-2">
+                    Wir antworten so schnell wie möglich.</p>
+                <form novalidate @submit.prevent="submitForm" class="grad-card rounded-2xl p-6 sm:p-8 space-y-5"
+                    aria-labelledby="kontakt-form-title" aria-describedby="kontakt-form-hinweis">
                     <div class="grid sm:grid-cols-2 gap-5">
                         <div>
                             <label for="cf-name" class="block text-sm font-medium text-gray-300 mb-1.5">Name</label>
-                            <input id="cf-name" v-model="form.name" type="text" placeholder="Dein Name"
+                            <input id="cf-name" v-model="form.name" name="name" autocomplete="name" required
+                                :aria-invalid="Boolean(form.errors.name)"
+                                :aria-describedby="form.errors.name ? 'cf-name-error' : 'cf-name-help'" type="text"
+                                ref="nameInputRef" placeholder="Dein Name" @input="clearFieldError('name')"
                                 class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-air-blue/50 transition">
-                            <div v-if="form.errors.name" class="text-red-400 text-xs mt-1">{{ form.errors.name }}</div>
+                            <p id="cf-name-help" class="sr-only text-gray-500 text-xs mt-1">Bitte gib deinen Namen ein.</p>
+                            <div v-if="form.errors.name" id="cf-name-error" role="alert" class="text-red-400 text-xs mt-1">{{ form.errors.name }}</div>
                         </div>
                         <div>
                             <label for="cf-email" class="block text-sm font-medium text-gray-300 mb-1.5">E-Mail</label>
-                            <input id="cf-email" v-model="form.email" type="email" placeholder="deine@email.de"
+                            <input id="cf-email" v-model="form.email" name="email" autocomplete="email" required
+                                :aria-invalid="Boolean(form.errors.email)"
+                                :aria-describedby="form.errors.email ? 'cf-email-error' : 'cf-email-help'" type="email"
+                                ref="emailInputRef"
+                                @input="clearFieldError('email')"
+                                placeholder="deine@email.de"
                                 class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-air-blue/50 transition">
-                            <div v-if="form.errors.email" class="text-red-400 text-xs mt-1">{{ form.errors.email }}
+                            <p id="cf-email-help" class="sr-only text-gray-500 text-xs mt-1">Bitte gib eine gültige E-Mail-Adresse an.</p>
+                            <div v-if="form.errors.email" id="cf-email-error" class="text-red-400 text-xs mt-1">{{ form.errors.email }}
                             </div>
                         </div>
                     </div>
                     <div>
                         <label for="cf-msg" class="block text-sm font-medium text-gray-300 mb-1.5">Nachricht</label>
-                        <textarea id="cf-msg" v-model="form.message" rows="4" placeholder="Was möchtest du uns sagen?"
+                        <textarea id="cf-msg" v-model="form.message" name="message" required rows="4"
+                            :aria-invalid="Boolean(form.errors.message)"
+                            :aria-describedby="form.errors.message ? 'cf-message-error' : 'cf-msg-help'"
+                            placeholder="Was möchtest du uns sagen?"
+                            ref="messageInputRef" @input="clearFieldError('message')"
                             class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-air-blue/50 transition resize-none"></textarea>
-                        <div v-if="form.errors.message" class="text-red-400 text-xs mt-1">{{ form.errors.message }}
-                        </div>
+                            <p id="cf-msg-help" class="sr-only text-gray-500 text-xs mt-1">Kurze Anwendungsfrage, Feedback oder Supportbedarf.</p>
+                            <div v-if="form.errors.message" id="cf-message-error" class="text-red-400 text-xs mt-1">{{ form.errors.message }}
+                            </div>
                     </div>
                     <button type="submit" :disabled="form.processing"
                         class="w-full bg-air-blue hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-full transition">
                         <span v-if="form.processing">Wird gesendet...</span>
                         <span v-else>Nachricht senden</span>
                     </button>
-                    <div v-show="formSuccess" class="text-center text-air-green text-sm font-medium py-2">
-                        ✅ Danke! Deine Nachricht wurde gesendet.
+                    <div v-show="formSuccess" role="status" aria-live="polite" class="text-center text-air-green text-sm font-medium py-2">
+                        Danke! Deine Nachricht wurde gesendet.
                     </div>
                 </form>
                 <div class="mt-8 flex justify-center gap-5">
-                    <a href="#"
+                    <button type="button" @click="scrollTo('blog')"
+                        aria-label="Zum Blog-Bereich scrollen"
                         class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:border-air-blue/50 transition">
-                        <i class="lab la-instagram text-gray-400"></i>
-                    </a>
-                    <a href="#"
+                        <i class="lab la-instagram text-gray-400" aria-hidden="true"></i>
+                        <span class="sr-only">Blog lesen</span>
+                    </button>
+                    <button type="button" @click="scrollTo('funktionen')"
+                        aria-label="Zum Funktionsbereich scrollen"
                         class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:border-air-blue/50 transition">
-                        <i class="lab la-twitter text-gray-400"></i>
-                    </a>
-                    <a href="#"
+                        <i class="lab la-twitter text-gray-400" aria-hidden="true"></i>
+                        <span class="sr-only">Funktionen ansehen</span>
+                    </button>
+                    <button type="button" @click="scrollTo('ueber')"
+                        aria-label="Zum Über-uns-Bereich scrollen"
                         class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:border-air-blue/50 transition">
-                        <i class="lab la-linkedin text-gray-400"></i>
-                    </a>
-                    <a href="#"
+                        <i class="lab la-linkedin text-gray-400" aria-hidden="true"></i>
+                        <span class="sr-only">Über uns ansehen</span>
+                    </button>
+                    <button type="button" @click="scrollTo('kontakt')"
+                        aria-label="Zum Kontaktformular scrollen"
                         class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:border-air-blue/50 transition">
-                        <i class="lab la-facebook text-gray-400"></i>
-                    </a>
+                        <i class="lab la-facebook text-gray-400" aria-hidden="true"></i>
+                        <span class="sr-only">Kontaktbereich</span>
+                    </button>
                 </div>
             </div>
         </section>
@@ -864,20 +1224,22 @@ const submitForm = () => {
                 <p class="text-gray-400 mt-3 max-w-lg mx-auto">Starte jetzt kostenlos und erlebe, wie einfach
                     Sportorganisation sein kann.</p>
                 <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-                    <button @click="scrollTo('hero')"
+                    <a :href="heroPrimaryCta" @click="onBannerPrimaryCtaClick"
                         class="bg-air-blue hover:bg-blue-600 glow-blue text-white font-bold px-8 py-3.5 rounded-full transition">
-                        Kostenlos starten
-                    </button>
-                    <button @click="scrollTo('funktionen')"
+                        {{ heroCopy.primaryCta }}
+                    </a>
+                    <button type="button" @click="onBannerSecondaryCtaClick"
                         class="border border-white/15 hover:border-white/30 text-white font-semibold px-8 py-3.5 rounded-full transition">
-                        Funktionen entdecken
+                        {{ heroCopy.secondaryCta }}
                     </button>
                 </div>
             </div>
         </section>
 
+        </main>
+
         <!-- FOOTER -->
-        <Footer/>
+        <Footer />
     </div>
 </template>
 <style scoped>
@@ -960,4 +1322,26 @@ const submitForm = () => {
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
+
+details[open] summary span {
+    transform: rotate(45deg);
+}
+
+details summary::-webkit-details-marker {
+    display: none;
+}
+
+details summary {
+    list-style: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .float-loop,
+    .card-item {
+        animation: none;
+    }
+}
 </style>
+
+
+
