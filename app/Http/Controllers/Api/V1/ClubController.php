@@ -61,6 +61,7 @@ class ClubController extends Controller
     public function members(Request $request, Club $club)
     {
         $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageMembership($request, $club), 403);
 
         $members = $club->users()
             ->withCount(['invoices', 'payments'])
@@ -73,26 +74,23 @@ class ClubController extends Controller
     public function billing(Request $request, Club $club)
     {
         $this->authorizeVisible($request, $club);
-
-        $canManage = $this->canManageMembership($request, $club);
+        abort_unless($this->canManageMembership($request, $club), 403);
 
         $invoices = Invoice::query()
             ->where('club_id', $club->id)
-            ->when(! $canManage, fn ($query) => $query->where('user_id', $request->user()->id))
             ->with(['club', 'user'])
             ->latest('id')
             ->paginate($this->perPage($request), ['*'], 'invoices_page');
 
         $payments = Payment::query()
             ->where('club_id', $club->id)
-            ->when(! $canManage, fn ($query) => $query->where('user_id', $request->user()->id))
             ->with(['club', 'invoice'])
             ->latest('id')
             ->paginate($this->perPage($request), ['*'], 'payments_page');
 
         return response()->json([
             'data' => [
-                'can_manage' => $canManage,
+                'can_manage' => true,
                 'invoices' => InvoiceResource::collection($invoices)->response()->getData(true),
                 'payments' => PaymentResource::collection($payments)->response()->getData(true),
             ],

@@ -70,6 +70,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::post('/training/plans/{plan}/items/{item}/duplicate', [TrainingController::class, 'duplicatePlanItem'])->name('auth.training.plans.items.duplicate');
     Route::delete('/training/plans/{plan}/items/{item}', [TrainingController::class, 'destroyPlanItem'])->name('auth.training.plans.items.destroy');
     Route::get('/sport-map', [SportMapController::class, 'index'])->name('auth.sport-map.index');
+    Route::post('/sport-route-proposals', [SportMapController::class, 'generateRouteProposal'])->name('auth.sport-route-proposals.store');
     Route::post('/sport-routes', [SportMapController::class, 'storeRoute'])->name('auth.sport-routes.store');
     Route::put('/sport-routes/{sportRoute}', [SportMapController::class, 'updateRoute'])->name('auth.sport-routes.update');
     Route::delete('/sport-routes/{sportRoute}', [SportMapController::class, 'destroyRoute'])->name('auth.sport-routes.destroy');

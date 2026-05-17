@@ -269,10 +269,61 @@ const autosaveError = ref('')
 const activeGymExerciseIndex = ref(0)
 const activeGymSetIndex = ref(0)
 const activeEntryIndex = ref(0)
+const currentTrainingStep = ref(1)
 let restInterval = null
 let liveInterval = null
 let autosaveTimer = null
 let autosaveRequestId = 0
+
+const trainingSteps = [
+    { id: 1, label: 'Training waehlen', short: 'Start' },
+    { id: 2, label: 'Dokumentieren', short: 'Doku' },
+    { id: 3, label: 'Abschliessen', short: 'Finish' },
+]
+
+const trainingTypeThemes = {
+    gym: {
+        active: 'border-sky-400 bg-sky-500 text-white shadow-sm shadow-sky-500/20',
+        idle: 'border-sky-500/30 bg-sky-500/10 text-sky-100 hover:border-sky-400/70 hover:bg-sky-500/20',
+        icon: 'bg-sky-400/20 text-sky-100',
+    },
+    run_interval: {
+        active: 'border-amber-300 bg-amber-400 text-slate-950 shadow-sm shadow-amber-400/20',
+        idle: 'border-amber-400/30 bg-amber-400/10 text-amber-100 hover:border-amber-300/70 hover:bg-amber-400/20',
+        icon: 'bg-amber-300/20 text-amber-100',
+    },
+    long_run: {
+        active: 'border-emerald-300 bg-emerald-500 text-white shadow-sm shadow-emerald-500/20',
+        idle: 'border-emerald-400/30 bg-emerald-500/10 text-emerald-100 hover:border-emerald-300/70 hover:bg-emerald-500/20',
+        icon: 'bg-emerald-400/20 text-emerald-100',
+    },
+    swim: {
+        active: 'border-cyan-300 bg-cyan-500 text-slate-950 shadow-sm shadow-cyan-500/20',
+        idle: 'border-cyan-400/30 bg-cyan-500/10 text-cyan-100 hover:border-cyan-300/70 hover:bg-cyan-500/20',
+        icon: 'bg-cyan-300/20 text-cyan-100',
+    },
+    football: {
+        active: 'border-lime-300 bg-lime-500 text-slate-950 shadow-sm shadow-lime-500/20',
+        idle: 'border-lime-400/30 bg-lime-500/10 text-lime-100 hover:border-lime-300/70 hover:bg-lime-500/20',
+        icon: 'bg-lime-300/20 text-lime-100',
+    },
+    cycling: {
+        active: 'border-fuchsia-300 bg-fuchsia-500 text-white shadow-sm shadow-fuchsia-500/20',
+        idle: 'border-fuchsia-400/30 bg-fuchsia-500/10 text-fuchsia-100 hover:border-fuchsia-300/70 hover:bg-fuchsia-500/20',
+        icon: 'bg-fuchsia-400/20 text-fuchsia-100',
+    },
+    generic: {
+        active: 'border-indigo-300 bg-indigo-500 text-white shadow-sm shadow-indigo-500/20',
+        idle: 'border-indigo-400/30 bg-indigo-500/10 text-indigo-100 hover:border-indigo-300/70 hover:bg-indigo-500/20',
+        icon: 'bg-indigo-400/20 text-indigo-100',
+    },
+}
+
+const trainingTypeTheme = (key) => trainingTypeThemes[key] || trainingTypeThemes.generic
+
+const trainingTypeButtonClass = (type) => form.training_type === type.key
+    ? trainingTypeTheme(type.key).active
+    : trainingTypeTheme(type.key).idle
 
 const sportChoices = computed(() => {
     const catalog = (props.sportCatalog || [])
@@ -301,8 +352,9 @@ const selectedType = computed(() => trainingTypes.find((type) => type.key === fo
 const visibleFields = computed(() => selectedType.value.fields || [])
 const usesGymSets = computed(() => selectedType.value.mode === 'sets')
 const selectedTemplates = computed(() => detailTemplates[selectedType.value.key] || [])
-
-const hasField = (field) => visibleFields.value.includes(field)
+const hasField = (field) => field !== 'intensity' && visibleFields.value.includes(field)
+const showSessionDistance = computed(() => !usesGymSets.value && hasField('distance_km'))
+const showQuickDistanceAction = computed(() => !usesGymSets.value && hasField('distance_km'))
 
 const visibleEntries = computed(() => form.entries.filter((entry) => entry.title || entry.distance_km || entry.duration_minutes || entry.notes))
 
@@ -749,6 +801,11 @@ const setActiveGymSet = (exerciseIndex, setIndex) => {
     activeGymSetIndex.value = setIndex
 }
 
+const setActiveGymExercise = (exerciseIndex) => {
+    activeGymExerciseIndex.value = exerciseIndex
+    activeGymSetIndex.value = 0
+}
+
 const adjustActiveGymSet = (field, delta, step = 1) => {
     if (!activeGymSet.value) return
 
@@ -1004,18 +1061,44 @@ onUnmounted(() => {
 <template>
     <Head title="Training dokumentieren" />
 
-    <div class="space-y-5 pb-24 xl:pb-0">
-        <section class="rounded-2xl border border-border bg-card p-5">
-            <div class="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Trainingsdokumentation</p>
-                    <h1 class="mt-1 text-2xl font-semibold text-primary">Training dokumentieren</h1>
-                    <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
-                        Erfasse geplante oder spontane Trainingseinheiten mit passenden Feldern fuer deine Trainingsart.
-                    </p>
+    <div class="space-y-4 pb-32 xl:pb-0">
+        <section class="overflow-hidden rounded-2xl border border-border bg-card">
+            <div class="border-b border-border bg-inputBg/30 p-4 sm:p-5">
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div class="min-w-0">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Training</p>
+                        <h1 class="mt-1 text-2xl font-semibold text-primary sm:text-3xl">Dokumentieren</h1>
+                        <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
+                            Schnell erfassen, Saetze abhaken, bei Bedarf spaeter Details ergaenzen.
+                        </p>
+                    </div>
+                    <Link :href="route('auth.training.index')" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
+                        Zurueck
+                    </Link>
+                </div>
+            </div>
+            <div class="grid gap-2 p-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div class="rounded-xl border border-border bg-inputBg/40 p-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-secondary">Vorlage</p>
+                    <p class="mt-1 truncate text-sm font-semibold text-primary">{{ selectedType.label }}</p>
+                </div>
+                <div class="rounded-xl border border-border bg-inputBg/40 p-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-secondary">Status</p>
+                    <p class="mt-1 truncate text-sm font-semibold text-primary">{{ detailSummary }}</p>
+                </div>
+                <div class="rounded-xl border border-border bg-inputBg/40 p-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-secondary">Qualitaet</p>
+                    <div class="mt-2 flex items-center gap-2">
+                        <div class="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                            <div class="h-full rounded-full bg-air-blue" :style="{ width: `${documentationScore}%` }"></div>
+                        </div>
+                        <span class="text-sm font-semibold" :class="documentationScoreClass">{{ documentationScore }}%</span>
+                    </div>
+                </div>
+                <div class="rounded-xl border border-border bg-inputBg/40 p-3">
                     <p
                         v-if="draftLog"
-                        class="mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-semibold"
+                        class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold"
                         :class="autosaveStatus === 'error' ? 'border-danger/40 bg-danger/10 text-danger' : autosaveStatus === 'saving' || autosaveStatus === 'dirty' ? 'border-air-blue/40 bg-air-blue/10 text-air-blue' : 'border-success/40 bg-success/10 text-success'"
                     >
                         <span v-if="autosaveStatus === 'saving'">Entwurf wird gespeichert...</span>
@@ -1023,10 +1106,8 @@ onUnmounted(() => {
                         <span v-else-if="autosaveStatus === 'error'">{{ autosaveError }}</span>
                         <span v-else>Entwurf gespeichert{{ autosaveSavedAt ? ` um ${formatSaveTime(autosaveSavedAt)}` : '' }}</span>
                     </p>
+                    <p v-else class="text-sm font-semibold text-secondary">Noch kein Entwurf</p>
                 </div>
-                <Link :href="route('auth.training.index')" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
-                    Zurueck
-                </Link>
             </div>
         </section>
 
@@ -1038,28 +1119,46 @@ onUnmounted(() => {
             {{ $page.props.flash?.success || $page.props.flash?.error }}
         </div>
 
-        <form class="grid gap-5 xl:grid-cols-[1fr_360px]" @submit.prevent="submit">
-            <section class="space-y-5 rounded-2xl border border-border bg-card p-5">
+        <form class="grid items-start gap-5 2xl:grid-cols-[minmax(0,1fr)_340px]" @submit.prevent="submit">
+            <div class="min-w-0 self-start rounded-2xl border border-border bg-card p-2 2xl:col-span-2">
+                <div class="grid gap-2 sm:grid-cols-3">
+                    <button
+                        v-for="step in trainingSteps"
+                        :key="step.id"
+                        type="button"
+                        class="rounded-xl px-3 py-3 text-left transition"
+                        :class="currentTrainingStep === step.id ? 'bg-air-blue text-white shadow-sm shadow-air-blue/20' : 'bg-inputBg/40 text-secondary hover:bg-muted hover:text-primary'"
+                        @click="currentTrainingStep = step.id"
+                    >
+                        <span class="block text-[11px] font-semibold uppercase tracking-wide">Schritt {{ step.id }}</span>
+                        <span class="mt-1 block text-sm font-semibold">{{ step.label }}</span>
+                    </button>
+                </div>
+            </div>
+
+            <section v-show="currentTrainingStep === 1" class="min-w-0 space-y-5 rounded-2xl border border-border bg-card p-4 sm:p-5 2xl:col-start-1 2xl:row-start-2">
                 <div class="grid gap-4 md:grid-cols-2">
                     <div class="md:col-span-2">
                         <div class="flex items-end justify-between gap-3">
                             <div>
                                 <p class="text-sm font-semibold text-primary">Trainingsart</p>
-                                <p class="mt-1 text-xs text-secondary">Waehle zuerst den passenden Flow.</p>
+                                <p class="mt-1 text-xs text-secondary">Wische auf dem Handy seitlich durch die Vorlagen.</p>
                             </div>
                             <span class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">{{ detailSummary }}</span>
                         </div>
-                        <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
+                        <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
                             <button
                                 v-for="type in trainingTypes"
                                 :key="type.key"
                                 type="button"
-                                class="min-h-20 rounded-2xl border p-3 text-left transition"
-                                :class="form.training_type === type.key ? 'border-air-blue bg-air-blue/10 text-primary shadow-sm shadow-air-blue/10' : 'border-border bg-inputBg/40 text-secondary hover:bg-muted'"
+                                class="flex min-h-12 items-center gap-2 rounded-2xl border px-3 py-2.5 text-left transition"
+                                :class="trainingTypeButtonClass(type)"
                                 @click="selectTrainingType(type.key)"
                             >
-                                <i :class="type.icon" class="text-xl"></i>
-                                <span class="mt-2 block text-sm font-semibold">{{ type.shortLabel }}</span>
+                                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl" :class="trainingTypeTheme(type.key).icon">
+                                    <i :class="type.icon" class="text-lg"></i>
+                                </span>
+                                <span class="min-w-0 truncate text-sm font-semibold">{{ type.shortLabel }}</span>
                             </button>
                         </div>
                     </div>
@@ -1151,35 +1250,9 @@ onUnmounted(() => {
                     <label class="block text-sm font-semibold text-primary">Dauer in Minuten
                         <input v-model="form.duration_minutes" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                     </label>
-                    <label class="block text-sm font-semibold text-primary">Distanz in km
+                    <label v-if="showSessionDistance" class="block text-sm font-semibold text-primary">Distanz in km
                         <input v-model="form.distance_km" type="number" min="0" step="0.01" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                     </label>
-                    <label class="block text-sm font-semibold text-primary">Kalorien
-                        <input v-model="form.calories" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
-                    </label>
-                    <label class="block text-sm font-semibold text-primary">Intensitaet
-                        <select v-model="form.intensity" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                            <option value="">Keine Angabe</option>
-                            <option value="locker">Locker</option>
-                            <option value="mittel">Mittel</option>
-                            <option value="hart">Hart</option>
-                            <option value="recovery">Regeneration</option>
-                        </select>
-                    </label>
-                    <div class="grid gap-3 rounded-xl border border-border bg-inputBg/40 p-3 md:col-span-2 sm:grid-cols-4">
-                        <label class="block text-sm font-semibold text-primary">RPE 1-10
-                            <input v-model="form.wellness.rpe" type="number" min="1" max="10" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
-                        </label>
-                        <label class="block text-sm font-semibold text-primary">Energie 1-10
-                            <input v-model="form.wellness.energy" type="number" min="1" max="10" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
-                        </label>
-                        <label class="block text-sm font-semibold text-primary">Schmerz 0-10
-                            <input v-model="form.wellness.pain" type="number" min="0" max="10" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
-                        </label>
-                        <label class="block text-sm font-semibold text-primary">Schlaf h
-                            <input v-model="form.wellness.sleep_hours" type="number" min="0" max="24" step="0.5" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
-                        </label>
-                    </div>
                     <label class="block text-sm font-semibold text-primary md:col-span-2">Notizen
                         <textarea v-model="form.notes" rows="4" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Gefuehl, Technik, Schmerzen, Besonderheiten" />
                     </label>
@@ -1202,10 +1275,97 @@ onUnmounted(() => {
                             </span>
                         </span>
                     </label>
+                    <div class="md:col-span-2 flex justify-end">
+                        <button type="button" class="rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary" @click="currentTrainingStep = 2">
+                            Weiter dokumentieren
+                        </button>
+                    </div>
                 </div>
             </section>
 
-            <aside class="space-y-4 xl:sticky xl:top-20 xl:self-start">
+            <section v-show="currentTrainingStep === 3" class="min-w-0 space-y-5 rounded-2xl border border-border bg-card p-4 sm:p-5 2xl:col-start-1 2xl:row-start-2">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Schritt 3</p>
+                    <h2 class="mt-1 text-xl font-semibold text-primary">Training abschliessen</h2>
+                    <p class="mt-2 text-sm leading-6 text-secondary">
+                        Diese Werte sind bewusst am Ende. Du musst nur eintragen, was du wirklich weisst.
+                    </p>
+                </div>
+                <div class="grid gap-4 md:grid-cols-2">
+                    <label class="block text-sm font-semibold text-primary">Intensitaet
+                        <select v-model="form.intensity" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
+                            <option value="">Keine Angabe</option>
+                            <option value="locker">Leicht / locker</option>
+                            <option value="mittel">Mittel</option>
+                            <option value="hart">Hart / intensiv</option>
+                            <option value="recovery">Regeneration</option>
+                        </select>
+                    </label>
+                    <label class="block text-sm font-semibold text-primary">Verbrannte Kalorien
+                        <input v-model="form.calories" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Optional" />
+                    </label>
+                    <div class="rounded-xl border border-border bg-inputBg/40 p-3 md:col-span-2">
+                        <p class="text-sm font-semibold text-primary">Koerpergefuehl optional</p>
+                        <p class="mt-1 text-xs leading-5 text-secondary">
+                            Nur ausfuellen, wenn du dein Befinden dokumentieren willst. 1 bedeutet niedrig, 10 bedeutet hoch.
+                        </p>
+                        <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            <label class="block text-sm font-semibold text-primary">Anstrengung 1-10
+                                <input v-model="form.wellness.rpe" type="number" min="1" max="10" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
+                            </label>
+                            <label class="block text-sm font-semibold text-primary">Energie 1-10
+                                <input v-model="form.wellness.energy" type="number" min="1" max="10" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
+                            </label>
+                            <label class="block text-sm font-semibold text-primary">Schmerzen 0-10
+                                <input v-model="form.wellness.pain" type="number" min="0" max="10" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
+                            </label>
+                            <label class="block text-sm font-semibold text-primary">Schlaf in Stunden
+                                <input v-model="form.wellness.sleep_hours" type="number" min="0" max="24" step="0.5" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap justify-between gap-2">
+                    <button type="button" class="rounded-xl border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted" @click="currentTrainingStep = 2">
+                        Zurueck zur Doku
+                    </button>
+                    <button type="submit" class="rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="form.processing">
+                        Training speichern
+                    </button>
+                </div>
+            </section>
+
+            <section class="rounded-2xl border border-air-blue/30 bg-air-blue/10 p-4 2xl:hidden">
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="min-w-0">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Arbeitsmodus</p>
+                        <p class="mt-1 text-sm font-semibold text-primary">{{ selectedType.label }} · {{ detailSummary }}</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            v-if="!isLiveTraining"
+                            type="button"
+                            class="rounded-xl border border-air-blue/40 bg-card px-4 py-2 text-sm font-semibold text-primary hover:bg-air-blue/10"
+                            @click="startLiveTraining"
+                        >
+                            Live starten
+                        </button>
+                        <button
+                            v-else
+                            type="button"
+                            class="rounded-xl border border-air-blue/40 bg-card px-4 py-2 text-sm font-semibold text-primary hover:bg-air-blue/10"
+                            @click="finishLiveTraining"
+                        >
+                            Live beenden
+                        </button>
+                        <button type="submit" class="rounded-xl bg-buttonPrimary px-5 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="form.processing">
+                            Training speichern
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <aside class="hidden min-w-0 space-y-4 2xl:sticky 2xl:top-20 2xl:col-start-2 2xl:row-start-2 2xl:block 2xl:self-start">
                 <section class="rounded-2xl border border-border bg-card p-4">
                     <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Aktive Vorlage</p>
                     <h2 class="mt-1 text-lg font-semibold text-primary">{{ selectedType.label }}</h2>
@@ -1276,24 +1436,51 @@ onUnmounted(() => {
                 </button>
             </aside>
 
-            <section class="space-y-4 rounded-2xl border border-border bg-card p-5 xl:col-span-2">
+            <section v-show="currentTrainingStep === 2" class="min-w-0 space-y-4 rounded-2xl border border-border bg-card p-4 sm:p-5 2xl:col-start-1 2xl:row-start-2">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Details</p>
                         <h2 class="text-xl font-semibold text-primary">{{ selectedType.detailTitle }}</h2>
                     </div>
-                    <button v-if="!usesGymSets" type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="addEntry">
+                    <button v-if="!usesGymSets" type="button" class="rounded-xl border border-border bg-inputBg/40 px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="addEntry">
                         Zeile hinzufuegen
-                    </button>
-                    <button v-else type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="addGymExercise">
-                        Uebung hinzufuegen
                     </button>
                 </div>
 
                 <div v-if="usesGymSets" class="space-y-4">
-                    <div v-for="(exercise, exerciseIndex) in form.gym_exercises" :key="exerciseIndex" class="rounded-2xl border border-border bg-inputBg/40 p-4">
+                    <div class="rounded-2xl border border-border bg-inputBg/40 p-3">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Uebungen</p>
+                                <p class="mt-1 text-sm font-semibold text-primary">{{ form.gym_exercises.length }} Uebungen angelegt</p>
+                            </div>
+                            <button type="button" class="rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="addGymExercise">
+                                Uebung hinzufuegen
+                            </button>
+                        </div>
+                        <div class="custom-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1">
+                            <button
+                                v-for="(exercise, exerciseIndex) in form.gym_exercises"
+                                :key="`exercise-step-${exerciseIndex}`"
+                                type="button"
+                                class="min-w-32 rounded-xl border px-3 py-2 text-left text-sm transition"
+                                :class="activeGymExerciseIndex === exerciseIndex ? 'border-air-blue bg-air-blue/10 text-primary ring-1 ring-air-blue/30' : 'border-border bg-card text-secondary hover:bg-muted hover:text-primary'"
+                                @click="setActiveGymExercise(exerciseIndex)"
+                            >
+                                <span class="block text-[11px] font-semibold uppercase tracking-wide">Uebung {{ exerciseIndex + 1 }}</span>
+                                <span class="mt-1 block truncate font-semibold">{{ exercise.title || 'Ohne Namen' }}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div
+                        v-for="(exercise, exerciseIndex) in form.gym_exercises"
+                        :key="exerciseIndex"
+                        v-show="activeGymExerciseIndex === exerciseIndex"
+                        class="rounded-2xl border border-border bg-inputBg/40 p-3 sm:p-4"
+                    >
                         <div class="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
-                            <label class="block text-sm font-semibold text-primary">Uebung
+                            <label class="block text-sm font-semibold text-primary">Uebung {{ exerciseIndex + 1 }}
                                 <input v-model="exercise.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="z. B. Kniebeugen" />
                             </label>
                             <button type="button" class="rounded-xl border border-border px-3 py-2 text-sm font-semibold text-danger hover:bg-danger/10" @click="removeGymExercise(exerciseIndex)">
@@ -1328,11 +1515,37 @@ onUnmounted(() => {
                             </div>
                         </div>
 
+                        <div class="mt-4 rounded-2xl border border-border bg-card p-3">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Saetze</p>
+                                    <p class="mt-1 text-sm font-semibold text-primary">{{ exercise.sets.length }} Saetze in Uebung {{ exerciseIndex + 1 }}</p>
+                                </div>
+                                <button type="button" class="rounded-xl border border-border bg-inputBg px-3 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="addGymSet(exerciseIndex)">
+                                    Satz hinzufuegen
+                                </button>
+                            </div>
+                            <div class="custom-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1">
+                                <button
+                                    v-for="(set, setIndex) in exercise.sets"
+                                    :key="`set-step-${exerciseIndex}-${setIndex}`"
+                                    type="button"
+                                    class="min-w-28 rounded-xl border px-3 py-2 text-left text-sm transition"
+                                    :class="activeGymExerciseIndex === exerciseIndex && activeGymSetIndex === setIndex ? 'border-air-blue bg-air-blue/10 text-primary ring-1 ring-air-blue/30' : set.completed ? 'border-success/40 bg-success/10 text-success' : 'border-border bg-inputBg/40 text-secondary hover:bg-muted hover:text-primary'"
+                                    @click="setActiveGymSet(exerciseIndex, setIndex)"
+                                >
+                                    <span class="block text-[11px] font-semibold uppercase tracking-wide">Satz {{ setIndex + 1 }}</span>
+                                    <span class="mt-1 block truncate font-semibold">{{ set.completed ? 'Erledigt' : 'Offen' }}</span>
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="mt-4 space-y-3">
                             <div
                                 v-for="(set, setIndex) in exercise.sets"
                                 :key="setIndex"
-                                class="grid gap-3 rounded-xl border p-3 transition sm:grid-cols-2 lg:grid-cols-6"
+                                v-show="activeGymExerciseIndex === exerciseIndex && activeGymSetIndex === setIndex"
+                                class="grid gap-3 rounded-2xl border p-3 transition sm:grid-cols-2 lg:grid-cols-6"
                                 :class="activeGymExerciseIndex === exerciseIndex && activeGymSetIndex === setIndex ? 'border-air-blue bg-air-blue/10 ring-1 ring-air-blue/30' : set.completed ? 'border-success/40 bg-success/10' : 'border-border bg-card'"
                                 @click="setActiveGymSet(exerciseIndex, setIndex)"
                             >
@@ -1352,9 +1565,6 @@ onUnmounted(() => {
                                 <label class="block text-sm font-semibold text-primary">Zeit min
                                     <input v-model="set.duration_minutes" type="number" min="0" step="0.1" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                                 </label>
-                                <label class="block text-sm font-semibold text-primary">Intensitaet
-                                    <input v-model="set.intensity" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="RPE 8" />
-                                </label>
                                 <div class="grid gap-2 self-end">
                                     <button
                                         type="button"
@@ -1364,7 +1574,7 @@ onUnmounted(() => {
                                     >
                                         {{ set.completed ? 'Erledigt' : 'Satz erledigt' }}
                                     </button>
-                                    <button type="button" class="rounded-xl border border-border px-3 py-2 text-sm font-semibold text-danger hover:bg-danger/10" @click="removeGymSet(exerciseIndex, setIndex)">
+                                    <button type="button" class="rounded-xl border border-border px-3 py-2 text-sm font-semibold text-danger hover:bg-danger/10" @click.stop="removeGymSet(exerciseIndex, setIndex)">
                                         Entfernen
                                     </button>
                                 </div>
@@ -1379,9 +1589,17 @@ onUnmounted(() => {
                                 </label>
                             </div>
                         </div>
-                        <button type="button" class="mt-3 rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="addGymSet(exerciseIndex)">
-                            Naechster Satz
-                        </button>
+                        <div class="mt-3 grid gap-2 sm:grid-cols-3">
+                            <button type="button" class="rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold text-primary hover:bg-muted sm:py-2" @click="activeGymSetIndex = Math.max(0, activeGymSetIndex - 1)">
+                                Vorheriger Satz
+                            </button>
+                            <button type="button" class="rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold text-primary hover:bg-muted sm:py-2" @click="nextActiveGymSet">
+                                Naechster Satz
+                            </button>
+                            <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary sm:py-2" @click="finishActiveGymSet">
+                                Satz erledigt
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -1443,9 +1661,17 @@ onUnmounted(() => {
                         </button>
                     </div>
                 </div>
+                <div class="flex flex-wrap justify-between gap-2 border-t border-border pt-4">
+                    <button type="button" class="rounded-xl border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted" @click="currentTrainingStep = 1">
+                        Zurueck
+                    </button>
+                    <button type="button" class="rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary" @click="currentTrainingStep = 3">
+                        Abschliessen
+                    </button>
+                </div>
             </section>
 
-            <div class="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur xl:hidden">
+            <div class="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-2xl backdrop-blur lg:hidden">
                 <div v-if="usesGymSets && activeGymSet" class="mx-auto max-w-4xl space-y-2">
                     <div class="flex items-center justify-between gap-3">
                         <div class="min-w-0">
@@ -1510,7 +1736,7 @@ onUnmounted(() => {
                         <button type="button" class="rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-primary" @click="adjustSessionNumber('duration_minutes', 5)">
                             +5 min
                         </button>
-                        <button type="button" class="rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-primary" @click="adjustSessionNumber('distance_km', 0.5, 0.1)">
+                        <button v-if="showQuickDistanceAction" type="button" class="rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-primary" @click="adjustSessionNumber('distance_km', 0.5, 0.1)">
                             +0,5 km
                         </button>
                         <button type="button" class="rounded-xl border border-border bg-card px-2 py-2 text-xs font-semibold text-primary" @click="nextActiveEntry">

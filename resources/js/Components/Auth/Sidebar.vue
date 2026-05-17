@@ -140,7 +140,6 @@ const closeSidebar = () => {
                 :badge="unreadNotificationsCount || null"
             />
             <NavItem v-if="can('profile.view')" @navigate="closeSidebar" :href="route('auth.badges.index')" label="Meine Badges" icon="las la-medal" />
-            <NavItem v-if="can('settings.view')" @navigate="closeSidebar" :href="route('auth.settings')" label="Einstellungen" icon="las la-cog" />
             <NavItem v-if="can('guardians.children.view')" @navigate="closeSidebar" :href="route('guardian-access.children')" label="Elternbereich" icon="las la-user-shield" />
             <NavItem @navigate="closeSidebar" :href="route('auth.learning.my-courses.index')" label="Meine Kurse" icon="las la-book-open" />
             <NavItem @navigate="closeSidebar" :href="route('auth.learning.studio.index')" label="Sportschule" icon="las la-graduation-cap" />

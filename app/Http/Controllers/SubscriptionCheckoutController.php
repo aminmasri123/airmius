@@ -10,6 +10,7 @@ use App\Models\SubscriptionInvoice;
 use App\Models\SubscriptionPlan;
 use App\Notifications\SubscriptionInvoiceAwaitingTransfer;
 use App\Notifications\SubscriptionInvoicePaid;
+use App\Services\UserSubscriptionActivationService;
 use App\Support\AppNotification;
 use App\Support\ClubRoles;
 use App\Support\VisitorCountry;
@@ -851,6 +852,7 @@ class SubscriptionCheckoutController extends Controller
         if ($userSubscription) {
             $userSubscription->forceFill($updates)->save();
             if ($status === 'active') {
+                app(UserSubscriptionActivationService::class)->retireOtherUserSubscriptions($userSubscription->fresh('plan'));
                 $this->markRecurringInvoicePaid('user', $userSubscription->id, $provider, $payload);
             }
         }
@@ -986,6 +988,8 @@ class SubscriptionCheckoutController extends Controller
                     'cancelled_at' => null,
                 ],
             );
+
+            app(UserSubscriptionActivationService::class)->retireOtherUserSubscriptions($subscription->fresh('plan'));
         }
 
         $checkout->update([

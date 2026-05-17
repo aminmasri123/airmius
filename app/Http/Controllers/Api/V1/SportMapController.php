@@ -11,6 +11,7 @@ use App\Models\SportPlace;
 use App\Models\SportRoute;
 use App\Models\SportRouteTrack;
 use App\Services\SportRouteMetricService;
+use App\Services\SportRouteRoutingService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -41,6 +42,13 @@ class SportMapController extends Controller
         return (new SportRouteResource($route->load(['creator', 'sport', 'team'])->loadCount('tracks')))
             ->response()
             ->setStatusCode(201);
+    }
+
+    public function generateRouteProposal(Request $request, SportRouteRoutingService $routing)
+    {
+        return response()->json([
+            'data' => $routing->generateProposal($this->validateRouteProposalData($request)),
+        ]);
     }
 
     public function showRoute(Request $request, SportRoute $sportRoute)

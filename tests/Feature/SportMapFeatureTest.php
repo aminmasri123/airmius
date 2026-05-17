@@ -7,6 +7,7 @@ use App\Models\SportRoute;
 use App\Models\SportRouteTrack;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -74,6 +75,7 @@ class SportMapFeatureTest extends TestCase
                 'sport_types' => ['football', 'running'],
                 'amenities' => ['floodlights', 'locker_room'],
                 'surfaces' => ['grass'],
+                'gallery_images' => ['https://example.test/sportpark.jpg'],
             ])
             ->assertRedirect();
 
@@ -82,6 +84,7 @@ class SportMapFeatureTest extends TestCase
             'type' => 'football_pitch',
             'status' => 'active',
         ]);
+        $this->assertSame(['https://example.test/sportpark.jpg'], SportPlace::query()->where('name', 'Sportpark Mitte')->firstOrFail()->gallery_images);
     }
 
     public function test_mobile_sport_map_contract_supports_routes_tracks_and_nearby_places(): void
@@ -176,9 +179,11 @@ class SportMapFeatureTest extends TestCase
             'sport_types' => ['running'],
             'amenities' => ['lights'],
             'surfaces' => ['tartan'],
+            'gallery_images' => ['https://example.test/laufbahn.webp'],
         ])
             ->assertCreated()
             ->assertJsonPath('data.name', 'Community Laufbahn')
+            ->assertJsonPath('data.gallery_images.0', 'https://example.test/laufbahn.webp')
             ->assertJsonPath('data.geojson.geometry.type', 'Point');
 
         $placeId = $placeResponse->json('data.id');
@@ -215,5 +220,153 @@ class SportMapFeatureTest extends TestCase
 
         $this->assertSoftDeleted('sport_route_tracks', ['id' => $trackId]);
         $this->assertDatabaseHas('sport_places', ['id' => $placeId, 'name' => 'Community Laufbahn']);
+    }
+
+    public function test_route_planning_can_use_configured_osrm_routing_provider(): void
+    {
+        $user = User::factory()->create();
+
+        Sanctum::actingAs($user);
+        config()->set('sport_map.routing.provider', 'osrm');
+        config()->set('sport_map.routing.osrm_base_url', 'https://osrm.test');
+        config()->set('sport_map.routing.profiles.running', 'foot');
+
+        Http::fake([
+            'osrm.test/route/v1/foot/*' => Http::response([
+                'routes' => [[
+                    'distance' => 1234.5,
+                    'duration' => 612.3,
+                    'geometry' => [
+                        'type' => 'LineString',
+                        'coordinates' => [
+                            [13.405, 52.52],
+                            [13.412, 52.523],
+                            [13.42, 52.526],
+                        ],
+                    ],
+                    'legs' => [[
+                        'steps' => [
+                            [
+                                'distance' => 500,
+                                'duration' => 240,
+                                'name' => 'Parkweg',
+                                'maneuver' => [
+                                    'type' => 'depart',
+                                    'bearing_after' => 45,
+                                    'location' => [13.405, 52.52],
+                                ],
+                            ],
+                            [
+                                'distance' => 734.5,
+                                'duration' => 372,
+                                'name' => 'Uferweg',
+                                'maneuver' => [
+                                    'type' => 'turn',
+                                    'modifier' => 'right',
+                                    'bearing_after' => 90,
+                                    'location' => [13.412, 52.523],
+                                ],
+                            ],
+                            [
+                                'distance' => 0,
+                                'duration' => 0,
+                                'name' => '',
+                                'maneuver' => [
+                                    'type' => 'arrive',
+                                    'bearing_after' => 0,
+                                    'location' => [13.42, 52.526],
+                                ],
+                            ],
+                        ],
+                    ]],
+                ]],
+            ], 200),
+        ]);
+
+        $this->postJson('/api/v1/sport-routes', [
+            'title' => 'OSRM Laufroute',
+            'sport_type' => 'running',
+            'visibility' => 'public',
+            'waypoints' => [
+                ['name' => 'Start', 'latitude' => 52.52, 'longitude' => 13.405],
+                ['name' => 'Ziel', 'latitude' => 52.526, 'longitude' => 13.42],
+            ],
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.distance_meters', 1235)
+            ->assertJsonPath('data.estimated_duration_seconds', 612)
+            ->assertJsonPath('data.metrics.calculation', 'osrm_route_v1')
+            ->assertJsonPath('data.metrics.routing_provider', 'osrm')
+            ->assertJsonPath('data.metrics.routing_profile', 'foot')
+            ->assertJsonPath('data.metrics.routing_status', 'routed')
+            ->assertJsonPath('data.navigation_cues.1.type', 'turn')
+            ->assertJsonPath('data.route_geometry.coordinates.0.0', 13.405);
+
+        Http::assertSent(fn ($request) => str_contains(
+            (string) $request->url(),
+            '/route/v1/foot/13.405,52.52;13.42,52.526',
+        ));
+    }
+
+    public function test_web_route_generator_returns_routed_geometry_for_preview(): void
+    {
+        $user = User::factory()->create();
+
+        config()->set('sport_map.routing.route_generator_provider', 'osrm');
+        config()->set('sport_map.routing.osrm_base_url', 'https://osrm.test');
+        config()->set('sport_map.routing.profiles.running', 'foot');
+
+        Http::fake([
+            'osrm.test/route/v1/foot/*' => Http::response([
+                'routes' => [[
+                    'distance' => 5012,
+                    'duration' => 1820,
+                    'geometry' => [
+                        'type' => 'LineString',
+                        'coordinates' => [
+                            [13.405, 52.52],
+                            [13.407, 52.521],
+                            [13.41, 52.523],
+                            [13.405, 52.52],
+                        ],
+                    ],
+                    'legs' => [[
+                        'steps' => [[
+                            'distance' => 1200,
+                            'duration' => 420,
+                            'name' => 'Parkweg',
+                            'maneuver' => [
+                                'type' => 'depart',
+                                'bearing_after' => 30,
+                                'location' => [13.405, 52.52],
+                            ],
+                        ]],
+                    ]],
+                ]],
+            ], 200),
+        ]);
+
+        $this->actingAs($user)
+            ->postJson(route('auth.sport-route-proposals.store'), [
+                'sport_type' => 'running',
+                'route_type' => 'roundtrip',
+                'target_mode' => 'distance',
+                'distance_km' => 5,
+                'surface' => 'forest',
+                'environment' => 'forest',
+                'elevation' => 'mixed',
+                'difficulty' => 'easy',
+                'low_traffic' => true,
+                'start' => [
+                    'latitude' => 52.52,
+                    'longitude' => 13.405,
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.distance_meters', 5012)
+            ->assertJsonPath('data.metrics.routing_status', 'routed')
+            ->assertJsonPath('data.metrics.routing_provider', 'osrm')
+            ->assertJsonPath('data.metrics.generator_parameters.surface', 'forest')
+            ->assertJsonCount(4, 'data.route_geometry.coordinates');
     }
 }

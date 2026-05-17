@@ -9,6 +9,7 @@ use App\Models\SubscriptionPlan;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\User;
+use App\Models\UserSubscription;
 use App\Services\PlanFeatureService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -67,5 +68,29 @@ class PlanFeatureServiceTest extends TestCase
         $this->assertNull($service->memberInvitationDailyLimit($club->fresh('currentSubscription.plan')));
         $service->ensureCanSendMemberInvitations($club->fresh('currentSubscription.plan'), 50);
         $this->assertTrue(true);
+    }
+
+    public function test_user_storage_uses_latest_active_subscription_per_actor(): void
+    {
+        $user = User::factory()->create();
+        $pro = SubscriptionPlan::query()->where('slug', 'sportler-pro')->firstOrFail();
+        $free = SubscriptionPlan::query()->where('slug', 'sportler-free')->firstOrFail();
+
+        UserSubscription::query()->create([
+            'user_id' => $user->id,
+            'subscription_plan_id' => $pro->id,
+            'status' => 'active',
+        ]);
+
+        UserSubscription::query()->create([
+            'user_id' => $user->id,
+            'subscription_plan_id' => $free->id,
+            'status' => 'active',
+        ]);
+
+        $summary = app(PlanFeatureService::class)->userStorageSummary($user);
+
+        $this->assertSame('Sportler Free', $summary['plan_name']);
+        $this->assertSame(1, $summary['limit_gb']);
     }
 }

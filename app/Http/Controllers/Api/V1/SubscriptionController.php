@@ -15,6 +15,7 @@ use App\Models\Setting;
 use App\Models\SubscriptionInvoice;
 use App\Models\SubscriptionPlan;
 use App\Models\UserSubscription;
+use App\Services\UserSubscriptionActivationService;
 use App\Support\AppNotification;
 use App\Support\ClubRoles;
 use App\Support\Roles;
@@ -697,6 +698,8 @@ class SubscriptionController extends Controller
                         'cancelled_at' => null,
                     ],
                 );
+
+                app(UserSubscriptionActivationService::class)->retireOtherUserSubscriptions($subscription->fresh('plan'));
             }
 
             $checkout->update([

@@ -87,6 +87,10 @@ class HandleInertiaRequests extends Middleware
                 ->with('plan:id,slug,name,target_actor')
                 ->whereIn('status', ['active', 'trialing'])
                 ->get()
+                ->filter(fn ($subscription) => $subscription->plan)
+                ->groupBy(fn ($subscription) => $subscription->plan->target_actor ?: 'default')
+                ->map(fn ($subscriptions) => $subscriptions->sortByDesc('id')->first())
+                ->values()
             : collect();
         $currentUserSubscription = $activeUserSubscriptions
             ->sortByDesc(fn ($subscription) => $subscription->current_period_ends_at?->timestamp ?? 0)
@@ -223,10 +227,7 @@ class HandleInertiaRequests extends Middleware
             'club.delete' => $user->can('clubs.delete'),
             'club.jobs.manage' => $user->can('club.jobs.manage'),
             'club-memberships.view' => $user->hasAnyRole(\App\Support\Roles::FULL_ACCESS)
-                || tap($user->clubs(), fn ($query) => ClubRoles::whereAny($query, ClubRoles::ELEVATED))->exists()
-                || $user->teams()
-                    ->wherePivotIn('role', ['Coach', 'Captain'])
-                    ->exists(),
+                || tap($user->clubs(), fn ($query) => ClubRoles::whereAny($query, ClubRoles::ELEVATED))->exists(),
 
             'teams.view' => $user->can('viewAny', \App\Models\Team::class),
             'teams.create' => $user->can('create', \App\Models\Team::class),

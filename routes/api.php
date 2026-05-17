@@ -84,6 +84,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/training/logs/{trainingLog}', [TrainingController::class, 'showLog'])->name('training.logs.show');
 
         Route::get('/sport-routes', [MobileSportMapController::class, 'routes'])->name('sport-routes.index');
+        Route::post('/sport-route-proposals', [MobileSportMapController::class, 'generateRouteProposal'])->name('sport-route-proposals.store');
         Route::post('/sport-routes', [MobileSportMapController::class, 'storeRoute'])->name('sport-routes.store');
         Route::get('/sport-routes/{sportRoute}', [MobileSportMapController::class, 'showRoute'])->name('sport-routes.show');
         Route::patch('/sport-routes/{sportRoute}', [MobileSportMapController::class, 'updateRoute'])->name('sport-routes.update');

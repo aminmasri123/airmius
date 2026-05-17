@@ -20,6 +20,7 @@ Die Webapp ist nach den aktuellen Reparaturen stabiler, mobilfreundlicher und de
 - JSON Resources fuer User, Clubs, Club-Mitglieder, Membership-Requests, Dateien, Rechnungen, Zahlungen, Teams, Posts, Conversations, Messages, Events, Training und Commerce stabilisieren die Flutter-Datenvertraege.
 - Auth/Login/Logout, Sprache, Settings, Uploads, Club/Membership, Feed, Teams, Chat-Messages/Typing, Events, Trainingsplaene/-logs sowie Commerce-Produkte/-Bestellungen sind als API-Routen verfuegbar.
 - User-Responses liefern jetzt ein kompaktes `user_card`-Objekt fuer Mobile/Flutter-Header, Listen und Profil-Teaser.
+- Die normale Web-Sidebar zeigt Settings nicht mehr doppelt; Flutter sollte Settings ebenfalls ueber UserCard/Profile-Sheet statt als eigenen Hauptnavigationseintrag anbieten.
 - Story-Upload schliesst den Web-Modal sofort beim Start, zeigt einen Upload-Hinweis und danach eine Feedback-Nachricht.
 - Stories sind fuer Flutter als API-Routen verfuegbar: List, Upload, Viewed, React und Delete.
 - Subscription-Plans, Subscription-Overview, Bankueberweisung-Checkout, Checkout-Abbruch, Abo-Kuendigung/-Verlaengerung und Admin-Mark-Paid sind als Mobile-API verfuegbar.
@@ -29,6 +30,10 @@ Die Webapp ist nach den aktuellen Reparaturen stabiler, mobilfreundlicher und de
 - Komoot-aehnliche Sportkarten-Grundlage ist verfuegbar: Routen planen, Navigation-Cues erzeugen, Strecken tracken, Trackpunkte anhaengen, Tracks abschliessen und Community-Sportplaetze eintragen/finden.
 - Die Webapp hat eine eigene Sportkarte-Seite, damit der grosse Training-Screen nicht weiter aufgeblaeht wird.
 - Flutter bekommt 17 neue `/api/v1`-Routen fuer Sport-Routen, Sport-Tracks und Sportplaetze inklusive Nearby-Suche.
+- Trainingserfassung wurde UX-seitig auf einen 3-Schritt-Flow umgestellt: Training waehlen, dokumentieren, abschliessen. Flutter sollte diesen Flow nativ als Stepper/Bottom-Sheet-Flow nachbauen.
+- Gym-Logs nutzen innerhalb von Schritt 2 jetzt aktive `Uebung 1/2/...` und darunter aktive `Satz 1/2/...` statt alle Felder gleichzeitig zu zeigen. Flutter sollte pro Uebung/Satz nur den aktiven Schritt anzeigen und Naechster/Vorheriger/Erledigt-Aktionen anbieten.
+- `Kalorien`, `Intensitaet` und Wellness-Werte gehoeren in Flutter in den Abschluss-Schritt, nicht in die Live-Dokumentation. Gym blendet Distanz weiterhin aus.
+- Die Trainingsart-Auswahl ist kompakt und farbig; Flutter bekommt dafuer jetzt Metadaten unter `/api/v1/meta` in `catalogs.training.training_types` inklusive `theme`, `mode`, `fields` und `document_flow`.
 - Admin-Commerce hat schlanke Mobile-Actions fuer Dashboard-Zusammenfassung, Katalog, Coupons, Add-ons, Produktstatus, Versandstatus, Seller-Antraege, Website-Anfragen, Ads-Kampagnenstatus, Tax-/Shipping-Rates, Refunds, Rechnungs-/Gutschrift-Dokumente, Export, Payout-Paid und Payout-Profilstatus.
 - CommerceOrder-Responses enthalten jetzt Rechnungsnummern, Gutschriften und Issue-/Refund-Status fuer mobile Admin-Flows.
 - Refunds pruefen jetzt den offenen Restbetrag statt nur den urspruenglichen Bestellbetrag.
@@ -51,7 +56,7 @@ Die Webapp ist nach den aktuellen Reparaturen stabiler, mobilfreundlicher und de
 
 ## Flutter Blocker
 
-1. API-Abdeckung: Die wichtigsten Mobile-Endpunkte existieren, inklusive Settings, Notifications, Uploads, Club/Membership, Stories, Sportkarte/Routen/Tracking/Sportplaetze, Subscription-Checkout fuer Bank/Stripe/PayPal, Refunds, Dokumentlinks/-Downloads, Export und Admin-Commerce-Spezialaktionen.
+1. API-Abdeckung: Die wichtigsten Mobile-Endpunkte existieren, inklusive Settings, Notifications, Uploads, Club/Membership, Stories, Sportkarte/Routen/Tracking/Sportplaetze, Training-Meta-Katalog fuer den neuen Dokumentations-Stepper, Subscription-Checkout fuer Bank/Stripe/PayPal, Refunds, Dokumentlinks/-Downloads, Export und Admin-Commerce-Spezialaktionen.
 2. Controller-Groesse: `CommerceCheckoutController` mit ueber 4000 Zeilen und mehrere weitere Controller ueber 1000 Zeilen sind schwer testbar und sollten weiter in Services/Actions zerlegt werden.
 3. Datenvertraege: Core-Resources und Mobile-Spezialvertraege existieren jetzt; fuer eine langfristig sehr saubere Architektur sollten sie spaeter in dedizierte Request-/Response-DTOs und Actions ausgelagert werden.
 4. Zahlungen und Checkout: Bankueberweisung, Stripe und PayPal sind API-faehig. Die Flutter-App muss die Redirects bzw. Provider-SDKs, Deep Links und Return-Screens nativ integrieren.
@@ -62,3 +67,15 @@ Die Webapp ist nach den aktuellen Reparaturen stabiler, mobilfreundlicher und de
 ## Aktueller Status
 
 Die Webapp funktioniert nach dieser Runde besser, grosse Screens sind lazy gerendert, native Browser-Dialoge sind ersetzt, Sprachdateien sind synchron, Legal-Platzhalter sind entfernt und die Mobile-API deckt die kritischen Flutter-Startbereiche ab. Die Sportkarte liefert jetzt die Komoot-aehnliche Produktgrundlage fuer Routen, Tracking und Community-Sportplaetze. Fuer Flutter ist das Backend jetzt migrationsbereit gegen `/api/v1`. Was danach noch fehlt, ist die eigentliche Flutter-App mit nativen Screens, Provider-Deep-Links, Push-/Realtime-Anbindung, nativer GPS-Hintergrundaufzeichnung und UI-Zerlegung in Bottom Sheets, Dialog-Flows und kleinere Feature-Screens.
+
+## Nachtrag 2026-05-17: Anpassungen nach Training-UX
+
+Flutter muss nach den letzten Web-Aenderungen vor allem die Trainingserfassung anpassen:
+
+- Hauptnavigation: Settings aus der Sidebar entfernen und ueber UserCard/Profile-Menue oeffnen.
+- Training Create: 3 Schritte verwenden (`select_training`, `document`, `finish`).
+- Trainingsart: kompakte farbige Auswahl statt grosser Karten.
+- Gym-Dokumentation: Uebungs-Stepper und Satz-Stepper verschachteln.
+- Abschluss: Intensitaet, Kalorien und Wellness erst beim Speichern/Finish abfragen.
+
+Der Mobile-Meta-Vertrag wurde entsprechend erweitert, damit Flutter diese Struktur nicht hart im Client nachbauen muss.

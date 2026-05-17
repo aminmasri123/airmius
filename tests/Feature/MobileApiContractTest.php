@@ -46,13 +46,63 @@ class MobileApiContractTest extends TestCase
             ->assertJsonPath('data.capabilities.chat.0', 'conversations')
             ->assertJsonPath('data.capabilities.commerce.0', 'products')
             ->assertJsonPath('data.capabilities.subscriptions.2', 'bank_transfer_checkout')
+            ->assertJsonPath('data.capabilities.training.2', 'log_create_stepper')
+            ->assertJsonPath('data.capabilities.training.4', 'gym_exercise_set_stepper')
+            ->assertJsonPath('data.catalogs.training.log_create_flow.steps.1.key', 'document')
+            ->assertJsonPath('data.catalogs.training.log_create_flow.finish_fields.0', 'intensity')
+            ->assertJsonPath('data.catalogs.training.training_types.0.key', 'gym')
+            ->assertJsonPath('data.catalogs.training.training_types.0.document_flow', 'exercise_set_stepper')
+            ->assertJsonPath('data.capabilities.clubs.3', 'manager_members')
+            ->assertJsonPath('data.capabilities.clubs.4', 'manager_billing')
             ->assertJsonPath('data.capabilities.sport_map.0', 'route_planning')
             ->assertJsonPath('data.catalogs.sport_map.sport_types.0.key', 'running')
             ->assertJsonPath('data.catalogs.sport_map.sport_types.0.label_key', 'sport_map.sport_types.running')
             ->assertJsonPath('data.catalogs.sport_map.place_types.0.key', 'football_pitch')
+            ->assertJsonPath('data.catalogs.sport_map.map.tile_url', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png')
+            ->assertJsonPath('data.catalogs.sport_map.routing.provider', 'local')
             ->assertJsonPath('data.capabilities.notifications.0', 'list')
             ->assertJsonPath('data.capabilities.uploads.0', 'list')
             ->assertJsonPath('data.capabilities.settings.1', 'update');
+    }
+
+    public function test_regular_club_member_cannot_read_member_or_billing_management_api(): void
+    {
+        $user = User::factory()->create();
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+
+        $club->users()->syncWithoutDetaching([
+            $user->id => [
+                'role' => 'member',
+                'roles' => ['member'],
+                'membership_status' => 'active',
+            ],
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson("/api/v1/clubs/{$club->id}/members")->assertForbidden();
+        $this->getJson("/api/v1/clubs/{$club->id}/billing")->assertForbidden();
+    }
+
+    public function test_club_manager_can_read_member_and_billing_management_api(): void
+    {
+        $manager = User::factory()->create();
+        $owner = User::factory()->create();
+        $club = Club::factory()->create(['owner_id' => $owner->id]);
+
+        $club->users()->syncWithoutDetaching([
+            $manager->id => [
+                'role' => 'manager',
+                'roles' => ['manager'],
+                'membership_status' => 'active',
+            ],
+        ]);
+
+        Sanctum::actingAs($manager);
+
+        $this->getJson("/api/v1/clubs/{$club->id}/members")->assertOk();
+        $this->getJson("/api/v1/clubs/{$club->id}/billing")->assertOk();
     }
 
     public function test_authenticated_user_can_read_profile_and_update_language(): void
@@ -158,7 +208,7 @@ class MobileApiContractTest extends TestCase
         $this->assertDatabaseMissing('notifications', ['id' => $notification->id]);
     }
 
-    public function test_mobile_club_membership_endpoints_return_member_context(): void
+    public function test_mobile_club_membership_management_endpoint_requires_manager_context(): void
     {
         $owner = User::factory()->create();
         $member = User::factory()->create();
@@ -183,9 +233,7 @@ class MobileApiContractTest extends TestCase
             ->assertJsonPath('data.0.name', 'Mobile Club');
 
         $this->getJson("/api/v1/clubs/{$club->id}/members")
-            ->assertOk()
-            ->assertJsonFragment(['id' => $owner->id])
-            ->assertJsonFragment(['id' => $member->id]);
+            ->assertForbidden();
     }
 
     public function test_mobile_upload_flow_can_create_rename_and_delete_user_file(): void

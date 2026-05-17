@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserSubscription;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class UserSubscriptionAccountManagementTest extends TestCase
@@ -177,5 +178,38 @@ class UserSubscriptionAccountManagementTest extends TestCase
         $response->assertRedirect();
         $response->assertSessionHasErrors();
         $this->assertEquals('active', $subscription->fresh()->status);
+    }
+
+    public function test_admin_assigning_free_sportler_plan_retires_previous_active_sportler_plan(): void
+    {
+        $admin = User::factory()->create();
+        Permission::findOrCreate('subscriptions.manage', 'web');
+        $admin->givePermissionTo('subscriptions.manage');
+
+        $user = User::factory()->create();
+        $free = SubscriptionPlan::query()->where('slug', 'sportler-free')->firstOrFail();
+        $pro = SubscriptionPlan::query()->where('slug', 'sportler-pro')->firstOrFail();
+
+        $proSubscription = UserSubscription::query()->create([
+            'user_id' => $user->id,
+            'subscription_plan_id' => $pro->id,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('admin.users.subscription.update', $user), [
+                'subscription_plan_id' => $free->id,
+                'status' => 'active',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame('cancelled', $proSubscription->fresh()->status);
+        $this->assertNotNull($proSubscription->fresh()->cancelled_at);
+        $this->assertDatabaseHas('user_subscriptions', [
+            'user_id' => $user->id,
+            'subscription_plan_id' => $free->id,
+            'status' => 'active',
+        ]);
+        $this->assertSame(1, app(\App\Services\PlanFeatureService::class)->userStorageSummary($user)['limit_gb']);
     }
 }

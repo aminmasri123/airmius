@@ -31,6 +31,12 @@ const fileInput = ref(null)
 const itemToShare = ref(null)
 const shareType = ref('file')
 const friendSearch = ref('')
+const pageSizeOptions = [12, 24, 36, 48, 72, 100]
+const normalizePageSize = (value) => {
+    const normalized = Number.parseInt(value, 10)
+
+    return pageSizeOptions.includes(normalized) ? normalized : 24
+}
 const fileSearch = ref(props.search || '')
 const filesPerPage = ref(normalizePageSize(props.per_page))
 const foldersPerPage = ref(normalizePageSize(props.folders_per_page))
@@ -79,17 +85,11 @@ const renameForm = useForm({
     name: '',
     display_name: '',
 })
-const pageSizeOptions = [12, 24, 36, 48, 72, 100]
 const deleteConfirmationInputRef = ref(null)
 const renameFolderInputRef = ref(null)
 const renameFileInputRef = ref(null)
 const shareTargetSelectRef = ref(null)
 const shareEmailInputRef = ref(null)
-const normalizePageSize = (value) => {
-    const normalized = Number.parseInt(value, 10)
-
-    return pageSizeOptions.includes(normalized) ? normalized : 24
-}
 
 const scopeOptions = [
     { value: 'user', label: 'Meine Dateien' },
@@ -586,11 +586,11 @@ watch(showShareModal, async (show) => {
                             <h1 class="text-lg font-semibold text-primary">{{ currentFolder?.name || 'Dateimanager' }}</h1>
                             <p class="text-sm text-secondary">{{ totalFolders }} Ordner · {{ totalFiles }} Dateien</p>
                         </div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <div class="relative">
+                        <div class="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-center">
+                            <div class="relative sm:col-span-2 xl:col-span-1">
                                 <input
                                     v-model="fileSearch"
-                                    class="h-9 rounded-lg border border-border bg-inputBg px-3 text-sm text-primary"
+                                    class="h-9 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:w-44"
                                     placeholder="Suchen..."
                                     :disabled="isFiltering"
                                     aria-label="Dateien und Ordner durchsuchen"
@@ -600,46 +600,46 @@ watch(showShareModal, async (show) => {
                             </div>
                             <select
                                 v-model="filesPerPage"
-                                class="h-9 rounded-lg border border-border bg-inputBg px-3 text-sm text-primary"
+                                class="h-9 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:w-36"
                                 aria-label="Dateien pro Seite"
                                 :disabled="isFiltering"
                                 @change="applyFilters"
                             >
                                 <option v-for="pageSize in pageSizeOptions" :key="`page-size-${pageSize}`" :value="pageSize">
-                                    {{ pageSize }} / Seite
+                                    Dateien: {{ pageSize }} / Seite
                                 </option>
                             </select>
                             <select
                                 v-model="foldersPerPage"
-                                class="h-9 rounded-lg border border-border bg-inputBg px-3 text-sm text-primary"
+                                class="h-9 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:w-36"
                                 aria-label="Ordner pro Seite"
                                 :disabled="isFiltering"
                                 @change="applyFilters"
                             >
                                 <option v-for="pageSize in pageSizeOptions" :key="`folder-page-size-${pageSize}`" :value="pageSize">
-                                    {{ pageSize }} / Seite
+                                    Ordner: {{ pageSize }} / Seite
                                 </option>
                             </select>
                             <select
                                 v-model="folderSort"
-                                class="h-9 rounded-lg border border-border bg-inputBg px-3 text-sm text-primary"
+                                class="h-9 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:w-44"
                                 aria-label="Ordner sortieren"
                                 :disabled="isFiltering"
                                 @change="applyFilters"
                             >
                                 <option v-for="option in folderSortOptions" :key="`folder-${option.value}`" :value="option.value">
-                                    {{ option.label }}
+                                    Ordner: {{ option.label }}
                                 </option>
                             </select>
                             <select
                                 v-model="fileSort"
-                                class="h-9 rounded-lg border border-border bg-inputBg px-3 text-sm text-primary"
+                                class="h-9 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:w-44"
                                 aria-label="Dateien sortieren"
                                 :disabled="isFiltering"
                                 @change="applyFilters"
                             >
                                 <option v-for="option in fileSortOptions" :key="`file-${option.value}`" :value="option.value">
-                                    {{ option.label }}
+                                    Dateien: {{ option.label }}
                                 </option>
                             </select>
                         </div>

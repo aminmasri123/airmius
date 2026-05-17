@@ -267,10 +267,12 @@ class PlanFeatureService
     private function userStoragePlan(User $user): ?SubscriptionPlan
     {
         $activePlan = $user->subscriptions()
-            ->with('plan:id,name,storage_gb')
+            ->with('plan:id,slug,name,target_actor,storage_gb')
             ->whereIn('status', ['active', 'trialing'])
             ->get()
-            ->pluck('plan')
+            ->filter(fn ($subscription) => $subscription->plan)
+            ->groupBy(fn ($subscription) => $subscription->plan->target_actor ?: 'default')
+            ->map(fn ($subscriptions) => $subscriptions->sortByDesc('id')->first()?->plan)
             ->filter()
             ->sortByDesc(fn (SubscriptionPlan $plan) => (int) $plan->storage_gb)
             ->first();

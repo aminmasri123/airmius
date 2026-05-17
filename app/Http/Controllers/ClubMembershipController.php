@@ -47,10 +47,16 @@ class ClubMembershipController extends Controller
         $user = $request->user();
 
         $hasFullClubAccess = $user->hasAnyRole(Roles::FULL_ACCESS);
+        $hasManageableMembershipClubs = $hasFullClubAccess
+            || Club::query()->where(function ($query) use ($user) {
+                $this->scopeManageableMembershipClubs($query, $user);
+            })->exists();
+
+        abort_unless($hasManageableMembershipClubs, 403);
 
         $clubs = Club::query()
             ->when(! $hasFullClubAccess, function ($query) use ($user) {
-                $this->scopeVisibleMembershipClubs($query, $user);
+                $this->scopeManageableMembershipClubs($query, $user);
             })
             ->with([
                 'users' => fn ($query) => $query
@@ -219,7 +225,7 @@ class ClubMembershipController extends Controller
         ]);
     }
 
-    private function scopeVisibleMembershipClubs($query, User $user): void
+    private function scopeManageableMembershipClubs($query, User $user): void
     {
         $query->where(function ($clubQuery) use ($user) {
             $clubQuery
@@ -227,10 +233,7 @@ class ClubMembershipController extends Controller
                 ->orWhereHas('users', function ($memberQuery) use ($user) {
                     $memberQuery->where('users.id', $user->id);
                     ClubRoles::whereAny($memberQuery, ClubRoles::ELEVATED);
-                })
-                ->orWhereHas('teams.users', fn ($teamUserQuery) => $teamUserQuery
-                    ->where('users.id', $user->id)
-                    ->whereIn('team_user.role', ['Coach', 'Captain']));
+                });
         });
     }
 

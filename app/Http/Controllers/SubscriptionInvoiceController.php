@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\SubscriptionInvoice;
 use App\Services\AirmiusLegalProfile;
 use App\Services\AirmiusPdfDocument;
+use App\Services\UserSubscriptionActivationService;
 use App\Support\AppNotification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -86,6 +87,8 @@ class SubscriptionInvoiceController extends Controller
                         'access_restricted_at' => null,
                     ],
                 );
+
+                app(UserSubscriptionActivationService::class)->retireOtherUserSubscriptions($subscription->fresh('plan'));
             }
 
             $checkout->forceFill([
@@ -112,6 +115,10 @@ class SubscriptionInvoiceController extends Controller
                     'access_restricted_at' => null,
                     'payment_issue_email_sent_at' => null,
                 ])->save();
+
+                if ($subscription instanceof \App\Models\UserSubscription) {
+                    app(UserSubscriptionActivationService::class)->retireOtherUserSubscriptions($subscription->fresh('plan'));
+                }
             }
         }
 

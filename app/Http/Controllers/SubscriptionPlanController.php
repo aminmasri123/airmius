@@ -12,6 +12,7 @@ use App\Models\UserSubscription;
 use App\Notifications\SubscriptionCancelled;
 use App\Notifications\SubscriptionPaymentIssue;
 use App\Notifications\SubscriptionRenewed;
+use App\Services\UserSubscriptionActivationService;
 use App\Support\AppNotification;
 use App\Support\ClubRoles;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -24,6 +25,10 @@ use Inertia\Inertia;
 class SubscriptionPlanController extends Controller
 {
     use AuthorizesRequests;
+
+    public function __construct(private readonly UserSubscriptionActivationService $userSubscriptionActivator)
+    {
+    }
 
     public function index()
     {
@@ -220,6 +225,7 @@ class SubscriptionPlanController extends Controller
         } else {
             $subscription = $user->subscriptions()->create($payload);
         }
+        $this->userSubscriptionActivator->retireOtherUserSubscriptions($subscription->fresh('plan'));
         $this->sendStatusEmail($subscription);
 
         return back()->with('success', 'Nutzer-Abo aktualisiert.');

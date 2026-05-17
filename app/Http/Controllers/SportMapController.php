@@ -11,6 +11,7 @@ use App\Models\SportPlace;
 use App\Models\SportRoute;
 use App\Models\SportRouteTrack;
 use App\Services\SportRouteMetricService;
+use App\Services\SportRouteRoutingService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -63,6 +64,7 @@ class SportMapController extends Controller
             'routes' => SportRouteResource::collection($routes)->resolve(),
             'tracks' => SportTrackResource::collection($tracks)->resolve(),
             'places' => SportPlaceResource::collection($places)->resolve(),
+            'mapConfig' => config('sport_map.map', []),
             'sportCatalog' => Sport::query()
                 ->where('is_active', true)
                 ->orderBy('sort_order')
@@ -82,6 +84,13 @@ class SportMapController extends Controller
         );
 
         return back()->with('success', 'Route "'.$route->title.'" wurde geplant.');
+    }
+
+    public function generateRouteProposal(Request $request, SportRouteRoutingService $routing)
+    {
+        return response()->json([
+            'data' => $routing->generateProposal($this->validateRouteProposalData($request)),
+        ]);
     }
 
     public function updateRoute(Request $request, SportRoute $sportRoute, SportRouteMetricService $metrics)

@@ -27,4 +27,28 @@ return [
         ['key' => 'sports_hall', 'label' => 'Sporthalle', 'label_key' => 'sport_map.place_types.sports_hall', 'icon' => 'las la-warehouse'],
         ['key' => 'other', 'label' => 'Anderer Sportplatz', 'label_key' => 'sport_map.place_types.other', 'icon' => 'las la-map-pin'],
     ],
+
+    'map' => [
+        'tile_url' => env('SPORT_MAP_TILE_URL', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'),
+        'attribution' => env('SPORT_MAP_ATTRIBUTION', '(c) OpenStreetMap contributors'),
+    ],
+
+    'routing' => [
+        'provider' => env('SPORT_MAP_ROUTING_PROVIDER', 'osrm'),
+        'route_generator_provider' => env('SPORT_MAP_ROUTE_GENERATOR_PROVIDER', 'osrm'),
+        'osrm_base_url' => env('SPORT_MAP_OSRM_BASE_URL', 'https://router.project-osrm.org'),
+        'timeout_seconds' => (int) env('SPORT_MAP_ROUTING_TIMEOUT', 4),
+        'profiles' => [
+            'running' => 'foot',
+            'trail_running' => 'foot',
+            'walking' => 'foot',
+            'wandern' => 'foot',
+            'cycling' => 'bike',
+            'mountainbike' => 'bike',
+            'skateboard' => 'foot',
+            'fitness' => 'foot',
+            'football' => 'foot',
+            'other' => 'foot',
+        ],
+    ],
 ];

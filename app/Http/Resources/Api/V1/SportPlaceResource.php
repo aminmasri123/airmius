@@ -37,6 +37,7 @@ class SportPlaceResource extends JsonResource
             'amenities' => $this->amenities ?? [],
             'surfaces' => $this->surfaces ?? [],
             'opening_hours' => $this->opening_hours,
+            'gallery_images' => $this->gallery_images ?? [],
             'rating' => [
                 'avg' => $this->rating_avg,
                 'count' => $this->rating_count,

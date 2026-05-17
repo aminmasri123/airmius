@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Concerns;
 use App\Models\SportPlace;
 use App\Models\SportRoute;
 use App\Models\SportRouteTrack;
+use App\Services\MediaOptimizer;
 use App\Models\User;
 use App\Services\SportRouteMetricService;
+use App\Services\SportRouteRoutingService;
+use App\Support\UploadStorage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -51,6 +54,36 @@ trait ManagesSportMapPayloads
             'difficulty' => [$nullable, Rule::in(['easy', 'moderate', 'hard', 'expert'])],
             'surface' => [$nullable, 'string', 'max:60'],
             'waypoints' => [$required, 'array', 'min:2', 'max:200'],
+            'waypoints.*.name' => ['nullable', 'string', 'max:120'],
+            'waypoints.*.latitude' => ['required_with:waypoints', 'numeric', 'between:-90,90'],
+            'waypoints.*.longitude' => ['required_with:waypoints', 'numeric', 'between:-180,180'],
+            'waypoints.*.elevation_m' => ['nullable', 'numeric', 'between:-500,9000'],
+        ]);
+    }
+
+    private function validateRouteProposalData(Request $request): array
+    {
+        return $request->validate([
+            'title' => ['nullable', 'string', 'max:160'],
+            'sport_type' => ['nullable', Rule::in($this->sportTypeKeys())],
+            'route_type' => ['nullable', Rule::in(['roundtrip', 'point_to_point'])],
+            'target_mode' => ['nullable', Rule::in(['distance', 'duration'])],
+            'distance_km' => ['nullable', 'numeric', 'min:1', 'max:80'],
+            'duration_minutes' => ['nullable', 'numeric', 'min:10', 'max:600'],
+            'surface' => ['nullable', Rule::in(['any', 'asphalt', 'firm', 'forest', 'gravel', 'trail'])],
+            'environment' => ['nullable', Rule::in(['nature', 'forest', 'park', 'water'])],
+            'elevation' => ['nullable', Rule::in(['flat', 'mixed', 'hilly'])],
+            'difficulty' => ['nullable', Rule::in(['easy', 'moderate', 'hard'])],
+            'low_traffic' => ['nullable', 'boolean'],
+            'lit' => ['nullable', 'boolean'],
+            'water_breaks' => ['nullable', 'boolean'],
+            'include_places' => ['nullable', 'string', 'max:500'],
+            'avoid_places' => ['nullable', 'string', 'max:500'],
+            'start' => ['required_without:waypoints', 'array'],
+            'start.name' => ['nullable', 'string', 'max:120'],
+            'start.latitude' => ['required_without:waypoints', 'numeric', 'between:-90,90'],
+            'start.longitude' => ['required_without:waypoints', 'numeric', 'between:-180,180'],
+            'waypoints' => ['nullable', 'array', 'min:2', 'max:12'],
             'waypoints.*.name' => ['nullable', 'string', 'max:120'],
             'waypoints.*.latitude' => ['required_with:waypoints', 'numeric', 'between:-90,90'],
             'waypoints.*.longitude' => ['required_with:waypoints', 'numeric', 'between:-180,180'],
@@ -117,6 +150,10 @@ trait ManagesSportMapPayloads
             'surfaces' => [$nullable, 'array', 'max:20'],
             'surfaces.*' => ['nullable', 'string', 'max:80'],
             'opening_hours' => [$nullable, 'string', 'max:255'],
+            'gallery_images' => [$nullable, 'array', 'max:8'],
+            'gallery_images.*' => ['nullable', 'url', 'max:2048'],
+            'image_uploads' => [$nullable, 'array', 'max:6'],
+            'image_uploads.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:8192'],
         ]);
     }
 
@@ -125,7 +162,7 @@ trait ManagesSportMapPayloads
         $waypoints = array_key_exists('waypoints', $data)
             ? $metrics->normalizePoints($data['waypoints'])
             : ($route?->waypoints ?? []);
-        $summary = $metrics->summarize($waypoints, $data['sport_type'] ?? $route?->sport_type);
+        $summary = app(SportRouteRoutingService::class)->summarizeRoute($waypoints, $data['sport_type'] ?? $route?->sport_type);
         $first = $waypoints[0] ?? null;
         $last = $waypoints[count($waypoints) - 1] ?? null;
         $visibility = $data['visibility'] ?? $route?->visibility ?? 'private';
@@ -155,11 +192,15 @@ trait ManagesSportMapPayloads
             'waypoints' => $waypoints,
             'route_geometry' => $summary['geometry'],
             'navigation_cues' => $summary['navigation_cues'],
-            'metrics' => [
+            'metrics' => array_filter([
                 'bounds' => $summary['bounds'],
-                'calculation' => 'airmius_haversine_estimate',
+                'calculation' => $summary['calculation'] ?? 'airmius_haversine_estimate',
+                'routing_provider' => $summary['routing_provider'] ?? 'local',
+                'routing_profile' => $summary['routing_profile'] ?? null,
+                'routing_status' => $summary['routing_status'] ?? 'estimated',
+                'routing_error' => $summary['routing_error'] ?? null,
                 'supports_offline_navigation' => true,
-            ],
+            ], fn ($value) => $value !== null && $value !== ''),
             'completed_at' => ($data['status'] ?? $route?->status) === 'completed' ? ($route?->completed_at ?? now()) : $route?->completed_at,
         ];
     }
@@ -228,10 +269,41 @@ trait ManagesSportMapPayloads
             'amenities' => array_key_exists('amenities', $data) ? $this->cleanList($data['amenities'] ?? []) : ($place?->amenities ?? []),
             'surfaces' => array_key_exists('surfaces', $data) ? $this->cleanList($data['surfaces'] ?? []) : ($place?->surfaces ?? []),
             'opening_hours' => array_key_exists('opening_hours', $data) ? $data['opening_hours'] : $place?->opening_hours,
+            'gallery_images' => $this->sportPlaceGalleryImages($data, $place),
             'metrics' => [
                 'submitted_from' => request()->expectsJson() ? 'api' : 'web',
             ],
         ];
+    }
+
+    private function sportPlaceGalleryImages(array $data, ?SportPlace $place = null): array
+    {
+        $images = collect($place?->gallery_images ?? []);
+
+        if (array_key_exists('gallery_images', $data)) {
+            $images = collect($data['gallery_images'] ?? []);
+        }
+
+        foreach (($data['image_uploads'] ?? []) as $upload) {
+            if (! $upload) {
+                continue;
+            }
+
+            $stored = app(MediaOptimizer::class)->store($upload, 'sport-places');
+            $url = UploadStorage::url($stored['path'] ?? null);
+
+            if ($url) {
+                $images->push($url);
+            }
+        }
+
+        return $images
+            ->map(fn ($image) => trim((string) $image))
+            ->filter()
+            ->unique()
+            ->take(8)
+            ->values()
+            ->all();
     }
 
     private function filterNearbyPlaces(Builder $query, Request $request, SportRouteMetricService $metrics): Builder
