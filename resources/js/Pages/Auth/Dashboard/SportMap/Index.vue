@@ -57,21 +57,32 @@ const routeGeneratorStatus = ref('')
 const generatedRoutePoints = ref([])
 const generatedRouteGeometryPoints = ref([])
 const generatedRouteMetrics = ref(null)
+const generatedRouteNavigationCues = ref([])
 const isGeneratingRoute = ref(false)
+const routeGeneratorVariantSeed = ref(Date.now())
+const routeGeneratorMapTarget = ref('start')
+const activeMapLayer = ref('standard')
 const activeTileSourceIndex = ref(0)
 const visibleMapTileCount = ref(0)
 const failedMapTileCount = ref(0)
 const isTracking = ref(false)
+const routePlaybackState = ref('idle')
+const routePlaybackProgressMeters = ref(0)
+const routePlaybackSpeed = ref(16)
+const routePlaybackStatus = ref('')
 let watchId = null
 let mapDragStart = null
 let mapDragFrame = null
 let mapPendingDragEvent = null
+let routePlaybackFrame = null
+let routePlaybackLastTimestamp = null
 
 const TILE_SIZE = 256
 const MAP_WIDTH = 1000
 const MAP_HEIGHT = 560
 const DEFAULT_CENTER = { latitude: 51.1657, longitude: 10.4515 }
 const DEFAULT_ZOOM = 6
+const PLAYBACK_SPEED_OPTIONS = [8, 16, 32]
 const mapView = ref({
     latitude: DEFAULT_CENTER.latitude,
     longitude: DEFAULT_CENTER.longitude,
@@ -103,6 +114,8 @@ const routeGeneratorForm = reactive({
     start_mode: 'map_center',
     start_latitude: '',
     start_longitude: '',
+    destination_latitude: '',
+    destination_longitude: '',
     route_type: 'roundtrip',
     target_mode: 'distance',
     distance_km: 5,
@@ -172,8 +185,8 @@ const routeGeneratorStartModes = [
 ]
 
 const routeGeneratorRouteTypes = [
-    { key: 'roundtrip', label: 'Rundroute', icon: 'las la-sync' },
-    { key: 'point_to_point', label: 'Zielroute', icon: 'las la-long-arrow-alt-right' },
+    { key: 'roundtrip', label: 'Rundroute', icon: 'las la-sync', description: 'Start und Ziel sind gleich.' },
+    { key: 'point_to_point', label: 'Einmal zum Ziel', icon: 'las la-long-arrow-alt-right', description: 'Keine Rueckstrecke.' },
 ]
 
 const routeGeneratorSurfaceOptions = [
@@ -246,9 +259,26 @@ const draftPlacePoint = computed(() => {
 const activeGeneratorPoints = computed(() => {
     if (activeTab.value !== 'generator') return []
 
-    return generatedRoutePoints.value
+    if (generatedRoutePoints.value.length) {
+        return generatedRoutePoints.value
+            .filter(isValidMapCoordinate)
+            .map((point, index) => ({ ...point, source: 'generator_draft', sourceIndex: index }))
+    }
+
+    return [
+        routeGeneratorStartPoint.value ? {
+            ...routeGeneratorStartPoint.value,
+            name: 'Start',
+            source: 'generator_setup',
+        } : null,
+        routeGeneratorForm.route_type === 'point_to_point' && routeGeneratorDestinationPoint.value ? {
+            ...routeGeneratorDestinationPoint.value,
+            name: 'Ziel',
+            source: 'generator_setup',
+        } : null,
+    ]
         .filter(isValidMapCoordinate)
-        .map((point, index) => ({ ...point, source: 'generator_draft', sourceIndex: index }))
+        .map((point, index) => ({ ...point, sourceIndex: index }))
 })
 
 const selectedRoute = computed(() => props.routes.find((item) => item.id === selectedRouteId.value) || props.routes[0] || null)
@@ -287,10 +317,49 @@ const routeGeometryPoints = computed(() => {
         }))
         .filter(isValidMapCoordinate)
 })
+
+const cleanedWaypoints = () => waypointRows.value
+    .map((point) => ({
+        name: point.name,
+        latitude: point.latitude === '' ? null : Number(point.latitude),
+        longitude: point.longitude === '' ? null : Number(point.longitude),
+        elevation_m: point.elevation_m === '' ? null : Number(point.elevation_m),
+    }))
+    .filter(isValidMapCoordinate)
+
+const haversine = (from, to) => {
+    const radius = 6371000
+    const lat1 = Number(from.latitude) * Math.PI / 180
+    const lat2 = Number(to.latitude) * Math.PI / 180
+    const dLat = (Number(to.latitude) - Number(from.latitude)) * Math.PI / 180
+    const dLon = (Number(to.longitude) - Number(from.longitude)) * Math.PI / 180
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2
+
+    return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+const anchorRouteLinePoints = (linePoints, waypointPoints = []) => {
+    const points = linePoints.filter(isValidMapCoordinate)
+    const waypoints = waypointPoints.filter(isValidMapCoordinate)
+    const start = waypoints[0]
+    const finish = waypoints[waypoints.length - 1]
+    const anchored = [...points]
+
+    if (start && (!anchored.length || haversine(start, anchored[0]) > 8)) {
+        anchored.unshift(start)
+    }
+
+    if (finish && (!anchored.length || haversine(finish, anchored[anchored.length - 1]) > 8)) {
+        anchored.push(finish)
+    }
+
+    return anchored
+}
+
 const routeLinePoints = computed(() => {
     if (activeTab.value === 'generator') {
         return generatedRouteGeometryPoints.value.length >= 2
-            ? generatedRouteGeometryPoints.value
+            ? anchorRouteLinePoints(generatedRouteGeometryPoints.value, activeGeneratorPoints.value)
             : activeGeneratorPoints.value
     }
 
@@ -298,10 +367,10 @@ const routeLinePoints = computed(() => {
 
     if (formPoints.length >= 2) {
         return draftRouteGeometryPoints.value.length >= 2
-            ? draftRouteGeometryPoints.value
+            ? anchorRouteLinePoints(draftRouteGeometryPoints.value, formPoints)
             : formPoints
     }
-    if (routeGeometryPoints.value.length >= 2) return routeGeometryPoints.value
+    if (routeGeometryPoints.value.length >= 2) return anchorRouteLinePoints(routeGeometryPoints.value, selectedRoute.value?.waypoints || [])
 
     return (selectedRoute.value?.waypoints || []).filter(isValidMapCoordinate)
 })
@@ -341,6 +410,44 @@ const bounds = computed(() => {
 const routePolyline = computed(() => polylinePoints(routeLinePoints.value))
 const trackPolyline = computed(() => polylinePoints(activeTrackPoints.value))
 const trackingDistance = computed(() => distanceMeters(trackingPoints.value))
+const routePlaybackPath = computed(() => routeLinePoints.value.filter(isValidMapCoordinate))
+const routePlaybackTotalDistance = computed(() => distanceMeters(routePlaybackPath.value))
+const routePlaybackCanStart = computed(() => routePlaybackPath.value.length >= 2 && routePlaybackTotalDistance.value > 10)
+const activeRouteSportType = computed(() => {
+    if (activeTab.value === 'generator') return routeGeneratorForm.sport_type
+    if (activeTab.value === 'routes' && cleanedWaypoints().length >= 2) return routeForm.sport_type
+
+    return selectedRoute.value?.sport_type || routeForm.sport_type || 'running'
+})
+const activeRouteEstimatedDurationSeconds = computed(() => {
+    if (activeTab.value === 'generator' && generatedRouteMetrics.value?.estimated_duration_seconds) {
+        return Number(generatedRouteMetrics.value.estimated_duration_seconds)
+    }
+
+    if (activeTab.value === 'routes' && cleanedWaypoints().length < 2 && selectedRoute.value?.estimated_duration_seconds) {
+        return Number(selectedRoute.value.estimated_duration_seconds)
+    }
+
+    const speedKmh = routeGeneratorSpeedsKmh[activeRouteSportType.value] || routeGeneratorSpeedsKmh.other
+
+    return Math.max(60, Math.round((routePlaybackTotalDistance.value / 1000) / speedKmh * 3600))
+})
+const routePlaybackMarker = computed(() => {
+    if (!routePlaybackCanStart.value) return null
+
+    return interpolateRoutePoint(routePlaybackPath.value, routePlaybackProgressMeters.value)
+})
+const routePlaybackProgressPercent = computed(() => {
+    if (!routePlaybackTotalDistance.value) return 0
+
+    return clamp((routePlaybackProgressMeters.value / routePlaybackTotalDistance.value) * 100, 0, 100)
+})
+const routePlaybackElapsedSeconds = computed(() => {
+    if (!routePlaybackTotalDistance.value) return 0
+
+    return Math.round((routePlaybackProgressMeters.value / routePlaybackTotalDistance.value) * activeRouteEstimatedDurationSeconds.value)
+})
+const routePlaybackRemainingSeconds = computed(() => Math.max(0, activeRouteEstimatedDurationSeconds.value - routePlaybackElapsedSeconds.value))
 const activeMapPointCount = computed(() => {
     if (activeTab.value === 'generator') return generatedRoutePoints.value.length
     if (activeTab.value === 'routes') return waypointRows.value.filter((point) => point.latitude !== '' && point.longitude !== '').length
@@ -349,27 +456,97 @@ const activeMapPointCount = computed(() => {
 
     return 0
 })
-const tileSources = computed(() => [
-    {
-        url: String(props.mapConfig?.tile_url || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'),
-        attribution: String(props.mapConfig?.attribution || '(c) OpenStreetMap contributors'),
-    },
-    {
-        url: 'https://a.tile.openstreetmap.de/{z}/{x}/{y}.png',
-        attribution: '(c) OpenStreetMap contributors',
-    },
-    {
-        url: 'https://tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-        attribution: '(c) OpenStreetMap contributors, HOT',
-    },
-    {
-        url: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-        attribution: '(c) OpenStreetMap contributors, CARTO',
-    },
-])
-const activeTileSource = computed(() => tileSources.value[activeTileSourceIndex.value] || tileSources.value[0])
-const tileTemplate = computed(() => activeTileSource.value.url)
-const mapAttribution = computed(() => activeTileSource.value.attribution)
+const mapLayerOptions = computed(() => {
+    const standardUrl = String(props.mapConfig?.tile_url || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png')
+    const standardAttribution = String(props.mapConfig?.attribution || '(c) OpenStreetMap contributors')
+    const satelliteUrl = String(props.mapConfig?.satellite_tile_url || '')
+    const satelliteAttribution = String(props.mapConfig?.satellite_attribution || '(c) Satellite imagery provider')
+    const standardSources = [
+        {
+            url: standardUrl,
+            attribution: standardAttribution,
+        },
+        {
+            url: 'https://a.tile.openstreetmap.de/{z}/{x}/{y}.png',
+            attribution: '(c) OpenStreetMap contributors',
+        },
+        {
+            url: 'https://tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+            attribution: '(c) OpenStreetMap contributors, HOT',
+        },
+        {
+            url: 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+            attribution: '(c) OpenStreetMap contributors, CARTO',
+        },
+    ]
+
+    return [
+        {
+            key: 'standard',
+            label: 'Karte',
+            icon: 'las la-map',
+            sources: standardSources,
+        },
+        {
+            key: 'outdoor',
+            label: 'Outdoor',
+            icon: 'las la-mountain',
+            sources: [
+                {
+                    url: 'https://tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+                    attribution: '(c) OpenStreetMap contributors, HOT',
+                },
+                ...standardSources,
+            ],
+        },
+        {
+            key: 'satellite',
+            label: 'Satellit',
+            icon: 'las la-satellite',
+            sources: satelliteUrl
+                ? [
+                    {
+                        url: satelliteUrl,
+                        attribution: satelliteAttribution,
+                    },
+                    ...standardSources,
+                ]
+                : standardSources,
+        },
+        {
+            key: 'hybrid',
+            label: 'Hybrid',
+            icon: 'las la-layer-group',
+            sources: satelliteUrl
+                ? [
+                    {
+                        url: satelliteUrl,
+                        attribution: satelliteAttribution,
+                    },
+                    ...standardSources,
+                ]
+                : standardSources,
+            overlay: satelliteUrl
+                ? {
+                    url: 'https://basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}.png',
+                    attribution: '(c) OpenStreetMap contributors, CARTO',
+                }
+                : null,
+        },
+    ]
+})
+const activeMapLayerOption = computed(() => mapLayerOptions.value.find((layer) => layer.key === activeMapLayer.value) || mapLayerOptions.value[0])
+const tileSources = computed(() => activeMapLayerOption.value?.sources || [])
+const defaultTileSource = computed(() => ({
+    url: String(props.mapConfig?.tile_url || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'),
+    attribution: String(props.mapConfig?.attribution || '(c) OpenStreetMap contributors'),
+}))
+const activeTileSource = computed(() => tileSources.value[activeTileSourceIndex.value] || tileSources.value[0] || defaultTileSource.value)
+const tileTemplate = computed(() => activeTileSource.value?.url || defaultTileSource.value.url)
+const mapOverlaySource = computed(() => activeMapLayerOption.value?.overlay || null)
+const mapAttribution = computed(() => mapOverlaySource.value
+    ? `${activeTileSource.value?.attribution || defaultTileSource.value.attribution} - ${mapOverlaySource.value.attribution}`
+    : (activeTileSource.value?.attribution || defaultTileSource.value.attribution))
 const mapHasRealTiles = computed(() => visibleMapTileCount.value > 0)
 const mapStatusText = computed(() => {
     if (manualMapPointStatus.value) return manualMapPointStatus.value
@@ -488,6 +665,36 @@ const formatDuration = (seconds) => {
     return `${hours} h ${String(minutes).padStart(2, '0')} min`
 }
 
+const formatPercent = (value) => `${Number(value || 0).toFixed(1)} %`
+
+const cueText = (cue, index) => {
+    const type = String(cue?.type || cue?.maneuver_type || 'continue')
+    const road = cue?.road_name ? ` auf ${cue.road_name}` : ''
+    const distance = cue?.distance_meters ? ` · ${formatDistance(cue.distance_meters)}` : ''
+    const label = {
+        start: 'Start',
+        finish: 'Ziel erreicht',
+        turn: 'Abbiegen',
+        new_name: 'Weiter',
+        continue: 'Geradeaus',
+        roundabout: 'Kreisverkehr',
+        merge: 'Einfaedeln',
+        fork: 'Gabelung',
+    }[type] || `Hinweis ${index + 1}`
+
+    return `${label}${road}${distance}`
+}
+
+const qualityBadgeClass = (score) => {
+    const value = Number(score || 0)
+
+    if (value >= 85) return 'border-emerald-400/50 bg-emerald-500/10 text-emerald-400'
+    if (value >= 70) return 'border-air-blue/50 bg-air-blue/10 text-air-blue'
+    if (value >= 50) return 'border-amber-400/50 bg-amber-500/10 text-amber-400'
+
+    return 'border-red-400/50 bg-red-500/10 text-red-400'
+}
+
 const splitList = (value) => String(value || '')
     .split(',')
     .map((item) => item.trim())
@@ -511,8 +718,10 @@ const routeGeneratorEstimatedMinutes = computed(() => {
 })
 
 const routeGeneratorStartPoint = computed(() => {
-    if (routeGeneratorForm.start_mode === 'current_location' && currentLocationPoint.value) {
-        return currentLocationPoint.value
+    if (routeGeneratorForm.start_mode === 'current_location') {
+        return currentLocationPoint.value && isValidMapCoordinate(currentLocationPoint.value)
+            ? currentLocationPoint.value
+            : null
     }
 
     if (routeGeneratorForm.start_mode === 'manual') {
@@ -531,6 +740,17 @@ const routeGeneratorStartPoint = computed(() => {
     }
 })
 
+const routeGeneratorDestinationPoint = computed(() => {
+    const latitude = Number(routeGeneratorForm.destination_latitude)
+    const longitude = Number(routeGeneratorForm.destination_longitude)
+
+    if (!isValidMapCoordinate({ latitude, longitude })) {
+        return null
+    }
+
+    return { latitude, longitude, name: 'Ziel' }
+})
+
 const routeGeneratorSummary = computed(() => ({
     distance: `${routeGeneratorTargetDistanceKm.value.toFixed(routeGeneratorTargetDistanceKm.value < 10 ? 1 : 0)} km`,
     duration: `${routeGeneratorEstimatedMinutes.value} min`,
@@ -545,14 +765,24 @@ const generatedRouteActualSummary = computed(() => {
         return null
     }
 
+    const quality = generatedRouteMetrics.value.quality || {}
+    const fallbackBacktrackPercent = Number(generatedRouteMetrics.value.route_shape?.backtrack_ratio || 0) * 100
+
     return {
         distance: formatDistance(generatedRouteMetrics.value.distance_meters),
         duration: formatDuration(generatedRouteMetrics.value.estimated_duration_seconds),
         status: generatedRouteMetrics.value.routing_status || 'estimated',
         provider: generatedRouteMetrics.value.routing_provider || 'local',
         geometryPoints: generatedRouteMetrics.value.geometry_point_count || generatedRouteGeometryPoints.value.length,
+        qualityScore: quality.score ?? null,
+        qualityLabel: quality.label || '-',
+        targetDelta: formatDistance(quality.target_delta_meters || generatedRouteMetrics.value.target_delta_meters || 0),
+        backtrackPercent: quality.backtrack_percent ?? fallbackBacktrackPercent,
+        shapeAcceptable: quality.shape_acceptable ?? generatedRouteMetrics.value.route_shape?.acceptable ?? false,
     }
 })
+
+const generatedRouteCuePreview = computed(() => generatedRouteNavigationCues.value.slice(0, 6))
 
 const setActiveTab = (key) => {
     activeTab.value = key
@@ -561,15 +791,6 @@ const setActiveTab = (key) => {
 const handlePlaceImageUploads = (event) => {
     placeImageUploads.value = Array.from(event.target.files || []).slice(0, 6)
 }
-
-const cleanedWaypoints = () => waypointRows.value
-    .map((point) => ({
-        name: point.name,
-        latitude: point.latitude === '' ? null : Number(point.latitude),
-        longitude: point.longitude === '' ? null : Number(point.longitude),
-        elevation_m: point.elevation_m === '' ? null : Number(point.elevation_m),
-    }))
-    .filter(isValidMapCoordinate)
 
 const addWaypoint = () => {
     draftRouteGeometryPoints.value = []
@@ -640,12 +861,54 @@ const setGeneratorStep = (step) => {
     routeGeneratorStep.value = clamp(step, 1, 3)
 }
 
+const setRouteGeneratorStartMode = (mode) => {
+    routeGeneratorForm.start_mode = mode
+
+    if (mode === 'current_location') {
+        useCurrentLocationForGenerator()
+    }
+}
+
+const setRouteGeneratorType = (type) => {
+    routeGeneratorForm.route_type = type
+    routeGeneratorMapTarget.value = type === 'point_to_point' ? 'destination' : 'start'
+    generatedRoutePoints.value = []
+    generatedRouteGeometryPoints.value = []
+    generatedRouteMetrics.value = null
+    generatedRouteNavigationCues.value = []
+    routeGeneratorStatus.value = type === 'point_to_point'
+        ? 'Setze jetzt den Zielpunkt auf der Karte oder per Koordinaten.'
+        : 'Rundroute aktiv: Kartenklick setzt den Startpunkt.'
+}
+
 const setGeneratorStartFromCoordinate = (coordinate, label = 'Startpunkt') => {
     routeGeneratorForm.start_mode = 'manual'
     routeGeneratorForm.start_latitude = Number(coordinate.latitude).toFixed(7)
     routeGeneratorForm.start_longitude = Number(coordinate.longitude).toFixed(7)
     routeGeneratorStatus.value = `${label} wurde gesetzt.`
     manualMapPointStatus.value = `${label} wurde fuer den Routengenerator uebernommen.`
+
+    if (routeGeneratorForm.route_type === 'point_to_point') {
+        routeGeneratorMapTarget.value = 'destination'
+    }
+}
+
+const setGeneratorDestinationFromCoordinate = (coordinate, label = 'Zielpunkt') => {
+    routeGeneratorForm.destination_latitude = Number(coordinate.latitude).toFixed(7)
+    routeGeneratorForm.destination_longitude = Number(coordinate.longitude).toFixed(7)
+    routeGeneratorStatus.value = `${label} wurde gesetzt.`
+    manualMapPointStatus.value = `${label} wurde fuer die Zielroute uebernommen.`
+}
+
+const setGeneratorDestinationFromMapCenter = () => {
+    setGeneratorDestinationFromCoordinate(safeMapView.value, 'Kartenmitte als Ziel')
+}
+
+const clearGeneratorDestination = () => {
+    routeGeneratorForm.destination_latitude = ''
+    routeGeneratorForm.destination_longitude = ''
+    routeGeneratorStatus.value = 'Zielpunkt wurde entfernt.'
+    manualMapPointStatus.value = routeGeneratorStatus.value
 }
 
 const useCurrentLocationForGenerator = () => {
@@ -717,6 +980,23 @@ const generatorWaypointName = (index, isLast) => {
 
 const routeProposalPayload = (waypoints = null) => {
     const start = routeGeneratorStartPoint.value
+    const destination = routeGeneratorDestinationPoint.value
+    const effectiveWaypoints = waypoints || (
+        routeGeneratorForm.route_type === 'point_to_point' && isValidMapCoordinate(start) && isValidMapCoordinate(destination)
+            ? [
+                {
+                    name: start.name || 'Start',
+                    latitude: start.latitude,
+                    longitude: start.longitude,
+                },
+                {
+                    name: destination.name || 'Ziel',
+                    latitude: destination.latitude,
+                    longitude: destination.longitude,
+                },
+            ]
+            : null
+    )
 
     return {
         title: routeGeneratorForm.title,
@@ -734,13 +1014,18 @@ const routeProposalPayload = (waypoints = null) => {
         water_breaks: routeGeneratorForm.water_breaks,
         include_places: routeGeneratorForm.include_places,
         avoid_places: routeGeneratorForm.avoid_places,
+        variant_seed: routeGeneratorVariantSeed.value,
         start: isValidMapCoordinate(start) ? {
             name: start.name || 'Start',
             latitude: start.latitude,
             longitude: start.longitude,
         } : null,
-        waypoints,
+        waypoints: effectiveWaypoints,
     }
+}
+
+const refreshRouteGeneratorVariant = () => {
+    routeGeneratorVariantSeed.value = Date.now() + Math.floor(Math.random() * 1000000)
 }
 
 const applyRouteProposal = (proposal) => {
@@ -765,6 +1050,7 @@ const applyRouteProposal = (proposal) => {
         estimated_duration_seconds: proposal?.estimated_duration_seconds || 0,
         geometry_point_count: metrics.geometry_point_count || geometryPoints.length,
     }
+    generatedRouteNavigationCues.value = Array.isArray(proposal?.navigation_cues) ? proposal.navigation_cues : []
 
     routeGeneratorStep.value = 3
 
@@ -798,6 +1084,14 @@ const generateRouteProposal = () => {
         return
     }
 
+    if (routeGeneratorForm.route_type === 'point_to_point' && !isValidMapCoordinate(routeGeneratorDestinationPoint.value)) {
+        routeGeneratorStatus.value = 'Bitte fuer "Einmal zum Ziel" zuerst einen Zielpunkt auf der Karte oder per Koordinaten setzen.'
+        routeGeneratorStep.value = 1
+        routeGeneratorMapTarget.value = 'destination'
+        return
+    }
+
+    refreshRouteGeneratorVariant()
     requestRouteProposal()
 }
 
@@ -825,6 +1119,8 @@ const resetGeneratedRoute = () => {
     generatedRoutePoints.value = []
     generatedRouteGeometryPoints.value = []
     generatedRouteMetrics.value = null
+    generatedRouteNavigationCues.value = []
+    refreshRouteGeneratorVariant()
     routeGeneratorStatus.value = 'Routenvorschlag wurde zurueckgesetzt.'
     manualMapPointStatus.value = routeGeneratorStatus.value
 }
@@ -1044,6 +1340,11 @@ const showCurrentLocationOnMap = () => {
         manualMapPointStatus.value = point.accuracy_m
             ? `Dein Standort wird angezeigt. Genauigkeit ca. ${point.accuracy_m} m.`
             : 'Dein Standort wird auf der Karte angezeigt.'
+
+        if (activeTab.value === 'generator') {
+            routeGeneratorForm.start_mode = 'current_location'
+            routeGeneratorStatus.value = 'Dein Standort ist jetzt der Startpunkt fuer die Routengenerierung.'
+        }
     }, () => {
         manualMapPointStatus.value = 'Standort konnte nicht ermittelt werden. Bitte Browser-Berechtigung pruefen.'
     }, {
@@ -1211,19 +1512,6 @@ const autoMapZoom = computed(() => {
     return clamp(Math.min(zoomX, zoomY), 2, 17)
 })
 
-watch([autoMapCenter, autoMapZoom], ([center, zoom]) => {
-    if (mapView.value.userChanged) return
-
-    mapView.value.latitude = center.latitude
-    mapView.value.longitude = center.longitude
-    mapView.value.zoom = zoom
-}, { immediate: true })
-
-watch(activeTileSourceIndex, () => {
-    visibleMapTileCount.value = 0
-    failedMapTileCount.value = 0
-})
-
 const safeMapView = computed(() => ({
     latitude: Number.isFinite(Number(mapView.value.latitude)) ? Number(mapView.value.latitude) : DEFAULT_CENTER.latitude,
     longitude: Number.isFinite(Number(mapView.value.longitude)) ? Number(mapView.value.longitude) : DEFAULT_CENTER.longitude,
@@ -1241,10 +1529,12 @@ const mapProjection = computed(() => {
     }
 })
 
-const tileUrl = (zoom, x, y) => tileTemplate.value
+const tileUrlFromTemplate = (template, zoom, x, y) => template
     .replace('{z}', String(zoom))
     .replace('{x}', String(x))
     .replace('{y}', String(y))
+
+const tileUrl = (zoom, x, y) => tileUrlFromTemplate(tileTemplate.value, zoom, x, y)
 
 const handleTileLoad = () => {
     visibleMapTileCount.value += 1
@@ -1282,8 +1572,42 @@ const mapTiles = computed(() => {
             if (y < 0 || y >= tilesPerAxis) continue
 
             tiles.push({
-                key: `${activeTileSourceIndex.value}-${zoom}-${rawX}-${y}`,
+                key: `${activeMapLayer.value}-${activeTileSourceIndex.value}-${zoom}-${rawX}-${y}`,
                 url: tileUrl(zoom, x, y),
+                style: {
+                    left: `${((rawX * TILE_SIZE - projection.left) / MAP_WIDTH) * 100}%`,
+                    top: `${((y * TILE_SIZE - projection.top) / MAP_HEIGHT) * 100}%`,
+                    width: `${(TILE_SIZE / MAP_WIDTH) * 100}%`,
+                    height: `${(TILE_SIZE / MAP_HEIGHT) * 100}%`,
+                },
+            })
+        }
+    }
+
+    return tiles
+})
+
+const mapOverlayTiles = computed(() => {
+    if (!mapOverlaySource.value?.url) return []
+
+    const projection = mapProjection.value
+    const zoom = projection.zoom
+    const tilesPerAxis = 2 ** zoom
+    const startX = Math.floor(projection.left / TILE_SIZE) - 1
+    const endX = Math.floor((projection.left + MAP_WIDTH) / TILE_SIZE) + 1
+    const startY = Math.floor(projection.top / TILE_SIZE) - 1
+    const endY = Math.floor((projection.top + MAP_HEIGHT) / TILE_SIZE) + 1
+    const tiles = []
+
+    for (let rawX = startX; rawX <= endX; rawX += 1) {
+        const x = ((rawX % tilesPerAxis) + tilesPerAxis) % tilesPerAxis
+
+        for (let y = startY; y <= endY; y += 1) {
+            if (y < 0 || y >= tilesPerAxis) continue
+
+            tiles.push({
+                key: `overlay-${activeMapLayer.value}-${zoom}-${rawX}-${y}`,
+                url: tileUrlFromTemplate(mapOverlaySource.value.url, zoom, x, y),
                 style: {
                     left: `${((rawX * TILE_SIZE - projection.left) / MAP_WIDTH) * 100}%`,
                     top: `${((y * TILE_SIZE - projection.top) / MAP_HEIGHT) * 100}%`,
@@ -1433,6 +1757,11 @@ const handleMapClick = (event) => {
     const coordinate = coordinateFromMapEvent(event)
 
     if (activeTab.value === 'generator') {
+        if (routeGeneratorForm.route_type === 'point_to_point' && routeGeneratorMapTarget.value === 'destination') {
+            setGeneratorDestinationFromCoordinate(coordinate, 'Zielpunkt')
+            return
+        }
+
         setGeneratorStartFromCoordinate(coordinate, 'Startpunkt')
         return
     }
@@ -1499,19 +1828,159 @@ const distanceMeters = (points) => {
     return Math.round(distance)
 }
 
-const haversine = (from, to) => {
-    const radius = 6371000
-    const lat1 = Number(from.latitude) * Math.PI / 180
-    const lat2 = Number(to.latitude) * Math.PI / 180
-    const dLat = (Number(to.latitude) - Number(from.latitude)) * Math.PI / 180
-    const dLon = (Number(to.longitude) - Number(from.longitude)) * Math.PI / 180
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2
+const interpolateRoutePoint = (points, progressMeters) => {
+    const path = points.filter(isValidMapCoordinate)
 
-    return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+    if (!path.length) return null
+    if (path.length === 1 || progressMeters <= 0) return path[0]
+
+    let walked = 0
+
+    for (let index = 1; index < path.length; index += 1) {
+        const from = path[index - 1]
+        const to = path[index]
+        const segmentDistance = haversine(from, to)
+
+        if (walked + segmentDistance >= progressMeters) {
+            const ratio = segmentDistance <= 0 ? 0 : (progressMeters - walked) / segmentDistance
+
+            return {
+                latitude: Number(from.latitude) + ((Number(to.latitude) - Number(from.latitude)) * ratio),
+                longitude: Number(from.longitude) + ((Number(to.longitude) - Number(from.longitude)) * ratio),
+                name: 'Route-Vorschau',
+            }
+        }
+
+        walked += segmentDistance
+    }
+
+    return path[path.length - 1]
 }
+
+const cancelRoutePlaybackFrame = () => {
+    if (routePlaybackFrame !== null) {
+        cancelAnimationFrame(routePlaybackFrame)
+        routePlaybackFrame = null
+    }
+
+    routePlaybackLastTimestamp = null
+}
+
+const centerRoutePlaybackOnMap = (point) => {
+    if (!isValidMapCoordinate(point)) return
+
+    mapView.value.latitude = point.latitude
+    mapView.value.longitude = point.longitude
+    mapView.value.zoom = Math.max(safeMapView.value.zoom, 15)
+    mapView.value.userChanged = true
+}
+
+const routePlaybackMetersPerSecond = () => {
+    const speedKmh = routeGeneratorSpeedsKmh[activeRouteSportType.value] || routeGeneratorSpeedsKmh.other
+
+    return Math.max(0.4, speedKmh / 3.6) * routePlaybackSpeed.value
+}
+
+const tickRoutePlayback = (timestamp) => {
+    if (routePlaybackState.value !== 'playing') {
+        cancelRoutePlaybackFrame()
+        return
+    }
+
+    if (routePlaybackLastTimestamp === null) {
+        routePlaybackLastTimestamp = timestamp
+    }
+
+    const deltaSeconds = Math.min((timestamp - routePlaybackLastTimestamp) / 1000, 0.25)
+    routePlaybackLastTimestamp = timestamp
+    routePlaybackProgressMeters.value = Math.min(
+        routePlaybackTotalDistance.value,
+        routePlaybackProgressMeters.value + (routePlaybackMetersPerSecond() * deltaSeconds),
+    )
+
+    if (routePlaybackMarker.value) {
+        centerRoutePlaybackOnMap(routePlaybackMarker.value)
+    }
+
+    if (routePlaybackProgressMeters.value >= routePlaybackTotalDistance.value) {
+        routePlaybackState.value = 'finished'
+        routePlaybackStatus.value = 'Route-Vorschau beendet.'
+        cancelRoutePlaybackFrame()
+        return
+    }
+
+    routePlaybackFrame = requestAnimationFrame(tickRoutePlayback)
+}
+
+const startRoutePlayback = () => {
+    if (!routePlaybackCanStart.value) {
+        routePlaybackStatus.value = 'Bitte zuerst eine Route mit mindestens zwei Punkten planen oder generieren.'
+        return
+    }
+
+    if (routePlaybackState.value === 'finished' || routePlaybackProgressMeters.value >= routePlaybackTotalDistance.value) {
+        routePlaybackProgressMeters.value = 0
+    }
+
+    routePlaybackState.value = 'playing'
+    routePlaybackStatus.value = 'Route-Vorschau laeuft.'
+    cancelRoutePlaybackFrame()
+
+    if (routePlaybackMarker.value) {
+        centerRoutePlaybackOnMap(routePlaybackMarker.value)
+    }
+
+    routePlaybackFrame = requestAnimationFrame(tickRoutePlayback)
+}
+
+const pauseRoutePlayback = () => {
+    if (routePlaybackState.value !== 'playing') return
+
+    routePlaybackState.value = 'paused'
+    routePlaybackStatus.value = 'Route-Vorschau pausiert.'
+    cancelRoutePlaybackFrame()
+}
+
+const resetRoutePlayback = (status = '') => {
+    cancelRoutePlaybackFrame()
+    routePlaybackState.value = 'idle'
+    routePlaybackProgressMeters.value = 0
+    routePlaybackStatus.value = status
+}
+
+const toggleRoutePlayback = () => {
+    if (routePlaybackState.value === 'playing') {
+        pauseRoutePlayback()
+        return
+    }
+
+    startRoutePlayback()
+}
+
+watch(routePlaybackPath, () => {
+    resetRoutePlayback()
+}, { deep: true })
+
+watch([autoMapCenter, autoMapZoom], ([center, zoom]) => {
+    if (mapView.value.userChanged) return
+
+    mapView.value.latitude = center.latitude
+    mapView.value.longitude = center.longitude
+    mapView.value.zoom = zoom
+}, { immediate: true })
+
+watch(activeMapLayer, () => {
+    activeTileSourceIndex.value = 0
+})
+
+watch([activeMapLayer, activeTileSourceIndex], () => {
+    visibleMapTileCount.value = 0
+    failedMapTileCount.value = 0
+})
 
 onUnmounted(() => {
     stopTracking()
+    cancelRoutePlaybackFrame()
 
     if (mapDragFrame !== null) {
         cancelAnimationFrame(mapDragFrame)
@@ -1576,14 +2045,30 @@ onUnmounted(() => {
 
             <section v-if="activeTab !== 'landing'" class="grid gap-5 xl:grid-cols-[minmax(0,1.25fr),minmax(320px,0.75fr)]">
                 <div class="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-                    <div class="flex items-center justify-between border-b border-border px-4 py-3">
+                    <div class="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <p class="text-sm font-semibold text-primary">{{ $t('sport_map.map_preview') }}</p>
                             <p class="text-xs text-secondary">{{ mapStatusText }}</p>
                         </div>
-                        <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-secondary">
-                            {{ mapPoints.length }} {{ $t('sport_map.points') }}
-                        </span>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <div class="flex overflow-hidden rounded-lg border border-border bg-inputBg p-1">
+                                <button
+                                    v-for="layer in mapLayerOptions"
+                                    :key="layer.key"
+                                    type="button"
+                                    class="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-md px-3 text-xs font-bold transition"
+                                    :class="activeMapLayer === layer.key ? 'bg-buttonPrimary text-buttonTextPrimary shadow-sm' : 'text-secondary hover:bg-card hover:text-primary'"
+                                    :aria-label="`${layer.label} anzeigen`"
+                                    @click="activeMapLayer = layer.key"
+                                >
+                                    <i :class="layer.icon"></i>
+                                    <span>{{ layer.label }}</span>
+                                </button>
+                            </div>
+                            <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-secondary">
+                                {{ mapPoints.length }} {{ $t('sport_map.points') }}
+                            </span>
+                        </div>
                     </div>
 
                     <div
@@ -1637,6 +2122,19 @@ onUnmounted(() => {
                             @load="handleTileLoad"
                             @error="handleTileError"
                         >
+                        <img
+                            v-for="tile in mapOverlayTiles"
+                            :key="tile.key"
+                            :src="tile.url"
+                            :style="tile.style"
+                            class="pointer-events-none absolute z-[7] max-w-none select-none"
+                            alt=""
+                            aria-hidden="true"
+                            decoding="async"
+                            loading="eager"
+                            draggable="false"
+                            @dragstart.prevent
+                        >
 
                         <template v-if="!mapHasRealTiles">
                             <span
@@ -1650,7 +2148,7 @@ onUnmounted(() => {
                         </template>
 
                         <div
-                            class="pointer-events-auto absolute left-3 top-3 z-[80] flex flex-col overflow-hidden rounded-lg border border-border bg-card/95 shadow-sm"
+                            class="pointer-events-auto absolute left-3 top-3 z-[80] flex flex-col overflow-hidden rounded-xl border border-white/70 bg-white/95 shadow-2xl ring-1 ring-slate-950/20 backdrop-blur"
                             @click.stop
                             @pointerdown.stop
                             @pointermove.stop
@@ -1659,7 +2157,7 @@ onUnmounted(() => {
                         >
                             <button
                                 type="button"
-                                class="flex h-10 w-10 items-center justify-center text-lg font-bold text-primary hover:bg-inputBg"
+                                class="flex h-10 w-10 items-center justify-center text-lg font-black text-slate-950 transition hover:bg-air-blue hover:text-white"
                                 aria-label="Karte vergroessern"
                                 @click.stop.prevent="zoomMap(1)"
                             >
@@ -1667,7 +2165,7 @@ onUnmounted(() => {
                             </button>
                             <button
                                 type="button"
-                                class="flex h-10 w-10 items-center justify-center border-t border-border text-lg font-bold text-primary hover:bg-inputBg"
+                                class="flex h-10 w-10 items-center justify-center border-t border-slate-300 text-lg font-black text-slate-950 transition hover:bg-air-blue hover:text-white"
                                 aria-label="Karte verkleinern"
                                 @click.stop.prevent="zoomMap(-1)"
                             >
@@ -1675,7 +2173,7 @@ onUnmounted(() => {
                             </button>
                             <button
                                 type="button"
-                                class="flex h-10 w-10 items-center justify-center border-t border-border text-base text-primary hover:bg-inputBg"
+                                class="flex h-10 w-10 items-center justify-center border-t border-slate-300 text-base text-slate-800 transition hover:bg-slate-900 hover:text-white"
                                 aria-label="Karte zentrieren"
                                 @click.stop.prevent="resetMapView"
                             >
@@ -1683,7 +2181,7 @@ onUnmounted(() => {
                             </button>
                             <button
                                 type="button"
-                                class="flex h-10 w-10 items-center justify-center border-t border-border text-base text-air-blue hover:bg-inputBg"
+                                class="flex h-10 w-10 items-center justify-center border-t border-slate-300 text-base text-blue-600 transition hover:bg-blue-600 hover:text-white"
                                 aria-label="Mein Standort anzeigen"
                                 title="Mein Standort"
                                 @click.stop.prevent="showCurrentLocationOnMap"
@@ -1692,7 +2190,7 @@ onUnmounted(() => {
                             </button>
                             <button
                                 type="button"
-                                class="flex h-10 w-10 items-center justify-center border-t border-border text-base text-primary hover:bg-inputBg"
+                                class="flex h-10 w-10 items-center justify-center border-t border-slate-300 text-base text-slate-700 transition hover:bg-slate-900 hover:text-white"
                                 aria-label="Letzten Punkt entfernen"
                                 @click.stop.prevent="removeLastActiveMapPoint"
                             >
@@ -1700,7 +2198,7 @@ onUnmounted(() => {
                             </button>
                             <button
                                 type="button"
-                                class="flex h-10 w-10 items-center justify-center border-t border-border text-base text-red-400 hover:bg-red-500/10"
+                                class="flex h-10 w-10 items-center justify-center border-t border-slate-300 text-base text-red-600 transition hover:bg-red-600 hover:text-white"
                                 aria-label="Punkte zuruecksetzen"
                                 @click.stop.prevent="resetActiveMapPoints"
                             >
@@ -1709,13 +2207,24 @@ onUnmounted(() => {
                         </div>
 
                         <div class="pointer-events-none absolute right-3 top-3 z-20 max-w-xs rounded-lg border border-border bg-card/95 px-3 py-2 text-xs font-semibold text-secondary shadow-sm">
-                            <span v-if="activeTab === 'generator'">Karte ziehen/zoomen. Klick setzt den Startpunkt fuer den Generator.</span>
+                            <span v-if="activeTab === 'generator'">
+                                Karte ziehen/zoomen. Klick setzt {{ routeGeneratorForm.route_type === 'point_to_point' && routeGeneratorMapTarget === 'destination' ? 'den Zielpunkt' : 'den Startpunkt' }}.
+                            </span>
                             <span v-else-if="activeTab === 'routes'">Karte ziehen/zoomen. Klick setzt den naechsten Routenpunkt.</span>
                             <span v-else-if="activeTab === 'tracks'">Karte ziehen/zoomen. Klick setzt einen manuellen Trackpunkt.</span>
                             <span v-else>Karte ziehen/zoomen. Klick setzt die Sportplatz-Position.</span>
                         </div>
 
                         <svg class="absolute inset-0 z-20 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            <polyline
+                                v-if="routePolyline"
+                                :points="routePolyline"
+                                fill="none"
+                                stroke="rgba(255,255,255,.92)"
+                                stroke-width="2.4"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
                             <polyline
                                 v-if="routePolyline"
                                 :points="routePolyline"
@@ -1749,6 +2258,17 @@ onUnmounted(() => {
                         </div>
 
                         <div
+                            v-if="routePlaybackMarker && routePlaybackState !== 'idle'"
+                            class="absolute z-[55] flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-orange-400 text-slate-950 shadow-xl"
+                            :style="markerStyle(routePlaybackMarker)"
+                            title="Route-Vorschau"
+                            @pointerdown.stop
+                        >
+                            <span class="absolute h-14 w-14 rounded-full bg-orange-400/25"></span>
+                            <i class="las la-running relative text-xl"></i>
+                        </div>
+
+                        <div
                             v-for="(point, index) in mapPoints"
                             :key="`${point.kind}-${index}-${point.latitude}-${point.longitude}`"
                             class="absolute z-30 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-card text-xs font-bold shadow"
@@ -1777,6 +2297,65 @@ onUnmounted(() => {
 
                         <div v-if="!mapPoints.length" class="absolute bottom-10 left-4 z-30 max-w-xs rounded-lg border border-border bg-card/95 px-3 py-2 text-xs font-semibold text-secondary shadow-sm">
                             Karte bereit. Waehle unten Route planen, Tracking oder Sportplatz eintragen.
+                        </div>
+
+                        <div
+                            v-if="routePlaybackCanStart"
+                            class="pointer-events-auto absolute bottom-4 left-4 right-4 z-[70] rounded-xl border border-border bg-card/95 p-3 shadow-xl backdrop-blur"
+                            @click.stop
+                            @pointerdown.stop
+                            @pointermove.stop
+                            @pointerup.stop
+                            @wheel.stop
+                        >
+                            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <p class="text-sm font-bold text-primary">Route-Vorschau</p>
+                                        <p class="shrink-0 text-xs font-semibold text-secondary">
+                                            {{ formatDistance(routePlaybackProgressMeters) }} / {{ formatDistance(routePlaybackTotalDistance) }}
+                                        </p>
+                                    </div>
+                                    <div class="mt-2 h-2 overflow-hidden rounded-full bg-inputBg">
+                                        <div class="h-full rounded-full bg-orange-400 transition-[width]" :style="{ width: `${routePlaybackProgressPercent}%` }"></div>
+                                    </div>
+                                    <p class="mt-1 text-xs text-secondary">
+                                        {{ formatDuration(routePlaybackElapsedSeconds) }} gelaufen · {{ formatDuration(routePlaybackRemainingSeconds) }} Rest
+                                        <span v-if="routePlaybackStatus"> · {{ routePlaybackStatus }}</span>
+                                    </p>
+                                </div>
+
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <button
+                                        type="button"
+                                        class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
+                                        @click="toggleRoutePlayback"
+                                    >
+                                        <i :class="routePlaybackState === 'playing' ? 'las la-pause' : 'las la-play'"></i>
+                                        {{ routePlaybackState === 'playing' ? 'Pause' : routePlaybackState === 'paused' ? 'Weiter' : 'Start' }}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
+                                        @click="resetRoutePlayback('Route-Vorschau zurueckgesetzt.')"
+                                    >
+                                        <i class="las la-redo-alt"></i>
+                                        Reset
+                                    </button>
+                                    <div class="flex overflow-hidden rounded-lg border border-border">
+                                        <button
+                                            v-for="speed in PLAYBACK_SPEED_OPTIONS"
+                                            :key="speed"
+                                            type="button"
+                                            class="min-h-10 px-3 text-xs font-bold"
+                                            :class="routePlaybackSpeed === speed ? 'bg-orange-400 text-slate-950' : 'bg-inputBg text-secondary hover:text-primary'"
+                                            @click="routePlaybackSpeed = speed"
+                                        >
+                                            {{ speed }}x
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <span class="absolute bottom-2 right-2 z-30 rounded bg-card/90 px-2 py-1 text-[10px] font-semibold text-secondary shadow-sm">
@@ -1868,7 +2447,7 @@ onUnmounted(() => {
                                     type="button"
                                     class="rounded-xl border px-3 py-3 text-left text-sm font-semibold"
                                     :class="routeGeneratorForm.start_mode === mode.key ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border bg-inputBg text-secondary hover:text-primary'"
-                                    @click="routeGeneratorForm.start_mode = mode.key"
+                                    @click="setRouteGeneratorStartMode(mode.key)"
                                 >
                                     <i :class="mode.icon"></i>
                                     <span class="ml-2">{{ mode.label }}</span>
@@ -1894,11 +2473,56 @@ onUnmounted(() => {
                                     type="button"
                                     class="rounded-xl border px-4 py-4 text-left"
                                     :class="routeGeneratorForm.route_type === type.key ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border bg-inputBg text-secondary hover:text-primary'"
-                                    @click="routeGeneratorForm.route_type = type.key"
+                                    @click="setRouteGeneratorType(type.key)"
                                 >
                                     <i :class="type.icon"></i>
                                     <span class="ml-2 text-sm font-bold">{{ type.label }}</span>
+                                    <span class="mt-2 block text-xs text-secondary">{{ type.description }}</span>
                                 </button>
+                            </div>
+
+                            <div v-if="routeGeneratorForm.route_type === 'point_to_point'" class="rounded-xl border border-border bg-inputBg p-3">
+                                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <p class="text-sm font-bold text-primary">Zielpunkt</p>
+                                        <p class="text-xs text-secondary">Kartenklick kann Start oder Ziel setzen. Fuer Zielroute brauchst du ein echtes Ziel.</p>
+                                    </div>
+                                    <div class="flex overflow-hidden rounded-lg border border-border">
+                                        <button
+                                            type="button"
+                                            class="px-3 py-2 text-xs font-bold"
+                                            :class="routeGeneratorMapTarget === 'start' ? 'bg-air-blue text-white' : 'bg-card text-secondary hover:text-primary'"
+                                            @click="routeGeneratorMapTarget = 'start'"
+                                        >
+                                            Start setzen
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="border-l border-border px-3 py-2 text-xs font-bold"
+                                            :class="routeGeneratorMapTarget === 'destination' ? 'bg-air-blue text-white' : 'bg-card text-secondary hover:text-primary'"
+                                            @click="routeGeneratorMapTarget = 'destination'"
+                                        >
+                                            Ziel setzen
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                                    <input v-model="routeGeneratorForm.destination_latitude" type="number" step="0.0000001" class="rounded-lg border border-border bg-card px-3 py-2 text-sm" placeholder="Ziel Latitude">
+                                    <input v-model="routeGeneratorForm.destination_longitude" type="number" step="0.0000001" class="rounded-lg border border-border bg-card px-3 py-2 text-sm" placeholder="Ziel Longitude">
+                                </div>
+
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold hover:bg-muted" @click="setGeneratorDestinationFromMapCenter">
+                                        Kartenmitte als Ziel
+                                    </button>
+                                    <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold hover:bg-muted" @click="clearGeneratorDestination">
+                                        Ziel entfernen
+                                    </button>
+                                    <span v-if="routeGeneratorDestinationPoint" class="rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-500">
+                                        Ziel gesetzt: {{ Number(routeGeneratorDestinationPoint.latitude).toFixed(5) }}, {{ Number(routeGeneratorDestinationPoint.longitude).toFixed(5) }}
+                                    </span>
+                                </div>
                             </div>
 
                             <div class="rounded-xl border border-border bg-inputBg p-3">
@@ -1939,7 +2563,7 @@ onUnmounted(() => {
                                     <span>{{ routeGeneratorSummary.distance }}</span>
                                     <span>{{ routeGeneratorSummary.duration }}</span>
                                     <span>{{ routeGeneratorSummary.difficulty }}</span>
-                                    <span>{{ routeGeneratorForm.route_type === 'roundtrip' ? 'Rundroute' : 'Zielroute' }}</span>
+                                    <span>{{ routeGeneratorForm.route_type === 'roundtrip' ? 'Rundroute' : 'Einmal zum Ziel' }}</span>
                                 </div>
                             </div>
                         </div>
@@ -2062,7 +2686,7 @@ onUnmounted(() => {
                                 </div>
                             </div>
 
-                            <div v-if="generatedRouteActualSummary" class="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+                            <div v-if="generatedRouteActualSummary" class="grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
                                 <div class="rounded-xl border border-air-blue/40 bg-air-blue/10 p-3">
                                     <p class="text-xs font-semibold text-secondary">Berechnet</p>
                                     <p class="mt-1 font-bold text-primary">{{ generatedRouteActualSummary.distance }}</p>
@@ -2075,9 +2699,32 @@ onUnmounted(() => {
                                     <p class="text-xs font-semibold text-secondary">Routing</p>
                                     <p class="mt-1 font-bold text-primary">{{ generatedRouteActualSummary.status }}</p>
                                 </div>
+                                <div class="rounded-xl border p-3" :class="qualityBadgeClass(generatedRouteActualSummary.qualityScore)">
+                                    <p class="text-xs font-semibold opacity-80">Qualitaet</p>
+                                    <p class="mt-1 font-bold">{{ generatedRouteActualSummary.qualityScore ?? '-' }}%</p>
+                                </div>
                                 <div class="rounded-xl border border-air-blue/40 bg-air-blue/10 p-3">
                                     <p class="text-xs font-semibold text-secondary">Wegpunkte</p>
                                     <p class="mt-1 font-bold text-primary">{{ generatedRouteActualSummary.geometryPoints }}</p>
+                                </div>
+                            </div>
+
+                            <div v-if="generatedRouteActualSummary" class="rounded-xl border border-border bg-inputBg p-3 text-sm">
+                                <div class="grid gap-2 sm:grid-cols-3">
+                                    <div>
+                                        <p class="text-xs font-semibold text-secondary">Abweichung vom Ziel</p>
+                                        <p class="mt-1 font-bold text-primary">{{ generatedRouteActualSummary.targetDelta }}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs font-semibold text-secondary">Ruecklauf</p>
+                                        <p class="mt-1 font-bold text-primary">{{ formatPercent(generatedRouteActualSummary.backtrackPercent) }}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs font-semibold text-secondary">Routenform</p>
+                                        <p class="mt-1 font-bold" :class="generatedRouteActualSummary.shapeAcceptable ? 'text-emerald-400' : 'text-amber-400'">
+                                            {{ generatedRouteActualSummary.shapeAcceptable ? 'passt' : 'pruefen' }}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
 
@@ -2124,6 +2771,23 @@ onUnmounted(() => {
                                 <p v-if="!generatedRoutePoints.length" class="rounded-lg border border-dashed border-border px-3 py-6 text-center text-sm text-secondary">
                                     Noch kein Vorschlag. Klicke auf "Vorschlag generieren".
                                 </p>
+                            </div>
+
+                            <div v-if="generatedRouteCuePreview.length" class="mt-5 rounded-xl border border-border bg-card p-3">
+                                <div class="flex items-center justify-between gap-3">
+                                    <p class="text-sm font-bold text-primary">Abbiegehinweise</p>
+                                    <span class="rounded-full bg-inputBg px-2 py-1 text-xs font-semibold text-secondary">{{ generatedRouteNavigationCues.length }}</span>
+                                </div>
+                                <ol class="mt-3 space-y-2">
+                                    <li
+                                        v-for="(cue, index) in generatedRouteCuePreview"
+                                        :key="`${cue.type || cue.maneuver_type}-${index}`"
+                                        class="flex gap-2 rounded-lg border border-border bg-inputBg px-3 py-2 text-xs text-secondary"
+                                    >
+                                        <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-air-blue/15 text-[10px] font-bold text-air-blue">{{ index + 1 }}</span>
+                                        <span>{{ cueText(cue, index) }}</span>
+                                    </li>
+                                </ol>
                             </div>
                         </div>
                     </div>

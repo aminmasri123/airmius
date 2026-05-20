@@ -79,6 +79,7 @@ trait ManagesSportMapPayloads
             'water_breaks' => ['nullable', 'boolean'],
             'include_places' => ['nullable', 'string', 'max:500'],
             'avoid_places' => ['nullable', 'string', 'max:500'],
+            'variant_seed' => ['nullable', 'integer', 'min:0'],
             'start' => ['required_without:waypoints', 'array'],
             'start.name' => ['nullable', 'string', 'max:120'],
             'start.latitude' => ['required_without:waypoints', 'numeric', 'between:-90,90'],

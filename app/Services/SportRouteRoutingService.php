@@ -48,10 +48,21 @@ class SportRouteRoutingService
     public function generateProposal(array $data): array
     {
         $sportType = $data['sport_type'] ?? 'running';
-        $waypoints = isset($data['waypoints']) && is_array($data['waypoints']) && count($data['waypoints']) >= 2
-            ? $this->metrics->normalizePoints($data['waypoints'])
-            : $this->proposalWaypoints($data);
-        $summary = $this->routedSummary($waypoints, $sportType, true);
+        $calibration = [
+            'target_distance_meters' => $this->targetDistanceMeters($data),
+            'attempts' => 1,
+            'radius_scale' => 1.0,
+        ];
+
+        if (isset($data['waypoints']) && is_array($data['waypoints']) && count($data['waypoints']) >= 2) {
+            $waypoints = $this->metrics->normalizePoints($data['waypoints']);
+            $summary = $this->routedSummary($waypoints, $sportType, true);
+        } else {
+            [$waypoints, $summary, $calibration] = $this->generatedRouteCandidate($data, $sportType);
+        }
+
+        $routeShape = $calibration['shape'] ?? $this->routeShapeMetrics($summary, ($data['route_type'] ?? 'roundtrip') === 'roundtrip');
+        $quality = $this->routeQualityMetrics($summary, $data, $routeShape, $calibration);
 
         return [
             'title' => trim((string) ($data['title'] ?? '')) !== '' ? trim((string) $data['title']) : $this->proposalTitle($data),
@@ -75,9 +86,81 @@ class SportRouteRoutingService
                 'routing_status' => $summary['routing_status'] ?? null,
                 'routing_error' => $summary['routing_error'] ?? null,
                 'generator_parameters' => $this->generatorParameters($data),
+                'target_distance_meters' => $calibration['target_distance_meters'] ?? null,
+                'target_delta_meters' => isset($calibration['target_distance_meters'])
+                    ? abs((int) $summary['distance_meters'] - (int) $calibration['target_distance_meters'])
+                    : null,
+                'calibration_attempts' => $calibration['attempts'] ?? null,
+                'calibration_radius_scale' => $calibration['radius_scale'] ?? null,
+                'route_shape' => $routeShape,
+                'quality' => $quality,
                 'geometry_point_count' => count(data_get($summary, 'geometry.coordinates', [])),
             ], fn ($value) => $value !== null && $value !== ''),
         ];
+    }
+
+    private function generatedRouteCandidate(array $data, string $sportType): array
+    {
+        if (($data['route_type'] ?? 'roundtrip') !== 'roundtrip') {
+            $waypoints = $this->proposalWaypoints($data);
+            $summary = $this->routedSummary($waypoints, $sportType, true);
+
+            return [$waypoints, $summary, [
+                'target_distance_meters' => $this->targetDistanceMeters($data),
+                'attempts' => 1,
+                'radius_scale' => 1.0,
+            ]];
+        }
+
+        return $this->calibratedRoundtripProposal($data, $sportType);
+    }
+
+    private function calibratedRoundtripProposal(array $data, string $sportType): array
+    {
+        $targetDistance = $this->targetDistanceMeters($data);
+        $baseVariantSeed = $this->variantSeed($data);
+        $scale = 1.0;
+        $best = null;
+        $attempts = 0;
+
+        for ($attempt = 1; $attempt <= 6; $attempt++) {
+            $candidateData = $data;
+            $candidateData['variant_seed'] = $baseVariantSeed + (($attempt - 1) * 104729);
+            $waypoints = $this->proposalWaypoints($candidateData, $scale);
+            $summary = $this->routedSummary($waypoints, $sportType, true);
+            $actualDistance = max(1, (int) $summary['distance_meters']);
+            $delta = abs($actualDistance - $targetDistance);
+            $shapeMetrics = $this->routeShapeMetrics($summary, true);
+            $shapePenalty = (int) round(($shapeMetrics['backtrack_ratio'] ?? 0) * $targetDistance * 2.2);
+            $score = $delta + $shapePenalty;
+            $attempts = $attempt;
+
+            if (! $best || $score < $best['score']) {
+                $best = [
+                    'waypoints' => $waypoints,
+                    'summary' => $summary,
+                    'delta' => $delta,
+                    'score' => $score,
+                    'scale' => $scale,
+                    'shape_metrics' => $shapeMetrics,
+                ];
+            }
+
+            if ($this->routeShapeIsAcceptable($shapeMetrics, true, $targetDistance)
+                && $delta <= max(180, (int) round($targetDistance * 0.08))) {
+                break;
+            }
+
+            $scale *= $this->clamp($targetDistance / $actualDistance, 0.35, 1.65);
+            $scale = $this->clamp($scale, 0.28, 1.8);
+        }
+
+        return [$best['waypoints'], $best['summary'], [
+            'target_distance_meters' => $targetDistance,
+            'attempts' => $attempts,
+            'radius_scale' => round((float) $best['scale'], 3),
+            'shape' => $best['shape_metrics'] ?? null,
+        ]];
     }
 
     private function routedSummary(array $points, ?string $sportType = null, bool $forceRouting = false): array
@@ -103,7 +186,7 @@ class SportRouteRoutingService
         }
     }
 
-    private function proposalWaypoints(array $data): array
+    private function proposalWaypoints(array $data, float $radiusScale = 1.0): array
     {
         $start = [
             'name' => 'Start',
@@ -112,33 +195,47 @@ class SportRouteRoutingService
         ];
         $distanceMeters = $this->targetDistanceMeters($data);
         $routeType = $data['route_type'] ?? 'roundtrip';
-        $baseBearing = $this->proposalBearing($data);
+        $variantSeed = $this->variantSeed($data);
+        $baseBearing = $this->proposalBearing($data, $variantSeed);
 
         if ($routeType === 'roundtrip') {
-            $spread = match ($data['elevation'] ?? 'mixed') {
-                'flat' => 62,
-                'hilly' => 112,
-                default => 88,
+            $controlPointCount = $distanceMeters >= 12000 ? 4 : ($distanceMeters <= 7000 ? 2 : 3);
+            $clockwise = $this->seededUnit($variantSeed, 2) > 0.5 ? 1 : -1;
+            $loopRadius = max(220, (($distanceMeters / (2 * pi())) * (0.9 + $this->seededUnit($variantSeed, 3) * 0.2)) * $radiusScale);
+            $difficultyScale = match ($data['difficulty'] ?? 'easy') {
+                'hard' => 1.12,
+                'moderate' => 1.05,
+                default => 1.0,
             };
-            $difficultyShift = match ($data['difficulty'] ?? 'easy') {
-                'hard' => 24,
-                'moderate' => 12,
-                default => 0,
+            $elevationSpread = match ($data['elevation'] ?? 'mixed') {
+                'flat' => 0.92,
+                'hilly' => 1.14,
+                default => 1.0,
             };
-            $legDistance = max(350, $distanceMeters / 3.8);
+            $loopRadius *= $difficultyScale * $elevationSpread;
+            $loopCenter = $this->coordinateAtDistanceBearing($start, $loopRadius, $baseBearing);
+            $startBearingFromCenter = fmod($baseBearing + 180, 360);
+            $arcStep = 360 / ($controlPointCount + 1);
+            $points = [$start];
+
+            for ($index = 0; $index < $controlPointCount; $index++) {
+                $angleJitter = ($this->seededUnit($variantSeed, 10 + $index) - 0.5) * 18;
+                $radiusJitter = 0.92 + ($this->seededUnit($variantSeed, 20 + $index) * 0.18);
+                $bearing = $startBearingFromCenter + ($clockwise * ($arcStep * ($index + 1) + $angleJitter));
+
+                $points[] = $this->coordinateAtDistanceBearing($loopCenter, $loopRadius * $radiusJitter, $bearing);
+            }
+
+            $points[] = $start;
+        } else {
+            $finishBearing = $baseBearing + (($this->seededUnit($variantSeed, 4) - 0.5) * 70);
+            $curveDirection = $this->seededUnit($variantSeed, 5) > 0.5 ? 1 : -1;
+            $finishDistance = $distanceMeters * (0.9 + $this->seededUnit($variantSeed, 6) * 0.22);
 
             $points = [
                 $start,
-                $this->coordinateAtDistanceBearing($start, $legDistance, $baseBearing + $difficultyShift),
-                $this->coordinateAtDistanceBearing($start, $legDistance * 1.16, $baseBearing + $spread),
-                $this->coordinateAtDistanceBearing($start, $legDistance * 0.92, $baseBearing + ($spread * 2) - $difficultyShift),
-                $start,
-            ];
-        } else {
-            $points = [
-                $start,
-                $this->coordinateAtDistanceBearing($start, $distanceMeters * 0.5, $baseBearing - 10),
-                $this->coordinateAtDistanceBearing($start, $distanceMeters, $baseBearing + 12),
+                $this->coordinateAtDistanceBearing($start, $finishDistance * 0.48, $finishBearing + ($curveDirection * (26 + $this->seededUnit($variantSeed, 7) * 28))),
+                $this->coordinateAtDistanceBearing($start, $finishDistance, $finishBearing),
             ];
         }
 
@@ -167,12 +264,27 @@ class SportRouteRoutingService
         return (int) round($this->clamp((float) ($data['distance_km'] ?? 5), 1, 80) * 1000);
     }
 
-    private function proposalBearing(array $data): float
+    private function variantSeed(array $data): int
+    {
+        $seed = (int) ($data['variant_seed'] ?? 0);
+
+        return $seed > 0 ? $seed : random_int(1, PHP_INT_MAX);
+    }
+
+    private function seededUnit(int $seed, int $slot): float
+    {
+        $value = sin(($seed + 1) * (12.9898 + $slot) + ($slot * 78.233)) * 43758.5453;
+
+        return $value - floor($value);
+    }
+
+    private function proposalBearing(array $data, int $variantSeed): float
     {
         $environment = (string) ($data['environment'] ?? 'nature');
         $surface = (string) ($data['surface'] ?? 'any');
         $bearing = self::ENVIRONMENT_BEARINGS[$environment] ?? self::ENVIRONMENT_BEARINGS['nature'];
         $bearing += self::SURFACE_BEARING_OFFSETS[$surface] ?? 0;
+        $bearing += ($this->seededUnit($variantSeed, 1) - 0.5) * 140;
 
         if (($data['low_traffic'] ?? false) === true) {
             $bearing -= 14;
@@ -225,7 +337,7 @@ class SportRouteRoutingService
     {
         $distance = round($this->targetDistanceMeters($data) / 1000, 1);
 
-        return (($data['route_type'] ?? 'roundtrip') === 'roundtrip' ? 'Rundroute' : 'Zielroute').' '.$distance.' km';
+        return (($data['route_type'] ?? 'roundtrip') === 'roundtrip' ? 'Rundroute' : 'Einmal zum Ziel').' '.$distance.' km';
     }
 
     private function generatorParameters(array $data): array
@@ -242,12 +354,194 @@ class SportRouteRoutingService
             'water_breaks' => (bool) ($data['water_breaks'] ?? false),
             'include_places' => $data['include_places'] ?? null,
             'avoid_places' => $data['avoid_places'] ?? null,
+            'variant_seed' => $data['variant_seed'] ?? null,
         ];
     }
 
     private function clamp(float $value, float $min, float $max): float
     {
         return min(max($value, $min), $max);
+    }
+
+    private function routeShapeIsAcceptable(array $metrics, bool $roundtrip, int $targetDistanceMeters): bool
+    {
+        $backtrackRatio = (float) ($metrics['backtrack_ratio'] ?? 0);
+
+        if ($backtrackRatio > ($roundtrip ? 0.18 : 0.12)) {
+            return false;
+        }
+
+        if ($roundtrip) {
+            $closureMeters = (float) ($metrics['loop_closure_meters'] ?? 0);
+
+            return $closureMeters <= max(120, $targetDistanceMeters * 0.04);
+        }
+
+        return true;
+    }
+
+    private function routeShapeMetrics(array $summary, bool $roundtrip): array
+    {
+        $points = $this->geometryPointsFromSummary($summary);
+        $distanceMeters = max(1, (int) ($summary['distance_meters'] ?? 0));
+        $backtrackMeters = $this->backtrackMeters($points);
+        $first = $points[0] ?? null;
+        $last = $points[count($points) - 1] ?? null;
+        $closureMeters = $roundtrip && $first && $last ? $this->distanceBetween($first, $last) : null;
+
+        return array_filter([
+            'mode' => $roundtrip ? 'roundtrip' : 'one_way',
+            'backtrack_meters' => (int) round($backtrackMeters),
+            'backtrack_ratio' => round($backtrackMeters / $distanceMeters, 3),
+            'loop_closure_meters' => $closureMeters !== null ? (int) round($closureMeters) : null,
+            'acceptable' => $this->routeShapeIsAcceptable([
+                'backtrack_ratio' => $backtrackMeters / $distanceMeters,
+                'loop_closure_meters' => $closureMeters,
+            ], $roundtrip, $distanceMeters),
+        ], fn ($value) => $value !== null);
+    }
+
+    private function routeQualityMetrics(array $summary, array $data, array $shapeMetrics, array $calibration): array
+    {
+        $targetDistance = max(1, (int) ($calibration['target_distance_meters'] ?? $this->targetDistanceMeters($data)));
+        $actualDistance = max(1, (int) ($summary['distance_meters'] ?? 0));
+        $targetDelta = abs($actualDistance - $targetDistance);
+        $targetDeltaRatio = $targetDelta / $targetDistance;
+        $backtrackRatio = (float) ($shapeMetrics['backtrack_ratio'] ?? 0);
+        $score = 100;
+
+        $score -= min(42, (int) round($targetDeltaRatio * 130));
+        $score -= min(36, (int) round($backtrackRatio * 190));
+
+        if (($summary['routing_status'] ?? null) !== 'routed') {
+            $score -= 14;
+        }
+
+        if (($shapeMetrics['acceptable'] ?? true) !== true) {
+            $score -= 18;
+        }
+
+        $score = (int) $this->clamp($score, 0, 100);
+
+        return [
+            'score' => $score,
+            'label' => match (true) {
+                $score >= 85 => 'Sehr gut',
+                $score >= 70 => 'Gut',
+                $score >= 50 => 'Pruefen',
+                default => 'Schwach',
+            },
+            'target_delta_meters' => (int) round($targetDelta),
+            'target_delta_percent' => round($targetDeltaRatio * 100, 1),
+            'backtrack_percent' => round($backtrackRatio * 100, 1),
+            'uses_real_routing' => ($summary['routing_status'] ?? null) === 'routed',
+            'shape_acceptable' => (bool) ($shapeMetrics['acceptable'] ?? false),
+        ];
+    }
+
+    private function geometryPointsFromSummary(array $summary): array
+    {
+        return collect(data_get($summary, 'geometry.coordinates', []))
+            ->filter(fn ($coordinate) => is_array($coordinate) && count($coordinate) >= 2)
+            ->map(fn (array $coordinate) => [
+                'longitude' => (float) $coordinate[0],
+                'latitude' => (float) $coordinate[1],
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function backtrackMeters(array $points): float
+    {
+        if (count($points) < 4) {
+            return 0.0;
+        }
+
+        $segments = [];
+
+        for ($index = 1; $index < count($points); $index++) {
+            $from = $points[$index - 1];
+            $to = $points[$index];
+            $length = $this->distanceBetween($from, $to);
+
+            if ($length < 15) {
+                continue;
+            }
+
+            $segments[] = [
+                'index' => $index - 1,
+                'from' => $from,
+                'to' => $to,
+                'midpoint' => [
+                    'latitude' => (((float) $from['latitude']) + ((float) $to['latitude'])) / 2,
+                    'longitude' => (((float) $from['longitude']) + ((float) $to['longitude'])) / 2,
+                ],
+                'bearing' => $this->bearingBetween($from, $to),
+                'length' => $length,
+            ];
+        }
+
+        if (count($segments) < 3) {
+            return 0.0;
+        }
+
+        $marked = [];
+        $segmentCount = count($segments);
+
+        for ($left = 0; $left < $segmentCount; $left++) {
+            for ($right = $left + 2; $right < $segmentCount; $right++) {
+                if ($this->distanceBetween($segments[$left]['midpoint'], $segments[$right]['midpoint']) > 75) {
+                    continue;
+                }
+
+                if ($this->bearingDifference($segments[$left]['bearing'], $segments[$right]['bearing']) < 145) {
+                    continue;
+                }
+
+                $marked[$left] = true;
+                $marked[$right] = true;
+                break;
+            }
+        }
+
+        $meters = 0.0;
+
+        foreach (array_keys($marked) as $segmentIndex) {
+            $meters += $segments[$segmentIndex]['length'];
+        }
+
+        return $meters;
+    }
+
+    private function distanceBetween(array $from, array $to): float
+    {
+        $earthRadius = 6371000;
+        $lat1 = deg2rad((float) $from['latitude']);
+        $lat2 = deg2rad((float) $to['latitude']);
+        $deltaLatitude = deg2rad((float) $to['latitude'] - (float) $from['latitude']);
+        $deltaLongitude = deg2rad((float) $to['longitude'] - (float) $from['longitude']);
+        $a = sin($deltaLatitude / 2) ** 2
+            + cos($lat1) * cos($lat2) * sin($deltaLongitude / 2) ** 2;
+
+        return $earthRadius * 2 * atan2(sqrt($a), sqrt(1 - $a));
+    }
+
+    private function bearingBetween(array $from, array $to): float
+    {
+        $lat1 = deg2rad((float) $from['latitude']);
+        $lat2 = deg2rad((float) $to['latitude']);
+        $deltaLongitude = deg2rad((float) $to['longitude'] - (float) $from['longitude']);
+        $y = sin($deltaLongitude) * cos($lat2);
+        $x = cos($lat1) * sin($lat2) - sin($lat1) * cos($lat2) * cos($deltaLongitude);
+
+        return fmod(rad2deg(atan2($y, $x)) + 360, 360);
+    }
+
+    private function bearingDifference(float $first, float $second): float
+    {
+        $difference = abs($first - $second);
+
+        return $difference > 180 ? 360 - $difference : $difference;
     }
 
     private function localSummary(array $points, ?string $sportType): array
@@ -273,6 +567,7 @@ class SportRouteRoutingService
                 'overview' => 'full',
                 'geometries' => 'geojson',
                 'steps' => 'true',
+                'continue_straight' => 'true',
             ]);
 
         if (! $response->successful()) {

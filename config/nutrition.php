@@ -1,0 +1,142 @@
+<?php
+
+return [
+    'open_food_facts' => [
+        'base_url' => env('OPEN_FOOD_FACTS_BASE_URL', 'https://world.openfoodfacts.org'),
+        'user_agent' => env('OPEN_FOOD_FACTS_USER_AGENT', 'Airmius/1.0 (contact@airmius.com)'),
+        'timeout_seconds' => (int) env('OPEN_FOOD_FACTS_TIMEOUT', 5),
+    ],
+
+    'meal_types' => [
+        ['key' => 'breakfast', 'label' => 'Fruehstueck', 'icon' => 'las la-mug-hot', 'theme' => 'amber'],
+        ['key' => 'lunch', 'label' => 'Mittagessen', 'icon' => 'las la-utensils', 'theme' => 'emerald'],
+        ['key' => 'dinner', 'label' => 'Abendessen', 'icon' => 'las la-moon', 'theme' => 'indigo'],
+        ['key' => 'snack', 'label' => 'Snack', 'icon' => 'las la-apple-alt', 'theme' => 'rose'],
+        ['key' => 'shake', 'label' => 'Shake', 'icon' => 'las la-blender', 'theme' => 'sky'],
+    ],
+
+    'goal_types' => [
+        ['key' => 'maintain', 'label' => 'Gewicht halten', 'hint' => 'Ausgeglichen essen und Training stabil unterstuetzen.'],
+        ['key' => 'build_muscle', 'label' => 'Muskelaufbau', 'hint' => 'Protein und genug Energie fuer Krafttraining priorisieren.'],
+        ['key' => 'fat_loss', 'label' => 'Fett reduzieren', 'hint' => 'Satt essen, Protein hoch halten und Defizit moderat planen.'],
+        ['key' => 'performance', 'label' => 'Mehr Leistung', 'hint' => 'Kohlenhydrate rund ums Training und Regeneration staerken.'],
+        ['key' => 'recovery', 'label' => 'Besser regenerieren', 'hint' => 'Fluessigkeit, Protein und einfache Mahlzeiten nach Belastung.'],
+    ],
+
+    'diet_styles' => [
+        ['key' => 'balanced', 'label' => 'Ausgewogen'],
+        ['key' => 'high_protein', 'label' => 'Proteinreich'],
+        ['key' => 'vegetarian', 'label' => 'Vegetarisch'],
+        ['key' => 'vegan', 'label' => 'Vegan'],
+        ['key' => 'low_carb', 'label' => 'Low Carb'],
+        ['key' => 'halal', 'label' => 'Halal'],
+    ],
+
+    'recipes' => [
+        [
+            'key' => 'post_workout_bowl',
+            'title' => 'Post-Workout Bowl',
+            'goal_type' => 'recovery',
+            'category' => 'Nach dem Training',
+            'prep_minutes' => 15,
+            'calories' => 640,
+            'protein_g' => 42,
+            'carbs_g' => 78,
+            'fat_g' => 16,
+            'tags' => ['regeneration', 'protein', 'schnell'],
+            'diet_styles' => ['balanced', 'high_protein', 'halal'],
+            'ingredients' => ['Reis', 'Haehnchen oder Tofu', 'Gemuese', 'Joghurt-Dip'],
+            'steps' => ['Kohlenhydratbasis waehlen.', 'Proteinquelle anbraten.', 'Gemuese und Dip ergaenzen.'],
+        ],
+        [
+            'key' => 'runner_oats',
+            'title' => 'Runner Oats',
+            'goal_type' => 'performance',
+            'category' => 'Vor dem Lauf',
+            'prep_minutes' => 8,
+            'calories' => 520,
+            'protein_g' => 25,
+            'carbs_g' => 72,
+            'fat_g' => 12,
+            'tags' => ['laufen', 'energie', 'fruehstueck'],
+            'diet_styles' => ['balanced', 'vegetarian', 'high_protein'],
+            'ingredients' => ['Haferflocken', 'Banane', 'Skyr oder Sojajoghurt', 'Honig'],
+            'steps' => ['Haferflocken mit Milch oder Wasser kochen.', 'Banane und Skyr dazugeben.', 'Leicht suessen und 60-90 Minuten vor dem Training essen.'],
+        ],
+        [
+            'key' => 'lean_protein_plate',
+            'title' => 'Lean Protein Teller',
+            'goal_type' => 'fat_loss',
+            'category' => 'Sattmacher',
+            'prep_minutes' => 20,
+            'calories' => 480,
+            'protein_g' => 48,
+            'carbs_g' => 35,
+            'fat_g' => 14,
+            'tags' => ['satt', 'kalorienarm', 'protein'],
+            'diet_styles' => ['balanced', 'high_protein', 'low_carb', 'halal'],
+            'ingredients' => ['Mageres Protein', 'Kartoffeln oder Vollkornreis', 'Salat', 'Olivenoel-Zitronen-Dressing'],
+            'steps' => ['Proteinquelle garen.', 'Beilage portionieren.', 'Viel Salat dazugeben und Dressing sparsam dosieren.'],
+        ],
+        [
+            'key' => 'muscle_shake',
+            'title' => 'Muskelaufbau Shake',
+            'goal_type' => 'build_muscle',
+            'category' => 'Schnell',
+            'prep_minutes' => 5,
+            'calories' => 700,
+            'protein_g' => 45,
+            'carbs_g' => 82,
+            'fat_g' => 20,
+            'tags' => ['gym', 'kalorien', 'shake'],
+            'diet_styles' => ['balanced', 'high_protein', 'vegetarian'],
+            'ingredients' => ['Milch oder Pflanzendrink', 'Banane', 'Haferflocken', 'Proteinpulver', 'Erdnussmus'],
+            'steps' => ['Alles mixen.', 'Nach dem Training oder als Zusatzmahlzeit trinken.', 'Bei Bedarf Haferflockenmenge anpassen.'],
+        ],
+        [
+            'key' => 'balanced_family_plate',
+            'title' => 'Ausgewogener Alltagsteller',
+            'goal_type' => 'maintain',
+            'category' => 'Alltag',
+            'prep_minutes' => 18,
+            'calories' => 590,
+            'protein_g' => 34,
+            'carbs_g' => 62,
+            'fat_g' => 22,
+            'tags' => ['alltag', 'einfach', 'familie'],
+            'diet_styles' => ['balanced', 'vegetarian', 'vegan', 'halal'],
+            'ingredients' => ['Proteinquelle', 'Vollkornbeilage', 'Gemuese', 'gesunde Fettquelle'],
+            'steps' => ['Teller halb mit Gemuese fuellen.', 'Ein Viertel Protein, ein Viertel Beilage.', 'Fettquelle bewusst portionieren.'],
+        ],
+    ],
+
+    'tips' => [
+        'maintain' => [
+            'Baue jede Hauptmahlzeit aus Protein, Kohlenhydraten, Gemuese und etwas Fett auf.',
+            'Wenn dein Gewicht stabil bleiben soll, tracke zuerst 7 Tage ehrlich statt sofort stark zu veraendern.',
+        ],
+        'build_muscle' => [
+            'Protein ueber den Tag verteilen: 3-5 Portionen funktionieren oft besser als alles abends.',
+            'Wenn das Training schwerer wird, darf auch die Energiezufuhr steigen.',
+        ],
+        'fat_loss' => [
+            'Halte das Defizit moderat. Zu wenig Energie macht Training und Alltag schnell schlechter.',
+            'Protein und ballaststoffreiche Lebensmittel helfen, laenger satt zu bleiben.',
+        ],
+        'performance' => [
+            'Vor intensiven Einheiten sind leicht verdauliche Kohlenhydrate oft hilfreicher als schwere Mahlzeiten.',
+            'Nach langen Einheiten Fluessigkeit, Salz und Kohlenhydrate nicht vergessen.',
+        ],
+        'recovery' => [
+            'Nach Training: Protein plus Kohlenhydrate ist fuer viele Sportler der einfachste Regenerationsanker.',
+            'Schlaf, Wasser und regelmaessige Mahlzeiten schlagen perfekte Detailplanung.',
+        ],
+    ],
+
+    'source_types' => [
+        ['key' => 'manual', 'label' => 'Manuell'],
+        ['key' => 'recipe', 'label' => 'Rezept'],
+        ['key' => 'barcode', 'label' => 'Barcode vorbereitet'],
+        ['key' => 'photo_estimate', 'label' => 'Foto-Schaetzung geplant'],
+    ],
+];

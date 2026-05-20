@@ -367,6 +367,354 @@ class SportMapFeatureTest extends TestCase
             ->assertJsonPath('data.metrics.routing_status', 'routed')
             ->assertJsonPath('data.metrics.routing_provider', 'osrm')
             ->assertJsonPath('data.metrics.generator_parameters.surface', 'forest')
+            ->assertJsonPath('data.metrics.quality.label', 'Sehr gut')
+            ->assertJsonPath('data.navigation_cues.0.type', 'start')
             ->assertJsonCount(4, 'data.route_geometry.coordinates');
+    }
+
+    public function test_web_route_generator_changes_control_points_for_new_variants(): void
+    {
+        $user = User::factory()->create();
+
+        config()->set('sport_map.routing.route_generator_provider', 'osrm');
+        config()->set('sport_map.routing.osrm_base_url', 'https://osrm.test');
+
+        Http::fake([
+            'osrm.test/route/v1/foot/*' => Http::response([
+                'routes' => [[
+                    'distance' => 5000,
+                    'duration' => 1800,
+                    'geometry' => [
+                        'type' => 'LineString',
+                        'coordinates' => [
+                            [13.405, 52.52],
+                            [13.408, 52.522],
+                            [13.405, 52.52],
+                        ],
+                    ],
+                    'legs' => [],
+                ]],
+            ], 200),
+        ]);
+
+        $payload = [
+            'sport_type' => 'running',
+            'route_type' => 'roundtrip',
+            'target_mode' => 'distance',
+            'distance_km' => 5,
+            'surface' => 'forest',
+            'environment' => 'forest',
+            'elevation' => 'mixed',
+            'difficulty' => 'easy',
+            'low_traffic' => true,
+            'start' => [
+                'latitude' => 52.52,
+                'longitude' => 13.405,
+            ],
+        ];
+
+        $first = $this->actingAs($user)
+            ->postJson(route('auth.sport-route-proposals.store'), $payload + ['variant_seed' => 1001])
+            ->assertOk()
+            ->json('data.waypoints.1');
+
+        $second = $this->actingAs($user)
+            ->postJson(route('auth.sport-route-proposals.store'), $payload + ['variant_seed' => 2002])
+            ->assertOk()
+            ->json('data.waypoints.1');
+
+        $this->assertNotSame($first['latitude'], $second['latitude']);
+        $this->assertNotSame($first['longitude'], $second['longitude']);
+    }
+
+    public function test_route_generator_calibrates_roundtrip_distance_towards_target(): void
+    {
+        $user = User::factory()->create();
+        $calls = 0;
+
+        config()->set('sport_map.routing.route_generator_provider', 'osrm');
+        config()->set('sport_map.routing.osrm_base_url', 'https://osrm.test');
+
+        Http::fake(function () use (&$calls) {
+            $calls++;
+            $distance = $calls === 1 ? 12050 : 5100;
+
+            return Http::response([
+                'routes' => [[
+                    'distance' => $distance,
+                    'duration' => 1500,
+                    'geometry' => [
+                        'type' => 'LineString',
+                        'coordinates' => [
+                            [7.0676, 49.1122],
+                            [7.071, 49.116],
+                            [7.064, 49.116],
+                            [7.0676, 49.1122],
+                        ],
+                    ],
+                    'legs' => [],
+                ]],
+            ], 200);
+        });
+
+        $this->actingAs($user)
+            ->postJson(route('auth.sport-route-proposals.store'), [
+                'sport_type' => 'running',
+                'route_type' => 'roundtrip',
+                'target_mode' => 'distance',
+                'distance_km' => 5,
+                'surface' => 'firm',
+                'environment' => 'park',
+                'elevation' => 'flat',
+                'difficulty' => 'easy',
+                'variant_seed' => 4100,
+                'start' => [
+                    'latitude' => 49.1122,
+                    'longitude' => 7.0676,
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.distance_meters', 5100)
+            ->assertJsonPath('data.metrics.target_distance_meters', 5000)
+            ->assertJsonPath('data.metrics.target_delta_meters', 100)
+            ->assertJsonPath('data.metrics.calibration_attempts', 2);
+
+        $this->assertSame(2, $calls);
+    }
+
+    public function test_roundtrip_generator_keeps_start_on_loop_edge_instead_of_center(): void
+    {
+        $user = User::factory()->create();
+
+        config()->set('sport_map.routing.route_generator_provider', 'local');
+
+        $waypoints = $this->actingAs($user)
+            ->postJson(route('auth.sport-route-proposals.store'), [
+                'sport_type' => 'running',
+                'route_type' => 'roundtrip',
+                'target_mode' => 'distance',
+                'distance_km' => 5,
+                'surface' => 'forest',
+                'environment' => 'forest',
+                'elevation' => 'mixed',
+                'difficulty' => 'easy',
+                'low_traffic' => true,
+                'variant_seed' => 3003,
+                'start' => [
+                    'latitude' => 49.1122,
+                    'longitude' => 7.0676,
+                ],
+            ])
+            ->assertOk()
+            ->json('data.waypoints');
+
+        $start = $waypoints[0];
+        $last = $waypoints[count($waypoints) - 1];
+
+        $this->assertSame($start['latitude'], $last['latitude']);
+        $this->assertSame($start['longitude'], $last['longitude']);
+        $this->assertCount(4, $waypoints);
+
+        for ($index = 2; $index <= count($waypoints) - 2; $index++) {
+            $this->assertGreaterThan(
+                650,
+                $this->distanceFromPointToSegmentMeters($start, $waypoints[$index - 1], $waypoints[$index]),
+                'Rundroute-Segmente duerfen nicht durch den Startpunkt zurueckschneiden.',
+            );
+        }
+    }
+
+    public function test_roundtrip_generator_retries_when_route_goes_out_and_back(): void
+    {
+        $user = User::factory()->create();
+        $calls = 0;
+
+        config()->set('sport_map.routing.route_generator_provider', 'osrm');
+        config()->set('sport_map.routing.osrm_base_url', 'https://osrm.test');
+
+        Http::fake(function () use (&$calls) {
+            $calls++;
+            $outAndBack = [
+                [7.0676, 49.1122],
+                [7.0776, 49.1122],
+                [7.0876, 49.1122],
+                [7.0776, 49.1122],
+                [7.0676, 49.1122],
+            ];
+            $loop = [
+                [7.0676, 49.1122],
+                [7.0776, 49.1122],
+                [7.0776, 49.1222],
+                [7.0676, 49.1222],
+                [7.0676, 49.1122],
+            ];
+
+            return Http::response([
+                'routes' => [[
+                    'distance' => $calls === 1 ? 5000 : 5050,
+                    'duration' => 1800,
+                    'geometry' => [
+                        'type' => 'LineString',
+                        'coordinates' => $calls === 1 ? $outAndBack : $loop,
+                    ],
+                    'legs' => [],
+                ]],
+            ], 200);
+        });
+
+        $this->actingAs($user)
+            ->postJson(route('auth.sport-route-proposals.store'), [
+                'sport_type' => 'running',
+                'route_type' => 'roundtrip',
+                'target_mode' => 'distance',
+                'distance_km' => 5,
+                'surface' => 'firm',
+                'environment' => 'park',
+                'elevation' => 'flat',
+                'difficulty' => 'easy',
+                'variant_seed' => 5200,
+                'start' => [
+                    'latitude' => 49.1122,
+                    'longitude' => 7.0676,
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.distance_meters', 5050)
+            ->assertJsonPath('data.metrics.route_shape.acceptable', true)
+            ->assertJsonPath('data.metrics.quality.shape_acceptable', true)
+            ->assertJsonPath('data.metrics.calibration_attempts', 2);
+
+        $this->assertSame(2, $calls);
+    }
+
+    public function test_route_generator_can_use_explicit_destination_for_one_way_route(): void
+    {
+        $user = User::factory()->create();
+
+        config()->set('sport_map.routing.route_generator_provider', 'osrm');
+        config()->set('sport_map.routing.osrm_base_url', 'https://osrm.test');
+
+        Http::fake([
+            'osrm.test/route/v1/foot/*' => Http::response([
+                'routes' => [[
+                    'distance' => 4300,
+                    'duration' => 1500,
+                    'geometry' => [
+                        'type' => 'LineString',
+                        'coordinates' => [
+                            [7.0676, 49.1122],
+                            [7.081, 49.119],
+                            [7.096, 49.125],
+                        ],
+                    ],
+                    'legs' => [],
+                ]],
+            ], 200),
+        ]);
+
+        $this->actingAs($user)
+            ->postJson(route('auth.sport-route-proposals.store'), [
+                'sport_type' => 'running',
+                'route_type' => 'point_to_point',
+                'target_mode' => 'distance',
+                'distance_km' => 5,
+                'surface' => 'firm',
+                'environment' => 'park',
+                'elevation' => 'flat',
+                'difficulty' => 'easy',
+                'waypoints' => [
+                    [
+                        'name' => 'Start',
+                        'latitude' => 49.1122,
+                        'longitude' => 7.0676,
+                    ],
+                    [
+                        'name' => 'Ziel',
+                        'latitude' => 49.125,
+                        'longitude' => 7.096,
+                    ],
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.route_type', 'point_to_point')
+            ->assertJsonPath('data.waypoints.0.name', 'Start')
+            ->assertJsonPath('data.waypoints.1.name', 'Ziel')
+            ->assertJsonPath('data.distance_meters', 4300)
+            ->assertJsonPath('data.metrics.quality.uses_real_routing', true);
+    }
+
+    public function test_point_to_point_generator_creates_one_way_route_without_return_to_start(): void
+    {
+        $user = User::factory()->create();
+
+        config()->set('sport_map.routing.route_generator_provider', 'local');
+
+        $waypoints = $this->actingAs($user)
+            ->postJson(route('auth.sport-route-proposals.store'), [
+                'sport_type' => 'running',
+                'route_type' => 'point_to_point',
+                'target_mode' => 'distance',
+                'distance_km' => 5,
+                'surface' => 'firm',
+                'environment' => 'park',
+                'elevation' => 'flat',
+                'difficulty' => 'easy',
+                'variant_seed' => 6100,
+                'start' => [
+                    'latitude' => 49.1122,
+                    'longitude' => 7.0676,
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.route_type', 'point_to_point')
+            ->assertJsonPath('data.waypoints.2.name', 'Ziel')
+            ->json('data.waypoints');
+
+        $this->assertCount(3, $waypoints);
+        $this->assertGreaterThan(3500, $this->distanceBetweenPointsMeters($waypoints[0], $waypoints[2]));
+    }
+
+    private function distanceBetweenPointsMeters(array $from, array $to): float
+    {
+        return sqrt(array_sum(array_map(
+            fn ($value) => $value ** 2,
+            [
+                $this->projectForDistance($to, $from)[0],
+                $this->projectForDistance($to, $from)[1],
+            ],
+        )));
+    }
+
+    private function distanceFromPointToSegmentMeters(array $point, array $from, array $to): float
+    {
+        [$px, $py] = $this->projectForDistance($point, $point);
+        [$ax, $ay] = $this->projectForDistance($from, $point);
+        [$bx, $by] = $this->projectForDistance($to, $point);
+        $dx = $bx - $ax;
+        $dy = $by - $ay;
+        $lengthSquared = ($dx * $dx) + ($dy * $dy);
+
+        if ($lengthSquared <= 0) {
+            return sqrt((($px - $ax) ** 2) + (($py - $ay) ** 2));
+        }
+
+        $t = max(0, min(1, ((($px - $ax) * $dx) + (($py - $ay) * $dy)) / $lengthSquared));
+        $nearestX = $ax + ($t * $dx);
+        $nearestY = $ay + ($t * $dy);
+
+        return sqrt((($px - $nearestX) ** 2) + (($py - $nearestY) ** 2));
+    }
+
+    private function projectForDistance(array $point, array $origin): array
+    {
+        $latitude = (float) $point['latitude'];
+        $longitude = (float) $point['longitude'];
+        $originLatitude = (float) $origin['latitude'];
+        $originLongitude = (float) $origin['longitude'];
+
+        return [
+            ($longitude - $originLongitude) * 111320 * cos(deg2rad($originLatitude)),
+            ($latitude - $originLatitude) * 110540,
+        ];
     }
 }

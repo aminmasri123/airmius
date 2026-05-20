@@ -31,6 +31,8 @@ return [
     'map' => [
         'tile_url' => env('SPORT_MAP_TILE_URL', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'),
         'attribution' => env('SPORT_MAP_ATTRIBUTION', '(c) OpenStreetMap contributors'),
+        'satellite_tile_url' => env('SPORT_MAP_SATELLITE_TILE_URL', 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'),
+        'satellite_attribution' => env('SPORT_MAP_SATELLITE_ATTRIBUTION', '(c) Esri, Maxar, Earthstar Geographics, and the GIS User Community'),
     ],
 
     'routing' => [

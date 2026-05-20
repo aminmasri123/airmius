@@ -37,6 +37,8 @@ class MobileApiContractTest extends TestCase
 
     public function test_mobile_meta_returns_versioned_capabilities(): void
     {
+        config()->set('sport_map.routing.provider', 'local');
+
         $this->getJson('/api/v1/meta')
             ->assertOk()
             ->assertJsonPath('data.api_version', 'v1')
@@ -48,10 +50,16 @@ class MobileApiContractTest extends TestCase
             ->assertJsonPath('data.capabilities.subscriptions.2', 'bank_transfer_checkout')
             ->assertJsonPath('data.capabilities.training.2', 'log_create_stepper')
             ->assertJsonPath('data.capabilities.training.4', 'gym_exercise_set_stepper')
+            ->assertJsonPath('data.capabilities.nutrition.0', 'meal_logging')
+            ->assertJsonPath('data.capabilities.nutrition.3', 'recipe_suggestions')
+            ->assertJsonPath('data.capabilities.nutrition.4', 'food_search_open_food_facts')
             ->assertJsonPath('data.catalogs.training.log_create_flow.steps.1.key', 'document')
             ->assertJsonPath('data.catalogs.training.log_create_flow.finish_fields.0', 'intensity')
             ->assertJsonPath('data.catalogs.training.training_types.0.key', 'gym')
             ->assertJsonPath('data.catalogs.training.training_types.0.document_flow', 'exercise_set_stepper')
+            ->assertJsonPath('data.catalogs.nutrition.meal_types.0.key', 'breakfast')
+            ->assertJsonPath('data.catalogs.nutrition.goal_types.0.key', 'maintain')
+            ->assertJsonPath('data.catalogs.nutrition.external_sources.0.key', 'open_food_facts')
             ->assertJsonPath('data.capabilities.clubs.3', 'manager_members')
             ->assertJsonPath('data.capabilities.clubs.4', 'manager_billing')
             ->assertJsonPath('data.capabilities.sport_map.0', 'route_planning')
@@ -59,6 +67,7 @@ class MobileApiContractTest extends TestCase
             ->assertJsonPath('data.catalogs.sport_map.sport_types.0.label_key', 'sport_map.sport_types.running')
             ->assertJsonPath('data.catalogs.sport_map.place_types.0.key', 'football_pitch')
             ->assertJsonPath('data.catalogs.sport_map.map.tile_url', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png')
+            ->assertJsonPath('data.catalogs.sport_map.map.satellite_tile_url', 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}')
             ->assertJsonPath('data.catalogs.sport_map.routing.provider', 'local')
             ->assertJsonPath('data.capabilities.notifications.0', 'list')
             ->assertJsonPath('data.capabilities.uploads.0', 'list')
