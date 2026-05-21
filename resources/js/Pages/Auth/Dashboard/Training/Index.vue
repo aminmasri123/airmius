@@ -28,7 +28,18 @@ const sports = [
     { key: 'yoga', label: 'Yoga', icon: 'las la-spa', accent: 'bg-violet-500', metrics: ['Flow', 'Atemfokus', 'Level', 'Haltezeit'] },
 ]
 
+const planTrainingTypes = [
+    { key: 'gym', label: 'Gym', icon: 'las la-dumbbell', sport_type: 'gym', accent: 'bg-sky-500' },
+    { key: 'run_interval', label: 'Intervalle', icon: 'las la-stopwatch', sport_type: 'laufen', accent: 'bg-amber-400' },
+    { key: 'long_run', label: 'Long Run', icon: 'las la-route', sport_type: 'laufen', accent: 'bg-emerald-500' },
+    { key: 'swim', label: 'Swim', icon: 'las la-swimmer', sport_type: 'schwimmen', accent: 'bg-cyan-500' },
+    { key: 'football', label: 'Fussball', icon: 'las la-futbol', sport_type: 'fussball', accent: 'bg-lime-500' },
+    { key: 'cycling', label: 'Bike', icon: 'las la-biking', sport_type: 'cycling', accent: 'bg-fuchsia-500' },
+    { key: 'generic', label: 'Frei', icon: 'las la-clipboard-list', sport_type: 'laufen', accent: 'bg-indigo-500' },
+]
+
 const activeSport = ref('all')
+const activeTrainingSection = ref('overview')
 const activeModal = ref(null)
 const deleteText = ref('')
 const selectedPlan = ref(null)
@@ -39,6 +50,22 @@ const planImageInput = ref(null)
 const itemImageInput = ref(null)
 const editItemImageInput = ref(null)
 const draggedItem = ref(null)
+
+const trainingSections = [
+    { key: 'overview', label: 'Uebersicht', hint: 'Start', icon: 'las la-home' },
+    { key: 'plans', label: 'Plaene', hint: 'Aufbau', icon: 'las la-clipboard-list' },
+    { key: 'week', label: 'Woche', hint: 'Kalender', icon: 'las la-calendar-week' },
+    { key: 'logs', label: 'Logs', hint: 'Dokumentation', icon: 'las la-pen-alt' },
+    { key: 'analysis', label: 'Analyse', hint: 'Signale', icon: 'las la-chart-line' },
+]
+
+const planWizardStep = ref(0)
+const planWizardSteps = [
+    { label: 'Basis', hint: 'Name & Rhythmus', icon: 'las la-clipboard-list' },
+    { label: 'Ziel', hint: 'Zeitraum & Niveau', icon: 'las la-bullseye' },
+    { label: 'Freigabe', hint: 'Team & Sportler', icon: 'las la-user-friends' },
+    { label: 'Einheit', hint: 'Erstes Training', icon: 'las la-running' },
+]
 
 const activityForm = useForm({
     title: '',
@@ -97,6 +124,7 @@ const planForm = useForm({
     share_permission: 'read',
     team_id: '',
     user_ids: [],
+    item_training_type: 'long_run',
     item_title: '',
     item_sport_type: 'laufen',
     item_description: '',
@@ -304,11 +332,11 @@ const sportStats = computed(() => Object.values(visibleLogs.value.reduce((groups
 }, {})).sort((a, b) => b.sessions - a.sessions))
 
 const exerciseLibrary = [
-    { sport_type: 'gym', title: 'Kniebeuge Progression', focus: 'Kraft', duration_minutes: 45, todos: 'Warm-up 10 Minuten\n3-5 Arbeitssaetze\nTechnikvideo nach schwerstem Satz', metrics: { Saetze: '4', Wiederholungen: '6-10', 'Gewicht kg': 'RPE 7-8', Pause: '120s' } },
-    { sport_type: 'laufen', title: 'Long Run Zone 2', focus: 'Ausdauer', duration_minutes: 70, todos: 'Locker starten\nPace stabil halten\nLetzte 10 Minuten kontrollieren', metrics: { 'Distanz km': '10-16', 'Pace Ziel': 'Zone 2', Hoehenmeter: '-', RPE: '4-5' } },
-    { sport_type: 'laufen', title: 'Intervall 6 x 400m', focus: 'Tempo', duration_minutes: 50, todos: '15 Minuten einlaufen\n6 x 400m schnell\n200m Trabpause\n10 Minuten auslaufen', metrics: { 'Distanz km': '6-8', 'Pace Ziel': '5k-Pace', Hoehenmeter: '-', RPE: '8' } },
-    { sport_type: 'schwimmen', title: 'Technik + Intervalle', focus: 'Wasserlage', duration_minutes: 55, todos: '200m einschwimmen\n6 x 50m Technik\n8 x 100m konstant\nlocker ausschwimmen', metrics: { Bahnen: '40+', Stil: 'Frei', Intervall: '100m', Pausenzeit: '20s' } },
-    { sport_type: 'fussball', title: 'Ballkontrolle + Sprints', focus: 'Explosivitaet', duration_minutes: 60, todos: 'Koordination\nDribbling-Parcours\n8 x 20m Sprint\nkleines Abschlussspiel', metrics: { Schwerpunkt: 'Technik', Spielfeld: 'Halbfeld', Spielerzahl: '4-8', Drill: 'Sprint + Ball' } },
+    { training_type: 'gym', sport_type: 'gym', title: 'Kniebeuge Progression', focus: 'Kraft', duration_minutes: 45, todos: 'Warm-up 10 Minuten\n3-5 Arbeitssaetze\nTechnikvideo nach schwerstem Satz', metrics: { Saetze: '4', Wiederholungen: '6-10', 'Gewicht kg': 'RPE 7-8', Pause: '120s' } },
+    { training_type: 'long_run', sport_type: 'laufen', title: 'Long Run Zone 2', focus: 'Ausdauer', duration_minutes: 70, todos: 'Locker starten\nPace stabil halten\nLetzte 10 Minuten kontrollieren', metrics: { 'Distanz km': '10-16', 'Pace Ziel': 'Zone 2', Hoehenmeter: '-', RPE: '4-5' } },
+    { training_type: 'run_interval', sport_type: 'laufen', title: 'Intervall 6 x 400m', focus: 'Tempo', duration_minutes: 50, todos: '15 Minuten einlaufen\n6 x 400m schnell\n200m Trabpause\n10 Minuten auslaufen', metrics: { 'Distanz km': '6-8', 'Pace Ziel': '5k-Pace', Hoehenmeter: '-', RPE: '8' } },
+    { training_type: 'swim', sport_type: 'schwimmen', title: 'Technik + Intervalle', focus: 'Wasserlage', duration_minutes: 55, todos: '200m einschwimmen\n6 x 50m Technik\n8 x 100m konstant\nlocker ausschwimmen', metrics: { Bahnen: '40+', Stil: 'Frei', Intervall: '100m', Pausenzeit: '20s' } },
+    { training_type: 'football', sport_type: 'fussball', title: 'Ballkontrolle + Sprints', focus: 'Explosivitaet', duration_minutes: 60, todos: 'Koordination\nDribbling-Parcours\n8 x 20m Sprint\nkleines Abschlussspiel', metrics: { Schwerpunkt: 'Technik', Spielfeld: 'Halbfeld', Spielerzahl: '4-8', Drill: 'Sprint + Ball' } },
 ]
 
 const templatePlans = computed(() => props.plans.filter((plan) => plan.settings?.is_template_copy || plan.status === 'draft'))
@@ -317,6 +345,38 @@ const selectedTeamMembers = computed(() => {
     const team = props.teams.find((item) => Number(item.id) === Number(planForm.team_id))
     return team?.users || []
 })
+
+const selectPlanTrainingType = (key) => {
+    const type = planTrainingTypes.find((item) => item.key === key) || planTrainingTypes[planTrainingTypes.length - 1]
+    planForm.item_training_type = type.key
+    planForm.item_sport_type = type.sport_type
+    planForm.item_metrics = {
+        ...planForm.item_metrics,
+        _training_type: type.key,
+    }
+}
+
+const canOpenPlanWizardStep = (index) => index === 0 || Boolean(planForm.title?.trim())
+const goToPlanWizardStep = (index) => {
+    if (!canOpenPlanWizardStep(index)) return
+    planWizardStep.value = index
+}
+
+const planWizardCanContinue = computed(() => {
+    if (planWizardStep.value === 0) return Boolean(planForm.title?.trim())
+    if (planWizardStep.value === planWizardSteps.length - 1) return Boolean(planForm.item_title?.trim())
+
+    return true
+})
+
+const nextPlanWizardStep = () => {
+    if (!planWizardCanContinue.value) return
+    planWizardStep.value = Math.min(planWizardStep.value + 1, planWizardSteps.length - 1)
+}
+
+const previousPlanWizardStep = () => {
+    planWizardStep.value = Math.max(planWizardStep.value - 1, 0)
+}
 
 const cadenceLabels = {
     single: 'Einmalig',
@@ -354,6 +414,7 @@ const permissionLabels = {
 
 const resetPlanForm = () => {
     planForm.reset()
+    planWizardStep.value = 0
     planForm.cadence = 'weekly'
     planForm.status = 'published'
     planForm.share_permission = 'read'
@@ -365,9 +426,10 @@ const resetPlanForm = () => {
     planForm.competition_date = ''
     planForm.item_load = 'medium'
     planForm.item_week = 1
-    planForm.item_sport_type = activeSport.value === 'all' ? 'laufen' : activeSport.value
+    planForm.item_training_type = activeSport.value === 'gym' ? 'gym' : activeSport.value === 'schwimmen' ? 'swim' : activeSport.value === 'fussball' ? 'football' : activeSport.value === 'cycling' ? 'cycling' : 'long_run'
+    planForm.item_sport_type = planTrainingTypes.find((type) => type.key === planForm.item_training_type)?.sport_type || (activeSport.value === 'all' ? 'laufen' : activeSport.value)
     planForm.item_intensity = 'mittel'
-    planForm.item_metrics = {}
+    planForm.item_metrics = { _training_type: planForm.item_training_type }
     if (planImageInput.value) planImageInput.value.value = ''
 }
 
@@ -441,7 +503,7 @@ const openModal = (name, plan = null, item = null) => {
         editItemForm.todos = (item.todos || []).join('\n')
         editItemForm.image = null
         editItemForm.video_url = item.video_url || ''
-        editItemForm.metrics = Object.fromEntries(Object.entries(item.metrics || {}).filter(([key]) => !['Woche', 'Belastung', 'Fokus'].includes(key)))
+        editItemForm.metrics = Object.fromEntries(Object.entries(item.metrics || {}).filter(([key]) => !['Woche', 'Belastung', 'Fokus', '_training_type', 'training_type', 'Trainingstyp'].includes(key)))
         editItemForm.clearErrors()
         if (editItemImageInput.value) editItemImageInput.value.value = ''
     }
@@ -561,6 +623,20 @@ const submitLog = () => {
 }
 
 const submitPlan = () => {
+    if (!planForm.title?.trim()) {
+        planWizardStep.value = 0
+        return
+    }
+    if (!planForm.item_title?.trim()) {
+        planWizardStep.value = planWizardSteps.length - 1
+        return
+    }
+
+    planForm.item_metrics = {
+        ...planForm.item_metrics,
+        _training_type: planForm.item_training_type,
+    }
+
     planForm.post(route('auth.training.plans.store'), {
         preserveScroll: true,
         forceFormData: true,
@@ -639,7 +715,7 @@ const itemPayload = (item, scheduledAt = null) => ({
     focus: item.metrics?.Fokus || '',
     todos: (item.todos || []).join('\n'),
     video_url: item.video_url || '',
-    metrics: Object.fromEntries(Object.entries(item.metrics || {}).filter(([key]) => !['Woche', 'Belastung', 'Fokus'].includes(key))),
+    metrics: Object.fromEntries(Object.entries(item.metrics || {}).filter(([key]) => !['Woche', 'Belastung', 'Fokus', '_training_type', 'training_type', 'Trainingstyp'].includes(key))),
     _method: 'put',
 })
 
@@ -671,6 +747,16 @@ const applyExerciseTemplate = (template, form = itemForm) => {
     form.duration_minutes = template.duration_minutes
     form.todos = template.todos
     form.metrics = { ...template.metrics }
+}
+
+const applyPlanExerciseTemplate = (template) => {
+    planForm.item_training_type = template.training_type || planForm.item_training_type || 'generic'
+    planForm.item_sport_type = template.sport_type
+    planForm.item_title = template.title
+    planForm.item_focus = template.focus
+    planForm.item_duration_minutes = template.duration_minutes
+    planForm.item_todos = template.todos
+    planForm.item_metrics = { ...template.metrics, _training_type: planForm.item_training_type }
 }
 
 const documentPlanItem = (item) => {
@@ -754,25 +840,22 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
 <template>
     <Head title="Training" />
 
-    <div class="space-y-5">
-        <section class="overflow-hidden rounded-2xl border border-border bg-card">
-            <div class="grid lg:grid-cols-[1fr_380px]">
-                <div class="p-5 sm:p-6">
+    <div class="space-y-4">
+        <section class="rounded-2xl border border-border bg-card p-4 sm:p-5">
+            <div class="space-y-4 lg:grid lg:grid-cols-[1fr_320px] lg:gap-5 lg:space-y-0">
+                <div>
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="rounded-full border border-air-blue/40 bg-air-blue/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-air-blue">
                             Training Hub
                         </span>
-                        <span class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">
+                        <span class="hidden rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary sm:inline-flex">
                             Planen · Ausfuehren · Teilen
                         </span>
                     </div>
-                    <h1 class="mt-4 max-w-3xl text-2xl font-semibold leading-tight text-primary sm:text-3xl">
-                        Trainingsplaene fuer jede Sportart, jedes Team und jeden Athleten.
+                    <h1 class="mt-3 max-w-3xl text-2xl font-semibold leading-tight text-primary sm:text-3xl">
+                        Trainingsplaene
                     </h1>
-                    <p class="mt-3 max-w-3xl text-sm leading-6 text-secondary">
-                        Trainer erstellen Programme mit Aufgaben, Bildern und Video-Erklaerungen. Sportler dokumentieren eigene Einheiten und koennen Plaene lesen oder gemeinsam verbessern.
-                    </p>
-                    <div class="mt-5 flex flex-wrap gap-2">
+                    <div class="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                         <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="openModal('plan')">
                             Plan erstellen
                         </button>
@@ -781,24 +864,24 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                         </button>
                     </div>
                 </div>
-                <div class="border-t border-border bg-muted/30 p-5 lg:border-l lg:border-t-0">
-                    <div class="grid grid-cols-3 gap-3">
-                        <div class="rounded-xl border border-border bg-card p-3 text-center">
-                            <p class="text-2xl font-semibold text-primary">{{ plans.length }}</p>
-                            <p class="text-xs text-secondary">Plaene</p>
+                <div class="rounded-2xl border border-border bg-inputBg/40 p-3 lg:bg-muted/30">
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="rounded-xl border border-border bg-card p-2 text-center">
+                            <p class="text-xl font-semibold text-primary">{{ plans.length }}</p>
+                            <p class="text-[11px] text-secondary">Plaene</p>
                         </div>
-                        <div class="rounded-xl border border-border bg-card p-3 text-center">
-                            <p class="text-2xl font-semibold text-primary">{{ visibleLogs.length }}</p>
-                            <p class="text-xs text-secondary">Logs</p>
+                        <div class="rounded-xl border border-border bg-card p-2 text-center">
+                            <p class="text-xl font-semibold text-primary">{{ visibleLogs.length }}</p>
+                            <p class="text-[11px] text-secondary">Logs</p>
                         </div>
-                        <div class="rounded-xl border border-border bg-card p-3 text-center">
-                            <p class="text-2xl font-semibold text-primary">{{ teams.length }}</p>
-                            <p class="text-xs text-secondary">Teams</p>
+                        <div class="rounded-xl border border-border bg-card p-2 text-center">
+                            <p class="text-xl font-semibold text-primary">{{ teams.length }}</p>
+                            <p class="text-[11px] text-secondary">Teams</p>
                         </div>
                     </div>
-                    <div class="mt-4 rounded-xl border border-border bg-card p-4">
+                    <div class="mt-3 rounded-xl border border-border bg-card p-3">
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Naechstes Training</p>
-                        <div v-if="upcomingItems.length" class="mt-3 space-y-3">
+                        <div v-if="upcomingItems.length" class="mt-2 space-y-2">
                             <div v-for="item in upcomingItems.slice(0, 2)" :key="`${item.plan.id}-${item.id}`" class="flex items-center gap-3">
                                 <span class="flex h-10 w-10 items-center justify-center rounded-xl text-white" :class="sportAccent(item.sport_type)">
                                     <i :class="sportIcon(item.sport_type)" class="text-xl"></i>
@@ -809,7 +892,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                                 </div>
                             </div>
                         </div>
-                        <p v-else class="mt-3 text-sm text-secondary">Noch kein Termin geplant.</p>
+                        <p v-else class="mt-2 text-sm text-secondary">Noch kein Termin geplant.</p>
                     </div>
                 </div>
             </div>
@@ -853,7 +936,28 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
             </div>
         </section>
 
-        <section class="rounded-2xl border border-border bg-card p-3">
+        <nav class="flex gap-2 overflow-x-auto rounded-2xl border border-border bg-card p-2 md:grid md:grid-cols-5 md:overflow-visible">
+            <button
+                v-for="section in trainingSections"
+                :key="section.key"
+                type="button"
+                :class="[
+                    'flex min-w-[112px] shrink-0 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-center transition md:min-w-0 md:justify-start md:gap-3 md:py-3 md:text-start',
+                    activeTrainingSection === section.key
+                        ? 'border-air-blue bg-air-blue/15 text-primary shadow-lg shadow-air-blue/10'
+                        : 'border-transparent text-secondary hover:border-border hover:bg-inputBg'
+                ]"
+                @click="activeTrainingSection = section.key"
+            >
+                <i :class="[section.icon, 'text-xl']"></i>
+                <span class="min-w-0">
+                    <span class="block text-sm font-semibold">{{ section.label }}</span>
+                    <span class="hidden truncate text-xs opacity-80 sm:block">{{ section.hint }}</span>
+                </span>
+            </button>
+        </nav>
+
+        <section v-if="activeTrainingSection === 'plans'" class="rounded-2xl border border-border bg-card p-3">
             <div class="flex gap-2 overflow-x-auto pb-1">
                 <button
                     v-for="sport in sports"
@@ -871,7 +975,67 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
             </div>
         </section>
 
-        <section class="rounded-2xl border border-border bg-card">
+        <section v-if="activeTrainingSection === 'overview'" class="grid gap-4 xl:grid-cols-[minmax(0,1fr),360px]">
+            <div class="rounded-2xl border border-border bg-card p-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Start</p>
+                        <h2 class="mt-1 text-xl font-semibold text-primary">Was steht als Naechstes an?</h2>
+                    </div>
+                    <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="activeTrainingSection = 'plans'">
+                        Zu den Plaenen
+                    </button>
+                </div>
+                <div class="mt-4 grid gap-3 md:grid-cols-2">
+                    <article v-for="item in upcomingItems.slice(0, 4)" :key="`${item.plan.id}-${item.id}`" class="rounded-xl border border-border bg-inputBg/40 p-3">
+                        <div class="flex items-start gap-3">
+                            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white" :class="sportAccent(item.sport_type)">
+                                <i :class="sportIcon(item.sport_type)" class="text-xl"></i>
+                            </span>
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate text-sm font-semibold text-primary">{{ item.title }}</p>
+                                <p class="mt-1 text-xs text-secondary">{{ item.plan.title }} &middot; {{ formatDate(item.scheduled_at) }} {{ formatTime(item.scheduled_at) }}</p>
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    <button type="button" class="rounded-lg border border-success/40 px-3 py-1.5 text-xs font-semibold text-success hover:bg-success/10" @click="documentPlanItem(item)">
+                                        Dokumentieren
+                                    </button>
+                                    <button type="button" class="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-muted" @click="openPlanItem(item)">
+                                        Details
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                    <div v-if="!upcomingItems.length" class="rounded-xl border border-dashed border-border bg-inputBg/40 p-6 text-center md:col-span-2">
+                        <p class="font-semibold text-primary">Noch keine geplanten Einheiten.</p>
+                        <p class="mt-1 text-sm text-secondary">Erstelle einen Plan oder dokumentiere ein spontanes Training.</p>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="space-y-4">
+                <section class="rounded-2xl border border-border bg-card p-4">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Schnellstart</p>
+                    <div class="mt-3 grid gap-2">
+                        <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary" @click="openModal('plan')">
+                            Plan erstellen
+                        </button>
+                        <button type="button" class="rounded-xl border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted" @click="openLogPage">
+                            Training dokumentieren
+                        </button>
+                    </div>
+                </section>
+                <section class="rounded-2xl border border-border bg-card p-4">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Aufmerksamkeit</p>
+                    <div class="mt-3 grid grid-cols-2 gap-2">
+                        <span class="rounded-xl border border-border bg-inputBg/40 p-3 text-xs text-secondary"><b class="block text-xl text-primary">{{ trainerDashboard.overdue.length }}</b>ueberfaellig</span>
+                        <span class="rounded-xl border border-border bg-inputBg/40 p-3 text-xs text-secondary"><b class="block text-xl text-primary">{{ trainerDashboard.feedbackOpen.length }}</b>Feedback offen</span>
+                    </div>
+                </section>
+            </aside>
+        </section>
+
+        <section v-if="activeTrainingSection === 'logs'" class="rounded-2xl border border-border bg-card">
             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Trainingsdokumentation</p>
@@ -922,7 +1086,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
             </div>
         </section>
 
-        <section class="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+        <section v-if="activeTrainingSection === 'week'" class="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
             <div class="rounded-2xl border border-border bg-card p-4">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
@@ -990,7 +1154,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
             </div>
         </section>
 
-        <section class="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
+        <section v-if="activeTrainingSection === 'analysis'" class="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
             <div class="rounded-2xl border border-border bg-card p-4">
                 <div class="flex items-center justify-between gap-3">
                     <div>
@@ -1037,7 +1201,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
             </div>
         </section>
 
-        <div class="grid gap-5 xl:grid-cols-[1fr_340px]">
+        <div v-if="activeTrainingSection === 'plans'" class="grid gap-5 xl:grid-cols-[1fr_340px]">
             <section class="space-y-4">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
@@ -1063,7 +1227,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                                         </span>
                                     </div>
                                     <h3 class="mt-3 truncate text-lg font-semibold text-primary">{{ plan.title }}</h3>
-                                    <p class="mt-1 line-clamp-2 text-sm text-secondary">{{ plan.description || 'Keine Beschreibung hinterlegt.' }}</p>
+                                    <p class="mt-1 hidden line-clamp-2 text-sm text-secondary md:block">{{ plan.description || 'Keine Beschreibung hinterlegt.' }}</p>
                                     <p v-if="plan.settings?.goal" class="mt-2 rounded-xl border border-air-blue/30 bg-air-blue/10 px-3 py-2 text-xs font-semibold text-primary">
                                         Ziel: {{ plan.settings.goal }}
                                     </p>
@@ -1147,7 +1311,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                                                 <span v-if="item.metrics?.Fokus" class="rounded-full bg-muted px-2 py-0.5 text-[11px] text-secondary">{{ item.metrics.Fokus }}</span>
                                             </div>
                                             <div v-if="item.metrics && Object.keys(item.metrics).length" class="mt-2 flex flex-wrap gap-1">
-                                                <span v-for="(value, key) in item.metrics" v-show="!['Woche', 'Belastung', 'Fokus'].includes(key)" :key="key" class="rounded-full bg-muted px-2 py-0.5 text-[11px] text-secondary">
+                                                <span v-for="(value, key) in item.metrics" v-show="!['Woche', 'Belastung', 'Fokus', '_training_type', 'training_type', 'Trainingstyp'].includes(key)" :key="key" class="rounded-full bg-muted px-2 py-0.5 text-[11px] text-secondary">
                                                     {{ key }}: {{ value }}
                                                 </span>
                                             </div>
@@ -1396,106 +1560,215 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                     </button>
                 </form>
 
-                <form v-if="activeModal === 'plan'" class="space-y-5 p-4" @submit.prevent="submitPlan">
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <label class="block text-sm font-semibold text-primary md:col-span-2">Planname
-                            <input v-model="planForm.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" required />
-                        </label>
-                        <label class="block text-sm font-semibold text-primary">Rhythmus
-                            <select v-model="planForm.cadence" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                                <option value="single">Einmalig</option>
-                                <option value="daily">Taeglich</option>
-                                <option value="weekly">Woechentlich</option>
-                                <option value="monthly">Monatlich</option>
-                            </select>
-                        </label>
-                        <label class="block text-sm font-semibold text-primary">Status
-                            <select v-model="planForm.status" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                                <option value="published">Direkt freigeben</option>
-                                <option value="draft">Entwurf</option>
-                            </select>
-                        </label>
-                        <label class="block text-sm font-semibold text-primary">Start
-                            <input v-model="planForm.starts_on" type="date" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
-                        </label>
-                        <label class="block text-sm font-semibold text-primary">Ende
-                            <input v-model="planForm.ends_on" type="date" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
-                        </label>
-                        <label class="block text-sm font-semibold text-primary md:col-span-2">Ziel des Plans
-                            <input v-model="planForm.goal" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="z. B. 10 km unter 45 Minuten, Muskelaufbau, Comeback nach Pause" />
-                        </label>
-                        <label class="block text-sm font-semibold text-primary">Trainingsphase
-                            <select v-model="planForm.phase" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                                <option value="base">Grundlage</option>
-                                <option value="build">Aufbau</option>
-                                <option value="peak">Peak / Wettkampfnaehe</option>
-                                <option value="recovery">Regeneration</option>
-                                <option value="rehab">Reha / Wiedereinstieg</option>
-                            </select>
-                        </label>
-                        <label class="block text-sm font-semibold text-primary">Niveau
-                            <select v-model="planForm.level" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                                <option value="beginner">Einsteiger</option>
-                                <option value="intermediate">Fortgeschritten</option>
-                                <option value="advanced">Advanced</option>
-                                <option value="elite">Leistung</option>
-                            </select>
-                        </label>
-                        <label class="block text-sm font-semibold text-primary">Wochen
-                            <input v-model="planForm.weeks" type="number" min="1" max="104" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
-                        </label>
-                        <label class="block text-sm font-semibold text-primary">Einheiten pro Woche
-                            <input v-model="planForm.weekly_sessions" type="number" min="1" max="21" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
-                        </label>
-                        <label class="block text-sm font-semibold text-primary">Makrozyklus
-                            <input v-model="planForm.macrocycle" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="z. B. Sommeraufbau 2026" />
-                        </label>
-                        <label class="block text-sm font-semibold text-primary">Mesozyklus
-                            <input v-model="planForm.mesocycle" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="z. B. Kraftblock 1" />
-                        </label>
-                        <label class="block text-sm font-semibold text-primary">Deload-Woche
-                            <input v-model="planForm.deload_week" type="number" min="1" max="104" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
-                        </label>
-                        <label class="block text-sm font-semibold text-primary">Wettkampf / Zieltermin
-                            <input v-model="planForm.competition_date" type="date" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
-                        </label>
-                        <label class="block text-sm font-semibold text-primary md:col-span-2">Beschreibung
-                            <textarea v-model="planForm.description" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
-                        </label>
+                <form v-if="activeModal === 'plan'" class="space-y-4 p-4" @submit.prevent="submitPlan">
+                    <div class="grid grid-cols-2 gap-2 md:grid-cols-4">
+                        <button
+                            v-for="(step, index) in planWizardSteps"
+                            :key="step.label"
+                            type="button"
+                            class="rounded-2xl border p-3 text-left transition"
+                            :class="[
+                                planWizardStep === index ? 'border-air-blue bg-air-blue text-white shadow-lg shadow-air-blue/20' : 'border-border bg-card text-primary hover:bg-muted',
+                                !canOpenPlanWizardStep(index) ? 'cursor-not-allowed opacity-50' : '',
+                            ]"
+                            :disabled="!canOpenPlanWizardStep(index)"
+                            @click="goToPlanWizardStep(index)"
+                        >
+                            <span class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide" :class="planWizardStep === index ? 'text-white/80' : 'text-secondary'">
+                                <i :class="step.icon"></i>
+                                Schritt {{ index + 1 }}
+                            </span>
+                            <span class="mt-2 block text-sm font-semibold">{{ step.label }}</span>
+                            <span class="hidden text-xs opacity-80 sm:block">{{ step.hint }}</span>
+                        </button>
                     </div>
 
-                    <div class="rounded-2xl border border-border bg-inputBg/40 p-4">
-                        <h3 class="text-sm font-semibold uppercase tracking-wide text-secondary">Erste Einheit</h3>
+                    <section v-if="planWizardStep === 0" class="rounded-2xl border border-border bg-card p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Schritt 1</p>
+                        <h3 class="mt-1 text-lg font-semibold text-primary">Plan-Basis</h3>
+                        <p class="mt-1 text-sm text-secondary">Erst nur das Wichtigste: Name und Rhythmus.</p>
+
+                        <div class="mt-4 space-y-4">
+                            <label class="block text-sm font-semibold text-primary">Planname
+                                <input v-model="planForm.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. 10k Aufbau, Gym Push/Pull, Comeback" required />
+                            </label>
+
+                            <div>
+                                <p class="text-sm font-semibold text-primary">Rhythmus</p>
+                                <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                    <button
+                                        v-for="option in [
+                                            { value: 'single', label: 'Einmalig', icon: 'las la-calendar-day' },
+                                            { value: 'daily', label: 'Taeglich', icon: 'las la-redo' },
+                                            { value: 'weekly', label: 'Woechentlich', icon: 'las la-calendar-week' },
+                                            { value: 'monthly', label: 'Monatlich', icon: 'las la-calendar-alt' },
+                                        ]"
+                                        :key="option.value"
+                                        type="button"
+                                        class="rounded-xl border px-3 py-3 text-left text-sm font-semibold transition"
+                                        :class="planForm.cadence === option.value ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-inputBg text-primary hover:bg-muted'"
+                                        @click="planForm.cadence = option.value"
+                                    >
+                                        <i :class="option.icon" class="mr-2"></i>{{ option.label }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section v-if="planWizardStep === 1" class="rounded-2xl border border-border bg-card p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Schritt 2</p>
+                        <h3 class="mt-1 text-lg font-semibold text-primary">Ziel und Zeitraum</h3>
+                        <p class="mt-1 text-sm text-secondary">Alles hier ist optional, hilft aber bei Struktur und Auswertung.</p>
+
                         <div class="mt-4 grid gap-4 md:grid-cols-2">
-                            <label class="block text-sm font-semibold text-primary">Sportart
-                                <select v-model="planForm.item_sport_type" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                                    <option v-for="sport in sports.filter((item) => item.key !== 'all')" :key="sport.key" :value="sport.key">{{ sport.label }}</option>
+                            <label class="block text-sm font-semibold text-primary md:col-span-2">Ziel des Plans
+                                <input v-model="planForm.goal" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. 10 km unter 45 Minuten, Muskelaufbau, Wiedereinstieg" />
+                            </label>
+                            <label class="block text-sm font-semibold text-primary">Trainingsphase
+                                <select v-model="planForm.phase" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                                    <option value="base">Grundlage</option>
+                                    <option value="build">Aufbau</option>
+                                    <option value="peak">Peak / Wettkampfnaehe</option>
+                                    <option value="recovery">Regeneration</option>
+                                    <option value="rehab">Reha / Wiedereinstieg</option>
                                 </select>
                             </label>
-                            <label class="block text-sm font-semibold text-primary">Titel
-                                <input v-model="planForm.item_title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" required />
+                            <label class="block text-sm font-semibold text-primary">Niveau
+                                <select v-model="planForm.level" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                                    <option value="beginner">Einsteiger</option>
+                                    <option value="intermediate">Fortgeschritten</option>
+                                    <option value="advanced">Advanced</option>
+                                    <option value="elite">Leistung</option>
+                                </select>
                             </label>
-                            <label v-for="metric in planSport.metrics" :key="metric" class="block text-sm font-semibold text-primary">
-                                {{ metric }}
-                                <input v-model="planForm.item_metrics[metric]" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
+                            <label class="block text-sm font-semibold text-primary">Start
+                                <input v-model="planForm.starts_on" type="date" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
+                            </label>
+                            <label class="block text-sm font-semibold text-primary">Ende
+                                <input v-model="planForm.ends_on" type="date" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
+                            </label>
+                            <label class="block text-sm font-semibold text-primary">Wochen
+                                <input v-model="planForm.weeks" type="number" min="1" max="104" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
+                            </label>
+                            <label class="block text-sm font-semibold text-primary">Einheiten pro Woche
+                                <input v-model="planForm.weekly_sessions" type="number" min="1" max="21" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
+                            </label>
+                        </div>
+
+                        <details class="mt-4 rounded-2xl border border-border bg-inputBg/40 p-3">
+                            <summary class="cursor-pointer text-sm font-semibold text-primary">Erweiterte Planung</summary>
+                            <div class="mt-4 grid gap-4 md:grid-cols-2">
+                                <label class="block text-sm font-semibold text-primary">Makrozyklus
+                                    <input v-model="planForm.macrocycle" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. Sommeraufbau 2026" />
+                                </label>
+                                <label class="block text-sm font-semibold text-primary">Mesozyklus
+                                    <input v-model="planForm.mesocycle" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. Kraftblock 1" />
+                                </label>
+                                <label class="block text-sm font-semibold text-primary">Deload-Woche
+                                    <input v-model="planForm.deload_week" type="number" min="1" max="104" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
+                                </label>
+                                <label class="block text-sm font-semibold text-primary">Wettkampf / Zieltermin
+                                    <input v-model="planForm.competition_date" type="date" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
+                                </label>
+                                <label class="block text-sm font-semibold text-primary md:col-span-2">Beschreibung
+                                    <textarea v-model="planForm.description" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
+                                </label>
+                            </div>
+                        </details>
+                    </section>
+
+                    <section v-if="planWizardStep === 2" class="rounded-2xl border border-border bg-card p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Schritt 3</p>
+                        <h3 class="mt-1 text-lg font-semibold text-primary">Freigabe</h3>
+                        <p class="mt-1 text-sm text-secondary">Waehle, ob der Plan sofort sichtbar ist und wer Zugriff bekommt.</p>
+
+                        <div class="mt-4 grid gap-4 md:grid-cols-2">
+                            <label class="block text-sm font-semibold text-primary">Status
+                                <select v-model="planForm.status" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                                    <option value="published">Direkt freigeben</option>
+                                    <option value="draft">Entwurf</option>
+                                </select>
+                            </label>
+                            <label class="block text-sm font-semibold text-primary">Berechtigung
+                                <select v-model="planForm.share_permission" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                                    <option value="read">Nur lesen</option>
+                                    <option value="write">Mit schreiben / verbessern</option>
+                                </select>
+                            </label>
+                            <label class="block text-sm font-semibold text-primary md:col-span-2">Team
+                                <select v-model="planForm.team_id" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                                    <option value="">Kein komplettes Team</option>
+                                    <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <div class="mt-4 rounded-2xl border border-border bg-inputBg/40 p-3">
+                            <div class="flex items-center justify-between gap-3">
+                                <p class="text-sm font-semibold text-primary">Einzelne Sportler</p>
+                                <span class="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-secondary">{{ planForm.user_ids.length }} gewaehlt</span>
+                            </div>
+                            <div class="mt-3 grid max-h-52 gap-2 overflow-y-auto sm:grid-cols-2">
+                                <label v-for="person in people" :key="person.id" class="flex items-center gap-2 rounded-xl border border-border bg-bg/40 px-3 py-2 text-sm text-primary">
+                                    <input type="checkbox" class="rounded border-border bg-inputBg" :checked="planForm.user_ids.map(Number).includes(Number(person.id))" @change="togglePlanUser(person.id)" />
+                                    <span class="truncate">{{ person.name }}</span>
+                                </label>
+                                <p v-if="!people.length" class="text-sm text-secondary">Keine einzelnen Sportler verfuegbar.</p>
+                            </div>
+                            <p v-if="selectedTeamMembers.length" class="mt-3 text-xs text-secondary">Team-Auswahl umfasst {{ selectedTeamMembers.length }} Personen.</p>
+                        </div>
+                    </section>
+
+                    <section v-if="planWizardStep === 3" class="rounded-2xl border border-border bg-card p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Schritt 4</p>
+                        <h3 class="mt-1 text-lg font-semibold text-primary">Erste Einheit</h3>
+                        <p class="mt-1 text-sm text-secondary">Der Plan braucht eine erste Einheit. Weitere Einheiten kannst du danach hinzufuegen.</p>
+
+                        <div class="mt-4 rounded-2xl border border-border bg-inputBg/40 p-3">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Schnellstart</p>
+                            <div class="mt-2 flex gap-2 overflow-x-auto pb-1">
+                                <button v-for="template in exerciseLibrary" :key="template.title" type="button" class="shrink-0 rounded-xl border border-border bg-bg/50 px-3 py-2 text-left text-xs text-primary hover:bg-muted" @click="applyPlanExerciseTemplate(template)">
+                                    <span class="block font-semibold">{{ template.title }}</span>
+                                    <span class="text-secondary">{{ sportLabel(template.sport_type) }} - {{ template.focus }}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 grid gap-4 md:grid-cols-2">
+                            <div class="md:col-span-2">
+                                <p class="text-sm font-semibold text-primary">Trainingsart</p>
+                                <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                    <button
+                                        v-for="type in planTrainingTypes"
+                                        :key="type.key"
+                                        type="button"
+                                        class="rounded-xl border px-3 py-3 text-left text-sm font-semibold transition"
+                                        :class="planForm.item_training_type === type.key ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-inputBg text-primary hover:bg-muted'"
+                                        @click="selectPlanTrainingType(type.key)"
+                                    >
+                                        <span :class="['mb-2 block h-1.5 w-8 rounded-full', type.accent]"></span>
+                                        <i :class="type.icon" class="mr-2"></i>{{ type.label }}
+                                    </button>
+                                </div>
+                            </div>
+                            <label class="block text-sm font-semibold text-primary md:col-span-2">Titel
+                                <input v-model="planForm.item_title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. Long Run, Push Training, Technikdrill" required />
                             </label>
                             <label class="block text-sm font-semibold text-primary">Termin
-                                <input v-model="planForm.item_scheduled_at" type="datetime-local" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
+                                <input v-model="planForm.item_scheduled_at" type="datetime-local" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
                             </label>
                             <label class="block text-sm font-semibold text-primary">Woche
-                                <input v-model="planForm.item_week" type="number" min="1" max="104" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
+                                <input v-model="planForm.item_week" type="number" min="1" max="104" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
                             </label>
                             <label class="block text-sm font-semibold text-primary">Dauer
-                                <input v-model="planForm.item_duration_minutes" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
+                                <input v-model="planForm.item_duration_minutes" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
                             </label>
-                            <label class="block text-sm font-semibold text-primary">Distanz km
-                                <input v-model="planForm.item_distance_km" type="number" min="0" step="0.01" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
-                            </label>
-                            <label class="block text-sm font-semibold text-primary">Kalorien
-                                <input v-model="planForm.item_calories" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
+                            <label v-if="['laufen', 'cycling', 'schwimmen', 'fussball'].includes(planForm.item_sport_type)" class="block text-sm font-semibold text-primary">Distanz km
+                                <input v-model="planForm.item_distance_km" type="number" min="0" step="0.01" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
                             </label>
                             <label class="block text-sm font-semibold text-primary">Belastung
-                                <select v-model="planForm.item_load" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
+                                <select v-model="planForm.item_load" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
                                     <option value="low">Locker</option>
                                     <option value="medium">Mittel</option>
                                     <option value="high">Hoch</option>
@@ -1503,47 +1776,41 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                                 </select>
                             </label>
                             <label class="block text-sm font-semibold text-primary">Fokus
-                                <input v-model="planForm.item_focus" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="z. B. Technik, Zone 2, Explosivitaet" />
+                                <input v-model="planForm.item_focus" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. Technik, Zone 2, Explosivitaet" />
                             </label>
-                            <label class="block text-sm font-semibold text-primary md:col-span-2">Todo-Liste
-                                <textarea v-model="planForm.item_todos" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Eine Aufgabe pro Zeile" />
-                            </label>
-                            <label class="block text-sm font-semibold text-primary">Video-Link
-                                <input v-model="planForm.item_video_url" type="url" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
-                            </label>
-                            <label class="block text-sm font-semibold text-primary">Bild
-                                <input ref="planImageInput" type="file" accept="image/*" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary file:mr-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setPlanImage" />
+                            <label v-for="metric in planSport.metrics" :key="metric" class="block text-sm font-semibold text-primary">
+                                {{ metric }}
+                                <input v-model="planForm.item_metrics[metric]" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
                             </label>
                         </div>
-                    </div>
 
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <label class="block text-sm font-semibold text-primary">Team
-                            <select v-model="planForm.team_id" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                                <option value="">Kein komplettes Team</option>
-                                <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
-                            </select>
-                        </label>
-                        <label class="block text-sm font-semibold text-primary">Berechtigung
-                            <select v-model="planForm.share_permission" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                                <option value="read">Nur lesen</option>
-                                <option value="write">Mit schreiben / verbessern</option>
-                            </select>
-                        </label>
+                        <details class="mt-4 rounded-2xl border border-border bg-inputBg/40 p-3">
+                            <summary class="cursor-pointer text-sm font-semibold text-primary">Medien und Aufgaben</summary>
+                            <div class="mt-4 grid gap-4 md:grid-cols-2">
+                                <label class="block text-sm font-semibold text-primary md:col-span-2">Todo-Liste
+                                    <textarea v-model="planForm.item_todos" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="Eine Aufgabe pro Zeile" />
+                                </label>
+                                <label class="block text-sm font-semibold text-primary">Video-Link
+                                    <input v-model="planForm.item_video_url" type="url" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
+                                </label>
+                                <label class="block text-sm font-semibold text-primary">Bild
+                                    <input ref="planImageInput" type="file" accept="image/*" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary file:mr-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setPlanImage" />
+                                </label>
+                            </div>
+                        </details>
+                    </section>
+
+                    <div class="sticky bottom-0 -mx-4 -mb-4 flex items-center justify-between gap-3 border-t border-border bg-bg/95 p-4 backdrop-blur">
+                        <button type="button" class="rounded-xl border border-border px-4 py-3 text-sm font-semibold text-primary disabled:opacity-40" :disabled="planWizardStep === 0" @click="previousPlanWizardStep">
+                            Zurueck
+                        </button>
+                        <button v-if="planWizardStep < planWizardSteps.length - 1" type="button" class="rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="!planWizardCanContinue" @click="nextPlanWizardStep">
+                            Weiter
+                        </button>
+                        <button v-else type="submit" class="rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="planForm.processing || !planWizardCanContinue">
+                            Plan speichern
+                        </button>
                     </div>
-                    <div class="rounded-2xl border border-border p-3">
-                        <p class="text-sm font-semibold text-primary">Einzelne Sportler</p>
-                        <div class="mt-3 grid max-h-44 gap-2 overflow-y-auto sm:grid-cols-2">
-                            <label v-for="person in people" :key="person.id" class="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-sm text-primary">
-                                <input type="checkbox" class="rounded border-border bg-inputBg" :checked="planForm.user_ids.map(Number).includes(Number(person.id))" @change="togglePlanUser(person.id)" />
-                                <span class="truncate">{{ person.name }}</span>
-                            </label>
-                        </div>
-                        <p v-if="selectedTeamMembers.length" class="mt-3 text-xs text-secondary">Team-Auswahl umfasst {{ selectedTeamMembers.length }} Personen.</p>
-                    </div>
-                    <button type="submit" class="w-full rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="planForm.processing">
-                        Plan speichern
-                    </button>
                 </form>
 
                 <form v-if="activeModal === 'edit'" class="space-y-4 p-4" @submit.prevent="updatePlan">

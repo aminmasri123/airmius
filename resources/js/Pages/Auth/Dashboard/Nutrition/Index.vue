@@ -21,6 +21,8 @@ const props = defineProps({
 const selectedDateValue = ref(props.selectedDate)
 const editingMealId = ref(null)
 const deleteCandidate = ref(null)
+const activeSection = ref('today')
+const showAdvancedMeal = ref(false)
 const recipeFilter = ref('all')
 const foodSearchQuery = ref('')
 const foodBarcode = ref('')
@@ -79,6 +81,13 @@ const filteredRecipes = computed(() => {
 
     return props.recipes
 })
+
+const nutritionSections = [
+    { key: 'today', label: 'Heute', hint: 'Ueberblick', icon: 'las la-chart-pie' },
+    { key: 'add', label: 'Erfassen', hint: 'Mahlzeit', icon: 'las la-plus-circle' },
+    { key: 'goals', label: 'Ziele', hint: 'Plan', icon: 'las la-bullseye' },
+    { key: 'ideas', label: 'Ideen', hint: 'Rezepte', icon: 'las la-lightbulb' },
+]
 
 const macroCards = computed(() => [
     {
@@ -157,6 +166,7 @@ const removeItemRow = (index) => {
 
 const resetMealForm = () => {
     editingMealId.value = null
+    showAdvancedMeal.value = false
     mealForm.reset()
     mealForm.eaten_on = props.selectedDate
     mealForm.meal_type = 'breakfast'
@@ -167,7 +177,10 @@ const resetMealForm = () => {
 const submitMeal = () => {
     const options = {
         preserveScroll: true,
-        onSuccess: resetMealForm,
+        onSuccess: () => {
+            resetMealForm()
+            activeSection.value = 'today'
+        },
     }
 
     if (editingMealId.value) {
@@ -179,6 +192,8 @@ const submitMeal = () => {
 }
 
 const editMeal = (meal) => {
+    activeSection.value = 'add'
+    showAdvancedMeal.value = true
     editingMealId.value = meal.id
     mealForm.eaten_on = meal.eaten_on || props.selectedDate
     mealForm.meal_type = meal.meal_type || 'snack'
@@ -201,6 +216,8 @@ const saveGoal = () => {
 }
 
 const applyRecipe = (recipe) => {
+    activeSection.value = 'add'
+    showAdvancedMeal.value = true
     editingMealId.value = null
     mealForm.eaten_on = props.selectedDate
     mealForm.meal_type = recipe.category === 'Vor dem Lauf' ? 'breakfast' : 'lunch'
@@ -215,12 +232,15 @@ const applyRecipe = (recipe) => {
 }
 
 const applyTrainingSuggestion = (suggestion) => {
+    activeSection.value = 'add'
+    showAdvancedMeal.value = true
     mealForm.meal_type = suggestion.meal_type || 'snack'
     mealForm.training_context = suggestion.training_context || ''
     mealForm.notes = suggestion.body || ''
 }
 
 const applyFoodResult = (food) => {
+    activeSection.value = 'add'
     editingMealId.value = null
     mealForm.eaten_on = props.selectedDate
     mealForm.title = food.brand ? `${food.title} (${food.brand})` : food.title
@@ -302,219 +322,126 @@ const confirmDelete = () => {
 <template>
     <Head title="Ernaehrung" />
 
-    <div class="space-y-5">
-        <section class="overflow-hidden rounded-2xl border border-border bg-card">
-            <div class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1.3fr),minmax(300px,0.7fr)] lg:p-6">
-                <div>
+    <div class="space-y-4">
+        <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="min-w-0">
                     <p class="text-xs font-bold uppercase text-air-blue">Airmius Fuel</p>
-                    <h1 class="mt-2 text-2xl font-bold leading-tight text-primary sm:text-3xl">
-                        Ernaehrung, die zu deinem Training passt.
-                    </h1>
-                    <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
-                        Tracke Mahlzeiten, Makros und Wasser kostenlos. Foto-Kalorien und Barcode koennen spaeter als Anbieter-Funktion angebunden werden.
+                    <h1 class="mt-1 text-2xl font-bold leading-tight text-primary">Ernaehrung</h1>
+                    <p class="mt-1 max-w-2xl text-sm leading-6 text-secondary">
+                        Heute sehen, schnell erfassen, Ziele ruhig anpassen. Keine ueberladene Arbeitsflaeche mehr.
                     </p>
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        <span class="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-300">
-                            Kostenloses MVP
-                        </span>
-                        <span class="rounded-full border border-air-blue/30 bg-air-blue/10 px-3 py-1 text-xs font-bold text-air-blue">
-                            Flutter/API vorbereitet
-                        </span>
-                        <span class="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-bold text-amber-200">
-                            Keine externe Bild-KI aktiv
-                        </span>
-                    </div>
                 </div>
-
-                <div class="rounded-2xl border border-border bg-inputBg p-4">
-                    <label class="text-xs font-bold uppercase text-secondary">Tag auswaehlen</label>
-                    <div class="mt-2 flex gap-2">
-                        <input v-model="selectedDateValue" type="date" class="min-w-0 flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm text-primary" @change="changeDate">
-                        <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary" @click="changeDate">
-                            Laden
-                        </button>
-                    </div>
-                    <div class="mt-4 grid grid-cols-2 gap-3">
-                        <div class="rounded-xl border border-border bg-card p-3">
-                            <p class="text-xs text-secondary">Noch offen</p>
-                            <p class="mt-1 text-xl font-bold text-primary">{{ formatNumber(caloriesLeft) }} kcal</p>
-                        </div>
-                        <div class="rounded-xl border border-border bg-card p-3">
-                            <p class="text-xs text-secondary">Wasser</p>
-                            <p class="mt-1 text-xl font-bold text-primary">{{ formatNumber(todaySummary.water_ml || 0) }} ml</p>
-                        </div>
-                    </div>
+                <div class="flex w-full gap-2 sm:w-auto">
+                    <input v-model="selectedDateValue" type="date" class="min-w-0 flex-1 rounded-xl border border-border bg-inputBg px-3 py-2 text-sm text-primary sm:w-44" @change="changeDate">
+                    <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary" @click="changeDate">
+                        Laden
+                    </button>
                 </div>
             </div>
         </section>
 
-        <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <article v-for="macro in macroCards" :key="macro.key" class="rounded-2xl border border-border bg-card p-4">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <p class="text-xs font-bold uppercase text-secondary">{{ macro.label }}</p>
-                        <p class="mt-1 text-2xl font-bold text-primary">
-                            {{ formatNumber(macro.value, macro.key === 'calories' ? 0 : 1) }}
-                            <span class="text-sm text-secondary">{{ macro.unit }}</span>
-                        </p>
-                    </div>
-                    <span :class="['flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br text-white shadow-lg', macro.color]">
-                        <i :class="[macro.icon, 'text-2xl']"></i>
-                    </span>
-                </div>
-                <div class="mt-4 h-2 rounded-full bg-inputBg">
-                    <div :class="['h-2 rounded-full bg-gradient-to-r', macro.color]" :style="{ width: `${progressValue(macro.value, macro.target)}%` }"></div>
-                </div>
-                <p class="mt-2 text-xs text-secondary">
-                    Ziel: {{ formatNumber(macro.target, macro.key === 'calories' ? 0 : 0) }} {{ macro.unit }}
-                </p>
-            </article>
-        </section>
+        <nav class="grid gap-2 rounded-2xl border border-border bg-card p-2 sm:grid-cols-4">
+            <button
+                v-for="section in nutritionSections"
+                :key="section.key"
+                type="button"
+                :class="[
+                    'flex items-center gap-3 rounded-xl border px-3 py-3 text-start transition',
+                    activeSection === section.key
+                        ? 'border-air-blue bg-air-blue/15 text-primary shadow-lg shadow-air-blue/10'
+                        : 'border-transparent text-secondary hover:border-border hover:bg-inputBg'
+                ]"
+                @click="activeSection = section.key"
+            >
+                <i :class="[section.icon, 'text-xl']"></i>
+                <span class="min-w-0">
+                    <span class="block text-sm font-bold">{{ section.label }}</span>
+                    <span class="block truncate text-xs opacity-80">{{ section.hint }}</span>
+                </span>
+            </button>
+        </nav>
 
-        <section class="grid gap-5 xl:grid-cols-[minmax(320px,0.95fr),minmax(0,1.1fr),minmax(320px,0.95fr)]">
-            <form class="rounded-2xl border border-border bg-card p-4" @submit.prevent="submitMeal">
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <p class="text-xs font-bold uppercase text-air-blue">Mahlzeit</p>
-                        <h2 class="mt-1 text-xl font-bold text-primary">{{ editingMealId ? 'Mahlzeit bearbeiten' : 'Schnell erfassen' }}</h2>
-                    </div>
-                    <button v-if="editingMealId" type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-bold text-primary hover:bg-muted" @click="resetMealForm">
-                        Neu
-                    </button>
-                </div>
-
-                <section class="mt-4 rounded-2xl border border-air-blue/25 bg-air-blue/10 p-3">
-                    <div class="flex items-start justify-between gap-3">
+        <section v-if="activeSection === 'today'" class="grid gap-4 xl:grid-cols-[minmax(0,0.95fr),minmax(360px,0.75fr)]">
+            <div class="space-y-4">
+                <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
+                    <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                         <div>
-                            <p class="text-xs font-bold uppercase text-air-blue">Lebensmittel finden</p>
-                            <p class="mt-1 text-sm text-secondary">Open Food Facts: Suche per Name oder Barcode und pruefe die Werte vor dem Speichern.</p>
+                            <p class="text-xs font-bold uppercase text-air-blue">Heute</p>
+                            <h2 class="mt-1 text-xl font-bold text-primary">{{ formatNumber(todaySummary.calories || 0) }} kcal gegessen</h2>
+                            <p class="mt-1 text-sm text-secondary">
+                                {{ formatNumber(caloriesLeft) }} kcal bis zu deinem Tagesziel.
+                            </p>
                         </div>
-                        <span class="rounded-full bg-card px-3 py-1 text-[11px] font-bold text-primary">kostenlos</span>
-                    </div>
-                    <div class="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr),auto]">
-                        <input v-model="foodSearchQuery" class="rounded-xl border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="z. B. Skyr, Banane, Proteinriegel">
-                        <button type="button" class="rounded-xl border border-air-blue/40 px-4 py-2 text-sm font-bold text-primary hover:bg-air-blue/15 disabled:opacity-60" :disabled="foodLookupLoading" @click="searchFoods">
-                            Suchen
-                        </button>
-                    </div>
-                    <div class="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr),auto]">
-                        <input v-model="foodBarcode" class="rounded-xl border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="Barcode eingeben">
-                        <button type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-bold text-primary hover:bg-muted disabled:opacity-60" :disabled="foodLookupLoading" @click="lookupBarcode">
-                            Barcode
-                        </button>
-                    </div>
-                    <p v-if="foodLookupError" class="mt-2 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs font-semibold text-danger">
-                        {{ foodLookupError }}
-                    </p>
-                    <div v-if="foodSearchResults.length" class="mt-3 space-y-2">
-                        <article v-for="food in foodSearchResults" :key="food.code || food.title" class="flex gap-3 rounded-xl border border-border bg-card p-3">
-                            <img v-if="food.image_url" :src="food.image_url" alt="" class="h-14 w-14 rounded-lg object-cover">
-                            <div v-else class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-inputBg">
-                                <i class="las la-utensils text-2xl text-air-blue"></i>
-                            </div>
-                            <div class="min-w-0 flex-1">
-                                <p class="truncate text-sm font-bold text-primary">{{ food.title }}</p>
-                                <p class="truncate text-xs text-secondary">{{ food.brand || 'Open Food Facts' }} - {{ food.quantity_label }}</p>
-                                <div class="mt-2 flex flex-wrap gap-1 text-[11px] text-secondary">
-                                    <span class="rounded bg-inputBg px-2 py-1"><b class="text-primary">{{ food.calories }}</b> kcal</span>
-                                    <span class="rounded bg-inputBg px-2 py-1"><b class="text-primary">{{ food.protein_g }}g</b> Protein</span>
-                                    <span v-if="food.nutriscore_grade" class="rounded bg-inputBg px-2 py-1">Nutri {{ food.nutriscore_grade }}</span>
-                                </div>
-                            </div>
-                            <button type="button" class="shrink-0 rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-bold text-buttonTextPrimary" @click="applyFoodResult(food)">
-                                Uebernehmen
+                        <div class="flex gap-2">
+                            <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary" @click="activeSection = 'add'">
+                                Mahlzeit erfassen
                             </button>
+                            <button type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-bold text-primary hover:bg-muted" @click="activeSection = 'ideas'">
+                                Ideen
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        <article v-for="macro in macroCards" :key="macro.key" class="rounded-xl border border-border bg-inputBg p-3">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="truncate text-xs font-bold uppercase text-secondary">{{ macro.label }}</p>
+                                    <p class="mt-1 text-lg font-bold text-primary">
+                                        {{ formatNumber(macro.value, macro.key === 'calories' ? 0 : 1) }}
+                                        <span class="text-xs text-secondary">{{ macro.unit }}</span>
+                                    </p>
+                                </div>
+                                <span :class="['flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white', macro.color]">
+                                    <i :class="[macro.icon, 'text-lg']"></i>
+                                </span>
+                            </div>
+                            <div class="mt-3 h-1.5 rounded-full bg-card">
+                                <div :class="['h-1.5 rounded-full bg-gradient-to-r', macro.color]" :style="{ width: `${progressValue(macro.value, macro.target)}%` }"></div>
+                            </div>
                         </article>
                     </div>
                 </section>
 
-                <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                    <label class="block text-sm font-bold text-primary">Datum
-                        <input v-model="mealForm.eaten_on" type="date" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                    </label>
-                    <label class="block text-sm font-bold text-primary">Typ
-                        <select v-model="mealForm.meal_type" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                            <option v-for="type in mealTypes" :key="type.key" :value="type.key">{{ type.label }}</option>
-                        </select>
-                    </label>
-                    <label class="block text-sm font-bold text-primary sm:col-span-2">Name
-                        <input v-model="mealForm.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="z. B. Reis mit Haehnchen" required>
-                    </label>
-                    <label class="block text-sm font-bold text-primary">Kalorien
-                        <input v-model="mealForm.calories" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" required>
-                    </label>
-                    <label class="block text-sm font-bold text-primary">Protein g
-                        <input v-model="mealForm.protein_g" type="number" min="0" step="0.1" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" required>
-                    </label>
-                    <label class="block text-sm font-bold text-primary">Kohlenhydrate g
-                        <input v-model="mealForm.carbs_g" type="number" min="0" step="0.1" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" required>
-                    </label>
-                    <label class="block text-sm font-bold text-primary">Fett g
-                        <input v-model="mealForm.fat_g" type="number" min="0" step="0.1" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" required>
-                    </label>
-                    <label class="block text-sm font-bold text-primary">Wasser ml
-                        <input v-model="mealForm.water_ml" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                    </label>
-                    <label class="block text-sm font-bold text-primary">Training-Bezug
-                        <select v-model="mealForm.training_context" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                            <option value="">Ohne Bezug</option>
-                            <option value="pre_workout">Vor dem Training</option>
-                            <option value="post_workout">Nach dem Training</option>
-                            <option v-for="log in recentTraining" :key="log.id" :value="`training_log:${log.id}`">{{ log.title }}</option>
-                        </select>
-                    </label>
-                </div>
-
-                <div class="mt-4 rounded-xl border border-border bg-inputBg p-3">
+                <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
                     <div class="flex items-center justify-between gap-3">
-                        <p class="text-sm font-bold text-primary">Zutaten / Portionen</p>
-                        <button type="button" class="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-primary hover:bg-muted" @click="addItemRow">
-                            Zeile
-                        </button>
+                        <div>
+                            <p class="text-xs font-bold uppercase text-air-blue">Verlauf</p>
+                            <h2 class="mt-1 text-lg font-bold text-primary">Letzte 7 Tage</h2>
+                        </div>
+                        <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-secondary">{{ formatNumber(todaySummary.water_ml || 0) }} ml Wasser</span>
                     </div>
-                    <div class="mt-3 space-y-2">
-                        <div v-for="(item, index) in mealForm.items" :key="index" class="grid gap-2 sm:grid-cols-[minmax(0,1fr),130px,auto]">
-                            <input v-model="item.name" class="rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="Lebensmittel">
-                            <input v-model="item.amount" class="rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="Menge">
-                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm text-danger hover:bg-danger/10" @click="removeItemRow(index)">
-                                <i class="las la-trash"></i>
-                            </button>
+                    <div class="mt-4 flex h-28 items-end gap-2">
+                        <div v-for="day in weeklySummaries" :key="day.date" class="flex min-w-0 flex-1 flex-col items-center gap-2">
+                            <div class="flex h-20 w-full items-end rounded-full bg-inputBg px-1">
+                                <div class="w-full rounded-full bg-gradient-to-t from-air-blue to-emerald-300" :style="{ height: `${Math.max(6, (Number(day.calories || 0) / maxWeekCalories) * 100)}%` }"></div>
+                            </div>
+                            <span class="text-[11px] font-bold text-secondary">{{ day.label }}</span>
                         </div>
                     </div>
-                </div>
+                </section>
+            </div>
 
-                <label class="mt-4 block text-sm font-bold text-primary">Notiz
-                    <textarea v-model="mealForm.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Gefuehl, Hunger, Timing, Besonderheiten"></textarea>
-                </label>
-
-                <div v-if="Object.keys(mealForm.errors).length" class="mt-4 rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
-                    Bitte pruefe die Eingaben.
-                </div>
-
-                <button type="submit" class="mt-4 w-full rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-bold text-buttonTextPrimary disabled:opacity-60" :disabled="mealForm.processing">
-                    {{ editingMealId ? 'Mahlzeit speichern' : 'Mahlzeit hinzufuegen' }}
-                </button>
-            </form>
-
-            <section class="rounded-2xl border border-border bg-card p-4">
+            <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <p class="text-xs font-bold uppercase text-air-blue">Tageslog</p>
-                        <h2 class="mt-1 text-xl font-bold text-primary">Mahlzeiten am {{ selectedDate }}</h2>
+                        <h2 class="mt-1 text-lg font-bold text-primary">Mahlzeiten</h2>
                     </div>
                     <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-primary">{{ meals.length }} Eintraege</span>
                 </div>
 
                 <div class="mt-4 space-y-3">
-                    <article v-for="meal in sortedMeals" :key="meal.id" class="rounded-2xl border border-border bg-inputBg p-4">
+                    <article v-for="meal in sortedMeals" :key="meal.id" class="rounded-xl border border-border bg-inputBg p-3">
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
                                 <p class="text-xs font-bold uppercase text-secondary">
                                     <i :class="[mealTypeMeta(meal.meal_type).icon, 'me-1']"></i>
                                     {{ mealTypeMeta(meal.meal_type).label }}
                                 </p>
-                                <h3 class="mt-1 truncate text-lg font-bold text-primary">{{ meal.title }}</h3>
-                                <p v-if="meal.notes" class="mt-1 line-clamp-2 text-sm text-secondary">{{ meal.notes }}</p>
+                                <h3 class="mt-1 truncate text-base font-bold text-primary">{{ meal.title }}</h3>
+                                <p class="mt-1 text-sm text-secondary">{{ formatNumber(meal.calories) }} kcal - {{ formatNumber(meal.protein_g, 1) }} g Protein</p>
                             </div>
                             <div class="flex shrink-0 gap-1">
                                 <button type="button" class="rounded-lg border border-border px-2.5 py-2 text-primary hover:bg-muted" title="Bearbeiten" @click="editMeal(meal)">
@@ -525,143 +452,281 @@ const confirmDelete = () => {
                                 </button>
                             </div>
                         </div>
-                        <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                            <span class="rounded-xl border border-border bg-card p-2 text-xs text-secondary"><b class="block text-base text-primary">{{ formatNumber(meal.calories) }}</b>kcal</span>
-                            <span class="rounded-xl border border-border bg-card p-2 text-xs text-secondary"><b class="block text-base text-primary">{{ formatNumber(meal.protein_g, 1) }} g</b>Protein</span>
-                            <span class="rounded-xl border border-border bg-card p-2 text-xs text-secondary"><b class="block text-base text-primary">{{ formatNumber(meal.carbs_g, 1) }} g</b>Carbs</span>
-                            <span class="rounded-xl border border-border bg-card p-2 text-xs text-secondary"><b class="block text-base text-primary">{{ formatNumber(meal.fat_g, 1) }} g</b>Fett</span>
-                        </div>
                     </article>
 
-                    <div v-if="!meals.length" class="rounded-2xl border border-dashed border-border bg-inputBg p-8 text-center">
+                    <div v-if="!meals.length" class="rounded-xl border border-dashed border-border bg-inputBg p-6 text-center">
                         <i class="las la-apple-alt text-4xl text-air-blue"></i>
-                        <p class="mt-3 text-lg font-bold text-primary">Noch keine Mahlzeit erfasst.</p>
-                        <p class="mt-1 text-sm text-secondary">Starte mit einer groben Schaetzung. Perfektion kommt spaeter.</p>
-                    </div>
-                </div>
-
-                <div class="mt-5 rounded-2xl border border-border bg-inputBg p-4">
-                    <p class="text-sm font-bold text-primary">7-Tage-Verlauf</p>
-                    <div class="mt-3 flex h-32 items-end gap-2">
-                        <div v-for="day in weeklySummaries" :key="day.date" class="flex min-w-0 flex-1 flex-col items-center gap-2">
-                            <div class="flex h-24 w-full items-end rounded-full bg-card px-1">
-                                <div class="w-full rounded-full bg-gradient-to-t from-air-blue to-emerald-300" :style="{ height: `${Math.max(6, (Number(day.calories || 0) / maxWeekCalories) * 100)}%` }"></div>
-                            </div>
-                            <span class="text-[11px] font-bold text-secondary">{{ day.label }}</span>
-                        </div>
+                        <p class="mt-3 text-base font-bold text-primary">Noch nichts erfasst.</p>
+                        <p class="mt-1 text-sm text-secondary">Eine grobe Mahlzeit reicht fuer den Anfang.</p>
                     </div>
                 </div>
             </section>
+        </section>
 
-            <aside class="space-y-5">
-                <form class="rounded-2xl border border-border bg-card p-4" @submit.prevent="saveGoal">
-                    <p class="text-xs font-bold uppercase text-air-blue">Ziel</p>
-                    <h2 class="mt-1 text-xl font-bold text-primary">{{ selectedGoal.label || 'Ernaehrungsziel' }}</h2>
-                    <p class="mt-1 text-sm text-secondary">{{ selectedGoal.hint }}</p>
-
-                    <div class="mt-4 grid gap-3">
-                        <label class="block text-sm font-bold text-primary">Ziel
-                            <select v-model="goalForm.goal_type" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                                <option v-for="goalType in goalTypes" :key="goalType.key" :value="goalType.key">{{ goalType.label }}</option>
-                            </select>
-                        </label>
-                        <label class="block text-sm font-bold text-primary">Ernaehrungsstil
-                            <select v-model="goalForm.diet_style" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                                <option v-for="style in dietStyles" :key="style.key" :value="style.key">{{ style.label }}</option>
-                            </select>
-                        </label>
-                        <div class="grid grid-cols-2 gap-3">
-                            <label class="block text-sm font-bold text-primary">kcal
-                                <input v-model="goalForm.daily_calories_target" type="number" min="800" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                            </label>
-                            <label class="block text-sm font-bold text-primary">Protein
-                                <input v-model="goalForm.protein_target_g" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                            </label>
-                            <label class="block text-sm font-bold text-primary">Carbs
-                                <input v-model="goalForm.carbs_target_g" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                            </label>
-                            <label class="block text-sm font-bold text-primary">Fett
-                                <input v-model="goalForm.fat_target_g" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                            </label>
-                        </div>
-                        <label class="block text-sm font-bold text-primary">Wasserziel ml
-                            <input v-model="goalForm.water_target_ml" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
-                        </label>
-                        <label class="block text-sm font-bold text-primary">Notiz
-                            <textarea v-model="goalForm.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Allergien, Vorlieben, Trainer-Hinweise"></textarea>
-                        </label>
+        <section v-if="activeSection === 'add'" class="grid gap-4 xl:grid-cols-[minmax(0,0.85fr),minmax(340px,0.65fr)]">
+            <form class="rounded-2xl border border-border bg-card p-4 lg:p-5" @submit.prevent="submitMeal">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-bold uppercase text-air-blue">Mahlzeit</p>
+                        <h2 class="mt-1 text-xl font-bold text-primary">{{ editingMealId ? 'Mahlzeit bearbeiten' : 'Schnell erfassen' }}</h2>
+                        <p class="mt-1 text-sm text-secondary">Nur Name und Kalorien sind Pflicht. Details bleiben optional.</p>
                     </div>
-                    <button type="submit" class="mt-4 w-full rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-bold text-buttonTextPrimary disabled:opacity-60" :disabled="goalForm.processing">
-                        Ziel speichern
+                    <button v-if="editingMealId" type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-bold text-primary hover:bg-muted" @click="resetMealForm">
+                        Neu
                     </button>
-                </form>
+                </div>
 
-                <section class="rounded-2xl border border-border bg-card p-4">
-                    <p class="text-xs font-bold uppercase text-air-blue">Tipps</p>
-                    <div class="mt-3 space-y-2">
-                        <p v-for="tip in tips" :key="tip" class="rounded-xl border border-border bg-inputBg p-3 text-sm leading-6 text-secondary">
-                            {{ tip }}
-                        </p>
+                <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                    <button
+                        v-for="type in mealTypes"
+                        :key="type.key"
+                        type="button"
+                        :class="[
+                            'rounded-xl border px-3 py-3 text-start transition',
+                            mealForm.meal_type === type.key ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border bg-inputBg text-secondary hover:bg-muted'
+                        ]"
+                        @click="mealForm.meal_type = type.key"
+                    >
+                        <i :class="[type.icon, 'text-lg']"></i>
+                        <span class="mt-1 block text-xs font-bold">{{ type.label }}</span>
+                    </button>
+                </div>
+
+                <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label class="block text-sm font-bold text-primary sm:col-span-2">Was hast du gegessen?
+                        <input v-model="mealForm.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. Bowl, Banane, Proteinshake" required>
+                    </label>
+                    <label class="block text-sm font-bold text-primary">Kalorien
+                        <input v-model="mealForm.calories" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. 520" required>
+                    </label>
+                    <label class="block text-sm font-bold text-primary">Protein optional
+                        <input v-model="mealForm.protein_g" type="number" min="0" step="0.1" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. 32">
+                    </label>
+                </div>
+
+                <button type="button" class="mt-4 flex w-full items-center justify-between rounded-xl border border-border bg-inputBg px-4 py-3 text-sm font-bold text-primary hover:bg-muted" @click="showAdvancedMeal = !showAdvancedMeal">
+                    <span>Mehr Details</span>
+                    <i :class="[showAdvancedMeal ? 'las la-angle-up' : 'las la-angle-down', 'text-lg']"></i>
+                </button>
+
+                <div v-if="showAdvancedMeal" class="mt-4 space-y-4 rounded-2xl border border-border bg-inputBg p-3">
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <label class="block text-sm font-bold text-primary">Datum
+                            <input v-model="mealForm.eaten_on" type="date" class="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-primary">
+                        </label>
+                        <label class="block text-sm font-bold text-primary">Training-Bezug
+                            <select v-model="mealForm.training_context" class="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-primary">
+                                <option value="">Ohne Bezug</option>
+                                <option value="pre_workout">Vor dem Training</option>
+                                <option value="post_workout">Nach dem Training</option>
+                                <option v-for="log in recentTraining" :key="log.id" :value="`training_log:${log.id}`">{{ log.title }}</option>
+                            </select>
+                        </label>
+                        <label class="block text-sm font-bold text-primary">Kohlenhydrate g
+                            <input v-model="mealForm.carbs_g" type="number" min="0" step="0.1" class="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-primary">
+                        </label>
+                        <label class="block text-sm font-bold text-primary">Fett g
+                            <input v-model="mealForm.fat_g" type="number" min="0" step="0.1" class="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-primary">
+                        </label>
+                        <label class="block text-sm font-bold text-primary">Wasser ml
+                            <input v-model="mealForm.water_ml" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-primary">
+                        </label>
                     </div>
-                </section>
 
-                <section class="rounded-2xl border border-border bg-card p-4">
-                    <p class="text-xs font-bold uppercase text-air-blue">Training-Bezug</p>
-                    <div class="mt-3 space-y-2">
-                        <article v-for="suggestion in trainingSuggestions" :key="suggestion.title + suggestion.body" class="rounded-xl border border-border bg-inputBg p-3">
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <p class="text-sm font-bold text-primary">{{ suggestion.title }}</p>
-                                    <p class="mt-1 text-sm leading-6 text-secondary">{{ suggestion.body }}</p>
-                                </div>
-                                <button type="button" class="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-primary hover:bg-muted" @click="applyTrainingSuggestion(suggestion)">
-                                    Nutzen
-                                </button>
-                            </div>
-                        </article>
-                    </div>
-                </section>
-
-                <section class="rounded-2xl border border-border bg-card p-4">
-                    <div class="flex items-center justify-between gap-3">
-                        <div>
-                            <p class="text-xs font-bold uppercase text-air-blue">Rezepte</p>
-                            <h2 class="mt-1 text-lg font-bold text-primary">Schnell uebernehmen</h2>
+                    <div>
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="text-sm font-bold text-primary">Zutaten / Portionen</p>
+                            <button type="button" class="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-primary hover:bg-muted" @click="addItemRow">
+                                Zeile
+                            </button>
                         </div>
-                        <i class="las la-utensils text-2xl text-air-blue"></i>
-                    </div>
-                    <div class="mt-3 grid grid-cols-3 gap-2">
-                        <button type="button" :class="['rounded-lg border px-2 py-2 text-xs font-bold', recipeFilter === 'all' ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border text-secondary hover:bg-muted']" @click="recipeFilter = 'all'">
-                            Alle
-                        </button>
-                        <button type="button" :class="['rounded-lg border px-2 py-2 text-xs font-bold', recipeFilter === 'goal' ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border text-secondary hover:bg-muted']" @click="recipeFilter = 'goal'">
-                            Ziel
-                        </button>
-                        <button type="button" :class="['rounded-lg border px-2 py-2 text-xs font-bold', recipeFilter === 'style' ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border text-secondary hover:bg-muted']" @click="recipeFilter = 'style'">
-                            Stil
-                        </button>
-                    </div>
-                    <div class="mt-3 space-y-3">
-                        <article v-for="recipe in filteredRecipes" :key="recipe.key" class="rounded-2xl border border-border bg-inputBg p-3">
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <p class="text-xs font-bold uppercase text-secondary">{{ recipe.category }} - {{ recipe.prep_minutes }} min</p>
-                                    <h3 class="mt-1 font-bold text-primary">{{ recipe.title }}</h3>
-                                </div>
-                                <button type="button" class="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-primary hover:bg-muted" @click="applyRecipe(recipe)">
-                                    Nutzen
+                        <div class="mt-3 space-y-2">
+                            <div v-for="(item, index) in mealForm.items" :key="index" class="grid gap-2 sm:grid-cols-[minmax(0,1fr),130px,auto]">
+                                <input v-model="item.name" class="rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="Lebensmittel">
+                                <input v-model="item.amount" class="rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="Menge">
+                                <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm text-danger hover:bg-danger/10" @click="removeItemRow(index)">
+                                    <i class="las la-trash"></i>
                                 </button>
                             </div>
-                            <div class="mt-3 grid grid-cols-4 gap-2 text-center text-[11px] text-secondary">
-                                <span class="rounded-lg bg-card p-2"><b class="block text-primary">{{ recipe.calories }}</b>kcal</span>
-                                <span class="rounded-lg bg-card p-2"><b class="block text-primary">{{ recipe.protein_g }}g</b>P</span>
-                                <span class="rounded-lg bg-card p-2"><b class="block text-primary">{{ recipe.carbs_g }}g</b>C</span>
-                                <span class="rounded-lg bg-card p-2"><b class="block text-primary">{{ recipe.fat_g }}g</b>F</span>
+                        </div>
+                    </div>
+
+                    <label class="block text-sm font-bold text-primary">Notiz
+                        <textarea v-model="mealForm.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-primary" placeholder="Gefuehl, Hunger, Timing, Besonderheiten"></textarea>
+                    </label>
+                </div>
+
+                <div v-if="Object.keys(mealForm.errors).length" class="mt-4 rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
+                    Bitte pruefe die Eingaben.
+                </div>
+
+                <button type="submit" class="mt-4 w-full rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-bold text-buttonTextPrimary disabled:opacity-60" :disabled="mealForm.processing">
+                    {{ editingMealId ? 'Speichern' : 'Hinzufuegen' }}
+                </button>
+            </form>
+
+            <aside class="space-y-4">
+                <section class="rounded-2xl border border-air-blue/25 bg-air-blue/10 p-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-bold uppercase text-air-blue">Suche</p>
+                            <h2 class="mt-1 text-lg font-bold text-primary">Lebensmittel finden</h2>
+                            <p class="mt-1 text-sm text-secondary">Name oder Barcode suchen, dann uebernehmen.</p>
+                        </div>
+                        <span class="rounded-full bg-card px-3 py-1 text-[11px] font-bold text-primary">kostenlos</span>
+                    </div>
+                    <div class="mt-4 grid gap-2">
+                        <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr),auto]">
+                            <input v-model="foodSearchQuery" class="rounded-xl border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="z. B. Skyr, Banane">
+                            <button type="button" class="rounded-xl border border-air-blue/40 px-4 py-2 text-sm font-bold text-primary hover:bg-air-blue/15 disabled:opacity-60" :disabled="foodLookupLoading" @click="searchFoods">
+                                Suchen
+                            </button>
+                        </div>
+                        <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr),auto]">
+                            <input v-model="foodBarcode" class="rounded-xl border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="Barcode">
+                            <button type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-bold text-primary hover:bg-muted disabled:opacity-60" :disabled="foodLookupLoading" @click="lookupBarcode">
+                                Barcode
+                            </button>
+                        </div>
+                    </div>
+                    <p v-if="foodLookupError" class="mt-3 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs font-semibold text-danger">
+                        {{ foodLookupError }}
+                    </p>
+                    <div v-if="foodSearchResults.length" class="mt-3 space-y-2">
+                        <article v-for="food in foodSearchResults" :key="food.code || food.title" class="flex gap-3 rounded-xl border border-border bg-card p-3">
+                            <img v-if="food.image_url" :src="food.image_url" alt="" class="h-12 w-12 rounded-lg object-cover">
+                            <div v-else class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-inputBg">
+                                <i class="las la-utensils text-xl text-air-blue"></i>
                             </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate text-sm font-bold text-primary">{{ food.title }}</p>
+                                <p class="truncate text-xs text-secondary">{{ food.brand || 'Open Food Facts' }} - {{ food.quantity_label }}</p>
+                                <p class="mt-1 text-xs text-secondary">{{ food.calories }} kcal - {{ food.protein_g }} g Protein</p>
+                            </div>
+                            <button type="button" class="shrink-0 rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-bold text-buttonTextPrimary" @click="applyFoodResult(food)">
+                                Uebernehmen
+                            </button>
                         </article>
+                    </div>
+                </section>
+
+                <section class="rounded-2xl border border-border bg-card p-4">
+                    <p class="text-xs font-bold uppercase text-air-blue">Heute bisher</p>
+                    <div class="mt-3 grid grid-cols-2 gap-2">
+                        <span class="rounded-xl border border-border bg-inputBg p-3 text-xs text-secondary"><b class="block text-lg text-primary">{{ formatNumber(todaySummary.calories || 0) }}</b>kcal</span>
+                        <span class="rounded-xl border border-border bg-inputBg p-3 text-xs text-secondary"><b class="block text-lg text-primary">{{ formatNumber(todaySummary.protein_g || 0, 1) }} g</b>Protein</span>
                     </div>
                 </section>
             </aside>
+        </section>
+
+        <section v-if="activeSection === 'goals'" class="grid gap-4 xl:grid-cols-[minmax(0,0.8fr),minmax(320px,0.6fr)]">
+            <form class="rounded-2xl border border-border bg-card p-4 lg:p-5" @submit.prevent="saveGoal">
+                <p class="text-xs font-bold uppercase text-air-blue">Ziel</p>
+                <h2 class="mt-1 text-xl font-bold text-primary">{{ selectedGoal.label || 'Ernaehrungsziel' }}</h2>
+                <p class="mt-1 text-sm text-secondary">{{ selectedGoal.hint }}</p>
+
+                <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label class="block text-sm font-bold text-primary">Ziel
+                        <select v-model="goalForm.goal_type" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                            <option v-for="goalType in goalTypes" :key="goalType.key" :value="goalType.key">{{ goalType.label }}</option>
+                        </select>
+                    </label>
+                    <label class="block text-sm font-bold text-primary">Ernaehrungsstil
+                        <select v-model="goalForm.diet_style" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                            <option v-for="style in dietStyles" :key="style.key" :value="style.key">{{ style.label }}</option>
+                        </select>
+                    </label>
+                    <label class="block text-sm font-bold text-primary">Kalorienziel
+                        <input v-model="goalForm.daily_calories_target" type="number" min="800" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                    </label>
+                    <label class="block text-sm font-bold text-primary">Proteinziel
+                        <input v-model="goalForm.protein_target_g" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                    </label>
+                    <label class="block text-sm font-bold text-primary">Kohlenhydrate
+                        <input v-model="goalForm.carbs_target_g" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                    </label>
+                    <label class="block text-sm font-bold text-primary">Fett
+                        <input v-model="goalForm.fat_target_g" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                    </label>
+                    <label class="block text-sm font-bold text-primary">Wasserziel ml
+                        <input v-model="goalForm.water_target_ml" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                    </label>
+                    <label class="block text-sm font-bold text-primary sm:col-span-2">Notiz
+                        <textarea v-model="goalForm.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="Allergien, Vorlieben, Trainer-Hinweise"></textarea>
+                    </label>
+                </div>
+                <button type="submit" class="mt-4 w-full rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-bold text-buttonTextPrimary disabled:opacity-60" :disabled="goalForm.processing">
+                    Ziel speichern
+                </button>
+            </form>
+
+            <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
+                <p class="text-xs font-bold uppercase text-air-blue">Tipps</p>
+                <div class="mt-3 space-y-2">
+                    <p v-for="tip in tips" :key="tip" class="rounded-xl border border-border bg-inputBg p-3 text-sm leading-6 text-secondary">
+                        {{ tip }}
+                    </p>
+                </div>
+            </section>
+        </section>
+
+        <section v-if="activeSection === 'ideas'" class="grid gap-4 xl:grid-cols-[minmax(0,0.85fr),minmax(320px,0.55fr)]">
+            <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-bold uppercase text-air-blue">Rezepte</p>
+                        <h2 class="mt-1 text-xl font-bold text-primary">Schnell uebernehmen</h2>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" :class="['rounded-lg border px-3 py-2 text-xs font-bold', recipeFilter === 'all' ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border text-secondary hover:bg-muted']" @click="recipeFilter = 'all'">
+                            Alle
+                        </button>
+                        <button type="button" :class="['rounded-lg border px-3 py-2 text-xs font-bold', recipeFilter === 'goal' ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border text-secondary hover:bg-muted']" @click="recipeFilter = 'goal'">
+                            Ziel
+                        </button>
+                        <button type="button" :class="['rounded-lg border px-3 py-2 text-xs font-bold', recipeFilter === 'style' ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border text-secondary hover:bg-muted']" @click="recipeFilter = 'style'">
+                            Stil
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-4 grid gap-3 md:grid-cols-2">
+                    <article v-for="recipe in filteredRecipes" :key="recipe.key" class="rounded-xl border border-border bg-inputBg p-4">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-xs font-bold uppercase text-secondary">{{ recipe.category }} - {{ recipe.prep_minutes }} min</p>
+                                <h3 class="mt-1 font-bold text-primary">{{ recipe.title }}</h3>
+                            </div>
+                            <button type="button" class="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-primary hover:bg-muted" @click="applyRecipe(recipe)">
+                                Nutzen
+                            </button>
+                        </div>
+                        <div class="mt-3 grid grid-cols-4 gap-2 text-center text-[11px] text-secondary">
+                            <span class="rounded-lg bg-card p-2"><b class="block text-primary">{{ recipe.calories }}</b>kcal</span>
+                            <span class="rounded-lg bg-card p-2"><b class="block text-primary">{{ recipe.protein_g }}g</b>P</span>
+                            <span class="rounded-lg bg-card p-2"><b class="block text-primary">{{ recipe.carbs_g }}g</b>C</span>
+                            <span class="rounded-lg bg-card p-2"><b class="block text-primary">{{ recipe.fat_g }}g</b>F</span>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
+                <p class="text-xs font-bold uppercase text-air-blue">Training-Bezug</p>
+                <div class="mt-3 space-y-2">
+                    <article v-for="suggestion in trainingSuggestions" :key="suggestion.title + suggestion.body" class="rounded-xl border border-border bg-inputBg p-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-bold text-primary">{{ suggestion.title }}</p>
+                                <p class="mt-1 text-sm leading-6 text-secondary">{{ suggestion.body }}</p>
+                            </div>
+                            <button type="button" class="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-primary hover:bg-muted" @click="applyTrainingSuggestion(suggestion)">
+                                Nutzen
+                            </button>
+                        </div>
+                    </article>
+                </div>
+            </section>
         </section>
 
         <div v-if="deleteCandidate" class="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-4 sm:items-center">

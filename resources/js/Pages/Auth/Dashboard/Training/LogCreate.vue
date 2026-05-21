@@ -348,6 +348,7 @@ const plannedItems = computed(() => props.plans
     .flatMap((plan) => (plan.items || []).map((item) => ({ ...item, plan })))
     .sort((a, b) => new Date(a.scheduled_at || 0) - new Date(b.scheduled_at || 0)))
 
+const selectedPlannedItem = computed(() => plannedItems.value.find((entry) => Number(entry.id) === Number(form.training_plan_item_id)) || null)
 const selectedType = computed(() => trainingTypes.find((type) => type.key === form.training_type) || trainingTypes[trainingTypes.length - 1])
 const visibleFields = computed(() => selectedType.value.fields || [])
 const usesGymSets = computed(() => selectedType.value.mode === 'sets')
@@ -565,6 +566,78 @@ const applyDetailTemplate = (template) => {
     if (!form.duration_minutes && minutes) form.duration_minutes = String(minutes)
 }
 
+const decimalForInput = (value, digits = 2) => {
+    const number = Number(value)
+    if (!number) return ''
+
+    return number.toFixed(digits).replace(/\.?0+$/, '')
+}
+
+const parsePlannedEntryTime = (text) => {
+    const normalized = String(text || '').toLowerCase()
+    const mmss = normalized.match(/\b(\d{1,2}):(\d{2})\s*(?:min|minute|minuten)?\b/)
+    if (mmss) {
+        return decimalForInput(Number(mmss[1]) + (Number(mmss[2]) / 60), 2)
+    }
+
+    const seconds = normalized.match(/\b(?:in\s*)?(\d+(?:[.,]\d+)?)\s*(?:s|sek|sekunden)\b/)
+    if (seconds) {
+        return decimalForInput(Number(seconds[1].replace(',', '.')) / 60, 2)
+    }
+
+    const minutes = normalized.match(/\b(?:in\s*)?(\d+(?:[.,]\d+)?)\s*(?:min|minute|minuten)\b/)
+    if (minutes) {
+        return decimalForInput(Number(minutes[1].replace(',', '.')), 2)
+    }
+
+    return ''
+}
+
+const plannedEntryFromItem = (item) => {
+    if (!item || usesGymSets.value) return emptyEntry()
+
+    const text = planItemSearchText(item)
+    const primaryText = [
+        item.title,
+        item.description,
+        item.metrics?.Zeit,
+        item.metrics?.Dauer,
+        item.metrics?.Intervallzeit,
+        item.metrics?.['Intervall Zeit'],
+        item.metrics?.['Pace Ziel'],
+    ].filter(Boolean).join(' ')
+    const repeatedDistance = text.match(/\b(\d+)\s*(?:x|\*)\s*(\d+(?:[.,]\d+)?)\s*(m|meter|km)\b/)
+    const entry = emptyEntry()
+
+    if (repeatedDistance) {
+        const reps = Number(repeatedDistance[1])
+        const distanceValue = Number(repeatedDistance[2].replace(',', '.'))
+        const unit = repeatedDistance[3]
+        const distanceKm = unit === 'km' ? distanceValue : distanceValue / 1000
+
+        entry.title = `${reps} x ${unit === 'km' ? decimalForInput(distanceValue, 2) : Math.round(distanceValue)} ${unit === 'km' ? 'km' : 'm'}`
+        entry.reps = String(reps)
+        entry.distance_km = decimalForInput(distanceKm, 3)
+        entry.duration_minutes = parsePlannedEntryTime(primaryText)
+        entry.intensity = item.metrics?.RPE ? `RPE ${item.metrics.RPE}` : (item.intensity || '')
+
+        return entry
+    }
+
+    if (item.distance_meters && hasField('distance_km')) {
+        entry.title = item.title || selectedType.value.entryLabel
+        entry.distance_km = decimalForInput(Number(item.distance_meters) / 1000, 2)
+    }
+
+    entry.duration_minutes = parsePlannedEntryTime(text)
+    entry.intensity = item.metrics?.RPE ? `RPE ${item.metrics.RPE}` : (item.intensity || '')
+
+    return entry
+}
+
+const isBlankEntry = (entry) => !Object.entries(entry || {})
+    .some(([key, value]) => key !== 'media_file' && value !== null && value !== undefined && value !== '')
+
 const inferTrainingTypeFromDraft = (log) => {
     const savedType = log?.metrics?.training_type
     if (savedType && trainingTypes.some((type) => type.key === savedType)) return savedType
@@ -573,6 +646,44 @@ const inferTrainingTypeFromDraft = (log) => {
     if (log?.sport_type === 'schwimmen') return 'swim'
     if (log?.sport_type === 'fussball') return 'football'
     if (log?.sport_type === 'cycling') return 'cycling'
+
+    return 'generic'
+}
+
+const planItemSearchText = (item = {}) => [
+    item.title,
+    item.description,
+    item.intensity,
+    item.metrics?.Fokus,
+    item.metrics?.Belastung,
+    ...(item.todos || []),
+    ...Object.keys(item.metrics || {}),
+    ...Object.values(item.metrics || {}),
+].filter(Boolean).join(' ').toLowerCase()
+
+const inferTrainingTypeFromPlanItem = (item = {}) => {
+    const savedType = item.metrics?._training_type || item.metrics?.training_type || item.metrics?.Trainingstyp
+    if (savedType && trainingTypes.some((type) => type.key === savedType)) return savedType
+
+    const sport = String(item.sport_type || '').toLowerCase()
+    const text = planItemSearchText(item)
+
+    if (sport === 'gym' || text.match(/\b(saetze|sätze|wiederholungen|gewicht|kraft|bankdruecken|bankdrücken|kniebeuge|deadlift)\b/)) return 'gym'
+    if (sport === 'schwimmen') return 'swim'
+    if (sport === 'fussball' || sport === 'football') return 'football'
+    if (sport === 'cycling' || sport === 'radfahren' || sport === 'bike') return 'cycling'
+
+    if (sport === 'laufen' || sport === 'running') {
+        if (text.match(/\b(intervall|intervalle|interval|400\s*m|800\s*m|sprint|tempolauf|tempo|rpe\s*8|trabpause|wiederholung)\b/) || text.match(/\b\d+\s*x\s*\d+/)) {
+            return 'run_interval'
+        }
+
+        if (text.match(/\b(long run|dauerlauf|zone\s*2|grundlage|ausdauer|locker|endbeschleunigung)\b/)) {
+            return 'long_run'
+        }
+
+        return 'long_run'
+    }
 
     return 'generic'
 }
@@ -665,6 +776,7 @@ const applySelectedPlanItem = () => {
     const item = plannedItems.value.find((entry) => Number(entry.id) === Number(form.training_plan_item_id))
     if (!item) return
 
+    form.training_type = inferTrainingTypeFromPlanItem(item)
     form.title = item.title || form.title
     form.sport_type = item.sport_type || form.sport_type
     form.performed_at = form.performed_at || toLocalDateTime(item.scheduled_at)
@@ -706,7 +818,15 @@ const finishLiveTraining = () => {
 }
 
 const addEntry = () => {
-    form.entries = [...form.entries, emptyEntry()]
+    const plannedEntry = plannedEntryFromItem(selectedPlannedItem.value)
+
+    if (selectedPlannedItem.value && !isBlankEntry(plannedEntry) && form.entries.length === 1 && isBlankEntry(form.entries[0])) {
+        form.entries = [plannedEntry]
+        activeEntryIndex.value = 0
+        return
+    }
+
+    form.entries = [...form.entries, plannedEntry]
     activeEntryIndex.value = form.entries.length - 1
 }
 
