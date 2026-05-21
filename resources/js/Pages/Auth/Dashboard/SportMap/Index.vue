@@ -186,7 +186,7 @@ const routeGeneratorStartModes = [
 
 const routeGeneratorRouteTypes = [
     { key: 'roundtrip', label: 'Rundroute', icon: 'las la-sync', description: 'Start und Ziel sind gleich.' },
-    { key: 'point_to_point', label: 'Einmal zum Ziel', icon: 'las la-long-arrow-alt-right', description: 'Keine Rueckstrecke.' },
+    { key: 'point_to_point', label: 'Einmal zum Ziel', icon: 'las la-long-arrow-alt-right', description: 'Keine Rückstrecke.' },
 ]
 
 const routeGeneratorSurfaceOptions = [
@@ -550,7 +550,7 @@ const mapAttribution = computed(() => mapOverlaySource.value
 const mapHasRealTiles = computed(() => visibleMapTileCount.value > 0)
 const mapStatusText = computed(() => {
     if (manualMapPointStatus.value) return manualMapPointStatus.value
-    if (!mapPoints.value.length) return 'Noch keine Punkte. Plane eine Route, starte Tracking oder fuege einen Sportplatz hinzu.'
+    if (!mapPoints.value.length) return 'Noch keine Punkte. Plane eine Route, starte Tracking oder füge einen Sportplatz hinzu.'
 
     return `${mapPoints.value.length} Kartenpunkte geladen.`
 })
@@ -584,14 +584,14 @@ const landingActions = [
     {
         key: 'generator',
         title: 'Route generieren',
-        description: 'Parameter waehlen und direkt einen passenden Routenvorschlag erzeugen.',
+        description: 'Parameter wählen und direkt einen passenden Routenvorschlag erzeugen.',
         icon: 'las la-magic',
         color: 'border-indigo-400/40 bg-indigo-500/10 text-indigo-100',
     },
     {
         key: 'routes',
         title: 'Route planen',
-        description: 'Start und Ziel setzen, Sportart waehlen und Strecke mit Vorschau speichern.',
+        description: 'Start und Ziel setzen, Sportart wählen und Strecke mit Vorschau speichern.',
         icon: 'las la-route',
         color: 'border-sky-400/40 bg-sky-500/10 text-sky-100',
     },
@@ -612,7 +612,7 @@ const landingActions = [
     {
         key: 'places',
         title: 'Sportplatz eintragen',
-        description: 'Adresse, Bilder, Ausstattung und Sportarten fuer andere hinzufuegen.',
+        description: 'Adresse, Bilder, Ausstattung und Sportarten für andere hinzufügen.',
         icon: 'las la-map-pin',
         color: 'border-fuchsia-400/40 bg-fuchsia-500/10 text-fuchsia-100',
     },
@@ -821,7 +821,7 @@ const setWaypointFromMap = (coordinate) => {
     waypointRows.value[nextIndex].latitude = coordinate.latitude.toFixed(7)
     waypointRows.value[nextIndex].longitude = coordinate.longitude.toFixed(7)
     waypointRows.value[nextIndex].name = waypointRows.value[nextIndex].name || t('sport_map.routes.point_name', { number: nextIndex + 1 })
-    manualMapPointStatus.value = `Routenpunkt ${nextIndex + 1} wurde aus der Karte uebernommen.`
+    manualMapPointStatus.value = `Routenpunkt ${nextIndex + 1} wurde aus der Karte übernommen.`
 }
 
 const removeRouteWaypointFromMap = (index) => {
@@ -854,7 +854,7 @@ const removeLastRouteWaypoint = () => {
 const resetRouteWaypoints = () => {
     waypointRows.value = createDefaultWaypoints()
     draftRouteGeometryPoints.value = []
-    manualMapPointStatus.value = 'Routenpunkte wurden zurueckgesetzt.'
+    manualMapPointStatus.value = 'Routenpunkte wurden zurückgesetzt.'
 }
 
 const setGeneratorStep = (step) => {
@@ -886,7 +886,7 @@ const setGeneratorStartFromCoordinate = (coordinate, label = 'Startpunkt') => {
     routeGeneratorForm.start_latitude = Number(coordinate.latitude).toFixed(7)
     routeGeneratorForm.start_longitude = Number(coordinate.longitude).toFixed(7)
     routeGeneratorStatus.value = `${label} wurde gesetzt.`
-    manualMapPointStatus.value = `${label} wurde fuer den Routengenerator uebernommen.`
+    manualMapPointStatus.value = `${label} wurde für den Routengenerator übernommen.`
 
     if (routeGeneratorForm.route_type === 'point_to_point') {
         routeGeneratorMapTarget.value = 'destination'
@@ -897,7 +897,7 @@ const setGeneratorDestinationFromCoordinate = (coordinate, label = 'Zielpunkt') 
     routeGeneratorForm.destination_latitude = Number(coordinate.latitude).toFixed(7)
     routeGeneratorForm.destination_longitude = Number(coordinate.longitude).toFixed(7)
     routeGeneratorStatus.value = `${label} wurde gesetzt.`
-    manualMapPointStatus.value = `${label} wurde fuer die Zielroute uebernommen.`
+    manualMapPointStatus.value = `${label} wurde für die Zielroute übernommen.`
 }
 
 const setGeneratorDestinationFromMapCenter = () => {
@@ -915,7 +915,7 @@ const useCurrentLocationForGenerator = () => {
     routeGeneratorStatus.value = 'Standort wird ermittelt...'
 
     if (!navigator.geolocation) {
-        routeGeneratorStatus.value = 'Standort ist in diesem Browser nicht verfuegbar.'
+        routeGeneratorStatus.value = 'Standort ist in diesem Browser nicht verfügbar.'
         return
     }
 
@@ -942,7 +942,7 @@ const useCurrentLocationForGenerator = () => {
             ? `Startpunkt gesetzt. Genauigkeit ca. ${point.accuracy_m} m.`
             : 'Startpunkt wurde auf deinen Standort gesetzt.'
     }, () => {
-        routeGeneratorStatus.value = 'Standort konnte nicht ermittelt werden. Bitte Browser-Berechtigung pruefen.'
+        routeGeneratorStatus.value = 'Standort konnte nicht ermittelt werden. Bitte Browser-Berechtigung prüfen.'
     }, {
         enableHighAccuracy: true,
         maximumAge: 10000,
@@ -973,7 +973,7 @@ const routeGeometryToPoints = (geometry) => {
 
 const generatorWaypointName = (index, isLast) => {
     if (index === 0) return 'Start'
-    if (isLast && routeGeneratorForm.route_type === 'roundtrip') return 'Zurueck zum Start'
+    if (isLast && routeGeneratorForm.route_type === 'roundtrip') return 'Zurück zum Start'
 
     return `Routenpunkt ${index + 1}`
 }
@@ -1057,7 +1057,7 @@ const applyRouteProposal = (proposal) => {
     if (metrics.routing_status === 'routed' && geometryPoints.length > 2) {
         routeGeneratorStatus.value = `Route wurde auf echten Wegen berechnet: ${formatDistance(proposal.distance_meters)}, ${formatDuration(proposal.estimated_duration_seconds)}.`
     } else {
-        routeGeneratorStatus.value = 'Routingdienst konnte keine echte Wegstrecke liefern. Bitte Startpunkt/Distanz aendern oder Routing-Konfiguration pruefen.'
+        routeGeneratorStatus.value = 'Routingdienst konnte keine echte Wegstrecke liefern. Bitte Startpunkt/Distanz aendern oder Routing-Konfiguration prüfen.'
     }
 
     manualMapPointStatus.value = routeGeneratorStatus.value
@@ -1072,7 +1072,7 @@ const requestRouteProposal = async (waypoints = null) => {
         applyRouteProposal(response.data?.data)
     } catch (error) {
         routeGeneratorStatus.value = error.response?.data?.message
-            || 'Route konnte nicht berechnet werden. Bitte pruefe Startpunkt, Distanz und Internetverbindung.'
+            || 'Route konnte nicht berechnet werden. Bitte prüfe Startpunkt, Distanz und Internetverbindung.'
     } finally {
         isGeneratingRoute.value = false
     }
@@ -1080,12 +1080,12 @@ const requestRouteProposal = async (waypoints = null) => {
 
 const generateRouteProposal = () => {
     if (!isValidMapCoordinate(routeGeneratorStartPoint.value)) {
-        routeGeneratorStatus.value = 'Bitte zuerst einen gueltigen Startpunkt waehlen.'
+        routeGeneratorStatus.value = 'Bitte zuerst einen gueltigen Startpunkt wählen.'
         return
     }
 
     if (routeGeneratorForm.route_type === 'point_to_point' && !isValidMapCoordinate(routeGeneratorDestinationPoint.value)) {
-        routeGeneratorStatus.value = 'Bitte fuer "Einmal zum Ziel" zuerst einen Zielpunkt auf der Karte oder per Koordinaten setzen.'
+        routeGeneratorStatus.value = 'Bitte für "Einmal zum Ziel" zuerst einen Zielpunkt auf der Karte oder per Koordinaten setzen.'
         routeGeneratorStep.value = 1
         routeGeneratorMapTarget.value = 'destination'
         return
@@ -1121,7 +1121,7 @@ const resetGeneratedRoute = () => {
     generatedRouteMetrics.value = null
     generatedRouteNavigationCues.value = []
     refreshRouteGeneratorVariant()
-    routeGeneratorStatus.value = 'Routenvorschlag wurde zurueckgesetzt.'
+    routeGeneratorStatus.value = 'Routenvorschlag wurde zurückgesetzt.'
     manualMapPointStatus.value = routeGeneratorStatus.value
 }
 
@@ -1154,7 +1154,7 @@ const applyGeneratedRouteToPlanner = () => {
     }))
     draftRouteGeometryPoints.value = generatedRouteGeometryPoints.value
     activeTab.value = 'routes'
-    manualMapPointStatus.value = 'Routenvorschlag wurde in die Routenplanung uebernommen.'
+    manualMapPointStatus.value = 'Routenvorschlag wurde in die Routenplanung übernommen.'
 }
 
 const saveRoute = () => {
@@ -1237,7 +1237,7 @@ const removeTrackPointFromMap = (index) => {
 const resetTrackPoints = () => {
     trackingPoints.value = []
     trackingStartedAt.value = null
-    manualMapPointStatus.value = 'Trackpunkte wurden zurueckgesetzt.'
+    manualMapPointStatus.value = 'Trackpunkte wurden zurückgesetzt.'
 }
 
 const saveTrack = () => {
@@ -1297,9 +1297,9 @@ const useCurrentLocationForPlace = () => {
                 address.house_number,
             ].filter(Boolean).join(' ') || result.display_name || placeForm.address
             placeForm.country_code = String(address.country_code || placeForm.country_code || 'DE').toUpperCase()
-            placeLocationStatus.value = 'Standort und Adresse wurden uebernommen.'
+            placeLocationStatus.value = 'Standort und Adresse wurden übernommen.'
         } catch (error) {
-            placeLocationStatus.value = 'Standort wurde uebernommen, Adresse bitte manuell ergaenzen.'
+            placeLocationStatus.value = 'Standort wurde übernommen, Adresse bitte manuell ergaenzen.'
         }
     }, () => {
         placeLocationError.value = t('sport_map.places.location_error')
@@ -1315,7 +1315,7 @@ const showCurrentLocationOnMap = () => {
     manualMapPointStatus.value = 'Standort wird ermittelt...'
 
     if (!navigator.geolocation) {
-        manualMapPointStatus.value = 'Standort ist in diesem Browser nicht verfuegbar.'
+        manualMapPointStatus.value = 'Standort ist in diesem Browser nicht verfügbar.'
         return
     }
 
@@ -1343,10 +1343,10 @@ const showCurrentLocationOnMap = () => {
 
         if (activeTab.value === 'generator') {
             routeGeneratorForm.start_mode = 'current_location'
-            routeGeneratorStatus.value = 'Dein Standort ist jetzt der Startpunkt fuer die Routengenerierung.'
+            routeGeneratorStatus.value = 'Dein Standort ist jetzt der Startpunkt für die Routengenerierung.'
         }
     }, () => {
-        manualMapPointStatus.value = 'Standort konnte nicht ermittelt werden. Bitte Browser-Berechtigung pruefen.'
+        manualMapPointStatus.value = 'Standort konnte nicht ermittelt werden. Bitte Browser-Berechtigung prüfen.'
     }, {
         enableHighAccuracy: true,
         maximumAge: 10000,
@@ -1357,9 +1357,9 @@ const showCurrentLocationOnMap = () => {
 const setPlaceFromMap = (coordinate) => {
     placeForm.latitude = coordinate.latitude.toFixed(7)
     placeForm.longitude = coordinate.longitude.toFixed(7)
-    placeLocationStatus.value = 'Koordinaten wurden aus der Karte uebernommen.'
+    placeLocationStatus.value = 'Koordinaten wurden aus der Karte übernommen.'
     placeLocationError.value = ''
-    manualMapPointStatus.value = 'Sportplatz-Position wurde aus der Karte uebernommen.'
+    manualMapPointStatus.value = 'Sportplatz-Position wurde aus der Karte übernommen.'
 }
 
 const clearPlaceMapPoint = () => {
@@ -1419,7 +1419,7 @@ const removeLastActiveMapPoint = () => {
 const resetActiveMapPoints = () => {
     if (activeMapPointCount.value === 0) {
         resetMapView()
-        manualMapPointStatus.value = 'Karte wurde zentriert. Es gibt aktuell keine Punkte zum Zuruecksetzen.'
+        manualMapPointStatus.value = 'Karte wurde zentriert. Es gibt aktuell keine Punkte zum Zurücksetzen.'
         return
     }
 
@@ -2001,7 +2001,7 @@ onUnmounted(() => {
                             {{ $t('sport_map.title') }}
                         </h2>
                         <p class="mt-2 text-sm leading-6 text-secondary">
-                            Plane Routen, tracke deine Strecke live oder finde und teile Sportplaetze in deiner Umgebung.
+                            Plane Routen, tracke deine Strecke live oder finde und teile Sportplätze in deiner Umgebung.
                         </p>
                     </div>
 
@@ -2158,7 +2158,7 @@ onUnmounted(() => {
                             <button
                                 type="button"
                                 class="flex h-10 w-10 items-center justify-center text-lg font-black text-slate-950 transition hover:bg-air-blue hover:text-white"
-                                aria-label="Karte vergroessern"
+                                aria-label="Karte vergrößern"
                                 @click.stop.prevent="zoomMap(1)"
                             >
                                 +
@@ -2199,7 +2199,7 @@ onUnmounted(() => {
                             <button
                                 type="button"
                                 class="flex h-10 w-10 items-center justify-center border-t border-slate-300 text-base text-red-600 transition hover:bg-red-600 hover:text-white"
-                                aria-label="Punkte zuruecksetzen"
+                                aria-label="Punkte zurücksetzen"
                                 @click.stop.prevent="resetActiveMapPoints"
                             >
                                 <i class="las la-trash"></i>
@@ -2210,7 +2210,7 @@ onUnmounted(() => {
                             <span v-if="activeTab === 'generator'">
                                 Karte ziehen/zoomen. Klick setzt {{ routeGeneratorForm.route_type === 'point_to_point' && routeGeneratorMapTarget === 'destination' ? 'den Zielpunkt' : 'den Startpunkt' }}.
                             </span>
-                            <span v-else-if="activeTab === 'routes'">Karte ziehen/zoomen. Klick setzt den naechsten Routenpunkt.</span>
+                            <span v-else-if="activeTab === 'routes'">Karte ziehen/zoomen. Klick setzt den nächsten Routenpunkt.</span>
                             <span v-else-if="activeTab === 'tracks'">Karte ziehen/zoomen. Klick setzt einen manuellen Trackpunkt.</span>
                             <span v-else>Karte ziehen/zoomen. Klick setzt die Sportplatz-Position.</span>
                         </div>
@@ -2296,7 +2296,7 @@ onUnmounted(() => {
                         </div>
 
                         <div v-if="!mapPoints.length" class="absolute bottom-10 left-4 z-30 max-w-xs rounded-lg border border-border bg-card/95 px-3 py-2 text-xs font-semibold text-secondary shadow-sm">
-                            Karte bereit. Waehle unten Route planen, Tracking oder Sportplatz eintragen.
+                            Karte bereit. Wähle unten Route planen, Tracking oder Sportplatz eintragen.
                         </div>
 
                         <div
@@ -2337,7 +2337,7 @@ onUnmounted(() => {
                                     <button
                                         type="button"
                                         class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
-                                        @click="resetRoutePlayback('Route-Vorschau zurueckgesetzt.')"
+                                        @click="resetRoutePlayback('Route-Vorschau zurückgesetzt.')"
                                     >
                                         <i class="las la-redo-alt"></i>
                                         Reset
@@ -2425,7 +2425,7 @@ onUnmounted(() => {
                         <div class="space-y-4">
                             <div>
                                 <h3 class="text-lg font-bold text-primary">Route generieren</h3>
-                                <p class="mt-1 text-sm leading-6 text-secondary">Waehle nur die wichtigsten Daten. Die Details kannst du danach in der normalen Routenplanung speichern.</p>
+                                <p class="mt-1 text-sm leading-6 text-secondary">Wähle nur die wichtigsten Daten. Die Details kannst du danach in der normalen Routenplanung speichern.</p>
                             </div>
 
                             <label class="space-y-1">
@@ -2485,7 +2485,7 @@ onUnmounted(() => {
                                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                     <div>
                                         <p class="text-sm font-bold text-primary">Zielpunkt</p>
-                                        <p class="text-xs text-secondary">Kartenklick kann Start oder Ziel setzen. Fuer Zielroute brauchst du ein echtes Ziel.</p>
+                                        <p class="text-xs text-secondary">Kartenklick kann Start oder Ziel setzen. Für Zielroute brauchst du ein echtes Ziel.</p>
                                     </div>
                                     <div class="flex overflow-hidden rounded-lg border border-border">
                                         <button
@@ -2667,8 +2667,8 @@ onUnmounted(() => {
                     <div v-else class="grid gap-5 lg:grid-cols-[minmax(0,0.85fr),minmax(0,1.15fr)]">
                         <div class="space-y-4">
                             <div>
-                                <h3 class="text-lg font-bold text-primary">Vorschlag pruefen</h3>
-                                <p class="mt-1 text-sm leading-6 text-secondary">Der Vorschlag erscheint auf der Karte. Danach kannst du ihn in die normale Routenplanung uebernehmen.</p>
+                                <h3 class="text-lg font-bold text-primary">Vorschlag prüfen</h3>
+                                <p class="mt-1 text-sm leading-6 text-secondary">Der Vorschlag erscheint auf der Karte. Danach kannst du ihn in die normale Routenplanung übernehmen.</p>
                             </div>
 
                             <div class="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
@@ -2700,7 +2700,7 @@ onUnmounted(() => {
                                     <p class="mt-1 font-bold text-primary">{{ generatedRouteActualSummary.status }}</p>
                                 </div>
                                 <div class="rounded-xl border p-3" :class="qualityBadgeClass(generatedRouteActualSummary.qualityScore)">
-                                    <p class="text-xs font-semibold opacity-80">Qualitaet</p>
+                                    <p class="text-xs font-semibold opacity-80">Qualität</p>
                                     <p class="mt-1 font-bold">{{ generatedRouteActualSummary.qualityScore ?? '-' }}%</p>
                                 </div>
                                 <div class="rounded-xl border border-air-blue/40 bg-air-blue/10 p-3">
@@ -2716,13 +2716,13 @@ onUnmounted(() => {
                                         <p class="mt-1 font-bold text-primary">{{ generatedRouteActualSummary.targetDelta }}</p>
                                     </div>
                                     <div>
-                                        <p class="text-xs font-semibold text-secondary">Ruecklauf</p>
+                                        <p class="text-xs font-semibold text-secondary">Rücklauf</p>
                                         <p class="mt-1 font-bold text-primary">{{ formatPercent(generatedRouteActualSummary.backtrackPercent) }}</p>
                                     </div>
                                     <div>
                                         <p class="text-xs font-semibold text-secondary">Routenform</p>
                                         <p class="mt-1 font-bold" :class="generatedRouteActualSummary.shapeAcceptable ? 'text-emerald-400' : 'text-amber-400'">
-                                            {{ generatedRouteActualSummary.shapeAcceptable ? 'passt' : 'pruefen' }}
+                                            {{ generatedRouteActualSummary.shapeAcceptable ? 'passt' : 'prüfen' }}
                                         </p>
                                     </div>
                                 </div>
@@ -2735,7 +2735,7 @@ onUnmounted(() => {
                                 </button>
                                 <button type="button" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60" :disabled="generatedRoutePoints.length < 2 || isGeneratingRoute" @click="applyGeneratedRouteToPlanner">
                                     <i class="las la-route"></i>
-                                    In Routenplanung uebernehmen
+                                    In Routenplanung übernehmen
                                 </button>
                             </div>
 
@@ -2794,11 +2794,11 @@ onUnmounted(() => {
 
                     <div class="flex flex-wrap justify-between gap-2 border-t border-border pt-4">
                         <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:bg-muted" :disabled="routeGeneratorStep === 1" @click="setGeneratorStep(routeGeneratorStep - 1)">
-                            Zurueck
+                            Zurück
                         </button>
                         <div class="flex flex-wrap gap-2">
                             <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:bg-muted" @click="resetGeneratedRoute">
-                                Zuruecksetzen
+                                Zurücksetzen
                             </button>
                             <button v-if="routeGeneratorStep < 3" type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="setGeneratorStep(routeGeneratorStep + 1)">
                                 Weiter
@@ -3042,7 +3042,7 @@ onUnmounted(() => {
 
                         <div class="rounded-xl border border-border bg-inputBg/60 p-3">
                             <p class="text-sm font-semibold text-primary">Bilder vom Sportplatz</p>
-                            <p class="mt-1 text-xs leading-5 text-secondary">Fuege Fotos vom Platz, Eingang, Belag oder Ausstattung hinzu. Du kannst Dateien hochladen oder Bild-URLs eintragen.</p>
+                            <p class="mt-1 text-xs leading-5 text-secondary">Füge Fotos vom Platz, Eingang, Belag oder Ausstattung hinzu. Du kannst Dateien hochladen oder Bild-URLs eintragen.</p>
                             <div class="mt-3 grid gap-3 sm:grid-cols-2">
                                 <label class="block">
                                     <span class="text-xs font-semibold text-secondary">Bilder hochladen</span>

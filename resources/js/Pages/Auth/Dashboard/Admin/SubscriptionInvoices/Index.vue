@@ -24,7 +24,7 @@ const statusLabel = (status) => ({
     open: 'Offen',
     awaiting_transfer: 'Warte auf Überweisung',
     paid: 'Bezahlt',
-    overdue: 'Ueberfaellig',
+    overdue: 'Überfällig',
     cancelled: 'Storniert',
 }[status] || status)
 
@@ -82,7 +82,7 @@ const markPaid = (invoice) => {
                 <p class="mt-2 text-xs text-secondary">Bereits abgeschlossen</p>
             </div>
             <div class="surface-card p-4">
-                <p class="text-xs font-semibold uppercase text-secondary">Ueberfaellig</p>
+                <p class="text-xs font-semibold uppercase text-secondary">Überfällig</p>
                 <p class="mt-2 text-2xl font-black text-primary">{{ summary.overdue || 0 }}</p>
                 <p class="mt-2 text-xs text-secondary">Überfällige Rechnung</p>
             </div>

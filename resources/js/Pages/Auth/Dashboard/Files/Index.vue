@@ -122,13 +122,13 @@ const activeFiles = computed(() => {
 })
 const storageUsage = computed(() => page.props.auth?.user?.storage_usage || null)
 const isStorageFull = computed(() => storageUsage.value?.is_full === true)
-const uploadFileName = computed(() => uploadForm.file?.name || 'Datei waehlen')
+const uploadFileName = computed(() => uploadForm.file?.name || 'Datei wählen')
 const deleteTargetName = computed(() => {
     if (!deleteTarget.value) return ''
 
     return deleteType.value === 'folder' ? deleteTarget.value.name : fileName(deleteTarget.value)
 })
-const canConfirmDelete = computed(() => deleteConfirmation.value.trim().toLowerCase() === 'loeschen')
+const canConfirmDelete = computed(() => deleteConfirmation.value.trim().toLowerCase() === 'löschen')
 const shareTargets = computed(() => {
     const query = friendSearch.value.trim().toLowerCase()
 
@@ -556,7 +556,7 @@ watch(showShareModal, async (show) => {
                     <label v-if="scopeForm.scope === 'club'" class="text-sm">
                         <span class="mb-1 block text-secondary">Verein</span>
                         <select v-model="scopeForm.club_id" class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-primary" @change="changeScope">
-                            <option :value="null">Auswaehlen</option>
+                            <option :value="null">Auswählen</option>
                             <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
                         </select>
                     </label>
@@ -564,7 +564,7 @@ watch(showShareModal, async (show) => {
                     <label v-if="scopeForm.scope === 'team'" class="text-sm">
                         <span class="mb-1 block text-secondary">Team</span>
                         <select v-model="scopeForm.team_id" class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-primary" @change="changeScope">
-                            <option :value="null">Auswaehlen</option>
+                            <option :value="null">Auswählen</option>
                             <option v-for="team in teams" :key="team.id" :value="team.id">{{ team.name }}</option>
                         </select>
                     </label>
@@ -572,7 +572,7 @@ watch(showShareModal, async (show) => {
                     <label v-if="scopeForm.scope === 'event'" class="text-sm">
                         <span class="mb-1 block text-secondary">Event</span>
                         <select v-model="scopeForm.event_id" class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-primary" @change="changeScope">
-                            <option :value="null">Auswaehlen</option>
+                            <option :value="null">Auswählen</option>
                             <option v-for="event in events" :key="event.id" :value="event.id">{{ event.title }}</option>
                         </select>
                     </label>
@@ -596,7 +596,7 @@ watch(showShareModal, async (show) => {
                                     aria-label="Dateien und Ordner durchsuchen"
                                     @keyup.enter="scheduleFilterRefresh(true)"
                                 />
-                                <button v-if="fileSearch" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-secondary hover:text-primary" type="button" @click="clearSearch" aria-label="Suche loeschen">x</button>
+                                <button v-if="fileSearch" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-secondary hover:text-primary" type="button" @click="clearSearch" aria-label="Suche löschen">x</button>
                             </div>
                             <select
                                 v-model="filesPerPage"
@@ -649,10 +649,10 @@ watch(showShareModal, async (show) => {
                             type="button"
                             :disabled="isFiltering"
                             @click="openFolder(currentFolder.parent)"
-                            aria-label="In das uebergeordnete Verzeichnis gehen"
+                            aria-label="In das übergeordnete Verzeichnis gehen"
                         >
                             <i class="las la-arrow-left"></i>
-                            Zurueck
+                            Zurück
                         </button>
                     </div>
 
@@ -694,8 +694,8 @@ watch(showShareModal, async (show) => {
                                 class="rounded-lg p-2 text-secondary opacity-0 group-hover:opacity-100"
                                 :disabled="isFiltering"
                                 @click.stop="confirmDeleteFolder(folder)"
-                                title="Loeschen"
-                                aria-label="Ordner loeschen"
+                                title="Löschen"
+                                aria-label="Ordner löschen"
                             >
                                 <i class="las la-trash"></i>
                             </button>
@@ -735,8 +735,8 @@ watch(showShareModal, async (show) => {
                                 class="rounded-lg p-2 text-secondary hover:bg-inputBg"
                                 :disabled="isFiltering"
                                 @click="deleteFile(file)"
-                                title="Loeschen"
-                                aria-label="Datei loeschen"
+                                title="Löschen"
+                                aria-label="Datei löschen"
                             >
                                 <i class="las la-trash"></i>
                             </button>
@@ -762,7 +762,7 @@ watch(showShareModal, async (show) => {
                                     @click="goToFoldersPage(currentFoldersPage - 1)"
                                     type="button"
                                 >
-                                    Zurueck
+                                    Zurück
                                 </button>
                                 <button
                                     class="rounded-lg border border-border px-3 py-2 text-sm text-primary disabled:opacity-50"
@@ -784,7 +784,7 @@ watch(showShareModal, async (show) => {
                                     @click="goToFilesPage(currentFilesPage - 1)"
                                     type="button"
                                 >
-                                    Zurueck
+                                    Zurück
                                 </button>
                                 <button
                                     class="rounded-lg border border-border px-3 py-2 text-sm text-primary disabled:opacity-50"
@@ -832,13 +832,13 @@ watch(showShareModal, async (show) => {
                             type="button"
                             class="mt-3 flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-border bg-inputBg px-3 text-left text-sm text-primary hover:bg-muted"
                             @click="selectUploadFile"
-                            aria-label="Datei auswaehlen"
+                            aria-label="Datei auswählen"
                         >
                             <span class="truncate">{{ uploadFileName }}</span>
                             <i class="las la-paperclip text-lg text-secondary"></i>
                         </button>
                         <p v-if="isStorageFull" class="mt-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-semibold text-warning">
-                            Dein Speicher ist voll. Bitte loesche Dateien oder upgrade.
+                            Dein Speicher ist voll. Bitte lösche Dateien oder upgrade.
                         </p>
                         <p v-if="uploadForm.errors.file || uploadForm.errors.general" class="mt-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs font-semibold text-error">
                             {{ uploadForm.errors.file || uploadForm.errors.general }}
@@ -863,9 +863,9 @@ watch(showShareModal, async (show) => {
     <Modal :show="showDeleteModal" max-width="md" @close="closeDeleteModal">
         <div class="space-y-5 text-primary">
             <div>
-                <p class="text-xs font-semibold uppercase tracking-wide text-error">Endgueltig loeschen</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-error">Endgültig löschen</p>
                 <h2 class="mt-1 text-lg font-bold">
-                    {{ deleteType === 'folder' ? 'Ordner loeschen' : 'Datei loeschen' }}
+                    {{ deleteType === 'folder' ? 'Ordner löschen' : 'Datei löschen' }}
                 </h2>
                 <p class="mt-2 text-sm text-secondary">
                     {{ deleteType === 'folder'
@@ -879,13 +879,13 @@ watch(showShareModal, async (show) => {
             </div>
 
             <label class="block text-sm">
-                <span class="mb-1 block text-secondary">Schreibe <span class="font-semibold text-primary">loeschen</span>, um fortzufahren.</span>
+                <span class="mb-1 block text-secondary">Schreibe <span class="font-semibold text-primary">löschen</span>, um fortzufahren.</span>
             <input
                 ref="deleteConfirmationInputRef"
                 v-model="deleteConfirmation"
                 class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
                 autocomplete="off"
-                placeholder="loeschen"
+                placeholder="löschen"
                 @keyup.enter="deleteConfirmed"
                 >
             </label>
@@ -898,7 +898,7 @@ watch(showShareModal, async (show) => {
                     :disabled="!canConfirmDelete || deleteProcessing"
                     @click="deleteConfirmed"
                 >
-                    {{ deleteProcessing ? 'Loesche...' : 'Endgueltig loeschen' }}
+                    {{ deleteProcessing ? 'Lösche...' : 'Endgültig löschen' }}
                 </button>
             </div>
         </div>
@@ -948,7 +948,7 @@ watch(showShareModal, async (show) => {
                 ref="shareTargetSelectRef"
                 class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
             >
-                <option value="">Auswaehlen</option>
+                <option value="">Auswählen</option>
                 <option v-for="target in shareTargets" :key="target.id" :value="target.id">
                     {{ target.name }}{{ target.email ? ` · ${target.email}` : '' }}
                 </option>

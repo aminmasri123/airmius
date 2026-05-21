@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { reactive } from 'vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
@@ -85,7 +85,7 @@ const deleteBadge = async (badge) => {
             <p class="text-sm font-semibold uppercase tracking-wide text-air-blue">Admin</p>
             <h1 class="mt-1 text-2xl font-bold text-primary">Badges</h1>
             <p class="mt-2 text-sm text-secondary">
-                Automatische Auszeichnungen fuer XP, Level, Streaks und konkrete Aktionen.
+                Automatische Auszeichnungen für XP, Level, Streaks und konkrete Aktionen.
             </p>
         </section>
 
@@ -133,7 +133,7 @@ const deleteBadge = async (badge) => {
                     >
                         Speichern
                     </button>
-                    <button type="button" class="rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger" @click="deleteBadge(badge)">Loeschen</button>
+                    <button type="button" class="rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger" @click="deleteBadge(badge)">Löschen</button>
                 </div>
                 <div v-if="firstError(formFor(badge))" class="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm font-semibold text-error xl:col-span-6" role="alert">
                     {{ firstError(formFor(badge)) }}

@@ -17,7 +17,7 @@ const formatDate = (value) => value
 </script>
 
 <template>
-    <SeoHead title="Zertifikat pruefen" description="Oeffentliche Pruefung eines Airmius E-Learning Zertifikats." />
+    <SeoHead title="Zertifikat prüfen" description="Öffentliche Prüfung eines Airmius E-Learning Zertifikats." />
 
     <div class="min-h-screen bg-bg text-primary">
         <Nav :canLogin="canLogin" :canRegister="canRegister" />
@@ -25,7 +25,7 @@ const formatDate = (value) => value
 
         <main class="px-4 pt-36 md:pt-44">
             <section class="mx-auto max-w-4xl">
-                <Link :href="route('guest.e-learning')" class="text-sm font-semibold text-air-orange">Zurueck zur Sportschule</Link>
+                <Link :href="route('guest.e-learning')" class="text-sm font-semibold text-air-orange">Zurück zur Sportschule</Link>
 
                 <article class="mt-5 overflow-hidden rounded-xl border border-border bg-card">
                     <div class="border-b border-border bg-success/10 p-6">

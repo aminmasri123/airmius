@@ -63,7 +63,7 @@ const formatDate = (value) => value
                         Zertifikat PDF
                     </a>
                     <a v-if="enrollment.certificate?.verify_url" :href="enrollment.certificate.verify_url" class="rounded-lg border border-success/40 px-4 py-2 text-sm font-semibold text-success">
-                        Oeffentlich pruefen
+                        Öffentlich prüfen
                     </a>
                 </div>
             </article>

@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, ref, watch } from 'vue'
 import { Head, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
@@ -90,7 +90,7 @@ const save = () => {
                     <p class="text-sm font-semibold uppercase tracking-wide text-air-blue">Admin</p>
                     <h1 class="mt-1 text-2xl font-bold text-primary">Gamification-Regeln</h1>
                     <p class="mt-2 max-w-3xl text-sm leading-relaxed text-secondary">
-                        Verwalte XP, Daily Limits, Trust-Auswirkungen und aktive Regeln zentral. Aenderungen wirken auf neue Aktionen und halten das System fair, steuerbar und jugendschutzfreundlich.
+                        Verwalte XP, Daily Limits, Trust-Auswirkungen und aktive Regeln zentral. Änderungen wirken auf neue Aktionen und halten das System fair, steuerbar und jugendschutzfreundlich.
                     </p>
                 </div>
 
@@ -118,7 +118,7 @@ const save = () => {
 
             <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-8">
                 <div class="rounded-xl border border-border bg-card p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Qualitaet</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Qualität</p>
                     <p :class="['mt-2 text-2xl font-bold', healthTone]">{{ selectedHealth.quality_score }}/10</p>
                 </div>
                 <div class="rounded-xl border border-border bg-card p-4">

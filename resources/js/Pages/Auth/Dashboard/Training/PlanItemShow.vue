@@ -51,7 +51,7 @@ const documentItem = () => {
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <Link :href="route('auth.training.index')" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
-                        Zurueck
+                        Zurück
                     </Link>
                     <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="documentItem">
                         Dokumentieren
@@ -86,7 +86,7 @@ const documentItem = () => {
                         </span>
                     </div>
                     <a v-if="item.video_url" :href="item.video_url" target="_blank" class="inline-flex rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
-                        Video oeffnen
+                        Video öffnen
                     </a>
                 </div>
             </div>
@@ -134,7 +134,7 @@ const documentItem = () => {
                         Log ansehen
                     </Link>
                 </article>
-                <p v-if="!item.logs?.length" class="p-4 text-sm text-secondary">Noch keine Dokumentation fuer diese Einheit.</p>
+                <p v-if="!item.logs?.length" class="p-4 text-sm text-secondary">Noch keine Dokumentation für diese Einheit.</p>
             </div>
         </section>
     </div>

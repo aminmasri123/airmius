@@ -28,7 +28,7 @@ const forms = reactive(Object.fromEntries(props.clubs.map((club) => [
 const pendingCount = computed(() => props.clubs.filter((club) => club.verification_status === 'pending_verification').length)
 
 const statusLabel = (status) => ({
-    pending_verification: 'Wartet auf Pruefung',
+    pending_verification: 'Wartet auf Prüfung',
     verified: 'Freigegeben',
     rejected: 'Abgelehnt',
 }[status] || status)
@@ -73,15 +73,15 @@ const submit = (club, action) => {
 </script>
 
 <template>
-    <Head title="Vereinspruefung" />
+    <Head title="Vereinsprüfung" />
 
     <div class="space-y-5">
         <section class="surface-card p-5">
             <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div>
-                    <h1 class="text-xl font-semibold text-primary">Vereinspruefung</h1>
+                    <h1 class="text-xl font-semibold text-primary">Vereinsprüfung</h1>
                     <p class="mt-1 text-sm text-secondary">
-                        Neue Vereinsantraege freigeben, ablehnen und Vereinsnummern pruefen.
+                        Neue Vereinsantraege freigeben, ablehnen und Vereinsnummern prüfen.
                     </p>
                 </div>
                 <span class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm font-semibold text-primary">
@@ -144,7 +144,7 @@ const submit = (club, action) => {
 
                     <div class="space-y-3 rounded-lg border border-border bg-bg p-4">
                         <label class="block">
-                            <span class="text-sm font-semibold text-primary">Gepruefte Vereinsnummer</span>
+                            <span class="text-sm font-semibold text-primary">Geprüfte Vereinsnummer</span>
                             <input v-model="forms[club.id].official_club_number" class="input" placeholder="Optional" />
                         </label>
 
@@ -176,7 +176,7 @@ const submit = (club, action) => {
                                 Ablehnen
                             </button>
                             <Link :href="route('auth.clubs.show', club.id)" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
-                                Oeffnen
+                                Öffnen
                             </Link>
                         </div>
                     </div>

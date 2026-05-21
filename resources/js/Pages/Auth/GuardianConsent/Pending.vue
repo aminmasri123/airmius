@@ -120,7 +120,7 @@ onUnmounted(() => {
                     <span class="font-semibold text-primary">{{ formatDateTime(rejectedAt) }}</span>
                 </p>
                 <p v-if="approvedAt" class="mt-1">
-                    Bestaetigt am:
+                    Bestätigt am:
                     <span class="font-semibold text-primary">{{ formatDateTime(approvedAt) }}</span>
                 </p>
             </div>

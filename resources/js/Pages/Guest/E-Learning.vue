@@ -83,7 +83,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                             <p class="mt-2 text-secondary">Strukturierte Kurse mit Kapiteln, Lektionen, Quiz, Notizen und Tutor-Betreuung.</p>
                         </div>
                         <Link :href="canLogin ? route('auth.learning.studio.index') : route('register')" class="text-sm font-semibold text-air-orange">
-                            Tutor-Studio oeffnen
+                            Tutor-Studio öffnen
                         </Link>
                     </div>
 

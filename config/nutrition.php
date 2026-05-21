@@ -13,6 +13,7 @@ return [
         ['key' => 'dinner', 'label' => 'Abendessen', 'icon' => 'las la-moon', 'theme' => 'indigo'],
         ['key' => 'snack', 'label' => 'Snack', 'icon' => 'las la-apple-alt', 'theme' => 'rose'],
         ['key' => 'shake', 'label' => 'Shake', 'icon' => 'las la-blender', 'theme' => 'sky'],
+        ['key' => 'drink', 'label' => 'Trinken', 'icon' => 'las la-tint', 'theme' => 'cyan'],
     ],
 
     'goal_types' => [

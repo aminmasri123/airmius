@@ -58,7 +58,7 @@ const resendCode = () => {
 </script>
 
 <template>
-    <Head title="Eltern-Code bestaetigen" />
+    <Head title="Eltern-Code bestätigen" />
 
     <AuthenticationCard>
         <div class="mx-auto h-36 w-36 md:h-48 md:w-48">
@@ -66,7 +66,7 @@ const resendCode = () => {
         </div>
 
         <div class="rounded-lg border border-border bg-card p-6">
-            <h1 class="text-xl font-semibold text-primary">Code bestaetigen</h1>
+            <h1 class="text-xl font-semibold text-primary">Code bestätigen</h1>
             <p class="mt-2 text-sm leading-6 text-secondary">
                 Wir haben einen 6-stelligen Code an
                 <span class="font-semibold text-primary">{{ email || 'deine E-Mail' }}</span>
@@ -108,7 +108,7 @@ const resendCode = () => {
                         :class="{ 'opacity-60': isSubmitting }"
                         :aria-busy="isSubmitting"
                     >
-                        Zugang oeffnen
+                        Zugang öffnen
                     </PrimaryButton>
 
                     <button

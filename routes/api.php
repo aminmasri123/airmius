@@ -89,6 +89,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/nutrition/foods/search', [NutritionController::class, 'searchFoods'])->name('nutrition.foods.search');
         Route::get('/nutrition/foods/barcode', [NutritionController::class, 'lookupBarcode'])->name('nutrition.foods.barcode');
         Route::post('/nutrition/meals', [NutritionController::class, 'storeMeal'])->name('nutrition.meals.store');
+        Route::post('/nutrition/water', [NutritionController::class, 'storeWater'])->name('nutrition.water.store');
         Route::patch('/nutrition/meals/{nutritionMeal}', [NutritionController::class, 'updateMeal'])->name('nutrition.meals.update');
         Route::delete('/nutrition/meals/{nutritionMeal}', [NutritionController::class, 'destroyMeal'])->name('nutrition.meals.destroy');
 

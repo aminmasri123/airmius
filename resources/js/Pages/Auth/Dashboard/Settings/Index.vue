@@ -299,7 +299,7 @@ const closeOpenPaymentModal = () => {
 }
 
 const openPaymentModalTitle = () => openPaymentModal.value.action === 'delete'
-    ? 'Offene Zahlung loeschen'
+    ? 'Offene Zahlung löschen'
     : 'Offene Zahlung abbrechen'
 
 const openPaymentModalMessage = () => {
@@ -307,7 +307,7 @@ const openPaymentModalMessage = () => {
     const number = invoice?.number ? ` ${invoice.number}` : ''
 
     if (openPaymentModal.value.action === 'delete') {
-        return `Die offene Zahlung${number} wird dauerhaft geloescht. Das ist nur fuer unbezahlte, nicht aktivierte Zahlungen moeglich.`
+        return `Die offene Zahlung${number} wird dauerhaft gelöscht. Das ist nur für unbezahlte, nicht aktivierte Zahlungen möglich.`
     }
 
     return `Die offene Zahlung${number} wird abgebrochen und als storniert markiert.`
@@ -452,12 +452,12 @@ const closeSportActivityDeleteModal = () => {
 }
 
 const sportActivityDeleteTitle = () => sportActivityDeleteModal.value.mode === 'all'
-    ? 'Alle importierten Aktivitaeten loeschen'
-    : 'Importierte Aktivitaet loeschen'
+    ? 'Alle importierten Aktivitaeten löschen'
+    : 'Importierte Aktivitaet löschen'
 
 const sportActivityDeleteMessage = () => sportActivityDeleteModal.value.mode === 'all'
-    ? 'Alle importierten Sportaktivitaeten werden dauerhaft aus deinem Airmius Konto geloescht. Die Verbindung zu Google Fit oder anderen Apps bleibt bestehen.'
-    : 'Diese importierte Sportaktivitaet wird dauerhaft aus deinem Airmius Konto geloescht.'
+    ? 'Alle importierten Sportaktivitaeten werden dauerhaft aus deinem Airmius Konto gelöscht. Die Verbindung zu Google Fit oder anderen Apps bleibt bestehen.'
+    : 'Diese importierte Sportaktivitaet wird dauerhaft aus deinem Airmius Konto gelöscht.'
 
 const confirmSportActivityDelete = () => {
     if (sportActivityDeleteModal.value.mode === 'all') {
@@ -588,13 +588,13 @@ const sportActivityTime = (activity) => {
 const activityLabel = (type) => ({
     'post.created': 'Beitrag erstellt',
     'post.updated': 'Beitrag aktualisiert',
-    'post.deleted': 'Beitrag geloescht',
+    'post.deleted': 'Beitrag gelöscht',
     'user.followed': 'Person gefolgt',
     'friend.requested': 'Freundschaftsanfrage gesendet',
     'friend.accepted': 'Freundschaft akzeptiert',
     'comment.created': 'Kommentar geschrieben',
     'comment.updated': 'Kommentar bearbeitet',
-    'comment.deleted': 'Kommentar geloescht',
+    'comment.deleted': 'Kommentar gelöscht',
 }[type] || type)
 
 const activityScope = (activity) => activity.team?.name || activity.club?.name || 'Persoenlich'
@@ -862,7 +862,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         <span class="text-sm font-semibold text-secondary">km</span>
                     </div>
                     <p class="mt-1 text-xs text-secondary">
-                        Aktuell adressbasiert ueber PLZ/Stadt/Vereinsadresse.
+                        Aktuell adressbasiert über PLZ/Stadt/Vereinsadresse.
                     </p>
                     <p v-if="form.errors.event_radius_km" class="mt-1 text-sm text-error">{{ form.errors.event_radius_km }}</p>
                 </div>
@@ -990,7 +990,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                     v-else-if="subscription.payment_provider === 'stripe'"
                                     class="text-xs text-secondary"
                                 >
-                                    Zahlungsportal ist fuer dieses Abo momentan nicht aktiv.
+                                    Zahlungsportal ist für dieses Abo momentan nicht aktiv.
                                 </p>
 
                                 <button
@@ -1087,7 +1087,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                             class="rounded-lg border border-error px-3 py-1 text-xs font-semibold text-error hover:bg-error/10"
                                             @click="openPaymentActionModal('delete', invoice)"
                                         >
-                                            Loeschen
+                                            Löschen
                                         </button>
                                     </div>
                                     <span v-else class="text-xs text-secondary">-</span>
@@ -1332,7 +1332,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         <div>
                             <h3 class="text-sm font-semibold uppercase tracking-wide text-secondary">Manuell eintragen</h3>
                             <p class="mt-1 text-sm text-secondary">
-                                Fuege eigene Trainingseinheiten hinzu, auch wenn keine Sport-App verbunden ist.
+                                Füge eigene Trainingseinheiten hinzu, auch wenn keine Sport-App verbunden ist.
                             </p>
                         </div>
                         <button
@@ -1370,7 +1370,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                 <option>Laufen</option>
                                 <option>Radfahren</option>
                                 <option>Schwimmen</option>
-                                <option>Fussball</option>
+                                <option>Fußball</option>
                                 <option>Fitness</option>
                                 <option>Krafttraining</option>
                                 <option>Yoga</option>
@@ -1520,7 +1520,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             :title="openPaymentModalTitle()"
             :message="openPaymentModalMessage()"
             :confirm-text="openPaymentModalConfirmText()"
-            cancel-text="Zurueck"
+            cancel-text="Zurück"
             @confirm="confirmOpenPaymentAction"
             @cancel="closeOpenPaymentModal"
         />
@@ -1530,7 +1530,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             title="Abo kuendigen"
             :message="subscriptionCancelModalMessage()"
             confirm-text="kuendigen"
-            cancel-text="Zurueck"
+            cancel-text="Zurück"
             @confirm="confirmSubscriptionCancel"
             @cancel="closeSubscriptionCancelModal"
         />
@@ -1538,7 +1538,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
         <DeleteConfirmModal
             :show="disconnectIntegrationModal.show"
             title="Sport-App entfernen"
-            message="Bist du sicher, dass du diese Sport-App-Verknuepfung entfernen moechtest? Gespeicherte Tokens werden geloescht und die App muss danach neu verbunden werden."
+            message="Bist du sicher, dass du diese Sport-App-Verknuepfung entfernen moechtest? Gespeicherte Tokens werden gelöscht und die App muss danach neu verbunden werden."
             confirm-text="entfernen"
             cancel-text="Abbrechen"
             @confirm="disconnectIntegration(disconnectIntegrationModal.account)"
@@ -1550,7 +1550,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             :title="sportActivityDeleteTitle()"
             :message="sportActivityDeleteMessage()"
             confirm-text="delete"
-            cancel-text="Zurueck"
+            cancel-text="Zurück"
             @confirm="confirmSportActivityDelete"
             @cancel="closeSportActivityDeleteModal"
         />
@@ -1576,7 +1576,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         class="rounded-lg border border-border px-3 py-1 text-sm font-semibold text-primary hover:bg-muted"
                         @click="closeSportActivityEditModal"
                     >
-                        Schliessen
+                        Schließen
                     </button>
                 </div>
 
@@ -1622,9 +1622,9 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             <div class="w-full max-w-lg rounded-xl border border-border bg-bg p-5 shadow-2xl">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <h2 class="text-lg font-semibold text-primary">Per Ueberweisung zahlen</h2>
+                        <h2 class="text-lg font-semibold text-primary">Per Überweisung zahlen</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            Nutze diese Daten fuer deine Bankueberweisung.
+                            Nutze diese Daten für deine Banküberweisung.
                         </p>
                     </div>
                     <button
@@ -1632,7 +1632,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         class="rounded-lg border border-border px-3 py-1 text-sm font-semibold text-primary hover:bg-muted"
                         @click="closeBankTransferModal"
                     >
-                        Schliessen
+                        Schließen
                     </button>
                 </div>
 

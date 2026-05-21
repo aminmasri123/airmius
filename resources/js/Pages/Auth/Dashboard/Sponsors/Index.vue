@@ -211,7 +211,7 @@ const formatAmount = (amount) => {
                     <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">Sponsoring</p>
                     <h1 class="mt-1 text-2xl font-bold text-primary">Sponsoren verwalten</h1>
                     <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
-                        Lege Sponsoren fuer Airmius, Outfit-Abos oder einzelne Vereine an und verwalte Logos, Laufzeiten und Ansprechpartner.
+                        Lege Sponsoren für Airmius, Outfit-Abos oder einzelne Vereine an und verwalte Logos, Laufzeiten und Ansprechpartner.
                     </p>
                 </div>
 
@@ -317,7 +317,7 @@ const formatAmount = (amount) => {
                         Bearbeiten
                     </button>
                     <button class="rounded-lg border border-error/40 px-3 py-2 text-sm font-semibold text-error hover:bg-error/10" @click="openDeleteModal(sponsor)">
-                        Loeschen
+                        Löschen
                     </button>
                 </div>
             </article>
@@ -375,7 +375,7 @@ const formatAmount = (amount) => {
 
                     <div class="max-h-[75vh] overflow-y-auto p-5">
                         <div v-if="!canManageSponsors" class="mb-4 rounded-lg border border-border bg-inputBg p-4 text-sm text-primary">
-                            Sponsorenverwaltung fuer diesen Verein ist ab dem Club-Plan verfuegbar. Waehle einen Verein mit passendem Plan oder eine Plattform-/Outfit-Abo-Zuordnung.
+                            Sponsorenverwaltung für diesen Verein ist ab dem Club-Plan verfügbar. Wähle einen Verein mit passendem Plan oder eine Plattform-/Outfit-Abo-Zuordnung.
                         </div>
 
                         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -392,7 +392,7 @@ const formatAmount = (amount) => {
                             <label v-if="form.scope === 'club'" class="block">
                                 <span class="text-sm font-semibold text-primary">Verein</span>
                                 <select v-model="form.club_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required>
-                                    <option value="">Verein auswaehlen</option>
+                                    <option value="">Verein auswählen</option>
                                     <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
                                 </select>
                                 <div v-if="form.errors.club_id" class="mt-1 text-sm text-error">{{ form.errors.club_id }}</div>
@@ -427,7 +427,7 @@ const formatAmount = (amount) => {
                                     <div>
                                         <p class="text-sm font-semibold text-primary">Sponsorlogos nach Farbflaeche</p>
                                         <p class="mt-1 text-xs text-secondary">
-                                            Hinterlege idealerweise zwei Varianten: dunkles Logo fuer helle Flaechen und helles Logo fuer dunkle Flaechen.
+                                            Hinterlege idealerweise zwei Varianten: dunkles Logo für helle Flächen und helles Logo für dunkle Flächen.
                                         </p>
                                     </div>
                                     <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-secondary">
@@ -437,19 +437,19 @@ const formatAmount = (amount) => {
 
                                 <div class="mt-4 grid gap-4 md:grid-cols-2">
                                     <label class="block rounded-lg border border-border bg-card p-3">
-                                        <span class="text-sm font-semibold text-primary">Logo fuer helle Flaechen</span>
+                                        <span class="text-sm font-semibold text-primary">Logo für helle Flächen</span>
                                         <input v-model="form.logo_light" class="mt-2 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="sponsors/nike-light.webp">
                                         <div class="mt-3 flex h-20 items-center justify-center rounded-lg border border-border bg-white p-3">
-                                            <img v-if="form.logo_light" :src="previewUrl(form.logo_light)" alt="Logo fuer helle Flaechen" class="max-h-full max-w-full object-contain">
+                                            <img v-if="form.logo_light" :src="previewUrl(form.logo_light)" alt="Logo für helle Flächen" class="max-h-full max-w-full object-contain">
                                             <span v-else class="text-xs text-slate-500">Vorschau helle Flaeche</span>
                                         </div>
                                     </label>
 
                                     <label class="block rounded-lg border border-border bg-card p-3">
-                                        <span class="text-sm font-semibold text-primary">Logo fuer dunkle Flaechen</span>
+                                        <span class="text-sm font-semibold text-primary">Logo für dunkle Flächen</span>
                                         <input v-model="form.logo_dark" class="mt-2 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="sponsors/nike-dark.webp">
                                         <div class="mt-3 flex h-20 items-center justify-center rounded-lg border border-border bg-slate-950 p-3">
-                                            <img v-if="form.logo_dark" :src="previewUrl(form.logo_dark)" alt="Logo fuer dunkle Flaechen" class="max-h-full max-w-full object-contain">
+                                            <img v-if="form.logo_dark" :src="previewUrl(form.logo_dark)" alt="Logo für dunkle Flächen" class="max-h-full max-w-full object-contain">
                                             <span v-else class="text-xs text-slate-400">Vorschau dunkle Flaeche</span>
                                         </div>
                                     </label>
@@ -499,10 +499,10 @@ const formatAmount = (amount) => {
                 <div class="w-full max-w-md rounded-lg border border-border bg-card p-5 shadow-xl">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-error">Sponsor loeschen</p>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-error">Sponsor löschen</p>
                             <h2 class="mt-1 text-lg font-semibold text-primary">{{ deleteTarget.name }}</h2>
                             <p class="mt-2 text-sm leading-6 text-secondary">
-                                Dieser Sponsor wird dauerhaft geloescht. Gib zur Bestaetigung <span class="font-semibold text-primary">delete</span> ein.
+                                Dieser Sponsor wird dauerhaft gelöscht. Gib zur Bestätigung <span class="font-semibold text-primary">delete</span> ein.
                             </p>
                         </div>
                         <button type="button" class="rounded-lg border border-border px-3 py-1 text-secondary hover:text-primary" @click="closeDeleteModal">
@@ -527,7 +527,7 @@ const formatAmount = (amount) => {
                             :disabled="deleteConfirmation !== 'delete'"
                             @click="confirmDelete"
                         >
-                            Endgueltig loeschen
+                            Endgültig löschen
                         </button>
                     </div>
                 </div>

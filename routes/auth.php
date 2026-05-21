@@ -50,6 +50,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::put('/profile-completion', [ProfileCompletionController::class, 'update'])->name('auth.profile-completion.update');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('auth.dashboard');
+    Route::patch('/dashboard/preferences', [DashboardController::class, 'updatePreferences'])->name('auth.dashboard.preferences.update');
     Route::get('/workspaces', [RoleWorkspaceController::class, 'index'])->name('auth.workspaces.index');
     Route::get('/training', [TrainingController::class, 'index'])->name('auth.training.index');
     Route::post('/training/activities', [TrainingController::class, 'storeActivity'])->name('auth.training.activities.store');
@@ -75,6 +76,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::get('/nutrition/foods/search', [NutritionController::class, 'searchFoods'])->name('auth.nutrition.foods.search');
     Route::get('/nutrition/foods/barcode', [NutritionController::class, 'lookupBarcode'])->name('auth.nutrition.foods.barcode');
     Route::post('/nutrition/meals', [NutritionController::class, 'storeMeal'])->name('auth.nutrition.meals.store');
+    Route::post('/nutrition/water', [NutritionController::class, 'storeWater'])->name('auth.nutrition.water.store');
     Route::patch('/nutrition/meals/{nutritionMeal}', [NutritionController::class, 'updateMeal'])->name('auth.nutrition.meals.update');
     Route::delete('/nutrition/meals/{nutritionMeal}', [NutritionController::class, 'destroyMeal'])->name('auth.nutrition.meals.destroy');
     Route::get('/sport-map', [SportMapController::class, 'index'])->name('auth.sport-map.index');

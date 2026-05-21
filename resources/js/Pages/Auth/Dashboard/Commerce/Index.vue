@@ -224,14 +224,14 @@ const formatDateTime = (value) => value
 
 const productStatusLabel = (status) => ({
     draft: 'Entwurf',
-    review: 'In Pruefung',
+    review: 'In Prüfung',
     published: 'Online',
     rejected: 'Abgelehnt',
     archived: 'Archiviert',
 }[status] || status || 'Unbekannt')
 
 const sellerApplicationStatusLabel = (status) => ({
-    pending: 'Wartet auf Pruefung',
+    pending: 'Wartet auf Prüfung',
     approved: 'Freigegeben',
     rejected: 'Abgelehnt',
 }[status] || 'Noch kein Antrag')
@@ -388,7 +388,7 @@ const orderIssueLabel = (status) => ({
 
 const payoutStatusLabel = (status) => ({
     requested: 'Angefordert',
-    prepared: 'In Pruefung',
+    prepared: 'In Prüfung',
     paid: 'Ausgezahlt',
     cancelled: 'Storniert',
 }[status] || status || '-')
@@ -579,7 +579,7 @@ const closeCheckoutConfirmation = () => {
 }
 
 const providerLabel = (value) => ({
-    bank_transfer: 'Ueberweisung',
+    bank_transfer: 'Überweisung',
     stripe: 'Stripe',
     paypal: 'PayPal',
 })[value] || value
@@ -588,14 +588,14 @@ const checkoutConfirmationTitle = computed(() => {
     const item = checkoutConfirmation.value.item
 
     if (!item) {
-        return 'Checkout bestaetigen'
+        return 'Checkout bestätigen'
     }
 
     if (checkoutConfirmation.value.type === 'account_plan') {
         return item.name
     }
 
-    return item.name || item.title || 'Checkout bestaetigen'
+    return item.name || item.title || 'Checkout bestätigen'
 })
 
 const checkoutConfirmationPrice = computed(() => {
@@ -1054,7 +1054,7 @@ const storeCampaign = () => {
         preserveScroll: true,
         forceFormData: true,
         onError: () => {
-            campaignCreateError.value = 'Die Ads-Kampagne konnte nicht zur Zahlung vorbereitet werden. Bitte pruefe die Angaben unten.'
+            campaignCreateError.value = 'Die Ads-Kampagne konnte nicht zur Zahlung vorbereitet werden. Bitte prüfe die Angaben unten.'
         },
         onSuccess: () => {
             campaignCreateError.value = ''
@@ -1240,7 +1240,7 @@ const confirmDeleteOwnCampaign = () => {
         },
         onSuccess: closeDeleteCampaignModal,
         onError: (errors) => {
-            campaignActionError.value = errors.confirmation || errors.campaign_status || 'Kampagne konnte nicht geloescht werden.'
+            campaignActionError.value = errors.confirmation || errors.campaign_status || 'Kampagne konnte nicht gelöscht werden.'
         },
     })
 }
@@ -1420,7 +1420,7 @@ onMounted(() => {
                             {{ item.product?.title }}
                         </Link>
                         <p class="mt-1 line-clamp-2 text-sm text-secondary">{{ item.product?.description }}</p>
-                        <p class="mt-2 text-xs font-semibold text-success">Verfuegbar: {{ item.product?.stock_quantity }} Stueck</p>
+                        <p class="mt-2 text-xs font-semibold text-success">Verfügbar: {{ item.product?.stock_quantity }} Stück</p>
                     </div>
                     <input
                         :value="item.quantity"
@@ -1449,7 +1449,7 @@ onMounted(() => {
                     </div>
                     <div>
                         <h3 class="text-lg font-bold text-primary">Dein Warenkorb ist leer</h3>
-                        <p class="mt-1 text-sm text-secondary">Fuege ein Marketplace-Produkt hinzu, dann erscheint es hier.</p>
+                        <p class="mt-1 text-sm text-secondary">Füge ein Marketplace-Produkt hinzu, dann erscheint es hier.</p>
                     </div>
                     <Link :href="route('guest.marketplace')" class="mx-auto rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
                         Marketplace ansehen
@@ -1510,7 +1510,7 @@ onMounted(() => {
                 <p class="mt-4 text-2xl font-bold text-primary">{{ formatMoney(plan.monthly_price_cents, plan.currency) }}</p>
                 <p class="text-sm text-secondary">{{ plan.monthly_price_cents ? 'pro Monat' : 'kostenlos' }}</p>
                 <p v-if="plan.yearly_price_cents" class="mt-1 text-xs text-secondary">{{ formatMoney(plan.yearly_price_cents, plan.currency) }} pro Jahr</p>
-                <p v-if="plan.localized_price" class="mt-1 text-xs text-air-blue">Lokaler Preis fuer {{ plan.pricing_country }}</p>
+                <p v-if="plan.localized_price" class="mt-1 text-xs text-air-blue">Lokaler Preis für {{ plan.pricing_country }}</p>
                 <dl class="mt-4 border-t border-border pt-3 text-sm text-secondary">
                     <div class="flex justify-between gap-3">
                         <dt>Speicher</dt>
@@ -1549,7 +1549,7 @@ onMounted(() => {
                         class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted"
                         @click="checkoutAccountPlan(plan, 'bank_transfer')"
                     >
-                        Per Ueberweisung zahlen
+                        Per Überweisung zahlen
                     </button>
                 </div>
             </article>
@@ -1591,7 +1591,7 @@ onMounted(() => {
                     </div>
                     </div>
                 </article>
-                <p v-if="!visibleShopProducts.length" class="text-sm text-secondary">Noch keine passenden Angebote veroeffentlicht.</p>
+                <p v-if="!visibleShopProducts.length" class="text-sm text-secondary">Noch keine passenden Angebote veröffentlicht.</p>
             </div>
         </section>
 
@@ -1662,7 +1662,7 @@ onMounted(() => {
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <p class="text-xs font-semibold uppercase text-air-blue">Shop-Antrag</p>
-                            <h3 class="mt-1 font-semibold text-primary">Verkaeufer-Zugang beantragen</h3>
+                            <h3 class="mt-1 font-semibold text-primary">Verkäufer-Zugang beantragen</h3>
                             <p class="mt-1 text-sm text-secondary">Status: {{ sellerApplicationStatusLabel(sellerApplication?.status) }}</p>
                             <p v-if="sellerApplication?.review_note" class="mt-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">{{ sellerApplication.review_note }}</p>
                         </div>
@@ -1689,15 +1689,15 @@ onMounted(() => {
                             </label>
                             <label class="flex items-start gap-2">
                                 <input v-model="sellerApplicationForm.rule_shipping_returns" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
-                                <span>Ich beachte Versand-, Rueckgabe- und Kundenservice-Pflichten.</span>
+                                <span>Ich beachte Versand-, Rückgabe- und Kundenservice-Pflichten.</span>
                             </label>
                             <label class="flex items-start gap-2">
                                 <input v-model="sellerApplicationForm.rule_commission" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
-                                <span>Ich akzeptiere Marketplace-Provisionen und Auszahlungspruefung.</span>
+                                <span>Ich akzeptiere Marketplace-Provisionen und Auszahlungsprüfung.</span>
                             </label>
                             <label class="flex items-start gap-2">
                                 <input v-model="sellerApplicationForm.rule_data_privacy" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
-                                <span>Ich gehe sorgsam mit Kundendaten um und nutze sie nur fuer die Bestellung.</span>
+                                <span>Ich gehe sorgsam mit Kundendaten um und nutze sie nur für die Bestellung.</span>
                             </label>
                         </div>
                         <div v-if="Object.keys(sellerApplicationForm.errors).length" class="rounded-lg border border-error/40 bg-error/10 p-3 text-sm text-error">
@@ -1713,7 +1713,7 @@ onMounted(() => {
                         <button
                             type="button"
                             class="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-bg text-secondary transition hover:text-primary"
-                            aria-label="Produkt erstellen schliessen"
+                            aria-label="Produkt erstellen schließen"
                             @click="productCreateModal = false"
                         >
                             <i class="las la-times text-xl"></i>
@@ -1721,7 +1721,7 @@ onMounted(() => {
                         <div class="mb-4 pr-12">
                             <p class="text-xs font-semibold uppercase text-air-blue">Verkaufen</p>
                             <h2 class="mt-1 text-lg font-semibold text-primary">Produkt erstellen</h2>
-                            <p class="mt-1 text-sm text-secondary">Das Angebot geht danach zur Pruefung und wird erst nach Freigabe im Marketplace angezeigt.</p>
+                            <p class="mt-1 text-sm text-secondary">Das Angebot geht danach zur Prüfung und wird erst nach Freigabe im Marketplace angezeigt.</p>
                         </div>
                         <div class="grid gap-3">
                     <div v-if="Object.keys(productForm.errors).length" class="rounded-lg border border-error/40 bg-error/10 p-3 text-sm text-error">
@@ -1804,7 +1804,7 @@ onMounted(() => {
                                     {{ course.title }} - {{ course.status }}
                                 </option>
                             </select>
-                            <p class="mt-1 text-xs text-secondary">Nach bezahlter Bestellung wird der verknuepfte Kurs automatisch fuer den Kaeufer freigeschaltet.</p>
+                            <p class="mt-1 text-xs text-secondary">Nach bezahlter Bestellung wird der verknuepfte Kurs automatisch für den Käufer freigeschaltet.</p>
                             <p v-if="productForm.errors.learning_course_id" class="mt-1 text-sm text-error">{{ productForm.errors.learning_course_id }}</p>
                         </div>
                         <div>
@@ -1845,7 +1845,7 @@ onMounted(() => {
                                 <p class="mt-1 font-semibold text-primary">
                                     {{ selectedProductCommission.label }}: {{ selectedProductCommission.commission_percent }} %
                                 </p>
-                                <p class="mt-1 text-xs text-secondary">Die Provision wird nach der gewaehlten Kategorie berechnet und intern am Produkt gespeichert.</p>
+                                <p class="mt-1 text-xs text-secondary">Die Provision wird nach der gewählten Kategorie berechnet und intern am Produkt gespeichert.</p>
                             </div>
                             <div class="grid gap-1 text-right">
                                 <p class="text-xs text-secondary">Provision bei diesem Preis</p>
@@ -1875,7 +1875,7 @@ onMounted(() => {
                                 <p class="text-xs text-secondary">Nur Laender mit aktivem Bestand werden im internationalen Marketplace angeboten.</p>
                             </div>
                             <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="addProductInventoryRow">
-                                Land hinzufuegen
+                                Land hinzufügen
                             </button>
                         </div>
                         <div class="mt-3 space-y-3">
@@ -2009,7 +2009,7 @@ onMounted(() => {
                                 class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary"
                                 @click="updateOwnProductStatus(product, 'review')"
                             >
-                                Zur Pruefung
+                                Zur Prüfung
                             </button>
                             <button
                                 v-if="product.status !== 'draft'"
@@ -2028,7 +2028,7 @@ onMounted(() => {
                                 Archivieren
                             </button>
                             <button type="button" class="rounded-lg border border-danger/40 px-3 py-2 text-xs font-semibold text-danger" @click="openDeleteProductModal(product)">
-                                Loeschen
+                                Löschen
                             </button>
                         </div>
                     </article>
@@ -2043,7 +2043,7 @@ onMounted(() => {
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <h2 class="text-lg font-semibold text-primary">Vereinswebsite</h2>
-                        <p class="mt-1 text-sm text-secondary">Website-Anfragen sind nur fuer Vereine sichtbar, fuer die du berechtigt bist.</p>
+                        <p class="mt-1 text-sm text-secondary">Website-Anfragen sind nur für Vereine sichtbar, für die du berechtigt bist.</p>
                     </div>
                     <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="openWebsiteRequestModal">
                         Website anfragen
@@ -2056,7 +2056,7 @@ onMounted(() => {
                         <button
                             type="button"
                             class="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-bg text-secondary transition hover:text-primary"
-                            aria-label="Website-Anfrage schliessen"
+                            aria-label="Website-Anfrage schließen"
                             @click="websiteRequestModal = false"
                         >
                             <i class="las la-times text-xl"></i>
@@ -2064,7 +2064,7 @@ onMounted(() => {
                         <div class="mb-4 pr-12">
                             <p class="text-xs font-semibold uppercase text-air-blue">Verein</p>
                             <h2 class="mt-1 text-lg font-semibold text-primary">Vereinswebsite erstellen lassen</h2>
-                            <p class="mt-1 text-sm text-secondary">Waehle den Verein und beschreibe kurz die gewuenschte Website.</p>
+                            <p class="mt-1 text-sm text-secondary">Wähle den Verein und beschreibe kurz die gewünschte Website.</p>
                         </div>
                         <div class="grid gap-3">
                     <select v-model="websiteForm.club_id" class="rounded-lg border-border bg-inputBg text-sm text-primary">
@@ -2108,7 +2108,7 @@ onMounted(() => {
                     </div>
                     <form class="mt-4 grid gap-3 md:grid-cols-[12rem_minmax(0,1fr)_auto]" @submit.prevent="requestPayout">
                         <select v-model="payoutRequestForm.method" class="rounded-lg border-border bg-inputBg text-sm text-primary">
-                            <option value="bank_transfer">Bankueberweisung</option>
+                            <option value="bank_transfer">Banküberweisung</option>
                             <option value="paypal">PayPal</option>
                         </select>
                         <input v-model="payoutRequestForm.notes" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Hinweis optional">
@@ -2263,7 +2263,7 @@ onMounted(() => {
                     <div class="hidden rounded-lg border border-border bg-bg p-3">
                         <label class="text-xs font-semibold uppercase text-secondary">Zahlungsart</label>
                         <select v-model="adProvider" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
-                            <option value="bank_transfer">Ueberweisung</option>
+                            <option value="bank_transfer">Überweisung</option>
                             <option value="stripe">Stripe</option>
                             <option value="paypal">PayPal</option>
                         </select>
@@ -2271,7 +2271,7 @@ onMounted(() => {
                     <label class="hidden items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
                         <input v-model="adAcceptedTerms" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                         <span>
-                            Ich akzeptiere AGB, Widerrufshinweise und nehme zur Kenntnis, dass die Kampagne erst nach Zahlung zur Pruefung eingereicht wird.
+                            Ich akzeptiere AGB, Widerrufshinweise und nehme zur Kenntnis, dass die Kampagne erst nach Zahlung zur Prüfung eingereicht wird.
                             <Link :href="route('terms.show')" class="text-air-blue underline">AGB</Link>
                             <span> - </span>
                             <Link :href="route('legal.withdrawal')" class="text-air-blue underline">Widerruf</Link>
@@ -2369,7 +2369,7 @@ onMounted(() => {
                                             class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary"
                                             @click="updateOwnCampaignStatus(campaign, 'pending_review')"
                                         >
-                                            Zur Pruefung
+                                            Zur Prüfung
                                         </button>
                                         <button
                                             v-if="['pending_review', 'paused'].includes(campaign.status)"
@@ -2377,14 +2377,14 @@ onMounted(() => {
                                             class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary"
                                             @click="updateOwnCampaignStatus(campaign, 'draft')"
                                         >
-                                            Zurueckziehen
+                                            Zurückziehen
                                         </button>
                                         <button
                                             type="button"
                                             class="rounded-lg border border-danger/40 px-3 py-2 text-xs font-semibold text-danger"
                                             @click="deleteOwnCampaign(campaign)"
                                         >
-                                            Loeschen
+                                            Löschen
                                         </button>
                                     </div>
                                 </td>
@@ -2498,7 +2498,7 @@ onMounted(() => {
 
         <section v-if="activeTab === 'invoices'" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
-                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Zentrale Uebersicht</p>
+                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Zentrale Übersicht</p>
                 <h2 class="mt-1 text-lg font-semibold text-primary">Rechnungen und Einkaeufe</h2>
                 <p class="mt-1 text-sm text-secondary">Hier stehen Ads, Marketplace, Kurse, Outfit-Abos und Konto-Abos zusammen.</p>
             </div>
@@ -2547,8 +2547,8 @@ onMounted(() => {
 
         <section v-if="activeTab === 'invoices'" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
-                <h2 class="text-lg font-semibold text-primary">Bestellungen, Probleme und Ruecksendungen</h2>
-                <p class="mt-1 text-sm text-secondary">Fuer Marketplace-Bestellungen kannst du hier Rechnungen laden, Probleme melden und Ruecksendungen verfolgen.</p>
+                <h2 class="text-lg font-semibold text-primary">Bestellungen, Probleme und Rücksendungen</h2>
+                <p class="mt-1 text-sm text-secondary">Für Marketplace-Bestellungen kannst du hier Rechnungen laden, Probleme melden und Rücksendungen verfolgen.</p>
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full text-left text-sm">
@@ -2565,8 +2565,8 @@ onMounted(() => {
                                 <p class="font-semibold text-primary">{{ orderPaymentLabel(order) }}</p>
                                 <p v-if="orderPaymentHint(order)" class="text-xs text-secondary">{{ orderPaymentHint(order) }}</p>
                                 <p class="text-xs text-secondary">Versand: {{ orderShippingLabel(order.shipping_status) }}</p>
-                                <p v-if="orderCanCancel(order)" class="mt-1 text-xs text-secondary">Noch nicht versendet: Storno ist moeglich.</p>
-                                <p v-else-if="order.shipping_status === 'shipped'" class="mt-1 text-xs text-secondary">Bereits versendet: Storno ist nicht mehr moeglich. Nach Zustellung kannst du eine Ruecksendung anfragen.</p>
+                                <p v-if="orderCanCancel(order)" class="mt-1 text-xs text-secondary">Noch nicht versendet: Storno ist möglich.</p>
+                                <p v-else-if="order.shipping_status === 'shipped'" class="mt-1 text-xs text-secondary">Bereits versendet: Storno ist nicht mehr möglich. Nach Zustellung kannst du eine Rücksendung anfragen.</p>
                                 <div v-if="order.issue_status && order.issue_status !== 'none'" class="mt-3 rounded-lg border border-warning/30 bg-warning/10 p-3">
                                     <p class="text-xs font-semibold uppercase text-warning">{{ orderIssueLabel(order.issue_status) }}</p>
                                     <p v-if="order.issue_note" class="mt-1 text-xs text-secondary">Deine Meldung: {{ order.issue_note }}</p>
@@ -2625,7 +2625,7 @@ onMounted(() => {
                 <button
                     type="button"
                     class="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-bg text-secondary transition hover:text-primary"
-                    aria-label="Produkt schliessen"
+                    aria-label="Produkt schließen"
                     @click="closeEditProductModal"
                 >
                     <i class="las la-times text-xl"></i>
@@ -2633,7 +2633,7 @@ onMounted(() => {
                 <div class="pr-12">
                     <p class="text-xs font-semibold uppercase text-air-blue">Verkaufen</p>
                     <h2 class="mt-1 text-lg font-semibold text-primary">Produkt bearbeiten</h2>
-                    <p class="mt-1 text-sm text-secondary">Aenderungen werden danach erneut geprueft, bevor sie im Marketplace sichtbar sind.</p>
+                    <p class="mt-1 text-sm text-secondary">Änderungen werden danach erneut geprüft, bevor sie im Marketplace sichtbar sind.</p>
                 </div>
 
                 <div class="mt-5 grid gap-3 md:grid-cols-2">
@@ -2659,7 +2659,7 @@ onMounted(() => {
                             <p class="text-xs text-secondary">Steuert, in welchen Laendern dein Produkt sichtbar und kaufbar ist.</p>
                         </div>
                         <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="addEditProductInventoryRow">
-                            Land hinzufuegen
+                            Land hinzufügen
                         </button>
                     </div>
                     <div class="mt-3 space-y-3">
@@ -2694,16 +2694,16 @@ onMounted(() => {
 
         <div v-if="deleteProductModal.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
             <div class="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-2xl">
-                <h2 class="text-lg font-semibold text-primary">Produkt loeschen</h2>
+                <h2 class="text-lg font-semibold text-primary">Produkt löschen</h2>
                 <p class="mt-2 text-sm text-secondary">
-                    Gib <span class="font-semibold text-primary">delete</span> ein. Wenn es bereits Bestellungen gibt, wird das Produkt archiviert statt geloescht.
+                    Gib <span class="font-semibold text-primary">delete</span> ein. Wenn es bereits Bestellungen gibt, wird das Produkt archiviert statt gelöscht.
                 </p>
                 <p class="mt-3 rounded-lg border border-border bg-bg p-3 text-sm font-semibold text-primary">{{ deleteProductModal.product?.title }}</p>
                 <input v-model="deleteProductModal.confirmation" class="mt-4 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="delete">
                 <div class="mt-5 flex justify-end gap-3">
                     <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="closeDeleteProductModal">Abbrechen</button>
                     <button class="rounded-lg border border-danger/50 px-4 py-2 text-sm font-semibold text-danger" :disabled="deleteProductModal.confirmation !== 'delete'" @click="destroyOwnProduct">
-                        Loeschen
+                        Löschen
                     </button>
                 </div>
             </div>
@@ -2730,7 +2730,7 @@ onMounted(() => {
                 <button
                     type="button"
                     class="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-bg text-secondary transition hover:text-primary"
-                    aria-label="Anzeigegruppe schliessen"
+                    aria-label="Anzeigegruppe schließen"
                     @click="closeAdGroupModal"
                 >
                     <i class="las la-times text-xl"></i>
@@ -2766,12 +2766,12 @@ onMounted(() => {
                                         <i class="las la-times"></i>
                                     </button>
                                 </span>
-                                <span v-if="!selectedAdGroupSports.length" class="text-sm text-secondary">Noch keine Sportart gewaehlt.</span>
+                                <span v-if="!selectedAdGroupSports.length" class="text-sm text-secondary">Noch keine Sportart gewählt.</span>
                             </div>
                             <input
                                 v-model="adGroupSportQuery"
                                 class="mt-3 w-full rounded-lg border-border bg-inputBg text-sm text-primary"
-                                placeholder="Sportart suchen und aus Liste waehlen"
+                                placeholder="Sportart suchen und aus Liste wählen"
                             >
                             <div class="mt-2 max-h-44 overflow-y-auto rounded-lg border border-border bg-card">
                                 <button
@@ -2802,7 +2802,7 @@ onMounted(() => {
                     </div>
                     <div class="grid gap-3 sm:grid-cols-2">
                         <input v-model="adGroupForm.locations" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Ort/Region, z. B. Saarland, Berlin">
-                        <input v-model="adGroupForm.zones" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Zone, z. B. 10 km um Saarbruecken">
+                        <input v-model="adGroupForm.zones" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Zone, z. B. 10 km um Saarbrücken">
                     </div>
                     <div class="grid gap-3 sm:grid-cols-3">
                         <input v-model="adGroupForm.daily_budget_cents" v-bind="moneyInputAttrs" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Tagesbudget in EUR">
@@ -2827,7 +2827,7 @@ onMounted(() => {
                 <button
                     type="button"
                     class="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-bg text-secondary transition hover:text-primary"
-                    aria-label="Anzeige und Varianten schliessen"
+                    aria-label="Anzeige und Varianten schließen"
                     @click="closeAdCreativeModal"
                 >
                     <i class="las la-times text-xl"></i>
@@ -2850,11 +2850,11 @@ onMounted(() => {
                     <div class="rounded-lg border border-border bg-bg p-3">
                         <div class="flex items-center justify-between gap-3">
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">Varianten fuer A/B-Test</label>
+                                <label class="text-xs font-semibold uppercase text-secondary">Varianten für A/B-Test</label>
                                 <p class="mt-1 text-xs text-secondary">Jede Variante kann eigene Headline, Text, Ziel-URL, Bild-URL und Gewicht haben.</p>
                             </div>
                             <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="addAdCreativeRow">
-                                Variante hinzufuegen
+                                Variante hinzufügen
                             </button>
                         </div>
                         <div class="mt-3 space-y-3">
@@ -2903,7 +2903,7 @@ onMounted(() => {
                 <button
                     type="button"
                     class="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-bg text-secondary transition hover:text-primary"
-                    aria-label="Bearbeiten schliessen"
+                    aria-label="Bearbeiten schließen"
                     @click="closeEditCampaignModal"
                 >
                     <i class="las la-times text-xl"></i>
@@ -2911,7 +2911,7 @@ onMounted(() => {
                 <div class="pr-12">
                     <h2 class="text-lg font-semibold text-primary">Ads-Kampagne bearbeiten</h2>
                     <p class="mt-2 text-sm text-secondary">
-                        Bezahlte oder bereits aktive Kampagnen gehen nach Aenderungen wieder zur Admin-Pruefung.
+                        Bezahlte oder bereits aktive Kampagnen gehen nach Änderungen wieder zur Admin-Prüfung.
                     </p>
                 </div>
 
@@ -2982,7 +2982,7 @@ onMounted(() => {
                                 <p class="mt-1 text-xs text-secondary">Bearbeite Headline, Text, Ziel-URL, Bild-URL und Gewicht.</p>
                             </div>
                             <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="addEditCampaignCreativeRow">
-                                Variante hinzufuegen
+                                Variante hinzufügen
                             </button>
                         </div>
                         <div class="mt-3 space-y-3">
@@ -3020,13 +3020,13 @@ onMounted(() => {
                         <input v-model="editCampaignForm.starts_at" type="datetime-local" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                         <input v-model="editCampaignForm.ends_at" type="datetime-local" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                     </div>
-                    <p v-if="editCampaignModal.campaign?.payment_completed" class="text-xs text-secondary">Das bezahlte Gesamtbudget kann hier nicht nachtraeglich geaendert werden.</p>
+                    <p v-if="editCampaignModal.campaign?.payment_completed" class="text-xs text-secondary">Das bezahlte Gesamtbudget kann hier nicht nachtraeglich geändert werden.</p>
                     <div class="grid gap-3 sm:grid-cols-2">
                         <input v-model="editCampaignForm.audience_age_min" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter von">
                         <input v-model="editCampaignForm.audience_age_max" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter bis">
                     </div>
                     <input v-model="editCampaignForm.audience_locations" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Regionen, z. B. Berlin, NRW">
-                    <input v-model="editCampaignForm.audience_interests" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interessen, z. B. Fussball, Fitness">
+                    <input v-model="editCampaignForm.audience_interests" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interessen, z. B. Fußball, Fitness">
                     <input v-model="editCampaignForm.cta_label" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="CTA, z. B. Jetzt ansehen">
                 </div>
 
@@ -3043,13 +3043,13 @@ onMounted(() => {
 
         <div v-if="deleteCampaignModal.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
             <div class="w-full max-w-lg rounded-xl border border-danger/30 bg-card p-5 shadow-2xl">
-                <h2 class="text-lg font-semibold text-primary">Ads-Kampagne loeschen</h2>
+                <h2 class="text-lg font-semibold text-primary">Ads-Kampagne löschen</h2>
                 <p class="mt-2 text-sm text-secondary">
-                    Diese Kampagne wird dauerhaft geloescht:
+                    Diese Kampagne wird dauerhaft gelöscht:
                     <span class="font-semibold text-primary">{{ deleteCampaignModal.campaign?.headline || deleteCampaignModal.campaign?.name }}</span>
                 </p>
                 <p class="mt-4 text-sm text-secondary">
-                    Bitte gib <strong class="text-primary">delete</strong> ein, um die Loeschung zu bestaetigen.
+                    Bitte gib <strong class="text-primary">delete</strong> ein, um die Löschung zu bestätigen.
                 </p>
                 <input
                     v-model="deleteCampaignModal.confirmation"
@@ -3071,7 +3071,7 @@ onMounted(() => {
                         :disabled="deleteCampaignModal.confirmation !== 'delete'"
                         @click="confirmDeleteOwnCampaign"
                     >
-                        Endgueltig loeschen
+                        Endgültig löschen
                     </button>
                 </div>
             </div>
@@ -3081,7 +3081,7 @@ onMounted(() => {
             <div class="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-2xl">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Checkout bestaetigen</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Checkout bestätigen</p>
                         <h2 class="mt-1 text-lg font-semibold text-primary">{{ checkoutConfirmationTitle }}</h2>
                         <p class="mt-2 text-sm text-secondary">
                             {{ checkoutConfirmationPrice }}

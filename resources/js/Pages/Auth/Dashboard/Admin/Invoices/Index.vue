@@ -39,10 +39,10 @@ const statusForm = useForm({
 const selectedType = computed(() => props.invoiceTypes.find((type) => type.value === form.source))
 const selectedRecipientLabel = computed(() => {
     if (recipientMode.value === 'person') {
-        return props.users.find((user) => String(user.id) === String(form.user_id))?.name || 'Person waehlen'
+        return props.users.find((user) => String(user.id) === String(form.user_id))?.name || 'Person wählen'
     }
 
-    return props.clubs.find((club) => String(club.id) === String(form.club_id))?.name || 'Verein waehlen'
+    return props.clubs.find((club) => String(club.id) === String(form.club_id))?.name || 'Verein wählen'
 })
 
 const exampleTitles = {
@@ -140,8 +140,8 @@ const statusLabel = (status) => ({
     paid: 'Bezahlt',
     open: 'Offen',
     pending: 'Ausstehend',
-    awaiting_transfer: 'Warte auf Ueberweisung',
-    overdue: 'Ueberfaellig',
+    awaiting_transfer: 'Warte auf Überweisung',
+    overdue: 'Überfällig',
     cancelled: 'Storniert',
     failed: 'Fehlgeschlagen',
 }[status] || status || '-')
@@ -158,9 +158,9 @@ const statusClasses = (status) => ({
 
 const statusOptions = [
     { value: 'open', label: 'Offen', hint: 'Rechnung ist erstellt und noch nicht bezahlt.' },
-    { value: 'pending', label: 'Ausstehend', hint: 'Zahlung oder Pruefung ist noch in Bearbeitung.' },
+    { value: 'pending', label: 'Ausstehend', hint: 'Zahlung oder Prüfung ist noch in Bearbeitung.' },
     { value: 'paid', label: 'Bezahlt', hint: 'Rechnung wird als bezahlt markiert.' },
-    { value: 'overdue', label: 'Ueberfaellig', hint: 'Faelligkeit ist abgelaufen.' },
+    { value: 'overdue', label: 'Überfällig', hint: 'Faelligkeit ist abgelaufen.' },
     { value: 'cancelled', label: 'Storniert', hint: 'Rechnung ist nicht mehr aktiv.' },
 ]
 
@@ -194,7 +194,7 @@ const deleteInvoice = async (invoice) => {
                         <p class="text-xs font-semibold uppercase tracking-[0.18em] text-air-blue">Finanzen</p>
                         <h1 class="mt-2 text-3xl font-black text-primary">Rechnungszentrale</h1>
                         <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
-                        Erstelle und pruefe Rechnungen fuer Konto-Abos, Outfit-Abos, Marketplace-Kaeufe, Kurse,
+                        Erstelle und prüfe Rechnungen für Konto-Abos, Outfit-Abos, Marketplace-Kaeufe, Kurse,
                         ADS, Sponsoring und Werbeagentur-Leistungen wie Website, Logo oder Branding.
                     </p>
                 </div>
@@ -299,7 +299,7 @@ const deleteInvoice = async (invoice) => {
                             <td class="px-5 py-4 text-right">
                                 <div class="flex flex-wrap justify-end gap-2">
                                     <a v-if="invoice.download_url" :href="invoice.download_url" class="rounded-lg border border-border px-3 py-2 text-xs font-bold text-primary hover:bg-muted">PDF</a>
-                                    <button v-if="invoice.delete_url" type="button" class="rounded-lg bg-error px-3 py-2 text-xs font-semibold text-white hover:bg-error/90" @click="deleteInvoice(invoice)">Loeschen</button>
+                                    <button v-if="invoice.delete_url" type="button" class="rounded-lg bg-error px-3 py-2 text-xs font-semibold text-white hover:bg-error/90" @click="deleteInvoice(invoice)">Löschen</button>
                                     <span v-if="!invoice.download_url && !invoice.delete_url" class="text-xs text-secondary">-</span>
                                 </div>
                             </td>
@@ -340,7 +340,7 @@ const deleteInvoice = async (invoice) => {
                     </div>
                     <div class="mt-4 flex flex-wrap gap-2">
                         <a v-if="invoice.download_url" :href="invoice.download_url" class="rounded-lg border border-border px-3 py-2 text-xs font-bold text-primary">PDF</a>
-                                <button v-if="invoice.delete_url" type="button" class="rounded-lg bg-error px-3 py-2 text-xs font-semibold text-white hover:bg-error/90" @click="deleteInvoice(invoice)">Loeschen</button>
+                                <button v-if="invoice.delete_url" type="button" class="rounded-lg bg-error px-3 py-2 text-xs font-semibold text-white hover:bg-error/90" @click="deleteInvoice(invoice)">Löschen</button>
                     </div>
                 </article>
             </div>
@@ -384,7 +384,7 @@ const deleteInvoice = async (invoice) => {
                             type="button"
                             class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-secondary hover:bg-muted hover:text-primary"
                             :disabled="statusForm.processing"
-                            aria-label="Status-Modal schliessen"
+                            aria-label="Status-Modal schließen"
                             @click="closeStatusModal"
                         >
                             <i class="las la-times text-xl"></i>
@@ -462,7 +462,7 @@ const deleteInvoice = async (invoice) => {
                             type="button"
                             class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-secondary hover:bg-muted hover:text-primary"
                             :disabled="form.processing"
-                            aria-label="Modal schliessen"
+                            aria-label="Modal schließen"
                             @click="closeCreateModal"
                         >
                             <i class="las la-times text-xl"></i>
@@ -508,18 +508,18 @@ const deleteInvoice = async (invoice) => {
 
                                     <div class="mt-4 grid gap-4 lg:grid-cols-2">
                                         <label v-if="recipientMode === 'person'" class="block">
-                                            <span class="text-sm font-semibold text-primary">Person auswaehlen</span>
+                                            <span class="text-sm font-semibold text-primary">Person auswählen</span>
                                             <select v-model="form.user_id" class="mt-1 w-full rounded-xl border-border bg-card text-primary">
-                                                <option value="">Sportler, Trainer, Sponsor oder Kursanbieter waehlen</option>
+                                                <option value="">Sportler, Trainer, Sponsor oder Kursanbieter wählen</option>
                                                 <option v-for="user in users" :key="user.id" :value="user.id">{{ userLabel(user) }}</option>
                                             </select>
                                             <p v-if="form.errors.user_id" class="mt-1 text-xs text-error">{{ form.errors.user_id }}</p>
                                         </label>
 
                                         <label v-if="recipientMode === 'club'" class="block">
-                                            <span class="text-sm font-semibold text-primary">Verein auswaehlen</span>
+                                            <span class="text-sm font-semibold text-primary">Verein auswählen</span>
                                             <select v-model="form.club_id" class="mt-1 w-full rounded-xl border-border bg-card text-primary">
-                                                <option value="">Verein waehlen</option>
+                                                <option value="">Verein wählen</option>
                                                 <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
                                             </select>
                                             <p v-if="form.errors.club_id" class="mt-1 text-xs text-error">{{ form.errors.club_id }}</p>
@@ -531,7 +531,7 @@ const deleteInvoice = async (invoice) => {
                                                 <option value="open">Offen</option>
                                                 <option value="pending">Ausstehend</option>
                                                 <option value="paid">Bezahlt</option>
-                                                <option value="overdue">Ueberfaellig</option>
+                                                <option value="overdue">Überfällig</option>
                                                 <option value="cancelled">Storniert</option>
                                             </select>
                                             <p v-if="form.errors.status" class="mt-1 text-xs text-error">{{ form.errors.status }}</p>

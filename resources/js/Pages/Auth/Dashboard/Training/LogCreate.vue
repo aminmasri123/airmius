@@ -22,7 +22,7 @@ const fallbackSports = [
     { key: 'laufen', label: 'Laufen', category: 'Schnellauswahl' },
     { key: 'gym', label: 'Gym', category: 'Schnellauswahl' },
     { key: 'schwimmen', label: 'Schwimmen', category: 'Schnellauswahl' },
-    { key: 'fussball', label: 'Fussball', category: 'Schnellauswahl' },
+    { key: 'fussball', label: 'Fußball', category: 'Schnellauswahl' },
     { key: 'cycling', label: 'Radfahren', category: 'Schnellauswahl' },
     { key: 'yoga', label: 'Yoga', category: 'Schnellauswahl' },
 ]
@@ -37,9 +37,9 @@ const trainingTypes = [
         title: 'Krafttraining',
         fields: ['sets', 'reps', 'weight_kg', 'duration_minutes', 'intensity', 'notes'],
         mode: 'sets',
-        detailTitle: 'Uebungen und Saetze',
-        entryLabel: 'Uebung',
-        entryPlaceholder: 'z. B. Kniebeugen, Bankdruecken, Core',
+        detailTitle: 'Übungen und Sätze',
+        entryLabel: 'Übung',
+        entryPlaceholder: 'z. B. Kniebeugen, Bankdrücken, Core',
     },
     {
         key: 'run_interval',
@@ -82,11 +82,11 @@ const trainingTypes = [
     },
     {
         key: 'football',
-        label: 'Fussball',
-        shortLabel: 'Fussball',
+        label: 'Fußball',
+        shortLabel: 'Fußball',
         icon: 'las la-futbol',
         sport_type: 'fussball',
-        title: 'Fussballtraining',
+        title: 'Fußballtraining',
         fields: ['duration_minutes', 'distance_km', 'intensity', 'notes'],
         mode: 'rows',
         detailTitle: 'Drills und Spielformen',
@@ -115,8 +115,8 @@ const trainingTypes = [
         title: 'Training',
         fields: ['sets', 'reps', 'weight_kg', 'duration_minutes', 'distance_km', 'intensity', 'notes'],
         mode: 'rows',
-        detailTitle: 'Uebungen / Werte',
-        entryLabel: 'Uebung / Abschnitt',
+        detailTitle: 'Übungen / Werte',
+        entryLabel: 'Übung / Abschnitt',
         entryPlaceholder: 'z. B. Technik, Drill, Runde',
     },
 ]
@@ -276,9 +276,9 @@ let autosaveTimer = null
 let autosaveRequestId = 0
 
 const trainingSteps = [
-    { id: 1, label: 'Training waehlen', short: 'Start' },
+    { id: 1, label: 'Training wählen', short: 'Start' },
     { id: 2, label: 'Dokumentieren', short: 'Doku' },
-    { id: 3, label: 'Abschliessen', short: 'Finish' },
+    { id: 3, label: 'Abschließen', short: 'Finish' },
 ]
 
 const trainingTypeThemes = {
@@ -419,7 +419,7 @@ const liveElapsedLabel = computed(() => {
 
 const detailSummary = computed(() => {
     if (usesGymSets.value) {
-        return `${form.gym_exercises.length} Uebungen · ${completedGymSetCount.value}/${gymSetCount.value} Saetze erledigt`
+        return `${form.gym_exercises.length} Übungen · ${completedGymSetCount.value}/${gymSetCount.value} Sätze erledigt`
     }
 
     if (selectedType.value.key === 'long_run' && !visibleEntries.value.length) {
@@ -531,7 +531,7 @@ const fieldLabel = (field) => ({
         notes: 'Route / Kadenz',
     },
 }[selectedType.value.key]?.[field] || {
-    sets: 'Saetze',
+    sets: 'Sätze',
     reps: 'Wdh./Intervalle',
     weight_kg: 'Gewicht kg',
     duration_minutes: 'Zeit min',
@@ -668,7 +668,7 @@ const inferTrainingTypeFromPlanItem = (item = {}) => {
     const sport = String(item.sport_type || '').toLowerCase()
     const text = planItemSearchText(item)
 
-    if (sport === 'gym' || text.match(/\b(saetze|sätze|wiederholungen|gewicht|kraft|bankdruecken|bankdrücken|kniebeuge|deadlift)\b/)) return 'gym'
+    if (sport === 'gym' || text.match(/\b(saetze|sätze|wiederholungen|gewicht|kraft|bankdrücken|bankdrücken|kniebeuge|deadlift)\b/)) return 'gym'
     if (sport === 'schwimmen') return 'swim'
     if (sport === 'fussball' || sport === 'football') return 'football'
     if (sport === 'cycling' || sport === 'radfahren' || sport === 'bike') return 'cycling'
@@ -1189,11 +1189,11 @@ onUnmounted(() => {
                         <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Training</p>
                         <h1 class="mt-1 text-2xl font-semibold text-primary sm:text-3xl">Dokumentieren</h1>
                         <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
-                            Schnell erfassen, Saetze abhaken, bei Bedarf spaeter Details ergaenzen.
+                            Schnell erfassen, Sätze abhaken, bei Bedarf später Details ergaenzen.
                         </p>
                     </div>
                     <Link :href="route('auth.training.index')" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
-                        Zurueck
+                        Zurück
                     </Link>
                 </div>
             </div>
@@ -1207,7 +1207,7 @@ onUnmounted(() => {
                     <p class="mt-1 truncate text-sm font-semibold text-primary">{{ detailSummary }}</p>
                 </div>
                 <div class="rounded-xl border border-border bg-inputBg/40 p-3">
-                    <p class="text-[11px] font-semibold uppercase tracking-wide text-secondary">Qualitaet</p>
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-secondary">Qualität</p>
                     <div class="mt-2 flex items-center gap-2">
                         <div class="h-2 flex-1 overflow-hidden rounded-full bg-muted">
                             <div class="h-full rounded-full bg-air-blue" :style="{ width: `${documentationScore}%` }"></div>
@@ -1222,7 +1222,7 @@ onUnmounted(() => {
                         :class="autosaveStatus === 'error' ? 'border-danger/40 bg-danger/10 text-danger' : autosaveStatus === 'saving' || autosaveStatus === 'dirty' ? 'border-air-blue/40 bg-air-blue/10 text-air-blue' : 'border-success/40 bg-success/10 text-success'"
                     >
                         <span v-if="autosaveStatus === 'saving'">Entwurf wird gespeichert...</span>
-                        <span v-else-if="autosaveStatus === 'dirty'">Aenderungen werden gleich gespeichert</span>
+                        <span v-else-if="autosaveStatus === 'dirty'">Änderungen werden gleich gespeichert</span>
                         <span v-else-if="autosaveStatus === 'error'">{{ autosaveError }}</span>
                         <span v-else>Entwurf gespeichert{{ autosaveSavedAt ? ` um ${formatSaveTime(autosaveSavedAt)}` : '' }}</span>
                     </p>
@@ -1336,7 +1336,7 @@ onUnmounted(() => {
                                 <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Live-Modus</p>
                                 <p class="mt-1 text-sm font-semibold text-primary">
                                     <span v-if="isLiveTraining">Training laeuft seit {{ liveElapsedLabel }}</span>
-                                    <span v-else>Schnellstart fuer Training auf dem Platz, im Gym oder unterwegs.</span>
+                                    <span v-else>Schnellstart für Training auf dem Platz, im Gym oder unterwegs.</span>
                                 </p>
                             </div>
                             <div class="flex flex-wrap gap-2">
@@ -1354,7 +1354,7 @@ onUnmounted(() => {
                                     class="rounded-xl border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
                                     @click="setDurationFromLive"
                                 >
-                                    Zeit uebernehmen
+                                    Zeit übernehmen
                                 </button>
                                 <button
                                     v-if="isLiveTraining"
@@ -1362,7 +1362,7 @@ onUnmounted(() => {
                                     class="rounded-xl bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary"
                                     @click="finishLiveTraining"
                                 >
-                                    Abschliessen
+                                    Abschließen
                                 </button>
                             </div>
                         </div>
@@ -1377,7 +1377,7 @@ onUnmounted(() => {
                         <textarea v-model="form.notes" rows="4" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Gefuehl, Technik, Schmerzen, Besonderheiten" />
                     </label>
                     <label v-if="form.user_id" class="block text-sm font-semibold text-primary md:col-span-2">Trainer-Hinweis
-                        <textarea v-model="form.trainer_feedback" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Hinweise, Korrekturen oder Fokus fuer die naechste Einheit" />
+                        <textarea v-model="form.trainer_feedback" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Hinweise, Korrekturen oder Fokus für die nächste Einheit" />
                     </label>
                     <label class="block text-sm font-semibold text-primary md:col-span-2">Sichtbarkeit
                         <select v-model="form.privacy_scope" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
@@ -1406,7 +1406,7 @@ onUnmounted(() => {
             <section v-show="currentTrainingStep === 3" class="min-w-0 space-y-5 rounded-2xl border border-border bg-card p-4 sm:p-5 2xl:col-start-1 2xl:row-start-2">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Schritt 3</p>
-                    <h2 class="mt-1 text-xl font-semibold text-primary">Training abschliessen</h2>
+                    <h2 class="mt-1 text-xl font-semibold text-primary">Training abschließen</h2>
                     <p class="mt-2 text-sm leading-6 text-secondary">
                         Diese Werte sind bewusst am Ende. Du musst nur eintragen, was du wirklich weisst.
                     </p>
@@ -1447,7 +1447,7 @@ onUnmounted(() => {
                 </div>
                 <div class="flex flex-wrap justify-between gap-2">
                     <button type="button" class="rounded-xl border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted" @click="currentTrainingStep = 2">
-                        Zurueck zur Doku
+                        Zurück zur Doku
                     </button>
                     <button type="submit" class="rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="form.processing">
                         Training speichern
@@ -1490,7 +1490,7 @@ onUnmounted(() => {
                     <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Aktive Vorlage</p>
                     <h2 class="mt-1 text-lg font-semibold text-primary">{{ selectedType.label }}</h2>
                     <p class="mt-2 text-sm leading-6 text-secondary">
-                        {{ usesGymSets ? 'Erfasse zuerst die Uebung und darunter jeden Satz einzeln mit eigenen Wiederholungen und Gewicht.' : 'Die Felder passen sich der Trainingsart an. Bei Long Run sind Abschnitte optional, falls du Tempo- oder Kilometerbloecke dokumentieren willst.' }}
+                        {{ usesGymSets ? 'Erfasse zuerst die Übung und darunter jeden Satz einzeln mit eigenen Wiederholungen und Gewicht.' : 'Die Felder passen sich der Trainingsart an. Bei Long Run sind Abschnitte optional, falls du Tempo- oder Kilometerbloecke dokumentieren willst.' }}
                     </p>
                     <div class="mt-4 rounded-xl border border-border bg-inputBg/40 p-3">
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Moment</p>
@@ -1498,7 +1498,7 @@ onUnmounted(() => {
                     </div>
                     <div class="mt-3 rounded-xl border border-border bg-inputBg/40 p-3">
                         <div class="flex items-center justify-between gap-3">
-                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Qualitaetscheck</p>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Qualitätscheck</p>
                             <p class="text-sm font-semibold" :class="documentationScoreClass">{{ documentationScore }}%</p>
                         </div>
                         <div class="mt-2 h-2 overflow-hidden rounded-full bg-muted">
@@ -1563,7 +1563,7 @@ onUnmounted(() => {
                         <h2 class="text-xl font-semibold text-primary">{{ selectedType.detailTitle }}</h2>
                     </div>
                     <button v-if="!usesGymSets" type="button" class="rounded-xl border border-border bg-inputBg/40 px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="addEntry">
-                        Zeile hinzufuegen
+                        Zeile hinzufügen
                     </button>
                 </div>
 
@@ -1571,11 +1571,11 @@ onUnmounted(() => {
                     <div class="rounded-2xl border border-border bg-inputBg/40 p-3">
                         <div class="flex flex-wrap items-center justify-between gap-3">
                             <div>
-                                <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Uebungen</p>
-                                <p class="mt-1 text-sm font-semibold text-primary">{{ form.gym_exercises.length }} Uebungen angelegt</p>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Übungen</p>
+                                <p class="mt-1 text-sm font-semibold text-primary">{{ form.gym_exercises.length }} Übungen angelegt</p>
                             </div>
                             <button type="button" class="rounded-xl border border-border bg-card px-3 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="addGymExercise">
-                                Uebung hinzufuegen
+                                Übung hinzufügen
                             </button>
                         </div>
                         <div class="custom-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1">
@@ -1587,7 +1587,7 @@ onUnmounted(() => {
                                 :class="activeGymExerciseIndex === exerciseIndex ? 'border-air-blue bg-air-blue/10 text-primary ring-1 ring-air-blue/30' : 'border-border bg-card text-secondary hover:bg-muted hover:text-primary'"
                                 @click="setActiveGymExercise(exerciseIndex)"
                             >
-                                <span class="block text-[11px] font-semibold uppercase tracking-wide">Uebung {{ exerciseIndex + 1 }}</span>
+                                <span class="block text-[11px] font-semibold uppercase tracking-wide">Übung {{ exerciseIndex + 1 }}</span>
                                 <span class="mt-1 block truncate font-semibold">{{ exercise.title || 'Ohne Namen' }}</span>
                             </button>
                         </div>
@@ -1600,14 +1600,14 @@ onUnmounted(() => {
                         class="rounded-2xl border border-border bg-inputBg/40 p-3 sm:p-4"
                     >
                         <div class="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
-                            <label class="block text-sm font-semibold text-primary">Uebung {{ exerciseIndex + 1 }}
+                            <label class="block text-sm font-semibold text-primary">Übung {{ exerciseIndex + 1 }}
                                 <input v-model="exercise.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="z. B. Kniebeugen" />
                             </label>
                             <button type="button" class="rounded-xl border border-border px-3 py-2 text-sm font-semibold text-danger hover:bg-danger/10" @click="removeGymExercise(exerciseIndex)">
-                                Uebung entfernen
+                                Übung entfernen
                             </button>
                         </div>
-                        <label class="mt-3 block text-sm font-semibold text-primary">Notiz zur Uebung
+                        <label class="mt-3 block text-sm font-semibold text-primary">Notiz zur Übung
                             <input v-model="exercise.notes" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="z. B. tief, sauber, letzte Wiederholung schwer" />
                         </label>
                         <div
@@ -1620,7 +1620,7 @@ onUnmounted(() => {
                                     <p class="mt-1 text-xs text-secondary">{{ recentExerciseLabel(matchingRecentExercise(exercise)) }}</p>
                                 </div>
                                 <button type="button" class="rounded-xl border border-air-blue/40 px-3 py-2 text-xs font-semibold text-primary hover:bg-air-blue/10" @click="applyRecentExercise(exerciseIndex, matchingRecentExercise(exercise))">
-                                    Letzte Werte uebernehmen
+                                    Letzte Werte übernehmen
                                 </button>
                             </div>
                             <div v-if="matchingRecentExercise(exercise).history?.length" class="mt-3 grid gap-2 sm:grid-cols-3">
@@ -1638,11 +1638,11 @@ onUnmounted(() => {
                         <div class="mt-4 rounded-2xl border border-border bg-card p-3">
                             <div class="flex flex-wrap items-center justify-between gap-3">
                                 <div>
-                                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Saetze</p>
-                                    <p class="mt-1 text-sm font-semibold text-primary">{{ exercise.sets.length }} Saetze in Uebung {{ exerciseIndex + 1 }}</p>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Sätze</p>
+                                    <p class="mt-1 text-sm font-semibold text-primary">{{ exercise.sets.length }} Sätze in Übung {{ exerciseIndex + 1 }}</p>
                                 </div>
                                 <button type="button" class="rounded-xl border border-border bg-inputBg px-3 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="addGymSet(exerciseIndex)">
-                                    Satz hinzufuegen
+                                    Satz hinzufügen
                                 </button>
                             </div>
                             <div class="custom-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1">
@@ -1702,7 +1702,7 @@ onUnmounted(() => {
                                     <input v-model="set.notes" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                                 </label>
                                 <label class="block text-sm font-semibold text-primary sm:col-span-2 lg:col-span-6">Medien-Link
-                                    <input v-model="set.media_url" type="url" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Video oder Bild-Link fuer Technikfeedback" />
+                                    <input v-model="set.media_url" type="url" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Video oder Bild-Link für Technikfeedback" />
                                 </label>
                                 <label class="block text-sm font-semibold text-primary sm:col-span-2 lg:col-span-6">Datei hochladen
                                     <input type="file" accept="image/*,video/*" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary file:mr-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="set.media_file = $event.target.files?.[0] || null" />
@@ -1737,7 +1737,7 @@ onUnmounted(() => {
                         </button>
                     </div>
                     <p v-if="selectedType.key === 'long_run' && !visibleEntries.length" class="rounded-xl border border-border bg-inputBg/40 p-3 text-sm text-secondary">
-                        Bei einem Long Run musst du hier nichts eintragen, wenn du nur Gesamtdauer und Distanz dokumentieren willst. Nutze Abschnitte nur fuer Kilometerbloecke, Tempoanteile oder besondere Phasen.
+                        Bei einem Long Run musst du hier nichts eintragen, wenn du nur Gesamtdauer und Distanz dokumentieren willst. Nutze Abschnitte nur für Kilometerbloecke, Tempoanteile oder besondere Phasen.
                     </p>
                     <div
                         v-for="(entry, index) in form.entries"
@@ -1783,10 +1783,10 @@ onUnmounted(() => {
                 </div>
                 <div class="flex flex-wrap justify-between gap-2 border-t border-border pt-4">
                     <button type="button" class="rounded-xl border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted" @click="currentTrainingStep = 1">
-                        Zurueck
+                        Zurück
                     </button>
                     <button type="button" class="rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary" @click="currentTrainingStep = 3">
-                        Abschliessen
+                        Abschließen
                     </button>
                 </div>
             </section>
@@ -1795,7 +1795,7 @@ onUnmounted(() => {
                 <div v-if="usesGymSets && activeGymSet" class="mx-auto max-w-4xl space-y-2">
                     <div class="flex items-center justify-between gap-3">
                         <div class="min-w-0">
-                            <p class="truncate text-sm font-semibold text-primary">{{ activeGymExercise?.title || 'Aktive Uebung' }}</p>
+                            <p class="truncate text-sm font-semibold text-primary">{{ activeGymExercise?.title || 'Aktive Übung' }}</p>
                             <p class="text-xs text-secondary">
                                 Satz {{ activeGymSetIndex + 1 }}{{ restSeconds > 0 ? ` - Pause ${restTimerLabel}` : '' }}
                             </p>

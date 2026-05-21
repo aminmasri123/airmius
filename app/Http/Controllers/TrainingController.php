@@ -181,7 +181,7 @@ class TrainingController extends Controller
         $user = $request->user();
 
         abort_unless($this->canViewLog($user, $log), 403);
-        abort_if($log->status === 'draft', 422, 'Feedback ist erst nach dem Speichern der Trainingseinheit moeglich.');
+        abort_if($log->status === 'draft', 422, 'Feedback ist erst nach dem Speichern der Trainingseinheit möglich.');
 
         $data = $request->validate([
             'body' => ['required', 'string', 'min:2', 'max:3000'],
@@ -317,7 +317,7 @@ class TrainingController extends Controller
         }
 
         return redirect()->route('auth.training.logs.show', $log)->with('success', $log->trainer_id
-            ? 'Trainingseinheit wurde fuer den Sportler dokumentiert.'
+            ? 'Trainingseinheit wurde für den Sportler dokumentiert.'
             : 'Trainingseinheit wurde dokumentiert.');
     }
 
@@ -598,9 +598,9 @@ class TrainingController extends Controller
             'sort_order' => $plan->items()->count() + 1,
         ]);
 
-        $this->notifyPlanRecipients($plan->fresh(['assignments.user', 'assignments.team.users', 'creator']), $request->user(), 'Neue Einheit im Trainingsplan', '"'.$item->title.'" wurde zu "'.$plan->title.'" hinzugefuegt.', route('auth.training.plans.items.show', [$plan, $item]));
+        $this->notifyPlanRecipients($plan->fresh(['assignments.user', 'assignments.team.users', 'creator']), $request->user(), 'Neue Einheit im Trainingsplan', '"'.$item->title.'" wurde zu "'.$plan->title.'" hinzugefügt.', route('auth.training.plans.items.show', [$plan, $item]));
 
-        return back()->with('success', 'Trainingseinheit wurde zum Plan hinzugefuegt.');
+        return back()->with('success', 'Trainingseinheit wurde zum Plan hinzugefügt.');
     }
 
     public function updatePlanItem(Request $request, TrainingPlan $plan, TrainingPlanItem $item)
@@ -647,7 +647,7 @@ class TrainingController extends Controller
         $this->deletePlanItemImageIfUnused($item);
         $item->delete();
 
-        return back()->with('success', 'Trainingseinheit wurde geloescht.');
+        return back()->with('success', 'Trainingseinheit wurde gelöscht.');
     }
 
     public function updatePlan(Request $request, TrainingPlan $plan)
@@ -731,7 +731,7 @@ class TrainingController extends Controller
 
         $plan->update(['status' => 'published']);
 
-        $this->notifyPlanRecipients($plan->fresh(['assignments.user', 'assignments.team.users', 'creator']), $request->user(), 'Trainingsplan freigegeben', '"'.$plan->title.'" ist jetzt fuer dich sichtbar.', route('auth.training.index'));
+        $this->notifyPlanRecipients($plan->fresh(['assignments.user', 'assignments.team.users', 'creator']), $request->user(), 'Trainingsplan freigegeben', '"'.$plan->title.'" ist jetzt für dich sichtbar.', route('auth.training.index'));
 
         return back()->with('success', 'Trainingsplan wurde freigegeben.');
     }
@@ -829,7 +829,7 @@ class TrainingController extends Controller
 
         $plan->delete();
 
-        return back()->with('success', 'Trainingsplan wurde geloescht.');
+        return back()->with('success', 'Trainingsplan wurde gelöscht.');
     }
 
     private function serializePlan(TrainingPlan $plan, User $viewer): array
@@ -1135,7 +1135,7 @@ class TrainingController extends Controller
 
         $recipientIds->each(fn (int $recipientId) => AppNotification::send($recipientId, 'training.log.saved', [
             'title' => 'Training dokumentiert',
-            'body' => $actorName.' hat "'.$log->title.'" fuer '.$athleteName.' gespeichert.',
+            'body' => $actorName.' hat "'.$log->title.'" für '.$athleteName.' gespeichert.',
             'url' => route('auth.training.logs.show', $log),
             'training_log_id' => $log->id,
         ]));

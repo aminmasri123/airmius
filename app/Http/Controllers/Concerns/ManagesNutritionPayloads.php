@@ -93,6 +93,15 @@ trait ManagesNutritionPayloads
         ]);
     }
 
+    private function validateWaterData(Request $request): array
+    {
+        return $request->validate([
+            'eaten_on' => ['required', 'date'],
+            'amount_ml' => ['required', 'integer', 'min:1', 'max:5000'],
+            'title' => ['nullable', 'string', 'max:80'],
+        ]);
+    }
+
     private function mealPayload(User $user, array $data, ?NutritionMeal $meal = null): array
     {
         return [
@@ -111,6 +120,32 @@ trait ManagesNutritionPayloads
             'training_context' => $data['training_context'] ?? $meal?->training_context,
             'items' => $this->cleanNutritionItems($data['items'] ?? $meal?->items ?? []),
             'notes' => array_key_exists('notes', $data) ? $data['notes'] : $meal?->notes,
+        ];
+    }
+
+    private function waterPayload(User $user, array $data): array
+    {
+        $amount = (int) $data['amount_ml'];
+        $title = trim((string) ($data['title'] ?? '')) ?: 'Wasser';
+
+        return [
+            'user_id' => $user->id,
+            'eaten_on' => $data['eaten_on'],
+            'meal_type' => 'drink',
+            'title' => $title,
+            'calories' => 0,
+            'protein_g' => 0,
+            'carbs_g' => 0,
+            'fat_g' => 0,
+            'fiber_g' => null,
+            'sugar_g' => null,
+            'water_ml' => $amount,
+            'source' => 'manual',
+            'training_context' => null,
+            'items' => [
+                ['name' => $title, 'amount' => $amount.' ml'],
+            ],
+            'notes' => null,
         ];
     }
 
@@ -155,7 +190,7 @@ trait ManagesNutritionPayloads
         $rows = NutritionMeal::query()
             ->forUser($user)
             ->whereBetween('eaten_on', [$start->toDateString(), $end->toDateString()])
-            ->selectRaw('eaten_on, COALESCE(SUM(calories), 0) as calories, COALESCE(SUM(protein_g), 0) as protein_g, COALESCE(SUM(carbs_g), 0) as carbs_g, COALESCE(SUM(fat_g), 0) as fat_g')
+            ->selectRaw('eaten_on, COALESCE(SUM(calories), 0) as calories, COALESCE(SUM(protein_g), 0) as protein_g, COALESCE(SUM(carbs_g), 0) as carbs_g, COALESCE(SUM(fat_g), 0) as fat_g, COALESCE(SUM(water_ml), 0) as water_ml')
             ->groupBy('eaten_on')
             ->get()
             ->keyBy(fn ($row) => $row->eaten_on->toDateString());
@@ -172,6 +207,7 @@ trait ManagesNutritionPayloads
                     'protein_g' => round((float) ($row->protein_g ?? 0), 1),
                     'carbs_g' => round((float) ($row->carbs_g ?? 0), 1),
                     'fat_g' => round((float) ($row->fat_g ?? 0), 1),
+                    'water_ml' => (int) ($row->water_ml ?? 0),
                 ];
             })
             ->all();

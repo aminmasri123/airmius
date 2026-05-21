@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { Link } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import Nav from '@/Components/Guest/Nav.vue'
@@ -21,7 +21,7 @@ const expertScores = [
 const principles = [
     ['Meaningful first', 'XP entsteht durch sinnvolle sportliche Aktionen, nicht durch reine Nutzungsdauer.'],
     ['Trust weighted', 'Vertrauenswuerdige Nutzer erhalten mehr Wirkung, auffaellige Muster weniger.'],
-    ['Role aware', 'Sportler, Trainer, Teams und Vereine werden nach passenden Beitraegen bewertet.'],
+    ['Role aware', 'Sportler, Trainer, Teams und Vereine werden nach passenden Beiträgen bewertet.'],
     ['Transparent by design', 'Regeln, Limits, Abzuege und Fortschritt sind nachvollziehbar erklaerbar.'],
 ]
 
@@ -30,7 +30,7 @@ const roleCards = [
         icon: 'las la-running',
         title: 'Sportler',
         score: 'Profil, Training, Skills',
-        text: 'Fortschritt wird ueber Sportprofil, Skill-Entwicklung, Trainingsteilnahme, hilfreiche Beitraege und bestaetigte Empfehlungen sichtbar.',
+        text: 'Fortschritt wird über Sportprofil, Skill-Entwicklung, Trainingsteilnahme, hilfreiche Beiträge und bestätigte Empfehlungen sichtbar.',
         metrics: ['XP', 'Level', 'Rang', 'Streak', 'Trust Score'],
     },
     {
@@ -50,20 +50,20 @@ const roleCards = [
 ]
 
 const playerActions = [
-    ['Sportart hinzufuegen', '+15 XP', 'Strukturiert das sportliche Profil und erzeugt passende Skills.'],
-    ['Skill bearbeiten', '+3 XP', 'Kompetenz, Notiz oder Sichtbarkeit pflegen. Maximal 3x taeglich.'],
-    ['Skill-Level verbessern', '+8 XP', 'Anerkennt echte persoenliche Entwicklung. Maximal 3x taeglich.'],
-    ['Skill-Bestaetigung', '+10 XP', 'Bestaetigung durch andere Nutzer, Trainer oder Vereine. Maximal 3x taeglich.'],
-    ['Empfehlung freigeben', '+10 XP', 'Qualitaetsgesicherte Empfehlung auf dem Profil veroeffentlichen. Maximal 2x taeglich.'],
-    ['Training zusagen', '+5 XP', 'Verbindliche Teilnahmezusage zu einer Trainingseinheit. Maximal 3x taeglich.'],
-    ['Training Check-in', '+2 XP', 'Dokumentierte Teilnahme, zum Beispiel per QR-Code, GPS oder Trainerbestaetigung.'],
-    ['Hilfreicher Beitrag', '+5 XP', 'Wissen, Training, Taktik, Analyse oder Erfahrung mit Mehrwert. Maximal 3x taeglich.'],
+    ['Sportart hinzufügen', '+15 XP', 'Strukturiert das sportliche Profil und erzeugt passende Skills.'],
+    ['Skill bearbeiten', '+3 XP', 'Kompetenz, Notiz oder Sichtbarkeit pflegen. Maximal 3x täglich.'],
+    ['Skill-Level verbessern', '+8 XP', 'Anerkennt echte persoenliche Entwicklung. Maximal 3x täglich.'],
+    ['Skill-Bestätigung', '+10 XP', 'Bestätigung durch andere Nutzer, Trainer oder Vereine. Maximal 3x täglich.'],
+    ['Empfehlung freigeben', '+10 XP', 'Qualitätsgesicherte Empfehlung auf dem Profil veröffentlichen. Maximal 2x täglich.'],
+    ['Training zusagen', '+5 XP', 'Verbindliche Teilnahmezusage zu einer Trainingseinheit. Maximal 3x täglich.'],
+    ['Training Check-in', '+2 XP', 'Dokumentierte Teilnahme, zum Beispiel per QR-Code, GPS oder Trainerbestätigung.'],
+    ['Hilfreicher Beitrag', '+5 XP', 'Wissen, Training, Taktik, Analyse oder Erfahrung mit Mehrwert. Maximal 3x täglich.'],
 ]
 
 const demoActions = [
-    { key: 'sport_profile_added', label: 'Sportart hinzufuegen', xp: 15, limit: 1, value: ref(1) },
+    { key: 'sport_profile_added', label: 'Sportart hinzufügen', xp: 15, limit: 1, value: ref(1) },
     { key: 'skill_level_improved', label: 'Skill-Level verbessern', xp: 8, limit: 3, value: ref(2) },
-    { key: 'skill_endorsed', label: 'Skill bestaetigen lassen', xp: 10, limit: 3, value: ref(1) },
+    { key: 'skill_endorsed', label: 'Skill bestätigen lassen', xp: 10, limit: 3, value: ref(1) },
     { key: 'training_accepted', label: 'Training zusagen', xp: 5, limit: 3, value: ref(3) },
     { key: 'training_check_in', label: 'Training Check-in', xp: 2, limit: 3, value: ref(2) },
     { key: 'content_created', label: 'Hilfreichen Beitrag erstellen', xp: 5, limit: 3, value: ref(1) },
@@ -82,16 +82,16 @@ const organizationActions = [
     ['Event erstellt', '+10 XP', 'Turnier, Probetraining, Camp oder Vereinsaktion wird geplant.'],
     ['Event durchgefuehrt', '+25 XP', 'Event wurde tatsaechlich umgesetzt.'],
     ['Vereinsprofil vollstaendig', '+15 XP', 'Struktur, Ansprechpartner und Grunddaten sind gepflegt.'],
-    ['Informative Vereinsnews', '+8 XP', 'Vereinsbeitrag mit echtem Mehrwert fuer Mitglieder oder Oeffentlichkeit.'],
+    ['Informative Vereinsnews', '+8 XP', 'Vereinsbeitrag mit echtem Mehrwert für Mitglieder oder Öffentlichkeit.'],
 ]
 
 const safetyLayers = [
-    ['Daily Caps', 'XP-relevante Wiederholungen sind pro Tag begrenzt, damit Qualitaet wichtiger bleibt als Masse.'],
+    ['Daily Caps', 'XP-relevante Wiederholungen sind pro Tag begrenzt, damit Qualität wichtiger bleibt als Masse.'],
     ['Trust Score 70-130', 'Der Multiplikator reicht von 0,70 bis 1,30 und wird durch zuverlaessiges Verhalten beeinflusst.'],
-    ['Penalty Events', 'No-Shows, falsche Bestaetigungen, Spam und abgelehnte Empfehlungen reduzieren XP und Trust.'],
+    ['Penalty Events', 'No-Shows, falsche Bestätigungen, Spam und abgelehnte Empfehlungen reduzieren XP und Trust.'],
     ['Serverseitige Vergabe', 'XP wird ausschliesslich serverseitig berechnet und mit Quelle, Besitzer, Actor Type und Limit-Status protokolliert.'],
     ['Moderierbare Regeln', 'Admins koennen Labels, Beschreibungen, XP, Limits, Trust Delta und Aktivitaet zentral verwalten.'],
-    ['Badge-Governance', 'Badges werden ueber XP, Level, Streak oder konkrete Gruende vergeben und bleiben auditierbar.'],
+    ['Badge-Governance', 'Badges werden über XP, Level, Streak oder konkrete Gründe vergeben und bleiben auditierbar.'],
 ]
 
 const levelMilestones = [
@@ -104,32 +104,32 @@ const levelMilestones = [
 
 const lifecycle = [
     ['Onboarding', 'Sportart, Skills und erste Teilnahme geben schnelle Orientierung.'],
-    ['Engagement', 'Streaks, Feedback und hilfreiche Beitraege halten Aktivitaet wertvoll.'],
+    ['Engagement', 'Streaks, Feedback und hilfreiche Beiträge halten Aktivitaet wertvoll.'],
     ['Retention', 'Level, Badges und Rollen-Raenge schaffen langfristige Entwicklungspfade.'],
-    ['Reputation', 'Trust Score, Empfehlungen und Bestaetigungen machen Qualitaet sichtbar.'],
+    ['Reputation', 'Trust Score, Empfehlungen und Bestätigungen machen Qualität sichtbar.'],
 ]
 
 const penalties = [
     ['No-Show', '-5 XP', 'Unentschuldigtes Fernbleiben trotz Anmeldung.'],
-    ['Falsche Bestaetigung', '-50 XP', 'Manipulierte oder unwahre Bestaetigung.'],
+    ['Falsche Bestätigung', '-50 XP', 'Manipulierte oder unwahre Bestätigung.'],
     ['Spam oder Missbrauch', '-30 XP', 'Minderwertige Wiederholung oder missbraeuchliches Verhalten.'],
-    ['Abgelehnte Empfehlung', '-5 XP', 'Qualitaetssicherung bei Profil-Empfehlungen.'],
-    ['Uebermaessige Nutzung', '-5 XP', 'XP kann bei exzessiver Nutzung reduziert oder pausiert werden.'],
+    ['Abgelehnte Empfehlung', '-5 XP', 'Qualitätssicherung bei Profil-Empfehlungen.'],
+    ['Übermäßige Nutzung', '-5 XP', 'XP kann bei exzessiver Nutzung reduziert oder pausiert werden.'],
 ]
 
 const badges = [
-    ['las la-seedling', 'Erste Schritte', '50 XP gesammelt', 'Fuer den sichtbaren Start in die sportliche Entwicklung.'],
-    ['las la-fire', 'Streak Starter', '3 sinnvolle Tage', 'Belohnt wiederholte Qualitaet statt reines Einloggen.'],
-    ['las la-user-check', 'Verlaesslich', 'Trust stabil', 'Zeigt, dass Zusagen, Check-ins und Bestaetigungen sauber bleiben.'],
-    ['las la-lightbulb', 'Wissensgeber', 'Hilfreicher Beitrag', 'Fuer Trainingstipps, Analysen oder Erfahrungswissen mit Mehrwert.'],
+    ['las la-seedling', 'Erste Schritte', '50 XP gesammelt', 'Für den sichtbaren Start in die sportliche Entwicklung.'],
+    ['las la-fire', 'Streak Starter', '3 sinnvolle Tage', 'Belohnt wiederholte Qualität statt reines Einloggen.'],
+    ['las la-user-check', 'Verlaesslich', 'Trust stabil', 'Zeigt, dass Zusagen, Check-ins und Bestätigungen sauber bleiben.'],
+    ['las la-lightbulb', 'Wissensgeber', 'Hilfreicher Beitrag', 'Für Trainingstipps, Analysen oder Erfahrungswissen mit Mehrwert.'],
     ['las la-warehouse', 'Wachsender Verein', '250 Vereins-XP', 'Macht gute Organisation, Events und Kommunikation sichtbar.'],
-    ['las la-shield-alt', 'Fair Play', 'Keine Auffaelligkeiten', 'Ein Signal fuer respektvolle und manipulationsfreie Nutzung.'],
+    ['las la-shield-alt', 'Fair Play', 'Keine Auffälligkeiten', 'Ein Signal für respektvolle und manipulationsfreie Nutzung.'],
 ]
 </script>
 
 <template>
     <SeoHead
-        title="Gamification System fuer Sportler, Trainer, Teams und Vereine"
+        title="Gamification System für Sportler, Trainer, Teams und Vereine"
         description="Airmius Gamification macht sportliche Entwicklung, Engagement, Vertrauen und Vereinsarbeit sichtbar, fair und jugendschutzfreundlich."
     />
 
@@ -211,7 +211,7 @@ const badges = [
                             <div class="mt-4 grid gap-3 text-sm sm:grid-cols-3">
                                 <div class="rounded-md bg-card p-3">
                                     <p class="text-secondary">Training</p>
-                                    <p class="mt-1 font-bold text-primary">Check-in bestaetigt</p>
+                                    <p class="mt-1 font-bold text-primary">Check-in bestätigt</p>
                                 </div>
                                 <div class="rounded-md bg-card p-3">
                                     <p class="text-secondary">Skill</p>
@@ -231,7 +231,7 @@ const badges = [
                 <div class="mb-6">
                     <h2 class="text-2xl font-bold text-primary">Expertenanalyse aus allen Perspektiven</h2>
                     <p class="mt-2 max-w-3xl text-secondary">
-                        Das System wird nicht nur als Punkte-Mechanik bewertet, sondern als Produktmotor fuer Motivation, Vertrauen, Vereinsorganisation, Sicherheit und langfristige Bindung.
+                        Das System wird nicht nur als Punkte-Mechanik bewertet, sondern als Produktmotor für Motivation, Vertrauen, Vereinsorganisation, Sicherheit und langfristige Bindung.
                     </p>
                 </div>
                 <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -282,7 +282,7 @@ const badges = [
 
             <section class="mx-auto mt-12 grid max-w-7xl gap-5 xl:grid-cols-[1.15fr_0.85fr]">
                 <div class="rounded-lg border border-border bg-card p-6">
-                    <h2 class="text-2xl font-bold">XP-Aktionen fuer Sportler</h2>
+                    <h2 class="text-2xl font-bold">XP-Aktionen für Sportler</h2>
                     <p class="mt-2 text-sm text-secondary">
                         Die wichtigsten positiven Aktionen sind konkret, begrenzt und mit Trust gekoppelt.
                     </p>
@@ -302,7 +302,7 @@ const badges = [
                 <div class="rounded-lg border border-border bg-card p-6">
                     <h2 class="text-2xl font-bold">Level-System</h2>
                     <p class="mt-3 text-sm leading-relaxed text-secondary">
-                        Die XP-Schwelle steigt progressiv. Fruehe Level motivieren schnell, hoehere Level verlangen langfristige Qualitaet.
+                        Die XP-Schwelle steigt progressiv. Frühe Level motivieren schnell, höhere Level verlangen langfristige Qualität.
                     </p>
                     <div class="mt-4 rounded-lg bg-inputBg p-4 font-mono text-sm text-air-green">
                         XP_needed = Summe aus 250 * level^1.7
@@ -423,7 +423,7 @@ const badges = [
                 <div class="rounded-lg border border-border bg-card p-6">
                     <h2 class="text-2xl font-bold">Lifecycle-Wirkung</h2>
                     <p class="mt-2 text-sm text-secondary">
-                        Gamification wirkt ueber die ganze Nutzerreise, nicht nur als Badge-Schicht am Ende.
+                        Gamification wirkt über die ganze Nutzerreise, nicht nur als Badge-Schicht am Ende.
                     </p>
                     <div class="mt-5 grid gap-3 sm:grid-cols-2">
                         <article v-for="[title, text] in lifecycle" :key="title" class="rounded-lg bg-bg p-4">
@@ -438,7 +438,7 @@ const badges = [
                 <div class="rounded-lg border border-border bg-card p-6">
                     <h2 class="text-2xl font-bold">Strafen mit Mass</h2>
                     <p class="mt-2 text-sm text-secondary">
-                        Abzuege sind kein Druckmittel, sondern Schutz fuer Fairness, Verlaesslichkeit und Qualitaet.
+                        Abzuege sind kein Druckmittel, sondern Schutz für Fairness, Verlaesslichkeit und Qualität.
                     </p>
                     <div class="mt-5 space-y-3">
                         <div v-for="[title, xp, text] in penalties" :key="title" class="rounded-lg bg-bg p-3">
@@ -505,7 +505,7 @@ const badges = [
                         </div>
                         <div class="rounded-lg bg-bg p-4">
                             <p class="text-xs font-bold uppercase text-air-blue">Youth Safety</p>
-                            <p class="mt-2 text-sm text-secondary">Keine Belohnung fuer exzessive Nutzung.</p>
+                            <p class="mt-2 text-sm text-secondary">Keine Belohnung für exzessive Nutzung.</p>
                         </div>
                         <div class="rounded-lg bg-bg p-4">
                             <p class="text-xs font-bold uppercase text-air-blue">Transparency</p>

@@ -496,7 +496,7 @@ const recurrenceSummary = computed(() => {
 
 const selectedClubName = computed(() => {
     if (form.visibility === 'public') return 'Nicht erforderlich'
-    if (form.visibility === 'private') return 'Wird ueber Team gesetzt'
+    if (form.visibility === 'private') return 'Wird über Team gesetzt'
 
     return props.clubs?.find((club) => Number(club.id) === Number(form.club_id))?.name || '-'
 })

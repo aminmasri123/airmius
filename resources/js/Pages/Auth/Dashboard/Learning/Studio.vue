@@ -38,7 +38,7 @@ const levels = [
 const lessonTypes = [
     ['lesson', 'Lektion'],
     ['video', 'Video'],
-    ['exercise', 'Uebung'],
+    ['exercise', 'Übung'],
     ['assignment', 'Aufgabe'],
     ['live_session', 'Live-Session'],
 ]
@@ -108,7 +108,7 @@ const uploadLessonAttachment = (event) => {
 
 const statusLabel = (status) => ({
     draft: 'Entwurf',
-    review: 'Pruefung',
+    review: 'Prüfung',
     published: 'Live',
     archived: 'Archiviert',
 }[status] || status)
@@ -504,7 +504,7 @@ const submitQuestionReply = (question) => {
             <div class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Airmius Sportschule</p>
-                    <h1 class="mt-1 text-2xl font-bold text-primary">Kurs-Studio fuer Trainer und Tutoren</h1>
+                    <h1 class="mt-1 text-2xl font-bold text-primary">Kurs-Studio für Trainer und Tutoren</h1>
                     <p class="mt-2 max-w-3xl text-sm text-secondary">
                         Plane echte Online-Kurse mit Kapiteln, Lektionen, Aufgaben, Anhaengen, Quiz, Notizen und Kurskommunikation.
                     </p>
@@ -537,7 +537,7 @@ const submitQuestionReply = (question) => {
                                 <option v-for="[value, label] in levels" :key="value" :value="value">{{ label }}</option>
                             </select>
                         </div>
-                        <input v-model="newCourseForm.sport_type" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Sportart, z. B. Fussball">
+                        <input v-model="newCourseForm.sport_type" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Sportart, z. B. Fußball">
                         <textarea v-model="newCourseForm.description" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Worum geht es in diesem Kurs?"></textarea>
                         <textarea v-model="newCourseForm.learning_goals_text" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Lernziele, je Zeile eins"></textarea>
                         <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="newCourseForm.processing">
@@ -724,7 +724,7 @@ const submitQuestionReply = (question) => {
                                         <div class="flex items-center justify-end gap-1">
                                             <button type="button" class="rounded border border-border px-2 py-1 text-xs text-secondary" @click="moveLesson(section, lesson, -1)">Hoch</button>
                                             <button type="button" class="rounded border border-border px-2 py-1 text-xs text-secondary" @click="moveLesson(section, lesson, 1)">Runter</button>
-                                            <button type="button" class="rounded border border-error/40 px-2 py-1 text-xs text-error" @click="deleteLesson(lesson)">Loeschen</button>
+                                            <button type="button" class="rounded border border-error/40 px-2 py-1 text-xs text-error" @click="deleteLesson(lesson)">Löschen</button>
                                         </div>
                                     </div>
                                     <p v-if="!section.lessons?.length" class="rounded-lg border border-dashed border-border bg-bg p-4 text-sm text-secondary">Noch keine Lektionen in diesem Kapitel.</p>
@@ -735,7 +735,7 @@ const submitQuestionReply = (question) => {
 
                     <aside class="space-y-4">
                         <article class="surface-card p-5">
-                            <h2 class="text-base font-semibold text-primary">Kapitel hinzufuegen</h2>
+                            <h2 class="text-base font-semibold text-primary">Kapitel hinzufügen</h2>
                             <form class="mt-4 grid gap-3" @submit.prevent="createSection">
                                 <input v-model="sectionForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kapitelname">
                                 <textarea v-model="sectionForm.description" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kurzbeschreibung"></textarea>
@@ -744,7 +744,7 @@ const submitQuestionReply = (question) => {
                         </article>
 
                         <article class="surface-card p-5">
-                            <h2 class="text-base font-semibold text-primary">{{ editingLesson ? 'Lektion bearbeiten' : 'Lektion hinzufuegen' }}</h2>
+                            <h2 class="text-base font-semibold text-primary">{{ editingLesson ? 'Lektion bearbeiten' : 'Lektion hinzufügen' }}</h2>
                             <form class="mt-4 grid gap-3" @submit.prevent="submitLesson">
                                 <select v-model="lessonForm.learning_course_section_id" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                     <option v-for="section in selectedCourse.sections" :key="section.id" :value="section.id">{{ section.title }}</option>
@@ -800,7 +800,7 @@ const submitQuestionReply = (question) => {
                 </div>
 
                 <article v-show="activePanel === 'details'" class="surface-card p-5">
-                    <h2 class="text-lg font-semibold text-primary">Kursdaten und Veroeffentlichung</h2>
+                    <h2 class="text-lg font-semibold text-primary">Kursdaten und Veröffentlichung</h2>
                     <form class="mt-5 grid gap-4" @submit.prevent="updateCourse">
                         <div class="grid gap-3 lg:grid-cols-2">
                             <input v-model="courseForm.title" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kurstitel">
@@ -833,7 +833,7 @@ const submitQuestionReply = (question) => {
                         <div class="grid gap-3 lg:grid-cols-3">
                             <textarea v-model="courseForm.sales_points_text" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Verkaufsargumente, je Zeile eins"></textarea>
                             <textarea v-model="courseForm.faq_items_text" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="FAQ: Frage | Antwort"></textarea>
-                            <textarea v-model="courseForm.guarantee_text" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Garantie / Betreuung / Rueckfragen"></textarea>
+                            <textarea v-model="courseForm.guarantee_text" rows="4" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Garantie / Betreuung / Rückfragen"></textarea>
                         </div>
                         <div class="grid gap-3 lg:grid-cols-3">
                             <input v-model="courseForm.certificate_logo_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Zertifikat Logo URL">
@@ -844,13 +844,13 @@ const submitQuestionReply = (question) => {
                         <div class="grid gap-3 lg:grid-cols-4">
                             <select v-model="courseForm.status" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option value="draft">Entwurf</option>
-                                <option value="review">Zur Pruefung</option>
-                                <option value="published">Veroeffentlicht</option>
+                                <option value="review">Zur Prüfung</option>
+                                <option value="published">Veröffentlicht</option>
                                 <option value="archived">Archiviert</option>
                             </select>
                             <label class="flex items-center gap-2 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-secondary">
                                 <input v-model="courseForm.is_public" type="checkbox" class="rounded border-border bg-inputBg">
-                                Oeffentlich sichtbar
+                                Öffentlich sichtbar
                             </label>
                             <label class="flex items-center gap-2 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-secondary">
                                 <input v-model="courseForm.is_free" type="checkbox" class="rounded border-border bg-inputBg">
@@ -867,12 +867,12 @@ const submitQuestionReply = (question) => {
                 <article v-show="activePanel === 'sales'" class="surface-card overflow-hidden">
                     <div class="border-b border-border p-5">
                         <h2 class="text-lg font-semibold text-primary">Landingpage, Gutscheine und Review</h2>
-                        <p class="mt-1 text-sm text-secondary">Alles, was Besucher vor dem Kauf brauchen: Nutzen, FAQ, Rabatte und Qualitaetsstatus.</p>
+                        <p class="mt-1 text-sm text-secondary">Alles, was Besucher vor dem Kauf brauchen: Nutzen, FAQ, Rabatte und Qualitätsstatus.</p>
                     </div>
                     <div class="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
                         <div class="grid gap-4">
                             <div class="rounded-lg border border-border bg-bg p-4">
-                                <p class="text-xs font-semibold uppercase text-secondary">Qualitaetsreview</p>
+                                <p class="text-xs font-semibold uppercase text-secondary">Qualitätsreview</p>
                                 <p class="mt-2 text-lg font-bold text-primary">{{ selectedCourse.quality_status || 'pending' }}</p>
                                 <p v-if="selectedCourse.quality_note" class="mt-1 text-sm text-secondary">{{ selectedCourse.quality_note }}</p>
                             </div>
@@ -924,7 +924,7 @@ const submitQuestionReply = (question) => {
                                 </div>
                                 <p class="mt-3 text-xs text-secondary">{{ quiz.questions?.length || 0 }} Fragen</p>
                                 <button type="button" class="mt-3 rounded-lg border border-error/40 px-3 py-2 text-xs font-semibold text-error" @click="deleteQuiz(quiz)">
-                                    Quiz loeschen
+                                    Quiz löschen
                                 </button>
                             </div>
                             <p v-if="!selectedCourse.quizzes?.length" class="rounded-lg border border-dashed border-border bg-bg p-5 text-sm text-secondary">Noch kein Quiz angelegt.</p>
@@ -950,7 +950,7 @@ const submitQuestionReply = (question) => {
                 <article v-show="activePanel === 'assignments'" class="surface-card overflow-hidden">
                     <div class="border-b border-border p-5">
                         <h2 class="text-lg font-semibold text-primary">Aufgaben und manuelle Bewertung</h2>
-                        <p class="mt-1 text-sm text-secondary">Teilnehmer reichen Text oder Links ein, Tutoren geben Score und Feedback zurueck.</p>
+                        <p class="mt-1 text-sm text-secondary">Teilnehmer reichen Text oder Links ein, Tutoren geben Score und Feedback zurück.</p>
                     </div>
                     <div class="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_24rem]">
                         <div class="grid gap-4">
@@ -966,7 +966,7 @@ const submitQuestionReply = (question) => {
                                     <div v-for="submission in assignment.submissions" :key="submission.id" class="rounded-lg border border-border bg-card p-3">
                                         <p class="text-sm font-semibold text-primary">{{ submission.user?.name || 'Teilnehmer' }}</p>
                                         <p class="mt-1 text-sm text-secondary whitespace-pre-line">{{ submission.body }}</p>
-                                        <a v-if="submission.attachment_url" :href="submission.attachment_url" target="_blank" class="mt-2 inline-flex text-xs font-semibold text-air-blue">Anhang oeffnen</a>
+                                        <a v-if="submission.attachment_url" :href="submission.attachment_url" target="_blank" class="mt-2 inline-flex text-xs font-semibold text-air-blue">Anhang öffnen</a>
                                         <div class="mt-3 grid gap-2 md:grid-cols-[8rem_7rem_minmax(0,1fr)_auto]">
                                             <select v-model="gradingForms[String(submission.id)].status" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                                                 <option value="passed">Bestanden</option>
@@ -1009,7 +1009,7 @@ const submitQuestionReply = (question) => {
                         <p class="mt-1 text-sm text-secondary">Einschreibungen, Fortschritt, manuelle Freischaltung und CSV-Reporting.</p>
                         <div class="mt-4 flex flex-wrap gap-2">
                             <form class="flex min-w-0 flex-1 gap-2" @submit.prevent="grantEnrollment">
-                                <input v-model="enrollmentForm.email" type="email" class="min-w-0 flex-1 rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="E-Mail fuer manuellen Zugang">
+                                <input v-model="enrollmentForm.email" type="email" class="min-w-0 flex-1 rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="E-Mail für manuellen Zugang">
                                 <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Freischalten</button>
                             </form>
                             <a :href="route('auth.learning.studio.courses.report', selectedCourse.id)" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">CSV Export</a>
@@ -1043,7 +1043,7 @@ const submitQuestionReply = (question) => {
                 <article v-show="activePanel === 'questions'" class="surface-card overflow-hidden">
                     <div class="border-b border-border p-5">
                         <h2 class="text-lg font-semibold text-primary">Fragen-Inbox</h2>
-                        <p class="mt-1 text-sm text-secondary">Offene Fragen aus den Lektionen mit Status fuer Betreuung und Nacharbeit.</p>
+                        <p class="mt-1 text-sm text-secondary">Offene Fragen aus den Lektionen mit Status für Betreuung und Nacharbeit.</p>
                     </div>
                     <div class="divide-y divide-border">
                         <div v-for="question in selectedCourse.questions" :key="question.id" class="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_12rem]">
@@ -1063,7 +1063,7 @@ const submitQuestionReply = (question) => {
                                     </div>
                                 </div>
                                 <form class="mt-3 grid gap-2" @submit.prevent="submitQuestionReply(question)">
-                                    <textarea v-model="replyForms[String(question.id)]" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Antwort fuer den Teilnehmer schreiben"></textarea>
+                                    <textarea v-model="replyForms[String(question.id)]" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Antwort für den Teilnehmer schreiben"></textarea>
                                     <button class="justify-self-start rounded-lg bg-buttonPrimary px-4 py-2 text-xs font-semibold text-buttonTextPrimary">
                                         Antwort senden
                                     </button>

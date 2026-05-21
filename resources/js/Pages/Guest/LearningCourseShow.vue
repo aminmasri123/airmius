@@ -224,7 +224,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
         <main class="px-4 pt-36 md:pt-44">
             <section class="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[minmax(0,1fr)_24rem]">
                 <div>
-                    <Link :href="route('guest.e-learning')" class="text-sm font-semibold text-air-orange">Zurueck zur Sportschule</Link>
+                    <Link :href="route('guest.e-learning')" class="text-sm font-semibold text-air-orange">Zurück zur Sportschule</Link>
                     <div class="mt-5 overflow-hidden rounded-xl border border-border bg-card">
                         <div class="flex aspect-[16/8] items-center justify-center bg-inputBg">
                             <img v-if="course.cover_image" :src="course.cover_image" :alt="course.title" class="h-full w-full object-cover">
@@ -284,13 +284,13 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                             </ul>
                         </article>
                         <article class="surface-card p-5">
-                            <h2 class="text-lg font-bold text-primary">Fuer wen ist der Kurs?</h2>
+                            <h2 class="text-lg font-bold text-primary">Für wen ist der Kurs?</h2>
                             <ul class="mt-4 space-y-3">
                                 <li v-for="group in course.target_groups" :key="group" class="flex gap-2 text-sm text-secondary">
                                     <i class="las la-user-check mt-0.5 text-air-orange"></i>
                                     <span>{{ group }}</span>
                                 </li>
-                                <li v-if="!course.target_groups?.length" class="text-sm text-secondary">Geeignet fuer Sportler, Trainer und Teams mit Interesse am Thema.</li>
+                                <li v-if="!course.target_groups?.length" class="text-sm text-secondary">Geeignet für Sportler, Trainer und Teams mit Interesse am Thema.</li>
                             </ul>
                         </article>
                     </section>
@@ -334,7 +334,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                                         </div>
                                         <span v-if="lesson.completed" class="rounded-full bg-success/10 px-2 py-1 text-xs font-semibold text-success">Erledigt</span>
                                         <span v-else-if="lesson.drip_locked" class="rounded-full bg-warning/10 px-2 py-1 text-xs font-semibold text-warning">Ab {{ formatDateTime(lesson.available_at) }}</span>
-                                        <span v-else-if="lesson.is_preview || canUseLearningRoom" class="rounded-full bg-card px-2 py-1 text-xs font-semibold text-secondary">Oeffnen</span>
+                                        <span v-else-if="lesson.is_preview || canUseLearningRoom" class="rounded-full bg-card px-2 py-1 text-xs font-semibold text-secondary">Öffnen</span>
                                         <i v-else class="las la-lock text-secondary"></i>
                                     </button>
                                 </div>
@@ -345,7 +345,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                     <section v-if="course.reviews?.length" class="mt-6 surface-card overflow-hidden">
                         <div class="border-b border-border p-5">
                             <h2 class="text-lg font-bold text-primary">Bewertungen</h2>
-                            <p class="mt-1 text-sm text-secondary">Echte Rueckmeldungen von eingeschriebenen Teilnehmern.</p>
+                            <p class="mt-1 text-sm text-secondary">Echte Rückmeldungen von eingeschriebenen Teilnehmern.</p>
                         </div>
                         <div class="grid gap-3 p-5 md:grid-cols-2">
                             <article v-for="review in course.reviews" :key="review.id" class="rounded-lg border border-border bg-bg p-4">
@@ -416,7 +416,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                                     Zertifikat PDF
                                 </a>
                                 <a v-if="enrollment.certificate.verify_url" :href="enrollment.certificate.verify_url" class="inline-flex rounded-lg border border-success/40 px-3 py-2 text-xs font-semibold text-success">
-                                    Oeffentlich pruefen
+                                    Öffentlich prüfen
                                 </a>
                             </div>
                         </div>
@@ -428,7 +428,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                             <h2 class="mt-1 text-lg font-bold text-primary">{{ selectedLesson.title }}</h2>
                         </div>
                         <div class="p-5">
-                            <p class="text-sm leading-relaxed text-secondary">{{ selectedLesson.summary || 'Waehle eine Lektion, um Inhalte, Notizen und Fragen zu bearbeiten.' }}</p>
+                            <p class="text-sm leading-relaxed text-secondary">{{ selectedLesson.summary || 'Wähle eine Lektion, um Inhalte, Notizen und Fragen zu bearbeiten.' }}</p>
                             <div v-if="canOpenSelectedLesson" class="mt-5 grid gap-4">
                                 <div v-if="selectedLesson.content" class="rounded-lg border border-border bg-bg p-4 text-sm leading-relaxed text-primary whitespace-pre-line">{{ selectedLesson.content }}</div>
                                 <div v-if="selectedLesson.video_url && isVideoUrl(selectedLesson.video_url)" class="overflow-hidden rounded-lg border border-border bg-black">
@@ -441,7 +441,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                                         @ended="finishVideoProgress"
                                     ></video>
                                 </div>
-                                <a v-else-if="selectedLesson.video_url" :href="selectedLesson.video_url" target="_blank" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">Video oeffnen</a>
+                                <a v-else-if="selectedLesson.video_url" :href="selectedLesson.video_url" target="_blank" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">Video öffnen</a>
                                 <div v-if="canTrackSelectedLesson && selectedLesson.video_url" class="rounded-lg border border-border bg-bg p-3">
                                     <div class="flex items-center justify-between text-xs font-semibold text-secondary">
                                         <span>Video-Fortschritt</span>
@@ -454,7 +454,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                                 </div>
                                 <div v-if="selectedLesson.attachments?.length" class="grid gap-2">
                                     <a v-for="attachment in selectedLesson.attachments" :key="attachment.url || attachment.name" :href="attachment.url" target="_blank" class="rounded-lg border border-border bg-bg px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
-                                        {{ attachment.name || 'Material oeffnen' }}
+                                        {{ attachment.name || 'Material öffnen' }}
                                     </a>
                                 </div>
                                 <div v-if="selectedLesson.assignments?.length" class="grid gap-3">
@@ -487,7 +487,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                                     :disabled="selectedLesson.completed || lessonCompleteForm.processing"
                                     @click="completeLesson"
                                 >
-                                    {{ selectedLesson.completed ? 'Lektion abgeschlossen' : 'Lektion abschliessen' }}
+                                    {{ selectedLesson.completed ? 'Lektion abgeschlossen' : 'Lektion abschließen' }}
                                 </button>
                                 <form v-if="canUseLearningRoom" class="grid gap-2" @submit.prevent="submitNote">
                                     <textarea v-model="noteForm.body" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Private Notiz zu dieser Lektion"></textarea>
@@ -516,7 +516,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                                     </article>
                                 </div>
                                 <div v-if="!canUseLearningRoom" class="rounded-lg border border-border bg-bg p-4 text-sm text-secondary">
-                                    Das ist eine freigegebene Vorschau. Fuer Notizen und Kursfragen brauchst du Zugriff auf den Kurs.
+                                    Das ist eine freigegebene Vorschau. Für Notizen und Kursfragen brauchst du Zugriff auf den Kurs.
                                 </div>
                             </div>
                             <div v-else-if="selectedLesson.drip_locked" class="mt-5 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-warning">

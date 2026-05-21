@@ -82,7 +82,7 @@ const destroyCategory = async (category) => {
             </div>
 
             <Link :href="route('blogs.index')" class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:bg-muted">
-                Zurueck zu Blogs
+                Zurück zu Blogs
             </Link>
         </div>
 
@@ -96,7 +96,7 @@ const destroyCategory = async (category) => {
                                 <th class="px-4 py-3">Slug</th>
                                 <th class="px-4 py-3">Reihenfolge</th>
                                 <th class="px-4 py-3">Status</th>
-                                <th class="px-4 py-3">Beitraege</th>
+                                <th class="px-4 py-3">Beiträge</th>
                                 <th class="px-4 py-3 text-right">Aktionen</th>
                             </tr>
                         </thead>
@@ -120,7 +120,7 @@ const destroyCategory = async (category) => {
                                             Bearbeiten
                                         </button>
                                         <button class="rounded-lg bg-error px-3 py-2 text-white" @click="destroyCategory(category)">
-                                            Loeschen
+                                            Löschen
                                         </button>
                                     </div>
                                 </td>

@@ -1,6 +1,6 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
-import { Head, router, useForm } from '@inertiajs/vue3'
+import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 
 defineOptions({ layout: AppLayout })
@@ -29,6 +29,73 @@ const foodBarcode = ref('')
 const foodLookupLoading = ref(false)
 const foodLookupError = ref('')
 const foodSearchResults = ref([])
+const quickDrinkAmounts = [150, 250, 500, 750]
+const drinkVessels = [
+    {
+        key: 'small-cup',
+        label: 'Kleine Tasse',
+        amount: 150,
+        hint: 'Kaffee, Tee oder kurzer Drink',
+        title: 'Kleine Tasse Wasser',
+        fill: 42,
+        gradient: 'from-cyan-300 to-air-blue',
+        ring: 'border-cyan-300/45 hover:border-cyan-200',
+    },
+    {
+        key: 'glass',
+        label: 'Glas',
+        amount: 250,
+        hint: 'Standardglas fuer zwischendurch',
+        title: 'Glas Wasser',
+        fill: 58,
+        gradient: 'from-sky-300 to-cyan-500',
+        ring: 'border-sky-300/45 hover:border-sky-200',
+    },
+    {
+        key: 'large-cup',
+        label: 'Grosser Becher',
+        amount: 350,
+        hint: 'Guter Schritt nach dem Training',
+        title: 'Grosser Becher Wasser',
+        fill: 72,
+        gradient: 'from-emerald-300 to-cyan-500',
+        ring: 'border-emerald-300/45 hover:border-emerald-200',
+    },
+    {
+        key: 'bottle',
+        label: 'Flasche',
+        amount: 500,
+        hint: 'Schnell viel nachtragen',
+        title: 'Flasche Wasser',
+        fill: 88,
+        gradient: 'from-air-blue to-indigo-400',
+        ring: 'border-air-blue/55 hover:border-air-blue',
+    },
+]
+const showDrinkTips = ref(false)
+
+const drinkTips = [
+    {
+        title: 'Regelmäßig statt alles auf einmal',
+        body: 'Kleine Mengen über den Tag sind für die meisten alltagstauglicher als abends plötzlich sehr viel zu trinken.',
+        icon: 'las la-clock',
+    },
+    {
+        title: 'Training verändert den Bedarf',
+        body: 'Bei langen, intensiven oder warmen Einheiten brauchst du meist mehr Flüssigkeit. Nach dem Training nicht nur Kalorien, sondern auch Wasser nachtragen.',
+        icon: 'las la-running',
+    },
+    {
+        title: 'Farbe und Gefühl beobachten',
+        body: 'Sehr dunkler Urin, Kopfschmerzen oder starke Müdigkeit können Hinweise sein, dass du zu wenig getrunken hast.',
+        icon: 'las la-eye',
+    },
+    {
+        title: 'Nicht jedes Getränk ist gleich',
+        body: 'Wasser und ungesüßter Tee sind einfache Standardoptionen. Zuckerreiche Getränke zählen zwar als Flüssigkeit, passen aber nicht immer zum Ziel.',
+        icon: 'las la-mug-hot',
+    },
+]
 
 const emptyItems = () => ([
     { name: '', amount: '' },
@@ -51,6 +118,12 @@ const mealForm = useForm({
     notes: '',
 })
 
+const drinkForm = useForm({
+    eaten_on: props.selectedDate,
+    amount_ml: 250,
+    title: 'Wasser',
+})
+
 const goalForm = useForm({
     goal_type: props.goal?.goal_type || 'maintain',
     daily_calories_target: props.goal?.daily_calories_target || 2200,
@@ -64,12 +137,19 @@ const goalForm = useForm({
 })
 
 const mealTypes = computed(() => props.catalog?.meal_types || [])
+const foodMealTypes = computed(() => mealTypes.value.filter((type) => type.key !== 'drink'))
 const goalTypes = computed(() => props.catalog?.goal_types || [])
 const dietStyles = computed(() => props.catalog?.diet_styles || [])
-const sortedMeals = computed(() => [...(props.meals || [])].sort((a, b) => (a.meal_type || '').localeCompare(b.meal_type || '')))
+const drinkEntries = computed(() => (props.meals || []).filter((meal) => meal.meal_type === 'drink').sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')))
+const sortedMeals = computed(() => (props.meals || []).filter((meal) => meal.meal_type !== 'drink').sort((a, b) => (a.meal_type || '').localeCompare(b.meal_type || '')))
 const selectedGoal = computed(() => goalTypes.value.find((goal) => goal.key === goalForm.goal_type) || goalTypes.value[0] || {})
 const maxWeekCalories = computed(() => Math.max(1, ...props.weeklySummaries.map((day) => Number(day.calories || 0))))
+const maxWeekWater = computed(() => Math.max(1, Number(goalForm.water_target_ml || 0), ...props.weeklySummaries.map((day) => Number(day.water_ml || 0))))
 const caloriesLeft = computed(() => Math.max(0, Number(goalForm.daily_calories_target || 0) - Number(props.todaySummary.calories || 0)))
+const waterTargetMl = computed(() => Number(goalForm.water_target_ml || 0))
+const waterConsumedMl = computed(() => Number(props.todaySummary.water_ml || 0))
+const waterLeftMl = computed(() => Math.max(0, waterTargetMl.value - waterConsumedMl.value))
+const waterProgress = computed(() => progressValue(waterConsumedMl.value, waterTargetMl.value))
 const filteredRecipes = computed(() => {
     if (recipeFilter.value === 'goal') {
         return props.recipes.filter((recipe) => recipe.goal_type === goalForm.goal_type)
@@ -83,8 +163,9 @@ const filteredRecipes = computed(() => {
 })
 
 const nutritionSections = [
-    { key: 'today', label: 'Heute', hint: 'Ueberblick', icon: 'las la-chart-pie' },
+    { key: 'today', label: 'Heute', hint: 'Überblick', icon: 'las la-chart-pie' },
     { key: 'add', label: 'Erfassen', hint: 'Mahlzeit', icon: 'las la-plus-circle' },
+    { key: 'drink', label: 'Trinken', hint: 'Wasser', icon: 'las la-tint' },
     { key: 'goals', label: 'Ziele', hint: 'Plan', icon: 'las la-bullseye' },
     { key: 'ideas', label: 'Ideen', hint: 'Rezepte', icon: 'las la-lightbulb' },
 ]
@@ -142,6 +223,16 @@ const formatNumber = (value, digits = 0) => {
         minimumFractionDigits: digits,
         maximumFractionDigits: digits,
     })
+}
+
+const formatWater = (value) => {
+    const ml = Number(value || 0)
+
+    if (ml >= 1000) {
+        return `${(ml / 1000).toLocaleString('de-DE', { maximumFractionDigits: 1 })} l`
+    }
+
+    return `${formatNumber(ml)} ml`
 }
 
 const mealTypeMeta = (key) => mealTypes.value.find((type) => type.key === key) || { label: key || 'Mahlzeit', icon: 'las la-utensils' }
@@ -215,6 +306,32 @@ const saveGoal = () => {
     goalForm.patch(route('auth.nutrition.goal.update'), { preserveScroll: true })
 }
 
+const submitDrink = (amount = null, title = null) => {
+    if (amount) {
+        drinkForm.amount_ml = amount
+    }
+
+    if (title) {
+        drinkForm.title = title
+    }
+
+    drinkForm.eaten_on = selectedDateValue.value || props.selectedDate
+    drinkForm.title = drinkForm.title || 'Wasser'
+
+    drinkForm.post(route('auth.nutrition.water.store'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            drinkForm.amount_ml = amount || 250
+            drinkForm.title = 'Wasser'
+            activeSection.value = 'drink'
+        },
+    })
+}
+
+const submitDrinkVessel = (vessel) => {
+    submitDrink(vessel.amount, vessel.title)
+}
+
 const applyRecipe = (recipe) => {
     activeSection.value = 'add'
     showAdvancedMeal.value = true
@@ -252,7 +369,7 @@ const applyFoodResult = (food) => {
     mealForm.sugar_g = food.sugar_g ?? ''
     mealForm.source = food.code ? 'barcode' : 'manual'
     mealForm.items = [{ name: food.title, amount: food.quantity_label || food.serving_size || '1 Portion / 100 g' }]
-    mealForm.notes = `Quelle: ${food.attribution || 'Open Food Facts'}. Werte bitte pruefen, da offene Daten unvollstaendig sein koennen.`
+    mealForm.notes = `Quelle: ${food.attribution || 'Open Food Facts'}. Werte bitte prüfen, da offene Daten unvollstaendig sein koennen.`
 }
 
 const searchFoods = async () => {
@@ -275,7 +392,7 @@ const searchFoods = async () => {
             foodLookupError.value = 'Keine passenden Lebensmittel gefunden.'
         }
     } catch (error) {
-        foodLookupError.value = error.response?.data?.message || 'Lebensmittel-Suche ist gerade nicht verfuegbar.'
+        foodLookupError.value = error.response?.data?.message || 'Lebensmittel-Suche ist gerade nicht verfügbar.'
     } finally {
         foodLookupLoading.value = false
     }
@@ -329,7 +446,7 @@ const confirmDelete = () => {
                     <p class="text-xs font-bold uppercase text-air-blue">Airmius Fuel</p>
                     <h1 class="mt-1 text-2xl font-bold leading-tight text-primary">Ernaehrung</h1>
                     <p class="mt-1 max-w-2xl text-sm leading-6 text-secondary">
-                        Heute sehen, schnell erfassen, Ziele ruhig anpassen. Keine ueberladene Arbeitsflaeche mehr.
+                        Heute sehen, schnell erfassen, Ziele ruhig anpassen. Keine überladene Arbeitsflaeche mehr.
                     </p>
                 </div>
                 <div class="flex w-full gap-2 sm:w-auto">
@@ -341,7 +458,7 @@ const confirmDelete = () => {
             </div>
         </section>
 
-        <nav class="grid gap-2 rounded-2xl border border-border bg-card p-2 sm:grid-cols-4">
+        <nav class="grid gap-2 rounded-2xl border border-border bg-card p-2 sm:grid-cols-5">
             <button
                 v-for="section in nutritionSections"
                 :key="section.key"
@@ -402,6 +519,36 @@ const confirmDelete = () => {
                             </div>
                         </article>
                     </div>
+
+                    <div class="mt-4 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-4">
+                        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <p class="text-xs font-bold uppercase text-cyan-200">Trinken</p>
+                                <h3 class="mt-1 text-xl font-black text-primary">{{ formatWater(waterConsumedMl) }} getrunken</h3>
+                                <p class="mt-1 text-sm text-secondary">
+                                    {{ formatWater(waterLeftMl) }} bis zu deinem Tagesziel von {{ formatWater(waterTargetMl) }}.
+                                </p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                <button
+                                    v-for="amount in quickDrinkAmounts"
+                                    :key="amount"
+                                    type="button"
+                                    class="rounded-xl border border-cyan-300/40 bg-card px-3 py-2 text-sm font-bold text-primary hover:bg-cyan-400/15 disabled:opacity-60"
+                                    :disabled="drinkForm.processing"
+                                    @click="submitDrink(amount)"
+                                >
+                                    +{{ amount }} ml
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-4 h-3 overflow-hidden rounded-full bg-card">
+                            <div class="h-full rounded-full bg-gradient-to-r from-cyan-400 to-air-blue" :style="{ width: `${waterProgress}%` }"></div>
+                        </div>
+                        <button type="button" class="mt-3 text-sm font-bold text-cyan-200 hover:text-primary" @click="activeSection = 'drink'">
+                            Trinken genau verwalten
+                        </button>
+                    </div>
                 </section>
 
                 <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
@@ -429,7 +576,7 @@ const confirmDelete = () => {
                         <p class="text-xs font-bold uppercase text-air-blue">Tageslog</p>
                         <h2 class="mt-1 text-lg font-bold text-primary">Mahlzeiten</h2>
                     </div>
-                    <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-primary">{{ meals.length }} Eintraege</span>
+                    <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-primary">{{ sortedMeals.length }} Eintraege</span>
                 </div>
 
                 <div class="mt-4 space-y-3">
@@ -447,17 +594,17 @@ const confirmDelete = () => {
                                 <button type="button" class="rounded-lg border border-border px-2.5 py-2 text-primary hover:bg-muted" title="Bearbeiten" @click="editMeal(meal)">
                                     <i class="las la-pen"></i>
                                 </button>
-                                <button type="button" class="rounded-lg border border-danger/30 px-2.5 py-2 text-danger hover:bg-danger/10" title="Loeschen" @click="deleteCandidate = meal">
+                                <button type="button" class="rounded-lg border border-danger/30 px-2.5 py-2 text-danger hover:bg-danger/10" title="Löschen" @click="deleteCandidate = meal">
                                     <i class="las la-trash"></i>
                                 </button>
                             </div>
                         </div>
                     </article>
 
-                    <div v-if="!meals.length" class="rounded-xl border border-dashed border-border bg-inputBg p-6 text-center">
+                    <div v-if="!sortedMeals.length" class="rounded-xl border border-dashed border-border bg-inputBg p-6 text-center">
                         <i class="las la-apple-alt text-4xl text-air-blue"></i>
                         <p class="mt-3 text-base font-bold text-primary">Noch nichts erfasst.</p>
-                        <p class="mt-1 text-sm text-secondary">Eine grobe Mahlzeit reicht fuer den Anfang.</p>
+                        <p class="mt-1 text-sm text-secondary">Eine grobe Mahlzeit reicht für den Anfang.</p>
                     </div>
                 </div>
             </section>
@@ -478,7 +625,7 @@ const confirmDelete = () => {
 
                 <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
                     <button
-                        v-for="type in mealTypes"
+                        v-for="type in foodMealTypes"
                         :key="type.key"
                         type="button"
                         :class="[
@@ -557,11 +704,11 @@ const confirmDelete = () => {
                 </div>
 
                 <div v-if="Object.keys(mealForm.errors).length" class="mt-4 rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
-                    Bitte pruefe die Eingaben.
+                    Bitte prüfe die Eingaben.
                 </div>
 
                 <button type="submit" class="mt-4 w-full rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-bold text-buttonTextPrimary disabled:opacity-60" :disabled="mealForm.processing">
-                    {{ editingMealId ? 'Speichern' : 'Hinzufuegen' }}
+                    {{ editingMealId ? 'Speichern' : 'Hinzufügen' }}
                 </button>
             </form>
 
@@ -571,7 +718,7 @@ const confirmDelete = () => {
                         <div>
                             <p class="text-xs font-bold uppercase text-air-blue">Suche</p>
                             <h2 class="mt-1 text-lg font-bold text-primary">Lebensmittel finden</h2>
-                            <p class="mt-1 text-sm text-secondary">Name oder Barcode suchen, dann uebernehmen.</p>
+                            <p class="mt-1 text-sm text-secondary">Name oder Barcode suchen, dann übernehmen.</p>
                         </div>
                         <span class="rounded-full bg-card px-3 py-1 text-[11px] font-bold text-primary">kostenlos</span>
                     </div>
@@ -604,7 +751,7 @@ const confirmDelete = () => {
                                 <p class="mt-1 text-xs text-secondary">{{ food.calories }} kcal - {{ food.protein_g }} g Protein</p>
                             </div>
                             <button type="button" class="shrink-0 rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-bold text-buttonTextPrimary" @click="applyFoodResult(food)">
-                                Uebernehmen
+                                Übernehmen
                             </button>
                         </article>
                     </div>
@@ -615,6 +762,180 @@ const confirmDelete = () => {
                     <div class="mt-3 grid grid-cols-2 gap-2">
                         <span class="rounded-xl border border-border bg-inputBg p-3 text-xs text-secondary"><b class="block text-lg text-primary">{{ formatNumber(todaySummary.calories || 0) }}</b>kcal</span>
                         <span class="rounded-xl border border-border bg-inputBg p-3 text-xs text-secondary"><b class="block text-lg text-primary">{{ formatNumber(todaySummary.protein_g || 0, 1) }} g</b>Protein</span>
+                    </div>
+                </section>
+            </aside>
+        </section>
+
+        <section v-if="activeSection === 'drink'" class="grid gap-4 xl:grid-cols-[minmax(0,0.85fr),minmax(320px,0.55fr)]">
+            <form class="rounded-2xl border border-border bg-card p-4 lg:p-5" @submit.prevent="submitDrink()">
+                <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                        <p class="text-xs font-bold uppercase text-cyan-200">Trinken</p>
+                        <h2 class="mt-1 text-2xl font-black text-primary">{{ formatWater(waterConsumedMl) }} heute</h2>
+                        <p class="mt-1 text-sm leading-6 text-secondary">
+                            Ziel: {{ formatWater(waterTargetMl) }}. Noch {{ formatWater(waterLeftMl) }} offen.
+                        </p>
+                    </div>
+                    <button type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-bold text-primary hover:bg-muted" @click="activeSection = 'goals'">
+                        Wasserziel ändern
+                    </button>
+                </div>
+
+                <div class="mt-5 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <span class="text-sm font-bold text-primary">{{ waterProgress }}%</span>
+                        <span class="text-sm font-semibold text-secondary">{{ formatWater(waterConsumedMl) }} / {{ formatWater(waterTargetMl) }}</span>
+                    </div>
+                    <div class="mt-3 h-4 overflow-hidden rounded-full bg-card">
+                        <div class="h-full rounded-full bg-gradient-to-r from-cyan-400 to-air-blue" :style="{ width: `${waterProgress}%` }"></div>
+                    </div>
+                </div>
+
+                <div class="mt-5">
+                    <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <p class="text-sm font-bold text-primary">Nach Tasse oder Glas eintragen</p>
+                            <p class="text-xs leading-5 text-secondary">Waehle die Groesse, die am besten passt. Die Menge wird direkt gespeichert.</p>
+                        </div>
+                        <span class="text-xs font-bold uppercase text-cyan-200">Airmius Quick Drink</span>
+                    </div>
+                    <div class="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                        <button
+                            v-for="vessel in drinkVessels"
+                            :key="vessel.key"
+                            type="button"
+                            class="group rounded-2xl border bg-inputBg p-3 text-left transition hover:-translate-y-0.5 hover:bg-cyan-400/10 disabled:opacity-60"
+                            :class="vessel.ring"
+                            :disabled="drinkForm.processing"
+                            @click="submitDrinkVessel(vessel)"
+                        >
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="min-w-0">
+                                    <p class="truncate text-sm font-black text-primary">{{ vessel.label }}</p>
+                                    <p class="mt-1 text-xs text-secondary">{{ vessel.hint }}</p>
+                                </div>
+                                <span class="rounded-full bg-card px-2.5 py-1 text-xs font-black text-cyan-100">{{ vessel.amount }} ml</span>
+                            </div>
+                            <div class="mt-4 flex items-end justify-center">
+                                <div class="relative h-24 w-16">
+                                    <div class="absolute left-2 top-2 h-20 w-11 overflow-hidden rounded-b-2xl rounded-t-md border-2 border-white/45 bg-white/10 shadow-inner">
+                                        <div
+                                            class="absolute bottom-0 left-0 right-0 rounded-b-2xl bg-gradient-to-t opacity-95 transition-all group-hover:opacity-100"
+                                            :class="vessel.gradient"
+                                            :style="{ height: `${vessel.fill}%` }"
+                                        ></div>
+                                        <div class="absolute inset-x-1 top-2 h-2 rounded-full bg-white/30"></div>
+                                    </div>
+                                    <div class="absolute right-0 top-7 h-9 w-5 rounded-r-full border-2 border-l-0 border-white/40"></div>
+                                    <div class="absolute bottom-0 left-0 right-0 h-px bg-white/25"></div>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-5">
+                    <p class="text-sm font-bold text-primary">Oder schnelle Menge eintragen</p>
+                    <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        <button
+                            v-for="amount in quickDrinkAmounts"
+                            :key="amount"
+                            type="button"
+                            class="rounded-xl border border-border bg-inputBg px-4 py-4 text-base font-black text-primary hover:border-cyan-300 hover:bg-cyan-400/10 disabled:opacity-60"
+                            :disabled="drinkForm.processing"
+                            @click="submitDrink(amount)"
+                        >
+                            +{{ amount }} ml
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr),minmax(0,1fr),auto]">
+                    <label class="block text-sm font-bold text-primary">Getränk
+                        <input v-model="drinkForm.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. Wasser, Tee">
+                    </label>
+                    <label class="block text-sm font-bold text-primary">Menge in ml
+                        <input v-model="drinkForm.amount_ml" type="number" min="1" max="5000" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="250">
+                    </label>
+                    <button type="submit" class="self-end rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-bold text-buttonTextPrimary disabled:opacity-60" :disabled="drinkForm.processing">
+                        Eintragen
+                    </button>
+                </div>
+                <input v-model="drinkForm.eaten_on" type="hidden">
+
+                <p v-if="drinkForm.errors.amount_ml || drinkForm.errors.title" class="mt-3 rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
+                    Bitte Menge zwischen 1 und 5000 ml eingeben.
+                </p>
+            </form>
+
+            <aside class="space-y-4">
+                <section class="rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-4 lg:p-5">
+                    <div class="flex items-start gap-3">
+                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-cyan-400/20 text-cyan-100">
+                            <i class="las la-lightbulb text-2xl"></i>
+                        </span>
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold uppercase text-cyan-200">Trink-Tipps</p>
+                            <h3 class="mt-1 text-lg font-black text-primary">Kurz wissen, besser tracken</h3>
+                            <p class="mt-1 text-sm leading-6 text-secondary">
+                                Orientierung zu Wasserziel, Training und Alltag.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="mt-4 grid gap-2">
+                        <button
+                            type="button"
+                            class="rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-bold text-buttonTextPrimary"
+                            @click="showDrinkTips = true"
+                        >
+                            Tipps öffnen
+                        </button>
+                        <Link
+                            :href="route('guest.blog.index', { search: 'Trinken' })"
+                            class="rounded-xl border border-border bg-card px-4 py-3 text-center text-sm font-bold text-primary hover:border-cyan-300 hover:bg-cyan-400/10"
+                        >
+                            Blog zu Trinken
+                        </Link>
+                    </div>
+                </section>
+
+                <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-bold uppercase text-air-blue">Heute</p>
+                            <h2 class="mt-1 text-lg font-bold text-primary">Getränke</h2>
+                        </div>
+                        <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-primary">{{ drinkEntries.length }}</span>
+                    </div>
+
+                    <div v-if="drinkEntries.length" class="mt-4 space-y-2">
+                        <article v-for="entry in drinkEntries" :key="entry.id" class="flex items-center justify-between gap-3 rounded-xl border border-border bg-inputBg p-3">
+                            <div class="min-w-0">
+                                <p class="truncate text-sm font-bold text-primary">{{ entry.title }}</p>
+                                <p class="text-xs text-secondary">{{ formatWater(entry.water_ml) }}</p>
+                            </div>
+                            <button type="button" class="rounded-lg border border-danger/30 px-2.5 py-2 text-danger hover:bg-danger/10" title="Löschen" @click="deleteCandidate = entry">
+                                <i class="las la-trash"></i>
+                            </button>
+                        </article>
+                    </div>
+                    <div v-else class="mt-4 rounded-xl border border-dashed border-border bg-inputBg p-6 text-center">
+                        <i class="las la-tint text-4xl text-cyan-200"></i>
+                        <p class="mt-3 text-base font-bold text-primary">Noch nichts getrunken eingetragen.</p>
+                        <p class="mt-1 text-sm text-secondary">Ein Tippen auf +250 ml reicht während des Tages.</p>
+                    </div>
+                </section>
+
+                <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
+                    <p class="text-xs font-bold uppercase text-air-blue">7 Tage Wasser</p>
+                    <div class="mt-4 flex h-28 items-end gap-2">
+                        <div v-for="day in weeklySummaries" :key="`water-${day.date}`" class="flex min-w-0 flex-1 flex-col items-center gap-2">
+                            <div class="flex h-20 w-full items-end rounded-full bg-inputBg px-1">
+                                <div class="w-full rounded-full bg-gradient-to-t from-cyan-400 to-air-blue" :style="{ height: `${Math.max(6, (Number(day.water_ml || 0) / maxWeekWater) * 100)}%` }"></div>
+                            </div>
+                            <span class="text-[11px] font-bold text-secondary">{{ day.label }}</span>
+                        </div>
                     </div>
                 </section>
             </aside>
@@ -676,7 +997,7 @@ const confirmDelete = () => {
                 <div class="flex items-center justify-between gap-3">
                     <div>
                         <p class="text-xs font-bold uppercase text-air-blue">Rezepte</p>
-                        <h2 class="mt-1 text-xl font-bold text-primary">Schnell uebernehmen</h2>
+                        <h2 class="mt-1 text-xl font-bold text-primary">Schnell übernehmen</h2>
                     </div>
                     <div class="grid grid-cols-3 gap-2">
                         <button type="button" :class="['rounded-lg border px-3 py-2 text-xs font-bold', recipeFilter === 'all' ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border text-secondary hover:bg-muted']" @click="recipeFilter = 'all'">
@@ -731,7 +1052,7 @@ const confirmDelete = () => {
 
         <div v-if="deleteCandidate" class="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-4 sm:items-center">
             <div class="w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl">
-                <h2 class="text-lg font-bold text-primary">Mahlzeit loeschen?</h2>
+                <h2 class="text-lg font-bold text-primary">Eintrag löschen?</h2>
                 <p class="mt-2 text-sm text-secondary">
                     "{{ deleteCandidate.title }}" wird aus deinem Tageslog entfernt.
                 </p>
@@ -740,10 +1061,71 @@ const confirmDelete = () => {
                         Abbrechen
                     </button>
                     <button type="button" class="rounded-xl bg-danger px-4 py-2 text-sm font-bold text-white" @click="confirmDelete">
-                        Loeschen
+                        Löschen
                     </button>
                 </div>
             </div>
+        </div>
+
+        <div v-if="showDrinkTips" class="fixed inset-0 z-[90] flex items-end justify-center bg-black/65 p-0 sm:items-center sm:p-4" @click.self="showDrinkTips = false">
+            <section class="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border border-border bg-card shadow-2xl sm:rounded-2xl">
+                <header class="flex items-start justify-between gap-3 border-b border-border p-4 sm:p-5">
+                    <div class="min-w-0">
+                        <p class="text-xs font-bold uppercase text-cyan-200">Trinken</p>
+                        <h2 class="mt-1 text-xl font-black text-primary sm:text-2xl">Tipps rund ums Trinken</h2>
+                        <p class="mt-1 text-sm leading-6 text-secondary">
+                            Einfache Orientierung für Alltag, Training und Regeneration.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-primary hover:bg-muted"
+                        aria-label="Schließen"
+                        @click="showDrinkTips = false"
+                    >
+                        <i class="las la-times text-xl"></i>
+                    </button>
+                </header>
+
+                <div class="min-h-0 overflow-y-auto p-4 sm:p-5">
+                    <div class="grid gap-3">
+                        <article v-for="tip in drinkTips" :key="tip.title" class="rounded-2xl border border-border bg-inputBg p-4">
+                            <div class="flex gap-3">
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-400/15 text-cyan-200">
+                                    <i :class="[tip.icon, 'text-xl']"></i>
+                                </span>
+                                <div>
+                                    <h3 class="font-bold text-primary">{{ tip.title }}</h3>
+                                    <p class="mt-1 text-sm leading-6 text-secondary">{{ tip.body }}</p>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+
+                    <div class="mt-4 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-4">
+                        <p class="text-sm font-bold text-primary">Dein aktueller Stand</p>
+                        <p class="mt-1 text-sm leading-6 text-secondary">
+                            Heute: {{ formatWater(waterConsumedMl) }} von {{ formatWater(waterTargetMl) }}. Noch {{ formatWater(waterLeftMl) }} offen.
+                        </p>
+                        <div class="mt-3 h-3 overflow-hidden rounded-full bg-card">
+                            <div class="h-full rounded-full bg-gradient-to-r from-cyan-400 to-air-blue" :style="{ width: `${waterProgress}%` }"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <footer class="grid gap-2 border-t border-border p-4 sm:grid-cols-[1fr_auto] sm:p-5">
+                    <Link
+                        :href="route('guest.blog.index', { search: 'Trinken' })"
+                        class="rounded-xl border border-border px-4 py-3 text-center text-sm font-bold text-primary hover:border-cyan-300 hover:bg-cyan-400/10"
+                        @click="showDrinkTips = false"
+                    >
+                        Mehr im Blog lesen
+                    </Link>
+                    <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-bold text-buttonTextPrimary" @click="showDrinkTips = false">
+                        Verstanden
+                    </button>
+                </footer>
+            </section>
         </div>
     </div>
 </template>

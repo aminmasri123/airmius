@@ -653,7 +653,7 @@ const inviteExternalMember = (member) => {
                             type="button"
                             class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-inputBg disabled:cursor-not-allowed disabled:opacity-50"
                             :disabled="capabilities.member_import === false"
-                            :title="capabilities.member_import === false ? 'Import ist ab Starter verfuegbar' : ''"
+                            :title="capabilities.member_import === false ? 'Import ist ab Starter verfügbar' : ''"
                             @click="showImportModal = true"
                         >
                             Importieren
@@ -662,7 +662,7 @@ const inviteExternalMember = (member) => {
                             type="button"
                             class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50"
                             :disabled="!canOpenEmailMembers"
-                            :title="!canOpenEmailMembers ? 'Externe Mitglieder sind ab Starter verfuegbar' : ''"
+                            :title="!canOpenEmailMembers ? 'Externe Mitglieder sind ab Starter verfügbar' : ''"
                             @click="showAddMemberModal = true"
                         >
                             Mitglied hinzufügen
@@ -701,7 +701,7 @@ const inviteExternalMember = (member) => {
                         :href="route('auth.club-memberships.sepa-export', selectedClub.id)"
                         class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50"
                         :class="{ 'pointer-events-none opacity-50': capabilities.sepa_export === false }"
-                        :title="capabilities.sepa_export === false ? 'SEPA-Export ist ab Pro verfuegbar' : ''"
+                        :title="capabilities.sepa_export === false ? 'SEPA-Export ist ab Pro verfügbar' : ''"
                     >
                         SEPA-XML exportieren
                     </a>
@@ -728,7 +728,7 @@ const inviteExternalMember = (member) => {
                         <button
                             class="w-full rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50"
                             :disabled="capabilities.sepa_export === false"
-                            :title="capabilities.sepa_export === false ? 'SEPA-Export ist ab Pro verfuegbar' : ''"
+                            :title="capabilities.sepa_export === false ? 'SEPA-Export ist ab Pro verfügbar' : ''"
                         >
                             Speichern
                         </button>
@@ -906,7 +906,7 @@ const inviteExternalMember = (member) => {
                             <input v-model="membershipTypeForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="z. B. Jugendmitglied" required>
                             <input v-model="membershipTypeForm.slug" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="slug optional">
                             <textarea v-model="membershipTypeForm.description" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Beschreibung"></textarea>
-                            <label class="flex items-center gap-2 text-sm text-primary"><input v-model="membershipTypeForm.is_public" type="checkbox" class="rounded border-border bg-inputBg"> Oeffentlich sichtbar</label>
+                            <label class="flex items-center gap-2 text-sm text-primary"><input v-model="membershipTypeForm.is_public" type="checkbox" class="rounded border-border bg-inputBg"> Öffentlich sichtbar</label>
                             <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Typ speichern</button>
                         </form>
                         <div class="mt-4 flex flex-wrap gap-2">
@@ -975,7 +975,7 @@ const inviteExternalMember = (member) => {
                         </div>
                     </div>
                     <div v-if="endingSoonMembersCount" class="mt-4 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-                        {{ endingSoonMembersCount }} Mitgliedschaft{{ endingSoonMembersCount === 1 ? '' : 'en' }} endet innerhalb der naechsten 30 Tage.
+                        {{ endingSoonMembersCount }} Mitgliedschaft{{ endingSoonMembersCount === 1 ? '' : 'en' }} endet innerhalb der nächsten 30 Tage.
                     </div>
                 </div>
 
@@ -1014,7 +1014,7 @@ const inviteExternalMember = (member) => {
                                     type="button"
                                     class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50"
                                     :disabled="capabilities.invoices === false"
-                                    :title="capabilities.invoices === false ? 'Rechnungen sind ab Starter verfuegbar' : ''"
+                                    :title="capabilities.invoices === false ? 'Rechnungen sind ab Starter verfügbar' : ''"
                                     @click="openInvoice(member)"
                                 >
                                     Rechnung
@@ -1043,7 +1043,7 @@ const inviteExternalMember = (member) => {
                                         <span>{{ role.label }}</span>
                                     </label>
                                 </div>
-                                <p class="mt-1 text-xs text-secondary">Mehrere Rollen sind moeglich, z. B. Trainer und Kassierer.</p>
+                                <p class="mt-1 text-xs text-secondary">Mehrere Rollen sind möglich, z. B. Trainer und Kassierer.</p>
                             </div>
 
                             <div>
@@ -1211,7 +1211,7 @@ const inviteExternalMember = (member) => {
                                             type="button"
                                             class="rounded border border-border px-2 py-1 text-xs text-primary disabled:cursor-not-allowed disabled:opacity-50"
                                             :disabled="capabilities.payment_reminders === false"
-                                            :title="capabilities.payment_reminders === false ? 'Mahnungen sind ab Club verfuegbar' : ''"
+                                            :title="capabilities.payment_reminders === false ? 'Mahnungen sind ab Club verfügbar' : ''"
                                             @click="sendReminder(invoice)"
                                         >
                                             Mahnung
@@ -1230,14 +1230,14 @@ const inviteExternalMember = (member) => {
                     <div>
                         <h2 class="text-lg font-semibold text-primary">Bankabgleich</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            CSV-Umsaetze importieren, Rechnungen automatisch zuordnen und unklare Treffer manuell bestaetigen.
+                            CSV-Umsaetze importieren, Rechnungen automatisch zuordnen und unklare Treffer manuell bestätigen.
                         </p>
                     </div>
                     <button
                         type="button"
                         class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50"
                         :disabled="capabilities.bank_reconciliation === false"
-                        :title="capabilities.bank_reconciliation === false ? 'Bankabgleich ist ab Pro verfuegbar' : ''"
+                        :title="capabilities.bank_reconciliation === false ? 'Bankabgleich ist ab Pro verfügbar' : ''"
                         @click="showBankImportModal = true"
                     >
                         Bank-CSV importieren
@@ -1295,7 +1295,7 @@ const inviteExternalMember = (member) => {
                                         class="rounded border border-border px-2 py-1 text-xs text-primary"
                                         @click="confirmBankTransaction(transaction)"
                                     >
-                                        Bestaetigen
+                                        Bestätigen
                                     </button>
                                 </td>
                             </tr>
@@ -1318,7 +1318,7 @@ const inviteExternalMember = (member) => {
                         :href="datevExportUrl"
                         class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
                         :class="{ 'pointer-events-none opacity-50': capabilities.datev_export === false }"
-                        :title="capabilities.datev_export === false ? 'DATEV-Export ist ab Pro verfuegbar' : ''"
+                        :title="capabilities.datev_export === false ? 'DATEV-Export ist ab Pro verfügbar' : ''"
                     >
                         DATEV-CSV exportieren
                     </a>
@@ -1346,7 +1346,7 @@ const inviteExternalMember = (member) => {
                             <button
                                 class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50"
                                 :disabled="capabilities.datev_export === false"
-                                :title="capabilities.datev_export === false ? 'DATEV-Export ist ab Pro verfuegbar' : ''"
+                                :title="capabilities.datev_export === false ? 'DATEV-Export ist ab Pro verfügbar' : ''"
                             >
                                 DATEV-Einstellungen speichern
                             </button>
@@ -1372,7 +1372,7 @@ const inviteExternalMember = (member) => {
 
         <Modal :show="showAddMemberModal" max-width="2xl" @close="showAddMemberModal = false">
             <div class="p-2">
-                <h2 class="text-xl font-bold text-primary">Mitglieder per E-Mail hinzufuegen</h2>
+                <h2 class="text-xl font-bold text-primary">Mitglieder per E-Mail hinzufügen</h2>
                 <p class="mt-1 text-sm text-secondary">
                     Erfasse mehrere Mitglieder auf einmal. Wenn eine Einladung aktiv ist, werden vorhandene Konten verknuepft, sonst geht eine Einladung per E-Mail raus.
                 </p>
@@ -1629,7 +1629,7 @@ const inviteExternalMember = (member) => {
                     </div>
 
                     <p class="rounded-lg border border-border bg-bg p-3 text-xs text-secondary">
-                        Sichere Treffer mit Rechnungsnummer und Betrag werden automatisch als bezahlt markiert. Vorschlaege kannst du danach bestaetigen.
+                        Sichere Treffer mit Rechnungsnummer und Betrag werden automatisch als bezahlt markiert. Vorschlaege kannst du danach bestätigen.
                     </p>
 
                     <div class="flex justify-end gap-2">

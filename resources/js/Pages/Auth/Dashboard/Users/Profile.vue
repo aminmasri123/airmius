@@ -235,7 +235,7 @@ const trustTone = computed(() => {
 const profileStats = computed(() => [
     { label: 'Follower', value: props.profileUser.followers_count },
     { label: 'Folgt', value: props.profileUser.following_count },
-    { label: 'Beitraege', value: props.profileUser.posts_count },
+    { label: 'Beiträge', value: props.profileUser.posts_count },
     { label: 'Level', value: props.profileUser.gamification.level },
     { label: 'Heute XP', value: props.profileUser.gamification.earned_today },
 ])
@@ -246,13 +246,13 @@ const visibleBadges = computed(() => props.profileUser.badges.slice(0, 6))
 
 const membershipCount = computed(() => props.profileUser.clubs.length + props.profileUser.teams.length)
 
-const privacyLabel = computed(() => props.profileUser.profile_visibility === 'private' ? 'Privates Profil' : 'Oeffentliches Profil')
+const privacyLabel = computed(() => props.profileUser.profile_visibility === 'private' ? 'Privates Profil' : 'Öffentliches Profil')
 
 const tabs = computed(() => [
-    { key: 'overview', label: 'Uebersicht', icon: 'las la-id-card' },
+    { key: 'overview', label: 'Übersicht', icon: 'las la-id-card' },
     { key: 'sports', label: 'Sportarten', icon: 'las la-running' },
     { key: 'skills', label: 'Skills', icon: 'las la-medal' },
-    { key: 'posts', label: 'Beitraege', icon: 'las la-stream' },
+    { key: 'posts', label: 'Beiträge', icon: 'las la-stream' },
     { key: 'network', label: 'Netzwerk', icon: 'las la-users' },
     { key: 'recommendations', label: 'Empfehlungen', icon: 'las la-star' },
 ])
@@ -575,7 +575,7 @@ const rejectRecommendation = (recommendation) => {
                                                 {{ profileUser.gamification.xp }} XP von {{ profileUser.gamification.next_level_xp }} XP
                                             </div>
                                             <div class="mt-1 text-xs font-semibold uppercase tracking-wide text-secondary">
-                                                Noch {{ profileUser.gamification.xp_to_next_level }} XP bis zum naechsten Level
+                                                Noch {{ profileUser.gamification.xp_to_next_level }} XP bis zum nächsten Level
                                             </div>
                                         </div>
                                         <div class="rounded-xl border border-border bg-inputBg px-4 py-3">
@@ -613,7 +613,7 @@ const rejectRecommendation = (recommendation) => {
                             <div class="flex items-center justify-between gap-4">
                                 <div>
                                     <h2 class="text-lg font-bold text-primary">Profil</h2>
-                                    <p class="mt-1 text-sm text-secondary">Bio, Sportarten und oeffentliche Einordnung.</p>
+                                    <p class="mt-1 text-sm text-secondary">Bio, Sportarten und öffentliche Einordnung.</p>
                                 </div>
                             </div>
 
@@ -662,7 +662,7 @@ const rejectRecommendation = (recommendation) => {
                                     <option value="expert">Experte</option>
                                 </select>
                                 <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover">
-                                    Hinzufuegen
+                                    Hinzufügen
                                 </button>
                             </form>
 
@@ -688,7 +688,7 @@ const rejectRecommendation = (recommendation) => {
 
                         <section v-if="activeTab === 'skills'" class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
                             <div>
-                                <h2 class="text-lg font-bold text-primary">Skills & Bestaetigungen</h2>
+                                <h2 class="text-lg font-bold text-primary">Skills & Bestätigungen</h2>
                                 <p class="mt-1 text-sm text-secondary">Skills entstehen aus den gewählten Sportarten und können bestätigt werden.</p>
                             </div>
 
@@ -711,7 +711,7 @@ const rejectRecommendation = (recommendation) => {
                                                     <h4 class="font-semibold text-primary">{{ skill.skill.name }}</h4>
                                                     <p class="mt-1 text-sm text-secondary">{{ skill.skill.description }}</p>
                                                     <p class="mt-2 text-xs font-semibold text-secondary">
-                                                        Eigenes Level: {{ levelLabel(skill.self_level) }} - {{ skill.endorsements_count }} Bestaetigungen
+                                                        Eigenes Level: {{ levelLabel(skill.self_level) }} - {{ skill.endorsements_count }} Bestätigungen
                                                     </p>
                                                 </div>
 
@@ -722,7 +722,7 @@ const rejectRecommendation = (recommendation) => {
                                                     :disabled="skill.viewer_has_endorsed"
                                                     @click="endorseSkill(skill)"
                                                 >
-                                                    {{ skill.viewer_has_endorsed ? 'Bestaetigt' : 'Bestaetigen' }}
+                                                    {{ skill.viewer_has_endorsed ? 'Bestätigt' : 'Bestätigen' }}
                                                 </button>
                                             </div>
 
@@ -747,7 +747,7 @@ const rejectRecommendation = (recommendation) => {
                                                     <option value="club_admin">Verein</option>
                                                 </select>
                                                 <select v-model="skillFormFor(skill).level" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
-                                                    <option value="confirmed">Kann ich bestaetigen</option>
+                                                    <option value="confirmed">Kann ich bestätigen</option>
                                                     <option value="good">Gut</option>
                                                     <option value="strong">Stark</option>
                                                     <option value="exceptional">Aussergewoehnlich</option>
@@ -765,7 +765,7 @@ const rejectRecommendation = (recommendation) => {
                                 </article>
 
                                 <p v-if="!profileUser.sport_skills.length" class="rounded-xl border border-dashed border-border bg-bg p-4 text-sm text-secondary">
-                                    Sobald Sportarten hinzugefuegt werden, erscheinen hier passende Skills.
+                                    Sobald Sportarten hinzugefügt werden, erscheinen hier passende Skills.
                                 </p>
                             </div>
                         </section>
@@ -773,7 +773,7 @@ const rejectRecommendation = (recommendation) => {
                         <section v-if="activeTab === 'posts'" class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
                             <div class="flex items-center justify-between gap-4">
                                 <div>
-                                    <h2 class="text-lg font-bold text-primary">Aktuelle Beitraege</h2>
+                                    <h2 class="text-lg font-bold text-primary">Aktuelle Beiträge</h2>
                                     <p class="mt-1 text-sm text-secondary">Die letzten sichtbaren Aktivitaeten dieses Profils.</p>
                                 </div>
                             </div>
@@ -793,7 +793,7 @@ const rejectRecommendation = (recommendation) => {
                                     </div>
                                 </article>
                                 <p v-if="!posts.length" class="rounded-xl border border-dashed border-border bg-bg p-4 text-sm text-secondary">
-                                    Keine sichtbaren Beitraege vorhanden.
+                                    Keine sichtbaren Beiträge vorhanden.
                                 </p>
                             </div>
                         </section>
@@ -856,7 +856,7 @@ const rejectRecommendation = (recommendation) => {
                                 <article v-for="recommendation in profileUser.recommendations" :key="recommendation.id" class="rounded-xl border border-border bg-bg p-4">
                                     <p class="text-sm leading-relaxed text-primary">{{ recommendation.body }}</p>
                                     <p class="mt-3 text-xs text-secondary">
-                                        {{ recommendation.author.name }} - {{ relationshipLabel(recommendation.relationship) }} - {{ recommendation.status === 'pending' ? 'wartet auf Freigabe' : 'veroeffentlicht' }}
+                                        {{ recommendation.author.name }} - {{ relationshipLabel(recommendation.relationship) }} - {{ recommendation.status === 'pending' ? 'wartet auf Freigabe' : 'veröffentlicht' }}
                                     </p>
                                     <div v-if="viewer.is_self && recommendation.status === 'pending'" class="mt-3 flex gap-2">
                                         <button class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm text-buttonTextPrimary" @click="approveRecommendation(recommendation)">Freigeben</button>
@@ -876,7 +876,7 @@ const rejectRecommendation = (recommendation) => {
                 </div>
                 <h2 class="mt-4 text-xl font-bold text-primary">Dieses Profil ist privat</h2>
                 <p class="mx-auto mt-2 max-w-xl text-sm leading-6 text-secondary">
-                    Details, Beitraege, Teams und Sportprofil sind nur für berechtigte Personen sichtbar.
+                    Details, Beiträge, Teams und Sportprofil sind nur für berechtigte Personen sichtbar.
                 </p>
             </section>
 

@@ -95,7 +95,7 @@ const productFacts = computed(() => [
 ])
 const purchaseFacts = computed(() => [
     { label: 'Lieferung', value: props.product.delivery_label || (props.product.is_shippable ? 'Versand nach Bestellung' : 'Digital / Termin'), icon: 'las la-truck' },
-    { label: 'Rueckgabe', value: props.product.return_label || `${props.product.return_window_days ?? 14} Tage`, icon: 'las la-undo' },
+    { label: 'Rückgabe', value: props.product.return_label || `${props.product.return_window_days ?? 14} Tage`, icon: 'las la-undo' },
     { label: 'Anbieter', value: props.product.provider_name || 'Airmius Anbieter', icon: 'las la-store' },
 ])
 const galleryImages = computed(() => {
@@ -140,7 +140,7 @@ const checkoutStep = ref('address')
 const checkoutSteps = [
     { key: 'address', label: 'Adresse', icon: 'las la-map-marker-alt' },
     { key: 'payment', label: 'Menge', icon: 'las la-shopping-bag' },
-    { key: 'review', label: 'Pruefen', icon: 'las la-clipboard-check' },
+    { key: 'review', label: 'Prüfen', icon: 'las la-clipboard-check' },
 ]
 const isShippableProduct = computed(() => Boolean(props.product.is_shippable))
 const hasGuestContact = computed(() => isAuthenticated.value
@@ -169,15 +169,15 @@ const checkoutStepHint = computed(() => {
     }
 
     if (checkoutStep.value === 'payment' && checkoutUnavailable.value) {
-        return 'Aktuell ist noch keine Zahlungsart fuer diesen Marketplace konfiguriert.'
+        return 'Aktuell ist noch keine Zahlungsart für diesen Marketplace konfiguriert.'
     }
 
     if (checkoutStep.value === 'payment' && !canContinuePayment.value) {
-        return 'Bitte Zahlungsart und Menge pruefen.'
+        return 'Bitte Zahlungsart und Menge prüfen.'
     }
 
     if (checkoutStep.value === 'review' && !form.accepted_terms) {
-        return 'AGB und Widerruf muessen vor dem Kauf bestaetigt werden.'
+        return 'AGB und Widerruf muessen vor dem Kauf bestätigt werden.'
     }
 
     return ''
@@ -267,15 +267,15 @@ const productFaqItems = computed(() => [
     },
     {
         question: 'Wer ist mein Ansprechpartner?',
-        answer: `${props.product.provider_profile?.name || props.product.provider_name || 'Der Anbieter'} ist fuer Angebotsdetails und Erfuellung zustaendig. Airmius stellt Checkout, Status und Belege bereit.`,
+        answer: `${props.product.provider_profile?.name || props.product.provider_name || 'Der Anbieter'} ist für Angebotsdetails und Erfüllung zustaendig. Airmius stellt Checkout, Status und Belege bereit.`,
     },
     {
         question: 'Wie wird der Endpreis berechnet?',
         answer: 'Steuer, Versand und Gesamtpreis werden anhand von Lieferland und Kundentyp vor dem Abschluss angezeigt.',
     },
     {
-        question: 'Welche Rueckgabe gilt?',
-        answer: props.product.return_label || 'Die Rueckgabe richtet sich nach Angebotstyp, Richtlinie und gesetzlicher Lage.',
+        question: 'Welche Rückgabe gilt?',
+        answer: props.product.return_label || 'Die Rückgabe richtet sich nach Angebotstyp, Richtlinie und gesetzlicher Lage.',
     },
 ])
 
@@ -487,7 +487,7 @@ const updateCountry = () => {
                                         </p>
                                         <p class="flex items-center gap-2">
                                             <i class="las la-undo text-lg text-buttonPrimary"></i>
-                                            Rueckgabe: {{ product.return_window_days ?? 14 }} Tage nach Richtlinie.
+                                            Rückgabe: {{ product.return_window_days ?? 14 }} Tage nach Richtlinie.
                                         </p>
                                     </div>
                                     <div class="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
@@ -827,7 +827,7 @@ const updateCountry = () => {
                                     @blur="normalizeQuantity"
                                     class="mt-1 h-12 w-full rounded-lg border-border bg-inputBg text-primary"
                                 />
-                                <p class="mt-1 text-xs text-secondary">Verfuegbar: {{ maxQuantity }}</p>
+                                <p class="mt-1 text-xs text-secondary">Verfügbar: {{ maxQuantity }}</p>
                                 <p v-if="form.errors.quantity" class="mt-1 text-sm text-red-400">{{ form.errors.quantity }}</p>
                             </div>
 
@@ -837,7 +837,7 @@ const updateCountry = () => {
                                     class="flex-1 rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted"
                                     @click="previousCheckoutStep"
                                 >
-                                    Zurueck
+                                    Zurück
                                 </button>
                                 <button
                                     type="button"
@@ -845,14 +845,14 @@ const updateCountry = () => {
                                     :disabled="!canContinuePayment"
                                     @click="nextCheckoutStep"
                                 >
-                                    Pruefen
+                                    Prüfen
                                 </button>
                             </div>
                             </section>
 
                             <section v-show="checkoutStep === 'review'" class="space-y-4">
                             <div class="rounded-lg border border-buttonPrimary/20 bg-buttonPrimary/10 p-3 text-xs font-semibold text-secondary">
-                                <p class="mb-2 text-sm font-black text-primary">Bestellung pruefen</p>
+                                <p class="mb-2 text-sm font-black text-primary">Bestellung prüfen</p>
                                 <div class="grid gap-2">
                                     <p class="flex justify-between gap-3">
                                         <span>Lieferland</span>
@@ -899,7 +899,7 @@ const updateCountry = () => {
                                     <Link :href="route('terms.show')" target="_blank" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>AGB</Link>
                                     und
                                     <Link :href="route('legal.withdrawal')" target="_blank" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>Widerrufshinweise</Link>.
-                                    Mir ist bewusst, dass der jeweilige Anbieter fuer sein Angebot verantwortlich sein kann.
+                                    Mir ist bewusst, dass der jeweilige Anbieter für sein Angebot verantwortlich sein kann.
                                 </span>
                             </label>
                             <p v-if="form.errors.accepted_terms" class="text-sm text-red-400">{{ form.errors.accepted_terms }}</p>
@@ -909,7 +909,7 @@ const updateCountry = () => {
                                 class="w-full rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted"
                                 @click="previousCheckoutStep"
                             >
-                                Zurueck zu Menge
+                                Zurück zu Menge
                             </button>
 
                             <button

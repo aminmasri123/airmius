@@ -1248,7 +1248,7 @@ onUnmounted(() => {
                             v-if="selectedConversation.type === 'group'"
                             type="button"
                             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-inputBg hover:text-primary"
-                            title="Personen hinzufuegen"
+                            title="Personen hinzufügen"
                             @click="openAddMembersModal"
                         >
                             <i class="las la-user-plus text-xl"></i>
@@ -1404,7 +1404,7 @@ onUnmounted(() => {
                                     v-if="canDeleteMessage(message)"
                                     type="button"
                                     class="ml-auto rounded border border-border/50 px-2 py-1 opacity-80"
-                                    title="Fuer alle loeschen"
+                                    title="Für alle löschen"
                                     @click="deleteMessage(message)"
                                 >
                                     <i class="las la-trash"></i>
@@ -1413,7 +1413,7 @@ onUnmounted(() => {
                                     v-if="!String(message.id).startsWith('local-')"
                                     type="button"
                                     class="rounded border border-border/50 px-2 py-1 opacity-80"
-                                    title="Nur fuer mich ausblenden"
+                                    title="Nur für mich ausblenden"
                                     @click="hideMessageForMe(message)"
                                 >
                                     <i class="las la-eye-slash"></i>
@@ -1529,7 +1529,7 @@ onUnmounted(() => {
             <button
                 type="button"
                 class="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
-                title="Schliessen"
+                title="Schließen"
                 @click="closeMediaPreview"
             >
                 <i class="las la-times text-2xl"></i>
@@ -1680,13 +1680,13 @@ onUnmounted(() => {
                         </div>
 
                         <div v-if="canManageSelectedGroup && ownerTransferCandidates.length" class="rounded-lg border border-border bg-inputBg p-3">
-                            <p class="text-xs font-semibold uppercase text-secondary">Owner uebertragen</p>
+                            <p class="text-xs font-semibold uppercase text-secondary">Owner übertragen</p>
                             <div class="mt-3 flex gap-2">
                                 <select
                                     v-model="ownerTransferForm.user_id"
                                     class="min-w-0 flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
                                 >
-                                    <option :value="null">Mitglied waehlen</option>
+                                    <option :value="null">Mitglied wählen</option>
                                     <option v-for="member in ownerTransferCandidates" :key="member.id" :value="member.id">
                                         {{ member.name }}
                                     </option>
@@ -1697,7 +1697,7 @@ onUnmounted(() => {
                                     class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50"
                                     @click="transferGroupOwner"
                                 >
-                                    Uebertragen
+                                    Übertragen
                                 </button>
                             </div>
                         </div>
@@ -1714,7 +1714,7 @@ onUnmounted(() => {
                         class="flex-1 rounded-lg border border-border px-4 py-2 text-sm font-medium text-secondary transition hover:bg-inputBg"
                         @click="showConversationSettingsModal = false"
                     >
-                        Schliessen
+                        Schließen
                     </button>
                     <button
                         v-if="canManageSelectedGroup"
@@ -1769,7 +1769,7 @@ onUnmounted(() => {
                         </button>
 
                         <p v-if="availableUsersToAdd.length === 0" class="p-6 text-center text-sm text-secondary">
-                            Keine weiteren Personen verfuegbar.
+                            Keine weiteren Personen verfügbar.
                         </p>
                     </div>
 
@@ -1884,7 +1884,7 @@ onUnmounted(() => {
 
                         <div class="flex gap-2">
                             <div v-if="conversationForm.type === 'group'" class="flex flex-1 items-center text-xs text-secondary">
-                                {{ conversationForm.participant_ids.length }} von 2 Personen ausgewaehlt
+                                {{ conversationForm.participant_ids.length }} von 2 Personen ausgewählt
                             </div>
                             <button
                                 type="button"

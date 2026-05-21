@@ -20,8 +20,8 @@ const sports = [
     { key: 'all', label: 'Alle', icon: 'las la-layer-group', accent: 'bg-air-blue' },
     { key: 'laufen', label: 'Laufen', icon: 'las la-running', accent: 'bg-emerald-500', metrics: ['Distanz km', 'Pace Ziel', 'Hoehenmeter', 'RPE'] },
     { key: 'schwimmen', label: 'Schwimmen', icon: 'las la-swimmer', accent: 'bg-cyan-500', metrics: ['Bahnen', 'Stil', 'Intervall', 'Pausenzeit'] },
-    { key: 'gym', label: 'Gym', icon: 'las la-dumbbell', accent: 'bg-rose-500', metrics: ['Saetze', 'Wiederholungen', 'Gewicht kg', 'Pause'] },
-    { key: 'fussball', label: 'Fussball', icon: 'las la-futbol', accent: 'bg-lime-500', metrics: ['Schwerpunkt', 'Spielfeld', 'Spielerzahl', 'Drill'] },
+    { key: 'gym', label: 'Gym', icon: 'las la-dumbbell', accent: 'bg-rose-500', metrics: ['Sätze', 'Wiederholungen', 'Gewicht kg', 'Pause'] },
+    { key: 'fussball', label: 'Fußball', icon: 'las la-futbol', accent: 'bg-lime-500', metrics: ['Schwerpunkt', 'Spielfeld', 'Spielerzahl', 'Drill'] },
     { key: 'tanzen', label: 'Tanzen', icon: 'las la-music', accent: 'bg-fuchsia-500', metrics: ['Stil', 'Choreo', 'Takte', 'Tempo'] },
     { key: 'golf', label: 'Golf', icon: 'las la-golf-ball', accent: 'bg-amber-500', metrics: ['Loecher', 'Schlaeger', 'Schwerpunkt', 'Zielscore'] },
     { key: 'cycling', label: 'Radfahren', icon: 'las la-biking', accent: 'bg-orange-500', metrics: ['Distanz km', 'Watt Ziel', 'Kadenz', 'Hoehenmeter'] },
@@ -33,7 +33,7 @@ const planTrainingTypes = [
     { key: 'run_interval', label: 'Intervalle', icon: 'las la-stopwatch', sport_type: 'laufen', accent: 'bg-amber-400' },
     { key: 'long_run', label: 'Long Run', icon: 'las la-route', sport_type: 'laufen', accent: 'bg-emerald-500' },
     { key: 'swim', label: 'Swim', icon: 'las la-swimmer', sport_type: 'schwimmen', accent: 'bg-cyan-500' },
-    { key: 'football', label: 'Fussball', icon: 'las la-futbol', sport_type: 'fussball', accent: 'bg-lime-500' },
+    { key: 'football', label: 'Fußball', icon: 'las la-futbol', sport_type: 'fussball', accent: 'bg-lime-500' },
     { key: 'cycling', label: 'Bike', icon: 'las la-biking', sport_type: 'cycling', accent: 'bg-fuchsia-500' },
     { key: 'generic', label: 'Frei', icon: 'las la-clipboard-list', sport_type: 'laufen', accent: 'bg-indigo-500' },
 ]
@@ -52,8 +52,8 @@ const editItemImageInput = ref(null)
 const draggedItem = ref(null)
 
 const trainingSections = [
-    { key: 'overview', label: 'Uebersicht', hint: 'Start', icon: 'las la-home' },
-    { key: 'plans', label: 'Plaene', hint: 'Aufbau', icon: 'las la-clipboard-list' },
+    { key: 'overview', label: 'Übersicht', hint: 'Start', icon: 'las la-home' },
+    { key: 'plans', label: 'Pläne', hint: 'Aufbau', icon: 'las la-clipboard-list' },
     { key: 'week', label: 'Woche', hint: 'Kalender', icon: 'las la-calendar-week' },
     { key: 'logs', label: 'Logs', hint: 'Dokumentation', icon: 'las la-pen-alt' },
     { key: 'analysis', label: 'Analyse', hint: 'Signale', icon: 'las la-chart-line' },
@@ -332,7 +332,7 @@ const sportStats = computed(() => Object.values(visibleLogs.value.reduce((groups
 }, {})).sort((a, b) => b.sessions - a.sessions))
 
 const exerciseLibrary = [
-    { training_type: 'gym', sport_type: 'gym', title: 'Kniebeuge Progression', focus: 'Kraft', duration_minutes: 45, todos: 'Warm-up 10 Minuten\n3-5 Arbeitssaetze\nTechnikvideo nach schwerstem Satz', metrics: { Saetze: '4', Wiederholungen: '6-10', 'Gewicht kg': 'RPE 7-8', Pause: '120s' } },
+    { training_type: 'gym', sport_type: 'gym', title: 'Kniebeuge Progression', focus: 'Kraft', duration_minutes: 45, todos: 'Warm-up 10 Minuten\n3-5 Arbeitssaetze\nTechnikvideo nach schwerstem Satz', metrics: { Sätze: '4', Wiederholungen: '6-10', 'Gewicht kg': 'RPE 7-8', Pause: '120s' } },
     { training_type: 'long_run', sport_type: 'laufen', title: 'Long Run Zone 2', focus: 'Ausdauer', duration_minutes: 70, todos: 'Locker starten\nPace stabil halten\nLetzte 10 Minuten kontrollieren', metrics: { 'Distanz km': '10-16', 'Pace Ziel': 'Zone 2', Hoehenmeter: '-', RPE: '4-5' } },
     { training_type: 'run_interval', sport_type: 'laufen', title: 'Intervall 6 x 400m', focus: 'Tempo', duration_minutes: 50, todos: '15 Minuten einlaufen\n6 x 400m schnell\n200m Trabpause\n10 Minuten auslaufen', metrics: { 'Distanz km': '6-8', 'Pace Ziel': '5k-Pace', Hoehenmeter: '-', RPE: '8' } },
     { training_type: 'swim', sport_type: 'schwimmen', title: 'Technik + Intervalle', focus: 'Wasserlage', duration_minutes: 55, todos: '200m einschwimmen\n6 x 50m Technik\n8 x 100m konstant\nlocker ausschwimmen', metrics: { Bahnen: '40+', Stil: 'Frei', Intervall: '100m', Pausenzeit: '20s' } },
@@ -868,7 +868,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                     <div class="grid grid-cols-3 gap-2">
                         <div class="rounded-xl border border-border bg-card p-2 text-center">
                             <p class="text-xl font-semibold text-primary">{{ plans.length }}</p>
-                            <p class="text-[11px] text-secondary">Plaene</p>
+                            <p class="text-[11px] text-secondary">Pläne</p>
                         </div>
                         <div class="rounded-xl border border-border bg-card p-2 text-center">
                             <p class="text-xl font-semibold text-primary">{{ visibleLogs.length }}</p>
@@ -983,7 +983,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                         <h2 class="mt-1 text-xl font-semibold text-primary">Was steht als Naechstes an?</h2>
                     </div>
                     <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="activeTrainingSection = 'plans'">
-                        Zu den Plaenen
+                        Zu den Plänen
                     </button>
                 </div>
                 <div class="mt-4 grid gap-3 md:grid-cols-2">
@@ -1028,7 +1028,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                 <section class="rounded-2xl border border-border bg-card p-4">
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Aufmerksamkeit</p>
                     <div class="mt-3 grid grid-cols-2 gap-2">
-                        <span class="rounded-xl border border-border bg-inputBg/40 p-3 text-xs text-secondary"><b class="block text-xl text-primary">{{ trainerDashboard.overdue.length }}</b>ueberfaellig</span>
+                        <span class="rounded-xl border border-border bg-inputBg/40 p-3 text-xs text-secondary"><b class="block text-xl text-primary">{{ trainerDashboard.overdue.length }}</b>überfaellig</span>
                         <span class="rounded-xl border border-border bg-inputBg/40 p-3 text-xs text-secondary"><b class="block text-xl text-primary">{{ trainerDashboard.feedbackOpen.length }}</b>Feedback offen</span>
                     </div>
                 </section>
@@ -1071,7 +1071,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                     <div class="grid grid-cols-3 gap-2 text-xs text-secondary">
                         <span class="rounded-lg border border-border px-2 py-1">{{ formatDuration(log.duration_minutes) }}</span>
                         <span class="rounded-lg border border-border px-2 py-1">{{ formatDistance(log.distance_meters) }}</span>
-                        <span class="rounded-lg border border-border px-2 py-1">{{ log.entries?.length || 0 }} Uebungen</span>
+                        <span class="rounded-lg border border-border px-2 py-1">{{ log.entries?.length || 0 }} Übungen</span>
                     </div>
                     <div class="text-sm text-secondary lg:text-right">
                         <p class="font-semibold text-primary">{{ log.athlete?.name || 'Ich' }}</p>
@@ -1129,7 +1129,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                 <div class="mt-4 grid grid-cols-2 gap-2">
                     <div class="rounded-xl border border-border bg-inputBg/40 p-3">
                         <p class="text-2xl font-semibold text-primary">{{ trainerDashboard.overdue.length }}</p>
-                        <p class="text-xs text-secondary">ueberfaellig</p>
+                        <p class="text-xs text-secondary">überfaellig</p>
                     </div>
                     <div class="rounded-xl border border-border bg-inputBg/40 p-3">
                         <p class="text-2xl font-semibold text-primary">{{ trainerDashboard.missed.length }}</p>
@@ -1149,7 +1149,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                         <p class="text-sm font-semibold text-primary">{{ item.title }}</p>
                         <p class="text-xs text-secondary">{{ item.plan.title }} · {{ formatDate(item.scheduled_at) }}</p>
                     </div>
-                    <p v-if="!trainerDashboard.overdue.length" class="text-sm text-secondary">Keine ueberfaelligen Einheiten.</p>
+                    <p v-if="!trainerDashboard.overdue.length" class="text-sm text-secondary">Keine überfaelligen Einheiten.</p>
                 </div>
             </div>
         </section>
@@ -1179,7 +1179,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                             <span class="rounded-lg border border-border px-2 py-1"><b class="block text-primary">{{ entry.avgPain }}</b>Schmerz</span>
                         </div>
                     </article>
-                    <p v-if="!athleteCockpit.length" class="text-sm text-secondary">Noch keine dokumentierten Einheiten fuer das Cockpit.</p>
+                    <p v-if="!athleteCockpit.length" class="text-sm text-secondary">Noch keine dokumentierten Einheiten für das Cockpit.</p>
                 </div>
             </div>
 
@@ -1332,7 +1332,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                                                     Kopie
                                                 </button>
                                                 <button type="button" class="rounded-lg border border-danger/40 px-2.5 py-1.5 text-[11px] font-semibold text-danger hover:bg-danger/10" @click="openModal('item-delete', plan, item)">
-                                                    Loeschen
+                                                    Löschen
                                                 </button>
                                             </div>
                                         </div>
@@ -1355,13 +1355,13 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                                 Freigeben
                             </button>
                             <button v-if="plan.can_write" type="button" class="ml-auto rounded-lg border border-danger/40 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger/10" @click="openModal('delete', plan)">
-                                Loeschen
+                                Löschen
                             </button>
                         </div>
                     </article>
 
                     <div v-if="!filteredPlans.length" class="rounded-2xl border border-dashed border-border bg-card p-8 text-center lg:col-span-2">
-                        <p class="text-lg font-semibold text-primary">Noch kein Plan fuer diese Auswahl.</p>
+                        <p class="text-lg font-semibold text-primary">Noch kein Plan für diese Auswahl.</p>
                         <p class="mt-2 text-sm text-secondary">Erstelle den ersten Plan und gib ihn direkt an Sportler oder ein Team frei.</p>
                         <button type="button" class="mt-4 rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="openModal('plan')">
                             Plan erstellen
@@ -1389,7 +1389,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
 
                 <section class="rounded-2xl border border-border bg-card p-4">
                     <h2 class="text-base font-semibold text-primary">Sportart-Parameter</h2>
-                    <p class="mt-1 text-sm text-secondary">Die Felder im Plan passen sich der gewaehlten Sportart an.</p>
+                    <p class="mt-1 text-sm text-secondary">Die Felder im Plan passen sich der gewählten Sportart an.</p>
                     <div class="mt-4 flex flex-wrap gap-2">
                         <span v-for="metric in (selectedSport.metrics || ['Dauer', 'Intensitaet', 'Todo'])" :key="metric" class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">
                             {{ metric }}
@@ -1399,7 +1399,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
 
                 <section class="rounded-2xl border border-border bg-card p-4">
                     <h2 class="text-base font-semibold text-primary">Vorlagen</h2>
-                    <p class="mt-1 text-sm text-secondary">Kopierte oder vorbereitete Plaene koennen als Startpunkt genutzt werden.</p>
+                    <p class="mt-1 text-sm text-secondary">Kopierte oder vorbereitete Pläne koennen als Startpunkt genutzt werden.</p>
                     <div class="mt-4 space-y-2">
                         <div v-for="plan in templatePlans.slice(0, 4)" :key="plan.id" class="rounded-xl border border-border bg-inputBg/40 p-3">
                             <p class="text-sm font-semibold text-primary">{{ plan.title }}</p>
@@ -1419,14 +1419,14 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                 <div class="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border bg-bg/95 p-4 backdrop-blur">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">
-                            {{ ['log', 'activity', 'item', 'item-edit', 'item-missed'].includes(activeModal) ? 'Trainingseinheit' : ['delete', 'draft-delete', 'item-delete'].includes(activeModal) ? 'Bestaetigen' : 'Trainingsplan' }}
+                            {{ ['log', 'activity', 'item', 'item-edit', 'item-missed'].includes(activeModal) ? 'Trainingseinheit' : ['delete', 'draft-delete', 'item-delete'].includes(activeModal) ? 'Bestätigen' : 'Trainingsplan' }}
                         </p>
                         <h2 class="mt-1 text-xl font-semibold text-primary">
-                            {{ activeModal === 'plan' ? 'Plan erstellen' : activeModal === 'log' ? 'Training dokumentieren' : activeModal === 'activity' ? 'Einheit eintragen' : activeModal === 'edit' ? 'Plan bearbeiten & freigeben' : activeModal === 'item' ? 'Einheit zum Plan hinzufuegen' : activeModal === 'item-edit' ? 'Einheit bearbeiten' : activeModal === 'item-missed' ? 'Ausfall melden' : activeModal === 'item-delete' ? 'Einheit loeschen' : activeModal === 'draft-delete' ? 'Training-Entwurf verwerfen' : 'Trainingsplan loeschen' }}
+                            {{ activeModal === 'plan' ? 'Plan erstellen' : activeModal === 'log' ? 'Training dokumentieren' : activeModal === 'activity' ? 'Einheit eintragen' : activeModal === 'edit' ? 'Plan bearbeiten & freigeben' : activeModal === 'item' ? 'Einheit zum Plan hinzufügen' : activeModal === 'item-edit' ? 'Einheit bearbeiten' : activeModal === 'item-missed' ? 'Ausfall melden' : activeModal === 'item-delete' ? 'Einheit löschen' : activeModal === 'draft-delete' ? 'Training-Entwurf verwerfen' : 'Trainingsplan löschen' }}
                         </h2>
                     </div>
                     <button type="button" class="rounded-xl border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeModal">
-                        Schliessen
+                        Schließen
                     </button>
                 </div>
 
@@ -1485,23 +1485,23 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                             <textarea v-model="logForm.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Gefuehl, Technik, Schmerzen, Besonderheiten" />
                         </label>
                         <label v-if="logForm.user_id" class="block text-sm font-semibold text-primary md:col-span-2">Trainer-Hinweis
-                            <textarea v-model="logForm.trainer_feedback" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Hinweise, Korrekturen oder Fokus fuer die naechste Einheit" />
+                            <textarea v-model="logForm.trainer_feedback" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Hinweise, Korrekturen oder Fokus für die nächste Einheit" />
                         </label>
                     </div>
 
                     <div class="rounded-2xl border border-border bg-inputBg/40 p-4">
                         <div class="flex flex-wrap items-center justify-between gap-3">
-                            <h3 class="text-sm font-semibold uppercase tracking-wide text-secondary">Uebungen / Werte</h3>
+                            <h3 class="text-sm font-semibold uppercase tracking-wide text-secondary">Übungen / Werte</h3>
                             <button type="button" class="rounded-xl border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="addLogEntry">
-                                Zeile hinzufuegen
+                                Zeile hinzufügen
                             </button>
                         </div>
                         <div class="mt-4 space-y-3">
                             <div v-for="(entry, index) in logForm.entries" :key="index" class="grid gap-3 rounded-xl border border-border p-3 lg:grid-cols-6">
-                                <label class="block text-sm font-semibold text-primary lg:col-span-2">Uebung / Abschnitt
+                                <label class="block text-sm font-semibold text-primary lg:col-span-2">Übung / Abschnitt
                                     <input v-model="entry.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="z. B. Kniebeugen, 5-km-Lauf, Technikdrill" />
                                 </label>
-                                <label class="block text-sm font-semibold text-primary">Saetze
+                                <label class="block text-sm font-semibold text-primary">Sätze
                                     <input v-model="entry.sets" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                                 </label>
                                 <label class="block text-sm font-semibold text-primary">Wdh.
@@ -1681,7 +1681,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                     <section v-if="planWizardStep === 2" class="rounded-2xl border border-border bg-card p-4">
                         <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Schritt 3</p>
                         <h3 class="mt-1 text-lg font-semibold text-primary">Freigabe</h3>
-                        <p class="mt-1 text-sm text-secondary">Waehle, ob der Plan sofort sichtbar ist und wer Zugriff bekommt.</p>
+                        <p class="mt-1 text-sm text-secondary">Wähle, ob der Plan sofort sichtbar ist und wer Zugriff bekommt.</p>
 
                         <div class="mt-4 grid gap-4 md:grid-cols-2">
                             <label class="block text-sm font-semibold text-primary">Status
@@ -1707,14 +1707,14 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                         <div class="mt-4 rounded-2xl border border-border bg-inputBg/40 p-3">
                             <div class="flex items-center justify-between gap-3">
                                 <p class="text-sm font-semibold text-primary">Einzelne Sportler</p>
-                                <span class="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-secondary">{{ planForm.user_ids.length }} gewaehlt</span>
+                                <span class="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-secondary">{{ planForm.user_ids.length }} gewählt</span>
                             </div>
                             <div class="mt-3 grid max-h-52 gap-2 overflow-y-auto sm:grid-cols-2">
                                 <label v-for="person in people" :key="person.id" class="flex items-center gap-2 rounded-xl border border-border bg-bg/40 px-3 py-2 text-sm text-primary">
                                     <input type="checkbox" class="rounded border-border bg-inputBg" :checked="planForm.user_ids.map(Number).includes(Number(person.id))" @change="togglePlanUser(person.id)" />
                                     <span class="truncate">{{ person.name }}</span>
                                 </label>
-                                <p v-if="!people.length" class="text-sm text-secondary">Keine einzelnen Sportler verfuegbar.</p>
+                                <p v-if="!people.length" class="text-sm text-secondary">Keine einzelnen Sportler verfügbar.</p>
                             </div>
                             <p v-if="selectedTeamMembers.length" class="mt-3 text-xs text-secondary">Team-Auswahl umfasst {{ selectedTeamMembers.length }} Personen.</p>
                         </div>
@@ -1723,7 +1723,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                     <section v-if="planWizardStep === 3" class="rounded-2xl border border-border bg-card p-4">
                         <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Schritt 4</p>
                         <h3 class="mt-1 text-lg font-semibold text-primary">Erste Einheit</h3>
-                        <p class="mt-1 text-sm text-secondary">Der Plan braucht eine erste Einheit. Weitere Einheiten kannst du danach hinzufuegen.</p>
+                        <p class="mt-1 text-sm text-secondary">Der Plan braucht eine erste Einheit. Weitere Einheiten kannst du danach hinzufügen.</p>
 
                         <div class="mt-4 rounded-2xl border border-border bg-inputBg/40 p-3">
                             <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Schnellstart</p>
@@ -1802,7 +1802,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
 
                     <div class="sticky bottom-0 -mx-4 -mb-4 flex items-center justify-between gap-3 border-t border-border bg-bg/95 p-4 backdrop-blur">
                         <button type="button" class="rounded-xl border border-border px-4 py-3 text-sm font-semibold text-primary disabled:opacity-40" :disabled="planWizardStep === 0" @click="previousPlanWizardStep">
-                            Zurueck
+                            Zurück
                         </button>
                         <button v-if="planWizardStep < planWizardSteps.length - 1" type="button" class="rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="!planWizardCanContinue" @click="nextPlanWizardStep">
                             Weiter
@@ -1902,13 +1902,13 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                         </div>
                     </div>
                     <button type="submit" class="w-full rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="editForm.processing">
-                        Aenderungen speichern
+                        Änderungen speichern
                     </button>
                 </form>
 
                 <form v-if="activeModal === 'item'" class="grid gap-4 p-4 md:grid-cols-2" @submit.prevent="submitPlanItem">
                     <div class="md:col-span-2 rounded-2xl border border-border bg-inputBg/40 p-3">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Uebungsbibliothek</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Übungsbibliothek</p>
                         <div class="mt-2 flex gap-2 overflow-x-auto pb-1">
                             <button v-for="template in exerciseLibrary" :key="template.title" type="button" class="shrink-0 rounded-xl border border-border px-3 py-2 text-left text-xs text-primary hover:bg-muted" @click="applyExerciseTemplate(template, itemForm)">
                                 <span class="block font-semibold">{{ template.title }}</span>
@@ -1967,13 +1967,13 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                         <input ref="itemImageInput" type="file" accept="image/*" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary file:mr-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="setItemImage" />
                     </label>
                     <button type="submit" class="md:col-span-2 rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="itemForm.processing">
-                        Einheit hinzufuegen
+                        Einheit hinzufügen
                     </button>
                 </form>
 
                 <form v-if="activeModal === 'item-edit'" class="grid gap-4 p-4 md:grid-cols-2" @submit.prevent="updatePlanItem">
                     <div class="md:col-span-2 rounded-2xl border border-border bg-inputBg/40 p-3">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Uebungsbibliothek</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Übungsbibliothek</p>
                         <div class="mt-2 flex gap-2 overflow-x-auto pb-1">
                             <button v-for="template in exerciseLibrary" :key="template.title" type="button" class="shrink-0 rounded-xl border border-border px-3 py-2 text-left text-xs text-primary hover:bg-muted" @click="applyExerciseTemplate(template, editItemForm)">
                                 <span class="block font-semibold">{{ template.title }}</span>
@@ -2038,13 +2038,13 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
 
                 <div v-if="activeModal === 'delete'" class="p-4">
                     <p class="text-sm text-secondary">
-                        Der Plan <span class="font-semibold text-primary">{{ selectedPlan?.title }}</span> wird inklusive Einheiten und Bildern geloescht. Tippe <span class="font-semibold text-danger">delete</span>, um fortzufahren.
+                        Der Plan <span class="font-semibold text-primary">{{ selectedPlan?.title }}</span> wird inklusive Einheiten und Bildern gelöscht. Tippe <span class="font-semibold text-danger">delete</span>, um fortzufahren.
                     </p>
                     <input v-model="deleteText" class="mt-4 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="delete" />
                     <div class="mt-4 flex justify-end gap-2">
                         <button type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary" @click="closeModal">Abbrechen</button>
                         <button type="button" class="rounded-xl bg-danger px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" :disabled="deleteText !== 'delete'" @click="deletePlan">
-                            Endgueltig loeschen
+                            Endgültig löschen
                         </button>
                     </div>
                 </div>
@@ -2057,7 +2057,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                     <div class="mt-4 flex justify-end gap-2">
                         <button type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary" @click="closeModal">Abbrechen</button>
                         <button type="button" class="rounded-xl bg-danger px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" :disabled="deleteText !== 'delete'" @click="deletePlanItem">
-                            Einheit loeschen
+                            Einheit löschen
                         </button>
                     </div>
                 </div>
@@ -2082,7 +2082,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                         </select>
                     </label>
                     <label class="block text-sm font-semibold text-primary">Notiz
-                        <textarea v-model="missedForm.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Optional: kurze Einordnung fuer dich oder den Trainer" />
+                        <textarea v-model="missedForm.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Optional: kurze Einordnung für dich oder den Trainer" />
                     </label>
                     <button type="submit" class="w-full rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="missedForm.processing">
                         Ausfall speichern
@@ -2091,7 +2091,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
 
                 <div v-if="activeModal === 'draft-delete'" class="p-4">
                     <p class="text-sm text-secondary">
-                        Der Entwurf <span class="font-semibold text-primary">{{ selectedDraft?.title || 'Training-Entwurf' }}</span> wird geloescht. Deine gespeicherten Werte gehen verloren. Tippe <span class="font-semibold text-danger">delete</span>, um fortzufahren.
+                        Der Entwurf <span class="font-semibold text-primary">{{ selectedDraft?.title || 'Training-Entwurf' }}</span> wird gelöscht. Deine gespeicherten Werte gehen verloren. Tippe <span class="font-semibold text-danger">delete</span>, um fortzufahren.
                     </p>
                     <input v-model="deleteText" class="mt-4 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="delete" />
                     <div class="mt-4 flex justify-end gap-2">

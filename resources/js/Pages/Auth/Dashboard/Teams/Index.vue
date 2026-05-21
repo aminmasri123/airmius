@@ -566,7 +566,7 @@ const submitSponsor = (club) => {
             resetSponsorForm(club)
             setActionNotice('success', sponsorId ? 'Sponsor wurde aktualisiert.' : 'Sponsor wurde erstellt.')
         },
-        onError: () => setActionNotice('error', 'Sponsor konnte nicht gespeichert werden. Bitte pruefe die Eingaben.'),
+        onError: () => setActionNotice('error', 'Sponsor konnte nicht gespeichert werden. Bitte prüfe die Eingaben.'),
     }
 
     sponsorId
@@ -576,12 +576,12 @@ const submitSponsor = (club) => {
 
 const deleteSponsor = (club, sponsor) => {
     openDeleteModal({
-        title: `Sponsor "${sponsor.name}" loeschen`,
-        description: 'Der Sponsor wird aus diesem Verein entfernt. Diese Aktion kann nicht rueckgaengig gemacht werden.',
+        title: `Sponsor "${sponsor.name}" löschen`,
+        description: 'Der Sponsor wird aus diesem Verein entfernt. Diese Aktion kann nicht rückgaengig gemacht werden.',
         route: 'auth.clubs.sponsors.destroy',
         params: [club.id, sponsor.id],
-        successMessage: 'Sponsor wurde geloescht.',
-        errorMessage: 'Sponsor konnte nicht geloescht werden.',
+        successMessage: 'Sponsor wurde gelöscht.',
+        errorMessage: 'Sponsor konnte nicht gelöscht werden.',
     })
 }
 
@@ -621,23 +621,23 @@ const removeTeamMember = (team, member) => {
 
 const deleteClub = (club) => {
     openDeleteModal({
-        title: `Verein "${club.name}" loeschen`,
-        description: 'Dadurch werden auch alle Teams dieses Vereins geloescht. Diese Aktion kann nicht rueckgaengig gemacht werden.',
+        title: `Verein "${club.name}" löschen`,
+        description: 'Dadurch werden auch alle Teams dieses Vereins gelöscht. Diese Aktion kann nicht rückgaengig gemacht werden.',
         route: 'auth.clubs.destroy',
         params: club.id,
-        successMessage: 'Verein wurde geloescht.',
-        errorMessage: 'Verein konnte nicht geloescht werden.',
+        successMessage: 'Verein wurde gelöscht.',
+        errorMessage: 'Verein konnte nicht gelöscht werden.',
     })
 }
 
 const deleteTeam = (team) => {
     openDeleteModal({
-        title: `Team "${team.name}" loeschen`,
-        description: 'Das Team und seine Zuordnungen werden entfernt. Diese Aktion kann nicht rueckgaengig gemacht werden.',
+        title: `Team "${team.name}" löschen`,
+        description: 'Das Team und seine Zuordnungen werden entfernt. Diese Aktion kann nicht rückgaengig gemacht werden.',
         route: 'auth.teams.destroy',
         params: team.id,
-        successMessage: 'Team wurde geloescht.',
-        errorMessage: 'Team konnte nicht geloescht werden.',
+        successMessage: 'Team wurde gelöscht.',
+        errorMessage: 'Team konnte nicht gelöscht werden.',
     })
 }
 
@@ -1001,7 +1001,7 @@ const deleteJob = (job) => {
                     <div>
                         <h2 class="font-semibold text-primary">Vereinsdaten bearbeiten</h2>
                         <p class="text-xs text-secondary">
-                            Basisdaten, Adresse und Sportart pflegen. Offizielle Pruefung laeuft separat ueber Admin.
+                            Basisdaten, Adresse und Sportart pflegen. Offizielle Prüfung laeuft separat über Admin.
                         </p>
                     </div>
                     <span
@@ -1012,7 +1012,7 @@ const deleteJob = (job) => {
                                 ? 'bg-error/10 text-error'
                                 : 'bg-warning/10 text-warning'"
                     >
-                        {{ club.verification_status === 'verified' ? 'Freigegeben' : club.verification_status === 'rejected' ? 'Abgelehnt' : 'Wartet auf Pruefung' }}
+                        {{ club.verification_status === 'verified' ? 'Freigegeben' : club.verification_status === 'rejected' ? 'Abgelehnt' : 'Wartet auf Prüfung' }}
                     </span>
                 </div>
 
@@ -1097,14 +1097,14 @@ const deleteJob = (job) => {
                     </label>
 
                     <label v-if="activeClubEditTab(club) === 'basis'" class="block xl:col-span-2">
-                        <span class="text-xs font-semibold uppercase text-secondary">Vereinsnummer zur Pruefung</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">Vereinsnummer zur Prüfung</span>
                         <input
                             v-model="clubEditFormFor(club).official_club_number"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                             placeholder="z. B. Vereinsregister- oder Verbandsnummer"
                         >
                         <span class="mt-1 block text-xs text-secondary">
-                            Neue oder geaenderte Nummern werden zur Admin-Pruefung vorgemerkt.
+                            Neue oder geänderte Nummern werden zur Admin-Prüfung vorgemerkt.
                         </span>
                     </label>
 
@@ -1148,7 +1148,7 @@ const deleteJob = (job) => {
                     </label>
 
                     <div v-if="activeClubEditTab(club) === 'bank'" class="rounded-lg border border-border bg-card p-3 md:col-span-2 xl:col-span-3">
-                        <p class="text-xs font-semibold uppercase text-secondary">Bankkonto fuer Mitglieder-Ueberweisungen</p>
+                        <p class="text-xs font-semibold uppercase text-secondary">Bankkonto für Mitglieder-Überweisungen</p>
                         <p class="mt-1 text-xs text-secondary">
                             Diese Daten werden Mitgliedern bei offenen Vereinsrechnungen angezeigt.
                         </p>
@@ -1185,7 +1185,7 @@ const deleteJob = (job) => {
                             <div>
                                 <p class="text-xs font-semibold uppercase text-secondary">Vereins-Sponsoren</p>
                                 <p class="mt-1 text-xs text-secondary">
-                                    Pflege Sponsoren, die oeffentlich dem Verein zugeordnet werden.
+                                    Pflege Sponsoren, die öffentlich dem Verein zugeordnet werden.
                                 </p>
                             </div>
                             <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-secondary">
@@ -1194,7 +1194,7 @@ const deleteJob = (job) => {
                         </div>
 
                         <div v-if="club.subscription_capabilities?.sponsors === false" class="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
-                            Sponsorenverwaltung ist ab dem Club-Plan verfuegbar.
+                            Sponsorenverwaltung ist ab dem Club-Plan verfügbar.
                         </div>
 
                         <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -1229,11 +1229,11 @@ const deleteJob = (job) => {
                                 </label>
                             </div>
                             <label class="block md:col-span-1 xl:col-span-3">
-                                <span class="text-xs font-semibold uppercase text-secondary">Logo fuer helle Flaechen</span>
+                                <span class="text-xs font-semibold uppercase text-secondary">Logo für helle Flächen</span>
                                 <input v-model="sponsorFormFor(club).logo_light" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="sponsors/logo-light.webp oder https://...">
                             </label>
                             <label class="block md:col-span-1 xl:col-span-3">
-                                <span class="text-xs font-semibold uppercase text-secondary">Logo fuer dunkle Flaechen</span>
+                                <span class="text-xs font-semibold uppercase text-secondary">Logo für dunkle Flächen</span>
                                 <input v-model="sponsorFormFor(club).logo_dark" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="sponsors/logo-dark.webp oder https://...">
                             </label>
                         </div>
@@ -1280,12 +1280,12 @@ const deleteJob = (job) => {
                                         Bearbeiten
                                     </button>
                                     <button type="button" class="rounded-lg border border-error px-3 py-1 text-sm font-semibold text-error" @click="deleteSponsor(club, sponsor)">
-                                        Loeschen
+                                        Löschen
                                     </button>
                                 </div>
                             </div>
                             <div v-if="!(club.sponsors || []).length" class="bg-bg p-4 text-sm text-secondary">
-                                Noch keine Sponsoren fuer diesen Verein vorhanden.
+                                Noch keine Sponsoren für diesen Verein vorhanden.
                             </div>
                         </div>
                     </div>
@@ -1964,7 +1964,7 @@ const deleteJob = (job) => {
                             </h3>
 
                             <p class="mt-1 text-sm text-secondary">
-                                Name, Sportart und Land des Vereins. Nach dem Absenden prueft Airmius den Antrag.
+                                Name, Sportart und Land des Vereins. Nach dem Absenden prüft Airmius den Antrag.
                             </p>
                         </div>
 
@@ -2007,14 +2007,14 @@ const deleteJob = (job) => {
                                 class="mt-1 rounded border-border bg-inputBg"
                             >
                             <span>
-                                <span class="block font-semibold">Offizielle Pruefung beantragen</span>
-                                <span class="block text-secondary">Der Verein wird erst nach Admin-Freigabe oeffentlich sichtbar und als offiziell markiert.</span>
+                                <span class="block font-semibold">Offizielle Prüfung beantragen</span>
+                                <span class="block text-secondary">Der Verein wird erst nach Admin-Freigabe öffentlich sichtbar und als offiziell markiert.</span>
                             </span>
                         </label>
 
                         <div v-if="clubForm.is_official">
                             <label class="block text-sm font-semibold text-primary">
-                                Vereinsnummer zur Pruefung
+                                Vereinsnummer zur Prüfung
                             </label>
 
                             <input
@@ -2056,7 +2056,7 @@ const deleteJob = (job) => {
                             </h3>
 
                             <p class="mt-1 text-sm text-secondary">
-                                Optional: Standort und Bankkonto fuer Mitglieder-Ueberweisungen eintragen.
+                                Optional: Standort und Bankkonto für Mitglieder-Überweisungen eintragen.
                             </p>
                         </div>
 
@@ -2082,9 +2082,9 @@ const deleteJob = (job) => {
                                 <p v-if="clubForm.errors.house_number" class="mt-1 text-xs text-error">{{ clubForm.errors.house_number }}</p>
                             </div>
                             <div class="rounded-lg border border-border bg-card p-3 sm:col-span-2">
-                                <p class="text-xs font-semibold uppercase text-secondary">Bankkonto fuer Vereinsrechnungen</p>
+                                <p class="text-xs font-semibold uppercase text-secondary">Bankkonto für Vereinsrechnungen</p>
                                 <p class="mt-1 text-xs text-secondary">
-                                    Diese Daten werden Mitgliedern angezeigt, wenn sie offene Vereinsrechnungen per Ueberweisung zahlen.
+                                    Diese Daten werden Mitgliedern angezeigt, wenn sie offene Vereinsrechnungen per Überweisung zahlen.
                                 </p>
 
                                 <div class="mt-3 grid gap-3 sm:grid-cols-3">
@@ -2120,9 +2120,9 @@ const deleteJob = (job) => {
                             <div class="space-y-3 text-sm">
                                 <p><strong>Verein:</strong> {{ clubForm.name || '-' }}</p>
                                 <p><strong>Sportart:</strong> {{ sportLabel(clubForm.sport_type) }}</p>
-                                <p><strong>Offizielle Pruefung:</strong> {{ clubForm.is_official ? 'Beantragt' : 'Nicht beantragt' }}</p>
-                                <p v-if="clubForm.is_official"><strong>Vereinsnummer zur Pruefung:</strong> {{ clubForm.official_club_number || '-' }}</p>
-                                <p><strong>Status nach Absenden:</strong> Wartet auf Pruefung</p>
+                                <p><strong>Offizielle Prüfung:</strong> {{ clubForm.is_official ? 'Beantragt' : 'Nicht beantragt' }}</p>
+                                <p v-if="clubForm.is_official"><strong>Vereinsnummer zur Prüfung:</strong> {{ clubForm.official_club_number || '-' }}</p>
+                                <p><strong>Status nach Absenden:</strong> Wartet auf Prüfung</p>
                                 <p><strong>Land:</strong> {{ clubForm.country || '-' }}</p>
                                 <p>
                                     <strong>Adresse:</strong>

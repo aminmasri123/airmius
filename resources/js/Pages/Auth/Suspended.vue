@@ -68,7 +68,7 @@ const logout = () => router.post(route('logout'))
                 <div class="mt-5 flex flex-col gap-3 sm:flex-row">
                     <a
                         class="btn-primary inline-flex justify-center"
-                        href="mailto:contact@airmius.com?subject=Konto-Sperre%20pruefen"
+                        href="mailto:contact@airmius.com?subject=Konto-Sperre%20pr%C3%BCfen"
                     >
                         E-Mail schreiben
                     </a>

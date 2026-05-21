@@ -144,9 +144,9 @@ const issueTypeLabel = (type) => ({
 
 const issueStatusLabel = (status) => ({
     open: 'Offen',
-    reviewing: 'In Pruefung',
+    reviewing: 'In Prüfung',
     approved: 'Freigegeben',
-    return_waiting: 'Ruecksendung offen',
+    return_waiting: 'Rücksendung offen',
     replacement_preparing: 'Ersatz wird vorbereitet',
     resolved: 'Geloest',
     rejected: 'Abgeschlossen',
@@ -621,7 +621,7 @@ const deleteSubscription = () => {
                     <p class="text-sm font-semibold uppercase text-accent">Sportkleidung-Abo Modul</p>
                     <h1 class="mt-2 text-2xl font-bold text-primary">Outfit-Abo Pläne</h1>
                     <p class="mt-2 max-w-3xl text-sm text-secondary">
-                        Verwalte monatliche Sportkleidung-Abos, Sponsor-Rabatte und Branding-Regeln. Diese Seite ist ueber eigene Permissions geschuetzt.
+                        Verwalte monatliche Sportkleidung-Abos, Sponsor-Rabatte und Branding-Regeln. Diese Seite ist über eigene Permissions geschuetzt.
                     </p>
                 </div>
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
@@ -818,7 +818,7 @@ const deleteSubscription = () => {
                         <div>
                             <p class="font-semibold text-primary">{{ delivery.subscription?.user?.name || 'Unbekannter Kunde' }}</p>
                             <p class="mt-1 break-all text-xs text-secondary">{{ delivery.subscription?.user?.email || '-' }}</p>
-                            <p class="mt-2 text-sm font-semibold text-primary">{{ delivery.subscription?.plan?.name || 'Plan geloescht' }}</p>
+                            <p class="mt-2 text-sm font-semibold text-primary">{{ delivery.subscription?.plan?.name || 'Plan gelöscht' }}</p>
                             <p class="mt-1 text-xs text-secondary">{{ delivery.subscription?.payment_reference || 'Keine Referenz' }}</p>
                             <p v-if="delivery.subscription?.shipping_address" class="mt-2 text-xs text-secondary">
                                 {{ delivery.subscription.shipping_address.name || 'Lieferadresse' }} - {{ shippingAddressLine(delivery.subscription.shipping_address) || '-' }}
@@ -864,9 +864,9 @@ const deleteSubscription = () => {
                             <template v-if="delivery.issue">
                                 <select v-model="formForDelivery(delivery).issue_status" class="rounded-lg border-border bg-card text-sm text-primary">
                                     <option value="open">Offen</option>
-                                    <option value="reviewing">In Pruefung</option>
+                                    <option value="reviewing">In Prüfung</option>
                                     <option value="approved">Freigegeben</option>
-                                    <option value="return_waiting">Ruecksendung offen</option>
+                                    <option value="return_waiting">Rücksendung offen</option>
                                     <option value="replacement_preparing">Ersatz wird vorbereitet</option>
                                     <option value="resolved">Geloest</option>
                                     <option value="rejected">Abgeschlossen</option>
@@ -891,7 +891,7 @@ const deleteSubscription = () => {
                                 Support speichern
                             </button>
                             <button type="button" class="rounded-lg border border-red-500/50 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/10" @click="openDeleteDeliveryModal(delivery)">
-                                Loeschen
+                                Löschen
                             </button>
                         </div>
                     </div>
@@ -943,7 +943,7 @@ const deleteSubscription = () => {
                     </div>
 
                     <div>
-                        <p class="font-semibold text-primary">{{ subscription.plan?.name || 'Plan geloescht' }}</p>
+                        <p class="font-semibold text-primary">{{ subscription.plan?.name || 'Plan gelöscht' }}</p>
                         <p v-if="subscription.sponsor" class="mt-1 text-xs text-accent">Sponsor: {{ subscription.sponsor.name }}</p>
                         <p class="mt-1 text-sm font-semibold text-primary">{{ formatMoney(subscription.total_cents, subscription.currency) }}</p>
                     </div>
@@ -1001,7 +1001,7 @@ const deleteSubscription = () => {
                         <p class="font-semibold text-primary">{{ subscription.payment_reference || 'Keine Referenz' }}</p>
                         <p class="mt-1 text-xs text-secondary">Faellig: {{ formatDate(subscription.payment_due_at) }}</p>
                         <p v-if="subscription.payment_status !== 'paid'" class="mt-1 text-xs text-secondary">
-                            Autom. Loeschung: {{ formatDate(subscription.payment_expires_at) }}
+                            Autom. Löschung: {{ formatDate(subscription.payment_expires_at) }}
                         </p>
                         <p v-if="subscription.bank_transfer?.iban" class="mt-1 break-all text-xs text-secondary">
                             IBAN: {{ subscription.bank_transfer.iban }}
@@ -1054,7 +1054,7 @@ const deleteSubscription = () => {
                             class="rounded-lg border border-red-500/50 px-3 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/10"
                             @click="openDeleteSubscriptionModal(subscription)"
                         >
-                            Loeschen
+                            Löschen
                         </button>
                     </div>
                 </article>
@@ -1145,9 +1145,9 @@ const deleteSubscription = () => {
                                     <span class="text-sm font-semibold text-primary">Support-Status</span>
                                     <select v-model="formForDelivery(deliveryModal.delivery).issue_status" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
                                         <option value="open">Offen</option>
-                                        <option value="reviewing">In Pruefung</option>
+                                        <option value="reviewing">In Prüfung</option>
                                         <option value="approved">Freigegeben</option>
-                                        <option value="return_waiting">Ruecksendung offen</option>
+                                        <option value="return_waiting">Rücksendung offen</option>
                                         <option value="replacement_preparing">Ersatz wird vorbereitet</option>
                                         <option value="resolved">Geloest</option>
                                         <option value="rejected">Abgeschlossen</option>
@@ -1199,7 +1199,7 @@ const deleteSubscription = () => {
                 <div class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-2xl">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-accent">Zahlung bestaetigen</p>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-accent">Zahlung bestätigen</p>
                             <h2 class="mt-1 text-xl font-bold text-primary">{{ paymentModal.subscription?.plan?.name }}</h2>
                             <p class="mt-2 text-sm leading-6 text-secondary">
                                 Markiere die Zahlung erst als bezahlt, wenn der Betrag wirklich eingegangen ist. Danach wird das Abo aktiviert und der Kunde benachrichtigt.
@@ -1240,7 +1240,7 @@ const deleteSubscription = () => {
                             Abbrechen
                         </button>
                         <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:opacity-90" @click="markSubscriptionPaid">
-                            Zahlung bestaetigen
+                            Zahlung bestätigen
                         </button>
                     </div>
                 </div>
@@ -1407,7 +1407,7 @@ const deleteSubscription = () => {
                 <div class="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-2xl">
                     <div class="flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-wide text-red-300">Lieferung loeschen</p>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-red-300">Lieferung löschen</p>
                             <h2 class="mt-1 text-xl font-bold text-primary">{{ deleteDeliveryModal.delivery?.subscription?.plan?.name || 'Outfit-Lieferung' }}</h2>
                             <p class="mt-2 text-sm leading-6 text-secondary">
                                 Diese Lieferung wird dauerhaft entfernt. Das Outfit-Abo selbst bleibt bestehen.
@@ -1419,7 +1419,7 @@ const deleteSubscription = () => {
                     </div>
 
                     <label class="mt-4 block">
-                        <span class="text-sm font-semibold text-primary">Zur Bestaetigung delete eingeben</span>
+                        <span class="text-sm font-semibold text-primary">Zur Bestätigung delete eingeben</span>
                         <input
                             v-model="deleteDeliveryModal.confirmation"
                             class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"
@@ -1437,7 +1437,7 @@ const deleteSubscription = () => {
                             :disabled="deleteDeliveryModal.confirmation !== 'delete'"
                             @click="deleteDelivery"
                         >
-                            Endgueltig loeschen
+                            Endgültig löschen
                         </button>
                     </div>
                 </div>
@@ -1577,7 +1577,7 @@ const deleteSubscription = () => {
                                     <i class="las la-times"></i>
                                 </button>
                             </span>
-                            <span v-if="!selectedSports(newPlan).length" class="text-sm text-secondary">Noch keine Sportart gewaehlt.</span>
+                            <span v-if="!selectedSports(newPlan).length" class="text-sm text-secondary">Noch keine Sportart gewählt.</span>
                         </div>
 
                         <div class="mt-3">
@@ -1610,7 +1610,7 @@ const deleteSubscription = () => {
                 </label>
                 <label class="flex items-center gap-2 rounded-lg bg-inputBg p-3">
                     <input v-model="newPlan.is_public" type="checkbox" class="rounded border-border bg-card" />
-                    <span class="text-sm text-primary">Oeffentlich</span>
+                    <span class="text-sm text-primary">Öffentlich</span>
                 </label>
                 <label class="flex items-center gap-2 rounded-lg bg-inputBg p-3">
                     <input v-model="newPlan.is_active" type="checkbox" class="rounded border-border bg-card" />
@@ -1759,7 +1759,7 @@ const deleteSubscription = () => {
                                         <i class="las la-times"></i>
                                     </button>
                                 </span>
-                                <span v-if="!selectedSports(formFor(plan)).length" class="text-sm text-secondary">Noch keine Sportart gewaehlt.</span>
+                                <span v-if="!selectedSports(formFor(plan)).length" class="text-sm text-secondary">Noch keine Sportart gewählt.</span>
                             </div>
 
                             <div class="mt-3">
@@ -1792,7 +1792,7 @@ const deleteSubscription = () => {
                     </label>
                     <label class="flex items-center gap-2 rounded-lg bg-inputBg p-3">
                         <input v-model="formFor(plan).is_public" type="checkbox" class="rounded border-border bg-card" />
-                        <span class="text-sm text-primary">Oeffentlich</span>
+                        <span class="text-sm text-primary">Öffentlich</span>
                     </label>
                     <label class="flex items-center gap-2 rounded-lg bg-inputBg p-3">
                         <input v-model="formFor(plan).is_active" type="checkbox" class="rounded border-border bg-card" />

@@ -26,7 +26,7 @@ const props = defineProps({
         type: Object,
         default: () => ({
             title: 'Airmius Blog',
-            description: 'Praxiswissen, Updates und Ideen fuer digitale Sportorganisation, Vereine, Trainer, Teams und Sportler.',
+            description: 'Praxiswissen, Updates und Ideen für digitale Sportorganisation, Vereine, Trainer, Teams und Sportler.',
             canonical: null,
             noindex: false,
         }),

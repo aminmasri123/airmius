@@ -38,6 +38,8 @@ class MobileMetaController extends Controller
                         'meal_logging',
                         'macro_summary',
                         'goal_targets',
+                        'water_tracking',
+                        'water_quick_add',
                         'recipe_suggestions',
                         'food_search_open_food_facts',
                         'training_context',

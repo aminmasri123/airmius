@@ -35,7 +35,7 @@ const confirmation = computed(() => {
     if (type === 'revoke') {
         return {
             title: 'Zustimmung widerrufen',
-            message: `Moechtest du die Zustimmung fuer ${child.name} wirklich widerrufen? Die sozialen Funktionen werden danach wieder gesperrt.`,
+            message: `Moechtest du die Zustimmung für ${child.name} wirklich widerrufen? Die sozialen Funktionen werden danach wieder gesperrt.`,
             confirmLabel: 'Zustimmung widerrufen',
             danger: true,
         }
@@ -44,16 +44,16 @@ const confirmation = computed(() => {
     if (child.revoked_at) {
         return {
             title: 'Zustimmung erneut erteilen',
-            message: `Moechtest du die Zustimmung fuer ${child.name} erneut erteilen? Das Konto wird danach wieder freigegeben.`,
+            message: `Moechtest du die Zustimmung für ${child.name} erneut erteilen? Das Konto wird danach wieder freigegeben.`,
             confirmLabel: 'Erneut zustimmen',
             danger: false,
         }
     }
 
     return {
-        title: 'Ablehnung zuruecknehmen',
-        message: `Moechtest du die Ablehnung fuer ${child.name} zuruecknehmen und die Zustimmung erteilen? Das Konto wird danach freigegeben.`,
-        confirmLabel: 'Zuruecknehmen und zustimmen',
+        title: 'Ablehnung zurücknehmen',
+        message: `Moechtest du die Ablehnung für ${child.name} zurücknehmen und die Zustimmung erteilen? Das Konto wird danach freigegeben.`,
+        confirmLabel: 'Zurücknehmen und zustimmen',
         danger: false,
     }
 })
@@ -162,7 +162,7 @@ const logout = () => {
                     </div>
                 </div>
 
-                <button class="btn" @click="logout" aria-label="Elternbereich schliessen">Schliessen</button>
+                <button class="btn" @click="logout" aria-label="Elternbereich schließen">Schließen</button>
             </header>
 
             <div v-if="page.props.flash?.success" class="mt-5 rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success">
@@ -213,7 +213,7 @@ const logout = () => {
                             type="button"
                             class="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-white"
                             :disabled="processingAction"
-                            :aria-label="`Zustimmung fuer ${child.name} widerrufen`"
+                            :aria-label="`Zustimmung für ${child.name} widerrufen`"
                             @click="openConfirmation('revoke', child)"
                         >
                             Zustimmung widerrufen
@@ -223,10 +223,10 @@ const logout = () => {
                             type="button"
                             class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
                             :disabled="processingAction"
-                            :aria-label="`Zustimmung fuer ${child.name} erneut erteilen`"
+                            :aria-label="`Zustimmung für ${child.name} erneut erteilen`"
                             @click="openConfirmation('approve', child)"
                         >
-                            {{ child.rejected_at ? 'Ablehnung zuruecknehmen und zustimmen' : 'Zustimmung erneut erteilen' }}
+                            {{ child.rejected_at ? 'Ablehnung zurücknehmen und zustimmen' : 'Zustimmung erneut erteilen' }}
                         </button>
                     </div>
                 </article>

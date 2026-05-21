@@ -21,7 +21,15 @@ class NutritionController extends Controller
         $date = $request->date('date')?->toDateString() ?? now()->toDateString();
         $goal = NutritionGoal::query()->firstOrCreate(
             ['user_id' => $user->id],
-            ['goal_type' => 'maintain', 'diet_style' => 'balanced'],
+            [
+                'goal_type' => 'maintain',
+                'diet_style' => 'balanced',
+                'daily_calories_target' => 2200,
+                'protein_target_g' => 120,
+                'carbs_target_g' => 260,
+                'fat_target_g' => 75,
+                'water_target_ml' => 2500,
+            ],
         );
         $meals = NutritionMeal::query()
             ->forUser($user)
@@ -90,6 +98,18 @@ class NutritionController extends Controller
 
         return (new NutritionMealResource($meal))
             ->additional(['message' => 'Mahlzeit gespeichert.'])
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    public function storeWater(Request $request)
+    {
+        $entry = NutritionMeal::query()->create(
+            $this->waterPayload($request->user(), $this->validateWaterData($request))
+        );
+
+        return (new NutritionMealResource($entry))
+            ->additional(['message' => 'Trinken gespeichert.'])
             ->response()
             ->setStatusCode(201);
     }

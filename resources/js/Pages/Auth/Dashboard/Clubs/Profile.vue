@@ -222,9 +222,9 @@ const leaveClub = async () => {
                 <form class="mt-4 grid gap-4 md:grid-cols-2" @submit.prevent="updateClubProfile">
                     <div class="md:col-span-2 rounded-lg border border-border bg-bg p-4 text-sm">
                         <div class="flex flex-wrap items-center gap-2">
-                            <span class="font-semibold text-primary">Pruefstatus:</span>
+                            <span class="font-semibold text-primary">Prüfstatus:</span>
                             <span class="rounded-full bg-inputBg px-2 py-1 text-xs font-semibold text-secondary">
-                                {{ clubProfile.verification_status === 'pending_verification' ? 'Wartet auf Pruefung' : clubProfile.verification_status === 'verified' ? 'Freigegeben' : clubProfile.verification_status === 'rejected' ? 'Abgelehnt' : clubProfile.verification_status }}
+                                {{ clubProfile.verification_status === 'pending_verification' ? 'Wartet auf Prüfung' : clubProfile.verification_status === 'verified' ? 'Freigegeben' : clubProfile.verification_status === 'rejected' ? 'Abgelehnt' : clubProfile.verification_status }}
                             </span>
                             <span v-if="clubProfile.is_official" class="rounded-full bg-success/10 px-2 py-1 text-xs font-semibold text-success">
                                 Offiziell
@@ -292,14 +292,14 @@ const leaveClub = async () => {
                     </label>
 
                     <div class="md:col-span-2">
-                        <label class="text-sm font-semibold text-primary">Vereinsnummer zur Pruefung</label>
+                        <label class="text-sm font-semibold text-primary">Vereinsnummer zur Prüfung</label>
                         <input
                             v-model="clubForm.official_club_number"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
                             placeholder="z. B. Vereinsregister- oder Verbandsnummer"
                         >
                         <p class="mt-1 text-xs text-secondary">
-                            Wenn die Nummer neu oder geaendert ist, wird sie zur Admin-Pruefung vorgemerkt.
+                            Wenn die Nummer neu oder geändert ist, wird sie zur Admin-Prüfung vorgemerkt.
                         </p>
                     </div>
 

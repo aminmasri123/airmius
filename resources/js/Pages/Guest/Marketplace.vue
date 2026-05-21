@@ -147,7 +147,7 @@ const availabilityLabel = (item) => {
         return 'Aktuell vergriffen'
     }
 
-    return stock <= 5 ? `Nur ${stock} verfuegbar` : 'Auf Lager'
+    return stock <= 5 ? `Nur ${stock} verfügbar` : 'Auf Lager'
 }
 
 const shortDescription = (text, length = 92) => {
@@ -296,7 +296,7 @@ const selectSegment = (segment) => {
                             </select>
                         </label>
                         <label class="relative block">
-                            <span class="sr-only">Verfuegbarkeit</span>
+                            <span class="sr-only">Verfügbarkeit</span>
                             <select v-model="form.availability" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
                                 <option v-for="option in availabilityOptions" :key="option.value || 'all'" :value="option.value">
                                     {{ option.label }}
@@ -706,7 +706,7 @@ const selectSegment = (segment) => {
                             </p>
                             <div class="mt-5 flex flex-wrap justify-center gap-2">
                                 <button class="rounded bg-buttonPrimary px-4 py-2 text-sm font-black text-buttonTextPrimary hover:bg-buttonPrimaryHover" @click="reset">
-                                    Filter zuruecksetzen
+                                    Filter zurücksetzen
                                 </button>
                                 <button
                                     v-for="tile in quickTiles.slice(1, 5)"

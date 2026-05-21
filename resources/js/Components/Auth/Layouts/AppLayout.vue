@@ -5,11 +5,78 @@ import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import UserCard from '@/Components/Auth/UserCard.vue'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 
-defineProps({
+const props = defineProps({
     title: String
 })
 
 const page = usePage()
+
+const componentTitles = {
+    'Auth/Dashboard/Index': 'Dashboard',
+    'Auth/Dashboard/Workspaces/Index': 'Arbeitsbereiche',
+    'Auth/Dashboard/Feed/Index': 'Feed',
+    'Auth/Dashboard/Files/Index': 'Dateien',
+    'Auth/Dashboard/Events/Index': 'Events',
+    'Auth/Dashboard/Training/Index': 'Trainingspläne',
+    'Auth/Dashboard/Training/LogCreate': 'Training dokumentieren',
+    'Auth/Dashboard/Nutrition/Index': 'Ernährung',
+    'Auth/Dashboard/SportMap/Index': 'Sportkarte',
+    'Auth/Dashboard/Friends/Index': 'Freunde',
+    'Auth/Dashboard/Rides/Index': 'Fahrgemeinschaften',
+    'Auth/Dashboard/Notifications/Index': 'Benachrichtigungen',
+    'Auth/Dashboard/Settings/Index': 'Einstellungen',
+    'Auth/Dashboard/Learning/MyCourses': 'Meine Kurse',
+    'Auth/Dashboard/Learning/Studio': 'Sportschule',
+    'Auth/Dashboard/Commerce/Index': 'Commerce',
+    'Auth/Dashboard/Commerce/Cart': 'Warenkorb',
+    'Auth/Dashboard/Commerce/BankTransfer': 'Überweisung',
+    'Auth/Dashboard/OutfitSubscriptions/Index': 'Outfit-Abo',
+    'Auth/Dashboard/Badges/UserIndex': 'Meine Badges',
+    'Auth/Dashboard/Badges/Index': 'Badges verwalten',
+    'Auth/Dashboard/Blogs/Index': 'Blogs',
+    'Auth/Dashboard/Blogs/Categories': 'Blog-Kategorien',
+    'Auth/Dashboard/ClubMemberships/Index': 'Mitglieder & Beiträge',
+    'Auth/Dashboard/Teams/Index': 'Vereine & Teams',
+    'Auth/Dashboard/Users/Index': 'Nutzerverwaltung',
+    'Auth/Dashboard/Users/Create': 'Neuen Nutzer erstellen',
+    'Auth/Dashboard/Users/Edit': 'Nutzer bearbeiten',
+    'Auth/Dashboard/RolesPermissions/Index': 'Rollen & Rechte',
+    'Auth/Dashboard/GamificationRules/Index': 'Gamification',
+    'Auth/Dashboard/Sports/Index': 'Sportarten verwalten',
+    'Auth/Dashboard/Sponsors/Index': 'Sponsoren',
+    'Auth/Dashboard/MediaGuidelines/Index': 'Bildmaße',
+    'Auth/Dashboard/Admin/Subscriptions/Index': 'Abo-Verwaltung',
+    'Auth/Dashboard/Admin/SubscriptionInvoices/Index': 'Abo-Rechnungen',
+    'Auth/Dashboard/Admin/ClubVerifications/Index': 'Vereinsprüfung',
+    'Auth/Dashboard/Admin/MailCenter/Index': 'Mail-Zentrale',
+    'Auth/Dashboard/Admin/Settings/Index': 'Systemeinstellungen',
+    'Auth/Dashboard/Admin/Payments/Index': 'Zahlungen',
+    'Auth/Dashboard/Admin/Invoices/Index': 'Rechnungen',
+    'Auth/Dashboard/Admin/Commerce/Index': 'Admin Commerce',
+    'Auth/Dashboard/Admin/OutfitSubscriptions/Index': 'Admin Outfit-Abos',
+    'Auth/Dashboard/Admin/Moderation/Index': 'Moderation',
+}
+
+const dynamicPageTitle = computed(() => {
+    const props = page.props || {}
+
+    return props.profileUser?.name
+        || props.teamProfile?.name
+        || props.clubProfile?.name
+        || props.event?.title
+        || props.product?.title
+        || props.item?.title
+        || props.log?.title
+        || props.award?.badge?.name
+        || null
+})
+
+const pageTitle = computed(() => {
+    return props.title
+        || dynamicPageTitle.value
+        || componentTitles[page.component]
+        || 'Airmius'
+})
 
 const notificationOpen = ref(false)
 const notificationBox = ref(null)
@@ -323,7 +390,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
 
 <template>
 
-    <Head :title="title" />
+    <Head :title="pageTitle" />
 
     <div class="h-dvh w-full overflow-hidden bg-bg text-primary">
         <Sidebar :open="sidebarOpen" @close="sidebarOpen = false" />
@@ -344,7 +411,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
 
                         <!-- Titel -->
                         <h1 class="truncate text-base font-semibold sm:text-lg">
-                            {{ $t(title || 'Dashboard') }}
+                            {{ pageTitle }}
                         </h1>
                     </div>
 

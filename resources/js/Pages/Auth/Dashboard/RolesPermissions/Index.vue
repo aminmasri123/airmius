@@ -100,8 +100,8 @@ const deleteRole = async () => {
 
     router.delete(route('roles.destroy', selectedRole.value.id), {
         preserveScroll: true,
-        onSuccess: () => setNotice('success', 'Rolle wurde geloescht.'),
-        onError: () => setNotice('error', 'Rolle konnte nicht geloescht werden.'),
+        onSuccess: () => setNotice('success', 'Rolle wurde gelöscht.'),
+        onError: () => setNotice('error', 'Rolle konnte nicht gelöscht werden.'),
     })
 }
 

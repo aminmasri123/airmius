@@ -206,12 +206,12 @@ const rejectionModal = useForm({
 })
 const rejectionReasons = [
     { value: 'missing_required_info', label: 'Pflichtangaben fehlen', text: 'Bitte ergaenze die fehlenden Pflichtangaben wie Beschreibung, Preis, Kategorie oder Lieferinformationen.' },
-    { value: 'unclear_offer', label: 'Angebot ist unklar', text: 'Das Angebot ist fuer Kaeufer noch nicht eindeutig genug beschrieben. Bitte erklaere Inhalt, Umfang und Ablauf genauer.' },
-    { value: 'invalid_category', label: 'Falsche Kategorie', text: 'Das Angebot passt nicht zur gewaehlten Kategorie. Bitte waehle die passende Marketplace-Kategorie.' },
+    { value: 'unclear_offer', label: 'Angebot ist unklar', text: 'Das Angebot ist für Käufer noch nicht eindeutig genug beschrieben. Bitte erklaere Inhalt, Umfang und Ablauf genauer.' },
+    { value: 'invalid_category', label: 'Falsche Kategorie', text: 'Das Angebot passt nicht zur gewählten Kategorie. Bitte wähle die passende Marketplace-Kategorie.' },
     { value: 'bad_images', label: 'Bilder fehlen oder sind ungeeignet', text: 'Bitte lade passende, klare Bilder hoch. Platzhalter, unscharfe oder irrefuehrende Bilder koennen nicht freigegeben werden.' },
     { value: 'price_or_tax_issue', label: 'Preis, Steuer oder Versand unklar', text: 'Preis, Steuerklasse, Versand oder Lieferbedingungen sind nicht plausibel genug angegeben.' },
-    { value: 'prohibited_content', label: 'Nicht erlaubter Inhalt', text: 'Dieses Angebot enthaelt Inhalte oder Leistungen, die auf Airmius nicht veroeffentlicht werden koennen.' },
-    { value: 'quality_review', label: 'Qualitaetspruefung nicht bestanden', text: 'Das Angebot erfuellt aktuell nicht die Qualitaetsanforderungen fuer den Marketplace.' },
+    { value: 'prohibited_content', label: 'Nicht erlaubter Inhalt', text: 'Dieses Angebot enthaelt Inhalte oder Leistungen, die auf Airmius nicht veröffentlicht werden koennen.' },
+    { value: 'quality_review', label: 'Qualitätsprüfung nicht bestanden', text: 'Das Angebot erfüllt aktuell nicht die Qualitätsanforderungen für den Marketplace.' },
     { value: 'duplicate', label: 'Doppeltes Angebot', text: 'Ein sehr aehnliches Angebot existiert bereits. Bitte bearbeite das bestehende Angebot statt ein neues einzureichen.' },
     { value: 'custom', label: 'Eigener Grund', text: '' },
 ]
@@ -272,7 +272,7 @@ const issueReplyModal = useForm({
 const reportedOrders = computed(() => props.orders.filter((order) => order.issue_status && order.issue_status !== 'none'))
 
 const sellerApplicationStatusLabel = (status) => ({
-    pending: 'Wartet auf Pruefung',
+    pending: 'Wartet auf Prüfung',
     approved: 'Freigegeben',
     rejected: 'Abgelehnt',
 }[status] || status || '-')
@@ -1277,14 +1277,14 @@ const updatePayoutProfile = (profile, status) => {
             <article class="surface-card p-5 xl:col-span-2">
                 <div class="flex flex-col gap-1">
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Marketplace</p>
-                    <h2 class="text-lg font-semibold text-primary">Provisionen fuer externe Verkaeufer</h2>
-                    <p class="text-sm text-secondary">Diese Saetze gelten nur fuer externe Shop-Verkaeufer. Interne Airmius-Angebote und interne Services laufen ohne Marketplace-Provision.</p>
+                    <h2 class="text-lg font-semibold text-primary">Provisionen für externe Verkäufer</h2>
+                    <p class="text-sm text-secondary">Diese Sätze gelten nur für externe Shop-Verkäufer. Interne Airmius-Angebote und interne Services laufen ohne Marketplace-Provision.</p>
                 </div>
                 <form class="mt-4 space-y-4" @submit.prevent="updateMarketplaceCommissions">
                     <label class="grid gap-2 rounded-lg border border-border bg-card p-4 md:grid-cols-[1fr_8rem] md:items-center">
                         <span>
                             <span class="block text-sm font-semibold text-primary">Standard-Provision</span>
-                            <span class="block text-xs text-secondary">Greift nur, wenn fuer eine neue Kategorie noch kein eigener Satz hinterlegt ist.</span>
+                            <span class="block text-xs text-secondary">Greift nur, wenn für eine neue Kategorie noch kein eigener Satz hinterlegt ist.</span>
                         </span>
                         <span class="flex items-center gap-2">
                             <input v-model="marketplaceCommissionForm.default_commission_percent" type="number" min="0" max="100" class="w-full rounded-lg border-border bg-inputBg text-sm text-primary">
@@ -1299,7 +1299,7 @@ const updatePayoutProfile = (profile, status) => {
                             class="rounded-lg border border-border bg-card p-4"
                         >
                             <span class="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                                <input v-model="marketplaceCommissionForm.commissions[index].label" class="rounded-lg border-border bg-inputBg text-sm font-semibold text-primary" placeholder="Anzeigename, z. B. Fussballschuhe">
+                                <input v-model="marketplaceCommissionForm.commissions[index].label" class="rounded-lg border-border bg-inputBg text-sm font-semibold text-primary" placeholder="Anzeigename, z. B. Fußballschuhe">
                                 <input v-model="marketplaceCommissionForm.commissions[index].category" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="slug, z. B. football_shoes">
                                 <button type="button" class="rounded-lg border border-danger/40 px-3 py-2 text-xs font-semibold text-danger" @click="removeMarketplaceCommissionRow(index)">
                                     Entfernen
@@ -1314,7 +1314,7 @@ const updatePayoutProfile = (profile, status) => {
 
                     <div class="flex flex-wrap gap-3">
                         <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="addMarketplaceCommissionRow">
-                            Kategorie hinzufuegen
+                            Kategorie hinzufügen
                         </button>
                         <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="marketplaceCommissionForm.processing">
                             Provisionen speichern
@@ -1482,7 +1482,7 @@ const updatePayoutProfile = (profile, status) => {
                             <input v-model="commerceSettingsForm.ads_frequency_cap_per_day" type="number" min="0" max="100" class="w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="3">
                             <span class="shrink-0 text-sm text-secondary">pro User/Session</span>
                         </div>
-                        <span class="mt-2 block text-xs text-secondary">0 deaktiviert das Cap. Gilt auch fuer interne priorisierte Ads.</span>
+                        <span class="mt-2 block text-xs text-secondary">0 deaktiviert das Cap. Gilt auch für interne priorisierte Ads.</span>
                     </label>
 
                     <div class="rounded-lg border border-border bg-card p-4 md:col-span-2">
@@ -1589,7 +1589,7 @@ const updatePayoutProfile = (profile, status) => {
             <article class="surface-card overflow-hidden">
                 <div class="border-b border-border p-5">
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Shop-Zugang</p>
-                    <h2 class="mt-1 text-lg font-semibold text-primary">Verkaeufer-Antraege</h2>
+                    <h2 class="mt-1 text-lg font-semibold text-primary">Verkäufer-Antraege</h2>
                     <p class="mt-1 text-sm text-secondary">Erst freigegebene Nutzer koennen eigene Marketplace-Produkte erstellen.</p>
                 </div>
                 <div class="overflow-x-auto">
@@ -1633,7 +1633,7 @@ const updatePayoutProfile = (profile, status) => {
                                             class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary"
                                             @click="updateSellerApplication(application, 'pending')"
                                         >
-                                            Zurueck auf Pruefung
+                                            Zurück auf Prüfung
                                         </button>
                                     </div>
                                 </td>
@@ -1818,7 +1818,7 @@ const updatePayoutProfile = (profile, status) => {
                                             product.quality_score >= 86 ? 'bg-success/10 text-success' : (product.quality_score >= 72 ? 'bg-warning/10 text-warning' : 'bg-error/10 text-error')
                                         ]"
                                     >
-                                        Qualitaet {{ product.quality_score ?? 0 }}%
+                                        Qualität {{ product.quality_score ?? 0 }}%
                                     </span>
                                 </div>
                                 <p v-if="product.seller_name" class="mt-1 text-xs text-secondary">
@@ -2003,8 +2003,8 @@ const updatePayoutProfile = (profile, status) => {
                     <input v-model="campaignForm.clicks" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Klicks">
                     <input v-model="campaignForm.audience_locations" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Regionen">
                     <input v-model="campaignForm.audience_interests" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interessen">
-                    <input v-model="campaignForm.audience_excluded_locations" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Regionen ausschliessen">
-                    <input v-model="campaignForm.audience_excluded_interests" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interessen ausschliessen">
+                    <input v-model="campaignForm.audience_excluded_locations" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Regionen ausschließen">
+                    <input v-model="campaignForm.audience_excluded_interests" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interessen ausschließen">
                     <input v-model="campaignForm.audience_devices" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Geraete: desktop, mobile, tablet">
                     <input v-model="campaignForm.audience_languages" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Sprachen: de, en, fr">
                     <input v-model="campaignForm.audience_hours" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Zeitfenster: 08-22, 18:30-23:00">
@@ -2145,7 +2145,7 @@ const updatePayoutProfile = (profile, status) => {
             <div v-if="adPlacementReport.length" class="border-b border-border p-5">
                 <div class="flex flex-col gap-1">
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Placement Performance</p>
-                    <h3 class="font-semibold text-primary">Welche Flaechen Ergebnisse liefern</h3>
+                    <h3 class="font-semibold text-primary">Welche Flächen Ergebnisse liefern</h3>
                 </div>
                 <div class="mt-3 grid gap-3 lg:grid-cols-4">
                     <article v-for="row in adPlacementReport" :key="row.placement" class="rounded-lg border border-border bg-bg p-4">
@@ -2302,7 +2302,7 @@ const updatePayoutProfile = (profile, status) => {
                                             class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary"
                                             @click="updateCampaignStatus(campaign, 'pending_review')"
                                         >
-                                            Zur Pruefung
+                                            Zur Prüfung
                                         </button>
                                     </div>
                                 </td>
@@ -2769,13 +2769,13 @@ const updatePayoutProfile = (profile, status) => {
                 <label class="mt-4 block">
                     <span class="text-xs font-semibold uppercase text-secondary">Grund</span>
                     <select v-model="rejectionModal.selectedReason" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" @change="selectRejectionReason">
-                        <option value="">Grund auswaehlen</option>
+                        <option value="">Grund auswählen</option>
                         <option v-for="reason in rejectionReasons" :key="reason.value" :value="reason.value">
                             {{ reason.label }}
                         </option>
                     </select>
                 </label>
-                <textarea v-model="rejectionModal.reason" rows="5" class="mt-3 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Ablehnungsgrund fuer den Verkaeufer"></textarea>
+                <textarea v-model="rejectionModal.reason" rows="5" class="mt-3 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Ablehnungsgrund für den Verkäufer"></textarea>
                 <div class="mt-5 flex justify-end gap-3">
                     <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="rejectionModal.open = false">Abbrechen</button>
                     <button class="rounded-lg bg-warning px-4 py-2 text-sm font-semibold text-white" :disabled="!rejectionModal.reason.trim()" @click="submitRejection">Ablehnen</button>

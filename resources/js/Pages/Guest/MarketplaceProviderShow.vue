@@ -96,7 +96,7 @@ const shortDescription = (text, length = 110) => {
                         </span>
                         <span class="min-w-0">
                             <span class="block font-heading text-lg font-900 leading-tight sm:text-2xl">AIRMIUS Marketplace</span>
-                            <span class="block truncate text-xs font-semibold text-secondary sm:text-sm">Zurueck zu allen Angeboten</span>
+                            <span class="block truncate text-xs font-semibold text-secondary sm:text-sm">Zurück zu allen Angeboten</span>
                         </span>
                     </Link>
                     <div class="flex w-full flex-wrap items-center gap-2 text-sm font-black sm:w-auto sm:justify-end">
@@ -227,8 +227,8 @@ const shortDescription = (text, length = 110) => {
                     </div>
 
                     <div v-else class="p-8 text-center">
-                        <p class="text-lg font-bold text-primary">Noch keine verfuegbaren Angebote.</p>
-                        <p class="mt-2 text-sm text-secondary">Schau spaeter wieder vorbei oder entdecke andere Anbieter im Marketplace.</p>
+                        <p class="text-lg font-bold text-primary">Noch keine verfügbaren Angebote.</p>
+                        <p class="mt-2 text-sm text-secondary">Schau später wieder vorbei oder entdecke andere Anbieter im Marketplace.</p>
                     </div>
 
                     <div v-if="paginationLinks.length > 1" class="flex flex-wrap justify-center gap-2 border-t border-border px-4 py-4">

@@ -79,7 +79,7 @@ const canObjectToRemoval = (notification) => (
 
 const objectToRemoval = (notification) => {
     router.post(route('auth.club-memberships.removal-objection', notification.data.club_id), {
-        message: 'Ich widerspreche der Entfernung und bitte um Pruefung.',
+        message: 'Ich widerspreche der Entfernung und bitte um Prüfung.',
     }, {
         preserveScroll: true,
         only: ['notifications', 'notificationCenter', 'auth', 'flash'],
@@ -200,8 +200,8 @@ onUnmounted(() => {
                                 <button
                                     type="button"
                                     class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-secondary transition hover:border-error/40 hover:bg-error/10 hover:text-error"
-                                    :aria-label="`Benachrichtigung ${notification.data?.title || notification.id} loeschen`"
-                                    title="Benachrichtigung loeschen"
+                                    :aria-label="`Benachrichtigung ${notification.data?.title || notification.id} löschen`"
+                                    title="Benachrichtigung löschen"
                                     @click="deleteNotification(notification)"
                                 >
                                     <i class="las la-times text-lg"></i>

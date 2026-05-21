@@ -201,7 +201,7 @@ const comparisonRows = computed(() => {
                         Neue Einheit
                     </Link>
                     <Link :href="route('auth.training.index')" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
-                        Zur Uebersicht
+                        Zur Übersicht
                     </Link>
                 </div>
             </div>
@@ -217,7 +217,7 @@ const comparisonRows = computed(() => {
         <section v-if="log.plan_comparison" class="rounded-2xl border border-border bg-card">
             <div class="border-b border-border p-5">
                 <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Plan vs. Ist</p>
-                <h2 class="mt-1 text-xl font-semibold text-primary">Geplante Einheit mit Ausfuehrung vergleichen</h2>
+                <h2 class="mt-1 text-xl font-semibold text-primary">Geplante Einheit mit Ausführung vergleichen</h2>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full min-w-[680px] text-left text-sm">
@@ -258,7 +258,7 @@ const comparisonRows = computed(() => {
         <section class="rounded-2xl border border-border bg-card">
             <div class="border-b border-border p-5">
                 <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Dokumentation</p>
-                <h2 class="mt-1 text-xl font-semibold text-primary">Uebungen und Werte</h2>
+                <h2 class="mt-1 text-xl font-semibold text-primary">Übungen und Werte</h2>
             </div>
 
             <div v-if="groupedGymEntries.length" class="space-y-4 p-5">
@@ -337,7 +337,7 @@ const comparisonRows = computed(() => {
                 </article>
 
                 <p v-if="!log.feedbacks?.length" class="rounded-xl border border-dashed border-border p-4 text-sm text-secondary">
-                    Noch kein Feedback vorhanden. Schreibe die erste Rueckmeldung direkt zur Trainingseinheit.
+                    Noch kein Feedback vorhanden. Schreibe die erste Rückmeldung direkt zur Trainingseinheit.
                 </p>
 
                 <form class="rounded-2xl border border-border bg-inputBg/40 p-4" @submit.prevent="submitFeedback">
@@ -346,7 +346,7 @@ const comparisonRows = computed(() => {
                             v-model="feedbackForm.body"
                             rows="4"
                             class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary"
-                            placeholder="Feedback, Rueckfrage, Technik-Hinweis oder naechster Fokus"
+                            placeholder="Feedback, Rückfrage, Technik-Hinweis oder nächster Fokus"
                             required
                         />
                     </label>

@@ -50,7 +50,7 @@ const scopeLabel = (sponsor) => ({
 
 const scopeDescription = (sponsor) => ({
     platform: 'Unterstuetzt Airmius-Angebote und Plattform-Vorteile.',
-    outfit_subscription: 'Unterstuetzt Outfit-Abos und Sponsor-Deals fuer Sportler.',
+    outfit_subscription: 'Unterstuetzt Outfit-Abos und Sponsor-Deals für Sportler.',
     club: 'Unterstuetzt Vereinsangebote und lokale Sportprojekte.',
 }[sponsor.scope] || 'Unterstuetzt Airmius-Angebote und Plattform-Vorteile.')
 </script>

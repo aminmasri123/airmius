@@ -83,12 +83,12 @@
   "sport_map": {
     "eyebrow": "Routen, Tracking und Sportplätze",
     "title": "Sportkarte",
-    "subtitle": "Plane Strecken, tracke Training draussen und teile Sportplätze wie Fussballplätze, Laufbahnen oder Skateparks mit der Community.",
+    "subtitle": "Plane Strecken, tracke Training draußen und teile Sportplätze wie Fußballplätze, Laufbahnen oder Skateparks mit der Community.",
     "map_preview": "Karten-Vorschau",
     "map_hint": "Offline-faehige Vorschau aus deinen Wegpunkten, Tracks und Sportplätzen.",
     "points": "Punkte",
     "empty_map": "Noch keine Kartenpunkte",
-    "empty_map_hint": "Plane eine Route, starte ein Tracking oder fuege einen Sportplatz hinzu.",
+    "empty_map_hint": "Plane eine Route, starte ein Tracking oder füge einen Sportplatz hinzu.",
     "any_sport": "Sportart offen",
     "elevation_gain_meters": "{meters} m Anstieg",
     "sport_types": {
@@ -98,13 +98,13 @@
       "mountainbike": "Mountainbike",
       "walking": "Gehen",
       "wandern": "Wandern",
-      "football": "Fussball",
+      "football": "Fußball",
       "skateboard": "Skateboard",
       "fitness": "Outdoor-Fitness",
       "other": "Andere Sportart"
     },
     "place_types": {
-      "football_pitch": "Fussballplatz",
+      "football_pitch": "Fußballplatz",
       "running_track": "Laufbahn",
       "skatepark": "Skatepark",
       "basketball_court": "Basketballplatz",
@@ -134,7 +134,7 @@
       "team": "Team",
       "description": "Beschreibung",
       "latitude": "Breitengrad",
-      "longitude": "Laengengrad"
+      "longitude": "Längengrad"
     },
     "visibility": {
       "private": "Privat",
@@ -143,7 +143,7 @@
     },
     "routes": {
       "create_title": "Route planen",
-      "create_hint": "Setze mindestens Start und Ziel. Weitere Wegpunkte erzeugen Navigation-Cues fuer Web und Flutter.",
+      "create_hint": "Setze mindestens Start und Ziel. Weitere Wegpunkte erzeugen Navigation-Cues für Web und Flutter.",
       "waypoints": "Wegpunkte",
       "add_waypoint": "Punkt hinzufügen",
       "save": "Route speichern",
@@ -168,7 +168,7 @@
       "live": "Live",
       "points_count": "{count} Punkte",
       "location_unsupported": "Geolocation wird von diesem Browser nicht unterstuetzt.",
-      "location_error": "Standort konnte nicht gelesen werden. Bitte Standortfreigabe pruefen.",
+      "location_error": "Standort konnte nicht gelesen werden. Bitte Standortfreigabe prüfen.",
       "statuses": {
         "recording": "Aufzeichnung",
         "paused": "Pausiert",
@@ -190,7 +190,7 @@
       "save": "Sportplatz speichern",
       "saved_title": "Sportplätze",
       "no_city": "Ohne Stadt",
-      "location_error": "Standort konnte nicht gelesen werden. Bitte Standortfreigabe pruefen."
+      "location_error": "Standort konnte nicht gelesen werden. Bitte Standortfreigabe prüfen."
     }
   },
   "events": {

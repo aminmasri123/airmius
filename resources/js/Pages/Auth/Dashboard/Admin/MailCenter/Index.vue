@@ -181,7 +181,7 @@ const readyLabel = (sender) => {
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">System</p>
                     <h1 class="mt-1 text-2xl font-bold text-primary">Mail-Zentrale</h1>
                     <p class="mt-2 max-w-3xl text-sm text-secondary">
-                        Ueberwache Versand, Warteschlange, Fehler und Absender-Regeln fuer transaktionale E-Mails.
+                        Überwache Versand, Warteschlange, Fehler und Absender-Regeln für transaktionale E-Mails.
                     </p>
                 </div>
                 <div class="rounded-lg border border-border bg-bg px-4 py-3 text-sm text-secondary">
@@ -219,7 +219,7 @@ const readyLabel = (sender) => {
                     <div>
                         <h2 class="text-lg font-semibold text-primary">Absender-Regeln</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            Fuer Rechnungen kannst du Haupt- und Ersatz-Absender ohne Code-Aenderung wechseln.
+                            Für Rechnungen kannst du Haupt- und Ersatz-Absender ohne Code-Änderung wechseln.
                         </p>
                     </div>
                     <form class="grid gap-3 sm:grid-cols-[1fr_1fr_auto]" @submit.prevent="savePreferences">
@@ -362,7 +362,7 @@ const readyLabel = (sender) => {
             <div class="border-b border-border p-5">
                 <h2 class="text-lg font-semibold text-primary">Mailbox-Audit</h2>
                 <p class="mt-1 text-sm text-secondary">
-                    Protokolliert werden Aenderungen und Testversand ohne Klartext-Passwoerter.
+                    Protokolliert werden Änderungen und Testversand ohne Klartext-Passwoerter.
                 </p>
             </div>
             <div class="overflow-x-auto">
@@ -403,7 +403,7 @@ const readyLabel = (sender) => {
                     <div>
                         <h2 class="text-lg font-semibold text-primary">Versandprotokoll</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            Neue Eintraege erscheinen fuer Mails, die ueber die zentrale Mail-Schicht laufen.
+                            Neue Eintraege erscheinen für Mails, die über die zentrale Mail-Schicht laufen.
                         </p>
                     </div>
                     <form class="grid gap-3 sm:grid-cols-[12rem_16rem_auto]" @submit.prevent="applyFilters">

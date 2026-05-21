@@ -110,7 +110,7 @@ class SportMapController extends Controller
 
         $sportRoute->delete();
 
-        return back()->with('success', 'Route wurde geloescht.');
+        return back()->with('success', 'Route wurde gelöscht.');
     }
 
     public function storeTrack(Request $request, SportRouteMetricService $metrics)
@@ -139,7 +139,7 @@ class SportMapController extends Controller
 
         $sportRouteTrack->delete();
 
-        return back()->with('success', 'Strecke wurde geloescht.');
+        return back()->with('success', 'Strecke wurde gelöscht.');
     }
 
     public function storePlace(Request $request)
@@ -148,7 +148,7 @@ class SportMapController extends Controller
             $this->placePayload($request->user(), $this->validatePlaceData($request))
         );
 
-        return back()->with('success', 'Sportplatz "'.$place->name.'" wurde hinzugefuegt.');
+        return back()->with('success', 'Sportplatz "'.$place->name.'" wurde hinzugefügt.');
     }
 
     public function updatePlace(Request $request, SportPlace $sportPlace)
@@ -168,6 +168,6 @@ class SportMapController extends Controller
 
         $sportPlace->delete();
 
-        return back()->with('success', 'Sportplatz wurde geloescht.');
+        return back()->with('success', 'Sportplatz wurde gelöscht.');
     }
 }

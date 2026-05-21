@@ -130,7 +130,7 @@ const submit = () => {
                                 v-model="form.profile_visibility"
                                 class="mt-1 block w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary focus:border-borderHover focus:outline-none focus:ring-borderHover"
                             >
-                                <option value="public">Oeffentlich</option>
+                                <option value="public">Öffentlich</option>
                                 <option value="private">Privat</option>
                             </select>
                             <div v-if="form.errors.profile_visibility" class="mt-1 text-sm text-error">{{ form.errors.profile_visibility }}</div>

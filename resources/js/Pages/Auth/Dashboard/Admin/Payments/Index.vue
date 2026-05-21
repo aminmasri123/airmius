@@ -155,7 +155,7 @@ const methodLabel = (method) => ({
                 <label class="block">
                     <span class="text-sm font-semibold text-primary">Verein</span>
                     <select v-model="form.club_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required>
-                        <option value="">Verein waehlen</option>
+                        <option value="">Verein wählen</option>
                         <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
                     </select>
                     <p v-if="form.errors.club_id" class="mt-1 text-xs text-error">{{ form.errors.club_id }}</p>
@@ -164,7 +164,7 @@ const methodLabel = (method) => ({
                 <label class="block">
                     <span class="text-sm font-semibold text-primary">Zahler</span>
                     <select v-model="form.user_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required>
-                        <option value="">Nutzer waehlen</option>
+                        <option value="">Nutzer wählen</option>
                         <option v-for="user in users" :key="user.id" :value="user.id">{{ userLabel(user) }}</option>
                     </select>
                     <p v-if="form.errors.user_id" class="mt-1 text-xs text-error">{{ form.errors.user_id }}</p>
@@ -200,7 +200,7 @@ const methodLabel = (method) => ({
                 <label class="block">
                     <span class="text-sm font-semibold text-primary">Methode</span>
                     <select v-model="form.method" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                        <option value="bank_transfer">Ueberweisung</option>
+                        <option value="bank_transfer">Überweisung</option>
                         <option value="cash">Bar</option>
                         <option value="card">Karte</option>
                         <option value="paypal">PayPal</option>
@@ -270,7 +270,7 @@ const methodLabel = (method) => ({
                                     class="rounded-lg bg-error px-3 py-1 text-xs font-semibold text-white"
                                     @click="deletePayment(payment)"
                                 >
-                                    Loeschen
+                                    Löschen
                                 </button>
                             </td>
                         </tr>

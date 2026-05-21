@@ -109,7 +109,7 @@ const categoryHref = computed(() => props.post.blog_category?.slug
 
         <main class="px-4 pt-36 md:pt-44">
             <div v-if="isPreview" class="mx-auto mb-6 max-w-4xl rounded-lg border border-air-orange/40 bg-air-orange/10 px-4 py-3 text-sm font-semibold text-air-orange">
-                Vorschau: Dieser Beitrag ist nicht oeffentlich indexierbar.
+                Vorschau: Dieser Beitrag ist nicht öffentlich indexierbar.
             </div>
 
             <article class="mx-auto max-w-4xl">

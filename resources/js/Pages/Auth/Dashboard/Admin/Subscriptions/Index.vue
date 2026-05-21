@@ -732,7 +732,7 @@ const markTransferPaid = (checkout) => {
                     Keine Nutzer gefunden.
                 </p>
                 <p v-else-if="!selectedUserPlans.length" class="px-5 pb-5 text-sm text-warning">
-                    Fuer {{ actorLabels[selectedActor] }} sind noch keine Abo-Pläne vorhanden.
+                    Für {{ actorLabels[selectedActor] }} sind noch keine Abo-Pläne vorhanden.
                 </p>
             </div>
         </section>

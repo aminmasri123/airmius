@@ -208,10 +208,10 @@ const stageLabel = (stage) => ({
     first: 'Erste Mail faellig',
     second: 'Zweite Mail faellig',
     scheduled: 'Profil ausblenden',
-    anonymize: 'Anonymisierung pruefen',
+    anonymize: 'Anonymisierung prüfen',
     waiting: 'Warten',
     active: 'Aktiv',
-    check: 'Pruefen',
+    check: 'Prüfen',
 }[stage] || stage)
 
 const stageClass = (stage) => {
@@ -498,7 +498,7 @@ const sendInactivityNotice = (user, stage) => {
                         <div>
                             <h2 class="text-lg font-semibold text-primary">Regeln</h2>
                             <p class="text-sm text-secondary">
-                                Diese Regeln gelten fuer die automatische Pruefung und deine manuelle Kontrolle.
+                                Diese Regeln gelten für die automatische Prüfung und deine manuelle Kontrolle.
                             </p>
                         </div>
                         <button
@@ -506,7 +506,7 @@ const sendInactivityNotice = (user, stage) => {
                             class="rounded-md border border-border bg-inputBg px-4 py-2 text-sm font-semibold text-primary transition hover:bg-muted"
                             @click="router.visit(route('admin.mail-center.index', { type: 'inactive_account.first' }))"
                         >
-                            Mail-Zentrale oeffnen
+                            Mail-Zentrale öffnen
                         </button>
                     </div>
 
@@ -552,7 +552,7 @@ const sendInactivityNotice = (user, stage) => {
                             class="rounded-md border border-border bg-inputBg px-4 py-2 text-sm font-semibold text-primary transition hover:bg-muted"
                             @click="clearInactiveFilters"
                         >
-                            Zuruecksetzen
+                            Zurücksetzen
                         </button>
                     </div>
 

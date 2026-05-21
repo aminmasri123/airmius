@@ -53,7 +53,7 @@ const submit = () => {
                 {{ hasExistingAccount ? 'Konto verknuepfen' : 'Elternkonto erstellen' }}
             </h1>
             <p class="mt-2 text-sm leading-6 text-secondary">
-                Die E-Mail wurde bereits im Elternbereich bestaetigt:
+                Die E-Mail wurde bereits im Elternbereich bestätigt:
                 <span class="font-semibold text-primary">{{ email }}</span>
             </p>
 
@@ -138,7 +138,7 @@ const submit = () => {
                     </div>
 
                     <div>
-                        <InputLabel for="password_confirmation" value="Passwort bestaetigen" />
+                        <InputLabel for="password_confirmation" value="Passwort bestätigen" />
                         <TextInput
                             id="password_confirmation"
                             v-model="form.password_confirmation"
@@ -153,7 +153,7 @@ const submit = () => {
 
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <Link :href="route('guardian-access.children')" class="text-sm text-secondary underline hover:text-primary">
-                        Zurueck zur Kinderuebersicht
+                        Zurück zur Kinderübersicht
                     </Link>
 
                     <PrimaryButton

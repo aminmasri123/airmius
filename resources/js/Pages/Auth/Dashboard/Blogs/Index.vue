@@ -312,7 +312,7 @@ const seoChecks = computed(() => [
     {
         label: 'Kategorie gesetzt',
         passed: Boolean(form.blog_category_id || form.category),
-        hint: 'Fuer Archiv, Breadcrumbs und Related Posts',
+        hint: 'Für Archiv, Breadcrumbs und Related Posts',
     },
     {
         label: 'Cover Bild gesetzt',
@@ -583,7 +583,7 @@ const applyFilters = () => {
                                 <label v-else class="text-sm font-semibold text-primary">Kategorie</label>
                             </div>
                             <select v-model="form.blog_category_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                                <option value="">Kategorie waehlen</option>
+                                <option value="">Kategorie wählen</option>
                                 <option v-for="category in categoryOptions" :key="category.id" :value="category.id">
                                     {{ category.name }}
                                 </option>
@@ -661,7 +661,7 @@ const applyFilters = () => {
                                 </button>
                                 <button
                                     type="button"
-                                    title="Bild in Inhalt einfuegen"
+                                    title="Bild in Inhalt einfügen"
                                     class="inline-flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-sm text-primary hover:bg-muted disabled:opacity-60"
                                     :disabled="contentImageUploading"
                                     @click="selectContentImage"
@@ -704,7 +704,7 @@ const applyFilters = () => {
                             @change="selectCoverUpload"
                         />
                         <p class="mt-1 text-xs text-secondary">
-                            Empfohlenes Format: 1600 x 900 px im Querformat. Link einfuegen oder Bild hochladen. Wenn beides gesetzt ist, wird der Upload verwendet.
+                            Empfohlenes Format: 1600 x 900 px im Querformat. Link einfügen oder Bild hochladen. Wenn beides gesetzt ist, wird der Upload verwendet.
                         </p>
                         <p v-if="form.errors.cover_image" class="mt-1 text-sm text-error">{{ form.errors.cover_image }}</p>
                         <p v-if="form.errors.cover_image_upload" class="mt-1 text-sm text-error">{{ form.errors.cover_image_upload }}</p>
@@ -726,7 +726,7 @@ const applyFilters = () => {
                         <input v-model="form.meta_title" class="mt-3 w-full rounded-lg border-border bg-card text-primary" placeholder="Meta Title" />
                         <textarea v-model="form.meta_description" rows="2" class="mt-3 w-full rounded-lg border-border bg-card text-primary" placeholder="Meta Description"></textarea>
                         <p v-if="publishBlocked" class="mt-3 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs font-semibold text-error">
-                            Veroeffentlichen ist ab 85% SEO-Qualitaet moeglich.
+                            Veröffentlichen ist ab 85% SEO-Qualität möglich.
                         </p>
                         <div class="mt-3 grid gap-2 text-xs">
                             <div v-for="check in seoChecks" :key="check.label" class="flex items-start gap-2">

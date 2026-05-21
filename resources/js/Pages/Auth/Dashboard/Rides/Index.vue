@@ -192,7 +192,7 @@ const submit = () => {
 }
 
 const visibilityLabel = (value) => props.visibilities.find((visibility) => visibility.value === value)?.label || value
-const joinBlockLabel = (reason) => joinBlockLabels[reason] || 'Nicht verfuegbar.'
+const joinBlockLabel = (reason) => joinBlockLabels[reason] || 'Nicht verfügbar.'
 const rideIsFull = (ride) => Number(ride.participants_count) >= Number(ride.seats)
 const joinStatusMeta = (ride) => {
     if (ride.can_join) {
@@ -248,7 +248,7 @@ const rideActionHint = (ride) => {
     }
 
     if (ride.has_pending_request) {
-        return 'Deine Anfrage wartet auf Rueckmeldung. Du kannst sie jederzeit zurueckziehen.'
+        return 'Deine Anfrage wartet auf Rückmeldung. Du kannst sie jederzeit zurückziehen.'
     }
 
     if (ride.is_joined) {
@@ -257,7 +257,7 @@ const rideActionHint = (ride) => {
 
     if (ride.is_driver) {
         return ride.pending_requests?.length
-            ? 'Pruefe offene Anfragen und halte die Sitzplaetze aktuell.'
+            ? 'Prüfe offene Anfragen und halte die Sitzplaetze aktuell.'
             : 'Du verwaltest diese Fahrt.'
     }
 
@@ -413,7 +413,7 @@ const confirmDeleteRide = () => {
                             <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Fahrgemeinschaft</p>
                             <h2 class="mt-1 text-lg font-semibold text-primary">{{ editTarget ? 'Fahrt bearbeiten' : 'Neue Fahrt anbieten' }}</h2>
                             <p class="mt-1 text-sm text-secondary">
-                                Erstelle eine datenschutzfreundliche Fahrt mit oeffentlichem Treffpunkt statt privater Adresse.
+                                Erstelle eine datenschutzfreundliche Fahrt mit öffentlichem Treffpunkt statt privater Adresse.
                             </p>
                         </div>
                         <button
@@ -485,7 +485,7 @@ const confirmDeleteRide = () => {
                 <div class="md:col-span-2 rounded-lg border border-border bg-bg p-4">
                     <h3 class="text-sm font-semibold text-primary">Treffpunkt</h3>
                     <p class="mt-1 text-xs text-secondary">
-                        Bitte moeglichst einen oeffentlichen Treffpunkt angeben, keine private Wohnadresse.
+                        Bitte möglichst einen öffentlichen Treffpunkt angeben, keine private Wohnadresse.
                     </p>
 
                     <div class="mt-3 grid gap-3 md:grid-cols-2">
@@ -555,7 +555,7 @@ const confirmDeleteRide = () => {
 
                 <div class="md:col-span-2">
                     <button class="w-full rounded-lg bg-buttonPrimary px-4 py-3 font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover disabled:opacity-60" :disabled="form.processing">
-                        {{ form.processing ? 'Speichern...' : (editTarget ? 'Aenderungen speichern' : 'Fahrt anbieten') }}
+                        {{ form.processing ? 'Speichern...' : (editTarget ? 'Änderungen speichern' : 'Fahrt anbieten') }}
                     </button>
                 </div>
                 </div>
@@ -565,17 +565,17 @@ const confirmDeleteRide = () => {
         <Modal :show="showDeleteModal" max-width="md" @close="closeDeleteModal">
             <div v-if="deleteTarget" class="space-y-4">
                 <div>
-                    <p class="text-xs font-semibold uppercase tracking-wide text-error">Fahrgemeinschaft loeschen</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-error">Fahrgemeinschaft löschen</p>
                     <h2 class="mt-1 text-lg font-bold text-primary">
                         {{ deleteTarget.from }} -> {{ deleteTarget.to }}
                     </h2>
                     <p class="mt-2 text-sm text-secondary">
-                        Diese Fahrt wird dauerhaft geloescht. Beigetretene Mitfahrer verlieren den Zugriff auf Kontakt- und Treffpunktdaten.
+                        Diese Fahrt wird dauerhaft gelöscht. Beigetretene Mitfahrer verlieren den Zugriff auf Kontakt- und Treffpunktdaten.
                     </p>
                 </div>
 
                 <div class="rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error">
-                    Bitte gib <strong>DELETE</strong> ein, um die Aktion zu bestaetigen.
+                    Bitte gib <strong>DELETE</strong> ein, um die Aktion zu bestätigen.
                 </div>
 
                 <label class="block">
@@ -602,7 +602,7 @@ const confirmDeleteRide = () => {
                         :disabled="deleteConfirmation !== 'DELETE'"
                         @click="confirmDeleteRide"
                     >
-                        Endgueltig loeschen
+                        Endgültig löschen
                     </button>
                 </div>
             </div>
@@ -817,7 +817,7 @@ const confirmDeleteRide = () => {
                         @click="leaveRide(ride)"
                     >
                         <i class="las la-hourglass-half" aria-hidden="true"></i>
-                        Anfrage zurueckziehen
+                        Anfrage zurückziehen
                     </button>
                     <span
                         v-else-if="!ride.is_joined && joinStatusMeta(ride)"
@@ -842,7 +842,7 @@ const confirmDeleteRide = () => {
                         class="rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
                         @click="openDeleteModal(ride)"
                     >
-                        Loeschen
+                        Löschen
                     </button>
                 </div>
             </article>

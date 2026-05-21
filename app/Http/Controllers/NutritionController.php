@@ -117,6 +117,15 @@ class NutritionController extends Controller
         return back()->with('success', 'Mahlzeit "'.$meal->title.'" wurde gespeichert.');
     }
 
+    public function storeWater(Request $request)
+    {
+        $entry = NutritionMeal::query()->create(
+            $this->waterPayload($request->user(), $this->validateWaterData($request))
+        );
+
+        return back()->with('success', $entry->water_ml.' ml wurden eingetragen.');
+    }
+
     public function updateMeal(Request $request, NutritionMeal $nutritionMeal)
     {
         abort_unless((int) $nutritionMeal->user_id === (int) $request->user()->id, 403);

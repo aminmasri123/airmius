@@ -157,9 +157,9 @@ const issueTypeLabel = (type) => ({
 
 const issueStatusLabel = (status) => ({
     open: 'Offen',
-    reviewing: 'In Pruefung',
+    reviewing: 'In Prüfung',
     approved: 'Freigegeben',
-    return_waiting: 'Ruecksendung offen',
+    return_waiting: 'Rücksendung offen',
     replacement_preparing: 'Ersatz wird vorbereitet',
     resolved: 'Geloest',
     rejected: 'Abgeschlossen',
@@ -184,7 +184,7 @@ const planContractRules = (plan) => plan?.contract_rules || props.contractRules
 
 const planContractTerms = (plan) => (plan?.contract_terms?.length ? plan.contract_terms : [
     'Das Outfit-Abo ist ein monatliches Abonnement mit wiederkehrender Zahlung.',
-    'Die erste Lieferung wird erst nach bestaetigter Zahlung vorbereitet.',
+    'Die erste Lieferung wird erst nach bestätigter Zahlung vorbereitet.',
     'Pause und Kuendigung gelten nur für zukuenftige Lieferungen.',
 ])
 
@@ -356,7 +356,7 @@ const submitIssue = () => {
                         <p class="text-xs font-semibold uppercase tracking-wide text-accent">Abo-Zentrale</p>
                         <h2 class="mt-2 text-xl font-bold text-primary">Alles auf einen Blick</h2>
                         <p class="mt-2 text-sm leading-6 text-secondary">
-                            Aktive Abos, naechste Lieferung und Style-Daten bleiben hier schnell erreichbar.
+                            Aktive Abos, nächste Lieferung und Style-Daten bleiben hier schnell erreichbar.
                         </p>
                     </div>
 
@@ -506,7 +506,7 @@ const submitIssue = () => {
                         >
                             <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
-                                    <p class="text-sm font-bold text-primary">Ueberweisungsdaten</p>
+                                    <p class="text-sm font-bold text-primary">Überweisungsdaten</p>
                                     <p class="mt-1 text-xs leading-5 text-secondary">
                                         Bitte nutze exakt diesen Verwendungszweck, damit deine Zahlung zugeordnet werden kann.
                                     </p>
@@ -620,7 +620,7 @@ const submitIssue = () => {
                         <span v-if="plan.branding_type !== 'none'" class="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">{{ brandingLabel(plan.branding_type) }}</span>
                     </div>
                     <button type="button" class="mt-5 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:opacity-90" @click="subscribe(plan)">
-                        Plan auswaehlen
+                        Plan auswählen
                     </button>
                 </article>
             </div>
@@ -630,7 +630,7 @@ const submitIssue = () => {
             <div class="max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-2xl">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-accent">Outfit-Abo bestaetigen</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-accent">Outfit-Abo bestätigen</p>
                         <h2 class="mt-1 text-lg font-bold text-primary">{{ pendingSubscribePlan.name }}</h2>
                         <p class="mt-2 text-sm leading-6 text-secondary">
                             Nach deiner Bestätigung wird das Abo als Zahlung offen vorgemerkt. Es wird erst aktiviert und beliefert, wenn die Zahlung bestätigt ist.
@@ -663,7 +663,7 @@ const submitIssue = () => {
                         <option value="paypal">PayPal</option>
                     </select>
                     <span class="mt-1 block text-xs text-secondary">
-                        Die Zahlung wird danach vorbereitet. Das Abo bleibt bis zur Zahlungsbestaetigung offen.
+                        Die Zahlung wird danach vorbereitet. Das Abo bleibt bis zur Zahlungsbestätigung offen.
                     </span>
                 </label>
 
@@ -723,7 +723,7 @@ const submitIssue = () => {
                             <dd class="font-semibold text-primary">{{ planContractRules(pendingSubscribePlan).minimum_term_months }} Monate</dd>
                         </div>
                         <div class="flex items-center justify-between gap-4">
-                            <dt class="text-secondary">Pause moeglich ab</dt>
+                            <dt class="text-secondary">Pause möglich ab</dt>
                             <dd class="font-semibold text-primary">Monat {{ planContractRules(pendingSubscribePlan).pause_allowed_after_months }}</dd>
                         </div>
                         <div class="flex items-center justify-between gap-4">
@@ -766,7 +766,7 @@ const submitIssue = () => {
                         >
                             Widerrufshinweise
                         </a>
-                        und weiss, dass das Abo erst nach Zahlungsbestaetigung aktiv wird.
+                        und weiss, dass das Abo erst nach Zahlungsbestätigung aktiv wird.
                     </span>
                 </label>
 
