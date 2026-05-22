@@ -194,6 +194,7 @@ const closeSidebar = () => {
                 <NavItem v-if="can('system.manage')" @navigate="closeSidebar" :href="route('gamification-rules.index')" label="Gamification" icon="las la-trophy" />
                 <NavItem v-if="can('system.manage')" @navigate="closeSidebar" :href="route('admin.badges.index')" label="Badges" icon="las la-medal" />
                 <NavItem v-if="can('admin.mail-center.view')" @navigate="closeSidebar" :href="route('admin.mail-center.index')" label="Mail-Zentrale" icon="las la-envelope-open-text" />
+                <NavItem v-if="can('system.manage')" @navigate="closeSidebar" :href="route('admin.provider-costs.index')" label="Provider-Kosten" icon="las la-chart-pie" />
                 <NavItem v-if="can('admin.settings.view')" @navigate="closeSidebar" :href="route('admin.settings.index')" label="Settings" icon="las la-cog" />
             </NavGroup>
         </nav>

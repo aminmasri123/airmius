@@ -158,6 +158,13 @@ class MobileMetaController extends Controller
                         'goal_types' => config('nutrition.goal_types', []),
                         'diet_styles' => config('nutrition.diet_styles', []),
                         'source_types' => config('nutrition.source_types', []),
+                        'water_goal_modes' => ['manual', 'auto'],
+                        'water_features' => [
+                            'daily_target_ml' => 2500,
+                            'weight_factor_ml_per_kg' => 33,
+                            'adaptive_training_bonus' => true,
+                            'quick_amounts_ml' => [150, 250, 350, 500, 750],
+                        ],
                         'recipes' => config('nutrition.recipes', []),
                         'external_sources' => [
                             [

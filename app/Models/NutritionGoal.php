@@ -17,6 +17,8 @@ class NutritionGoal extends Model
         'carbs_target_g',
         'fat_target_g',
         'water_target_ml',
+        'body_weight_kg',
+        'water_target_mode',
         'diet_style',
         'allergies',
         'notes',
@@ -31,6 +33,7 @@ class NutritionGoal extends Model
             'carbs_target_g' => 'integer',
             'fat_target_g' => 'integer',
             'water_target_ml' => 'integer',
+            'body_weight_kg' => 'float',
         ];
     }
 

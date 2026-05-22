@@ -17,6 +17,8 @@ class NutritionGoalResource extends JsonResource
             'carbs_target_g' => $this->carbs_target_g,
             'fat_target_g' => $this->fat_target_g,
             'water_target_ml' => $this->water_target_ml,
+            'body_weight_kg' => $this->body_weight_kg,
+            'water_target_mode' => $this->water_target_mode ?: 'manual',
             'diet_style' => $this->diet_style,
             'allergies' => $this->allergies ?? [],
             'notes' => $this->notes,

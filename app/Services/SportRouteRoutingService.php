@@ -36,7 +36,10 @@ class SportRouteRoutingService
         'trail' => -34,
     ];
 
-    public function __construct(private readonly SportRouteMetricService $metrics)
+    public function __construct(
+        private readonly SportRouteMetricService $metrics,
+        private readonly ExternalProviderUsageService $usage,
+    )
     {
     }
 
@@ -166,23 +169,31 @@ class SportRouteRoutingService
     private function routedSummary(array $points, ?string $sportType = null, bool $forceRouting = false): array
     {
         $fallback = $this->localSummary($points, $sportType);
+        $provider = $forceRouting ? $this->proposalProvider() : $this->provider();
 
-        if (count($points) < 2 || (! $forceRouting && $this->provider() !== 'osrm') || ($forceRouting && $this->proposalProvider() !== 'osrm')) {
+        if (count($points) < 2 || ! in_array($provider, ['osrm', 'mapbox'], true)) {
             return $fallback;
         }
 
-        $profile = $this->profileFor($sportType);
+        $profile = $this->profileFor($provider, $sportType);
 
         try {
-            $route = $this->fetchOsrmRoute($points, $profile);
+            $route = $provider === 'mapbox'
+                ? $this->fetchMapboxRoute($points, $profile)
+                : $this->fetchOsrmRoute($points, $profile);
 
             if (! $route) {
-                return $this->osrmFallback($fallback, $profile, 'empty_route');
+                return $this->externalRoutingFallback($fallback, $provider, $profile, 'empty_route');
             }
 
-            return $this->summaryFromOsrmRoute($route, $fallback, $profile);
+            return $this->summaryFromExternalRoute($route, $fallback, $provider, $profile);
         } catch (Throwable $exception) {
-            return $this->osrmFallback($fallback, $profile, class_basename($exception));
+            $this->recordRoutingUsage($provider, $profile, 'exception', [
+                'error' => class_basename($exception),
+                'waypoints' => count($points),
+            ]);
+
+            return $this->externalRoutingFallback($fallback, $provider, $profile, class_basename($exception));
         }
     }
 
@@ -569,6 +580,10 @@ class SportRouteRoutingService
                 'steps' => 'true',
                 'continue_straight' => 'true',
             ]);
+        $this->recordRoutingUsage('osrm', $profile, $response->successful() ? 'ok' : 'failed', [
+            'http_status' => $response->status(),
+            'waypoints' => count($points),
+        ]);
 
         if (! $response->successful()) {
             return null;
@@ -579,7 +594,47 @@ class SportRouteRoutingService
         return is_array($route) ? $route : null;
     }
 
-    private function summaryFromOsrmRoute(array $route, array $fallback, string $profile): array
+    private function fetchMapboxRoute(array $points, string $profile): ?array
+    {
+        $token = (string) config('sport_map.routing.mapbox_access_token', '');
+
+        if ($token === '') {
+            $this->recordRoutingUsage('mapbox', $profile, 'missing_token', [
+                'waypoints' => count($points),
+            ]);
+
+            return null;
+        }
+
+        $coordinates = collect($points)
+            ->map(fn (array $point) => (float) $point['longitude'].','.(float) $point['latitude'])
+            ->implode(';');
+        $baseUrl = rtrim((string) config('sport_map.routing.mapbox_base_url', 'https://api.mapbox.com'), '/');
+
+        $response = Http::timeout(max(1, (int) config('sport_map.routing.timeout_seconds', 4)))
+            ->acceptJson()
+            ->get("{$baseUrl}/directions/v5/mapbox/{$profile}/{$coordinates}", [
+                'access_token' => $token,
+                'overview' => 'full',
+                'geometries' => 'geojson',
+                'steps' => 'true',
+                'continue_straight' => 'true',
+            ]);
+        $this->recordRoutingUsage('mapbox', $profile, $response->successful() ? 'ok' : 'failed', [
+            'http_status' => $response->status(),
+            'waypoints' => count($points),
+        ]);
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $route = data_get($response->json(), 'routes.0');
+
+        return is_array($route) ? $route : null;
+    }
+
+    private function summaryFromExternalRoute(array $route, array $fallback, string $provider, string $profile): array
     {
         $coordinates = collect(data_get($route, 'geometry.coordinates', []))
             ->filter(fn ($coordinate) => is_array($coordinate) && count($coordinate) >= 2)
@@ -591,7 +646,7 @@ class SportRouteRoutingService
             ->all();
 
         if (count($coordinates) < 2) {
-            return $this->osrmFallback($fallback, $profile, 'invalid_geometry');
+            return $this->externalRoutingFallback($fallback, $provider, $profile, 'invalid_geometry');
         }
 
         $distanceMeters = (int) round((float) data_get($route, 'distance', $fallback['distance_meters']));
@@ -608,8 +663,8 @@ class SportRouteRoutingService
                 'coordinates' => $coordinates,
             ],
             'navigation_cues' => $this->navigationCuesFromLegs(data_get($route, 'legs', []), $fallback['navigation_cues']),
-            'calculation' => 'osrm_route_v1',
-            'routing_provider' => 'osrm',
+            'calculation' => $provider.'_route_v1',
+            'routing_provider' => $provider,
             'routing_profile' => $profile,
             'routing_status' => 'routed',
         ]);
@@ -673,10 +728,10 @@ class SportRouteRoutingService
         ];
     }
 
-    private function osrmFallback(array $fallback, string $profile, string $reason): array
+    private function externalRoutingFallback(array $fallback, string $provider, string $profile, string $reason): array
     {
         return array_replace($fallback, [
-            'routing_provider' => 'osrm',
+            'routing_provider' => $provider,
             'routing_profile' => $profile,
             'routing_status' => 'fallback',
             'routing_error' => substr($reason, 0, 120),
@@ -693,11 +748,30 @@ class SportRouteRoutingService
         return strtolower((string) config('sport_map.routing.route_generator_provider', 'osrm'));
     }
 
-    private function profileFor(?string $sportType): string
+    private function profileFor(string $provider, ?string $sportType): string
     {
-        $profiles = config('sport_map.routing.profiles', []);
+        $profiles = $provider === 'mapbox'
+            ? config('sport_map.routing.mapbox_profiles', [])
+            : config('sport_map.routing.profiles', []);
         $key = strtolower((string) $sportType);
 
-        return (string) ($profiles[$key] ?? $profiles['other'] ?? 'foot');
+        return (string) ($profiles[$key] ?? $profiles['other'] ?? ($provider === 'mapbox' ? 'walking' : 'foot'));
+    }
+
+    private function recordRoutingUsage(string $provider, string $profile, string $status, array $metadata = []): void
+    {
+        $this->usage->record(
+            'routing',
+            $provider,
+            'directions',
+            'route',
+            auth()->user(),
+            1,
+            status: $status,
+            metadata: [
+                'profile' => $profile,
+                ...$metadata,
+            ],
+        );
     }
 }

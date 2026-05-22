@@ -49,6 +49,7 @@ const componentTitles = {
     'Auth/Dashboard/Admin/SubscriptionInvoices/Index': 'Abo-Rechnungen',
     'Auth/Dashboard/Admin/ClubVerifications/Index': 'Vereinsprüfung',
     'Auth/Dashboard/Admin/MailCenter/Index': 'Mail-Zentrale',
+    'Auth/Dashboard/Admin/ProviderCosts/Index': 'Provider-Kosten',
     'Auth/Dashboard/Admin/Settings/Index': 'Systemeinstellungen',
     'Auth/Dashboard/Admin/Payments/Index': 'Zahlungen',
     'Auth/Dashboard/Admin/Invoices/Index': 'Rechnungen',
@@ -89,12 +90,19 @@ const searchLoading = ref(false)
 const currentStatus = ref(page.props.auth?.user?.status || 'online')
 const sidebarOpen = ref(false)
 const notificationsMarkedReadLocally = ref(false)
+const feedbackMessages = ref([])
 
 let notificationInterval = null
 let notificationChannel = null
 let statusChannel = null
 let markOfflineOnUnload = null
 let searchTimeout = null
+let feedbackId = 0
+const feedbackTimers = new Map()
+let stopInertiaSuccess = null
+let stopInertiaError = null
+let stopInertiaInvalid = null
+let stopInertiaException = null
 
 const serverUnreadCount = computed(() => page.props.notificationCenter?.unread_count || 0)
 const unreadCount = computed(() => notificationsMarkedReadLocally.value ? 0 : serverUnreadCount.value)
@@ -271,6 +279,98 @@ const initialsFor = (value) => {
         .toUpperCase() || '?'
 }
 
+const removeFeedback = (id) => {
+    feedbackMessages.value = feedbackMessages.value.filter((message) => message.id !== id)
+
+    if (feedbackTimers.has(id)) {
+        window.clearTimeout(feedbackTimers.get(id))
+        feedbackTimers.delete(id)
+    }
+}
+
+const addFeedback = (type, message) => {
+    const text = String(message || '').trim()
+
+    if (!text) return
+
+    const id = ++feedbackId
+    feedbackMessages.value.unshift({
+        id,
+        type,
+        message: text,
+    })
+
+    if (feedbackMessages.value.length > 4) {
+        feedbackMessages.value.slice(4).forEach((item) => removeFeedback(item.id))
+    }
+
+    feedbackTimers.set(id, window.setTimeout(() => removeFeedback(id), type === 'error' ? 7000 : 4500))
+}
+
+const firstErrorMessage = (errors) => {
+    const values = Object.values(errors || {}).flat()
+    const first = values.find((value) => String(value || '').trim())
+
+    return first || 'Aktion konnte nicht abgeschlossen werden. Bitte pruefe deine Eingaben.'
+}
+
+const showFlashFeedback = (flash = {}) => {
+    if (flash.success) {
+        addFeedback('success', flash.success)
+    }
+
+    if (flash.error) {
+        addFeedback('error', flash.error)
+    }
+
+    if (flash.message) {
+        addFeedback('info', flash.message)
+    }
+}
+
+const httpErrorMessage = (status) => {
+    if (status === 401) return 'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.'
+    if (status === 403) return 'Du hast fuer diese Aktion keine Berechtigung.'
+    if (status === 404) return 'Der angeforderte Inhalt wurde nicht gefunden.'
+    if (status === 419) return 'Die Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es erneut.'
+    if (status === 422) return 'Bitte pruefe die Eingaben.'
+    if (status >= 500) return 'Serverfehler. Bitte versuche es gleich erneut.'
+
+    return 'Aktion konnte nicht abgeschlossen werden.'
+}
+
+const installGlobalFeedback = () => {
+    showFlashFeedback(page.props.flash || {})
+
+    stopInertiaSuccess = router.on('success', (event) => {
+        showFlashFeedback(event.detail.page.props.flash || {})
+    })
+
+    stopInertiaError = router.on('error', (event) => {
+        addFeedback('error', firstErrorMessage(event.detail.errors || {}))
+    })
+
+    stopInertiaInvalid = router.on('invalid', (event) => {
+        event.preventDefault()
+        addFeedback('error', httpErrorMessage(event.detail.response?.status))
+    })
+
+    stopInertiaException = router.on('exception', (event) => {
+        event.preventDefault()
+        addFeedback('error', 'Unerwarteter Fehler. Bitte versuche es erneut.')
+    })
+}
+
+const uninstallGlobalFeedback = () => {
+    stopInertiaSuccess?.()
+    stopInertiaError?.()
+    stopInertiaInvalid?.()
+    stopInertiaException?.()
+
+    feedbackTimers.forEach((timer) => window.clearTimeout(timer))
+    feedbackTimers.clear()
+}
+
 const bindRealtime = () => {
     if (!window.Echo || !page.props.auth?.user?.realtime) return
 
@@ -331,6 +431,7 @@ const unbindRealtime = () => {
 
 onMounted(() => {
     updateScreenSize()
+    installGlobalFeedback()
 
     setStatus(currentStatus.value === 'offline' ? 'online' : currentStatus.value)
 
@@ -350,6 +451,7 @@ onMounted(() => {
 
 onUnmounted(() => {
     document.body.style.overflow = ''
+    uninstallGlobalFeedback()
 
     if (markOfflineOnUnload) {
         window.removeEventListener('beforeunload', markOfflineOnUnload)
@@ -394,6 +496,56 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
 
     <div class="h-dvh w-full overflow-hidden bg-bg text-primary">
         <Sidebar :open="sidebarOpen" @close="sidebarOpen = false" />
+
+        <Teleport to="body">
+            <div
+                v-if="feedbackMessages.length"
+                class="pointer-events-none fixed inset-x-0 bottom-4 z-[90] flex flex-col gap-2 px-3 sm:bottom-auto sm:left-auto sm:right-4 sm:top-4 sm:w-[min(24rem,calc(100vw-2rem))] sm:px-0"
+            >
+                <TransitionGroup name="airmius-feedback" tag="div" class="space-y-2">
+                    <article
+                        v-for="feedback in feedbackMessages"
+                        :key="feedback.id"
+                        class="pointer-events-auto flex items-start gap-3 rounded-2xl border bg-card/95 p-3 shadow-2xl backdrop-blur"
+                        :class="{
+                            'border-success/40': feedback.type === 'success',
+                            'border-danger/40': feedback.type === 'error',
+                            'border-air-blue/40': feedback.type === 'info',
+                        }"
+                    >
+                        <span
+                            class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                            :class="{
+                                'bg-success/15 text-success': feedback.type === 'success',
+                                'bg-danger/15 text-danger': feedback.type === 'error',
+                                'bg-air-blue/15 text-air-blue': feedback.type === 'info',
+                            }"
+                        >
+                            <i
+                                :class="[
+                                    feedback.type === 'success' ? 'las la-check' : (feedback.type === 'error' ? 'las la-exclamation-circle' : 'las la-info-circle'),
+                                    'text-xl'
+                                ]"
+                            ></i>
+                        </span>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-bold text-primary">
+                                {{ feedback.type === 'success' ? 'Gespeichert' : (feedback.type === 'error' ? 'Hinweis' : 'Info') }}
+                            </p>
+                            <p class="mt-0.5 text-sm leading-5 text-secondary">{{ feedback.message }}</p>
+                        </div>
+                        <button
+                            type="button"
+                            class="rounded-lg p-1.5 text-secondary hover:bg-muted hover:text-primary"
+                            aria-label="Meldung schliessen"
+                            @click="removeFeedback(feedback.id)"
+                        >
+                            <i class="las la-times text-lg"></i>
+                        </button>
+                    </article>
+                </TransitionGroup>
+            </div>
+        </Teleport>
 
         <div class="flex h-dvh min-w-0 flex-1 flex-col md:pl-[260px]">
             <!-- Topbar -->
@@ -683,3 +835,16 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
         </div>
     </div>
 </template>
+
+<style scoped>
+.airmius-feedback-enter-active,
+.airmius-feedback-leave-active {
+    transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.airmius-feedback-enter-from,
+.airmius-feedback-leave-to {
+    opacity: 0;
+    transform: translateY(12px);
+}
+</style>

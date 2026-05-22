@@ -29,6 +29,7 @@ class NutritionController extends Controller
                 'carbs_target_g' => 260,
                 'fat_target_g' => 75,
                 'water_target_ml' => 2500,
+                'water_target_mode' => 'auto',
             ],
         );
         $meals = NutritionMeal::query()
@@ -44,6 +45,7 @@ class NutritionController extends Controller
                 'meals' => NutritionMealResource::collection($meals)->resolve(),
                 'summary' => $this->summaryForDate($user, $date),
                 'weekly_summaries' => $this->weeklySummaries($user, $date),
+                'water_recommendation' => $this->waterRecommendation($user, $goal, $date),
                 'catalog' => $this->nutritionCatalog(),
                 'recipes' => $this->nutritionRecipes($goal->goal_type, $goal->diet_style),
                 'tips' => $this->nutritionTips($goal->goal_type),

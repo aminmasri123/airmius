@@ -29,6 +29,7 @@ return [
     ],
 
     'map' => [
+        'provider' => env('SPORT_MAP_TILE_PROVIDER', 'osm_public'),
         'tile_url' => env('SPORT_MAP_TILE_URL', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'),
         'attribution' => env('SPORT_MAP_ATTRIBUTION', '(c) OpenStreetMap contributors'),
         'satellite_tile_url' => env('SPORT_MAP_SATELLITE_TILE_URL', 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'),
@@ -39,6 +40,8 @@ return [
         'provider' => env('SPORT_MAP_ROUTING_PROVIDER', 'osrm'),
         'route_generator_provider' => env('SPORT_MAP_ROUTE_GENERATOR_PROVIDER', 'osrm'),
         'osrm_base_url' => env('SPORT_MAP_OSRM_BASE_URL', 'https://router.project-osrm.org'),
+        'mapbox_base_url' => env('SPORT_MAP_MAPBOX_BASE_URL', 'https://api.mapbox.com'),
+        'mapbox_access_token' => env('MAPBOX_ACCESS_TOKEN'),
         'timeout_seconds' => (int) env('SPORT_MAP_ROUTING_TIMEOUT', 4),
         'profiles' => [
             'running' => 'foot',
@@ -51,6 +54,18 @@ return [
             'fitness' => 'foot',
             'football' => 'foot',
             'other' => 'foot',
+        ],
+        'mapbox_profiles' => [
+            'running' => 'walking',
+            'trail_running' => 'walking',
+            'walking' => 'walking',
+            'wandern' => 'walking',
+            'cycling' => 'cycling',
+            'mountainbike' => 'cycling',
+            'skateboard' => 'walking',
+            'fitness' => 'walking',
+            'football' => 'walking',
+            'other' => 'walking',
         ],
     ],
 ];

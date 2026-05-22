@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 defineOptions({ layout: AppLayout })
 
@@ -11,6 +11,7 @@ const props = defineProps({
     meals: { type: Array, default: () => [] },
     todaySummary: { type: Object, default: () => ({}) },
     weeklySummaries: { type: Array, default: () => [] },
+    waterRecommendation: { type: Object, default: () => ({}) },
     catalog: { type: Object, default: () => ({}) },
     recipes: { type: Array, default: () => [] },
     tips: { type: Array, default: () => [] },
@@ -29,7 +30,42 @@ const foodBarcode = ref('')
 const foodLookupLoading = ref(false)
 const foodLookupError = ref('')
 const foodSearchResults = ref([])
+const drinkSelectOpen = ref(false)
+const drinkSearchQuery = ref('Wasser')
+const drinkSelectRef = ref(null)
 const quickDrinkAmounts = [150, 250, 500, 750]
+const popularDrinkOptions = [
+    { label: 'Wasser', category: 'Wasser', amount: 250, aliases: ['still', 'leitungswasser', 'tap water'] },
+    { label: 'Mineralwasser', category: 'Wasser', amount: 250, aliases: ['mineral water'] },
+    { label: 'Sprudelwasser', category: 'Wasser', amount: 250, aliases: ['sparkling water', 'wasser mit kohlensaeure'] },
+    { label: 'Infused Water', category: 'Wasser', amount: 250, aliases: ['zitrone', 'gurke', 'mint water'] },
+    { label: 'Kokoswasser', category: 'Wasser', amount: 250, aliases: ['coconut water'] },
+    { label: 'Kraeutertee', category: 'Tee', amount: 250, aliases: ['tee', 'herbal tea'] },
+    { label: 'Gruener Tee', category: 'Tee', amount: 250, aliases: ['green tea'] },
+    { label: 'Schwarzer Tee', category: 'Tee', amount: 250, aliases: ['black tea'] },
+    { label: 'Eistee', category: 'Tee', amount: 330, aliases: ['iced tea'] },
+    { label: 'Kaffee', category: 'Kaffee', amount: 200, aliases: ['coffee', 'filterkaffee'] },
+    { label: 'Espresso', category: 'Kaffee', amount: 40, aliases: ['espresso shot'] },
+    { label: 'Cappuccino', category: 'Kaffee', amount: 180, aliases: ['kaffee milch'] },
+    { label: 'Latte Macchiato', category: 'Kaffee', amount: 250, aliases: ['latte'] },
+    { label: 'Milch', category: 'Milch & Protein', amount: 250, aliases: ['milk'] },
+    { label: 'Haferdrink', category: 'Milch & Protein', amount: 250, aliases: ['hafermilch', 'oat milk'] },
+    { label: 'Ayran', category: 'Milch & Protein', amount: 250, aliases: ['joghurt drink'] },
+    { label: 'Proteinshake', category: 'Milch & Protein', amount: 300, aliases: ['shake', 'protein'] },
+    { label: 'Kakao', category: 'Milch & Protein', amount: 250, aliases: ['schokomilch', 'chocolate milk'] },
+    { label: 'Orangensaft', category: 'Saft & Smoothie', amount: 200, aliases: ['orange juice', 'o-saft'] },
+    { label: 'Apfelsaft', category: 'Saft & Smoothie', amount: 200, aliases: ['apple juice'] },
+    { label: 'Multivitaminsaft', category: 'Saft & Smoothie', amount: 200, aliases: ['multi'] },
+    { label: 'Smoothie', category: 'Saft & Smoothie', amount: 250, aliases: ['frucht smoothie'] },
+    { label: 'Cola', category: 'Softdrink', amount: 330, aliases: ['coke'] },
+    { label: 'Cola Zero', category: 'Softdrink', amount: 330, aliases: ['coke zero', 'cola light'] },
+    { label: 'Limonade', category: 'Softdrink', amount: 330, aliases: ['lemonade', 'sprite', 'fanta'] },
+    { label: 'Energy Drink', category: 'Softdrink', amount: 250, aliases: ['red bull', 'monster'] },
+    { label: 'Isotonisches Getraenk', category: 'Sport', amount: 500, aliases: ['isodrink', 'sports drink', 'elektrolyt'] },
+    { label: 'Elektrolyt-Drink', category: 'Sport', amount: 500, aliases: ['hydration', 'salze'] },
+    { label: 'Pre-Workout', category: 'Sport', amount: 300, aliases: ['booster'] },
+    { label: 'Alkoholfreies Bier', category: 'Sport', amount: 330, aliases: ['recovery bier'] },
+]
 const drinkVessels = [
     {
         key: 'small-cup',
@@ -73,6 +109,9 @@ const drinkVessels = [
     },
 ]
 const showDrinkTips = ref(false)
+const pendingDrinkEntries = ref([])
+const deletingDrinkEntries = ref([])
+const drinkError = ref('')
 
 const drinkTips = [
     {
@@ -131,6 +170,8 @@ const goalForm = useForm({
     carbs_target_g: props.goal?.carbs_target_g || 260,
     fat_target_g: props.goal?.fat_target_g || 75,
     water_target_ml: props.goal?.water_target_ml || 2500,
+    body_weight_kg: props.goal?.body_weight_kg || '',
+    water_target_mode: props.goal?.water_target_mode || 'auto',
     diet_style: props.goal?.diet_style || 'balanced',
     allergies: props.goal?.allergies || [],
     notes: props.goal?.notes || '',
@@ -140,16 +181,53 @@ const mealTypes = computed(() => props.catalog?.meal_types || [])
 const foodMealTypes = computed(() => mealTypes.value.filter((type) => type.key !== 'drink'))
 const goalTypes = computed(() => props.catalog?.goal_types || [])
 const dietStyles = computed(() => props.catalog?.diet_styles || [])
-const drinkEntries = computed(() => (props.meals || []).filter((meal) => meal.meal_type === 'drink').sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')))
+const deletingDrinkIds = computed(() => new Set(deletingDrinkEntries.value.map((entry) => entry.id)))
+const persistedDrinkEntries = computed(() => (props.meals || []).filter((meal) => meal.meal_type === 'drink' && !deletingDrinkIds.value.has(meal.id)))
+const pendingWaterMl = computed(() => pendingDrinkEntries.value.reduce((total, entry) => total + Number(entry.water_ml || 0), 0))
+const deletingWaterMl = computed(() => deletingDrinkEntries.value.reduce((total, entry) => total + Number(entry.water_ml || 0), 0))
+const drinkEntries = computed(() => [...pendingDrinkEntries.value, ...persistedDrinkEntries.value].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')))
 const sortedMeals = computed(() => (props.meals || []).filter((meal) => meal.meal_type !== 'drink').sort((a, b) => (a.meal_type || '').localeCompare(b.meal_type || '')))
 const selectedGoal = computed(() => goalTypes.value.find((goal) => goal.key === goalForm.goal_type) || goalTypes.value[0] || {})
 const maxWeekCalories = computed(() => Math.max(1, ...props.weeklySummaries.map((day) => Number(day.calories || 0))))
-const maxWeekWater = computed(() => Math.max(1, Number(goalForm.water_target_ml || 0), ...props.weeklySummaries.map((day) => Number(day.water_ml || 0))))
 const caloriesLeft = computed(() => Math.max(0, Number(goalForm.daily_calories_target || 0) - Number(props.todaySummary.calories || 0)))
-const waterTargetMl = computed(() => Number(goalForm.water_target_ml || 0))
-const waterConsumedMl = computed(() => Number(props.todaySummary.water_ml || 0))
+const waterRecommendation = computed(() => props.waterRecommendation || {})
+const waterBaseMl = computed(() => {
+    const weight = Number(goalForm.body_weight_kg || 0)
+
+    if (weight > 0) {
+        return roundToWaterStep(weight * 33)
+    }
+
+    return Number(waterRecommendation.value.base_ml || 2500)
+})
+const waterTrainingExtraMl = computed(() => Number(waterRecommendation.value.training_extra_ml || 0))
+const suggestedWaterTargetMl = computed(() => clampWaterTarget(waterBaseMl.value + waterTrainingExtraMl.value))
+const manualWaterTargetMl = computed(() => clampWaterTarget(Number(goalForm.water_target_ml || waterRecommendation.value.manual_target_ml || 2500)))
+const waterTargetMl = computed(() => goalForm.water_target_mode === 'auto' ? suggestedWaterTargetMl.value : manualWaterTargetMl.value)
+const maxWeekWater = computed(() => Math.max(1, Number(waterTargetMl.value || 0), ...props.weeklySummaries.map((day) => Number(day.water_ml || 0))))
+const waterConsumedMl = computed(() => Math.max(0, Number(props.todaySummary.water_ml || 0) + pendingWaterMl.value - deletingWaterMl.value))
 const waterLeftMl = computed(() => Math.max(0, waterTargetMl.value - waterConsumedMl.value))
 const waterProgress = computed(() => progressValue(waterConsumedMl.value, waterTargetMl.value))
+const filteredDrinkOptions = computed(() => {
+    const search = normalizeDrinkSearch(drinkSearchQuery.value)
+
+    return popularDrinkOptions
+        .filter((drink) => {
+            if (!search) return true
+
+            return [
+                drink.label,
+                drink.category,
+                ...(drink.aliases || []),
+            ].some((value) => normalizeDrinkSearch(value).includes(search))
+        })
+        .slice(0, 18)
+})
+const customDrinkNameAvailable = computed(() => {
+    const search = normalizeDrinkSearch(drinkSearchQuery.value)
+
+    return Boolean(search) && !popularDrinkOptions.some((drink) => normalizeDrinkSearch(drink.label) === search)
+})
 const filteredRecipes = computed(() => {
     if (recipeFilter.value === 'goal') {
         return props.recipes.filter((recipe) => recipe.goal_type === goalForm.goal_type)
@@ -235,7 +313,17 @@ const formatWater = (value) => {
     return `${formatNumber(ml)} ml`
 }
 
+const roundToWaterStep = (value, step = 50) => Math.round(Number(value || 0) / step) * step
+
+const clampWaterTarget = (value) => Math.max(1500, Math.min(6000, roundToWaterStep(value || 2500)))
+
 const mealTypeMeta = (key) => mealTypes.value.find((type) => type.key === key) || { label: key || 'Mahlzeit', icon: 'las la-utensils' }
+
+const normalizeDrinkSearch = (value) => String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
 
 const changeDate = () => {
     router.get(route('auth.nutrition.index'), { date: selectedDateValue.value }, {
@@ -306,30 +394,126 @@ const saveGoal = () => {
     goalForm.patch(route('auth.nutrition.goal.update'), { preserveScroll: true })
 }
 
+const removePendingDrinkEntry = (id) => {
+    pendingDrinkEntries.value = pendingDrinkEntries.value.filter((entry) => entry.id !== id)
+}
+
+const removeDeletingDrinkEntry = (id) => {
+    deletingDrinkEntries.value = deletingDrinkEntries.value.filter((entry) => entry.id !== id)
+}
+
+const updateDrinkSearch = (value) => {
+    drinkSearchQuery.value = value
+    drinkForm.title = value
+    drinkSelectOpen.value = true
+}
+
+const selectDrinkOption = (drink) => {
+    drinkSearchQuery.value = drink.label
+    drinkForm.title = drink.label
+    drinkForm.amount_ml = drink.amount || drinkForm.amount_ml || 250
+
+    drinkSelectOpen.value = false
+}
+
+const useCustomDrinkName = () => {
+    const customName = drinkSearchQuery.value.trim()
+
+    if (!customName) return
+
+    drinkForm.title = customName
+    drinkSelectOpen.value = false
+}
+
+const clearDrinkSearch = () => {
+    drinkSearchQuery.value = ''
+    drinkForm.title = ''
+    drinkSelectOpen.value = true
+}
+
 const submitDrink = (amount = null, title = null) => {
-    if (amount) {
-        drinkForm.amount_ml = amount
+    const selectedAmount = Number(amount || drinkForm.amount_ml || 0)
+    const selectedTitle = String(title || drinkForm.title || 'Wasser').trim() || 'Wasser'
+    const selectedDate = selectedDateValue.value || props.selectedDate
+
+    if (!selectedAmount || selectedAmount < 1 || selectedAmount > 5000) {
+        drinkError.value = 'Bitte Menge zwischen 1 und 5000 ml eingeben.'
+        return
     }
 
-    if (title) {
-        drinkForm.title = title
-    }
+    drinkError.value = ''
+    activeSection.value = 'drink'
+    drinkForm.eaten_on = selectedDate
+    drinkForm.amount_ml = selectedAmount
+    drinkForm.title = selectedTitle
+    drinkSearchQuery.value = selectedTitle
 
-    drinkForm.eaten_on = selectedDateValue.value || props.selectedDate
-    drinkForm.title = drinkForm.title || 'Wasser'
+    const pendingId = `pending-drink-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    pendingDrinkEntries.value.unshift({
+        id: pendingId,
+        title: selectedTitle,
+        meal_type: 'drink',
+        water_ml: selectedAmount,
+        created_at: new Date().toISOString(),
+        is_pending: true,
+    })
 
-    drinkForm.post(route('auth.nutrition.water.store'), {
+    router.post(route('auth.nutrition.water.store'), {
+        eaten_on: selectedDate,
+        amount_ml: selectedAmount,
+        title: selectedTitle,
+    }, {
         preserveScroll: true,
+        preserveState: true,
         onSuccess: () => {
-            drinkForm.amount_ml = amount || 250
+            removePendingDrinkEntry(pendingId)
+            drinkForm.amount_ml = amount || selectedAmount || 250
             drinkForm.title = 'Wasser'
+            drinkSearchQuery.value = 'Wasser'
             activeSection.value = 'drink'
+        },
+        onError: () => {
+            removePendingDrinkEntry(pendingId)
+            drinkError.value = 'Trinken konnte nicht gespeichert werden. Bitte versuche es erneut.'
         },
     })
 }
 
 const submitDrinkVessel = (vessel) => {
     submitDrink(vessel.amount, vessel.title)
+}
+
+const deleteDrinkEntry = (entry) => {
+    if (!entry?.id || entry.is_pending || deletingDrinkIds.value.has(entry.id)) return
+
+    drinkError.value = ''
+    activeSection.value = 'drink'
+    deletingDrinkEntries.value.unshift({ ...entry, is_deleting: true })
+
+    let handled = false
+
+    const restoreDrinkEntry = (message = 'Getraenk konnte nicht geloescht werden. Bitte versuche es erneut.') => {
+        handled = true
+        removeDeletingDrinkEntry(entry.id)
+        drinkError.value = message
+    }
+
+    router.delete(route('auth.nutrition.meals.destroy', entry.id), {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            handled = true
+            removeDeletingDrinkEntry(entry.id)
+            activeSection.value = 'drink'
+        },
+        onError: () => restoreDrinkEntry(),
+        onCancel: () => restoreDrinkEntry('Loeschen wurde abgebrochen. Der Eintrag ist wieder sichtbar.'),
+        onFinish: () => {
+            if (!handled) {
+                restoreDrinkEntry()
+            }
+        },
+    })
 }
 
 const applyRecipe = (recipe) => {
@@ -434,6 +618,20 @@ const confirmDelete = () => {
         },
     })
 }
+
+const closeDrinkSelectOnOutsideClick = (event) => {
+    if (!drinkSelectRef.value?.contains(event.target)) {
+        drinkSelectOpen.value = false
+    }
+}
+
+onMounted(() => {
+    document.addEventListener('pointerdown', closeDrinkSelectOnOutsideClick)
+})
+
+onBeforeUnmount(() => {
+    document.removeEventListener('pointerdown', closeDrinkSelectOnOutsideClick)
+})
 </script>
 
 <template>
@@ -792,6 +990,26 @@ const confirmDelete = () => {
                     </div>
                 </div>
 
+                <div class="mt-4 grid gap-3 md:grid-cols-3">
+                    <div class="rounded-2xl border border-border bg-inputBg p-3">
+                        <p class="text-xs font-bold uppercase text-secondary">Basis</p>
+                        <p class="mt-1 text-lg font-black text-primary">{{ formatWater(waterBaseMl) }}</p>
+                        <p class="mt-1 text-xs leading-5 text-secondary">
+                            {{ goalForm.body_weight_kg ? 'Aus deinem Gewicht berechnet.' : 'Standard, bis Gewicht gepflegt ist.' }}
+                        </p>
+                    </div>
+                    <div class="rounded-2xl border border-border bg-inputBg p-3">
+                        <p class="text-xs font-bold uppercase text-secondary">Training heute</p>
+                        <p class="mt-1 text-lg font-black text-primary">+{{ formatWater(waterTrainingExtraMl) }}</p>
+                        <p class="mt-1 text-xs leading-5 text-secondary">Dauer, Sportart und Intensitaet werden beruecksichtigt.</p>
+                    </div>
+                    <div class="rounded-2xl border border-border bg-inputBg p-3">
+                        <p class="text-xs font-bold uppercase text-secondary">Modus</p>
+                        <p class="mt-1 text-lg font-black text-primary">{{ goalForm.water_target_mode === 'auto' ? 'Automatisch' : 'Manuell' }}</p>
+                        <p class="mt-1 text-xs leading-5 text-secondary">Aenderbar unter Ziele.</p>
+                    </div>
+                </div>
+
                 <div class="mt-5">
                     <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                         <div>
@@ -851,10 +1069,77 @@ const confirmDelete = () => {
                     </div>
                 </div>
 
-                <div class="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1fr),minmax(0,1fr),auto]">
-                    <label class="block text-sm font-bold text-primary">Getränk
-                        <input v-model="drinkForm.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. Wasser, Tee">
-                    </label>
+                <div class="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1.2fr),minmax(0,0.8fr),auto]">
+                    <div ref="drinkSelectRef" class="relative block text-sm font-bold text-primary">
+                        <span>Getränk</span>
+                        <div class="mt-2 flex rounded-xl border border-border bg-inputBg focus-within:border-cyan-300">
+                            <input
+                                :value="drinkSearchQuery"
+                                class="min-w-0 flex-1 rounded-l-xl border-0 bg-transparent px-3 py-3 text-primary placeholder-secondary focus:ring-0"
+                                placeholder="Getränk suchen oder eigenes schreiben"
+                                autocomplete="off"
+                                @focus="drinkSelectOpen = true"
+                                @input="updateDrinkSearch($event.target.value)"
+                                @keydown.escape="drinkSelectOpen = false"
+                                @keydown.enter.prevent="useCustomDrinkName"
+                            >
+                            <button
+                                v-if="drinkSearchQuery"
+                                type="button"
+                                class="px-2 text-secondary hover:text-primary"
+                                title="Leeren"
+                                @click="clearDrinkSearch"
+                            >
+                                <i class="las la-times"></i>
+                            </button>
+                            <button
+                                type="button"
+                                class="rounded-r-xl px-3 text-secondary hover:text-primary"
+                                title="Getränke anzeigen"
+                                @click="drinkSelectOpen = !drinkSelectOpen"
+                            >
+                                <i class="las la-angle-down"></i>
+                            </button>
+                        </div>
+
+                        <div
+                            v-if="drinkSelectOpen"
+                            class="absolute left-0 right-0 z-40 mt-2 max-h-72 overflow-y-auto rounded-2xl border border-border bg-card p-2 shadow-2xl shadow-black/30"
+                        >
+                            <button
+                                v-if="customDrinkNameAvailable"
+                                type="button"
+                                class="mb-2 flex w-full items-center gap-3 rounded-xl border border-cyan-300/30 bg-cyan-400/10 px-3 py-3 text-left hover:bg-cyan-400/15"
+                                @mousedown.prevent="useCustomDrinkName"
+                            >
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-400/20 text-cyan-100">
+                                    <i class="las la-plus"></i>
+                                </span>
+                                <span class="min-w-0">
+                                    <span class="block truncate text-sm font-black text-primary">"{{ drinkSearchQuery.trim() }}" verwenden</span>
+                                    <span class="block text-xs font-semibold text-secondary">Eigenes Getränk speichern</span>
+                                </span>
+                            </button>
+
+                            <button
+                                v-for="drink in filteredDrinkOptions"
+                                :key="drink.label"
+                                type="button"
+                                class="flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-left hover:bg-muted"
+                                @mousedown.prevent="selectDrinkOption(drink)"
+                            >
+                                <span class="min-w-0">
+                                    <span class="block truncate text-sm font-black text-primary">{{ drink.label }}</span>
+                                    <span class="block text-xs font-semibold text-secondary">{{ drink.category }}</span>
+                                </span>
+                                <span class="shrink-0 rounded-full bg-inputBg px-2.5 py-1 text-xs font-black text-cyan-100">{{ drink.amount }} ml</span>
+                            </button>
+
+                            <div v-if="!filteredDrinkOptions.length && !customDrinkNameAvailable" class="rounded-xl border border-dashed border-border px-3 py-4 text-sm font-semibold text-secondary">
+                                Kein Getränk gefunden. Schreibe einfach dein eigenes.
+                            </div>
+                        </div>
+                    </div>
                     <label class="block text-sm font-bold text-primary">Menge in ml
                         <input v-model="drinkForm.amount_ml" type="number" min="1" max="5000" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="250">
                     </label>
@@ -864,8 +1149,8 @@ const confirmDelete = () => {
                 </div>
                 <input v-model="drinkForm.eaten_on" type="hidden">
 
-                <p v-if="drinkForm.errors.amount_ml || drinkForm.errors.title" class="mt-3 rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
-                    Bitte Menge zwischen 1 und 5000 ml eingeben.
+                <p v-if="drinkError || drinkForm.errors.amount_ml || drinkForm.errors.title" class="mt-3 rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
+                    {{ drinkError || 'Bitte Menge zwischen 1 und 5000 ml eingeben.' }}
                 </p>
             </form>
 
@@ -909,15 +1194,31 @@ const confirmDelete = () => {
                         <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-primary">{{ drinkEntries.length }}</span>
                     </div>
 
+                    <div v-if="deletingDrinkEntries.length" class="mt-4 flex items-center gap-2 rounded-xl border border-cyan-300/30 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-100">
+                        <i class="las la-sync-alt animate-spin"></i>
+                        <span>{{ deletingDrinkEntries.length }} Eintrag wird geloescht...</span>
+                    </div>
+
                     <div v-if="drinkEntries.length" class="mt-4 space-y-2">
-                        <article v-for="entry in drinkEntries" :key="entry.id" class="flex items-center justify-between gap-3 rounded-xl border border-border bg-inputBg p-3">
+                        <article
+                            v-for="entry in drinkEntries"
+                            :key="entry.id"
+                            class="flex items-center justify-between gap-3 rounded-xl border bg-inputBg p-3"
+                            :class="entry.is_pending ? 'border-cyan-300/50 bg-cyan-400/10' : 'border-border'"
+                        >
                             <div class="min-w-0">
                                 <p class="truncate text-sm font-bold text-primary">{{ entry.title }}</p>
-                                <p class="text-xs text-secondary">{{ formatWater(entry.water_ml) }}</p>
+                                <p class="text-xs text-secondary">
+                                    {{ formatWater(entry.water_ml) }}
+                                    <span v-if="entry.is_pending" class="ml-1 font-bold text-cyan-200">wird gespeichert...</span>
+                                </p>
                             </div>
-                            <button type="button" class="rounded-lg border border-danger/30 px-2.5 py-2 text-danger hover:bg-danger/10" title="Löschen" @click="deleteCandidate = entry">
+                            <button v-if="!entry.is_pending" type="button" class="rounded-lg border border-danger/30 px-2.5 py-2 text-danger hover:bg-danger/10" title="Löschen" @click="deleteDrinkEntry(entry)">
                                 <i class="las la-trash"></i>
                             </button>
+                            <span v-else class="rounded-lg border border-cyan-300/30 px-2.5 py-2 text-cyan-200" title="Wird gespeichert">
+                                <i class="las la-sync-alt animate-spin"></i>
+                            </span>
                         </article>
                     </div>
                     <div v-else class="mt-4 rounded-xl border border-dashed border-border bg-inputBg p-6 text-center">
@@ -970,8 +1271,20 @@ const confirmDelete = () => {
                     <label class="block text-sm font-bold text-primary">Fett
                         <input v-model="goalForm.fat_target_g" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
                     </label>
-                    <label class="block text-sm font-bold text-primary">Wasserziel ml
-                        <input v-model="goalForm.water_target_ml" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                    <label class="block text-sm font-bold text-primary">Trinkziel
+                        <select v-model="goalForm.water_target_mode" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                            <option value="auto">Automatisch nach Gewicht und Training</option>
+                            <option value="manual">Manuell festlegen</option>
+                        </select>
+                    </label>
+                    <label class="block text-sm font-bold text-primary">Gewicht kg
+                        <input v-model="goalForm.body_weight_kg" type="number" min="20" max="300" step="0.1" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. 75">
+                    </label>
+                    <label class="block text-sm font-bold text-primary">Manuelles Wasserziel ml
+                        <input v-model="goalForm.water_target_ml" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" :disabled="goalForm.water_target_mode === 'auto'">
+                        <span class="mt-1 block text-xs font-semibold text-secondary">
+                            {{ goalForm.water_target_mode === 'auto' ? `Heute empfohlen: ${formatWater(suggestedWaterTargetMl)}` : 'Dieses Ziel bleibt jeden Tag gleich.' }}
+                        </span>
                     </label>
                     <label class="block text-sm font-bold text-primary sm:col-span-2">Notiz
                         <textarea v-model="goalForm.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="Allergien, Vorlieben, Trainer-Hinweise"></textarea>
@@ -983,7 +1296,27 @@ const confirmDelete = () => {
             </form>
 
             <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
-                <p class="text-xs font-bold uppercase text-air-blue">Tipps</p>
+                <p class="text-xs font-bold uppercase text-air-blue">Trinkziel heute</p>
+                <div class="mt-3 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-4">
+                    <p class="text-3xl font-black text-primary">{{ formatWater(waterTargetMl) }}</p>
+                    <p class="mt-2 text-sm leading-6 text-secondary">
+                        Basis {{ formatWater(waterBaseMl) }} + Training {{ formatWater(waterTrainingExtraMl) }}.
+                        {{ goalForm.water_target_mode === 'auto' ? 'Airmius passt das Tagesziel automatisch an.' : 'Manueller Modus nutzt dein festes Ziel.' }}
+                    </p>
+                </div>
+                <div v-if="waterRecommendation.details?.length" class="mt-3 space-y-2">
+                    <article v-for="detail in waterRecommendation.details" :key="`water-training-${detail.id}`" class="rounded-xl border border-border bg-inputBg p-3">
+                        <p class="text-sm font-bold text-primary">{{ detail.title }}</p>
+                        <p class="mt-1 text-xs text-secondary">
+                            {{ detail.duration_minutes || 0 }} min - {{ detail.sport_type || 'Training' }} - +{{ formatWater(detail.extra_ml) }}
+                        </p>
+                    </article>
+                </div>
+                <p v-else class="mt-3 rounded-xl border border-border bg-inputBg p-3 text-sm leading-6 text-secondary">
+                    Heute ist kein Training im Trinkziel eingerechnet.
+                </p>
+
+                <p class="mt-5 text-xs font-bold uppercase text-air-blue">Tipps</p>
                 <div class="mt-3 space-y-2">
                     <p v-for="tip in tips" :key="tip" class="rounded-xl border border-border bg-inputBg p-3 text-sm leading-6 text-secondary">
                         {{ tip }}

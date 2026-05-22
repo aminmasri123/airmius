@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Concerns;
 
 use App\Models\NutritionMeal;
+use App\Models\NutritionGoal;
+use App\Models\TrainingLog;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -60,6 +62,8 @@ trait ManagesNutritionPayloads
             'carbs_target_g' => ['nullable', 'integer', 'min:0', 'max:900'],
             'fat_target_g' => ['nullable', 'integer', 'min:0', 'max:400'],
             'water_target_ml' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'body_weight_kg' => ['nullable', 'numeric', 'min:20', 'max:300'],
+            'water_target_mode' => ['nullable', Rule::in(['manual', 'auto'])],
             'diet_style' => ['required', Rule::in($dietStyles)],
             'allergies' => ['nullable', 'array', 'max:12'],
             'allergies.*' => ['nullable', 'string', 'max:80'],
@@ -211,6 +215,123 @@ trait ManagesNutritionPayloads
                 ];
             })
             ->all();
+    }
+
+    private function waterRecommendation(User $user, NutritionGoal $goal, string $date): array
+    {
+        $mode = $goal->water_target_mode ?: 'manual';
+        $manualTarget = (int) ($goal->water_target_ml ?: 2500);
+        $weight = $goal->body_weight_kg ? (float) $goal->body_weight_kg : null;
+        $base = $weight
+            ? $this->roundWaterToStep($weight * 33)
+            : 2500;
+
+        $trainingLogs = TrainingLog::query()
+            ->where('user_id', $user->id)
+            ->whereDate('performed_at', $date)
+            ->where(fn ($query) => $query->whereNull('status')->orWhere('status', '!=', 'draft'))
+            ->get(['id', 'title', 'sport_type', 'duration_minutes', 'calories', 'intensity']);
+
+        $trainingDetails = $trainingLogs
+            ->map(function (TrainingLog $log) {
+                $extra = $this->waterExtraForTraining($log);
+
+                return [
+                    'id' => $log->id,
+                    'title' => $log->title ?: 'Training',
+                    'sport_type' => $log->sport_type,
+                    'duration_minutes' => $log->duration_minutes,
+                    'calories' => $log->calories,
+                    'intensity' => $log->intensity,
+                    'extra_ml' => $extra,
+                ];
+            })
+            ->filter(fn (array $detail) => $detail['extra_ml'] > 0)
+            ->values();
+
+        $trainingExtra = min(2000, (int) $trainingDetails->sum('extra_ml'));
+        $suggestedTarget = $this->clampWaterTarget($base + $trainingExtra);
+        $activeTarget = $mode === 'auto'
+            ? $suggestedTarget
+            : $this->clampWaterTarget($manualTarget);
+
+        return [
+            'mode' => $mode,
+            'target_ml' => $activeTarget,
+            'suggested_target_ml' => $suggestedTarget,
+            'manual_target_ml' => $this->clampWaterTarget($manualTarget),
+            'base_ml' => $base,
+            'training_extra_ml' => $trainingExtra,
+            'body_weight_kg' => $weight,
+            'uses_weight' => $weight !== null,
+            'fallback_used' => $weight === null,
+            'details' => $trainingDetails->all(),
+            'source_label' => $mode === 'auto'
+                ? 'Automatisch nach Gewicht und Training'
+                : 'Manuell festgelegt',
+        ];
+    }
+
+    private function waterExtraForTraining(TrainingLog $log): int
+    {
+        $duration = (int) ($log->duration_minutes ?? 0);
+        $calories = (int) ($log->calories ?? 0);
+
+        if ($duration <= 0 && $calories <= 0) {
+            return 0;
+        }
+
+        if ($duration > 0) {
+            $perHour = $this->waterHourlyMlForSport((string) $log->sport_type);
+            $multiplier = $this->waterIntensityMultiplier((string) $log->intensity);
+
+            return min(1500, $this->roundWaterToStep(($duration / 60) * $perHour * $multiplier));
+        }
+
+        return min(1200, $this->roundWaterToStep($calories * 0.5));
+    }
+
+    private function waterHourlyMlForSport(string $sportType): int
+    {
+        $sport = strtolower($sportType);
+
+        if (str_contains($sport, 'run') || str_contains($sport, 'lauf') || str_contains($sport, 'intervall') || str_contains($sport, 'football') || str_contains($sport, 'fussball')) {
+            return 650;
+        }
+
+        if (str_contains($sport, 'bike') || str_contains($sport, 'rad') || str_contains($sport, 'cycling')) {
+            return 600;
+        }
+
+        if (str_contains($sport, 'swim') || str_contains($sport, 'schwimm')) {
+            return 450;
+        }
+
+        if (str_contains($sport, 'gym') || str_contains($sport, 'kraft')) {
+            return 400;
+        }
+
+        return 500;
+    }
+
+    private function waterIntensityMultiplier(string $intensity): float
+    {
+        return match ($intensity) {
+            'hart' => 1.25,
+            'mittel' => 1.0,
+            'locker', 'recovery' => 0.75,
+            default => 1.0,
+        };
+    }
+
+    private function roundWaterToStep(float|int $value, int $step = 50): int
+    {
+        return (int) (round($value / $step) * $step);
+    }
+
+    private function clampWaterTarget(int $value): int
+    {
+        return max(1500, min(6000, $value));
     }
 
     private function trainingNutritionSuggestions(iterable $logs, ?string $goalType): array

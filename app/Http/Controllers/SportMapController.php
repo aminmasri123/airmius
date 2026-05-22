@@ -10,6 +10,7 @@ use App\Models\Sport;
 use App\Models\SportPlace;
 use App\Models\SportRoute;
 use App\Models\SportRouteTrack;
+use App\Services\ExternalProviderUsageService;
 use App\Services\SportRouteMetricService;
 use App\Services\SportRouteRoutingService;
 use Illuminate\Http\Request;
@@ -19,9 +20,21 @@ class SportMapController extends Controller
 {
     use ManagesSportMapPayloads;
 
-    public function index(Request $request, SportRouteMetricService $metrics)
+    public function index(Request $request, SportRouteMetricService $metrics, ExternalProviderUsageService $usage)
     {
         $user = $request->user();
+        $usage->record(
+            'maps',
+            (string) config('sport_map.map.provider', 'osm_public'),
+            'map',
+            'web_map_load',
+            $user,
+            1,
+            metadata: [
+                'page' => 'sport-map',
+                'tile_url_host' => parse_url((string) config('sport_map.map.tile_url'), PHP_URL_HOST),
+            ],
+        );
 
         $routes = SportRoute::query()
             ->visibleTo($user)
