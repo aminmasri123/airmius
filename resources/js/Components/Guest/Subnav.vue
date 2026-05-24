@@ -1,6 +1,6 @@
 <script setup>
 import { Link, usePage } from '@inertiajs/vue3'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 defineProps({
     vertical: {
@@ -19,6 +19,7 @@ const safeRoute = (name, fallback) => {
 
 const page = usePage()
 const isAuthenticated = computed(() => Boolean(page.props.auth?.user))
+const mobileSubnavOpen = ref(false)
 const items = computed(() => [
     ...(isAuthenticated.value ? [['las la-newspaper', 'Feed', safeRoute('auth.feed.index', '/feed')]] : []),
     ['las la-bullhorn', 'Top Inhalte', safeRoute('guest.top-inhalte', '/top-inhalte')],
@@ -33,25 +34,61 @@ const items = computed(() => [
 </script>
 
 <template>
-    <div
-        v-if="vertical"
-        class="fixed bottom-0 left-0 right-0 z-40 border-y border-border bg-card/95 backdrop-blur md:bottom-auto md:left-auto md:right-4 md:top-24 md:w-24 md:rounded-xl md:border md:shadow-xl"
-    >
-        <div class="flex w-full justify-center gap-5 overflow-x-auto px-4 py-2 text-xs text-secondary md:flex-col md:items-stretch md:gap-1 md:overflow-visible md:p-2">
-            <Link
-                v-for="[icon, label, href, options] in items"
-                :key="label"
-                :href="href || '#'"
-                :class="[
-                    'min-w-16 rounded-lg px-2 py-2 text-center transition hover:bg-muted hover:text-primary md:min-w-0 md:w-full',
-                    options?.hideOnMobile ? 'hidden md:block' : ''
-                ]"
-            >
-                <p><i :class="[icon, 'text-2xl']"></i></p>
-                <span class="mt-1 block max-w-full text-[10px] font-semibold leading-tight [hyphens:auto] [overflow-wrap:anywhere] md:text-[11px]">{{ $t(label) }}</span>
-            </Link>
+    <template v-if="vertical">
+        <button
+            type="button"
+            class="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] right-3 z-50 flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-buttonPrimary text-buttonTextPrimary shadow-2xl shadow-black/40 ring-1 ring-black/20 transition active:scale-95 md:hidden"
+            :class="mobileSubnavOpen ? 'pointer-events-none scale-90 opacity-0' : 'opacity-100'"
+            :aria-expanded="mobileSubnavOpen"
+            aria-controls="guest-mobile-subnav"
+            aria-label="Navigation anzeigen"
+            @click="mobileSubnavOpen = !mobileSubnavOpen"
+        >
+            <i :class="[mobileSubnavOpen ? 'las la-times' : 'las la-compass', 'text-2xl']"></i>
+        </button>
+
+        <div
+            id="guest-mobile-subnav"
+            class="fixed bottom-0 left-0 right-0 z-40 rounded-t-3xl border-t border-white/10 bg-gradient-to-b from-card/98 to-bg/98 shadow-2xl shadow-black/60 ring-1 ring-white/5 backdrop-blur-xl transition-all duration-300 md:bottom-auto md:left-auto md:right-4 md:top-24 md:w-24 md:translate-y-0 md:rounded-xl md:border md:bg-card/95 md:bg-none md:opacity-100 md:shadow-xl"
+            :class="mobileSubnavOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-[110%] opacity-0 md:pointer-events-auto'"
+        >
+            <div class="px-4 pb-2 pt-3 md:hidden">
+                <div class="mx-auto mb-3 h-1 w-12 rounded-full bg-white/25"></div>
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-[11px] font-black uppercase tracking-wide text-buttonPrimary">Airmius</p>
+                        <p class="text-sm font-black text-primary">Schnellnavigation</p>
+                    </div>
+                    <button
+                        type="button"
+                        class="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-bg text-primary shadow-sm transition hover:bg-muted"
+                        aria-label="Navigation schließen"
+                        @click="mobileSubnavOpen = false"
+                    >
+                        <i class="las la-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-4 gap-3 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-1 text-xs text-primary md:flex md:w-full md:grid-cols-none md:justify-center md:gap-1 md:overflow-visible md:p-2 md:text-secondary">
+                <Link
+                    v-for="[icon, label, href, options] in items"
+                    :key="label"
+                    :href="href || '#'"
+                    :class="[
+                        'flex min-h-[4.7rem] flex-col items-center justify-center rounded-2xl border border-border/80 bg-bg/90 px-2 py-2 text-center font-bold shadow-lg shadow-black/20 transition hover:border-buttonPrimary hover:bg-muted hover:text-primary md:min-h-0 md:min-w-0 md:w-full md:rounded-lg md:border-0 md:bg-transparent md:shadow-none',
+                        options?.hideOnMobile ? 'hidden md:block' : ''
+                    ]"
+                    @click="mobileSubnavOpen = false"
+                >
+                    <span class="mb-1 flex h-8 w-8 items-center justify-center rounded-xl bg-buttonPrimary/12 text-buttonPrimary md:mb-0 md:h-auto md:w-auto md:bg-transparent md:text-inherit">
+                        <i :class="[icon, 'text-xl md:text-2xl']"></i>
+                    </span>
+                    <span class="block max-w-full text-[10px] font-black leading-tight [hyphens:auto] [overflow-wrap:anywhere] md:mt-1 md:text-[11px]">{{ $t(label) }}</span>
+                </Link>
+            </div>
         </div>
-    </div>
+    </template>
 
     <div
         v-else
