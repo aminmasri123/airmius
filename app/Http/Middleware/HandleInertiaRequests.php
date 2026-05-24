@@ -184,6 +184,7 @@ class HandleInertiaRequests extends Middleware
             'loginImages' => fn () => $this->loginImages(),
 
             'flash' => [
+                'id' => fn () => $request->session()->get('flash_id'),
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
                 'message' => fn () => $request->session()->get('message'),

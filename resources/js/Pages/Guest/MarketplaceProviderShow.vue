@@ -6,6 +6,7 @@ import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
 import UserCard from '@/Components/Auth/UserCard.vue'
 import { useTheme } from '@/services/useTheme'
+import { applyLogoFallback, logoWordmark } from '@/services/logoAssets'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -20,9 +21,7 @@ const props = defineProps({
 const page = usePage()
 const { isDark } = useTheme()
 const currentUser = computed(() => props.authUser || page.props.auth?.user || null)
-const marketplaceLogo = computed(() => isDark.value
-    ? '/img/logo/Logo-Dark-Airmius-Quervormat.png'
-    : '/img/logo/Logo-Airmius-Quervormat.png')
+const marketplaceLogo = computed(() => logoWordmark(isDark.value))
 const cartItemCount = computed(() => Number(props.cart?.items_count || 0))
 const productItems = computed(() => props.products?.data || [])
 const paginationLinks = computed(() => (props.products?.links || []).filter((link) => link.url))
@@ -88,18 +87,18 @@ const shortDescription = (text, length = 110) => {
 
         <main class="relative z-10 mx-auto max-w-[86rem] pb-24 pt-0 md:pb-14 md:pr-28 2xl:pr-24">
             <section class="border-b border-border bg-bg px-4 py-3 shadow-sm">
-                <div class="mx-auto flex max-w-7xl flex-col gap-4 rounded border border-border bg-card px-5 py-3 text-primary shadow-sm sm:flex-row sm:items-center sm:justify-between">
-                    <Link :href="route('guest.marketplace')" class="flex min-w-0 items-center gap-3">
-                        <img :src="marketplaceLogo" alt="AIRMIUS" class="h-12 w-auto shrink-0 object-contain">
+                <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 rounded border border-border bg-card px-4 py-3 text-primary shadow-sm sm:px-5">
+                    <Link :href="route('guest.marketplace')" class="flex min-w-0 flex-1 items-center gap-3">
+                        <img :src="marketplaceLogo" alt="AIRMIUS" class="h-10 w-auto max-w-[10.5rem] shrink-0 object-contain sm:h-12 sm:max-w-none" @error="applyLogoFallback">
                         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary">
                             <i class="las la-arrow-left text-xl"></i>
                         </span>
-                        <span class="min-w-0">
+                        <span class="hidden min-w-0 sm:block">
                             <span class="block font-heading text-lg font-900 leading-tight sm:text-2xl">AIRMIUS Marketplace</span>
                             <span class="block truncate text-xs font-semibold text-secondary sm:text-sm">Zurück zu allen Angeboten</span>
                         </span>
                     </Link>
-                    <div class="flex w-full flex-wrap items-center gap-2 text-sm font-black sm:w-auto sm:justify-end">
+                    <div class="flex shrink-0 items-center justify-end gap-2 text-sm font-black">
                         <Link
                             v-if="currentUser"
                             :href="route('auth.commerce.cart.index')"

@@ -638,12 +638,12 @@ onBeforeUnmount(() => {
     <Head title="Ernaehrung" />
 
     <div class="space-y-4">
-        <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <section class="rounded-2xl border border-border bg-card p-3 sm:p-4 lg:p-5">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div class="min-w-0">
                     <p class="text-xs font-bold uppercase text-air-blue">Airmius Fuel</p>
-                    <h1 class="mt-1 text-2xl font-bold leading-tight text-primary">Ernaehrung</h1>
-                    <p class="mt-1 max-w-2xl text-sm leading-6 text-secondary">
+                    <h1 class="mt-1 text-xl font-bold leading-tight text-primary sm:text-2xl">Ernaehrung</h1>
+                    <p class="mt-1 hidden max-w-2xl text-sm leading-6 text-secondary sm:block">
                         Heute sehen, schnell erfassen, Ziele ruhig anpassen. Keine überladene Arbeitsflaeche mehr.
                     </p>
                 </div>
@@ -656,23 +656,23 @@ onBeforeUnmount(() => {
             </div>
         </section>
 
-        <nav class="grid gap-2 rounded-2xl border border-border bg-card p-2 sm:grid-cols-5">
+        <nav class="custom-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:mx-0 sm:grid sm:grid-cols-5 sm:overflow-visible sm:px-0 sm:pb-0">
             <button
                 v-for="section in nutritionSections"
                 :key="section.key"
                 type="button"
                 :class="[
-                    'flex items-center gap-3 rounded-xl border px-3 py-3 text-start transition',
+                    'flex min-w-[88px] flex-col items-center justify-center gap-1 rounded-2xl border px-3 py-3 text-center transition sm:min-w-0 sm:flex-row sm:justify-start sm:gap-3 sm:rounded-xl sm:text-start',
                     activeSection === section.key
                         ? 'border-air-blue bg-air-blue/15 text-primary shadow-lg shadow-air-blue/10'
                         : 'border-transparent text-secondary hover:border-border hover:bg-inputBg'
                 ]"
                 @click="activeSection = section.key"
             >
-                <i :class="[section.icon, 'text-xl']"></i>
+                <i :class="[section.icon, 'text-xl sm:text-xl']"></i>
                 <span class="min-w-0">
-                    <span class="block text-sm font-bold">{{ section.label }}</span>
-                    <span class="block truncate text-xs opacity-80">{{ section.hint }}</span>
+                    <span class="block text-xs font-bold sm:text-sm">{{ section.label }}</span>
+                    <span class="hidden truncate text-xs opacity-80 sm:block">{{ section.hint }}</span>
                 </span>
             </button>
         </nav>
@@ -698,21 +698,21 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
 
-                    <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                        <article v-for="macro in macroCards" :key="macro.key" class="rounded-xl border border-border bg-inputBg p-3">
-                            <div class="flex items-center justify-between gap-3">
+                    <div class="mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3 xl:grid-cols-4">
+                        <article v-for="macro in macroCards" :key="macro.key" class="rounded-xl border border-border bg-inputBg p-3 sm:p-3">
+                            <div class="flex items-start justify-between gap-2 sm:items-center sm:gap-3">
                                 <div class="min-w-0">
-                                    <p class="truncate text-xs font-bold uppercase text-secondary">{{ macro.label }}</p>
-                                    <p class="mt-1 text-lg font-bold text-primary">
+                                    <p class="truncate text-[11px] font-bold uppercase text-secondary sm:text-xs">{{ macro.label }}</p>
+                                    <p class="mt-1 text-base font-bold text-primary sm:text-lg">
                                         {{ formatNumber(macro.value, macro.key === 'calories' ? 0 : 1) }}
                                         <span class="text-xs text-secondary">{{ macro.unit }}</span>
                                     </p>
                                 </div>
-                                <span :class="['flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white', macro.color]">
-                                    <i :class="[macro.icon, 'text-lg']"></i>
+                                <span :class="['flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white sm:h-9 sm:w-9', macro.color]">
+                                    <i :class="[macro.icon, 'text-base sm:text-lg']"></i>
                                 </span>
                             </div>
-                            <div class="mt-3 h-1.5 rounded-full bg-card">
+                            <div class="mt-2 h-1.5 rounded-full bg-card sm:mt-3">
                                 <div :class="['h-1.5 rounded-full bg-gradient-to-r', macro.color]" :style="{ width: `${progressValue(macro.value, macro.target)}%` }"></div>
                             </div>
                         </article>
@@ -965,32 +965,40 @@ onBeforeUnmount(() => {
             </aside>
         </section>
 
-        <section v-if="activeSection === 'drink'" class="grid gap-4 xl:grid-cols-[minmax(0,0.85fr),minmax(320px,0.55fr)]">
-            <form class="rounded-2xl border border-border bg-card p-4 lg:p-5" @submit.prevent="submitDrink()">
-                <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <section v-if="activeSection === 'drink'" class="grid gap-3 sm:gap-4 xl:grid-cols-[minmax(0,0.85fr),minmax(320px,0.55fr)]">
+            <form class="rounded-2xl border border-border bg-card p-3 sm:p-4 lg:p-5" @submit.prevent="submitDrink()">
+                <div class="flex items-start justify-between gap-3">
                     <div>
                         <p class="text-xs font-bold uppercase text-cyan-200">Trinken</p>
-                        <h2 class="mt-1 text-2xl font-black text-primary">{{ formatWater(waterConsumedMl) }} heute</h2>
-                        <p class="mt-1 text-sm leading-6 text-secondary">
+                        <div class="mt-1 flex items-center gap-2">
+                            <h2 class="text-xl font-black text-primary sm:text-2xl">{{ formatWater(waterConsumedMl) }} heute</h2>
+                            <button
+                                type="button"
+                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-inputBg text-secondary hover:border-cyan-300 hover:text-primary sm:h-9 sm:w-9"
+                                title="Wasserziel einstellen"
+                                aria-label="Wasserziel einstellen"
+                                @click="activeSection = 'goals'"
+                            >
+                                <i class="las la-cog text-xl"></i>
+                            </button>
+                        </div>
+                        <p class="mt-1 text-sm leading-5 text-secondary sm:leading-6">
                             Ziel: {{ formatWater(waterTargetMl) }}. Noch {{ formatWater(waterLeftMl) }} offen.
                         </p>
                     </div>
-                    <button type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-bold text-primary hover:bg-muted" @click="activeSection = 'goals'">
-                        Wasserziel ändern
-                    </button>
                 </div>
 
-                <div class="mt-5 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-4">
+                <div class="mt-3 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-3 sm:mt-5 sm:p-4">
                     <div class="flex items-center justify-between gap-3">
                         <span class="text-sm font-bold text-primary">{{ waterProgress }}%</span>
                         <span class="text-sm font-semibold text-secondary">{{ formatWater(waterConsumedMl) }} / {{ formatWater(waterTargetMl) }}</span>
                     </div>
-                    <div class="mt-3 h-4 overflow-hidden rounded-full bg-card">
+                    <div class="mt-2 h-3 overflow-hidden rounded-full bg-card sm:mt-3 sm:h-4">
                         <div class="h-full rounded-full bg-gradient-to-r from-cyan-400 to-air-blue" :style="{ width: `${waterProgress}%` }"></div>
                     </div>
                 </div>
 
-                <div class="mt-4 grid gap-3 md:grid-cols-3">
+                <div class="mt-4 hidden gap-3 md:grid md:grid-cols-3">
                     <div class="rounded-2xl border border-border bg-inputBg p-3">
                         <p class="text-xs font-bold uppercase text-secondary">Basis</p>
                         <p class="mt-1 text-lg font-black text-primary">{{ formatWater(waterBaseMl) }}</p>
@@ -1010,15 +1018,31 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <div class="mt-5">
+                <div class="mt-4 sm:hidden">
+                    <p class="text-sm font-bold text-primary">Schnelle Menge</p>
+                    <div class="mt-3 grid grid-cols-4 gap-2">
+                        <button
+                            v-for="amount in quickDrinkAmounts"
+                            :key="`mobile-${amount}`"
+                            type="button"
+                            class="rounded-xl border border-border bg-inputBg px-2 py-3 text-sm font-black text-primary hover:border-cyan-300 hover:bg-cyan-400/10 disabled:opacity-60"
+                            :disabled="drinkForm.processing"
+                            @click="submitDrink(amount)"
+                        >
+                            +{{ amount }}
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-4 sm:mt-5">
                     <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                         <div>
                             <p class="text-sm font-bold text-primary">Nach Tasse oder Glas eintragen</p>
-                            <p class="text-xs leading-5 text-secondary">Waehle die Groesse, die am besten passt. Die Menge wird direkt gespeichert.</p>
+                            <p class="hidden text-xs leading-5 text-secondary sm:block">Waehle die Groesse, die am besten passt. Die Menge wird direkt gespeichert.</p>
                         </div>
-                        <span class="text-xs font-bold uppercase text-cyan-200">Airmius Quick Drink</span>
+                        <span class="hidden text-xs font-bold uppercase text-cyan-200 sm:inline">Airmius Quick Drink</span>
                     </div>
-                    <div class="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                    <div class="mt-3 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
                         <button
                             v-for="vessel in drinkVessels"
                             :key="vessel.key"
@@ -1035,7 +1059,7 @@ onBeforeUnmount(() => {
                                 </div>
                                 <span class="rounded-full bg-card px-2.5 py-1 text-xs font-black text-cyan-100">{{ vessel.amount }} ml</span>
                             </div>
-                            <div class="mt-4 flex items-end justify-center">
+                            <div class="mt-3 hidden items-end justify-center sm:flex">
                                 <div class="relative h-24 w-16">
                                     <div class="absolute left-2 top-2 h-20 w-11 overflow-hidden rounded-b-2xl rounded-t-md border-2 border-white/45 bg-white/10 shadow-inner">
                                         <div
@@ -1053,7 +1077,7 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <div class="mt-5">
+                <div class="mt-5 hidden sm:block">
                     <p class="text-sm font-bold text-primary">Oder schnelle Menge eintragen</p>
                     <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                         <button

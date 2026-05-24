@@ -270,6 +270,8 @@ const activeGymExerciseIndex = ref(0)
 const activeGymSetIndex = ref(0)
 const activeEntryIndex = ref(0)
 const currentTrainingStep = ref(1)
+const mobileLivePanelOpen = ref(false)
+const mobileTrainingTypeSheetOpen = ref(false)
 let restInterval = null
 let liveInterval = null
 let autosaveTimer = null
@@ -770,6 +772,7 @@ const applyTrainingType = () => {
 
 const selectTrainingType = (key) => {
     form.training_type = key
+    mobileTrainingTypeSheetOpen.value = false
 }
 
 const applySelectedPlanItem = () => {
@@ -1181,8 +1184,8 @@ onUnmounted(() => {
 <template>
     <Head title="Training dokumentieren" />
 
-    <div class="space-y-4 pb-32 xl:pb-0">
-        <section class="overflow-hidden rounded-2xl border border-border bg-card">
+    <div class="space-y-3 pb-32 sm:space-y-4 xl:pb-0">
+        <section class="hidden overflow-hidden rounded-2xl border border-border bg-card sm:block">
             <div class="border-b border-border bg-inputBg/30 p-4 sm:p-5">
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div class="min-w-0">
@@ -1240,45 +1243,61 @@ onUnmounted(() => {
         </div>
 
         <form class="grid items-start gap-5 2xl:grid-cols-[minmax(0,1fr)_340px]" @submit.prevent="submit">
-            <div class="min-w-0 self-start rounded-2xl border border-border bg-card p-2 2xl:col-span-2">
-                <div class="grid gap-2 sm:grid-cols-3">
+            <div class="min-w-0 self-start rounded-2xl border border-border bg-card p-1.5 2xl:col-span-2">
+                <div class="grid grid-cols-3 gap-1.5 sm:gap-2">
                     <button
                         v-for="step in trainingSteps"
                         :key="step.id"
                         type="button"
-                        class="rounded-xl px-3 py-3 text-left transition"
+                        class="rounded-xl px-2 py-2 text-left transition sm:px-3 sm:py-3"
                         :class="currentTrainingStep === step.id ? 'bg-air-blue text-white shadow-sm shadow-air-blue/20' : 'bg-inputBg/40 text-secondary hover:bg-muted hover:text-primary'"
                         @click="currentTrainingStep = step.id"
                     >
-                        <span class="block text-[11px] font-semibold uppercase tracking-wide">Schritt {{ step.id }}</span>
-                        <span class="mt-1 block text-sm font-semibold">{{ step.label }}</span>
+                        <span class="block text-[10px] font-semibold uppercase tracking-wide sm:text-[11px]">Schritt {{ step.id }}</span>
+                        <span class="mt-0.5 block truncate text-xs font-semibold sm:mt-1 sm:text-sm">{{ step.short || step.label }}</span>
                     </button>
                 </div>
             </div>
 
-            <section v-show="currentTrainingStep === 1" class="min-w-0 space-y-5 rounded-2xl border border-border bg-card p-4 sm:p-5 2xl:col-start-1 2xl:row-start-2">
-                <div class="grid gap-4 md:grid-cols-2">
+            <section v-show="currentTrainingStep === 1" class="min-w-0 space-y-4 rounded-2xl border border-border bg-card p-3 sm:space-y-5 sm:p-5 2xl:col-start-1 2xl:row-start-2">
+                <div class="grid gap-3 md:grid-cols-2 md:gap-4">
                     <div class="md:col-span-2">
                         <div class="flex items-end justify-between gap-3">
                             <div>
                                 <p class="text-sm font-semibold text-primary">Trainingsart</p>
-                                <p class="mt-1 text-xs text-secondary">Wische auf dem Handy seitlich durch die Vorlagen.</p>
+                                <p class="mt-1 hidden text-xs text-secondary sm:block">Wische auf dem Handy seitlich durch die Vorlagen.</p>
                             </div>
-                            <span class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">{{ detailSummary }}</span>
+                            <span class="hidden rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary sm:inline-flex">{{ detailSummary }}</span>
                         </div>
-                        <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
+                        <button
+                            type="button"
+                            class="mt-3 flex w-full items-center gap-3 rounded-2xl border border-border bg-inputBg/40 p-3 text-left sm:hidden"
+                            @click="mobileTrainingTypeSheetOpen = true"
+                        >
+                            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl" :class="trainingTypeTheme(selectedType.key).icon">
+                                <i :class="selectedType.icon" class="text-xl"></i>
+                            </span>
+                            <span class="min-w-0 flex-1">
+                                <span class="block text-[11px] font-semibold uppercase tracking-wide text-secondary">Ausgewählt</span>
+                                <span class="mt-0.5 block truncate text-base font-semibold text-primary">{{ selectedType.label }}</span>
+                            </span>
+                            <span class="rounded-xl bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary">
+                                Ändern
+                            </span>
+                        </button>
+                        <div class="mt-3 hidden grid-cols-3 gap-2 sm:grid sm:grid-cols-4 xl:grid-cols-7">
                             <button
                                 v-for="type in trainingTypes"
                                 :key="type.key"
                                 type="button"
-                                class="flex min-h-12 items-center gap-2 rounded-2xl border px-3 py-2.5 text-left transition"
+                                class="flex min-h-11 min-w-0 items-center gap-2 rounded-2xl border px-2.5 py-2 text-left transition sm:min-h-12 sm:px-3 sm:py-2.5"
                                 :class="trainingTypeButtonClass(type)"
                                 @click="selectTrainingType(type.key)"
                             >
-                                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl" :class="trainingTypeTheme(type.key).icon">
-                                    <i :class="type.icon" class="text-lg"></i>
+                                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl sm:h-8 sm:w-8" :class="trainingTypeTheme(type.key).icon">
+                                    <i :class="type.icon" class="text-base sm:text-lg"></i>
                                 </span>
-                                <span class="min-w-0 truncate text-sm font-semibold">{{ type.shortLabel }}</span>
+                                <span class="min-w-0 truncate text-xs font-semibold sm:text-sm">{{ type.shortLabel }}</span>
                             </button>
                         </div>
                     </div>
@@ -1317,20 +1336,50 @@ onUnmounted(() => {
                             </button>
                         </div>
                     </label>
-                    <label class="block text-sm font-semibold text-primary md:col-span-2">Titel
+                    <details class="rounded-2xl border border-border bg-inputBg/30 p-3 md:hidden">
+                        <summary class="cursor-pointer list-none text-sm font-semibold text-primary">
+                            Weitere Angaben
+                            <span class="ml-2 text-xs font-normal text-secondary">optional</span>
+                        </summary>
+                        <div class="mt-3 grid gap-3">
+                            <label class="block text-sm font-semibold text-primary">Titel
+                                <input v-model="form.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" required />
+                            </label>
+                            <label class="block text-sm font-semibold text-primary">Status
+                                <select v-model="form.status" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" @change="setStatusDefaults">
+                                    <option value="completed">Abgeschlossen</option>
+                                    <option value="in_progress">Läuft gerade</option>
+                                    <option value="planned">Geplant</option>
+                                </select>
+                            </label>
+                            <label class="block text-sm font-semibold text-primary">Zeitpunkt
+                                <input v-model="form.performed_at" type="datetime-local" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
+                            </label>
+                            <label class="block text-sm font-semibold text-primary">Dauer in Minuten
+                                <input v-model="form.duration_minutes" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
+                            </label>
+                            <label v-if="showSessionDistance" class="block text-sm font-semibold text-primary">Distanz in km
+                                <input v-model="form.distance_km" type="number" min="0" step="0.01" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
+                            </label>
+                            <label class="block text-sm font-semibold text-primary">Notizen
+                                <textarea v-model="form.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Gefühl, Technik, Schmerzen, Besonderheiten" />
+                            </label>
+                        </div>
+                    </details>
+                    <label class="hidden text-sm font-semibold text-primary md:col-span-2 md:block">Titel
                         <input v-model="form.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" required />
                     </label>
-                    <label class="block text-sm font-semibold text-primary">Status
+                    <label class="hidden text-sm font-semibold text-primary md:block">Status
                         <select v-model="form.status" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" @change="setStatusDefaults">
                             <option value="completed">Abgeschlossen</option>
                             <option value="in_progress">Laeuft gerade</option>
                             <option value="planned">Geplant</option>
                         </select>
                     </label>
-                    <label class="block text-sm font-semibold text-primary">Zeitpunkt
+                    <label class="hidden text-sm font-semibold text-primary md:block">Zeitpunkt
                         <input v-model="form.performed_at" type="datetime-local" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                     </label>
-                    <div class="rounded-xl border border-border bg-inputBg/40 p-3 md:col-span-2">
+                    <div class="hidden rounded-xl border border-border bg-inputBg/40 p-3 md:col-span-2 md:block">
                         <div class="flex flex-wrap items-center justify-between gap-3">
                             <div>
                                 <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Live-Modus</p>
@@ -1367,26 +1416,26 @@ onUnmounted(() => {
                             </div>
                         </div>
                     </div>
-                    <label class="block text-sm font-semibold text-primary">Dauer in Minuten
+                    <label class="hidden text-sm font-semibold text-primary md:block">Dauer in Minuten
                         <input v-model="form.duration_minutes" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                     </label>
-                    <label v-if="showSessionDistance" class="block text-sm font-semibold text-primary">Distanz in km
+                    <label v-if="showSessionDistance" class="hidden text-sm font-semibold text-primary md:block">Distanz in km
                         <input v-model="form.distance_km" type="number" min="0" step="0.01" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                     </label>
-                    <label class="block text-sm font-semibold text-primary md:col-span-2">Notizen
+                    <label class="hidden text-sm font-semibold text-primary md:col-span-2 md:block">Notizen
                         <textarea v-model="form.notes" rows="4" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Gefuehl, Technik, Schmerzen, Besonderheiten" />
                     </label>
-                    <label v-if="form.user_id" class="block text-sm font-semibold text-primary md:col-span-2">Trainer-Hinweis
+                    <label v-if="form.user_id" class="hidden text-sm font-semibold text-primary md:col-span-2 md:block">Trainer-Hinweis
                         <textarea v-model="form.trainer_feedback" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Hinweise, Korrekturen oder Fokus für die nächste Einheit" />
                     </label>
-                    <label class="block text-sm font-semibold text-primary md:col-span-2">Sichtbarkeit
+                    <label class="hidden text-sm font-semibold text-primary md:col-span-2 md:block">Sichtbarkeit
                         <select v-model="form.privacy_scope" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
                             <option value="trainer">Trainer und berechtigte Betreuer</option>
                             <option value="private">Nur ich</option>
                             <option value="team">Team</option>
                         </select>
                     </label>
-                    <label class="flex items-start gap-3 rounded-xl border border-border bg-inputBg/40 p-3 text-sm font-semibold text-primary md:col-span-2">
+                    <label class="hidden items-start gap-3 rounded-xl border border-border bg-inputBg/40 p-3 text-sm font-semibold text-primary md:col-span-2 md:flex">
                         <input v-model="form.notify_people" type="checkbox" class="mt-1 rounded border-border bg-inputBg" />
                         <span>
                             <span>{{ form.user_id ? 'Sportler beim Speichern informieren' : 'Trainer beim Speichern informieren' }}</span>
@@ -1395,9 +1444,11 @@ onUnmounted(() => {
                             </span>
                         </span>
                     </label>
-                    <div class="md:col-span-2 flex justify-end">
-                        <button type="button" class="rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary" @click="currentTrainingStep = 2">
-                            Weiter dokumentieren
+                    <div class="flex justify-end md:col-span-2">
+                        <button type="button" class="inline-flex items-center gap-2 rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary" @click="currentTrainingStep = 2">
+                            <span class="sm:hidden">Weiter</span>
+                            <span class="hidden sm:inline">Weiter dokumentieren</span>
+                            <i class="las la-arrow-right text-lg sm:hidden"></i>
                         </button>
                     </div>
                 </div>
@@ -1455,7 +1506,7 @@ onUnmounted(() => {
                 </div>
             </section>
 
-            <section class="rounded-2xl border border-air-blue/30 bg-air-blue/10 p-4 2xl:hidden">
+            <section class="hidden rounded-2xl border border-air-blue/30 bg-air-blue/10 p-4 lg:block 2xl:hidden">
                 <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div class="min-w-0">
                         <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Arbeitsmodus</p>
@@ -1556,7 +1607,7 @@ onUnmounted(() => {
                 </button>
             </aside>
 
-            <section v-show="currentTrainingStep === 2" class="min-w-0 space-y-4 rounded-2xl border border-border bg-card p-4 sm:p-5 2xl:col-start-1 2xl:row-start-2">
+            <section v-show="currentTrainingStep === 2" class="min-w-0 space-y-3 rounded-2xl border border-border bg-card p-3 sm:space-y-4 sm:p-5 2xl:col-start-1 2xl:row-start-2">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Details</p>
@@ -1607,12 +1658,21 @@ onUnmounted(() => {
                                 Übung entfernen
                             </button>
                         </div>
-                        <label class="mt-3 block text-sm font-semibold text-primary">Notiz zur Übung
+                        <label class="mt-3 hidden text-sm font-semibold text-primary md:block">Notiz zur Übung
                             <input v-model="exercise.notes" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="z. B. tief, sauber, letzte Wiederholung schwer" />
                         </label>
+                        <details class="mt-3 rounded-xl border border-border bg-card p-3 md:hidden">
+                            <summary class="cursor-pointer list-none text-sm font-semibold text-primary">
+                                Übungsdetails
+                                <span class="ml-2 text-xs font-normal text-secondary">optional</span>
+                            </summary>
+                            <label class="mt-3 block text-sm font-semibold text-primary">Notiz zur Übung
+                                <input v-model="exercise.notes" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="z. B. tief, sauber, letzte Wiederholung schwer" />
+                            </label>
+                        </details>
                         <div
                             v-if="matchingRecentExercise(exercise)"
-                            class="mt-3 rounded-xl border border-air-blue/30 bg-air-blue/10 p-3 text-sm"
+                            class="mt-3 hidden rounded-xl border border-air-blue/30 bg-air-blue/10 p-3 text-sm md:block"
                         >
                             <div class="flex flex-wrap items-center justify-between gap-3">
                                 <div>
@@ -1682,7 +1742,7 @@ onUnmounted(() => {
                                 <label class="block text-sm font-semibold text-primary">Gewicht kg
                                     <input v-model="set.weight_kg" type="number" min="0" step="0.01" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="30" />
                                 </label>
-                                <label class="block text-sm font-semibold text-primary">Zeit min
+                                <label class="hidden text-sm font-semibold text-primary md:block">Zeit min
                                     <input v-model="set.duration_minutes" type="number" min="0" step="0.1" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                                 </label>
                                 <div class="grid gap-2 self-end">
@@ -1698,13 +1758,33 @@ onUnmounted(() => {
                                         Entfernen
                                     </button>
                                 </div>
-                                <label class="block text-sm font-semibold text-primary sm:col-span-2 lg:col-span-6">Kommentar zum Satz
+                                <details class="rounded-xl border border-border bg-card/70 p-3 sm:col-span-2 md:hidden">
+                                    <summary class="cursor-pointer list-none text-sm font-semibold text-primary">
+                                        Satzdetails
+                                        <span class="ml-2 text-xs font-normal text-secondary">optional</span>
+                                    </summary>
+                                    <div class="mt-3 grid gap-3">
+                                        <label class="block text-sm font-semibold text-primary">Zeit min
+                                            <input v-model="set.duration_minutes" type="number" min="0" step="0.1" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
+                                        </label>
+                                        <label class="block text-sm font-semibold text-primary">Kommentar zum Satz
+                                            <input v-model="set.notes" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
+                                        </label>
+                                        <label class="block text-sm font-semibold text-primary">Medien-Link
+                                            <input v-model="set.media_url" type="url" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Video oder Bild-Link" />
+                                        </label>
+                                        <label class="block text-sm font-semibold text-primary">Datei hochladen
+                                            <input type="file" accept="image/*,video/*" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary file:mr-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="set.media_file = $event.target.files?.[0] || null" />
+                                        </label>
+                                    </div>
+                                </details>
+                                <label class="hidden text-sm font-semibold text-primary sm:col-span-2 md:block lg:col-span-6">Kommentar zum Satz
                                     <input v-model="set.notes" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                                 </label>
-                                <label class="block text-sm font-semibold text-primary sm:col-span-2 lg:col-span-6">Medien-Link
+                                <label class="hidden text-sm font-semibold text-primary sm:col-span-2 md:block lg:col-span-6">Medien-Link
                                     <input v-model="set.media_url" type="url" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Video oder Bild-Link für Technikfeedback" />
                                 </label>
-                                <label class="block text-sm font-semibold text-primary sm:col-span-2 lg:col-span-6">Datei hochladen
+                                <label class="hidden text-sm font-semibold text-primary sm:col-span-2 md:block lg:col-span-6">Datei hochladen
                                     <input type="file" accept="image/*,video/*" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary file:mr-3 file:rounded-md file:border-0 file:bg-buttonPrimary file:px-3 file:py-1 file:text-sm file:font-semibold file:text-buttonTextPrimary" @change="set.media_file = $event.target.files?.[0] || null" />
                                 </label>
                             </div>
@@ -1791,8 +1871,71 @@ onUnmounted(() => {
                 </div>
             </section>
 
+            <div
+                v-if="mobileTrainingTypeSheetOpen"
+                class="fixed inset-0 z-40 bg-black/60 px-3 pb-3 pt-16 sm:hidden"
+                @click.self="mobileTrainingTypeSheetOpen = false"
+            >
+                <div class="mt-auto max-h-[78vh] overflow-hidden rounded-3xl border border-border bg-card shadow-2xl">
+                    <div class="flex items-center justify-between gap-3 border-b border-border p-4">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Trainingsart</p>
+                            <h3 class="text-lg font-semibold text-primary">Was machst du heute?</h3>
+                        </div>
+                        <button
+                            type="button"
+                            class="flex h-10 w-10 items-center justify-center rounded-full border border-border text-secondary"
+                            @click="mobileTrainingTypeSheetOpen = false"
+                            aria-label="Schließen"
+                        >
+                            <i class="las la-times text-xl"></i>
+                        </button>
+                    </div>
+                    <div class="custom-scrollbar max-h-[62vh] space-y-2 overflow-y-auto p-3">
+                        <button
+                            v-for="type in trainingTypes"
+                            :key="`mobile-type-${type.key}`"
+                            type="button"
+                            class="flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition"
+                            :class="trainingTypeButtonClass(type)"
+                            @click="selectTrainingType(type.key)"
+                        >
+                            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl" :class="trainingTypeTheme(type.key).icon">
+                                <i :class="type.icon" class="text-xl"></i>
+                            </span>
+                            <span class="min-w-0 flex-1">
+                                <span class="block truncate text-sm font-semibold">{{ type.shortLabel }}</span>
+                                <span class="mt-0.5 block truncate text-xs opacity-80">{{ type.label }}</span>
+                            </span>
+                            <i v-if="form.training_type === type.key" class="las la-check-circle text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-bg/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-2xl backdrop-blur lg:hidden">
-                <div v-if="usesGymSets && activeGymSet" class="mx-auto max-w-4xl space-y-2">
+                <div v-if="usesGymSets && activeGymSet" class="mx-auto max-w-4xl">
+                    <button
+                        v-if="!mobileLivePanelOpen"
+                        type="button"
+                        class="flex w-full items-center gap-3 rounded-2xl border border-border bg-card p-3 text-left"
+                        @click="mobileLivePanelOpen = true"
+                    >
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-air-blue/15 text-air-blue">
+                            <i class="las la-dumbbell text-xl"></i>
+                        </span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block truncate text-sm font-semibold text-primary">{{ activeGymExercise?.title || 'Aktive Übung' }}</span>
+                            <span class="block truncate text-xs text-secondary">
+                                Satz {{ activeGymSetIndex + 1 }} · {{ activeGymSet.reps || 0 }} Wdh. · {{ activeGymSet.weight_kg || 0 }} kg
+                            </span>
+                        </span>
+                        <span class="rounded-xl bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary">
+                            Öffnen
+                        </span>
+                    </button>
+
+                    <div v-else class="space-y-2">
                     <div class="flex items-center justify-between gap-3">
                         <div class="min-w-0">
                             <p class="truncate text-sm font-semibold text-primary">{{ activeGymExercise?.title || 'Aktive Übung' }}</p>
@@ -1802,6 +1945,9 @@ onUnmounted(() => {
                         </div>
                         <button v-if="restSeconds > 0" type="button" class="rounded-xl border border-border px-3 py-2 text-xs font-semibold text-primary" @click="stopRestTimer">
                             Pause stop
+                        </button>
+                        <button type="button" class="rounded-xl border border-border px-3 py-2 text-xs font-semibold text-primary" @click="mobileLivePanelOpen = false">
+                            Minimieren
                         </button>
                     </div>
                     <div class="grid grid-cols-3 gap-2">
@@ -1832,6 +1978,7 @@ onUnmounted(() => {
                         <button type="submit" class="rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-primary disabled:opacity-60" :disabled="form.processing">
                             Speichern
                         </button>
+                    </div>
                     </div>
                 </div>
                 <div v-else class="mx-auto max-w-4xl space-y-2">

@@ -10,6 +10,7 @@ use App\Models\NutritionMeal;
 use App\Models\TrainingLog;
 use App\Services\NutritionFoodLookupService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class NutritionController extends Controller
@@ -125,7 +126,10 @@ class NutritionController extends Controller
             $this->waterPayload($request->user(), $this->validateWaterData($request))
         );
 
-        return back()->with('success', $entry->water_ml.' ml wurden eingetragen.');
+        return back()->with([
+            'success' => $entry->water_ml.' ml wurden eingetragen.',
+            'flash_id' => (string) Str::uuid(),
+        ]);
     }
 
     public function updateMeal(Request $request, NutritionMeal $nutritionMeal)

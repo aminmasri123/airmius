@@ -44,11 +44,12 @@ watch(mobileOpen, (val) => {
 })
 
 const navItems = [
-    ['vorteile', 'guest.nav.benefits'],
-    ['funktionen', 'guest.nav.features'],
-    ['sportarten', 'guest.nav.sports'],
-    ['ueber', 'guest.nav.about'],
-    ['kontakt', 'guest.nav.contact'],
+    { id: 'vorteile', label: 'guest.nav.benefits' },
+    { id: 'funktionen', label: 'guest.nav.features' },
+    { id: 'sportarten', label: 'guest.nav.sports' },
+    { id: 'shop', label: 'Shop', href: route('guest.marketplace') },
+    { id: 'ueber', label: 'guest.nav.about' },
+    { id: 'kontakt', label: 'guest.nav.contact' },
 ]
 </script>
 
@@ -61,14 +62,22 @@ const navItems = [
             </button>
 
             <div class="absolute left-1/2 hidden -translate-x-1/2 items-center gap-6 text-sm font-medium text-secondary md:flex">
-                <button
-                    v-for="[id, label] in navItems"
-                    :key="id"
-                    @click="scrollTo(id)"
-                    class="hover:text-primary transition"
-                >
-                    {{ $t(label) }}
-                </button>
+                <template v-for="item in navItems" :key="item.id">
+                    <Link
+                        v-if="item.href"
+                        :href="item.href"
+                        class="hover:text-primary transition"
+                    >
+                        {{ $t(item.label) }}
+                    </Link>
+                    <button
+                        v-else
+                        @click="scrollTo(item.id)"
+                        class="hover:text-primary transition"
+                    >
+                        {{ $t(item.label) }}
+                    </button>
+                </template>
                 <Link :href="route('guest.blog.index')" class="hover:text-primary transition">
                     {{ $t('Blog') }}
                 </Link>
@@ -139,14 +148,23 @@ const navItems = [
                         </div>
 
                         <div class="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-1">
-                            <button
-                                v-for="[id, label] in navItems"
-                                :key="id"
-                                @click="scrollTo(id)"
-                                class="text-left py-3 text-lg text-secondary hover:text-primary transition"
-                            >
-                                {{ $t(label) }}
-                            </button>
+                            <template v-for="item in navItems" :key="item.id">
+                                <Link
+                                    v-if="item.href"
+                                    :href="item.href"
+                                    @click="mobileOpen = false"
+                                    class="text-left py-3 text-lg text-secondary hover:text-primary transition"
+                                >
+                                    {{ $t(item.label) }}
+                                </Link>
+                                <button
+                                    v-else
+                                    @click="scrollTo(item.id)"
+                                    class="text-left py-3 text-lg text-secondary hover:text-primary transition"
+                                >
+                                    {{ $t(item.label) }}
+                                </button>
+                            </template>
 
                             <Link
                                 :href="route('guest.blog.index')"

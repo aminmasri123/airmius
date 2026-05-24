@@ -1,1 +1,0 @@
-import{u as e}from"./app-CmBAVPxc.js";import{o as t,f as s,z as a}from"./vendor-vue-udQHe02l.js";const c=["src"],p={__name:"ApplicationMark",setup(m){const{isDark:o}=e(),r=a(()=>o.value?"/img/logo/LOGO-Dark-Airmius-Quervormat.png":"/img/logo/Logo-Airmius-Quervormat.png");return(n,i)=>(t(),s("img",{src:r.value,alt:"AIRMIUS Logo"},null,8,c))}};export{p as _};

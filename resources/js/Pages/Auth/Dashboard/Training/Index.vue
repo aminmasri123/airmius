@@ -264,6 +264,18 @@ const weekDays = computed(() => {
     })
 })
 
+const plannedThisWeekCount = computed(() => weekDays.value.reduce((count, day) => count + day.items.length, 0))
+const completedThisWeekCount = computed(() => {
+    const keys = new Set(weekDays.value.map((day) => day.key))
+
+    return visibleLogs.value.filter((log) => {
+        const value = log.performed_at || log.created_at
+        return value && keys.has(value.slice(0, 10))
+    }).length
+})
+
+const nextTrainingItem = computed(() => upcomingItems.value[0] || null)
+
 const trainerDashboard = computed(() => {
     const overdue = plannedLogItems.value.filter((item) => {
         if (!item.scheduled_at) return false
@@ -840,47 +852,81 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
 <template>
     <Head title="Training" />
 
-    <div class="space-y-4">
-        <section class="rounded-2xl border border-border bg-card p-4 sm:p-5">
-            <div class="space-y-4 lg:grid lg:grid-cols-[1fr_320px] lg:gap-5 lg:space-y-0">
-                <div>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <span class="rounded-full border border-air-blue/40 bg-air-blue/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-air-blue">
+    <div class="space-y-3 pb-24 sm:space-y-4 sm:pb-0">
+        <section class="rounded-2xl border border-border bg-card p-3 sm:p-5">
+            <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
+                <div class="space-y-2.5 sm:space-y-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="rounded-full border border-air-blue/40 bg-air-blue/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-air-blue">
                             Training Hub
                         </span>
                         <span class="hidden rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary sm:inline-flex">
-                            Planen · Ausfuehren · Teilen
+                            Planen · Ausführen · Teilen
                         </span>
                     </div>
-                    <h1 class="mt-3 max-w-3xl text-2xl font-semibold leading-tight text-primary sm:text-3xl">
-                        Trainingsplaene
+                    <h1 class="max-w-3xl text-lg font-semibold leading-tight text-primary sm:text-3xl">
+                        Trainingspläne
                     </h1>
-                    <div class="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                        <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="openModal('plan')">
+                    <div
+                        class="rounded-xl border px-3 py-2.5 sm:rounded-2xl sm:p-3"
+                        :class="nextTrainingItem ? 'border-air-blue/35 bg-air-blue/10' : 'border-border bg-inputBg/50'"
+                    >
+                        <div v-if="nextTrainingItem" class="flex items-center gap-3">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white sm:h-11 sm:w-11 sm:rounded-2xl" :class="sportAccent(nextTrainingItem.sport_type)">
+                                <i :class="sportIcon(nextTrainingItem.sport_type)" class="text-lg sm:text-xl"></i>
+                            </span>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-[11px] font-semibold uppercase tracking-wide text-air-blue">Nächstes Training</p>
+                                <p class="truncate text-sm font-semibold text-primary">{{ nextTrainingItem.title }}</p>
+                                <p class="truncate text-xs text-secondary">{{ nextTrainingItem.plan.title }} · {{ formatDate(nextTrainingItem.scheduled_at) }} {{ formatTime(nextTrainingItem.scheduled_at) }}</p>
+                            </div>
+                            <button type="button" class="hidden rounded-xl border border-success/40 px-3 py-2 text-xs font-semibold text-success hover:bg-success/10 sm:inline-flex" @click="documentPlanItem(nextTrainingItem)">
+                                Starten
+                            </button>
+                        </div>
+                        <div v-else class="flex items-center gap-3">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-air-blue/15 text-air-blue sm:h-11 sm:w-11 sm:rounded-2xl">
+                                <i class="las la-calendar-plus text-lg sm:text-xl"></i>
+                            </span>
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold text-primary">Noch nichts geplant</p>
+                                <p class="text-xs text-secondary sm:hidden">Starte direkt unten.</p>
+                                <p class="hidden text-xs text-secondary sm:block">Erstelle einen Plan oder dokumentiere spontan.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hidden grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                        <button type="button" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary sm:min-h-11 sm:px-4" @click="openModal('plan')">
+                            <i class="las la-plus-circle text-lg"></i>
                             Plan erstellen
                         </button>
-                        <button type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="openLogPage">
-                            Training dokumentieren
+                        <button type="button" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted sm:min-h-11 sm:px-4" @click="openLogPage">
+                            <i class="las la-pen-alt text-lg"></i>
+                            Dokumentieren
                         </button>
                     </div>
                 </div>
-                <div class="rounded-2xl border border-border bg-inputBg/40 p-3 lg:bg-muted/30">
-                    <div class="grid grid-cols-3 gap-2">
-                        <div class="rounded-xl border border-border bg-card p-2 text-center">
-                            <p class="text-xl font-semibold text-primary">{{ plans.length }}</p>
+                <div class="rounded-xl border border-border bg-inputBg/40 p-2 lg:rounded-2xl lg:bg-muted/30 lg:p-2.5">
+                    <div class="grid grid-cols-4 gap-1.5 lg:grid-cols-2 lg:gap-2">
+                        <div class="rounded-lg border border-border bg-card p-2 sm:rounded-xl sm:p-2.5">
+                            <p class="text-base font-semibold leading-none text-primary sm:text-xl">{{ plans.length }}</p>
                             <p class="text-[11px] text-secondary">Pläne</p>
                         </div>
-                        <div class="rounded-xl border border-border bg-card p-2 text-center">
-                            <p class="text-xl font-semibold text-primary">{{ visibleLogs.length }}</p>
+                        <div class="rounded-lg border border-border bg-card p-2 sm:rounded-xl sm:p-2.5">
+                            <p class="text-base font-semibold leading-none text-primary sm:text-xl">{{ visibleLogs.length }}</p>
                             <p class="text-[11px] text-secondary">Logs</p>
                         </div>
-                        <div class="rounded-xl border border-border bg-card p-2 text-center">
-                            <p class="text-xl font-semibold text-primary">{{ teams.length }}</p>
+                        <div class="rounded-lg border border-border bg-card p-2 sm:rounded-xl sm:p-2.5">
+                            <p class="text-base font-semibold leading-none text-primary sm:text-xl">{{ completedThisWeekCount }}</p>
+                            <p class="text-[11px] text-secondary">Erledigt</p>
+                        </div>
+                        <div class="rounded-lg border border-border bg-card p-2 sm:rounded-xl sm:p-2.5">
+                            <p class="text-base font-semibold leading-none text-primary sm:text-xl">{{ teams.length }}</p>
                             <p class="text-[11px] text-secondary">Teams</p>
                         </div>
                     </div>
-                    <div class="mt-3 rounded-xl border border-border bg-card p-3">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Naechstes Training</p>
+                    <div class="mt-3 hidden rounded-xl border border-border bg-card p-3 lg:block">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Nächstes Training</p>
                         <div v-if="upcomingItems.length" class="mt-2 space-y-2">
                             <div v-for="item in upcomingItems.slice(0, 2)" :key="`${item.plan.id}-${item.id}`" class="flex items-center gap-3">
                                 <span class="flex h-10 w-10 items-center justify-center rounded-xl text-white" :class="sportAccent(item.sport_type)">
@@ -921,7 +967,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                         </div>
                         <h2 class="mt-1 truncate text-lg font-semibold text-primary">{{ activeDraftLog.title || 'Training-Entwurf' }}</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            {{ sportLabel(activeDraftLog.sport_type) }} &middot; zuletzt gespeichert {{ formatDate(activeDraftLog.updated_at) }} {{ formatTime(activeDraftLog.updated_at) }} &middot; {{ activeDraftLog.entries?.length || 0 }} Eintraege
+                            {{ sportLabel(activeDraftLog.sport_type) }} &middot; zuletzt gespeichert {{ formatDate(activeDraftLog.updated_at) }} {{ formatTime(activeDraftLog.updated_at) }} &middot; {{ activeDraftLog.entries?.length || 0 }} Einträge
                         </p>
                     </div>
                 </div>
@@ -936,22 +982,22 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
             </div>
         </section>
 
-        <nav class="flex gap-2 overflow-x-auto rounded-2xl border border-border bg-card p-2 md:grid md:grid-cols-5 md:overflow-visible">
+        <nav class="flex gap-1.5 overflow-x-auto rounded-2xl border border-border bg-card p-1.5 md:grid md:grid-cols-5 md:gap-2 md:overflow-visible md:p-2">
             <button
                 v-for="section in trainingSections"
                 :key="section.key"
                 type="button"
                 :class="[
-                    'flex min-w-[112px] shrink-0 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-center transition md:min-w-0 md:justify-start md:gap-3 md:py-3 md:text-start',
+                    'flex min-w-[76px] shrink-0 items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-center transition md:min-w-0 md:justify-start md:gap-3 md:px-3 md:py-3 md:text-start',
                     activeTrainingSection === section.key
                         ? 'border-air-blue bg-air-blue/15 text-primary shadow-lg shadow-air-blue/10'
                         : 'border-transparent text-secondary hover:border-border hover:bg-inputBg'
                 ]"
                 @click="activeTrainingSection = section.key"
             >
-                <i :class="[section.icon, 'text-xl']"></i>
+                <i :class="[section.icon, 'text-lg md:text-xl']"></i>
                 <span class="min-w-0">
-                    <span class="block text-sm font-semibold">{{ section.label }}</span>
+                    <span class="block text-xs font-semibold md:text-sm">{{ section.label }}</span>
                     <span class="hidden truncate text-xs opacity-80 sm:block">{{ section.hint }}</span>
                 </span>
             </button>
@@ -975,18 +1021,18 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
             </div>
         </section>
 
-        <section v-if="activeTrainingSection === 'overview'" class="grid gap-4 xl:grid-cols-[minmax(0,1fr),360px]">
-            <div class="rounded-2xl border border-border bg-card p-4">
+        <section v-if="activeTrainingSection === 'overview'" class="grid gap-3 xl:grid-cols-[minmax(0,1fr),360px]">
+            <div v-if="upcomingItems.length" class="rounded-2xl border border-border bg-card p-3 sm:p-4">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Start</p>
-                        <h2 class="mt-1 text-xl font-semibold text-primary">Was steht als Naechstes an?</h2>
+                        <h2 class="mt-1 text-lg font-semibold text-primary sm:text-xl">Was steht als Nächstes an?</h2>
                     </div>
-                    <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="activeTrainingSection = 'plans'">
+                    <button type="button" class="rounded-xl bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary sm:px-4" @click="activeTrainingSection = 'plans'">
                         Zu den Plänen
                     </button>
                 </div>
-                <div class="mt-4 grid gap-3 md:grid-cols-2">
+                <div class="mt-3 grid gap-2.5 md:grid-cols-2">
                     <article v-for="item in upcomingItems.slice(0, 4)" :key="`${item.plan.id}-${item.id}`" class="rounded-xl border border-border bg-inputBg/40 p-3">
                         <div class="flex items-start gap-3">
                             <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white" :class="sportAccent(item.sport_type)">
@@ -1006,15 +1052,22 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                             </div>
                         </div>
                     </article>
-                    <div v-if="!upcomingItems.length" class="rounded-xl border border-dashed border-border bg-inputBg/40 p-6 text-center md:col-span-2">
-                        <p class="font-semibold text-primary">Noch keine geplanten Einheiten.</p>
-                        <p class="mt-1 text-sm text-secondary">Erstelle einen Plan oder dokumentiere ein spontanes Training.</p>
-                    </div>
                 </div>
             </div>
 
-            <aside class="space-y-4">
-                <section class="rounded-2xl border border-border bg-card p-4">
+            <div v-else class="rounded-2xl border border-border bg-card p-2 sm:hidden">
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" class="rounded-xl bg-buttonPrimary px-3 py-2.5 text-sm font-semibold text-buttonTextPrimary" @click="activeTrainingSection = 'plans'">
+                        Pläne öffnen
+                    </button>
+                    <button type="button" class="rounded-xl border border-border px-3 py-2.5 text-sm font-semibold text-primary" @click="activeTrainingSection = 'week'">
+                        Woche
+                    </button>
+                </div>
+            </div>
+
+            <aside class="hidden space-y-3 sm:block">
+                <section class="hidden rounded-2xl border border-border bg-card p-4 sm:block">
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Schnellstart</p>
                     <div class="mt-3 grid gap-2">
                         <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary" @click="openModal('plan')">
@@ -1206,7 +1259,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ selectedSport.label }}</p>
-                        <h2 class="text-xl font-semibold text-primary">Trainingsplaene</h2>
+                        <h2 class="text-xl font-semibold text-primary">Trainingspläne</h2>
                     </div>
                     <button type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="openModal('plan')">
                         Neuer Plan
@@ -2101,6 +2154,22 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div class="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 px-4 py-3 shadow-2xl shadow-black/30 backdrop-blur sm:hidden">
+            <div class="mx-auto grid max-w-md grid-cols-[1fr_1fr_auto] gap-2">
+                <button type="button" class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-buttonPrimary px-3 text-sm font-semibold text-buttonTextPrimary" @click="openModal('plan')">
+                    <i class="las la-plus-circle text-lg"></i>
+                    Plan
+                </button>
+                <button type="button" class="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 text-sm font-semibold text-primary" @click="openLogPage">
+                    <i class="las la-pen-alt text-lg"></i>
+                    Log
+                </button>
+                <button type="button" class="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-card text-primary" aria-label="Zur Woche" @click="activeTrainingSection = 'week'">
+                    <i class="las la-calendar-week text-xl"></i>
+                </button>
             </div>
         </div>
     </div>

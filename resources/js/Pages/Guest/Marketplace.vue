@@ -7,6 +7,7 @@ import SeoHead from '@/Components/Guest/SeoHead.vue'
 import AdSlot from '@/Components/Ads/AdSlot.vue'
 import UserCard from '@/Components/Auth/UserCard.vue'
 import { useTheme } from '@/services/useTheme'
+import { applyLogoFallback, logoWordmark } from '@/services/logoAssets'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -35,9 +36,7 @@ const props = defineProps({
 const page = usePage()
 const { isDark } = useTheme()
 const currentUser = computed(() => props.authUser || page.props.auth?.user || null)
-const marketplaceLogo = computed(() => isDark.value
-    ? '/img/logo/Logo-Dark-Airmius-Quervormat.png'
-    : '/img/logo/Logo-Airmius-Quervormat.png')
+const marketplaceLogo = computed(() => logoWordmark(isDark.value))
 const marketplaceReturnTo = '/marketplace'
 const loginHref = computed(() => route('login', { redirect: marketplaceReturnTo }))
 const registerHref = computed(() => route('register', { redirect: marketplaceReturnTo }))
@@ -229,17 +228,17 @@ const selectSegment = (segment) => {
 
         <main class="relative z-10 mx-auto max-w-[86rem] pb-24 pt-0 md:pb-14 md:pr-28 2xl:pr-24">
             <section class="border-b border-border bg-bg px-4 py-3 shadow-sm">
-                <div class="mx-auto flex max-w-7xl flex-col gap-4 rounded-lg border border-border bg-card px-5 py-3 text-primary shadow-sm sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex min-w-0 items-center gap-3">
-                        <img :src="marketplaceLogo" alt="AIRMIUS" class="h-12 w-auto shrink-0 object-contain">
-                        <div class="min-w-0">
+                <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3 text-primary shadow-sm sm:px-5">
+                    <div class="flex min-w-0 flex-1 items-center gap-3">
+                        <img :src="marketplaceLogo" alt="AIRMIUS" class="h-10 w-auto max-w-[10.5rem] shrink-0 object-contain sm:h-12 sm:max-w-none" @error="applyLogoFallback">
+                        <div class="hidden min-w-0 sm:block">
                             <p class="font-heading text-lg font-900 leading-tight sm:text-2xl">AIRMIUS Marketplace</p>
                             <p class="truncate text-xs font-semibold text-secondary sm:text-sm">
                                 Sport Deals, Kurse, Camps und Services passend zu deinem Design
                             </p>
                         </div>
                     </div>
-                    <div class="flex w-full flex-wrap items-center gap-2 text-sm font-black sm:w-auto sm:justify-end">
+                    <div class="flex shrink-0 items-center justify-end gap-2 text-sm font-black">
                         <Link
                             v-if="currentUser"
                             :href="route('auth.commerce.cart.index')"
@@ -276,9 +275,63 @@ const selectSegment = (segment) => {
                 </div>
             </section>
 
-            <section class="bg-card/70 px-4 py-4 shadow-sm backdrop-blur">
-                <form class="mx-auto flex max-w-7xl flex-col gap-3 rounded border border-border bg-bg/70 p-3 shadow-sm lg:flex-row lg:items-center" @submit.prevent="search">
-                    <div class="grid gap-3 sm:grid-cols-2 lg:w-[36rem] lg:shrink-0 xl:grid-cols-3">
+            <section class="bg-card/70 px-4 py-3 shadow-sm backdrop-blur">
+                <form class="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-xl border border-border bg-bg/80 p-3 shadow-sm lg:grid-cols-[minmax(0,1fr)_minmax(18rem,30rem)_auto] lg:items-center lg:gap-3" @submit.prevent="search">
+                    <div class="relative order-1 min-w-0 lg:order-2 lg:min-w-[22rem] xl:min-w-[30rem]">
+                        <i class="las la-search absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-buttonPrimary"></i>
+                        <input
+                            v-model="form.search"
+                            class="h-12 w-full rounded-xl border-border bg-inputBg py-3 pl-12 pr-12 text-sm font-semibold text-primary outline-none transition placeholder:text-secondary/70 focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25"
+                            placeholder="Was suchst du?"
+                        />
+                        <button
+                            v-if="form.search"
+                            type="button"
+                            class="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-muted text-secondary transition hover:bg-buttonPrimary hover:text-buttonTextPrimary"
+                            aria-label="Suche leeren"
+                            @click="form.search = ''"
+                        >
+                            <i class="las la-times"></i>
+                        </button>
+                    </div>
+
+                    <details class="order-3 col-span-2 rounded-xl border border-border bg-card p-2 lg:hidden">
+                        <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-2 py-1.5 text-sm font-black text-primary">
+                            <span class="inline-flex items-center gap-2">
+                                <i class="las la-sliders-h text-xl text-buttonPrimary"></i>
+                                Filter
+                            </span>
+                            <span class="rounded-full bg-muted px-2 py-1 text-[11px] font-bold text-secondary">{{ totalProducts }} Treffer</span>
+                        </summary>
+                        <div class="mt-2 grid gap-2">
+                            <label class="relative block">
+                                <span class="sr-only">Kategorie</span>
+                                <select v-model="form.category" class="h-11 w-full rounded-xl border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
+                                    <option v-for="category in categories" :key="category.value" :value="category.value">
+                                        {{ category.label }}
+                                    </option>
+                                </select>
+                            </label>
+                            <label class="relative block">
+                                <span class="sr-only">Bereich</span>
+                                <select v-model="form.segment" class="h-11 w-full rounded-xl border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
+                                    <option v-for="segment in segments" :key="segment.value || 'all'" :value="segment.value">
+                                        {{ segment.label }}
+                                    </option>
+                                </select>
+                            </label>
+                            <div class="grid grid-cols-[1fr_auto] gap-2">
+                                <button class="h-11 rounded-xl bg-buttonPrimary px-4 text-sm font-black text-buttonTextPrimary shadow-sm transition hover:bg-buttonPrimaryHover focus:outline-none focus:ring-2 focus:ring-buttonPrimary/30">
+                                    Anwenden
+                                </button>
+                                <button type="button" class="h-11 rounded-xl border border-border bg-card px-4 text-sm font-bold text-primary transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-buttonPrimary/20" @click="reset">
+                                    Reset
+                                </button>
+                            </div>
+                        </div>
+                    </details>
+
+                    <div class="hidden gap-3 lg:order-1 lg:grid lg:grid-cols-5">
                         <label class="relative block">
                             <span class="sr-only">Kategorie</span>
                             <select v-model="form.category" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
@@ -322,44 +375,41 @@ const selectSegment = (segment) => {
                         </label>
                     </div>
 
-                    <div class="relative min-w-0 flex-1">
-                        <i class="las la-search absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-buttonPrimary"></i>
-                        <input
-                            v-model="form.search"
-                            class="h-13 min-h-12 w-full rounded border-border bg-inputBg py-3 pl-12 pr-12 text-sm font-semibold text-primary outline-none transition placeholder:text-secondary/70 focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25"
-                            placeholder="Was suchst du? Laufschuhe, Camps, Kurse, Analyse..."
-                        />
-                        <button
-                            v-if="form.search"
-                            type="button"
-                            class="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-muted text-secondary transition hover:bg-buttonPrimary hover:text-buttonTextPrimary"
-                            aria-label="Suche leeren"
-                            @click="form.search = ''"
-                        >
-                            <i class="las la-times"></i>
+                    <div class="order-2 grid grid-cols-[auto] gap-2 lg:order-3 lg:w-auto lg:shrink-0 lg:grid-cols-[1fr_auto]">
+                        <button class="flex h-12 w-12 items-center justify-center rounded-xl bg-buttonPrimary text-sm font-black text-buttonTextPrimary shadow-sm transition hover:bg-buttonPrimaryHover focus:outline-none focus:ring-2 focus:ring-buttonPrimary/30 lg:w-auto lg:px-6">
+                            <i class="las la-search text-xl lg:hidden"></i>
+                            <span class="hidden lg:inline">Suchen</span>
                         </button>
-                    </div>
-
-                    <div class="grid grid-cols-[1fr_auto] gap-2 lg:w-auto lg:shrink-0">
-                        <button class="h-12 rounded bg-buttonPrimary px-6 text-sm font-black text-buttonTextPrimary shadow-sm transition hover:bg-buttonPrimaryHover focus:outline-none focus:ring-2 focus:ring-buttonPrimary/30">
-                            Suchen
-                        </button>
-                        <button type="button" class="h-12 rounded border border-border bg-card px-4 text-sm font-bold text-primary transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-buttonPrimary/20" @click="reset">
+                        <button type="button" class="hidden h-12 rounded border border-border bg-card px-4 text-sm font-bold text-primary transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-buttonPrimary/20 sm:block" @click="reset">
                             Reset
                         </button>
                     </div>
                 </form>
 
-                <div class="mx-auto mt-3 flex max-w-7xl flex-wrap items-center gap-2 text-xs font-semibold text-secondary">
+                <div class="mx-auto mt-3 flex max-w-7xl gap-2 overflow-x-auto pb-1 text-xs font-semibold text-secondary sm:flex-wrap">
                     <span class="rounded bg-muted px-2 py-1">Kategorie: {{ activeCategory?.label || 'Alle' }}</span>
                     <span class="rounded bg-muted px-2 py-1">Bereich: {{ activeSegment?.label || 'Alle Bereiche' }}</span>
-                    <span class="rounded bg-muted px-2 py-1">Status: {{ activeAvailability?.label || 'Alle' }}</span>
-                    <span class="rounded bg-muted px-2 py-1">{{ totalProducts }} Treffer</span>
+                    <span class="hidden rounded bg-muted px-2 py-1 sm:inline">Status: {{ activeAvailability?.label || 'Alle' }}</span>
+                    <span class="shrink-0 rounded bg-buttonPrimary/15 px-2 py-1 text-buttonPrimary">{{ totalProducts }} Treffer</span>
                 </div>
             </section>
 
             <section class="mx-auto grid max-w-7xl gap-4 px-4 py-4 xl:grid-cols-[13rem_minmax(0,1fr)]">
-                <aside class="rounded border border-border bg-card p-2 shadow-sm">
+                <div class="xl:hidden">
+                    <div class="flex gap-2 overflow-x-auto pb-1">
+                        <button
+                            v-for="category in sportCategories"
+                            :key="category.label"
+                            class="inline-flex shrink-0 items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-xs font-black text-primary shadow-sm transition hover:border-buttonPrimary hover:text-buttonPrimary"
+                            @click="searchCategory(category)"
+                        >
+                            <i :class="[category.icon, 'text-base text-buttonPrimary']"></i>
+                            {{ category.label }}
+                        </button>
+                    </div>
+                </div>
+
+                <aside class="hidden rounded border border-border bg-card p-2 shadow-sm xl:block">
                     <button
                         v-for="category in sportCategories"
                         :key="category.label"
@@ -374,7 +424,7 @@ const selectSegment = (segment) => {
                 <section class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
                     <Link
                         :href="heroProduct?.show_url || route('guest.marketplace')"
-                            class="relative min-h-[22rem] overflow-hidden rounded border border-border bg-buttonPrimary shadow-sm"
+                            class="relative min-h-[15rem] overflow-hidden rounded-xl border border-border bg-buttonPrimary shadow-sm md:min-h-[22rem]"
                     >
                         <img
                             v-if="heroImageUrl"
@@ -383,15 +433,15 @@ const selectSegment = (segment) => {
                             class="absolute inset-0 h-full w-full object-cover"
                         />
                         <div class="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent"></div>
-                        <div class="relative flex min-h-[22rem] max-w-2xl flex-col justify-center p-6 text-white md:p-8">
+                        <div class="relative flex min-h-[15rem] max-w-2xl flex-col justify-end p-5 text-white md:min-h-[22rem] md:justify-center md:p-8">
                             <p class="text-xs font-black uppercase tracking-wide text-white/80">Airmius Marketplace</p>
-                            <h1 class="mt-2 font-heading text-4xl font-900 leading-tight md:text-5xl">
+                            <h1 class="mt-2 font-heading text-2xl font-900 leading-tight md:text-5xl">
                                 Sport Deals für Training, Team und Wettkampf
                             </h1>
-                            <p class="mt-4 max-w-xl text-sm leading-6 text-white/90">
+                            <p class="mt-3 hidden max-w-xl text-sm leading-6 text-white/90 sm:block md:mt-4">
                                 Weniger scrollen, schneller finden: Kategorien, Aktionen und kuratierte Reihen statt alle Produkte auf einmal.
                             </p>
-                            <span class="mt-5 inline-flex w-fit rounded bg-buttonPrimary px-4 py-3 text-sm font-black text-buttonTextPrimary">
+                            <span class="mt-4 inline-flex w-fit rounded-xl bg-buttonPrimary px-4 py-2.5 text-sm font-black text-buttonTextPrimary md:mt-5 md:py-3">
                                 Jetzt entdecken
                             </span>
                         </div>

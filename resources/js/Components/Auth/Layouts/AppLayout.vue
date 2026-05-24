@@ -103,6 +103,8 @@ let stopInertiaSuccess = null
 let stopInertiaError = null
 let stopInertiaInvalid = null
 let stopInertiaException = null
+const recentFeedback = new Map()
+const shownFlashIds = new Set()
 
 const serverUnreadCount = computed(() => page.props.notificationCenter?.unread_count || 0)
 const unreadCount = computed(() => notificationsMarkedReadLocally.value ? 0 : serverUnreadCount.value)
@@ -288,10 +290,50 @@ const removeFeedback = (id) => {
     }
 }
 
-const addFeedback = (type, message) => {
+const addFeedback = (type, message, flashId = null) => {
     const text = String(message || '').trim()
 
     if (!text) return
+
+    if (flashId) {
+        const flashKey = `${type}:${flashId}`
+
+        if (shownFlashIds.has(flashKey)) return
+
+        shownFlashIds.add(flashKey)
+    }
+
+    const signature = `${type}:${text}`
+    const now = Date.now()
+    const recentUntil = recentFeedback.get(signature) || 0
+
+    if (!flashId && recentUntil > now) return
+
+    if (!flashId) {
+        recentFeedback.set(signature, now + 12000)
+    }
+
+    recentFeedback.forEach((until, key) => {
+        if (until <= now) {
+            recentFeedback.delete(key)
+        }
+    })
+
+    const existing = feedbackMessages.value.find((item) => item.type === type && item.message === text)
+
+    if (existing) {
+        feedbackMessages.value = [
+            existing,
+            ...feedbackMessages.value.filter((item) => item.id !== existing.id),
+        ]
+
+        if (feedbackTimers.has(existing.id)) {
+            window.clearTimeout(feedbackTimers.get(existing.id))
+        }
+
+        feedbackTimers.set(existing.id, window.setTimeout(() => removeFeedback(existing.id), type === 'error' ? 7000 : 4500))
+        return
+    }
 
     const id = ++feedbackId
     feedbackMessages.value.unshift({
@@ -316,15 +358,15 @@ const firstErrorMessage = (errors) => {
 
 const showFlashFeedback = (flash = {}) => {
     if (flash.success) {
-        addFeedback('success', flash.success)
+        addFeedback('success', flash.success, flash.id)
     }
 
     if (flash.error) {
-        addFeedback('error', flash.error)
+        addFeedback('error', flash.error, flash.id)
     }
 
     if (flash.message) {
-        addFeedback('info', flash.message)
+        addFeedback('info', flash.message, flash.id)
     }
 }
 
@@ -369,6 +411,8 @@ const uninstallGlobalFeedback = () => {
 
     feedbackTimers.forEach((timer) => window.clearTimeout(timer))
     feedbackTimers.clear()
+    recentFeedback.clear()
+    shownFlashIds.clear()
 }
 
 const bindRealtime = () => {
