@@ -268,7 +268,7 @@ class PublicLearningController extends Controller
 
             if ($this->dripLocked($lesson, $enrollment)) {
                 $this->logLearningSecurityEvent($request, $course, $lesson, 'video_drip_locked', 'warning');
-                abort(403, 'Diese Lektion wird spaeter freigeschaltet.');
+                abort(403, 'Diese Lektion wird später freigeschaltet.');
             }
         }
 
@@ -305,7 +305,7 @@ class PublicLearningController extends Controller
         if ($assignment->learning_lesson_id) {
             $lesson = LearningLesson::query()->whereKey($assignment->learning_lesson_id)->firstOrFail();
             abort_unless($lesson->learning_course_id === $course->id, 404);
-            abort_if($this->dripLocked($lesson, $enrollment), 403, 'Diese Aufgabe wird spaeter freigeschaltet.');
+            abort_if($this->dripLocked($lesson, $enrollment), 403, 'Diese Aufgabe wird später freigeschaltet.');
         }
 
         $data = $request->validate([
@@ -363,7 +363,7 @@ class PublicLearningController extends Controller
         if ($quiz->learning_lesson_id) {
             $lesson = LearningLesson::query()->whereKey($quiz->learning_lesson_id)->firstOrFail();
             abort_unless($lesson->learning_course_id === $course->id, 404);
-            abort_if($this->dripLocked($lesson, $enrollment), 403, 'Dieses Quiz wird spaeter freigeschaltet.');
+            abort_if($this->dripLocked($lesson, $enrollment), 403, 'Dieses Quiz wird später freigeschaltet.');
         }
 
         $data = $request->validate([
@@ -568,7 +568,7 @@ class PublicLearningController extends Controller
         $pdf->sectionTitle('Kursleitung', 48, 365);
         $pdf->text($certificate->course?->certificate_signature_name ?: ($certificate->course?->tutor?->name ?: 'Airmius Tutor'), 48, 338, 13, true);
         $pdf->strokeColor(...AirmiusPdfDocument::BORDER)->line(48, 285, 546, 285);
-        $pdf->text($certificate->course?->certificate_footer_text ?: 'Dieses Zertifikat bestaetigt, dass der Kurs mit den erforderlichen Lektionen und Wissenschecks abgeschlossen wurde.', 48, 250, 10, false, AirmiusPdfDocument::SLATE, 115);
+        $pdf->text($certificate->course?->certificate_footer_text ?: 'Dieses Zertifikat bestätigt, dass der Kurs mit den erforderlichen Lektionen und Wissenschecks abgeschlossen wurde.', 48, 250, 10, false, AirmiusPdfDocument::SLATE, 115);
         $pdf->text('Zertifikat-ID: '.$certificate->code, 48, 224, 9, true, AirmiusPdfDocument::MUTED, 80);
 
         return response($pdf->legalFooter([], 'Airmius gratuliert zum erfolgreichen Abschluss.')->render(), 200, [
@@ -618,7 +618,7 @@ class PublicLearningController extends Controller
             ->first();
 
         abort_unless($enrollment, 403);
-        abort_if($this->dripLocked($lesson, $enrollment), 403, 'Diese Lektion wird spaeter freigeschaltet.');
+        abort_if($this->dripLocked($lesson, $enrollment), 403, 'Diese Lektion wird später freigeschaltet.');
     }
 
     private function canUseLearningRoom(Request $request, LearningCourse $course, ?LearningEnrollment $enrollment): bool
@@ -912,7 +912,7 @@ class PublicLearningController extends Controller
         }
 
         try {
-            Mail::raw(implode("\n\n", [...$lines, 'Viele Gruesse', 'Airmius']), function ($message) use ($user, $subject) {
+            Mail::raw(implode("\n\n", [...$lines, 'Viele Grüße', 'Airmius']), function ($message) use ($user, $subject) {
                 $message->to($user->email)->subject($subject);
             });
         } catch (Throwable) {
@@ -979,7 +979,7 @@ class PublicLearningController extends Controller
                 $this->sendLearningMail($certificate->user, 'Dein Zertifikat ist bereit: '.$course->title, [
                     'Hallo '.$certificate->user?->name.'.',
                     'du hast den Kurs "'.$course->title.'" abgeschlossen.',
-                    'Zertifikat pruefen: '.route('guest.learning.certificates.verify', $certificate->code),
+                    'Zertifikat prüfen: '.route('guest.learning.certificates.verify', $certificate->code),
                     'Kurs: '.route('guest.learning.courses.show', $course),
                 ]);
 

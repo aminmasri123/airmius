@@ -193,7 +193,7 @@ class FolderController extends Controller
         abort_unless(
             $request->user()->friendships()->where('friend_id', $targetUser->id)->exists(),
             403,
-            'Ordner koennen nur mit Freunden geteilt werden.'
+            'Ordner können nur mit Freunden geteilt werden.'
         );
 
         $this->copyTree($folder, $this->targetScope($data['target_type'], $targetUser->id));
@@ -389,7 +389,7 @@ class FolderController extends Controller
 
         if (in_array($normalized, self::RESERVED_FOLDER_NAMES, true) || str_starts_with($normalized, 'desktop.ini')) {
             throw ValidationException::withMessages([
-                'name' => 'Der Ordnername ist ungueltig.',
+                'name' => 'Der Ordnername ist ungültig.',
            ]);
         }
     }

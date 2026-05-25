@@ -168,7 +168,7 @@ class ConversationController extends Controller
     public function addMembers(Request $request, Conversation $conversation)
     {
         abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
-        abort_if($conversation->type !== 'group', 422, 'Mitglieder koennen nur zu Gruppenchats hinzugefuegt werden.');
+        abort_if($conversation->type !== 'group', 422, 'Mitglieder können nur zu Gruppenchats hinzugefügt werden.');
         abort_unless($this->canManageGroup($conversation), 403);
 
         $data = $request->validate([
@@ -181,7 +181,7 @@ class ConversationController extends Controller
             ->unique()
             ->values();
 
-        abort_if($participantIds->isEmpty(), 422, 'Bitte mindestens eine weitere Person auswaehlen.');
+        abort_if($participantIds->isEmpty(), 422, 'Bitte mindestens eine weitere Person auswählen.');
 
         $this->authorizeGroupParticipants($request, $participantIds);
         $existingIds = $conversation->users()
@@ -296,7 +296,7 @@ class ConversationController extends Controller
     public function update(Request $request, Conversation $conversation)
     {
         abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
-        abort_if($conversation->type !== 'group', 422, 'Nur Gruppenchats koennen bearbeitet werden.');
+        abort_if($conversation->type !== 'group', 422, 'Nur Gruppenchats können bearbeitet werden.');
         abort_unless($this->canManageGroup($conversation), 403);
 
         $data = $request->validate([
@@ -430,7 +430,7 @@ class ConversationController extends Controller
     public function removeMember(Request $request, Conversation $conversation, User $user)
     {
         abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
-        abort_if($conversation->type !== 'group', 422, 'Mitglieder koennen nur aus Gruppenchats entfernt werden.');
+        abort_if($conversation->type !== 'group', 422, 'Mitglieder können nur aus Gruppenchats entfernt werden.');
         abort_unless($this->canManageGroup($conversation), 403);
         abort_if($user->id === auth()->id(), 422, 'Nutze Gruppe verlassen, um dich selbst zu entfernen.');
         abort_if((int) $conversation->owner_id === (int) $user->id, 422, 'Der Owner kann nicht entfernt werden.');
@@ -463,7 +463,7 @@ class ConversationController extends Controller
     public function transferOwner(Request $request, Conversation $conversation)
     {
         abort_unless($conversation->users()->where('users.id', auth()->id())->exists(), 403);
-        abort_if($conversation->type !== 'group', 422, 'Owner kann nur fuer Gruppenchats uebertragen werden.');
+        abort_if($conversation->type !== 'group', 422, 'Owner kann nur für Gruppenchats Übertragen werden.');
         abort_unless($this->canManageGroup($conversation), 403);
 
         $data = $request->validate([
@@ -495,7 +495,7 @@ class ConversationController extends Controller
             'conversation_id' => $conversation->id,
         ]);
 
-        return back()->with('success', 'Owner wurde uebertragen.');
+        return back()->with('success', 'Owner wurde Übertragen.');
     }
 
     private function renderIndex(?Conversation $selectedConversation = null, ?Request $request = null)
@@ -769,7 +769,7 @@ class ConversationController extends Controller
             ->get()
             ->keyBy('id');
 
-        abort_if($participants->count() !== $participantIds->count(), 422, 'Mindestens eine ausgewaehlte Person wurde nicht gefunden.');
+        abort_if($participants->count() !== $participantIds->count(), 422, 'Mindestens eine ausgewählte Person wurde nicht gefunden.');
 
         $actor = $request->user();
 
@@ -777,7 +777,7 @@ class ConversationController extends Controller
             abort_unless(
                 $actor->isFriendsWith($participant) && $participant->allowsDirectMessagesFrom($actor),
                 403,
-                'Gruppenchats koennen nur mit Personen gestartet werden, die Nachrichten von dir erlauben und mit dir befreundet sind.'
+                'Gruppenchats können nur mit Personen gestartet werden, die Nachrichten von dir erlauben und mit dir befreundet sind.'
             );
         }
     }

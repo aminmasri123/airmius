@@ -81,7 +81,7 @@ defineProps({
                     </div>
 
                     <div class="mt-4 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm leading-6 text-warning">
-                        Achte darauf, den Verwendungszweck nicht zu veraendern. Sonst kann die Zahlung nicht automatisch oder eindeutig zugeordnet werden.
+                        Achte darauf, den Verwendungszweck nicht zu verändern. Sonst kann die Zahlung nicht automatisch oder eindeutig zugeordnet werden.
                     </div>
 
                     <div class="mt-5 flex flex-col gap-2">

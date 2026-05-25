@@ -10,8 +10,10 @@ use App\Models\TrainingLogFeedback;
 use App\Models\TrainingPlan;
 use App\Models\TrainingPlanItem;
 use App\Models\User;
+use App\Services\Ai\AirmiusAiService;
 use App\Support\Roles;
 use App\Support\AppNotification;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -21,7 +23,7 @@ use Inertia\Inertia;
 
 class TrainingController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, AirmiusAiService $ai)
     {
         $user = $request->user();
         $teamIds = $user->teams()->pluck('teams.id');
@@ -119,6 +121,7 @@ class TrainingController extends Controller
                     'users' => $team->users->map(fn (User $member) => $this->serializeUser($member)),
                 ]),
             'people' => $manageableAthletes->map(fn (User $person) => $this->serializeUser($person)),
+            'aiCapabilities' => $ai->capabilities($user),
         ]);
     }
 
@@ -198,6 +201,197 @@ class TrainingController extends Controller
         $this->notifyTrainingFeedbackRecipients($log->fresh(['feedbacks']), $feedback->load('author'));
 
         return back()->with('success', 'Feedback wurde gesendet.');
+    }
+
+    public function previewAiTrainingPlan(Request $request, AirmiusAiService $ai)
+    {
+        $maxPlanItems = $this->aiTrainingPlanMaxItems();
+        $data = $request->validate([
+            'title' => ['nullable', 'string', 'max:160'],
+            'goal' => ['required', 'string', 'min:3', 'max:500'],
+            'sport_type' => ['required', 'string', 'max:80'],
+            'training_type' => ['nullable', 'string', 'max:80'],
+            'level' => ['required', Rule::in(['beginner', 'intermediate', 'advanced', 'elite'])],
+            'phase' => ['required', Rule::in(['base', 'build', 'peak', 'recovery', 'rehab'])],
+            'weeks' => ['required', 'integer', 'min:1', 'max:26'],
+            'sessions_per_week' => ['required', 'integer', 'min:1', 'max:6'],
+            'duration_minutes' => ['nullable', 'integer', 'min:10', 'max:240'],
+            'starts_on' => ['nullable', 'date'],
+            'equipment' => ['nullable', 'string', 'max:800'],
+            'constraints' => ['nullable', 'string', 'max:1200'],
+            'preferences' => ['nullable', 'string', 'max:1200'],
+            'revision_instruction' => ['nullable', 'string', 'max:1200'],
+            'current_plan' => ['nullable', 'array'],
+        ]);
+
+        if (((int) $data['weeks'] * (int) $data['sessions_per_week']) > $maxPlanItems) {
+            return response()->json([
+                'message' => "Der Plan ist zu groß für eine saubere KI-Vorschau. Maximal {$maxPlanItems} Einheiten sind erlaubt.",
+            ], 422);
+        }
+
+        try {
+            return response()->json([
+                'message' => 'KI-Vorschlag erstellt. Bitte prüfen und erst danach speichern.',
+                'plan' => $ai->generateTrainingPlan($request->user(), $data),
+            ]);
+        } catch (\Throwable $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+    }
+
+    public function storeAiTrainingPlan(Request $request)
+    {
+        $user = $request->user();
+        $teamIds = $user->teams()->pluck('teams.id')->all();
+        $maxPlanItems = $this->aiTrainingPlanMaxItems();
+        $data = $request->validate([
+            'plan' => ['required', 'array'],
+            'plan.title' => ['required', 'string', 'max:160'],
+            'plan.summary' => ['nullable', 'string', 'max:1000'],
+            'plan.convincing_explanation' => ['nullable', 'string', 'max:2000'],
+            'plan.progression_logic' => ['nullable', 'array'],
+            'plan.progression_logic.*' => ['nullable', 'string', 'max:300'],
+            'plan.analysis_tips' => ['nullable', 'array'],
+            'plan.analysis_tips.*' => ['nullable', 'string', 'max:300'],
+            'plan.adjustment_tips' => ['nullable', 'array'],
+            'plan.adjustment_tips.*' => ['nullable', 'string', 'max:300'],
+            'plan.warnings' => ['nullable', 'array'],
+            'plan.warnings.*' => ['nullable', 'string', 'max:300'],
+            'plan.provider' => ['nullable', 'string', 'max:80'],
+            'plan.provider_label' => ['nullable', 'string', 'max:120'],
+            'plan.model' => ['nullable', 'string', 'max:160'],
+            'plan.settings' => ['nullable', 'array'],
+            'plan.settings.goal' => ['nullable', 'string', 'max:200'],
+            'plan.settings.phase' => ['nullable', Rule::in(['base', 'build', 'peak', 'recovery', 'rehab'])],
+            'plan.settings.level' => ['nullable', Rule::in(['beginner', 'intermediate', 'advanced', 'elite'])],
+            'plan.settings.weeks' => ['nullable', 'integer', 'min:1', 'max:104'],
+            'plan.settings.weekly_sessions' => ['nullable', 'integer', 'min:1', 'max:21'],
+            'plan.items' => ['required', 'array', 'min:1', 'max:'.$maxPlanItems],
+            'plan.items.*.week' => ['nullable', 'integer', 'min:1', 'max:104'],
+            'plan.items.*.day' => ['nullable', 'string', 'max:30'],
+            'plan.items.*.title' => ['required', 'string', 'max:160'],
+            'plan.items.*.sport_type' => ['nullable', 'string', 'max:80'],
+            'plan.items.*.training_type' => ['nullable', 'string', 'max:80'],
+            'plan.items.*.focus' => ['nullable', 'string', 'max:160'],
+            'plan.items.*.description' => ['nullable', 'string', 'max:3000'],
+            'plan.items.*.duration_minutes' => ['nullable', 'integer', 'min:0', 'max:14400'],
+            'plan.items.*.distance_km' => ['nullable', 'numeric', 'min:0', 'max:10000'],
+            'plan.items.*.calories' => ['nullable', 'integer', 'min:0', 'max:200000'],
+            'plan.items.*.intensity' => ['nullable', Rule::in(['locker', 'mittel', 'hart', 'recovery'])],
+            'plan.items.*.load' => ['nullable', Rule::in(['low', 'medium', 'high', 'test'])],
+            'plan.items.*.todos' => ['nullable', 'array'],
+            'plan.items.*.todos.*' => ['nullable', 'string', 'max:300'],
+            'plan.items.*.metrics' => ['nullable', 'array'],
+            'plan.items.*.metrics.*' => ['nullable', 'string', 'max:160'],
+            'plan.items.*.rationale' => ['nullable', 'string', 'max:800'],
+            'starts_on' => ['nullable', 'date'],
+            'status' => ['nullable', Rule::in(['draft', 'published'])],
+            'share_permission' => ['nullable', Rule::in(['read', 'write'])],
+            'team_id' => ['nullable', 'integer', Rule::in($teamIds)],
+            'user_ids' => ['nullable', 'array'],
+            'user_ids.*' => ['integer', 'exists:users,id'],
+        ]);
+
+        $planPayload = $data['plan'];
+        $settings = $planPayload['settings'] ?? [];
+        $startsOn = $data['starts_on'] ?? null;
+        $weeklySessions = max(1, (int) ($settings['weekly_sessions'] ?? 3));
+        $userIds = collect($data['user_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->reject(fn ($id) => $id === (int) $user->id)
+            ->unique()
+            ->values();
+
+        $plan = DB::transaction(function () use ($user, $data, $planPayload, $settings, $startsOn, $weeklySessions, $userIds) {
+            $plan = TrainingPlan::create([
+                'created_by' => $user->id,
+                'team_id' => $data['team_id'] ?? null,
+                'title' => $planPayload['title'],
+                'description' => trim(($planPayload['summary'] ?? '')."\n\nWarum so:\n".($planPayload['convincing_explanation'] ?? '')),
+                'cadence' => 'weekly',
+                'starts_on' => $startsOn,
+                'ends_on' => $startsOn && ! empty($settings['weeks'])
+                    ? CarbonImmutable::parse($startsOn)->addWeeks((int) $settings['weeks'])->subDay()->toDateString()
+                    : null,
+                'status' => $data['status'] ?? 'published',
+                'share_permission' => $data['share_permission'] ?? 'read',
+                'settings' => [
+                    'created_from' => 'ai_training_plan',
+                    'goal' => $settings['goal'] ?? null,
+                    'phase' => $settings['phase'] ?? null,
+                    'level' => $settings['level'] ?? null,
+                    'weeks' => $settings['weeks'] ?? null,
+                    'weekly_sessions' => $settings['weekly_sessions'] ?? null,
+                    'ai_generation' => [
+                        'provider' => $planPayload['provider'] ?? null,
+                        'provider_label' => $planPayload['provider_label'] ?? null,
+                        'model' => $planPayload['model'] ?? null,
+                        'summary' => $planPayload['summary'] ?? null,
+                        'convincing_explanation' => $planPayload['convincing_explanation'] ?? null,
+                        'progression_logic' => array_values(array_filter($planPayload['progression_logic'] ?? [])),
+                        'analysis_tips' => array_values(array_filter($planPayload['analysis_tips'] ?? [])),
+                        'adjustment_tips' => array_values(array_filter($planPayload['adjustment_tips'] ?? [])),
+                        'warnings' => array_values(array_filter($planPayload['warnings'] ?? [])),
+                        'generated_at' => now()->toIso8601String(),
+                    ],
+                ],
+            ]);
+
+            collect($planPayload['items'] ?? [])->values()->each(function (array $item, int $index) use ($plan, $startsOn, $weeklySessions) {
+                $plan->items()->create([
+                    'title' => $item['title'],
+                    'sport_type' => $item['sport_type'] ?? null,
+                    'description' => $item['description'] ?? null,
+                    'scheduled_at' => $this->aiPlanScheduledAt($item, $startsOn, $weeklySessions, $index),
+                    'duration_minutes' => $item['duration_minutes'] ?? null,
+                    'distance_meters' => isset($item['distance_km']) ? (int) round((float) $item['distance_km'] * 1000) : null,
+                    'calories' => $item['calories'] ?? null,
+                    'intensity' => $item['intensity'] ?? null,
+                    'todos' => array_values(array_filter($item['todos'] ?? [])),
+                    'sort_order' => $index + 1,
+                    'metrics' => [
+                        ...$this->cleanMetrics($item['metrics'] ?? []),
+                        ...array_filter([
+                            'Woche' => $item['week'] ?? null,
+                            'Belastung' => $item['load'] ?? null,
+                            'Fokus' => $item['focus'] ?? null,
+                            '_training_type' => $item['training_type'] ?? null,
+                            'Planlogik' => $item['rationale'] ?? null,
+                        ], fn ($value) => $value !== null && $value !== ''),
+                    ],
+                ]);
+            });
+
+            if (! empty($data['team_id'])) {
+                $plan->assignments()->create([
+                    'team_id' => $data['team_id'],
+                    'permission' => $data['share_permission'] ?? 'read',
+                ]);
+            }
+
+            $userIds->each(fn ($userId) => $plan->assignments()->create([
+                'user_id' => $userId,
+                'permission' => $data['share_permission'] ?? 'read',
+            ]));
+
+            return $plan;
+        });
+
+        $plan->load([
+            'creator:id,name,first_name,last_name,email',
+            'team:id,name',
+            'items.logs',
+            'assignments.user:id,name,first_name,last_name,email',
+            'assignments.team:id,name',
+        ]);
+
+        return response()->json([
+            'message' => 'KI-Trainingsplan wurde gespeichert. Du kannst jede Einheit jetzt bearbeiten oder dokumentieren.',
+            'plan' => $this->serializePlan($plan, $user),
+        ], 201);
     }
 
     public function storeLog(Request $request)
@@ -1366,6 +1560,33 @@ class TrainingController extends Controller
         $cleaned = trim(str_replace(['Erledigt | ', 'Erledigt'], '', (string) $notes));
 
         return $cleaned !== '' ? $cleaned : null;
+    }
+
+    private function aiPlanScheduledAt(array $item, ?string $startsOn, int $weeklySessions, int $index): ?CarbonImmutable
+    {
+        if (! empty($item['scheduled_at'])) {
+            return CarbonImmutable::parse($item['scheduled_at']);
+        }
+
+        if (! $startsOn) {
+            return null;
+        }
+
+        $week = max(1, (int) ($item['week'] ?? floor($index / max(1, $weeklySessions)) + 1));
+        $sessions = max(1, $weeklySessions);
+        $slotInWeek = $index % $sessions;
+        $daySpacing = max(1, (int) floor(7 / $sessions));
+
+        return CarbonImmutable::parse($startsOn)
+            ->startOfDay()
+            ->addWeeks($week - 1)
+            ->addDays(min(6, $slotInWeek * $daySpacing))
+            ->setTime(18, 0);
+    }
+
+    private function aiTrainingPlanMaxItems(): int
+    {
+        return max(1, min(156, (int) config('airmius_ai.features.training_plan_generation.max_items', 156)));
     }
 
     private function managedTeamIds(User $user)

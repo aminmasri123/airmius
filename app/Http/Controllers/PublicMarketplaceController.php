@@ -325,7 +325,7 @@ class PublicMarketplaceController extends Controller
 
         if ($enabledProviders === []) {
             throw ValidationException::withMessages([
-                'provider' => 'Aktuell ist noch keine Zahlungsart fuer den Marketplace konfiguriert.',
+                'provider' => 'Aktuell ist noch keine Zahlungsart für den Marketplace konfiguriert.',
             ]);
         }
 
@@ -632,8 +632,8 @@ class PublicMarketplaceController extends Controller
             ['value' => 'equipment', 'label' => 'Equipment', 'icon' => 'las la-dumbbell'],
             ['value' => 'recovery', 'label' => 'Recovery', 'icon' => 'las la-heartbeat'],
             ['value' => 'analysis', 'label' => 'Analyse', 'icon' => 'las la-chart-line'],
-            ['value' => 'nutrition', 'label' => 'Ernaehrung', 'icon' => 'las la-apple-alt'],
-            ['value' => 'plans', 'label' => 'Plaene & Kurse', 'icon' => 'las la-chalkboard-teacher'],
+            ['value' => 'nutrition', 'label' => 'Ernährung', 'icon' => 'las la-apple-alt'],
+            ['value' => 'plans', 'label' => 'Pläne & Kurse', 'icon' => 'las la-chalkboard-teacher'],
             ['value' => 'camps', 'label' => 'Camps', 'icon' => 'las la-campground'],
             ['value' => 'team', 'label' => 'Team & Verein', 'icon' => 'las la-users'],
         ];
@@ -750,7 +750,7 @@ class PublicMarketplaceController extends Controller
             'apparel' => ['shirt', 'trikot', 'bekleidung', 'outfit', 'kleidung'],
             'recovery' => ['recovery', 'regeneration', 'mobility', 'faszien', 'erholung'],
             'analysis' => ['analyse', 'check-up', 'sensorik', 'technik', 'feedback'],
-            'nutrition' => ['ernaehrung', 'wettkampfplanung'],
+            'nutrition' => ['ernährung', 'wettkampfplanung'],
             'plans' => ['trainingsplan', 'kurs', 'playbook', 'fortbildung'],
             'camps' => ['camp', 'clinic', 'workshop'],
             'team' => ['team', 'verein', 'club'],
@@ -762,7 +762,7 @@ class PublicMarketplaceController extends Controller
     {
         return [
             ['label' => 'Running', 'icon' => 'las la-running', 'query' => 'lauf'],
-            ['label' => 'Fussball', 'icon' => 'las la-futbol', 'query' => 'fussball'],
+            ['label' => 'Fußball', 'icon' => 'las la-futbol', 'query' => 'fussball'],
             ['label' => 'Fitness', 'icon' => 'las la-dumbbell', 'query' => 'fitness'],
             ['label' => 'Teamsport', 'icon' => 'las la-users', 'query' => 'team'],
             ['label' => 'Recovery', 'icon' => 'las la-heartbeat', 'segment' => 'recovery'],
@@ -799,8 +799,8 @@ class PublicMarketplaceController extends Controller
     private function availabilityOptions(): array
     {
         return [
-            ['value' => '', 'label' => 'Alle Verfuegbarkeiten'],
-            ['value' => 'available', 'label' => 'Sofort verfuegbar'],
+            ['value' => '', 'label' => 'Alle Verfügbarkeiten'],
+            ['value' => 'available', 'label' => 'Sofort verfügbar'],
             ['value' => 'shippable', 'label' => 'Versandartikel'],
             ['value' => 'digital', 'label' => 'Digital / Termin'],
         ];
@@ -811,14 +811,14 @@ class PublicMarketplaceController extends Controller
         return array_values(array_filter([
             filled(Setting::valueFor('billing_iban')) ? [
                 'value' => 'bank_transfer',
-                'label' => 'Ueberweisung',
-                'description' => 'Bestellung sofort anlegen und per Bankueberweisung bezahlen.',
+                'label' => 'Überweisung',
+                'description' => 'Bestellung sofort anlegen und per Banküberweisung bezahlen.',
                 'icon' => 'las la-university',
             ] : null,
             filled(config('services.stripe.secret')) ? [
                 'value' => 'stripe',
                 'label' => 'Stripe',
-                'description' => 'Sofortige Kartenzahlung ueber Stripe Checkout.',
+                'description' => 'Sofortige Kartenzahlung Über Stripe Checkout.',
                 'icon' => 'las la-credit-card',
             ] : null,
             filled(config('services.paypal.client_id')) && filled(config('services.paypal.client_secret')) ? [
@@ -833,7 +833,7 @@ class PublicMarketplaceController extends Controller
     private function trustBenefits(): array
     {
         return [
-            ['label' => 'Gastkauf moeglich', 'description' => 'Direkt bestellen, Konto optional.', 'icon' => 'las la-user-check'],
+            ['label' => 'Gastkauf möglich', 'description' => 'Direkt bestellen, Konto optional.', 'icon' => 'las la-user-check'],
             ['label' => 'Preis transparent', 'description' => 'Brutto, netto, Steuer und Versand werden ausgewiesen.', 'icon' => 'las la-receipt'],
             ['label' => 'Anbieter sichtbar', 'description' => 'Verein, Trainer oder Shop bleiben klar erkennbar.', 'icon' => 'las la-store'],
             ['label' => 'Bestellstatus', 'description' => 'Updates und Belege werden per E-Mail zugestellt.', 'icon' => 'las la-envelope-open-text'],
@@ -917,7 +917,7 @@ class PublicMarketplaceController extends Controller
             return 'Regeln je Angebot';
         }
 
-        return $days.' Tage Rueckgabe';
+        return $days.' Tage Rückgabe';
     }
 
     private function trustBadges(MarketplaceProduct $product): array
@@ -925,7 +925,7 @@ class PublicMarketplaceController extends Controller
         return array_values(array_filter([
             $this->deliveryLabel($product),
             $this->returnLabel($product),
-            $product->manages_stock ? 'Lagerbestand geprueft' : 'Anfrage / Termin',
+            $product->manages_stock ? 'Lagerbestand geprüft' : 'Anfrage / Termin',
         ]));
     }
 
@@ -1101,7 +1101,7 @@ class PublicMarketplaceController extends Controller
             ->first();
 
         if (! $coupon || ! $coupon->isRedeemable()) {
-            throw ValidationException::withMessages(['coupon_code' => 'Dieser Gutschein ist ungueltig oder abgelaufen.']);
+            throw ValidationException::withMessages(['coupon_code' => 'Dieser Gutschein ist ungültig oder abgelaufen.']);
         }
 
         $oldItemGross = max(0, (int) ($quote['item_gross_cents'] ?? $quote['gross_cents'] ?? 0));

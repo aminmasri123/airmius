@@ -49,8 +49,8 @@ class OutfitPaymentReminderService
         }
 
         AppNotification::send($user, 'outfit.payment.reminder', [
-            'title' => 'Zahlung fuer Outfit-Abo offen',
-            'message' => 'Bitte bezahle dein Outfit-Abo '.$this->planName($subscription).', damit wir deine Box vorbereiten koennen.',
+            'title' => 'Zahlung für Outfit-Abo offen',
+            'message' => 'Bitte bezahle dein Outfit-Abo '.$this->planName($subscription).', damit wir deine Box vorbereiten können.',
             'subscription_id' => $subscription->id,
             'payment_reference' => $subscription->payment_reference,
             'amount_cents' => max(0, (int) $subscription->monthly_price_cents),
@@ -96,8 +96,8 @@ class OutfitPaymentReminderService
 
         if ($user) {
             AppNotification::send($user, 'outfit.payment.expired', [
-                'title' => 'Outfit-Abo Anfrage geloescht',
-                'message' => 'Deine Outfit-Abo Anfrage '.$this->planName($subscription).' wurde geloescht, weil nach 9 Tagen keine Zahlung eingegangen ist.',
+                'title' => 'Outfit-Abo Anfrage gelöscht',
+                'message' => 'Deine Outfit-Abo Anfrage '.$this->planName($subscription).' wurde gelöscht, weil nach 9 Tagen keine Zahlung eingegangen ist.',
                 'subscription_id' => $subscription->id,
                 'payment_reference' => $subscription->payment_reference,
                 'url' => route('auth.outfit-subscriptions.index'),
@@ -152,10 +152,10 @@ class OutfitPaymentReminderService
         $isFinal = $nextLevel >= self::MAX_DUNNING_LEVEL;
 
         AppNotification::send($user, 'outfit.payment.dunning', [
-            'title' => $isFinal ? 'Letzte Mahnung fuer Outfit-Abo' : $nextLevel.'. Mahnung fuer Outfit-Abo',
+            'title' => $isFinal ? 'Letzte Mahnung für Outfit-Abo' : $nextLevel.'. Mahnung für Outfit-Abo',
             'message' => $isFinal
                 ? 'Dein Outfit-Abo '.$this->planName($subscription).' wurde bis zum Zahlungseingang pausiert.'
-                : 'Fuer dein Outfit-Abo '.$this->planName($subscription).' ist eine Zahlung offen.',
+                : 'Für dein Outfit-Abo '.$this->planName($subscription).' ist eine Zahlung offen.',
             'subscription_id' => $subscription->id,
             'dunning_level' => $nextLevel,
             'payment_reference' => $subscription->payment_reference,

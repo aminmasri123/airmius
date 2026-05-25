@@ -112,7 +112,7 @@ const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.h
                 <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">Media & Content</p>
                 <h1 class="mt-1 text-3xl font-bold text-primary">Empfohlene Bildmasse</h1>
                 <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
-                    Zentrale Übersicht für Redakteure, Admins und Vereine: welche Bildgroessen für Profile, Blog,
+                    Zentrale Übersicht für Redakteure, Admins und Vereine: welche Bildgrößen für Profile, Blog,
                     Posts, Videos und weitere Medien am besten funktionieren.
                 </p>
             </div>

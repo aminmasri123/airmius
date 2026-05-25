@@ -43,7 +43,7 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Profil vervollstaendigen" />
+    <Head title="Profil vervollständigen" />
 
     <AuthenticationCard>
         <div class="mx-auto h-36 w-36 md:h-48 md:w-48">

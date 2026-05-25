@@ -16,7 +16,7 @@ const feedbackForm = useForm({
 const statusLabels = {
     draft: 'Entwurf',
     planned: 'Geplant',
-    in_progress: 'Laeuft gerade',
+    in_progress: 'Läuft gerade',
     completed: 'Abgeschlossen',
 }
 
@@ -250,7 +250,7 @@ const comparisonRows = computed(() => {
                 </div>
                 <div class="rounded-xl border border-border bg-inputBg/40 p-3">
                     <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Details</p>
-                    <p class="mt-1 text-sm font-semibold text-primary">{{ log.plan_comparison.actual?.entries_count ?? 0 }} Eintraege</p>
+                    <p class="mt-1 text-sm font-semibold text-primary">{{ log.plan_comparison.actual?.entries_count ?? 0 }} Einträge</p>
                 </div>
             </div>
         </section>

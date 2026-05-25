@@ -50,7 +50,7 @@ const submit = () => {
 
         <div class="rounded-lg border border-border bg-card p-6">
             <h1 class="text-xl font-semibold text-primary">
-                {{ hasExistingAccount ? 'Konto verknuepfen' : 'Elternkonto erstellen' }}
+                {{ hasExistingAccount ? 'Konto verknüpfen' : 'Elternkonto erstellen' }}
             </h1>
             <p class="mt-2 text-sm leading-6 text-secondary">
                 Die E-Mail wurde bereits im Elternbereich bestätigt:
@@ -58,7 +58,7 @@ const submit = () => {
             </p>
 
             <div v-if="hasExistingAccount" class="mt-4 rounded-lg border border-border bg-inputBg p-4 text-sm text-secondary">
-                Zu dieser E-Mail existiert bereits ein Konto. Wenn du fortfährst, verknuepfen wir es als Elternkonto
+                Zu dieser E-Mail existiert bereits ein Konto. Wenn du fortfährst, verknüpfen wir es als Elternkonto
                 mit den Kindern, die diese Eltern-E-Mail verwenden.
             </div>
 
@@ -161,7 +161,7 @@ const submit = () => {
                         :class="{ 'opacity-60': form.processing }"
                         :aria-busy="form.processing"
                     >
-                        {{ hasExistingAccount ? 'Vorhandenes Konto verknuepfen' : 'Elternkonto erstellen' }}
+                        {{ hasExistingAccount ? 'Vorhandenes Konto verknüpfen' : 'Elternkonto erstellen' }}
                     </PrimaryButton>
                 </div>
             </form>

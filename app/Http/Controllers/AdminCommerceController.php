@@ -240,7 +240,7 @@ class AdminCommerceController extends Controller
             'title' => $data['status'] === 'approved' ? 'Shop-Zugang freigegeben' : 'Shop-Antrag aktualisiert',
             'message' => $data['status'] === 'approved'
                 ? 'Du kannst jetzt Produkte im Marketplace verkaufen.'
-                : ($data['review_note'] ?? 'Dein Shop-Antrag wurde geprueft.'),
+                : ($data['review_note'] ?? 'Dein Shop-Antrag wurde geprüft.'),
             'url' => route('auth.commerce.index', ['tab' => 'create']),
         ]);
 
@@ -436,7 +436,7 @@ class AdminCommerceController extends Controller
                             'type' => 'return_restock',
                             'quantity_delta' => (int) $returnRequest->quantity,
                             'stock_after' => $stockAfter,
-                            'note' => 'Ruecksendung #'.$returnRequest->id,
+                            'note' => 'Rücksendung #'.$returnRequest->id,
                         ]);
                     }
                 }
@@ -451,7 +451,7 @@ class AdminCommerceController extends Controller
                 ->notify(new \App\Notifications\CommerceReturnStatusUpdated($returnRequest));
         }
 
-        return back()->with('success', 'Ruecksendung wurde aktualisiert.');
+        return back()->with('success', 'Rücksendung wurde aktualisiert.');
     }
 
     public function updateShipping(Request $request, CommerceOrder $order)
@@ -492,7 +492,7 @@ class AdminCommerceController extends Controller
         ]);
 
         $remainingCents = max(0, (int) $order->amount_cents - (int) $order->refunded_cents);
-        abort_if((int) $data['amount_cents'] > $remainingCents, 422, 'Die Erstattung darf den offenen Restbetrag nicht uebersteigen.');
+        abort_if((int) $data['amount_cents'] > $remainingCents, 422, 'Die Erstattung darf den offenen Restbetrag nicht Übersteigen.');
 
         $providerRefundId = $this->refundViaProvider($order, (int) $data['amount_cents']);
         $before = $order->only(['status', 'refunded_cents', 'refund_provider_id']);
@@ -678,11 +678,11 @@ class AdminCommerceController extends Controller
                         filled($audience['interests'] ?? []) ? 'Interessen' : null,
                         filled($audience['excluded_interests'] ?? []) ? 'Interessen-Ausschluss' : null,
                         filled($audience['age_min'] ?? null) || filled($audience['age_max'] ?? null) ? 'Alter' : null,
-                        filled($audience['devices'] ?? []) ? 'Geraet' : null,
+                        filled($audience['devices'] ?? []) ? 'Gerät' : null,
                         filled($audience['languages'] ?? []) ? 'Sprache' : null,
                         filled($audience['hours'] ?? []) ? 'Zeitfenster' : null,
                     ])->filter()->implode(', ');
-                    $reasons[] = 'Audience aktiv: '.$audienceHints.' koennen Reichweite begrenzen';
+                    $reasons[] = 'Audience aktiv: '.$audienceHints.' können Reichweite begrenzen';
                 }
 
                 $recentEvents = AdEvent::query()
@@ -809,7 +809,7 @@ class AdminCommerceController extends Controller
         ]);
 
         $orders = $this->eligiblePayoutOrdersFor($user)->get();
-        abort_if($orders->isEmpty(), 422, 'Keine auszahlbaren Verkaeufe fuer diesen Anbieter gefunden. Auszahlungen sind erst 14 Tage nach Abschluss ohne Beschwerde oder Ruecksendung moeglich.');
+        abort_if($orders->isEmpty(), 422, 'Keine auszahlbaren Verkäufe für diesen Anbieter gefunden. Auszahlungen sind erst 14 Tage nach Abschluss ohne Beschwerde oder Rücksendung möglich.');
 
         DB::transaction(function () use ($orders, $user, $data) {
             $payout = MarketplacePayout::create([
@@ -1035,9 +1035,9 @@ class AdminCommerceController extends Controller
     private function marketplaceCategoryCommissionsForAdmin(): array
     {
         $defaults = [
-            'equipment' => 'Sportgeraete & Equipment',
+            'equipment' => 'Sportgeräte & Equipment',
             'apparel' => 'Bekleidung & Schuhe',
-            'nutrition' => 'Ernaehrung & Supplements',
+            'nutrition' => 'Ernährung & Supplements',
             'accessories' => 'Zubehoer',
             'digital_products' => 'Digitale Produkte',
             'product' => 'Sonstige Produkte',
@@ -1696,7 +1696,7 @@ class AdminCommerceController extends Controller
         }
 
         if (! filled($product->return_policy_type)) {
-            $issues[] = 'Rueckgaberichtlinie fehlt';
+            $issues[] = 'Rückgaberichtlinie fehlt';
         }
 
         if (! $product->club_id && ! $product->user_id) {
@@ -1854,7 +1854,7 @@ class AdminCommerceController extends Controller
                 'setting_key' => 'marketplace_visual_side_banner',
                 'label' => 'Seitlicher Marketplace-Banner',
                 'description' => 'Schmaler Hintergrund links und rechts. Bitte ohne Text, Logo oder wichtige Motive am Rand hochladen.',
-                'recommended_size' => '192 x 1080 px oder 384 x 2160 px fuer Retina',
+                'recommended_size' => '192 x 1080 px oder 384 x 2160 px für Retina',
                 'default_width' => 192,
                 'default_height' => 1080,
                 'default' => '/images/marketplace/airmius-marketplace-side-banner.png',
@@ -1862,7 +1862,7 @@ class AdminCommerceController extends Controller
             'hero_banner' => [
                 'setting_key' => 'marketplace_visual_hero_banner',
                 'label' => 'Oberer Aktions-/Hero-Banner',
-                'description' => 'Optionales Hauptbild im ersten Marketplace-Bereich. Fokus links/mittig halten, da Text darueber liegen kann.',
+                'description' => 'Optionales Hauptbild im ersten Marketplace-Bereich. Fokus links/mittig halten, da Text darüber liegen kann.',
                 'recommended_size' => '1600 x 900 px',
                 'default_width' => 1600,
                 'default_height' => 900,

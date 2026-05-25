@@ -184,6 +184,6 @@ class ModerationController extends Controller
             ])));
         }
 
-        return 'Datei oder geloeschter Inhalt';
+        return 'Datei oder gelöschter Inhalt';
     }
 }

@@ -46,7 +46,7 @@ const logout = () => router.post(route('logout'))
                 <button
                     type="button"
                     class="absolute right-4 top-4 rounded-lg p-2 text-secondary hover:bg-muted"
-                    aria-label="Support-Fenster schliessen"
+                    aria-label="Support-Fenster schließen"
                     @click="supportModalOpen = false"
                 >
                     <i class="las la-times text-xl"></i>

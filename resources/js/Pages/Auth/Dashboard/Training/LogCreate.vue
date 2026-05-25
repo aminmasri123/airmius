@@ -149,7 +149,7 @@ const detailTemplates = {
         {
             key: 'steady',
             label: 'Ruhiger Dauerlauf',
-            description: 'Nur Gesamtdaten plus Gefuehl dokumentieren.',
+            description: 'Nur Gesamtdaten plus Gefühl dokumentieren.',
             entries: [],
         },
         {
@@ -182,7 +182,7 @@ const detailTemplates = {
             label: 'Teamtraining',
             description: 'Aktivierung, Technik, Spielform, Abschluss.',
             entries: [
-                { title: 'Aktivierung und Mobilitaet', duration_minutes: 12, intensity: 'locker' },
+                { title: 'Aktivierung und Mobilität', duration_minutes: 12, intensity: 'locker' },
                 { title: 'Passform / Technik', duration_minutes: 18, intensity: 'mittel' },
                 { title: 'Spielform 4 gegen 4', duration_minutes: 25, intensity: 'hoch' },
                 { title: 'Torschuss / Standards', duration_minutes: 15, intensity: 'mittel' },
@@ -193,7 +193,7 @@ const detailTemplates = {
         {
             key: 'zone2',
             label: 'Zone 2 Ride',
-            description: 'Grundlage mit ruhiger Intensitaet.',
+            description: 'Grundlage mit ruhiger Intensität.',
             entries: [
                 { title: 'Einrollen', duration_minutes: 10, intensity: 'locker' },
                 { title: 'Zone 2 Block', duration_minutes: 60, intensity: 'Zone 2' },
@@ -450,7 +450,7 @@ const documentationChecklist = computed(() => [
     { label: 'Zeitpunkt', done: Boolean(form.performed_at) },
     { label: 'Belastung', done: Boolean(sessionMinutes.value || sessionDistanceKm.value || completedGymSetCount.value || form.intensity) },
     { label: 'Details', done: hasTrainingDetails.value },
-    { label: 'Koerperfeedback', done: Boolean(form.wellness.rpe || form.wellness.energy || form.wellness.pain || form.wellness.sleep_hours) },
+    { label: 'Körperfeedback', done: Boolean(form.wellness.rpe || form.wellness.energy || form.wellness.pain || form.wellness.sleep_hours) },
     { label: 'Notiz oder Medien', done: Boolean(form.notes || hasAnyMedia.value) },
     { label: 'Sichtbarkeit', done: Boolean(form.privacy_scope) },
 ])
@@ -509,7 +509,7 @@ const fieldLabel = (field) => ({
     long_run: {
         distance_km: 'Distanz km',
         duration_minutes: 'Zeit min',
-        intensity: 'Zone / Gefuehl',
+        intensity: 'Zone / Gefühl',
         notes: 'Notiz',
     },
     swim: {
@@ -517,7 +517,7 @@ const fieldLabel = (field) => ({
         reps: 'Wiederholungen',
         distance_km: 'Meter als km',
         duration_minutes: 'Zeit min',
-        intensity: 'Stil / Intensitaet',
+        intensity: 'Stil / Intensität',
         notes: 'Technik-Hinweis',
     },
     football: {
@@ -538,7 +538,7 @@ const fieldLabel = (field) => ({
     weight_kg: 'Gewicht kg',
     duration_minutes: 'Zeit min',
     distance_km: 'Distanz km',
-    intensity: 'Intensitaet',
+    intensity: 'Intensität',
     notes: 'Kommentar',
 }[field] || field)
 
@@ -670,7 +670,7 @@ const inferTrainingTypeFromPlanItem = (item = {}) => {
     const sport = String(item.sport_type || '').toLowerCase()
     const text = planItemSearchText(item)
 
-    if (sport === 'gym' || text.match(/\b(saetze|sätze|wiederholungen|gewicht|kraft|bankdrücken|bankdrücken|kniebeuge|deadlift)\b/)) return 'gym'
+    if (sport === 'gym' || text.match(/\b(Sätze|sätze|wiederholungen|gewicht|kraft|bankdrücken|bankdrücken|kniebeuge|deadlift)\b/)) return 'gym'
     if (sport === 'schwimmen') return 'swim'
     if (sport === 'fussball' || sport === 'football') return 'football'
     if (sport === 'cycling' || sport === 'radfahren' || sport === 'bike') return 'cycling'
@@ -1192,7 +1192,7 @@ onUnmounted(() => {
                         <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Training</p>
                         <h1 class="mt-1 text-2xl font-semibold text-primary sm:text-3xl">Dokumentieren</h1>
                         <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
-                            Schnell erfassen, Sätze abhaken, bei Bedarf später Details ergaenzen.
+                            Schnell erfassen, Sätze abhaken, bei Bedarf später Details ergänzen.
                         </p>
                     </div>
                     <Link :href="route('auth.training.index')" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
@@ -1372,7 +1372,7 @@ onUnmounted(() => {
                     <label class="hidden text-sm font-semibold text-primary md:block">Status
                         <select v-model="form.status" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" @change="setStatusDefaults">
                             <option value="completed">Abgeschlossen</option>
-                            <option value="in_progress">Laeuft gerade</option>
+                            <option value="in_progress">Läuft gerade</option>
                             <option value="planned">Geplant</option>
                         </select>
                     </label>
@@ -1384,7 +1384,7 @@ onUnmounted(() => {
                             <div>
                                 <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Live-Modus</p>
                                 <p class="mt-1 text-sm font-semibold text-primary">
-                                    <span v-if="isLiveTraining">Training laeuft seit {{ liveElapsedLabel }}</span>
+                                    <span v-if="isLiveTraining">Training läuft seit {{ liveElapsedLabel }}</span>
                                     <span v-else>Schnellstart für Training auf dem Platz, im Gym oder unterwegs.</span>
                                 </p>
                             </div>
@@ -1395,7 +1395,7 @@ onUnmounted(() => {
                                     class="rounded-xl border border-air-blue/40 bg-air-blue/10 px-3 py-2 text-sm font-semibold text-primary hover:bg-air-blue/20"
                                     @click="startLiveTraining"
                                 >
-                                    Laeuft gerade starten
+                                    Läuft gerade starten
                                 </button>
                                 <button
                                     v-if="isLiveTraining"
@@ -1423,7 +1423,7 @@ onUnmounted(() => {
                         <input v-model="form.distance_km" type="number" min="0" step="0.01" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                     </label>
                     <label class="hidden text-sm font-semibold text-primary md:col-span-2 md:block">Notizen
-                        <textarea v-model="form.notes" rows="4" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Gefuehl, Technik, Schmerzen, Besonderheiten" />
+                        <textarea v-model="form.notes" rows="4" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Gefühl, Technik, Schmerzen, Besonderheiten" />
                     </label>
                     <label v-if="form.user_id" class="hidden text-sm font-semibold text-primary md:col-span-2 md:block">Trainer-Hinweis
                         <textarea v-model="form.trainer_feedback" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Hinweise, Korrekturen oder Fokus für die nächste Einheit" />
@@ -1440,7 +1440,7 @@ onUnmounted(() => {
                         <span>
                             <span>{{ form.user_id ? 'Sportler beim Speichern informieren' : 'Trainer beim Speichern informieren' }}</span>
                             <span class="mt-1 block text-xs font-normal leading-5 text-secondary">
-                                Standard ist aktiv. Wenn du es deaktivierst, wird keine Benachrichtigung verschickt; berechtigte Personen koennen die Einheit weiterhin sehen.
+                                Standard ist aktiv. Wenn du es deaktivierst, wird keine Benachrichtigung verschickt; berechtigte Personen können die Einheit weiterhin sehen.
                             </span>
                         </span>
                     </label>
@@ -1459,11 +1459,11 @@ onUnmounted(() => {
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Schritt 3</p>
                     <h2 class="mt-1 text-xl font-semibold text-primary">Training abschließen</h2>
                     <p class="mt-2 text-sm leading-6 text-secondary">
-                        Diese Werte sind bewusst am Ende. Du musst nur eintragen, was du wirklich weisst.
+                        Diese Werte sind bewusst am Ende. Du musst nur eintragen, was du wirklich weißt.
                     </p>
                 </div>
                 <div class="grid gap-4 md:grid-cols-2">
-                    <label class="block text-sm font-semibold text-primary">Intensitaet
+                    <label class="block text-sm font-semibold text-primary">Intensität
                         <select v-model="form.intensity" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
                             <option value="">Keine Angabe</option>
                             <option value="locker">Leicht / locker</option>
@@ -1476,9 +1476,9 @@ onUnmounted(() => {
                         <input v-model="form.calories" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Optional" />
                     </label>
                     <div class="rounded-xl border border-border bg-inputBg/40 p-3 md:col-span-2">
-                        <p class="text-sm font-semibold text-primary">Koerpergefuehl optional</p>
+                        <p class="text-sm font-semibold text-primary">Körpergefühl optional</p>
                         <p class="mt-1 text-xs leading-5 text-secondary">
-                            Nur ausfuellen, wenn du dein Befinden dokumentieren willst. 1 bedeutet niedrig, 10 bedeutet hoch.
+                            Nur ausfüllen, wenn du dein Befinden dokumentieren willst. 1 bedeutet niedrig, 10 bedeutet hoch.
                         </p>
                         <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                             <label class="block text-sm font-semibold text-primary">Anstrengung 1-10
@@ -1541,7 +1541,7 @@ onUnmounted(() => {
                     <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Aktive Vorlage</p>
                     <h2 class="mt-1 text-lg font-semibold text-primary">{{ selectedType.label }}</h2>
                     <p class="mt-2 text-sm leading-6 text-secondary">
-                        {{ usesGymSets ? 'Erfasse zuerst die Übung und darunter jeden Satz einzeln mit eigenen Wiederholungen und Gewicht.' : 'Die Felder passen sich der Trainingsart an. Bei Long Run sind Abschnitte optional, falls du Tempo- oder Kilometerbloecke dokumentieren willst.' }}
+                        {{ usesGymSets ? 'Erfasse zuerst die Übung und darunter jeden Satz einzeln mit eigenen Wiederholungen und Gewicht.' : 'Die Felder passen sich der Trainingsart an. Bei Long Run sind Abschnitte optional, falls du Tempo- oder Kilometerblöcke dokumentieren willst.' }}
                     </p>
                     <div class="mt-4 rounded-xl border border-border bg-inputBg/40 p-3">
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Moment</p>
@@ -1563,7 +1563,7 @@ onUnmounted(() => {
                         </div>
                     </div>
                     <div v-if="isLiveTraining" class="mt-3 rounded-xl border border-success/40 bg-success/10 p-3">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-success">Laeuft gerade</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-success">Läuft gerade</p>
                         <p class="mt-1 text-2xl font-semibold text-primary">{{ liveElapsedLabel }}</p>
                         <div class="mt-3 grid grid-cols-2 gap-2">
                             <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted" @click="setDurationFromLive">
@@ -1593,7 +1593,7 @@ onUnmounted(() => {
                         </div>
                     </div>
                     <div v-if="restSeconds > 0" class="mt-3 rounded-xl border border-air-blue/40 bg-air-blue/10 p-3">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Pause laeuft</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Pause läuft</p>
                         <div class="mt-1 flex items-center justify-between gap-3">
                             <p class="text-2xl font-semibold text-primary">{{ restTimerLabel }}</p>
                             <button type="button" class="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-muted" @click="stopRestTimer">
@@ -1794,7 +1794,7 @@ onUnmounted(() => {
                                 Vorheriger Satz
                             </button>
                             <button type="button" class="rounded-xl border border-border bg-card px-4 py-3 text-sm font-semibold text-primary hover:bg-muted sm:py-2" @click="nextActiveGymSet">
-                                Naechster Satz
+                                Nächster Satz
                             </button>
                             <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary sm:py-2" @click="finishActiveGymSet">
                                 Satz erledigt
@@ -1817,7 +1817,7 @@ onUnmounted(() => {
                         </button>
                     </div>
                     <p v-if="selectedType.key === 'long_run' && !visibleEntries.length" class="rounded-xl border border-border bg-inputBg/40 p-3 text-sm text-secondary">
-                        Bei einem Long Run musst du hier nichts eintragen, wenn du nur Gesamtdauer und Distanz dokumentieren willst. Nutze Abschnitte nur für Kilometerbloecke, Tempoanteile oder besondere Phasen.
+                        Bei einem Long Run musst du hier nichts eintragen, wenn du nur Gesamtdauer und Distanz dokumentieren willst. Nutze Abschnitte nur für Kilometerblöcke, Tempoanteile oder besondere Phasen.
                     </p>
                     <div
                         v-for="(entry, index) in form.entries"
@@ -1973,7 +1973,7 @@ onUnmounted(() => {
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <button type="button" class="rounded-xl border border-border px-3 py-2 text-xs font-semibold text-primary" @click="nextActiveGymSet">
-                            Naechster Satz
+                            Nächster Satz
                         </button>
                         <button type="submit" class="rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-primary disabled:opacity-60" :disabled="form.processing">
                             Speichern
@@ -1986,7 +1986,7 @@ onUnmounted(() => {
                         <div class="min-w-0 flex-1">
                             <p class="truncate text-sm font-semibold text-primary">{{ form.title || selectedType.label }}</p>
                             <p class="truncate text-xs text-secondary">
-                                {{ isLiveTraining ? `Laeuft ${liveElapsedLabel}` : detailSummary }}
+                                {{ isLiveTraining ? `Läuft ${liveElapsedLabel}` : detailSummary }}
                             </p>
                         </div>
                         <button v-if="!isLiveTraining" type="button" class="rounded-xl border border-border px-3 py-3 text-xs font-semibold text-primary" @click="startLiveTraining">

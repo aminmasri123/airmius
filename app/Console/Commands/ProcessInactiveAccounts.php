@@ -10,7 +10,7 @@ use Illuminate\Console\Command;
 
 class ProcessInactiveAccounts extends Command
 {
-    protected $signature = 'airmius:process-inactive-accounts {--dry-run : Nur anzeigen, keine Aenderungen speichern}';
+    protected $signature = 'airmius:process-inactive-accounts {--dry-run : Nur anzeigen, keine ?nderungen speichern}';
 
     protected $description = 'Sendet Inaktivitaetswarnungen und anonymisiert dauerhaft inaktive Konten DSGVO-konform.';
 

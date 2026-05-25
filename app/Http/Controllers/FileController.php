@@ -280,7 +280,7 @@ class FileController extends Controller
 
         $this->service->delete($file);
 
-        return back()->with('success', 'Datei geloescht.');
+        return back()->with('success', 'Datei gelöscht.');
     }
 
     public function update(Request $request, File $file)
@@ -319,7 +319,7 @@ class FileController extends Controller
         abort_unless(
             $request->user()->friendships()->where('friend_id', $targetUser->id)->exists(),
             403,
-            'Dateien koennen nur mit Freunden geteilt werden.'
+            'Dateien können nur mit Freunden geteilt werden.'
         );
 
         $sharedFile = File::firstOrCreate(
@@ -551,7 +551,7 @@ class FileController extends Controller
 
         try {
             Mail::raw(
-                "Hallo,\n\n{$senderName} hat die Datei \"{$fileName}\" mit dir geteilt.\n\nDownload-Link: {$downloadUrl}\n\nDer Link ist bis {$expiresAt->format('d.m.Y H:i')} gueltig.\n\nViele Gruesse\nAirmius",
+                "Hallo,\n\n{$senderName} hat die Datei \"{$fileName}\" mit dir geteilt.\n\nDownload-Link: {$downloadUrl}\n\nDer Link ist bis {$expiresAt->format('d.m.Y H:i')} gültig.\n\nViele Grüße\nAirmius",
                 function ($message) use ($email, $senderName, $fileName) {
                     $message->to($email)
                         ->subject("{$senderName} hat eine Datei mit dir geteilt: {$fileName}");
@@ -560,7 +560,7 @@ class FileController extends Controller
         } catch (Throwable) {
             $share->delete();
 
-            return back()->with('error', 'Die E-Mail konnte nicht gesendet werden. Bitte pruefe die Mail-Konfiguration.');
+            return back()->with('error', 'Die E-Mail konnte nicht gesendet werden. Bitte prüfe die Mail-Konfiguration.');
         }
 
         return back()->with('success', 'Externe Freigabe per E-Mail gesendet.');
@@ -570,13 +570,13 @@ class FileController extends Controller
     {
         if (! $file->isValid()) {
             throw ValidationException::withMessages([
-                'file' => 'Die Datei ist ungueltig oder wurde fehlerhaft uebertragen.',
+                'file' => 'Die Datei ist ungültig oder wurde fehlerhaft Übertragen.',
             ]);
         }
 
         if ((int) $file->getSize() <= 0) {
             throw ValidationException::withMessages([
-                'file' => 'Die Datei ist leer oder wurde falsch uebertragen.',
+                'file' => 'Die Datei ist leer oder wurde falsch Übertragen.',
             ]);
         }
 
@@ -616,7 +616,7 @@ class FileController extends Controller
 
         if (! $this->isSafeFileName($originalName)) {
             throw ValidationException::withMessages([
-                'file' => 'Der Dateiname enthaelt ungueltige Zeichen.',
+                'file' => 'Der Dateiname enthält ungültige Zeichen.',
             ]);
         }
     }
@@ -633,7 +633,7 @@ class FileController extends Controller
 
         if (! $this->isSafeFileName($trimmed)) {
             throw ValidationException::withMessages([
-                'display_name' => 'Der Dateiname enthaelt ungueltige Zeichen.',
+                'display_name' => 'Der Dateiname enthält ungültige Zeichen.',
             ]);
         }
 

@@ -51,7 +51,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                             <dd class="font-semibold text-primary">{{ order.payment_reference }}</dd>
                         </div>
                         <div class="flex justify-between gap-4 border-b border-border pb-3">
-                            <dt class="text-secondary">Faellig bis</dt>
+                            <dt class="text-secondary">Fällig bis</dt>
                             <dd class="font-semibold text-primary">{{ order.due_at }}</dd>
                         </div>
                         <div class="flex justify-between gap-4 border-b border-border pb-3">

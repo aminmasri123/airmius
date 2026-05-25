@@ -43,7 +43,7 @@ class GamificationRuleSeeder extends Seeder
 
             ['key' => 'training_created', 'actor_type' => 'team', 'category' => 'Team & Training', 'label' => 'Training erstellt', 'description' => 'Ein Team erstellt eine Trainingseinheit.', 'xp_amount' => 5, 'daily_limit' => null, 'trust_delta' => 0],
             ['key' => 'event_created', 'actor_type' => 'team', 'category' => 'Team & Training', 'label' => 'Team-Event erstellt', 'description' => 'Ein Team plant ein Event oder Training.', 'xp_amount' => 5, 'daily_limit' => null, 'trust_delta' => 0],
-            ['key' => 'team_member_joined', 'actor_type' => 'team', 'category' => 'Teamaufbau', 'label' => 'Teammitglied hinzugefuegt', 'description' => 'Ein neues Mitglied wurde ins Team aufgenommen.', 'xp_amount' => 3, 'daily_limit' => 5, 'trust_delta' => 0],
+            ['key' => 'team_member_joined', 'actor_type' => 'team', 'category' => 'Teamaufbau', 'label' => 'Teammitglied hinzugefügt', 'description' => 'Ein neues Mitglied wurde ins Team aufgenommen.', 'xp_amount' => 3, 'daily_limit' => 5, 'trust_delta' => 0],
 
             ['key' => 'coach_feedback_created', 'actor_type' => 'trainer', 'category' => 'Bewertung & Feedback', 'label' => 'Konstruktives Feedback', 'description' => 'Trainer dokumentiert hilfreiches Feedback.', 'xp_amount' => 8, 'daily_limit' => 3, 'trust_delta' => 1],
             ['key' => 'training_plan_created', 'actor_type' => 'trainer', 'category' => 'Trainingsmanagement', 'label' => 'Trainingsplan erstellt', 'description' => 'Trainer erstellt einen strukturierten Trainingsplan.', 'xp_amount' => 10, 'daily_limit' => 3, 'trust_delta' => 1],

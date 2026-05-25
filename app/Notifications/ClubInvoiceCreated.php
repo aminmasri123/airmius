@@ -36,16 +36,16 @@ class ClubInvoiceCreated extends Notification
             ->line('Rechnungsnummer: '.$invoice->number)
             ->line('Titel: '.$invoice->title)
             ->line('Betrag: '.$this->amount($invoice))
-            ->line('Faellig bis: '.$this->date($invoice->due_date))
+            ->line('Fällig bis: '.$this->date($invoice->due_date))
             ->when(filled($invoice->description), fn (MailMessage $message) => $message->line($invoice->description))
             ->when(filled($club?->sepa_iban), fn (MailMessage $message) => $message
-                ->line('Zahlung per Ueberweisung:')
+                ->line('Zahlung per Überweisung:')
                 ->line('Kontoinhaber: '.($club->sepa_account_holder ?: $clubName))
                 ->line('IBAN: '.$club->sepa_iban)
                 ->when(filled($club->sepa_bic), fn (MailMessage $mail) => $mail->line('BIC: '.$club->sepa_bic))
                 ->line('Verwendungszweck: '.($invoice->payment_reference ?: $invoice->number)))
             ->action('Rechnung ansehen', route('auth.club-memberships.index'))
-            ->line('Bitte pruefe die Rechnung und begleiche sie fristgerecht.');
+            ->line('Bitte prüfe die Rechnung und begleiche sie fristgerecht.');
 
         if ($this->mailer) {
             $message->mailer($this->mailer);

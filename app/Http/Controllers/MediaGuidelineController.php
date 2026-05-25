@@ -92,7 +92,7 @@ class MediaGuidelineController extends Controller
                     'ratio' => '3.2:1',
                     'formats' => 'JPG, PNG, WebP',
                     'max_size' => 'bis 8 MB',
-                    'note' => 'Wichtige Inhalte mittig platzieren, weil mobile Ansichten seitlich beschneiden koennen.',
+                    'note' => 'Wichtige Inhalte mittig platzieren, weil mobile Ansichten seitlich beschneiden können.',
                     'edit_hint' => 'Bearbeitung im Profil, Verein oder Team.',
                 ],
                 [
@@ -162,7 +162,7 @@ class MediaGuidelineController extends Controller
                     'ratio' => '16:10',
                     'formats' => 'JPG, PNG, WebP',
                     'max_size' => 'bis 8 MB',
-                    'note' => 'Funktioniert für grosse Detailansichten. Wichtiges Motiv mittig halten.',
+                    'note' => 'Funktioniert für große Detailansichten. Wichtiges Motiv mittig halten.',
                     'edit_hint' => 'Bearbeitung beim jeweiligen Marketplace-Produkt.',
                 ],
                 [
@@ -192,7 +192,7 @@ class MediaGuidelineController extends Controller
                     'ratio' => '9:16',
                     'formats' => 'WebP, JPG, PNG',
                     'max_size' => 'bis 8 MB',
-                    'note' => 'Geeignet für Stories oder mobile Kampagnen. Fuer das Dashboard wird daraus nicht das beste Ergebnis, weil dort Querformat stabiler ist.',
+                    'note' => 'Geeignet für Stories oder mobile Kampagnen. Für das Dashboard wird daraus nicht das beste Ergebnis, weil dort Querformat stabiler ist.',
                     'edit_hint' => 'Als Kampagnenmotiv nutzbar; globales Dashboard-Bild ist der Outfit-Abo Hero.',
                 ],
                 [
@@ -315,7 +315,7 @@ class MediaGuidelineController extends Controller
                 'setting_key' => 'outfit_subscription_hero_image',
                 'category' => 'Outfit-Abo',
                 'label' => 'Outfit-Abo Dashboard Hero',
-                'description' => 'Grosses Hero-Bild auf der Outfit-Abo Dashboardseite.',
+                'description' => 'Großes Hero-Bild auf der Outfit-Abo Dashboardseite.',
                 'recommended_size' => '1920 x 1080 px',
                 'ratio' => '16:9',
                 'default' => '/images/marketplace/airmius_outfit_abo.webp',

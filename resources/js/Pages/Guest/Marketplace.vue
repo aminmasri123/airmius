@@ -86,7 +86,7 @@ const mobilePromoSlides = computed(() => {
         return [
             {
                 id: 'marketplace-start',
-                title: 'Sport Deals fuer Training und Team',
+                title: 'Sport Deals für Training und Team',
                 subtitle: 'Produkte, Kurse, Camps und Services an einem Ort.',
                 image_url: props.marketplaceVisuals.hero_banner || '',
                 href: route('guest.marketplace'),
@@ -97,7 +97,7 @@ const mobilePromoSlides = computed(() => {
 
     return uniqueProducts.map((item, index) => ({
         id: item.id || `mobile-slide-${index}`,
-        title: index === 0 ? 'Sport Deals fuer Training und Team' : item.title,
+        title: index === 0 ? 'Sport Deals für Training und Team' : item.title,
         subtitle: item.badge || availabilityLabel(item),
         image_url: index === 0 ? (props.marketplaceVisuals.hero_banner || item.image_url) : item.image_url,
         href: item.show_url || route('guest.marketplace'),

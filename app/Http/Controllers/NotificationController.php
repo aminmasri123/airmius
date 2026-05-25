@@ -54,6 +54,6 @@ class NotificationController extends Controller
 
         $notification->delete();
 
-        return back()->with('success', 'Benachrichtigung wurde geloescht.');
+        return back()->with('success', 'Benachrichtigung wurde gelöscht.');
     }
 }

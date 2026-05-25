@@ -812,7 +812,7 @@ const rejectRecommendation = (recommendation) => {
                             <div class="flex items-center justify-between gap-4">
                                 <div>
                                     <h2 class="text-lg font-bold text-primary">Aktuelle Beiträge</h2>
-                                    <p class="mt-1 text-sm text-secondary">Die letzten sichtbaren Aktivitaeten dieses Profils.</p>
+                                    <p class="mt-1 text-sm text-secondary">Die letzten sichtbaren Aktivitäten dieses Profils.</p>
                                 </div>
                             </div>
 

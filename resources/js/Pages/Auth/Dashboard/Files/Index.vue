@@ -104,8 +104,8 @@ const fileSortOptions = [
     { value: 'name-desc', label: 'Name (Z-A)' },
     { value: 'newest', label: 'Neueste zuerst' },
     { value: 'oldest', label: 'Aelteste zuerst' },
-    { value: 'size-asc', label: 'Groesse aufsteigend' },
-    { value: 'size-desc', label: 'Groesse absteigend' },
+    { value: 'size-asc', label: 'Grüße aufsteigend' },
+    { value: 'size-desc', label: 'Grüße absteigend' },
 ]
 
 const folderSortOptions = [

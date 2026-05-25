@@ -76,7 +76,7 @@ class NutritionController extends Controller
         $product = $lookup->barcode($data['barcode']);
 
         if (! $product) {
-            return response()->json(['message' => 'Kein Produkt fuer diesen Barcode gefunden.'], 404);
+            return response()->json(['message' => 'Kein Produkt für diesen Barcode gefunden.'], 404);
         }
 
         return response()->json(['data' => $product]);
@@ -102,7 +102,7 @@ class NutritionController extends Controller
 
         return response()->json([
             'data' => $suggestion,
-            'message' => 'KI-Vorschlag erstellt. Bitte pruefen und erst danach speichern.',
+            'message' => 'KI-Vorschlag erstellt. Bitte prüfen und erst danach speichern.',
         ]);
     }
 
@@ -115,7 +115,7 @@ class NutritionController extends Controller
 
         return response()->json([
             'data' => (new NutritionGoalResource($goal))->resolve(),
-            'message' => 'Ernaehrungsziel gespeichert.',
+            'message' => 'Ernährungsziel gespeichert.',
         ]);
     }
 

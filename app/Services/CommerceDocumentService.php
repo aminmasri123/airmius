@@ -82,7 +82,7 @@ class CommerceDocumentService
             $pdf->text($profile['invoice_note'], 48, 116, 8, false, AirmiusPdfDocument::SLATE, 95);
         }
 
-        return $pdf->legalFooter($profile, $type === 'credit_note' ? 'Gutschrift wurde erstellt.' : 'Danke fuer deine Bestellung.')->render();
+        return $pdf->legalFooter($profile, $type === 'credit_note' ? 'Gutschrift wurde erstellt.' : 'Danke für deine Bestellung.')->render();
     }
 
     private function money(int $cents, string $currency): string

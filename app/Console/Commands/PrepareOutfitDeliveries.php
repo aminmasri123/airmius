@@ -13,7 +13,7 @@ class PrepareOutfitDeliveries extends Command
     protected $signature = 'airmius:prepare-outfit-deliveries
         {--date= : Stichtag im Format YYYY-MM-DD, Standard ist heute}';
 
-    protected $description = 'Plant faellige monatliche Sportkleidung-Abo-Lieferungen.';
+    protected $description = 'Plant fällige monatliche Sportkleidung-Abo-Lieferungen.';
 
     public function handle(): int
     {
@@ -52,7 +52,7 @@ class PrepareOutfitDeliveries extends Command
 
                     AppNotification::send($subscription->user_id, 'outfit.delivery.planned', [
                         'title' => 'Outfit-Lieferung geplant',
-                        'message' => 'Deine naechste Sportkleidung-Box wird vorbereitet.',
+                        'message' => 'Deine nächste Sportkleidung-Box wird vorbereitet.',
                         'plan' => $subscription->plan?->name,
                         'url' => route('auth.outfit-subscriptions.index'),
                     ]);

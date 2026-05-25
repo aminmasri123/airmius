@@ -129,7 +129,7 @@ const confirmAction = () => {
     router.put(route(routeName, child.id), {}, {
         preserveScroll: true,
         onError: (errors) => {
-            actionError.value = errors?.code || errors?.message || 'Die Aktion konnte nicht ausgefuehrt werden. Bitte versuche es erneut.'
+            actionError.value = errors?.code || errors?.message || 'Die Aktion konnte nicht ausgeführt werden. Bitte versuche es erneut.'
         },
         onFinish: () => {
             processingAction.value = false
@@ -179,7 +179,7 @@ const logout = () => {
                         <h2 class="text-lg font-semibold text-primary">Eigenes Elternkonto nutzen</h2>
                         <p class="mt-1 text-sm leading-6 text-secondary">
                             Du kannst optional ein normales Airmius-Konto mit dieser E-Mail erstellen.
-                            Danach sind die Kinder dauerhaft mit deinem Elternkonto verknuepft.
+                            Danach sind die Kinder dauerhaft mit deinem Elternkonto verknüpft.
                         </p>
                     </div>
 

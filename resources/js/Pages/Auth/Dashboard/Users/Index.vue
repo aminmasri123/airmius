@@ -205,8 +205,8 @@ const initials = (name) => (name || '?')
     .toUpperCase()
 
 const stageLabel = (stage) => ({
-    first: 'Erste Mail faellig',
-    second: 'Zweite Mail faellig',
+    first: 'Erste Mail fällig',
+    second: 'Zweite Mail fällig',
     scheduled: 'Profil ausblenden',
     anonymize: 'Anonymisierung prüfen',
     waiting: 'Warten',

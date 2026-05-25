@@ -64,13 +64,13 @@ class BlogCategoryController extends Controller
 
         if (BlogPost::query()->where('category', $blogCategory->name)->exists()) {
             return back()->withErrors([
-                'category' => 'Diese Kategorie wird noch von Blogbeitraegen verwendet.',
+                'category' => 'Diese Kategorie wird noch von Blogbeiträgen verwendet.',
             ]);
         }
 
         $blogCategory->delete();
 
-        return back()->with('success', 'Blog-Kategorie geloescht.');
+        return back()->with('success', 'Blog-Kategorie gelöscht.');
     }
 
     private function validated(Request $request, ?BlogCategory $blogCategory = null): array

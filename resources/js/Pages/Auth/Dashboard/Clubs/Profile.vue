@@ -324,7 +324,7 @@ const leaveClub = async () => {
                     </div>
 
                     <div>
-                        <label class="text-sm font-semibold text-primary">Strasse</label>
+                        <label class="text-sm font-semibold text-primary">Straße</label>
                         <input v-model="clubForm.street" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </div>
 

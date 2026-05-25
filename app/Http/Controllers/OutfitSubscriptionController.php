@@ -94,8 +94,8 @@ class OutfitSubscriptionController extends Controller
             'shipping_state' => ['nullable', 'string', 'max:255'],
             'shipping_note' => ['nullable', 'string', 'max:1000'],
         ], [
-            'accepted_terms.accepted' => 'Bitte bestaetige AGB und Widerrufshinweise, bevor du das Outfit-Abo anfragst.',
-            'accepted_contract.accepted' => 'Bitte bestaetige den Outfit-Abo-Vertrag, bevor du das Outfit-Abo anfragst.',
+            'accepted_terms.accepted' => 'Bitte bestätige AGB und Widerrufshinweise, bevor du das Outfit-Abo anfragst.',
+            'accepted_contract.accepted' => 'Bitte bestätige den Outfit-Abo-Vertrag, bevor du das Outfit-Abo anfragst.',
         ]);
 
         $existingSubscription = $request->user()
@@ -115,19 +115,19 @@ class OutfitSubscriptionController extends Controller
         $missingAddressFields = collect([
             'shipping_name' => 'Name',
             'shipping_country' => 'Land',
-            'shipping_street' => 'Strasse',
+            'shipping_street' => 'Straße',
             'shipping_postal_code' => 'Postleitzahl',
             'shipping_city' => 'Stadt',
         ])->filter(fn ($label, $field) => blank($shippingAddress[$field] ?? null));
 
         if ($missingAddressFields->isNotEmpty()) {
             return back()
-                ->withErrors(['shipping_address' => 'Bitte vervollstaendige deine Lieferadresse: '.$missingAddressFields->implode(', ').'.'])
+                ->withErrors(['shipping_address' => 'Bitte vervollständige deine Lieferadresse: '.$missingAddressFields->implode(', ').'.'])
                 ->withInput();
         }
 
         if ($paymentProvider === 'bank_transfer' && blank($bankTransfer['iban'])) {
-            return back()->with('error', 'Bankverbindung für Ueberweisung ist noch nicht konfiguriert.');
+            return back()->with('error', 'Bankverbindung für Überweisung ist noch nicht konfiguriert.');
         }
 
         $subscription = OutfitSubscription::query()->create([
@@ -170,7 +170,7 @@ class OutfitSubscriptionController extends Controller
 
         AppNotification::send($request->user(), 'outfit.subscription.pending_payment', [
             'title' => 'Outfit-Abo wartet auf Zahlung',
-            'message' => "Dein Outfit-Abo {$plan->name} wurde vorgemerkt. Es wird erst nach bestaetigter Zahlung aktiviert.",
+            'message' => "Dein Outfit-Abo {$plan->name} wurde vorgemerkt. Es wird erst nach bestätigter Zahlung aktiviert.",
             'plan' => $plan->name,
             'amount_cents' => $subscription->monthly_price_cents,
             'currency' => $subscription->currency,
@@ -194,7 +194,7 @@ class OutfitSubscriptionController extends Controller
 
         return redirect()
             ->route('auth.outfit-subscriptions.index')
-            ->with('success', 'PayPal-Zahlung wurde verarbeitet. Dein Outfit-Abo wird aktiviert, sobald PayPal die Zahlung bestaetigt.');
+            ->with('success', 'PayPal-Zahlung wurde verarbeitet. Dein Outfit-Abo wird aktiviert, sobald PayPal die Zahlung bestätigt.');
     }
 
     public function cancelCheckout(Request $request, OutfitSubscription $subscription)
@@ -313,7 +313,7 @@ class OutfitSubscriptionController extends Controller
         $minimumTermEndsAt = $this->minimumTermEndsAt($subscription);
 
         if (! $wasPending && $minimumTermEndsAt && $minimumTermEndsAt->isFuture()) {
-            return back()->with('error', 'Dieses Outfit-Abo kann erst nach der Mindestlaufzeit ab dem '.$minimumTermEndsAt->format('d.m.Y').' gekuendigt werden.');
+            return back()->with('error', 'Dieses Outfit-Abo kann erst nach der Mindestlaufzeit ab dem '.$minimumTermEndsAt->format('d.m.Y').' gekündigt werden.');
         }
 
         if ($wasPending) {
@@ -343,7 +343,7 @@ class OutfitSubscriptionController extends Controller
                 : null,
         ]);
 
-        return back()->with('success', 'Outfit-Abo wurde zum '.$effectiveAt->format('d.m.Y').' gekuendigt.');
+        return back()->with('success', 'Outfit-Abo wurde zum '.$effectiveAt->format('d.m.Y').' gekündigt.');
     }
 
     public function requestDeliveryIssue(Request $request, OutfitDelivery $delivery)
@@ -383,7 +383,7 @@ class OutfitSubscriptionController extends Controller
 
         $this->notifyOutfitDeliveryIssueRequested($request, $delivery->fresh(['subscription.plan']));
 
-        return back()->with('success', 'Deine Meldung wurde gesendet. Unser Team prueft die Lieferung.');
+        return back()->with('success', 'Deine Meldung wurde gesendet. Unser Team prüft die Lieferung.');
     }
 
     private function authorizeSubscription(Request $request, OutfitSubscription $subscription): void
@@ -539,10 +539,10 @@ class OutfitSubscriptionController extends Controller
         $rules = $this->contractRules($plan);
         $terms = $plan->contract_terms ?: [
             'Das Outfit-Abo ist ein monatliches Abonnement mit wiederkehrender Zahlung.',
-            'Die erste Lieferung wird erst nach bestaetigter Zahlung vorbereitet.',
-            'Pause und Kuendigung gelten nur für zukuenftige Lieferungen.',
+            'Die erste Lieferung wird erst nach bestätigter Zahlung vorbereitet.',
+            'Pause und Kündigung gelten nur für zukünftige Lieferungen.',
             'Bereits vorbereitete, versendete oder zugestellte Boxen bleiben kostenpflichtig.',
-            'Bei PayPal wird der Monatsbetrag automatisch wiederkehrend eingezogen, bis die Pause oder Kuendigung wirksam ist.',
+            'Bei PayPal wird der Monatsbetrag automatisch wiederkehrend eingezogen, bis die Pause oder Kündigung wirksam ist.',
         ];
 
         return array_merge($rules, [
@@ -593,7 +593,7 @@ class OutfitSubscriptionController extends Controller
         $subscription->loadMissing('plan', 'user');
 
         $amountCents = max(0, (int) $subscription->monthly_price_cents);
-        abort_if($amountCents <= 0, 422, 'Kostenlose Outfit-Abos koennen nicht per PayPal verarbeitet werden.');
+        abort_if($amountCents <= 0, 422, 'Kostenlose Outfit-Abos können nicht per PayPal verarbeitet werden.');
 
         $planId = $this->ensurePayPalPlan($subscription->plan, $amountCents, $subscription->currency);
 
@@ -811,7 +811,7 @@ class OutfitSubscriptionController extends Controller
                 'status' => 'planned',
                 'delivery_month' => now()->addMonth()->startOfMonth(),
                 'items' => [],
-                'notes' => 'PayPal-Zahlung bestaetigt. Erste personalisierte Box wird vorbereitet.',
+                'notes' => 'PayPal-Zahlung bestätigt. Erste personalisierte Box wird vorbereitet.',
             ]);
         }
 
@@ -819,7 +819,7 @@ class OutfitSubscriptionController extends Controller
 
         AppNotification::send($subscription->user_id, 'outfit.subscription.paid', [
             'title' => 'Outfit-Abo aktiviert',
-            'message' => 'Deine Zahlung für '.$subscription->plan?->name.' wurde bestaetigt. Dein Outfit-Abo ist jetzt aktiv.',
+            'message' => 'Deine Zahlung für '.$subscription->plan?->name.' wurde bestätigt. Dein Outfit-Abo ist jetzt aktiv.',
             'url' => route('auth.outfit-subscriptions.index'),
             'subscription_id' => $subscription->id,
         ]);

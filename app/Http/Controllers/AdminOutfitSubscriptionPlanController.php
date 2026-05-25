@@ -105,7 +105,7 @@ class AdminOutfitSubscriptionPlanController extends Controller
 
         $plan->delete();
 
-        return back()->with('success', 'Plan wurde geloescht.');
+        return back()->with('success', 'Plan wurde gelöscht.');
     }
 
     public function updateVisuals(Request $request)
@@ -143,7 +143,7 @@ class AdminOutfitSubscriptionPlanController extends Controller
                 'status' => 'planned',
                 'delivery_month' => now()->addMonth()->startOfMonth(),
                 'items' => [],
-                'notes' => trim('Zahlung bestaetigt. '.($data['payment_note'] ?? 'Erste personalisierte Box wird vorbereitet.')),
+                'notes' => trim('Zahlung bestätigt. '.($data['payment_note'] ?? 'Erste personalisierte Box wird vorbereitet.')),
             ]);
         }
 
@@ -159,12 +159,12 @@ class AdminOutfitSubscriptionPlanController extends Controller
 
         AppNotification::send($subscription->user_id, 'outfit.subscription.paid', [
             'title' => 'Outfit-Abo aktiviert',
-            'message' => 'Deine Zahlung für '.$subscription->plan?->name.' wurde bestaetigt. Dein Outfit-Abo ist jetzt aktiv.',
+            'message' => 'Deine Zahlung für '.$subscription->plan?->name.' wurde bestätigt. Dein Outfit-Abo ist jetzt aktiv.',
             'url' => route('auth.outfit-subscriptions.index'),
             'subscription_id' => $subscription->id,
         ]);
 
-        return back()->with('success', 'Zahlung wurde bestaetigt und das Outfit-Abo aktiviert.');
+        return back()->with('success', 'Zahlung wurde bestätigt und das Outfit-Abo aktiviert.');
     }
 
     public function markSubscriptionUnpaid(Request $request, OutfitSubscription $subscription)
@@ -198,7 +198,7 @@ class AdminOutfitSubscriptionPlanController extends Controller
 
         AppNotification::send($subscription->user_id, 'outfit.payment.opened_by_admin', [
             'title' => 'Outfit-Abo Zahlung offen',
-            'message' => trim('Fuer dein Outfit-Abo '.$subscription->plan?->name.' wurde eine offene Zahlung hinterlegt. '.($data['reason'] ?? '')),
+            'message' => trim('Für dein Outfit-Abo '.$subscription->plan?->name.' wurde eine offene Zahlung hinterlegt. '.($data['reason'] ?? '')),
             'url' => route('auth.outfit-subscriptions.index'),
             'subscription_id' => $subscription->id,
         ]);
@@ -222,7 +222,7 @@ class AdminOutfitSubscriptionPlanController extends Controller
 
         AppNotification::send($subscription->user_id, 'outfit.subscription.shipping_address_updated', [
             'title' => 'Lieferadresse aktualisiert',
-            'message' => 'Die Lieferadresse fuer dein Outfit-Abo '.$subscription->plan?->name.' wurde aktualisiert.',
+            'message' => 'Die Lieferadresse für dein Outfit-Abo '.$subscription->plan?->name.' wurde aktualisiert.',
             'url' => route('auth.outfit-subscriptions.index'),
             'subscription_id' => $subscription->id,
         ]);
@@ -291,7 +291,7 @@ class AdminOutfitSubscriptionPlanController extends Controller
         ]);
 
         if ($subscription->payment_provider === 'paypal' && $subscription->provider_subscription_id) {
-            $this->cancelPayPalSubscription($subscription, 'Abo wurde durch Admin geloescht.');
+            $this->cancelPayPalSubscription($subscription, 'Abo wurde durch Admin gelöscht.');
         }
 
         $this->audit->log(
@@ -303,7 +303,7 @@ class AdminOutfitSubscriptionPlanController extends Controller
 
         $subscription->delete();
 
-        return back()->with('success', 'Outfit-Abo wurde geloescht.');
+        return back()->with('success', 'Outfit-Abo wurde gelöscht.');
     }
 
     public function updateDelivery(Request $request, OutfitDelivery $delivery)
@@ -460,7 +460,7 @@ class AdminOutfitSubscriptionPlanController extends Controller
 
         $delivery->delete();
 
-        return back()->with('success', 'Lieferung wurde geloescht.');
+        return back()->with('success', 'Lieferung wurde gelöscht.');
     }
 
     private function validatedData(Request $request): array
@@ -675,11 +675,11 @@ class AdminOutfitSubscriptionPlanController extends Controller
         $planName = $delivery->subscription?->plan?->name ?? 'Outfit-Abo';
 
         return match ($delivery->status) {
-            'preparing' => "Deine Lieferung fuer {$planName} wird vorbereitet.",
-            'shipped' => "Deine Lieferung fuer {$planName} wurde versendet.",
-            'delivered' => "Deine Lieferung fuer {$planName} wurde als geliefert markiert.",
-            'cancelled' => "Deine Lieferung fuer {$planName} wurde storniert.",
-            default => "Deine Lieferung fuer {$planName} wurde geplant.",
+            'preparing' => "Deine Lieferung für {$planName} wird vorbereitet.",
+            'shipped' => "Deine Lieferung für {$planName} wurde versendet.",
+            'delivered' => "Deine Lieferung für {$planName} wurde als geliefert markiert.",
+            'cancelled' => "Deine Lieferung für {$planName} wurde storniert.",
+            default => "Deine Lieferung für {$planName} wurde geplant.",
         };
     }
 
@@ -818,13 +818,13 @@ class AdminOutfitSubscriptionPlanController extends Controller
         $planName = $delivery->subscription?->plan?->name ?? 'Outfit-Abo';
 
         return match ($delivery->issue_status) {
-            'reviewing' => "Deine Meldung fuer {$planName} wird geprueft.",
-            'approved' => "Deine Meldung fuer {$planName} wurde freigegeben.",
-            'return_waiting' => "Wir warten auf deine Ruecksendung fuer {$planName}.",
-            'replacement_preparing' => "Dein Ersatz fuer {$planName} wird vorbereitet.",
-            'resolved' => "Dein Support-Vorgang fuer {$planName} wurde geloest.",
-            'rejected' => "Dein Support-Vorgang fuer {$planName} wurde abgeschlossen.",
-            default => "Dein Support-Vorgang fuer {$planName} wurde aktualisiert.",
+            'reviewing' => "Deine Meldung für {$planName} wird geprüft.",
+            'approved' => "Deine Meldung für {$planName} wurde freigegeben.",
+            'return_waiting' => "Wir warten auf deine Rücksendung für {$planName}.",
+            'replacement_preparing' => "Dein Ersatz für {$planName} wird vorbereitet.",
+            'resolved' => "Dein Support-Vorgang für {$planName} wurde geloest.",
+            'rejected' => "Dein Support-Vorgang für {$planName} wurde abgeschlossen.",
+            default => "Dein Support-Vorgang für {$planName} wurde aktualisiert.",
         };
     }
 

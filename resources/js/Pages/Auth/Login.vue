@@ -35,8 +35,8 @@ const submit = () => {
 };
 
 const fallbackImages = [
-    { src: '/img/login/bild1.png', alt: 'Airmius Neueroeffnung Sport-Plattform' },
-    { src: '/img/login/bild2.png', alt: 'Airmius Neueroeffnung Marketplace' },
+    { src: '/img/login/bild1.png', alt: 'Airmius Neueröffnung Sport-Plattform' },
+    { src: '/img/login/bild2.png', alt: 'Airmius Neueröffnung Marketplace' },
     { src: '/img/login/bild3.png', alt: 'Airmius Community Gamification' },
     { src: '/img/login/bild4.png', alt: 'Airmius Gemeinsam aktiv' },
 ]

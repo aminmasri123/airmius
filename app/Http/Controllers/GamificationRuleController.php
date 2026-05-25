@@ -146,7 +146,7 @@ class GamificationRuleController extends Controller
         }
 
         if ($rules->where('is_penalty', true)->isEmpty()) {
-            $notes[] = 'Keine Penalty-Regel fuer Missbrauch';
+            $notes[] = 'Keine Penalty-Regel für Missbrauch';
         }
 
         if ($rules->where('is_active', true)->isEmpty()) {
@@ -162,19 +162,19 @@ class GamificationRuleController extends Controller
 
         if ($rule->is_penalty && $xpAmount > 0) {
             throw ValidationException::withMessages([
-                'rules' => 'Strafregeln duerfen keine positiven XP vergeben.',
+                'rules' => 'Strafregeln dürfen keine positiven XP vergeben.',
             ]);
         }
 
         if (! $rule->is_penalty && $xpAmount < 0) {
             throw ValidationException::withMessages([
-                'rules' => 'Positive Regeln duerfen keine XP abziehen.',
+                'rules' => 'Positive Regeln dürfen keine XP abziehen.',
             ]);
         }
 
         if ($rule->is_penalty && ($ruleData['daily_limit'] ?? null) !== null) {
             throw ValidationException::withMessages([
-                'rules' => 'Daily Limits sind nur fuer positive Belohnungsregeln vorgesehen.',
+                'rules' => 'Daily Limits sind nur für positive Belohnungsregeln vorgesehen.',
             ]);
         }
     }

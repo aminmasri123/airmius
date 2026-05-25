@@ -85,10 +85,10 @@ class SendLearningDripNotifications extends Command
         try {
             Mail::raw(implode("\n\n", [
                 'Hallo '.$enrollment->user->name.',',
-                'eine neue Lektion ist jetzt fuer dich freigeschaltet:',
+                'eine neue Lektion ist jetzt für dich freigeschaltet:',
                 $lesson->title,
                 route('guest.learning.courses.show', $enrollment->course),
-                'Viele Gruesse',
+                'Viele Grüße',
                 'Airmius',
             ]), function ($message) use ($enrollment) {
                 $message->to($enrollment->user->email)

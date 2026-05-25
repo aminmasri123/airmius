@@ -418,7 +418,7 @@ const visibleShopProducts = computed(() => {
     return []
 })
 const visibleShopProductTitle = computed(() => 'Kurse und E-Learning')
-const visibleShopProductDescription = computed(() => 'Online-Kurse, Trainingsplaene und digitale Lernangebote kaufen.')
+const visibleShopProductDescription = computed(() => 'Online-Kurse, Trainingspläne und digitale Lernangebote kaufen.')
 const showAccountShop = computed(() => ['all', 'account'].includes(shopView.value))
 const showOutfitShop = computed(() => ['all', 'outfit'].includes(shopView.value))
 const showProductShop = computed(() => ['all', 'courses'].includes(shopView.value))
@@ -1676,12 +1676,12 @@ onMounted(() => {
                         </select>
                         <p v-if="sellerApplicationForm.errors.applicant_type" class="text-sm text-error">{{ sellerApplicationForm.errors.applicant_type }}</p>
                         <input v-model="sellerApplicationForm.business_name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Shop-/Firmenname optional">
-                        <textarea v-model="sellerApplicationForm.notes" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kurz beschreiben, was du verkaufen moechtest"></textarea>
+                        <textarea v-model="sellerApplicationForm.notes" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Kurz beschreiben, was du verkaufen möchtest"></textarea>
 
                         <div class="grid gap-2 rounded-lg border border-border bg-card p-3 text-sm text-primary">
                             <label class="flex items-start gap-2">
                                 <input v-model="sellerApplicationForm.rule_product_truth" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
-                                <span>Ich bestaetige, dass Preise, Bilder, Bestand und Beschreibung korrekt sind.</span>
+                                <span>Ich bestätige, dass Preise, Bilder, Bestand und Beschreibung korrekt sind.</span>
                             </label>
                             <label class="flex items-start gap-2">
                                 <input v-model="sellerApplicationForm.rule_rights" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
@@ -1701,7 +1701,7 @@ onMounted(() => {
                             </label>
                         </div>
                         <div v-if="Object.keys(sellerApplicationForm.errors).length" class="rounded-lg border border-error/40 bg-error/10 p-3 text-sm text-error">
-                            Bitte bestaetige alle Regeln, bevor du den Shop-Antrag absendest.
+                            Bitte bestätige alle Regeln, bevor du den Shop-Antrag absendest.
                         </div>
                         <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="sellerApplicationForm.processing">
                             Shop-Antrag senden
@@ -1797,14 +1797,14 @@ onMounted(() => {
                     <p v-if="productForm.errors.digital_delivery_note" class="text-sm text-error">{{ productForm.errors.digital_delivery_note }}</p>
                     <div v-if="isLearningOffer" class="grid gap-3 rounded-lg border border-border bg-bg p-3">
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Mit Sportschule-Kurs verknuepfen</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">Mit Sportschule-Kurs verknüpfen</label>
                             <select v-model="productForm.learning_course_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option value="">Keinen Kurs automatisch freischalten</option>
                                 <option v-for="course in learningCourses" :key="course.id" :value="course.id">
                                     {{ course.title }} - {{ course.status }}
                                 </option>
                             </select>
-                            <p class="mt-1 text-xs text-secondary">Nach bezahlter Bestellung wird der verknuepfte Kurs automatisch für den Käufer freigeschaltet.</p>
+                            <p class="mt-1 text-xs text-secondary">Nach bezahlter Bestellung wird der verknüpfte Kurs automatisch für den Käufer freigeschaltet.</p>
                             <p v-if="productForm.errors.learning_course_id" class="mt-1 text-sm text-error">{{ productForm.errors.learning_course_id }}</p>
                         </div>
                         <div>
@@ -1871,8 +1871,8 @@ onMounted(() => {
                     <div v-if="productForm.manages_stock && productForm.product_type !== 'digital'" class="rounded-lg border border-border bg-bg p-3">
                         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <div>
-                                <h3 class="text-sm font-semibold text-primary">Laenderbestand</h3>
-                                <p class="text-xs text-secondary">Nur Laender mit aktivem Bestand werden im internationalen Marketplace angeboten.</p>
+                                <h3 class="text-sm font-semibold text-primary">Länderbestand</h3>
+                                <p class="text-xs text-secondary">Nur Länder mit aktivem Bestand werden im internationalen Marketplace angeboten.</p>
                             </div>
                             <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="addProductInventoryRow">
                                 Land hinzufügen
@@ -1892,7 +1892,7 @@ onMounted(() => {
                                 </button>
                             </div>
                         </div>
-                        <p class="mt-2 text-xs text-secondary">Aktueller Gesamtbestand aus Laendern: {{ inventoryTotalStock }}</p>
+                        <p class="mt-2 text-xs text-secondary">Aktueller Gesamtbestand aus Ländern: {{ inventoryTotalStock }}</p>
                         <p v-if="productForm.errors.inventories" class="mt-2 text-sm text-error">{{ productForm.errors.inventories }}</p>
                     </div>
                     <div class="rounded-lg border border-border bg-bg p-3">
@@ -2070,7 +2070,7 @@ onMounted(() => {
                     <select v-model="websiteForm.club_id" class="rounded-lg border-border bg-inputBg text-sm text-primary">
                         <option v-for="club in clubs" :key="club.id" :value="club.id">{{ club.name }}</option>
                     </select>
-                    <input v-model="websiteForm.domain" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Gewuenschte Domain">
+                    <input v-model="websiteForm.domain" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Gewünschte Domain">
                     <textarea v-model="websiteForm.goals" rows="3" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Was soll die Website können?"></textarea>
                     <textarea v-model="websiteForm.notes" rows="2" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Weitere Hinweise"></textarea>
                     <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary">Anfrage senden</button>
@@ -2204,7 +2204,7 @@ onMounted(() => {
                         <p class="mt-2 text-sm font-semibold text-primary">{{ selectedAdFormat.size }} · {{ selectedAdFormat.ratio }}</p>
                         <p class="text-xs text-secondary">{{ selectedAdFormat.hint }}</p>
                         <p class="mt-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-secondary">
-                            Placement entscheidet den Ort. Creative Format entscheidet nur Groesse und Seitenverhaeltnis der Anzeige.
+                            Placement entscheidet den Ort. Creative Format entscheidet nur Grüße und Seitenverhaeltnis der Anzeige.
                         </p>
                     </div>
                     <input v-model="campaignForm.creative_image_url" type="url" class="hidden rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL optional">
@@ -2655,8 +2655,8 @@ onMounted(() => {
                 <div v-if="editProductForm.manages_stock" class="mt-4 rounded-lg border border-border bg-bg p-3">
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <h3 class="text-sm font-semibold text-primary">Laenderbestand</h3>
-                            <p class="text-xs text-secondary">Steuert, in welchen Laendern dein Produkt sichtbar und kaufbar ist.</p>
+                            <h3 class="text-sm font-semibold text-primary">Länderbestand</h3>
+                            <p class="text-xs text-secondary">Steuert, in welchen Ländern dein Produkt sichtbar und kaufbar ist.</p>
                         </div>
                         <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="addEditProductInventoryRow">
                             Land hinzufügen
@@ -2676,7 +2676,7 @@ onMounted(() => {
                             </button>
                         </div>
                     </div>
-                    <p v-if="!editProductForm.inventories.length" class="mt-3 text-sm text-secondary">Noch kein Laenderbestand gepflegt.</p>
+                    <p v-if="!editProductForm.inventories.length" class="mt-3 text-sm text-secondary">Noch kein Länderbestand gepflegt.</p>
                 </div>
 
                 <div v-if="Object.keys(editProductForm.errors || {}).length" class="mt-4 rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
@@ -2951,7 +2951,7 @@ onMounted(() => {
                         <p class="mt-2 text-sm font-semibold text-primary">{{ selectedEditAdFormat.size }} - {{ selectedEditAdFormat.ratio }}</p>
                         <p class="text-xs text-secondary">{{ selectedEditAdFormat.hint }}</p>
                         <p class="mt-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-secondary">
-                            Placement entscheidet den Ort. Creative Format entscheidet nur Groesse und Seitenverhaeltnis der Anzeige.
+                            Placement entscheidet den Ort. Creative Format entscheidet nur Grüße und Seitenverhaeltnis der Anzeige.
                         </p>
                     </div>
                     <input v-model="editCampaignForm.creative_image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL optional">

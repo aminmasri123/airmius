@@ -20,7 +20,7 @@ class SendMembershipAndBillingReminders extends Command
 {
     protected $signature = 'airmius:send-membership-billing-reminders
         {--membership-days=30 : Tage vor Ablauf einer Vereinsmitgliedschaft}
-        {--invoice-days=7 : Tage vor Faelligkeit einer Rechnung}
+        {--invoice-days=7 : Tage vor Fälligkeit einer Rechnung}
         {--subscription-days=14 : Tage vor Ablauf eines Airmius-Abos}';
 
     protected $description = 'Benachrichtigt Vereine und Sportler über bald endende Mitgliedschaften, Abos und fällige Beitragszahlungen.';

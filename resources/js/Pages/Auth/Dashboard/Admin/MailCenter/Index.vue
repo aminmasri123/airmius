@@ -167,7 +167,7 @@ const readyLabel = (sender) => {
         return 'Lokal: Log'
     }
 
-    return sender.ready ? 'Bereit' : 'Unvollstaendig'
+    return sender.ready ? 'Bereit' : 'Unvollständig'
 }
 </script>
 
@@ -298,7 +298,7 @@ const readyLabel = (sender) => {
                                     v-model="senderForms[sender.category].new_password"
                                     type="password"
                                     autocomplete="new-password"
-                                    placeholder="Leer lassen, um Passwort nicht zu aendern"
+                                    placeholder="Leer lassen, um Passwort nicht zu ?ndern"
                                     class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary"
                                 >
                             </label>
@@ -362,7 +362,7 @@ const readyLabel = (sender) => {
             <div class="border-b border-border p-5">
                 <h2 class="text-lg font-semibold text-primary">Mailbox-Audit</h2>
                 <p class="mt-1 text-sm text-secondary">
-                    Protokolliert werden Änderungen und Testversand ohne Klartext-Passwoerter.
+                    Protokolliert werden Änderungen und Testversand ohne Klartext-Passwörter.
                 </p>
             </div>
             <div class="overflow-x-auto">
@@ -378,7 +378,7 @@ const readyLabel = (sender) => {
                     </thead>
                     <tbody class="divide-y divide-border">
                         <tr v-if="!audits.length">
-                            <td colspan="5" class="px-5 py-8 text-center text-secondary">Noch keine Audit-Eintraege.</td>
+                            <td colspan="5" class="px-5 py-8 text-center text-secondary">Noch keine Audit-Einträge.</td>
                         </tr>
                         <tr v-for="audit in audits" :key="audit.id">
                             <td class="px-5 py-4 text-secondary">{{ audit.created_at }}</td>
@@ -403,7 +403,7 @@ const readyLabel = (sender) => {
                     <div>
                         <h2 class="text-lg font-semibold text-primary">Versandprotokoll</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            Neue Eintraege erscheinen für Mails, die über die zentrale Mail-Schicht laufen.
+                            Neue Einträge erscheinen für Mails, die über die zentrale Mail-Schicht laufen.
                         </p>
                     </div>
                     <form class="grid gap-3 sm:grid-cols-[12rem_16rem_auto]" @submit.prevent="applyFilters">
@@ -441,7 +441,7 @@ const readyLabel = (sender) => {
                     <tbody class="divide-y divide-border">
                         <tr v-if="!deliveryRows.length">
                             <td colspan="7" class="px-5 py-10 text-center text-secondary">
-                                Noch keine Mail-Eintraege vorhanden.
+                                Noch keine Mail-Einträge vorhanden.
                             </td>
                         </tr>
                         <tr v-for="delivery in deliveryRows" :key="delivery.id" class="align-top">

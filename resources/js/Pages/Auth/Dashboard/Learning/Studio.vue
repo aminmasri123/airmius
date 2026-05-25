@@ -20,7 +20,7 @@ const uploadState = ref({ key: '', error: '' })
 
 const courseCategories = [
     ['training', 'Training'],
-    ['nutrition', 'Ernaehrung'],
+    ['nutrition', 'Ernährung'],
     ['mindset', 'Mindset'],
     ['tactics', 'Taktik'],
     ['rehab', 'Reha & Praevention'],
@@ -606,7 +606,7 @@ const submitQuestionReply = (question) => {
                             <p class="mt-1 text-xl font-bold text-primary">{{ selectedCourse.analytics?.average_rating || '-' }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-bg p-3">
-                            <p class="text-xs uppercase text-secondary">Verkaeufe</p>
+                            <p class="text-xs uppercase text-secondary">Verkäufe</p>
                             <p class="mt-1 text-xl font-bold text-primary">{{ selectedCourse.analytics?.sales_count || 0 }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-bg p-3">
@@ -838,7 +838,7 @@ const submitQuestionReply = (question) => {
                         <div class="grid gap-3 lg:grid-cols-3">
                             <input v-model="courseForm.certificate_logo_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Zertifikat Logo URL">
                             <input v-model="courseForm.certificate_signature_name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Signatur auf Zertifikat">
-                            <input v-model="courseForm.certificate_footer_text" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Zertifikat Fusszeile">
+                            <input v-model="courseForm.certificate_footer_text" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Zertifikat Fußzeile">
                         </div>
                         <input v-model="courseForm.tags_text" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Tags durch Komma trennen">
                         <div class="grid gap-3 lg:grid-cols-4">
@@ -992,7 +992,7 @@ const submitQuestionReply = (question) => {
                             <textarea v-model="assignmentForm.instructions" rows="5" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Aufgabenstellung"></textarea>
                             <div class="grid gap-3 sm:grid-cols-2">
                                 <input v-model="assignmentForm.points" type="number" min="1" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Punkte">
-                                <input v-model="assignmentForm.due_after_days" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Faellig nach Tagen">
+                                <input v-model="assignmentForm.due_after_days" type="number" min="0" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Fällig nach Tagen">
                             </div>
                             <label class="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-secondary">
                                 <input v-model="assignmentForm.is_required" type="checkbox" class="rounded border-border bg-inputBg">

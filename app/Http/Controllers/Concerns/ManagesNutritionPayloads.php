@@ -353,7 +353,7 @@ trait ManagesNutritionPayloads
 
                 if (str_contains($sportType, 'lauf') || str_contains($sportType, 'run') || str_contains($sportType, 'cycling') || str_contains($sportType, 'rad')) {
                     return [
-                        'title' => 'Energie fuer Ausdauer',
+                        'title' => 'Energie für Ausdauer',
                         'body' => "Rund um \"{$title}\" helfen leicht verdauliche Kohlenhydrate und genug Wasser.",
                         'meal_type' => 'snack',
                         'training_context' => 'pre_workout',
@@ -370,9 +370,9 @@ trait ManagesNutritionPayloads
 
         if ($suggestions->isEmpty()) {
             $fallback = match ($goalType) {
-                'build_muscle' => 'Heute kein Training erkannt: plane trotzdem 3-5 Proteinportionen ueber den Tag.',
-                'fat_loss' => 'Heute kein Training erkannt: setze auf saettigende Mahlzeiten mit Protein und Gemuese.',
-                'performance' => 'Heute kein Training erkannt: halte deine Kohlenhydrate fuer die naechste Einheit bereit.',
+                'build_muscle' => 'Heute kein Training erkannt: plane trotzdem 3-5 Proteinportionen Über den Tag.',
+                'fat_loss' => 'Heute kein Training erkannt: setze auf sättigende Mahlzeiten mit Protein und Gemüse.',
+                'performance' => 'Heute kein Training erkannt: halte deine Kohlenhydrate für die nächste Einheit bereit.',
                 default => 'Heute kein Training erkannt: eine einfache, ausgewogene Mahlzeit reicht oft schon.',
             };
 

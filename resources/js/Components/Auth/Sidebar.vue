@@ -137,7 +137,7 @@ const closeSidebar = () => {
             <NavItem v-if="can('file.index')" @navigate="closeSidebar" :href="route('auth.files.index')" label="Dateien" icon="las la-folder-open" />
             <NavItem v-if="can('event.index')" @navigate="closeSidebar" :href="route('auth.events.index')" label="Events & Training" icon="las la-calendar" />
             <NavItem @navigate="closeSidebar" :href="route('auth.training.index')" label="Trainingspläne" icon="las la-clipboard-list" />
-            <NavItem @navigate="closeSidebar" :href="route('auth.nutrition.index')" label="Ernaehrung" icon="las la-apple-alt" />
+            <NavItem @navigate="closeSidebar" :href="route('auth.nutrition.index')" label="Ernährung" icon="las la-apple-alt" />
             <NavItem @navigate="closeSidebar" :href="route('auth.sport-map.index')" label="Sportkarte" icon="las la-route" />
             <NavItem
                 v-if="can('friends.view')"
@@ -206,7 +206,7 @@ const closeSidebar = () => {
                 <NavItem v-if="can('sponsors.view')" @navigate="closeSidebar" :href="route('sponsors.index')" label="Sponsors" icon="las la-handshake" />
                 <NavItem v-if="can('admin.moderation.view')" @navigate="closeSidebar" :href="route('admin.moderation.index')" label="Moderation" icon="las la-user-check" />
                 <NavItem v-if="can('system.manage')" @navigate="closeSidebar" :href="route('admin.sports.index')" label="Sportarten" icon="las la-running" />
-                <NavItem v-if="can('system.manage')" @navigate="closeSidebar" :href="route('admin.club-verifications.index')" label="Vereinspruefung" icon="las la-clipboard-check" />
+                <NavItem v-if="can('system.manage')" @navigate="closeSidebar" :href="route('admin.club-verifications.index')" label="Vereinsprüfung" icon="las la-clipboard-check" />
                 <NavItem v-if="can('system.manage')" @navigate="closeSidebar" :href="route('gamification-rules.index')" label="Gamification" icon="las la-trophy" />
                 <NavItem v-if="can('system.manage')" @navigate="closeSidebar" :href="route('admin.badges.index')" label="Badges" icon="las la-medal" />
                 <NavItem v-if="can('admin.mail-center.view')" @navigate="closeSidebar" :href="route('admin.mail-center.index')" label="Mail-Zentrale" icon="las la-envelope-open-text" />

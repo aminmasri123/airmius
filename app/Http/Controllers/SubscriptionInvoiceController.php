@@ -195,7 +195,7 @@ class SubscriptionInvoiceController extends Controller
 
         // Meta cards
         $pdf->card(48, 632, 150, 54, 'Datum', $issuedAt);
-        $pdf->card(222, 632, 150, 54, 'Faellig bis', $dueAt);
+        $pdf->card(222, 632, 150, 54, 'Fällig bis', $dueAt);
         $pdf->card(396, 632, 150, 54, 'Betrag', $amount, true);
 
         // Recipient and payment summary
@@ -252,8 +252,8 @@ class SubscriptionInvoiceController extends Controller
         return match ($status) {
             'paid' => 'Bezahlt',
             'open' => 'Offen',
-            'awaiting_transfer' => 'Wartet auf Ueberweisung',
-            'overdue' => 'Ueberfaellig',
+            'awaiting_transfer' => 'Wartet auf Überweisung',
+            'overdue' => 'Überfällig',
             'cancelled' => 'Storniert',
             default => $status ?: '-',
         };
@@ -264,7 +264,7 @@ class SubscriptionInvoiceController extends Controller
         return match ($method) {
             'stripe' => 'Stripe',
             'paypal' => 'PayPal',
-            'bank_transfer' => 'Ueberweisung',
+            'bank_transfer' => 'Überweisung',
             default => $method ?: '-',
         };
     }

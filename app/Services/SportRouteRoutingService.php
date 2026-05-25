@@ -315,7 +315,7 @@ class SportRouteRoutingService
         }
 
         if ($isLast) {
-            return $routeType === 'roundtrip' ? 'Zurueck zum Start' : 'Ziel';
+            return $routeType === 'roundtrip' ? 'Zurück zum Start' : 'Ziel';
         }
 
         return 'Routenpunkt '.$index;
@@ -439,7 +439,7 @@ class SportRouteRoutingService
             'label' => match (true) {
                 $score >= 85 => 'Sehr gut',
                 $score >= 70 => 'Gut',
-                $score >= 50 => 'Pruefen',
+                $score >= 50 => 'Prüfen',
                 default => 'Schwach',
             },
             'target_delta_meters' => (int) round($targetDelta),

@@ -117,7 +117,7 @@ Route::get('/blog/rss.xml', function () {
     $xml .= "  <channel>\n";
     $xml .= '    <title>'.e('Airmius Blog')."</title>\n";
     $xml .= '    <link>'.e(route('guest.blog.index'))."</link>\n";
-    $xml .= '    <description>'.e('Praxiswissen, Updates und Ideen fuer digitale Sportorganisation.')."</description>\n";
+    $xml .= '    <description>'.e('Praxiswissen, Updates und Ideen für digitale Sportorganisation.')."</description>\n";
     $xml .= '    <language>de-DE</language>'."\n";
     $xml .= '    <atom:link href="'.e(route('guest.blog.rss')).'" rel="self" type="application/rss+xml" />'."\n";
 

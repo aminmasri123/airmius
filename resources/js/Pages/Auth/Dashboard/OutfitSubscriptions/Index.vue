@@ -178,14 +178,14 @@ const shippingAddressLine = (address) => [
 
 const isPendingPayment = (subscription) => subscription?.status === 'pending_payment'
 
-const cancelActionLabel = (subscription) => isPendingPayment(subscription) ? 'Abbrechen' : 'Kuendigen'
+const cancelActionLabel = (subscription) => isPendingPayment(subscription) ? 'Abbrechen' : 'Kündigen'
 
 const planContractRules = (plan) => plan?.contract_rules || props.contractRules
 
 const planContractTerms = (plan) => (plan?.contract_terms?.length ? plan.contract_terms : [
     'Das Outfit-Abo ist ein monatliches Abonnement mit wiederkehrender Zahlung.',
     'Die erste Lieferung wird erst nach bestätigter Zahlung vorbereitet.',
-    'Pause und Kuendigung gelten nur für zukuenftige Lieferungen.',
+    'Pause und Kündigung gelten nur für zukünftige Lieferungen.',
 ])
 
 const brandingLabel = (type) => ({
@@ -366,7 +366,7 @@ const submitIssue = () => {
                             <p class="mt-2 text-3xl font-black text-primary">{{ activeSubscriptions.length }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-inputBg p-4">
-                            <p class="text-xs uppercase text-secondary">Naechste Lieferung</p>
+                            <p class="text-xs uppercase text-secondary">Nächste Lieferung</p>
                             <p class="mt-2 text-lg font-bold text-primary">{{ formatDate(nextDelivery) }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-inputBg p-4">
@@ -454,7 +454,7 @@ const submitIssue = () => {
                     </label>
                     <label class="block sm:col-span-2">
                         <span class="text-sm font-semibold text-primary">Notizen</span>
-                        <textarea v-model="profileForm.notes" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Materialwuensche, Marken, No-Gos, besondere Hinweise"></textarea>
+                        <textarea v-model="profileForm.notes" rows="3" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Materialwünsche, Marken, No-Gos, besondere Hinweise"></textarea>
                     </label>
                 </div>
             </form>
@@ -474,7 +474,7 @@ const submitIssue = () => {
                             <div>
                                 <p class="text-base font-bold text-primary">{{ subscription.plan?.name || 'Outfit-Abo' }}</p>
                                 <p class="mt-1 text-sm text-secondary">
-                                    {{ statusLabel(subscription.status) }} - Naechste Lieferung: {{ formatDate(subscription.next_delivery_at) }}
+                                    {{ statusLabel(subscription.status) }} - Nächste Lieferung: {{ formatDate(subscription.next_delivery_at) }}
                                 </p>
                                 <p class="mt-1 text-sm text-secondary">
                                     Zahlungsart: {{ paymentProviderLabel(subscription.payment_provider) }}
@@ -520,7 +520,7 @@ const submitIssue = () => {
                                     <dd class="mt-1 font-bold text-primary">{{ formatMoney(subscription.monthly_price_cents, subscription.currency) }}</dd>
                                 </div>
                                 <div class="rounded-lg bg-card p-3">
-                                    <dt class="text-xs uppercase text-secondary">Faellig bis</dt>
+                                    <dt class="text-xs uppercase text-secondary">Fällig bis</dt>
                                     <dd class="mt-1 font-bold text-primary">{{ formatDate(subscription.payment_due_at) }}</dd>
                                 </div>
                                 <div class="rounded-lg bg-card p-3 sm:col-span-2">
@@ -675,8 +675,8 @@ const submitIssue = () => {
                             <input v-model="shippingName" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" placeholder="Vor- und Nachname">
                         </label>
                         <label class="block sm:col-span-2">
-                            <span class="text-xs font-semibold uppercase text-secondary">Strasse</span>
-                            <input v-model="shippingStreet" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" placeholder="Strasse">
+                            <span class="text-xs font-semibold uppercase text-secondary">Straße</span>
+                            <input v-model="shippingStreet" class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary" placeholder="Straße">
                         </label>
                         <label class="block">
                             <span class="text-xs font-semibold uppercase text-secondary">Hausnummer</span>
@@ -727,7 +727,7 @@ const submitIssue = () => {
                             <dd class="font-semibold text-primary">Monat {{ planContractRules(pendingSubscribePlan).pause_allowed_after_months }}</dd>
                         </div>
                         <div class="flex items-center justify-between gap-4">
-                            <dt class="text-secondary">Kuendigungsfrist</dt>
+                            <dt class="text-secondary">Kündigungsfrist</dt>
                             <dd class="font-semibold text-primary">{{ planContractRules(pendingSubscribePlan).cancellation_notice_days }} Tage</dd>
                         </div>
                     </dl>
@@ -739,7 +739,7 @@ const submitIssue = () => {
                 <label class="mt-4 flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-secondary">
                     <input v-model="subscribeAcceptedContract" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                     <span>
-                        Ich akzeptiere den Outfit-Abo-Vertrag inkl. Mindestlaufzeit, Pausen-, Liefer- und Kuendigungsregeln.
+                        Ich akzeptiere den Outfit-Abo-Vertrag inkl. Mindestlaufzeit, Pausen-, Liefer- und Kündigungsregeln.
                     </span>
                 </label>
 
@@ -766,7 +766,7 @@ const submitIssue = () => {
                         >
                             Widerrufshinweise
                         </a>
-                        und weiss, dass das Abo erst nach Zahlungsbestätigung aktiv wird.
+                        und weiß, dass das Abo erst nach Zahlungsbestätigung aktiv wird.
                     </span>
                 </label>
 
@@ -791,12 +791,12 @@ const submitIssue = () => {
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-bold text-primary">
-                            {{ isPendingPayment(pendingCancelSubscription) ? 'Outfit-Abo-Anfrage abbrechen?' : 'Outfit-Abo kuendigen?' }}
+                            {{ isPendingPayment(pendingCancelSubscription) ? 'Outfit-Abo-Anfrage abbrechen?' : 'Outfit-Abo kündigen?' }}
                         </h2>
                         <p class="mt-2 text-sm leading-6 text-secondary">
                             {{ isPendingPayment(pendingCancelSubscription)
                                 ? 'Der Kaufvertrag ist noch nicht abgeschlossen. Die offene Anfrage wird abgebrochen und es wird keine Zahlung mehr erwartet.'
-                                : 'Das Abo wird beendet. Bereits geplante interne Bearbeitungsschritte werden danach nicht weitergefuehrt.' }}
+                                : 'Das Abo wird beendet. Bereits geplante interne Bearbeitungsschritte werden danach nicht weitergeführt.' }}
                         </p>
                     </div>
                     <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary" @click="closeCancelModal">
@@ -816,7 +816,7 @@ const submitIssue = () => {
                         Abbrechen
                     </button>
                     <button type="button" class="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500" @click="confirmCancel">
-                        {{ isPendingPayment(pendingCancelSubscription) ? 'Anfrage abbrechen' : 'Kuendigen' }}
+                        {{ isPendingPayment(pendingCancelSubscription) ? 'Anfrage abbrechen' : 'Kündigen' }}
                     </button>
                 </div>
             </div>
@@ -841,7 +841,7 @@ const submitIssue = () => {
                     <label class="block">
                         <span class="text-sm font-semibold text-primary">Art des Problems</span>
                         <select v-model="issueForm.issue_type" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                            <option value="exchange">Umtausch / andere Groesse</option>
+                            <option value="exchange">Umtausch / andere Grüße</option>
                             <option value="return">Retoure</option>
                             <option value="damaged">Beschaedigt</option>
                             <option value="missing_item">Artikel fehlt</option>
@@ -862,7 +862,7 @@ const submitIssue = () => {
                     </label>
 
                     <label class="block">
-                        <span class="text-sm font-semibold text-primary">Gewuenschte Groesse</span>
+                        <span class="text-sm font-semibold text-primary">Gewünschte Grüße</span>
                         <input v-model="issueForm.issue_exchange_size" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Optional, z.B. M statt L">
                     </label>
                 </div>

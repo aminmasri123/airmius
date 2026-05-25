@@ -120,7 +120,7 @@ const { setTheme } = useTheme()
 const addressNotice = ref(null)
 const themeOptions = [
     { key: 'air', label: 'Air', description: 'Klar, leicht und fokussiert.', colors: ['#0ea5e9', '#10b981', '#f7fbff'] },
-    { key: 'dark', label: 'Dark', description: 'Konzentriert für spaete Sessions.', colors: ['#0c1016', '#60a5fa', '#34d399'] },
+    { key: 'dark', label: 'Dark', description: 'Konzentriert für späte Sessions.', colors: ['#0c1016', '#60a5fa', '#34d399'] },
     { key: 'womanly', label: 'Womanly', description: 'Warm, stark und elegant.', colors: ['#be185d', '#fde8f2', '#0f9f6e'] },
     { key: 'champion', label: 'Champion', description: 'Goldene Energie für Gewinner.', colors: ['#b45309', '#f59e0b', '#fffaf0'] },
     { key: 'sprint', label: 'Sprint', description: 'Frisch, schnell und aktiv.', colors: ['#059669', '#10b981', '#f5fff9'] },
@@ -452,8 +452,8 @@ const closeSportActivityDeleteModal = () => {
 }
 
 const sportActivityDeleteTitle = () => sportActivityDeleteModal.value.mode === 'all'
-    ? 'Alle importierten Aktivitaeten löschen'
-    : 'Importierte Aktivitaet löschen'
+    ? 'Alle importierten Aktivitäten löschen'
+    : 'Importierte Aktivität löschen'
 
 const sportActivityDeleteMessage = () => sportActivityDeleteModal.value.mode === 'all'
     ? 'Alle importierten Sportaktivitaeten werden dauerhaft aus deinem Airmius Konto gelöscht. Die Verbindung zu Google Fit oder anderen Apps bleibt bestehen.'
@@ -597,7 +597,7 @@ const activityLabel = (type) => ({
     'comment.deleted': 'Kommentar gelöscht',
 }[type] || type)
 
-const activityScope = (activity) => activity.team?.name || activity.club?.name || 'Persoenlich'
+const activityScope = (activity) => activity.team?.name || activity.club?.name || 'Persönlich'
 
 const activityDescription = (activity) => activity.data?.title || activity.data?.content || activity.data?.message || ''
 </script>
@@ -631,7 +631,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             <button @click="activeTab = 'address'" :class="tabClass('address')">Adresse</button>
             <button @click="activeTab = 'billing'" :class="tabClass('billing')">Zahlungen</button>
             <button @click="activeTab = 'roles'" :class="tabClass('roles')">Rollen</button>
-            <button @click="activeTab = 'activities'" :class="tabClass('activities')">Aktivitaeten</button>
+            <button @click="activeTab = 'activities'" :class="tabClass('activities')">Aktivitäten</button>
             <button @click="activeTab = 'integrations'" :class="tabClass('integrations')">Verknüpfungen</button>
             <button @click="activeTab = 'design'" :class="tabClass('design')">Design</button>
             <button @click="activeTab = 'language'" :class="tabClass('language')">Sprache</button>
@@ -680,7 +680,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
         <div v-if="activeTab === 'activities'" class="surface-card p-5">
             <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <h2 class="text-lg font-semibold text-primary">Meine Aktivitaeten</h2>
+                    <h2 class="text-lg font-semibold text-primary">Meine Aktivitäten</h2>
                     <p class="mt-1 text-sm text-secondary">
                         Hier erscheinen nur Aktionen, die von deinem eigenen Konto erstellt wurden.
                     </p>
@@ -711,7 +711,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             </div>
 
             <div v-else class="mt-5 rounded-lg border border-dashed border-border bg-bg p-6 text-sm text-secondary">
-                Noch keine eigenen Aktivitaeten vorhanden.
+                Noch keine eigenen Aktivitäten vorhanden.
             </div>
         </div>
 
@@ -1527,9 +1527,9 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
 
         <DeleteConfirmModal
             :show="subscriptionCancelModal.show"
-            title="Abo kuendigen"
+            title="Abo kündigen"
             :message="subscriptionCancelModalMessage()"
-            confirm-text="kuendigen"
+            confirm-text="kündigen"
             cancel-text="Zurück"
             @confirm="confirmSubscriptionCancel"
             @cancel="closeSubscriptionCancelModal"
@@ -1538,7 +1538,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
         <DeleteConfirmModal
             :show="disconnectIntegrationModal.show"
             title="Sport-App entfernen"
-            message="Bist du sicher, dass du diese Sport-App-Verknuepfung entfernen moechtest? Gespeicherte Tokens werden gelöscht und die App muss danach neu verbunden werden."
+            message="Bist du sicher, dass du diese Sport-App-Verknüpfung entfernen möchtest? Gespeicherte Tokens werden gelöscht und die App muss danach neu verbunden werden."
             confirm-text="entfernen"
             cancel-text="Abbrechen"
             @confirm="disconnectIntegration(disconnectIntegrationModal.account)"

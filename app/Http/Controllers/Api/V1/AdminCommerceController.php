@@ -282,7 +282,7 @@ class AdminCommerceController extends Controller
             'title' => $data['status'] === 'approved' ? 'Shop-Zugang freigegeben' : 'Shop-Antrag aktualisiert',
             'message' => $data['status'] === 'approved'
                 ? 'Du kannst jetzt Produkte im Marketplace verkaufen.'
-                : ($data['review_note'] ?? 'Dein Shop-Antrag wurde geprueft.'),
+                : ($data['review_note'] ?? 'Dein Shop-Antrag wurde geprüft.'),
             'url' => route('auth.commerce.index', ['tab' => 'create']),
         ]);
 
@@ -330,7 +330,7 @@ class AdminCommerceController extends Controller
 
         $remainingCents = max(0, (int) $order->amount_cents - (int) $order->refunded_cents);
 
-        abort_if((int) $data['amount_cents'] > $remainingCents, 422, 'Die Erstattung darf den offenen Restbetrag nicht uebersteigen.');
+        abort_if((int) $data['amount_cents'] > $remainingCents, 422, 'Die Erstattung darf den offenen Restbetrag nicht Übersteigen.');
 
         $order->update([
             'status' => (int) $data['amount_cents'] >= $remainingCents ? 'refunded' : $order->status,

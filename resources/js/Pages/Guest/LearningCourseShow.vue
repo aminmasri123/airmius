@@ -384,7 +384,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                             <span v-if="isPaidCourse && !canUseLearningRoom">
                                 Preis: {{ formatMoney(course.price_cents, course.currency) }}.
                                 <template v-if="course.purchase_url">Nach dem Kauf wird der Kurs deinem Konto freigeschaltet.</template>
-                                <template v-else>Der Kaufzugang ist noch nicht verknuepft.</template>
+                                <template v-else>Der Kaufzugang ist noch nicht verknüpft.</template>
                             </span>
                             <span v-else>
                                 Nach der Einschreibung kannst du Notizen schreiben und Fragen im Kurs posten.
@@ -467,7 +467,7 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
                                             </div>
                                         </div>
                                         <p class="mt-2 text-sm text-secondary whitespace-pre-line">{{ assignment.instructions }}</p>
-                                        <p v-if="assignment.due_at" class="mt-2 text-xs font-semibold text-secondary">Faellig bis {{ formatDateTime(assignment.due_at) }}</p>
+                                        <p v-if="assignment.due_at" class="mt-2 text-xs font-semibold text-secondary">Fällig bis {{ formatDateTime(assignment.due_at) }}</p>
                                         <p v-if="assignment.submission" class="mt-3 text-xs font-semibold" :class="assignment.submission.status === 'passed' ? 'text-success' : 'text-warning'">
                                             Status: {{ assignment.submission.status }}<span v-if="assignment.submission.score !== null"> - {{ assignment.submission.score }} Punkte</span>
                                         </p>

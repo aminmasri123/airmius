@@ -63,7 +63,7 @@ class OutfitDeliveryStatusUpdated extends Notification
             'shipped' => 'Deine Sportkleidung-Box wurde versendet.',
             'delivered' => 'Deine Sportkleidung-Box wurde als geliefert markiert.',
             'cancelled' => 'Deine Sportkleidung-Box wurde storniert.',
-            default => 'Deine naechste Sportkleidung-Box wurde geplant.',
+            default => 'Deine nächste Sportkleidung-Box wurde geplant.',
         };
     }
 

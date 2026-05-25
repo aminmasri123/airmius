@@ -29,7 +29,7 @@ const form = useForm({
 })
 
 const suspensionOptions = [
-    { value: '', label: 'Nicht aendern' },
+    { value: '', label: 'Nicht ?ndern' },
     { value: 'lift', label: 'Sperre aufheben' },
     { value: '1', label: '1 Tag sperren' },
     { value: '3', label: '3 Tage sperren' },
@@ -94,7 +94,7 @@ const submit = () => {
                                 class="mt-1 block w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary focus:border-borderHover focus:outline-none focus:ring-borderHover"
                                 required
                             />
-                            <p class="mt-1 text-xs text-secondary">Wird beim Speichern aus Vor- und Nachname gesetzt, wenn diese ausgefuellt sind.</p>
+                            <p class="mt-1 text-xs text-secondary">Wird beim Speichern aus Vor- und Nachname gesetzt, wenn diese ausgefüllt sind.</p>
                             <div v-if="form.errors.name" class="mt-1 text-sm text-error">{{ form.errors.name }}</div>
                         </div>
 
@@ -190,7 +190,7 @@ const submit = () => {
                     <div v-if="canManageRoles" class="space-y-3 border-t border-border pt-4">
                         <div>
                             <h2 class="text-sm font-semibold text-primary">Rollen</h2>
-                            <p class="text-xs text-secondary">Nur Administratoren koennen Rollen aendern.</p>
+                            <p class="text-xs text-secondary">Nur Administratoren können Rollen ?ndern.</p>
                         </div>
 
                         <div class="grid gap-2 sm:grid-cols-2">

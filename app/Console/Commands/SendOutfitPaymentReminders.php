@@ -10,7 +10,7 @@ class SendOutfitPaymentReminders extends Command
 {
     protected $signature = 'airmius:send-outfit-payment-reminders';
 
-    protected $description = 'Sendet faellige Outfit-Abo-Zahlungserinnerungen.';
+    protected $description = 'Sendet fällige Outfit-Abo-Zahlungserinnerungen.';
 
     public function __construct(private OutfitPaymentReminderService $reminders)
     {
@@ -47,7 +47,7 @@ class SendOutfitPaymentReminders extends Command
                 });
             });
 
-        $this->info("{$sent} Outfit-Zahlungserinnerungen versendet. {$dunning} Mahnungen versendet. {$expired} unbezahlte Outfit-Anfragen geloescht.");
+        $this->info("{$sent} Outfit-Zahlungserinnerungen versendet. {$dunning} Mahnungen versendet. {$expired} unbezahlte Outfit-Anfragen gelöscht.");
 
         return self::SUCCESS;
     }

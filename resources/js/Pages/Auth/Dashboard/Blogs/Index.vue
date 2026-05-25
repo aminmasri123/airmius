@@ -525,7 +525,7 @@ const applyFilters = () => {
                 </article>
 
                 <div v-if="!posts.data.length" class="surface-card p-8 text-center text-secondary">
-                    Noch keine Blogbeitraege vorhanden.
+                    Noch keine Blogbeiträge vorhanden.
                 </div>
 
                 <div v-if="posts.links?.length > 3" class="flex flex-wrap gap-2">

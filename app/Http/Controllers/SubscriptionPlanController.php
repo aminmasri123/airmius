@@ -280,7 +280,7 @@ class SubscriptionPlanController extends Controller
         $this->authorize('cancel', $subscription);
 
         if (! $this->isUserSubscriptionCancellable($subscription)) {
-            return back()->with('error', 'Das Abo wurde bereits gekuendigt.');
+            return back()->with('error', 'Das Abo wurde bereits gekündigt.');
         }
 
         $this->cancelSubscription($subscription, 'period_end');
@@ -365,7 +365,7 @@ class SubscriptionPlanController extends Controller
 
         if ($recipientId) {
             AppNotification::send($recipientId, 'subscription.cancelled', [
-                'title' => 'Abo-Kuendigung vorgemerkt',
+                'title' => 'Abo-Kündigung vorgemerkt',
                 'body' => $mode === 'now' ? 'Dein Abo wurde beendet.' : 'Dein Abo läuft bis zum Periodenende weiter.',
                 'subscription_id' => $subscription->id,
             ]);
@@ -376,10 +376,10 @@ class SubscriptionPlanController extends Controller
 
             foreach ($this->subscriptionRecipients($subscription) as $recipient) {
                 AppNotification::send($recipient, 'club.subscription.cancelled', [
-                    'title' => $mode === 'now' ? 'Vereins-Abo beendet' : 'Vereins-Abo-Kuendigung vorgemerkt',
+                    'title' => $mode === 'now' ? 'Vereins-Abo beendet' : 'Vereins-Abo-Kündigung vorgemerkt',
                     'body' => $mode === 'now'
                         ? "Das Abo von {$clubName} wurde beendet."
-                        : "Das Abo von {$clubName} laeuft bis zum Kuendigungsdatum weiter.",
+                        : "Das Abo von {$clubName} läuft bis zum Kündigungsdatum weiter.",
                     'subscription_id' => $subscription->id,
                     'club_id' => $subscription->club_id,
                     'club_name' => $clubName,

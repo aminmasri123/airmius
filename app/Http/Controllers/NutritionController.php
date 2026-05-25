@@ -81,7 +81,7 @@ class NutritionController extends Controller
             $this->validateGoalData($request),
         );
 
-        return back()->with('success', 'Ernaehrungsziel wurde gespeichert.');
+        return back()->with('success', 'Ernährungsziel wurde gespeichert.');
     }
 
     public function searchFoods(Request $request, NutritionFoodLookupService $lookup)
@@ -105,7 +105,7 @@ class NutritionController extends Controller
 
         if (! $product) {
             return response()->json([
-                'message' => 'Kein Produkt fuer diesen Barcode gefunden.',
+                'message' => 'Kein Produkt für diesen Barcode gefunden.',
             ], 404);
         }
 
@@ -136,7 +136,7 @@ class NutritionController extends Controller
 
         return response()->json([
             'data' => $suggestion,
-            'message' => 'KI-Vorschlag erstellt. Bitte pruefen und erst danach speichern.',
+            'message' => 'KI-Vorschlag erstellt. Bitte prüfen und erst danach speichern.',
         ]);
     }
 
@@ -178,6 +178,6 @@ class NutritionController extends Controller
 
         $nutritionMeal->delete();
 
-        return back()->with('success', 'Mahlzeit wurde geloescht.');
+        return back()->with('success', 'Mahlzeit wurde gelöscht.');
     }
 }

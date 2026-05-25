@@ -114,7 +114,7 @@ const storyName = (storyOrGroup) => storyOrGroup?.actor?.type === 'user' && stor
     ? 'Deine Story'
     : storyOrGroup?.actor?.name || storyOrGroup?.user?.name
 const visibilityLabel = (visibility) => ({
-    public: 'Oeffentlich',
+    public: 'öffentlich',
     organization: 'Verein',
     team: 'Team',
 }[visibility] || visibility)
@@ -256,7 +256,7 @@ const submitStory = () => {
         },
         onError: () => {
             showCreateModal.value = true
-            showStoryUploadNotice('error', 'Story konnte nicht gepostet werden. Bitte pruefe die Felder.')
+            showStoryUploadNotice('error', 'Story konnte nicht gepostet werden. Bitte prüfe die Felder.')
         },
         onFinish: () => {
             storyUploading.value = false
@@ -546,7 +546,7 @@ const reactToStory = (reaction) => {
                             ></video>
                             <span v-else class="flex flex-col items-center gap-2 text-sm">
                                 <i class="las la-camera text-3xl"></i>
-                                Bild oder Video waehlen
+                                Bild oder Video wählen
                             </span>
                         </button>
 
@@ -582,7 +582,7 @@ const reactToStory = (reaction) => {
                                 v-model="storyForm.club_id"
                                 class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                             >
-                                <option value="">Verein waehlen</option>
+                                <option value="">Verein wählen</option>
                                 <option v-for="club in clubs" :key="club.id" :value="club.id">
                                     {{ club.name }}
                                 </option>
@@ -593,7 +593,7 @@ const reactToStory = (reaction) => {
                                 v-model="storyForm.team_id"
                                 class="rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary sm:col-span-2"
                             >
-                                <option value="">Team waehlen</option>
+                                <option value="">Team wählen</option>
                                 <option v-for="team in availableTeams" :key="team.id" :value="team.id">
                                     {{ team.name }}
                                 </option>
@@ -680,7 +680,7 @@ const reactToStory = (reaction) => {
                                 v-if="activeStory.can_delete"
                                 type="button"
                                 class="rounded-full p-2 text-white/80 hover:bg-white/10 hover:text-white"
-                                title="Story loeschen"
+                                title="Story löschen"
                                 @click="deleteStory"
                             >
                                 <i class="las la-trash"></i>
@@ -705,7 +705,7 @@ const reactToStory = (reaction) => {
                     </div>
 
                     <button type="button" class="absolute bottom-0 left-0 top-0 z-10 w-1/3" aria-label="Vorherige Story" @click="previousStory" @pointerdown="pauseStory" @pointerup="resumeStory" @pointerleave="resumeStory"></button>
-                    <button type="button" class="absolute bottom-0 right-0 top-0 z-10 w-1/3" aria-label="Naechste Story" @click="nextStory" @pointerdown="pauseStory" @pointerup="resumeStory" @pointerleave="resumeStory"></button>
+                    <button type="button" class="absolute bottom-0 right-0 top-0 z-10 w-1/3" aria-label="Nächste Story" @click="nextStory" @pointerdown="pauseStory" @pointerup="resumeStory" @pointerleave="resumeStory"></button>
 
                     <div class="flex min-h-0 flex-1 items-center justify-center">
                         <video

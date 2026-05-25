@@ -58,7 +58,7 @@ return new class extends Migration
             [
                 'slug' => 'starter',
                 'name' => 'Starter',
-                'description' => 'Fuer kleine Teams, Trainingsgruppen und Vereine mit einfachen Verwaltungsaufgaben.',
+                'description' => 'Für kleine Teams, Trainingsgruppen und Vereine mit einfachen Verwaltungsaufgaben.',
                 'monthly_price_cents' => 900,
                 'yearly_price_cents' => 9000,
                 'member_limit' => 50,
@@ -86,7 +86,7 @@ return new class extends Migration
             [
                 'slug' => 'pro',
                 'name' => 'Pro',
-                'description' => 'Fuer groessere Vereine mit mehreren Abteilungen und professioneller Verwaltung.',
+                'description' => 'Für größere Vereine mit mehreren Abteilungen und professioneller Verwaltung.',
                 'monthly_price_cents' => 3900,
                 'yearly_price_cents' => 39000,
                 'member_limit' => 500,
@@ -100,7 +100,7 @@ return new class extends Migration
             [
                 'slug' => 'elite',
                 'name' => 'Elite',
-                'description' => 'Fuer grosse Vereine, Leistungszentren und Organisationen mit hohen Anspruechen.',
+                'description' => 'Für große Vereine, Leistungszentren und Organisationen mit hohen Ansprüchen.',
                 'monthly_price_cents' => 7900,
                 'yearly_price_cents' => 79000,
                 'member_limit' => null,

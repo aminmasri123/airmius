@@ -145,8 +145,8 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
 
                 <div v-else-if="learningProducts.length" class="mb-12">
                     <div class="mb-8">
-                        <h2 class="text-2xl font-bold text-primary">Aktuelle Kurse und Trainingsplaene</h2>
-                        <p class="mt-2 text-secondary">Bestehende digitale Angebote, bis die Sportschule vollstaendig befuellt ist.</p>
+                        <h2 class="text-2xl font-bold text-primary">Aktuelle Kurse und Trainingspläne</h2>
+                        <p class="mt-2 text-secondary">Bestehende digitale Angebote, bis die Sportschule vollständig befüllt ist.</p>
                     </div>
                 </div>
 

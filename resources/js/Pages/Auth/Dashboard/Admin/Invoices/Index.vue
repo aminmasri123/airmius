@@ -160,7 +160,7 @@ const statusOptions = [
     { value: 'open', label: 'Offen', hint: 'Rechnung ist erstellt und noch nicht bezahlt.' },
     { value: 'pending', label: 'Ausstehend', hint: 'Zahlung oder Prüfung ist noch in Bearbeitung.' },
     { value: 'paid', label: 'Bezahlt', hint: 'Rechnung wird als bezahlt markiert.' },
-    { value: 'overdue', label: 'Überfällig', hint: 'Faelligkeit ist abgelaufen.' },
+    { value: 'overdue', label: 'Überfällig', hint: 'Fälligkeit ist abgelaufen.' },
     { value: 'cancelled', label: 'Storniert', hint: 'Rechnung ist nicht mehr aktiv.' },
 ]
 
@@ -267,7 +267,7 @@ const deleteInvoice = async (invoice) => {
                             <td class="px-5 py-4">
                                 <p class="font-black text-primary">{{ invoice.number || ('#' + invoice.id) }}</p>
                                 <p class="mt-1 text-xs text-secondary">{{ invoice.title || '-' }}</p>
-                                <p class="text-xs text-secondary">Faellig {{ invoice.due_date || '-' }}</p>
+                                <p class="text-xs text-secondary">Fällig {{ invoice.due_date || '-' }}</p>
                             </td>
                             <td class="px-5 py-4">
                                 <p class="font-bold text-primary">{{ recipientLabel(invoice) }}</p>
@@ -565,7 +565,7 @@ const deleteInvoice = async (invoice) => {
                                     </label>
 
                                     <label class="block">
-                                        <span class="text-sm font-semibold text-primary">Faellig am</span>
+                                        <span class="text-sm font-semibold text-primary">Fällig am</span>
                                         <input v-model="form.due_date" class="mt-1 w-full rounded-xl border-border bg-inputBg text-primary" type="date" required>
                                         <p v-if="form.errors.due_date" class="mt-1 text-xs text-error">{{ form.errors.due_date }}</p>
                                     </label>

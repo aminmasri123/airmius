@@ -439,7 +439,7 @@ class TeamController extends Controller
             ]);
 
             throw ValidationException::withMessages([
-                'email' => 'Die Einladung wurde vorbereitet, aber die E-Mail konnte nicht versendet werden. Bitte pruefe die SMTP-/Mail-Einstellungen oder versuche es spaeter erneut.',
+                'email' => 'Die Einladung wurde vorbereitet, aber die E-Mail konnte nicht versendet werden. Bitte prüfe die SMTP-/Mail-Einstellungen oder versuche es später erneut.',
             ]);
         }
 

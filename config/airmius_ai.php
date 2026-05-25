@@ -31,6 +31,13 @@ return [
             'primary_provider' => env('AIRMIUS_AI_NUTRITION_IMAGE_PROVIDER', env('AIRMIUS_AI_PRIMARY_PROVIDER', 'ionos')),
             'fallback_provider' => env('AIRMIUS_AI_NUTRITION_IMAGE_FALLBACK_PROVIDER', env('AIRMIUS_AI_FALLBACK_PROVIDER', 'openai')),
         ],
+        'training_plan_generation' => [
+            'enabled' => (bool) env('AIRMIUS_AI_TRAINING_PLAN_ENABLED', true),
+            'primary_provider' => env('AIRMIUS_AI_TRAINING_PLAN_PROVIDER', env('AIRMIUS_AI_PRIMARY_PROVIDER', 'ionos')),
+            'fallback_provider' => env('AIRMIUS_AI_TRAINING_PLAN_FALLBACK_PROVIDER', env('AIRMIUS_AI_FALLBACK_PROVIDER', 'openai')),
+            'max_items' => (int) env('AIRMIUS_AI_TRAINING_PLAN_MAX_ITEMS', 156),
+            'output_tokens' => (int) env('AIRMIUS_AI_TRAINING_PLAN_OUTPUT_TOKENS', 9000),
+        ],
     ],
 
     'providers' => [

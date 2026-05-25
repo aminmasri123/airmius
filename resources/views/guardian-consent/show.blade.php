@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Zustimmung bestaetigen</title>
+    <title>Zustimmung bestätigen</title>
     <style>
         :root {
             color-scheme: light;
@@ -128,11 +128,11 @@
 <body>
     <main>
         <section class="card">
-            <h1>Registrierung pruefen</h1>
+            <h1>Registrierung prüfen</h1>
 
             <p>
                 {{ $minor->name }} hat sich bei Airmius registriert und ist unter 16 Jahre alt.
-                Bitte bestaetigen Sie die Registrierung nur, wenn Sie erziehungsberechtigt sind.
+                Bitte bestätigen Sie die Registrierung nur, wenn Sie erziehungsberechtigt sind.
             </p>
 
             <div class="actions">

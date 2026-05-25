@@ -28,18 +28,18 @@ class ClubVerificationStatusUpdated extends Notification
 
         if ($approved) {
             $message
-                ->line('dein Verein "'.$this->club->name.'" wurde geprueft und freigegeben.')
-                ->line($this->club->is_official ? 'Der Verein ist jetzt oeffentlich sichtbar und als offiziell markiert.' : 'Der Verein ist jetzt oeffentlich sichtbar.');
+                ->line('dein Verein "'.$this->club->name.'" wurde geprüft und freigegeben.')
+                ->line($this->club->is_official ? 'Der Verein ist jetzt öffentlich sichtbar und als offiziell markiert.' : 'Der Verein ist jetzt öffentlich sichtbar.');
         } else {
             $message
                 ->line('dein Vereinsantrag für "'.$this->club->name.'" wurde abgelehnt.')
-                ->line('Bitte pruefe die Hinweise im Dashboard oder kontaktiere den Support.');
+                ->line('Bitte prüfe die Hinweise im Dashboard oder kontaktiere den Support.');
         }
 
         if ($this->club->verification_notes) {
             $message->line('Hinweis: '.$this->club->verification_notes);
         }
 
-        return $message->action('Verein oeffnen', route('auth.clubs.show', $this->club->id));
+        return $message->action('Verein ?ffnen', route('auth.clubs.show', $this->club->id));
     }
 }

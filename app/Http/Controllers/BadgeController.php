@@ -38,11 +38,11 @@ class BadgeController extends Controller
 
     public function destroy(Badge $badge)
     {
-        abort_if($badge->users()->exists(), 422, 'Badge wurde bereits vergeben und kann nicht geloescht werden.');
+        abort_if($badge->users()->exists(), 422, 'Badge wurde bereits vergeben und kann nicht gelöscht werden.');
 
         $badge->delete();
 
-        return back()->with('success', 'Badge wurde geloescht.');
+        return back()->with('success', 'Badge wurde gelöscht.');
     }
 
     private function validated(Request $request, ?Badge $badge = null): array

@@ -29,24 +29,24 @@ class RolesPermissionsSeeder extends Seeder
             // TEAM
             ['name' => 'team.create', 'description' => 'Teams erstellen'],
             ['name' => 'team.update', 'description' => 'Teams bearbeiten'],
-            ['name' => 'team.delete', 'description' => 'Teams loeschen'],
+            ['name' => 'team.delete', 'description' => 'Teams löschen'],
             ['name' => 'team.invite', 'description' => 'Teammitglieder einladen'],
             ['name' => 'team.kick', 'description' => 'Teammitglieder entfernen'],
 
             // EVENT
             ['name' => 'event.create', 'description' => 'Events erstellen'],
             ['name' => 'event.update', 'description' => 'Events bearbeiten'],
-            ['name' => 'event.delete', 'description' => 'Events loeschen'],
+            ['name' => 'event.delete', 'description' => 'Events löschen'],
             ['name' => 'event.join', 'description' => 'Events beitreten'],
 
             // POST
-            ['name' => 'post.create', 'description' => 'Beitraege erstellen'],
-            ['name' => 'post.update', 'description' => 'Beitraege bearbeiten'],
-            ['name' => 'post.delete', 'description' => 'Beitraege loeschen'],
+            ['name' => 'post.create', 'description' => 'Beiträge erstellen'],
+            ['name' => 'post.update', 'description' => 'Beiträge bearbeiten'],
+            ['name' => 'post.delete', 'description' => 'Beiträge löschen'],
 
             // FILE
             ['name' => 'file.upload', 'description' => 'Dateien hochladen'],
-            ['name' => 'file.delete', 'description' => 'Dateien loeschen'],
+            ['name' => 'file.delete', 'description' => 'Dateien löschen'],
             ['name' => 'file.view', 'description' => 'Dateien anzeigen'],
 
             // SOCIAL
@@ -137,11 +137,11 @@ class RolesPermissionsSeeder extends Seeder
             ['name' => 'content.create', 'description' => 'Inhalte erstellen'],
             ['name' => 'content.edit', 'description' => 'Inhalte bearbeiten'],
             ['name' => 'content.delete', 'description' => 'Inhalte löschen'],
-            ['name' => 'blog.view', 'description' => 'Blogbeitraege anzeigen'],
-            ['name' => 'blog.create', 'description' => 'Blogbeitraege erstellen'],
-            ['name' => 'blog.update', 'description' => 'Blogbeitraege bearbeiten'],
-            ['name' => 'blog.delete', 'description' => 'Blogbeitraege loeschen'],
-            ['name' => 'blog.publish', 'description' => 'Blogbeitraege veroeffentlichen'],
+            ['name' => 'blog.view', 'description' => 'Blogbeiträge anzeigen'],
+            ['name' => 'blog.create', 'description' => 'Blogbeiträge erstellen'],
+            ['name' => 'blog.update', 'description' => 'Blogbeiträge bearbeiten'],
+            ['name' => 'blog.delete', 'description' => 'Blogbeiträge löschen'],
+            ['name' => 'blog.publish', 'description' => 'Blogbeiträge veröffentlichen'],
             ['name' => 'blog.manage', 'description' => 'Blog-CMS verwalten'],
             ['name' => 'media.upload', 'description' => 'Medien hochladen'],
             ['name' => 'media.delete', 'description' => 'Medien löschen'],
@@ -211,8 +211,8 @@ class RolesPermissionsSeeder extends Seeder
 
             ['name' => 'player', 'description' => 'Spieler'],
             ['name' => 'youth_player', 'description' => 'Jugendspieler'],
-            ['name' => 'minor_pending_consent', 'description' => 'Minderjaehriger Account wartet auf Zustimmung der Erziehungsberechtigten'],
-            ['name' => 'minor_player', 'description' => 'Minderjaehriger Spieler mit Zustimmung der Erziehungsberechtigten'],
+            ['name' => 'minor_pending_consent', 'description' => 'Minderjähriger Account wartet auf Zustimmung der Erziehungsberechtigten'],
+            ['name' => 'minor_player', 'description' => 'Minderjähriger Spieler mit Zustimmung der Erziehungsberechtigten'],
             ['name' => 'guest_player', 'description' => 'Gastspieler'],
 
             //👪 COMMUNITY & Familly & OTHER

@@ -111,7 +111,7 @@ const markPaid = (invoice) => {
                         <tr v-for="invoice in invoices.data" :key="invoice.id" class="hover:bg-muted/40">
                             <td class="px-5 py-3">
                                 <p class="font-semibold text-primary">{{ invoice.number }}</p>
-                                <p class="text-xs text-secondary">Faellig {{ invoice.due_at || '-' }}</p>
+                                <p class="text-xs text-secondary">Fällig {{ invoice.due_at || '-' }}</p>
                             </td>
                             <td class="px-5 py-3">
                                 <p class="font-semibold text-primary">{{ invoice.club?.name || invoice.user?.name || '-' }}</p>

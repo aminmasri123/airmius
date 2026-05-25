@@ -16,7 +16,7 @@ Zustimmen
 Ablehnen
 </x-mail::button>
 
-Falls die Buttons nicht funktionieren, koennen Sie die Anfrage hier pruefen:
+Falls die Buttons nicht funktionieren, können Sie die Anfrage hier prüfen:
 [Anfrage anzeigen]({{ $reviewUrl }})
 
 Regards,<br>

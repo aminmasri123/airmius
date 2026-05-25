@@ -31,8 +31,8 @@ class SubscriptionEndingSoon extends Notification
             'plan_name' => $subscription->plan?->name ?? 'Airmius Plan',
             'end_date' => $this->date($endsAt),
             'ending_message' => $isTrial
-                ? 'deine Airmius Testphase laeuft bald ab.'
-                : 'dein Airmius Abo laeuft bald ab.',
+                ? 'deine Airmius Testphase läuft bald ab.'
+                : 'dein Airmius Abo läuft bald ab.',
         ], route('guest.pricing'));
     }
 

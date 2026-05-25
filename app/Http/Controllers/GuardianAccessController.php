@@ -159,7 +159,7 @@ class GuardianAccessController extends Controller
 
         if (! $verifiedCode) {
             return back()->withErrors([
-                'code' => 'Der Code ist ungueltig oder abgelaufen.',
+                'code' => 'Der Code ist ungültig oder abgelaufen.',
             ]);
         }
 
@@ -266,13 +266,13 @@ class GuardianAccessController extends Controller
         if ($existingUser) {
             if (! $existingUser->birth_date) {
                 return back()->withErrors([
-                    'email' => 'Das bestehende Konto hat kein gueltiges Geburtsdatum. Bitte aktualisiere es zuerst im Profil.',
+                    'email' => 'Das bestehende Konto hat kein gültiges Geburtsdatum. Bitte aktualisiere es zuerst im Profil.',
                 ]);
             }
 
             if ((int) $existingUser->birth_date->age < self::MIN_GUARDIAN_AGE) {
                 return back()->withErrors([
-                    'email' => 'Diese E-Mail ist bereits einem Minderjaehrigen zugeordnet.',
+                    'email' => 'Diese E-Mail ist bereits einem Minderjährigen zugeordnet.',
                 ]);
             }
 
@@ -281,7 +281,7 @@ class GuardianAccessController extends Controller
 
             return redirect()
                 ->route('login')
-                ->with('status', 'Dein vorhandenes Konto wurde als Elternkonto verknuepft. Du kannst dich jetzt anmelden.');
+                ->with('status', 'Dein vorhandenes Konto wurde als Elternkonto verknüpft. Du kannst dich jetzt anmelden.');
         }
 
         $data = $request->validate([
@@ -416,7 +416,7 @@ class GuardianAccessController extends Controller
             }
         });
 
-        return back()->with('success', 'Die Ablehnung wurde zurueckgenommen und die Zustimmung erteilt.');
+        return back()->with('success', 'Die Ablehnung wurde zurückgenommen und die Zustimmung erteilt.');
     }
 
     public function destroy(Request $request): RedirectResponse
@@ -542,7 +542,7 @@ class GuardianAccessController extends Controller
     {
         if (! $this->isMinor($child)) {
             throw ValidationException::withMessages([
-                'code' => 'Diese Aktion ist nur fuer Minderjaehrige moeglich.',
+                'code' => 'Diese Aktion ist nur für Minderjährige möglich.',
             ]);
         }
     }

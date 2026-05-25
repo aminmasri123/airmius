@@ -540,7 +540,7 @@ const startCheckout = async () => {
                             Ich akzeptiere
                             <a :href="route('terms.show')" target="_blank" rel="noopener noreferrer" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>AGB</a>,
                             <a :href="route('legal.withdrawal')" target="_blank" rel="noopener noreferrer" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>Widerrufshinweise</a>
-                            und weiss, dass ich ein kostenpflichtiges Abo abschliesse.
+                            und weiß, dass ich ein kostenpflichtiges Abo abschließe.
                         </span>
                     </label>
 

@@ -60,6 +60,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::delete('/training/logs/{log}/draft', [TrainingController::class, 'destroyDraftLog'])->name('auth.training.logs.draft.destroy');
     Route::get('/training/logs/{log}', [TrainingController::class, 'showLog'])->name('auth.training.logs.show');
     Route::post('/training/logs/{log}/feedback', [TrainingController::class, 'storeLogFeedback'])->name('auth.training.logs.feedback.store');
+    Route::post('/training/ai/plans/preview', [TrainingController::class, 'previewAiTrainingPlan'])->name('auth.training.ai.plans.preview');
+    Route::post('/training/ai/plans', [TrainingController::class, 'storeAiTrainingPlan'])->name('auth.training.ai.plans.store');
     Route::post('/training/plans', [TrainingController::class, 'storePlan'])->name('auth.training.plans.store');
     Route::put('/training/plans/{plan}', [TrainingController::class, 'updatePlan'])->name('auth.training.plans.update');
     Route::post('/training/plans/{plan}/publish', [TrainingController::class, 'publishPlan'])->name('auth.training.plans.publish');

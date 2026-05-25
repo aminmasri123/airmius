@@ -11,7 +11,7 @@ class SendEventReminders extends Command
 {
     protected $signature = 'airmius:send-event-reminders';
 
-    protected $description = 'Sendet faellige Event-Erinnerungen an relevante Teilnehmer.';
+    protected $description = 'Sendet fällige Event-Erinnerungen an relevante Teilnehmer.';
 
     public function handle(): int
     {
@@ -55,7 +55,7 @@ class SendEventReminders extends Command
                 }
             });
 
-        $this->info("{$sentNotifications} Event-Erinnerungen fuer {$sentEvents} Events versendet.");
+        $this->info("{$sentNotifications} Event-Erinnerungen für {$sentEvents} Events versendet.");
 
         return self::SUCCESS;
     }

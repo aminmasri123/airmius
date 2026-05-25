@@ -8,14 +8,14 @@ return [
         ['key' => 'mountainbike', 'label' => 'Mountainbike', 'label_key' => 'sport_map.sport_types.mountainbike', 'icon' => 'las la-biking'],
         ['key' => 'walking', 'label' => 'Gehen', 'label_key' => 'sport_map.sport_types.walking', 'icon' => 'las la-walking'],
         ['key' => 'wandern', 'label' => 'Wandern', 'label_key' => 'sport_map.sport_types.wandern', 'icon' => 'las la-hiking'],
-        ['key' => 'football', 'label' => 'Fussball', 'label_key' => 'sport_map.sport_types.football', 'icon' => 'las la-futbol'],
+        ['key' => 'football', 'label' => 'Fußball', 'label_key' => 'sport_map.sport_types.football', 'icon' => 'las la-futbol'],
         ['key' => 'skateboard', 'label' => 'Skateboard', 'label_key' => 'sport_map.sport_types.skateboard', 'icon' => 'las la-skating'],
         ['key' => 'fitness', 'label' => 'Outdoor-Fitness', 'label_key' => 'sport_map.sport_types.fitness', 'icon' => 'las la-dumbbell'],
         ['key' => 'other', 'label' => 'Andere Sportart', 'label_key' => 'sport_map.sport_types.other', 'icon' => 'las la-map-marker-alt'],
     ],
 
     'place_types' => [
-        ['key' => 'football_pitch', 'label' => 'Fussballplatz', 'label_key' => 'sport_map.place_types.football_pitch', 'icon' => 'las la-futbol'],
+        ['key' => 'football_pitch', 'label' => 'Fußballplatz', 'label_key' => 'sport_map.place_types.football_pitch', 'icon' => 'las la-futbol'],
         ['key' => 'running_track', 'label' => 'Laufbahn', 'label_key' => 'sport_map.place_types.running_track', 'icon' => 'las la-running'],
         ['key' => 'skatepark', 'label' => 'Skatepark', 'label_key' => 'sport_map.place_types.skatepark', 'icon' => 'las la-skating'],
         ['key' => 'basketball_court', 'label' => 'Basketballplatz', 'label_key' => 'sport_map.place_types.basketball_court', 'icon' => 'las la-basketball-ball'],

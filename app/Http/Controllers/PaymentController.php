@@ -174,7 +174,7 @@ class PaymentController extends Controller
             }
         });
 
-        return back()->with('success', 'Zahlung wurde geloescht.');
+        return back()->with('success', 'Zahlung wurde gelöscht.');
     }
 
     private function syncInvoicePaymentStatus(?Invoice $invoice): void

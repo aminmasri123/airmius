@@ -182,7 +182,7 @@ class BlogPostController extends Controller
             'seo' => [
                 'title' => $activeCategory ? $activeCategory->name.' im Airmius Blog' : 'Airmius Blog',
                 'description' => $activeCategory?->description
-                    ?: 'Praxiswissen, Updates und Ideen fuer digitale Sportorganisation, Vereine, Trainer, Teams und Sportler.',
+                    ?: 'Praxiswissen, Updates und Ideen für digitale Sportorganisation, Vereine, Trainer, Teams und Sportler.',
                 'canonical' => $activeCategory
                     ? route('guest.blog.category', $activeCategory->slug)
                     : route('guest.blog.index'),
@@ -379,7 +379,7 @@ class BlogPostController extends Controller
         }
 
         throw ValidationException::withMessages([
-            'status' => "Zum Veroeffentlichen braucht der Beitrag mindestens 85% SEO-Qualitaet. Aktuell: {$score}%.",
+            'status' => "Zum Veröffentlichen braucht der Beitrag mindestens 85% SEO-Qualitaet. Aktuell: {$score}%.",
         ]);
     }
 

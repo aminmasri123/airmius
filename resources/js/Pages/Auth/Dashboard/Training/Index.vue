@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 
 defineOptions({ layout: AppLayout })
 
@@ -14,17 +14,18 @@ const props = defineProps({
     sportCatalog: { type: Array, default: () => [] },
     teams: { type: Array, default: () => [] },
     people: { type: Array, default: () => [] },
+    aiCapabilities: { type: Object, default: () => ({}) },
 })
 
 const sports = [
     { key: 'all', label: 'Alle', icon: 'las la-layer-group', accent: 'bg-air-blue' },
-    { key: 'laufen', label: 'Laufen', icon: 'las la-running', accent: 'bg-emerald-500', metrics: ['Distanz km', 'Pace Ziel', 'Hoehenmeter', 'RPE'] },
+    { key: 'laufen', label: 'Laufen', icon: 'las la-running', accent: 'bg-emerald-500', metrics: ['Distanz km', 'Pace Ziel', 'Höhenmeter', 'RPE'] },
     { key: 'schwimmen', label: 'Schwimmen', icon: 'las la-swimmer', accent: 'bg-cyan-500', metrics: ['Bahnen', 'Stil', 'Intervall', 'Pausenzeit'] },
     { key: 'gym', label: 'Gym', icon: 'las la-dumbbell', accent: 'bg-rose-500', metrics: ['Sätze', 'Wiederholungen', 'Gewicht kg', 'Pause'] },
     { key: 'fussball', label: 'Fußball', icon: 'las la-futbol', accent: 'bg-lime-500', metrics: ['Schwerpunkt', 'Spielfeld', 'Spielerzahl', 'Drill'] },
     { key: 'tanzen', label: 'Tanzen', icon: 'las la-music', accent: 'bg-fuchsia-500', metrics: ['Stil', 'Choreo', 'Takte', 'Tempo'] },
-    { key: 'golf', label: 'Golf', icon: 'las la-golf-ball', accent: 'bg-amber-500', metrics: ['Loecher', 'Schlaeger', 'Schwerpunkt', 'Zielscore'] },
-    { key: 'cycling', label: 'Radfahren', icon: 'las la-biking', accent: 'bg-orange-500', metrics: ['Distanz km', 'Watt Ziel', 'Kadenz', 'Hoehenmeter'] },
+    { key: 'golf', label: 'Golf', icon: 'las la-golf-ball', accent: 'bg-amber-500', metrics: ['Löcher', 'Schläger', 'Schwerpunkt', 'Zielscore'] },
+    { key: 'cycling', label: 'Radfahren', icon: 'las la-biking', accent: 'bg-orange-500', metrics: ['Distanz km', 'Watt Ziel', 'Kadenz', 'Höhenmeter'] },
     { key: 'yoga', label: 'Yoga', icon: 'las la-spa', accent: 'bg-violet-500', metrics: ['Flow', 'Atemfokus', 'Level', 'Haltezeit'] },
 ]
 
@@ -37,6 +38,45 @@ const planTrainingTypes = [
     { key: 'cycling', label: 'Bike', icon: 'las la-biking', sport_type: 'cycling', accent: 'bg-fuchsia-500' },
     { key: 'generic', label: 'Frei', icon: 'las la-clipboard-list', sport_type: 'laufen', accent: 'bg-indigo-500' },
 ]
+
+const aiTrainingMethodGroups = {
+    laufen: [
+        { key: 'long_run', label: 'Ausdauerlauf', hint: 'ruhig und länger', icon: 'las la-route', accent: 'bg-emerald-500' },
+        { key: 'run_interval', label: 'Intervalle', hint: 'schnelle Abschnitte', icon: 'las la-stopwatch', accent: 'bg-amber-400' },
+        { key: 'tempo_run', label: 'Tempolauf', hint: 'kontrolliert hart', icon: 'las la-tachometer-alt', accent: 'bg-rose-500' },
+        { key: 'recovery_run', label: 'Regeneration', hint: 'locker erholen', icon: 'las la-leaf', accent: 'bg-lime-500' },
+    ],
+    gym: [
+        { key: 'strength', label: 'Kraft', hint: 'stärker werden', icon: 'las la-dumbbell', accent: 'bg-sky-500' },
+        { key: 'hypertrophy', label: 'Muskelaufbau', hint: 'Volumen & Technik', icon: 'las la-fire-alt', accent: 'bg-rose-500' },
+        { key: 'gym', label: 'Ganzkörper', hint: 'ausgewogen', icon: 'las la-clipboard-list', accent: 'bg-violet-500' },
+        { key: 'mobility', label: 'Mobility', hint: 'Beweglichkeit', icon: 'las la-spa', accent: 'bg-emerald-500' },
+    ],
+    schwimmen: [
+        { key: 'swim', label: 'Technik', hint: 'Wasserlage & Stil', icon: 'las la-swimmer', accent: 'bg-cyan-500' },
+        { key: 'swim_interval', label: 'Intervalle', hint: 'Serien & Pausen', icon: 'las la-stopwatch', accent: 'bg-amber-400' },
+        { key: 'endurance_swim', label: 'Ausdauer', hint: 'ruhige Meter', icon: 'las la-water', accent: 'bg-blue-500' },
+    ],
+    fussball: [
+        { key: 'football', label: 'Technik & Spiel', hint: 'Ball, Taktik, Spielform', icon: 'las la-futbol', accent: 'bg-lime-500' },
+        { key: 'football_conditioning', label: 'Kondition', hint: 'spielnah belastbar', icon: 'las la-running', accent: 'bg-emerald-500' },
+        { key: 'football_speed', label: 'Sprints', hint: 'Antritt & Explosivität', icon: 'las la-bolt', accent: 'bg-amber-400' },
+    ],
+    cycling: [
+        { key: 'cycling', label: 'Grundlagenfahrt', hint: 'ruhig und lang', icon: 'las la-biking', accent: 'bg-fuchsia-500' },
+        { key: 'bike_interval', label: 'Rad-Intervalle', hint: 'Watt & Pausen', icon: 'las la-stopwatch', accent: 'bg-amber-400' },
+        { key: 'hill_ride', label: 'Anstiege', hint: 'Kraft am Berg', icon: 'las la-mountain', accent: 'bg-orange-500' },
+    ],
+    yoga: [
+        { key: 'mobility', label: 'Mobility', hint: 'Beweglichkeit', icon: 'las la-spa', accent: 'bg-violet-500' },
+        { key: 'recovery', label: 'Regeneration', hint: 'ruhig & entlastend', icon: 'las la-leaf', accent: 'bg-emerald-500' },
+    ],
+    default: [
+        { key: 'generic', label: 'Freier Plan', hint: 'KI wählt passende Einheiten', icon: 'las la-clipboard-list', accent: 'bg-indigo-500' },
+    ],
+}
+
+const defaultTrainingTypeForSport = () => 'balanced'
 
 const activeSport = ref('all')
 const activeTrainingSection = ref('overview')
@@ -66,6 +106,46 @@ const planWizardSteps = [
     { label: 'Freigabe', hint: 'Team & Sportler', icon: 'las la-user-friends' },
     { label: 'Einheit', hint: 'Erstes Training', icon: 'las la-running' },
 ]
+
+const aiPlanStep = ref(0)
+const aiTrainingPlanPreview = ref(null)
+const aiTrainingPlanError = ref('')
+const aiTrainingPlanMessage = ref('')
+const aiTrainingPlanGenerating = ref(false)
+const aiTrainingPlanSaving = ref(false)
+const aiPlanSourcePlan = ref(null)
+
+const aiPlanSteps = [
+    { label: 'Ziel', hint: 'Was soll besser werden?', icon: 'las la-bullseye' },
+    { label: 'Rahmen', hint: 'Zeit, Niveau, Regeln', icon: 'las la-sliders-h' },
+    { label: 'Vorschau', hint: 'Prüfen und speichern', icon: 'las la-check-circle' },
+]
+
+const aiPlanDurationPresets = [
+    { label: '1 Monat', weeks: 4, hint: 'Schneller Start' },
+    { label: '2 Monate', weeks: 8, hint: 'Aufbau' },
+    { label: '3 Monate', weeks: 12, hint: 'Stabiler Block' },
+    { label: '6 Monate', weeks: 26, hint: 'Langfristig' },
+]
+
+const aiPlanDefaults = () => ({
+    title: '',
+    goal: '',
+    sport_type: activeSport.value === 'all' ? 'laufen' : activeSport.value,
+    training_type: defaultTrainingTypeForSport(),
+    level: 'intermediate',
+    phase: 'build',
+    weeks: 4,
+    sessions_per_week: 3,
+    duration_minutes: 45,
+    starts_on: '',
+    equipment: '',
+    constraints: '',
+    preferences: '',
+    revision_instruction: '',
+})
+
+const aiPlanForm = reactive(aiPlanDefaults())
 
 const activityForm = useForm({
     title: '',
@@ -224,6 +304,7 @@ const sportChoices = computed(() => {
         .filter((sport, index, list) => list.findIndex((item) => item.key === sport.key) === index)
 })
 
+const aiPlanSportChoices = computed(() => sportChoices.value.filter((sport) => ['laufen', 'gym', 'schwimmen', 'fussball', 'cycling', 'yoga'].includes(sport.key)))
 const plannedLogItems = computed(() => props.plans
     .flatMap((plan) => (plan.items || []).map((item) => ({ ...item, plan })))
     .sort((a, b) => new Date(a.scheduled_at || 0) - new Date(b.scheduled_at || 0)))
@@ -343,8 +424,47 @@ const sportStats = computed(() => Object.values(visibleLogs.value.reduce((groups
     return groups
 }, {})).sort((a, b) => b.sessions - a.sessions))
 
+const aiTrainingPlan = computed(() => props.aiCapabilities?.training_plan_generation || {})
+const aiTrainingPlanAvailable = computed(() => Boolean(aiTrainingPlan.value.available))
+const aiPlanMaxItems = computed(() => Number(aiTrainingPlan.value.max_items || 156))
+const aiPlanMaxWeeks = computed(() => Number(aiTrainingPlan.value.max_weeks || 26))
+const aiPlanMonthlyLimit = computed(() => aiTrainingPlan.value.monthly_limit)
+const aiPlanMonthlyRemaining = computed(() => aiTrainingPlan.value.monthly_remaining)
+const aiPlanRequestedItems = computed(() => {
+    const weeks = Math.max(1, Number(aiPlanForm.weeks || 0))
+    const sessions = Math.max(1, Number(aiPlanForm.sessions_per_week || 0))
+
+    return weeks * sessions
+})
+const aiPlanTooLarge = computed(() => aiPlanRequestedItems.value > aiPlanMaxItems.value)
+const aiPlanWeeksTooLong = computed(() => Math.max(1, Number(aiPlanForm.weeks || 0)) > aiPlanMaxWeeks.value)
+const aiPlanCannotGenerate = computed(() => !aiTrainingPlanAvailable.value || aiPlanTooLarge.value || aiPlanWeeksTooLong.value)
+const aiPlanTierLabel = computed(() => aiTrainingPlan.value.tier_label || 'Free')
+const aiPlanLimitLabel = computed(() => {
+    if (aiPlanMonthlyLimit.value === null || aiPlanMonthlyLimit.value === undefined) {
+        return `Stufe ${aiPlanTierLabel.value}: bis ${aiPlanMaxWeeks.value} Wochen`
+    }
+
+    return `Stufe ${aiPlanTierLabel.value}: ${Math.max(0, Number(aiPlanMonthlyRemaining.value ?? 0))}/${aiPlanMonthlyLimit.value} KI-Pläne diesen Monat, bis ${aiPlanMaxWeeks.value} Wochen`
+})
+const aiTrainingProviderLabel = computed(() => {
+    const provider = aiTrainingPlan.value.primary_provider || props.aiCapabilities?.primary_provider || 'ionos'
+    const match = (props.aiCapabilities?.available_providers || []).find((item) => item.key === provider)
+
+    return match?.label || provider
+})
+
+const aiGeneratedPlans = computed(() => (props.plans || []).filter((plan) => plan.settings?.ai_generation))
+const aiGeneratedPlanInsights = computed(() => aiGeneratedPlans.value
+    .flatMap((plan) => [
+        ...(plan.settings?.ai_generation?.analysis_tips || []).map((text) => ({ plan, text, label: 'Analyse' })),
+        ...(plan.settings?.ai_generation?.adjustment_tips || []).map((text) => ({ plan, text, label: 'Anpassung' })),
+    ])
+    .filter((item) => item.text)
+    .slice(0, 6))
+
 const exerciseLibrary = [
-    { training_type: 'gym', sport_type: 'gym', title: 'Kniebeuge Progression', focus: 'Kraft', duration_minutes: 45, todos: 'Warm-up 10 Minuten\n3-5 Arbeitssaetze\nTechnikvideo nach schwerstem Satz', metrics: { Sätze: '4', Wiederholungen: '6-10', 'Gewicht kg': 'RPE 7-8', Pause: '120s' } },
+    { training_type: 'gym', sport_type: 'gym', title: 'Kniebeuge Progression', focus: 'Kraft', duration_minutes: 45, todos: 'Warm-up 10 Minuten\n3-5 Arbeitssätze\nTechnikvideo nach schwerstem Satz', metrics: { Sätze: '4', Wiederholungen: '6-10', 'Gewicht kg': 'RPE 7-8', Pause: '120s' } },
     { training_type: 'long_run', sport_type: 'laufen', title: 'Long Run Zone 2', focus: 'Ausdauer', duration_minutes: 70, todos: 'Locker starten\nPace stabil halten\nLetzte 10 Minuten kontrollieren', metrics: { 'Distanz km': '10-16', 'Pace Ziel': 'Zone 2', Hoehenmeter: '-', RPE: '4-5' } },
     { training_type: 'run_interval', sport_type: 'laufen', title: 'Intervall 6 x 400m', focus: 'Tempo', duration_minutes: 50, todos: '15 Minuten einlaufen\n6 x 400m schnell\n200m Trabpause\n10 Minuten auslaufen', metrics: { 'Distanz km': '6-8', 'Pace Ziel': '5k-Pace', Hoehenmeter: '-', RPE: '8' } },
     { training_type: 'swim', sport_type: 'schwimmen', title: 'Technik + Intervalle', focus: 'Wasserlage', duration_minutes: 55, todos: '200m einschwimmen\n6 x 50m Technik\n8 x 100m konstant\nlocker ausschwimmen', metrics: { Bahnen: '40+', Stil: 'Frei', Intervall: '100m', Pausenzeit: '20s' } },
@@ -392,8 +512,8 @@ const previousPlanWizardStep = () => {
 
 const cadenceLabels = {
     single: 'Einmalig',
-    daily: 'Taeglich',
-    weekly: 'Woechentlich',
+    daily: 'Täglich',
+    weekly: 'Wöchentlich',
     monthly: 'Monatlich',
 }
 
@@ -445,12 +565,176 @@ const resetPlanForm = () => {
     if (planImageInput.value) planImageInput.value.value = ''
 }
 
+const resetAiTrainingPlanForm = () => {
+    Object.assign(aiPlanForm, aiPlanDefaults())
+    aiPlanStep.value = 0
+    aiTrainingPlanPreview.value = null
+    aiTrainingPlanError.value = ''
+    aiTrainingPlanMessage.value = ''
+    aiPlanSourcePlan.value = null
+}
+
+const selectAiPlanSportType = (sportKey) => {
+    aiPlanForm.sport_type = sportKey
+    aiPlanForm.training_type = defaultTrainingTypeForSport()
+}
+
+const setAiPlanDurationPreset = (weeks) => {
+    aiPlanForm.weeks = Math.min(weeks, aiPlanMaxWeeks.value)
+
+    if (weeks >= 26 && Number(aiPlanForm.sessions_per_week || 0) > 6) {
+        aiPlanForm.sessions_per_week = 6
+    }
+}
+
+const compactPlanForAi = (plan) => {
+    if (!plan) return null
+
+    return {
+        title: plan.title,
+        description: plan.description,
+        settings: plan.settings || {},
+        items: (plan.items || []).map((item) => ({
+            title: item.title,
+            sport_type: item.sport_type,
+            description: item.description,
+            duration_minutes: item.duration_minutes,
+            distance_km: item.distance_meters ? Number(item.distance_meters) / 1000 : null,
+            intensity: item.intensity,
+            todos: item.todos || [],
+            metrics: item.metrics || {},
+        })),
+    }
+}
+
+const openAiTrainingPlanModal = (plan = null) => {
+    resetAiTrainingPlanForm()
+
+    if (plan) {
+        aiPlanSourcePlan.value = plan
+        aiPlanForm.title = `${plan.title || 'Trainingsplan'} angepasst`
+        aiPlanForm.goal = plan.settings?.goal || ''
+        aiPlanForm.phase = plan.settings?.phase || 'build'
+        aiPlanForm.level = plan.settings?.level || 'intermediate'
+        aiPlanForm.weeks = plan.settings?.weeks || 4
+        aiPlanForm.sessions_per_week = plan.settings?.weekly_sessions || 3
+        aiPlanForm.sport_type = plan.items?.[0]?.sport_type || 'laufen'
+        aiPlanForm.training_type = plan.items?.[0]?.metrics?._training_type || plan.items?.[0]?.metrics?.training_type || 'long_run'
+        aiPlanForm.starts_on = plan.starts_on || ''
+        aiPlanStep.value = 1
+    }
+
+    activeModal.value = 'ai-plan'
+}
+
+const canOpenAiPlanStep = (index) => {
+    if (index === 0) return true
+    if (index === 1) return Boolean(aiPlanForm.goal?.trim())
+
+    return Boolean(aiTrainingPlanPreview.value)
+}
+
+const continueAiTrainingPlan = () => {
+    if (aiPlanStep.value === 0) {
+        aiPlanStep.value = 1
+        return
+    }
+
+    generateAiTrainingPlan(false)
+}
+
+const generateAiTrainingPlan = async (revise = false) => {
+    if (!aiTrainingPlanAvailable.value) {
+        aiTrainingPlanError.value = aiTrainingPlan.value.access_reason || 'KI-Trainingspläne sind für dein aktuelles Kontingent nicht verfügbar.'
+        return
+    }
+
+    if (!aiPlanForm.goal?.trim()) {
+        aiTrainingPlanError.value = 'Bitte gib zuerst ein klares Trainingsziel ein.'
+        aiPlanStep.value = 0
+        return
+    }
+
+    if (revise && !aiPlanForm.revision_instruction?.trim()) {
+        aiTrainingPlanError.value = 'Bitte schreibe kurz, was die KI am Plan verändern soll.'
+        return
+    }
+
+    if (aiPlanWeeksTooLong.value) {
+        aiTrainingPlanError.value = `Deine aktuelle Stufe erlaubt KI-Trainingspläne bis ${aiPlanMaxWeeks.value} Wochen. Bitte wähle eine kürzere Dauer oder nutze die nächste Stufe.`
+        aiPlanStep.value = 1
+        return
+    }
+    if (aiPlanTooLarge.value) {
+        aiTrainingPlanError.value = `Dieser Plan hätte ${aiPlanRequestedItems.value} Einheiten. Bitte reduziere Wochen oder Einheiten pro Woche auf maximal ${aiPlanMaxItems.value} Einheiten.`
+        aiPlanStep.value = 1
+        return
+    }
+
+    aiTrainingPlanGenerating.value = true
+    aiTrainingPlanError.value = ''
+    aiTrainingPlanMessage.value = ''
+
+    try {
+        const response = await window.axios.post(route('auth.training.ai.plans.preview'), {
+            title: aiPlanForm.title,
+            goal: aiPlanForm.goal,
+            sport_type: aiPlanForm.sport_type,
+            training_type: aiPlanForm.training_type,
+            level: aiPlanForm.level,
+            phase: aiPlanForm.phase,
+            weeks: aiPlanForm.weeks,
+            sessions_per_week: aiPlanForm.sessions_per_week,
+            duration_minutes: aiPlanForm.duration_minutes,
+            starts_on: aiPlanForm.starts_on,
+            equipment: aiPlanForm.equipment,
+            constraints: aiPlanForm.constraints,
+            preferences: aiPlanForm.preferences,
+            revision_instruction: revise || aiPlanSourcePlan.value ? aiPlanForm.revision_instruction : '',
+            current_plan: revise || aiPlanSourcePlan.value ? (aiTrainingPlanPreview.value || compactPlanForAi(aiPlanSourcePlan.value)) : null,
+        })
+
+        aiTrainingPlanPreview.value = response.data?.plan || null
+        aiTrainingPlanMessage.value = response.data?.message || 'KI-Vorschlag erstellt.'
+        aiPlanStep.value = 2
+    } catch (error) {
+        aiTrainingPlanError.value = error.response?.data?.message || 'KI-Trainingsplan konnte nicht erstellt werden.'
+    } finally {
+        aiTrainingPlanGenerating.value = false
+    }
+}
+
+const saveAiTrainingPlan = async () => {
+    if (!aiTrainingPlanPreview.value) return
+
+    aiTrainingPlanSaving.value = true
+    aiTrainingPlanError.value = ''
+
+    try {
+        await window.axios.post(route('auth.training.ai.plans.store'), {
+            plan: aiTrainingPlanPreview.value,
+            starts_on: aiPlanForm.starts_on,
+            status: 'published',
+            share_permission: 'read',
+        })
+
+        activeTrainingSection.value = 'plans'
+        closeModal()
+        router.reload({ preserveScroll: true })
+    } catch (error) {
+        aiTrainingPlanError.value = error.response?.data?.message || 'KI-Plan konnte nicht gespeichert werden.'
+    } finally {
+        aiTrainingPlanSaving.value = false
+    }
+}
+
 const openModal = (name, plan = null, item = null) => {
     selectedPlan.value = plan
     selectedItem.value = item
     deleteText.value = ''
 
     if (name === 'plan') resetPlanForm()
+    if (name === 'ai-plan') resetAiTrainingPlanForm()
     if (name === 'activity') {
         activityForm.reset()
         activityForm.activity_type = activeSport.value === 'all' ? 'laufen' : activeSport.value
@@ -591,7 +875,7 @@ const openDraftDelete = () => {
 const logStatusLabel = (status) => ({
     draft: 'Entwurf',
     planned: 'Geplant',
-    in_progress: 'Laeuft gerade',
+    in_progress: 'Läuft gerade',
     completed: 'Abgeschlossen',
     missed: 'Nicht gemacht',
 }[status] || status)
@@ -803,7 +1087,7 @@ const formatWeekday = (value) => new Intl.DateTimeFormat('de-DE', { weekday: 'sh
 const itemStatusLabel = (item) => {
     if (item.log_statuses?.some((log) => log.status === 'completed')) return 'Erledigt'
     if (item.log_statuses?.some((log) => log.status === 'missed')) return 'Nicht gemacht'
-    if (item.scheduled_at && new Date(item.scheduled_at) < new Date()) return 'Faellig'
+    if (item.scheduled_at && new Date(item.scheduled_at) < new Date()) return 'Fällig'
 
     return 'Geplant'
 }
@@ -812,7 +1096,7 @@ const itemStatusClass = (item) => {
     const label = itemStatusLabel(item)
     if (label === 'Erledigt') return 'bg-success/10 text-success'
     if (label === 'Nicht gemacht') return 'bg-danger/10 text-danger'
-    if (label === 'Faellig') return 'bg-warning/10 text-warning'
+    if (label === 'Fällig') return 'bg-warning/10 text-warning'
 
     return 'bg-muted text-secondary'
 }
@@ -899,6 +1183,10 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                         <button type="button" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary sm:min-h-11 sm:px-4" @click="openModal('plan')">
                             <i class="las la-plus-circle text-lg"></i>
                             Plan erstellen
+                        </button>
+                        <button type="button" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-air-blue/50 bg-air-blue/10 px-3 py-2 text-sm font-semibold text-air-blue hover:bg-air-blue/15 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-11 sm:px-4" :disabled="!aiTrainingPlanAvailable" @click="openAiTrainingPlanModal()">
+                            <i class="las la-magic text-lg"></i>
+                            KI-Plan
                         </button>
                         <button type="button" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted sm:min-h-11 sm:px-4" @click="openLogPage">
                             <i class="las la-pen-alt text-lg"></i>
@@ -1073,6 +1361,9 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                         <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary" @click="openModal('plan')">
                             Plan erstellen
                         </button>
+                        <button type="button" class="rounded-xl border border-air-blue/50 bg-air-blue/10 px-4 py-3 text-sm font-semibold text-air-blue hover:bg-air-blue/15 disabled:cursor-not-allowed disabled:opacity-50" :disabled="!aiTrainingPlanAvailable" @click="openAiTrainingPlanModal()">
+                            KI-Plan erstellen
+                        </button>
                         <button type="button" class="rounded-xl border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted" @click="openLogPage">
                             Training dokumentieren
                         </button>
@@ -1081,7 +1372,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                 <section class="rounded-2xl border border-border bg-card p-4">
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Aufmerksamkeit</p>
                     <div class="mt-3 grid grid-cols-2 gap-2">
-                        <span class="rounded-xl border border-border bg-inputBg/40 p-3 text-xs text-secondary"><b class="block text-xl text-primary">{{ trainerDashboard.overdue.length }}</b>überfaellig</span>
+                        <span class="rounded-xl border border-border bg-inputBg/40 p-3 text-xs text-secondary"><b class="block text-xl text-primary">{{ trainerDashboard.overdue.length }}</b>überfällig</span>
                         <span class="rounded-xl border border-border bg-inputBg/40 p-3 text-xs text-secondary"><b class="block text-xl text-primary">{{ trainerDashboard.feedbackOpen.length }}</b>Feedback offen</span>
                     </div>
                 </section>
@@ -1182,11 +1473,11 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                 <div class="mt-4 grid grid-cols-2 gap-2">
                     <div class="rounded-xl border border-border bg-inputBg/40 p-3">
                         <p class="text-2xl font-semibold text-primary">{{ trainerDashboard.overdue.length }}</p>
-                        <p class="text-xs text-secondary">überfaellig</p>
+                        <p class="text-xs text-secondary">überfällig</p>
                     </div>
                     <div class="rounded-xl border border-border bg-inputBg/40 p-3">
                         <p class="text-2xl font-semibold text-primary">{{ trainerDashboard.missed.length }}</p>
-                        <p class="text-xs text-secondary">Ausfaelle</p>
+                        <p class="text-xs text-secondary">Ausfälle</p>
                     </div>
                     <div class="rounded-xl border border-border bg-inputBg/40 p-3">
                         <p class="text-2xl font-semibold text-primary">{{ trainerDashboard.feedbackOpen.length }}</p>
@@ -1202,7 +1493,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                         <p class="text-sm font-semibold text-primary">{{ item.title }}</p>
                         <p class="text-xs text-secondary">{{ item.plan.title }} · {{ formatDate(item.scheduled_at) }}</p>
                     </div>
-                    <p v-if="!trainerDashboard.overdue.length" class="text-sm text-secondary">Keine überfaelligen Einheiten.</p>
+                    <p v-if="!trainerDashboard.overdue.length" class="text-sm text-secondary">Keine überfälligen Einheiten.</p>
                 </div>
             </div>
         </section>
@@ -1212,7 +1503,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                 <div class="flex items-center justify-between gap-3">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Athleten-Cockpit</p>
-                        <h2 class="mt-1 text-lg font-semibold text-primary">Belastung, Signale und letzte Aktivitaet</h2>
+                        <h2 class="mt-1 text-lg font-semibold text-primary">Belastung, Signale und letzte Aktivität</h2>
                     </div>
                     <span class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">{{ athleteCockpit.length }} Profile</span>
                 </div>
@@ -1233,6 +1524,30 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                         </div>
                     </article>
                     <p v-if="!athleteCockpit.length" class="text-sm text-secondary">Noch keine dokumentierten Einheiten für das Cockpit.</p>
+                </div>
+            </div>
+
+            <div class="rounded-2xl border border-air-blue/30 bg-air-blue/10 p-4">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">KI-Coach</p>
+                        <h2 class="mt-1 text-lg font-semibold text-primary">Tipps aus generierten Plänen</h2>
+                    </div>
+                    <span class="rounded-full border border-air-blue/30 px-3 py-1 text-xs font-semibold text-air-blue">{{ aiGeneratedPlans.length }} Pläne</span>
+                </div>
+                <div class="mt-4 space-y-2">
+                    <article v-for="insight in aiGeneratedPlanInsights" :key="`${insight.plan.id}-${insight.label}-${insight.text}`" class="rounded-xl border border-air-blue/25 bg-bg/50 p-3">
+                        <div class="flex items-start gap-3">
+                            <span class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-air-blue text-white">
+                                <i class="las la-lightbulb"></i>
+                            </span>
+                            <div class="min-w-0">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ insight.label }} · {{ insight.plan.title }}</p>
+                                <p class="mt-1 text-sm text-primary">{{ insight.text }}</p>
+                            </div>
+                        </div>
+                    </article>
+                    <p v-if="!aiGeneratedPlanInsights.length" class="text-sm text-secondary">Sobald ein KI-Plan gespeichert ist, erscheinen hier konkrete Analyse- und Verbesserungsvorschläge.</p>
                 </div>
             </div>
 
@@ -1261,9 +1576,14 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                         <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ selectedSport.label }}</p>
                         <h2 class="text-xl font-semibold text-primary">Trainingspläne</h2>
                     </div>
-                    <button type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="openModal('plan')">
-                        Neuer Plan
-                    </button>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" class="rounded-xl border border-air-blue/50 bg-air-blue/10 px-4 py-2 text-sm font-semibold text-air-blue hover:bg-air-blue/15 disabled:cursor-not-allowed disabled:opacity-50" :disabled="!aiTrainingPlanAvailable" @click="openAiTrainingPlanModal()">
+                            KI-Plan
+                        </button>
+                        <button type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="openModal('plan')">
+                            Neuer Plan
+                        </button>
+                    </div>
                 </div>
 
                 <div class="grid gap-4 lg:grid-cols-2">
@@ -1278,9 +1598,15 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                                         <span class="rounded-full px-2.5 py-1 text-xs font-semibold" :class="plan.status === 'published' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'">
                                             {{ plan.status === 'published' ? 'Freigegeben' : 'Entwurf' }}
                                         </span>
+                                        <span v-if="plan.settings?.ai_generation" class="rounded-full border border-air-blue/40 bg-air-blue/10 px-2.5 py-1 text-xs font-semibold text-air-blue">
+                                            KI-generiert
+                                        </span>
                                     </div>
                                     <h3 class="mt-3 truncate text-lg font-semibold text-primary">{{ plan.title }}</h3>
                                     <p class="mt-1 hidden line-clamp-2 text-sm text-secondary md:block">{{ plan.description || 'Keine Beschreibung hinterlegt.' }}</p>
+                                    <p v-if="plan.settings?.ai_generation?.convincing_explanation" class="mt-2 hidden line-clamp-2 rounded-xl border border-air-blue/25 bg-air-blue/10 px-3 py-2 text-xs text-primary md:block">
+                                        Warum so: {{ plan.settings.ai_generation.convincing_explanation }}
+                                    </p>
                                     <p v-if="plan.settings?.goal" class="mt-2 rounded-xl border border-air-blue/30 bg-air-blue/10 px-3 py-2 text-xs font-semibold text-primary">
                                         Ziel: {{ plan.settings.goal }}
                                     </p>
@@ -1401,6 +1727,9 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                             <button v-if="plan.can_write" type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted" @click="openModal('edit', plan)">
                                 Bearbeiten
                             </button>
+                            <button v-if="plan.can_write && plan.settings?.ai_generation && aiTrainingPlanAvailable" type="button" class="rounded-lg border border-air-blue/40 bg-air-blue/10 px-3 py-2 text-xs font-semibold text-air-blue hover:bg-air-blue/15" @click="openAiTrainingPlanModal(plan)">
+                                Mit KI anpassen
+                            </button>
                             <button v-if="plan.can_write" type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-muted" @click="duplicatePlan(plan)">
                                 Als Vorlage kopieren
                             </button>
@@ -1416,9 +1745,14 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                     <div v-if="!filteredPlans.length" class="rounded-2xl border border-dashed border-border bg-card p-8 text-center lg:col-span-2">
                         <p class="text-lg font-semibold text-primary">Noch kein Plan für diese Auswahl.</p>
                         <p class="mt-2 text-sm text-secondary">Erstelle den ersten Plan und gib ihn direkt an Sportler oder ein Team frei.</p>
-                        <button type="button" class="mt-4 rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="openModal('plan')">
-                            Plan erstellen
-                        </button>
+                        <div class="mt-4 flex flex-wrap justify-center gap-2">
+                            <button type="button" class="rounded-xl border border-air-blue/50 bg-air-blue/10 px-4 py-2 text-sm font-semibold text-air-blue disabled:opacity-50" :disabled="!aiTrainingPlanAvailable" @click="openAiTrainingPlanModal()">
+                                KI-Plan erstellen
+                            </button>
+                            <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="openModal('plan')">
+                                Plan manuell erstellen
+                            </button>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -1444,7 +1778,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                     <h2 class="text-base font-semibold text-primary">Sportart-Parameter</h2>
                     <p class="mt-1 text-sm text-secondary">Die Felder im Plan passen sich der gewählten Sportart an.</p>
                     <div class="mt-4 flex flex-wrap gap-2">
-                        <span v-for="metric in (selectedSport.metrics || ['Dauer', 'Intensitaet', 'Todo'])" :key="metric" class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">
+                        <span v-for="metric in (selectedSport.metrics || ['Dauer', 'Intensität', 'Todo'])" :key="metric" class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">
                             {{ metric }}
                         </span>
                     </div>
@@ -1452,7 +1786,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
 
                 <section class="rounded-2xl border border-border bg-card p-4">
                     <h2 class="text-base font-semibold text-primary">Vorlagen</h2>
-                    <p class="mt-1 text-sm text-secondary">Kopierte oder vorbereitete Pläne koennen als Startpunkt genutzt werden.</p>
+                    <p class="mt-1 text-sm text-secondary">Kopierte oder vorbereitete Pläne können als Startpunkt genutzt werden.</p>
                     <div class="mt-4 space-y-2">
                         <div v-for="plan in templatePlans.slice(0, 4)" :key="plan.id" class="rounded-xl border border-border bg-inputBg/40 p-3">
                             <p class="text-sm font-semibold text-primary">{{ plan.title }}</p>
@@ -1475,7 +1809,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                             {{ ['log', 'activity', 'item', 'item-edit', 'item-missed'].includes(activeModal) ? 'Trainingseinheit' : ['delete', 'draft-delete', 'item-delete'].includes(activeModal) ? 'Bestätigen' : 'Trainingsplan' }}
                         </p>
                         <h2 class="mt-1 text-xl font-semibold text-primary">
-                            {{ activeModal === 'plan' ? 'Plan erstellen' : activeModal === 'log' ? 'Training dokumentieren' : activeModal === 'activity' ? 'Einheit eintragen' : activeModal === 'edit' ? 'Plan bearbeiten & freigeben' : activeModal === 'item' ? 'Einheit zum Plan hinzufügen' : activeModal === 'item-edit' ? 'Einheit bearbeiten' : activeModal === 'item-missed' ? 'Ausfall melden' : activeModal === 'item-delete' ? 'Einheit löschen' : activeModal === 'draft-delete' ? 'Training-Entwurf verwerfen' : 'Trainingsplan löschen' }}
+                            {{ activeModal === 'ai-plan' ? 'KI-Plan erstellen' : activeModal === 'plan' ? 'Plan erstellen' : activeModal === 'log' ? 'Training dokumentieren' : activeModal === 'activity' ? 'Einheit eintragen' : activeModal === 'edit' ? 'Plan bearbeiten & freigeben' : activeModal === 'item' ? 'Einheit zum Plan hinzufügen' : activeModal === 'item-edit' ? 'Einheit bearbeiten' : activeModal === 'item-missed' ? 'Ausfall melden' : activeModal === 'item-delete' ? 'Einheit löschen' : activeModal === 'draft-delete' ? 'Training-Entwurf verwerfen' : 'Trainingsplan löschen' }}
                         </h2>
                     </div>
                     <button type="button" class="rounded-xl border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="closeModal">
@@ -1509,14 +1843,14 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                         <label class="block text-sm font-semibold text-primary">Status
                             <select v-model="logForm.status" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" @change="setLogStatus">
                                 <option value="completed">Abgeschlossen</option>
-                                <option value="in_progress">Laeuft gerade</option>
+                                <option value="in_progress">Läuft gerade</option>
                                 <option value="planned">Geplant</option>
                             </select>
                         </label>
                         <label class="block text-sm font-semibold text-primary">Zeitpunkt
                             <input v-model="logForm.performed_at" type="datetime-local" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                         </label>
-                        <label class="block text-sm font-semibold text-primary">Intensitaet
+                        <label class="block text-sm font-semibold text-primary">Intensität
                             <select v-model="logForm.intensity" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
                                 <option value="">Keine Angabe</option>
                                 <option value="locker">Locker</option>
@@ -1535,7 +1869,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                             <input v-model="logForm.calories" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" />
                         </label>
                         <label class="block text-sm font-semibold text-primary md:col-span-2">Notizen
-                            <textarea v-model="logForm.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Gefuehl, Technik, Schmerzen, Besonderheiten" />
+                            <textarea v-model="logForm.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Gefühl, Technik, Schmerzen, Besonderheiten" />
                         </label>
                         <label v-if="logForm.user_id" class="block text-sm font-semibold text-primary md:col-span-2">Trainer-Hinweis
                             <textarea v-model="logForm.trainer_feedback" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary" placeholder="Hinweise, Korrekturen oder Fokus für die nächste Einheit" />
@@ -1613,6 +1947,238 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                     </button>
                 </form>
 
+                <form v-if="activeModal === 'ai-plan'" class="space-y-4 p-4" @submit.prevent="aiPlanStep < 2 ? generateAiTrainingPlan(false) : saveAiTrainingPlan()">
+                    <div class="grid grid-cols-3 gap-2">
+                        <button
+                            v-for="(step, index) in aiPlanSteps"
+                            :key="step.label"
+                            type="button"
+                            class="rounded-2xl border p-3 text-left transition"
+                            :class="[
+                                aiPlanStep === index ? 'border-air-blue bg-air-blue text-white shadow-lg shadow-air-blue/20' : 'border-border bg-card text-primary hover:bg-muted',
+                                !canOpenAiPlanStep(index) ? 'cursor-not-allowed opacity-50' : '',
+                            ]"
+                            :disabled="!canOpenAiPlanStep(index)"
+                            @click="aiPlanStep = index"
+                        >
+                            <span class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide" :class="aiPlanStep === index ? 'text-white/80' : 'text-secondary'">
+                                <i :class="step.icon"></i>
+                                Schritt {{ index + 1 }}
+                            </span>
+                            <span class="mt-2 block text-sm font-semibold">{{ step.label }}</span>
+                            <span class="hidden text-xs opacity-80 sm:block">{{ step.hint }}</span>
+                        </button>
+                    </div>
+
+                    <div v-if="aiTrainingPlanError || aiTrainingPlanMessage" class="rounded-xl border px-4 py-3 text-sm font-semibold" :class="aiTrainingPlanError ? 'border-danger/40 bg-danger/10 text-danger' : 'border-success/40 bg-success/10 text-success'">
+                        {{ aiTrainingPlanError || aiTrainingPlanMessage }}
+                    </div>
+
+                    <section v-if="aiPlanStep === 0" class="rounded-2xl border border-border bg-card p-4">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">KI-Planung</p>
+                                <h3 class="mt-1 text-lg font-semibold text-primary">{{ aiPlanSourcePlan ? 'Plan mit KI anpassen' : 'Ziel festlegen' }}</h3>
+                            </div>
+                            <span class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">{{ aiTrainingProviderLabel }}</span>
+                        </div>
+
+                        <div class="mt-3 rounded-xl border border-air-blue/30 bg-air-blue/10 px-3 py-2 text-sm text-primary">
+                            <span class="font-semibold">{{ aiPlanLimitLabel }}</span>
+                            <span v-if="aiTrainingPlan.access_reason" class="mt-1 block text-danger">{{ aiTrainingPlan.access_reason }}</span>
+                        </div>
+
+                        <p v-if="aiPlanSourcePlan" class="mt-3 rounded-xl border border-air-blue/30 bg-air-blue/10 px-3 py-2 text-sm text-primary">
+                            Ausgangsplan: {{ aiPlanSourcePlan.title }}. Die KI erstellt eine neue bestätigbare Version, damit dein alter Plan nachvollziehbar bleibt.
+                        </p>
+
+                        <div class="mt-4 grid gap-4">
+                            <label class="block text-sm font-semibold text-primary">Planname
+                                <input v-model="aiPlanForm.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. 5-km Comeback, Hyrox Aufbau, Oberkörper Kraft" />
+                            </label>
+
+                            <label class="block text-sm font-semibold text-primary">Trainingsziel
+                                <textarea v-model="aiPlanForm.goal" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="Was soll der Plan erreichen? Beispiel: 6 Wochen, 5 km schneller laufen, 3 Einheiten pro Woche, Knie schonen." required />
+                            </label>
+
+                            <div>
+                                <p class="text-sm font-semibold text-primary">Sportart</p>
+                                <p class="mt-1 text-xs text-secondary">Die KI kombiniert die passenden Schwerpunkte wie Grundlage, Tempo, Technik, Kraft und Regeneration automatisch.</p>
+                                <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                    <button
+                                        v-for="sport in aiPlanSportChoices"
+                                        :key="sport.key"
+                                        type="button"
+                                        class="rounded-xl border px-3 py-3 text-left text-sm font-semibold transition"
+                                        :class="aiPlanForm.sport_type === sport.key ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-inputBg text-primary hover:bg-muted'"
+                                        @click="selectAiPlanSportType(sport.key)"
+                                    >
+                                        <span :class="['mb-2 block h-1.5 w-8 rounded-full', sport.accent]"></span>
+                                        <i :class="sport.icon" class="mr-2"></i>{{ sport.label }}
+                                    </button>
+                                </div>
+                                <div class="mt-3 rounded-xl border border-air-blue/30 bg-air-blue/10 px-3 py-2 text-xs font-semibold text-primary">
+                                    Ausgewogene Planung aktiv: Die einzelnen Einheiten bekommen später automatisch ihren Typ, z. B. Long Run, Intervalle, Technik oder Regeneration.
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section v-if="aiPlanStep === 1" class="rounded-2xl border border-border bg-card p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Rahmen</p>
+                        <h3 class="mt-1 text-lg font-semibold text-primary">Damit der Plan wirklich passt</h3>
+
+                        <div class="mt-4 grid gap-4 md:grid-cols-2">
+                            <label class="block text-sm font-semibold text-primary">Niveau
+                                <select v-model="aiPlanForm.level" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                                    <option value="beginner">Einsteiger</option>
+                                    <option value="intermediate">Fortgeschritten</option>
+                                    <option value="advanced">Advanced</option>
+                                    <option value="elite">Leistung</option>
+                                </select>
+                            </label>
+                            <label class="block text-sm font-semibold text-primary">Phase
+                                <select v-model="aiPlanForm.phase" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
+                                    <option value="base">Grundlage</option>
+                                    <option value="build">Aufbau</option>
+                                    <option value="peak">Peak</option>
+                                    <option value="recovery">Regeneration</option>
+                                    <option value="rehab">Reha / Wiedereinstieg</option>
+                                </select>
+                            </label>
+                            <div class="md:col-span-2">
+                                <p class="text-sm font-semibold text-primary">Planlänge</p>
+                                <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                    <button
+                                        v-for="preset in aiPlanDurationPresets"
+                                        :key="preset.weeks"
+                                        type="button"
+                                        class="rounded-xl border px-3 py-3 text-left transition"
+                                        :class="[
+                                            Number(aiPlanForm.weeks) === Math.min(preset.weeks, aiPlanMaxWeeks) ? 'border-air-blue bg-air-blue/10 text-air-blue' : 'border-border bg-inputBg text-primary hover:bg-muted',
+                                            preset.weeks > aiPlanMaxWeeks ? 'opacity-50' : '',
+                                        ]"
+                                        @click="setAiPlanDurationPreset(preset.weeks)"
+                                    >
+                                        <span class="block text-sm font-semibold">{{ preset.label }}</span>
+                                        <span class="mt-1 block text-xs text-secondary">{{ preset.hint }}</span>
+                                        <span v-if="preset.weeks > aiPlanMaxWeeks" class="mt-1 block text-[11px] text-danger">ab nächster Stufe</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <label class="block text-sm font-semibold text-primary">Wochen
+                                <input v-model="aiPlanForm.weeks" type="number" min="1" :max="aiPlanMaxWeeks" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
+                            </label>
+                            <label class="block text-sm font-semibold text-primary">Einheiten pro Woche
+                                <input v-model="aiPlanForm.sessions_per_week" type="number" min="1" max="6" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
+                            </label>
+                            <div class="md:col-span-2 rounded-xl border px-3 py-2 text-sm" :class="aiPlanTooLarge || aiPlanWeeksTooLong ? 'border-danger/40 bg-danger/10 text-danger' : 'border-border bg-inputBg/40 text-secondary'">
+                                {{ aiPlanRequestedItems }} geplante Einheiten · maximal {{ aiPlanMaxItems }} pro KI-Plan · maximal {{ aiPlanMaxWeeks }} Wochen in deiner Stufe.
+                            </div>
+                            <label class="block text-sm font-semibold text-primary">Dauer je Einheit
+                                <input v-model="aiPlanForm.duration_minutes" type="number" min="10" max="240" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
+                            </label>
+                            <label class="block text-sm font-semibold text-primary">Startdatum
+                                <input v-model="aiPlanForm.starts_on" type="date" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" />
+                            </label>
+                            <label class="block text-sm font-semibold text-primary md:col-span-2">Equipment / Ort
+                                <input v-model="aiPlanForm.equipment" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. Kurzhanteln, Laufbahn, Gym, kein Gerät" />
+                            </label>
+                            <label class="block text-sm font-semibold text-primary md:col-span-2">Einschränkungen
+                                <textarea v-model="aiPlanForm.constraints" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="Verletzungen, Zeitfenster, Pausentage, Dinge die vermieden werden sollen" />
+                            </label>
+                            <label class="block text-sm font-semibold text-primary md:col-span-2">Vorlieben
+                                <textarea v-model="aiPlanForm.preferences" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="Lieblingsübungen, bevorzugte Tage, Fokus, Stil" />
+                            </label>
+                            <label v-if="aiPlanSourcePlan || aiTrainingPlanPreview" class="block text-sm font-semibold text-primary md:col-span-2">Was soll die KI ändern?
+                                <textarea v-model="aiPlanForm.revision_instruction" rows="3" class="mt-2 w-full rounded-xl border border-air-blue/40 bg-air-blue/10 px-3 py-3 text-primary" placeholder="z. B. weniger Umfang, mehr Kraft, Dienstag frei lassen, Intervalle kürzer machen" />
+                            </label>
+                        </div>
+                    </section>
+
+                    <section v-if="aiPlanStep === 2" class="space-y-4">
+                        <div v-if="aiTrainingPlanPreview" class="rounded-2xl border border-air-blue/30 bg-air-blue/10 p-4">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Vorschlag prüfen</p>
+                                    <h3 class="mt-1 text-xl font-semibold text-primary">{{ aiTrainingPlanPreview.title }}</h3>
+                                    <p class="mt-2 max-w-3xl text-sm text-secondary">{{ aiTrainingPlanPreview.summary }}</p>
+                                </div>
+                                <span class="rounded-full border border-air-blue/40 px-3 py-1 text-xs font-semibold text-air-blue">
+                                    {{ aiTrainingPlanPreview.items?.length || 0 }} Einheiten
+                                </span>
+                            </div>
+                            <div class="mt-4 rounded-xl border border-air-blue/25 bg-bg/50 p-3">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Warum genau so?</p>
+                                <p class="mt-1 text-sm text-primary">{{ aiTrainingPlanPreview.convincing_explanation }}</p>
+                            </div>
+                        </div>
+
+                        <div v-if="aiTrainingPlanPreview" class="grid gap-4 lg:grid-cols-2">
+                            <section class="rounded-2xl border border-border bg-card p-4">
+                                <h4 class="text-sm font-semibold uppercase tracking-wide text-secondary">Planlogik</h4>
+                                <ul class="mt-3 space-y-2 text-sm text-primary">
+                                    <li v-for="reason in aiTrainingPlanPreview.progression_logic || []" :key="reason" class="rounded-xl border border-border bg-inputBg/40 px-3 py-2">{{ reason }}</li>
+                                </ul>
+                            </section>
+                            <section class="rounded-2xl border border-border bg-card p-4">
+                                <h4 class="text-sm font-semibold uppercase tracking-wide text-secondary">Analyse-Tipps</h4>
+                                <ul class="mt-3 space-y-2 text-sm text-primary">
+                                    <li v-for="tip in aiTrainingPlanPreview.analysis_tips || []" :key="tip" class="rounded-xl border border-border bg-inputBg/40 px-3 py-2">{{ tip }}</li>
+                                    <li v-if="!(aiTrainingPlanPreview.analysis_tips || []).length" class="text-secondary">Keine zusätzlichen Tipps.</li>
+                                </ul>
+                            </section>
+                        </div>
+
+                        <div v-if="aiTrainingPlanPreview" class="rounded-2xl border border-border bg-card p-4">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Trainingseinheiten</p>
+                                    <h4 class="text-lg font-semibold text-primary">Nach dem Speichern normal bearbeitbar</h4>
+                                </div>
+                                <button type="button" class="rounded-xl border border-air-blue/40 px-3 py-2 text-sm font-semibold text-air-blue hover:bg-air-blue/10" :disabled="aiTrainingPlanGenerating" @click="generateAiTrainingPlan(true)">
+                                    KI überarbeiten
+                                </button>
+                            </div>
+
+                            <label class="mt-4 block text-sm font-semibold text-primary">Änderungswunsch an die KI
+                                <textarea v-model="aiPlanForm.revision_instruction" rows="2" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. Einheit 3 leichter machen, mehr Gym-Sätze, Laufumfang reduzieren" />
+                            </label>
+
+                            <div class="mt-4 space-y-2">
+                                <article v-for="(item, index) in aiTrainingPlanPreview.items || []" :key="`${item.title}-${index}`" class="rounded-xl border border-border bg-inputBg/40 p-3">
+                                    <div class="flex flex-wrap items-start justify-between gap-2">
+                                        <div class="min-w-0">
+                                            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Woche {{ item.week || '-' }} · {{ item.day || 'Termin offen' }}</p>
+                                            <h5 class="mt-1 text-sm font-semibold text-primary">{{ item.title }}</h5>
+                                            <p class="mt-1 text-xs text-secondary">{{ item.description }}</p>
+                                        </div>
+                                        <span class="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-secondary">{{ sportLabel(item.sport_type) }}</span>
+                                    </div>
+                                    <div class="mt-3 flex flex-wrap gap-1.5 text-[11px] text-secondary">
+                                        <span v-if="item.duration_minutes" class="rounded-full bg-bg px-2 py-1">{{ item.duration_minutes }} min</span>
+                                        <span v-if="item.distance_km" class="rounded-full bg-bg px-2 py-1">{{ item.distance_km }} km</span>
+                                        <span v-if="item.intensity" class="rounded-full bg-bg px-2 py-1">{{ item.intensity }}</span>
+                                        <span v-for="(value, key) in item.metrics || {}" :key="key" class="rounded-full bg-bg px-2 py-1">{{ key }}: {{ value }}</span>
+                                    </div>
+                                </article>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="sticky bottom-0 -mx-4 -mb-4 flex items-center justify-between gap-3 border-t border-border bg-bg/95 p-4 backdrop-blur">
+                        <button type="button" class="rounded-xl border border-border px-4 py-3 text-sm font-semibold text-primary disabled:opacity-40" :disabled="aiPlanStep === 0 || aiTrainingPlanGenerating || aiTrainingPlanSaving" @click="aiPlanStep = Math.max(0, aiPlanStep - 1)">
+                            Zurück
+                        </button>
+                        <button v-if="aiPlanStep < 2" type="button" class="rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="aiTrainingPlanGenerating || !aiPlanForm.goal?.trim() || (aiPlanStep === 1 && aiPlanCannotGenerate)" @click="continueAiTrainingPlan">
+                            {{ aiPlanStep === 0 ? 'Weiter' : aiTrainingPlanGenerating ? 'KI arbeitet...' : 'Plan generieren' }}
+                        </button>
+                        <button v-else type="button" class="rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60" :disabled="aiTrainingPlanSaving || !aiTrainingPlanPreview" @click="saveAiTrainingPlan">
+                            {{ aiTrainingPlanSaving ? 'Speichert...' : 'Plan bestätigen & speichern' }}
+                        </button>
+                    </div>
+                </form>
+
                 <form v-if="activeModal === 'plan'" class="space-y-4 p-4" @submit.prevent="submitPlan">
                     <div class="grid grid-cols-2 gap-2 md:grid-cols-4">
                         <button
@@ -1652,8 +2218,8 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                                     <button
                                         v-for="option in [
                                             { value: 'single', label: 'Einmalig', icon: 'las la-calendar-day' },
-                                            { value: 'daily', label: 'Taeglich', icon: 'las la-redo' },
-                                            { value: 'weekly', label: 'Woechentlich', icon: 'las la-calendar-week' },
+                                            { value: 'daily', label: 'Täglich', icon: 'las la-redo' },
+                                            { value: 'weekly', label: 'Wöchentlich', icon: 'las la-calendar-week' },
                                             { value: 'monthly', label: 'Monatlich', icon: 'las la-calendar-alt' },
                                         ]"
                                         :key="option.value"
@@ -1682,7 +2248,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                                 <select v-model="planForm.phase" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
                                     <option value="base">Grundlage</option>
                                     <option value="build">Aufbau</option>
-                                    <option value="peak">Peak / Wettkampfnaehe</option>
+                                    <option value="peak">Peak / Wettkampfnähe</option>
                                     <option value="recovery">Regeneration</option>
                                     <option value="rehab">Reha / Wiedereinstieg</option>
                                 </select>
@@ -1790,7 +2356,8 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
 
                         <div class="mt-4 grid gap-4 md:grid-cols-2">
                             <div class="md:col-span-2">
-                                <p class="text-sm font-semibold text-primary">Trainingsart</p>
+                                <p class="text-sm font-semibold text-primary">Einheitstyp</p>
+                                <p class="mt-1 text-xs text-secondary">Hier geht es um die Art dieser Einheit, nicht um die Sportart.</p>
                                 <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                                     <button
                                         v-for="type in planTrainingTypes"
@@ -1874,8 +2441,8 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                         <label class="block text-sm font-semibold text-primary">Rhythmus
                             <select v-model="editForm.cadence" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
                                 <option value="single">Einmalig</option>
-                                <option value="daily">Taeglich</option>
-                                <option value="weekly">Woechentlich</option>
+                                <option value="daily">Täglich</option>
+                                <option value="weekly">Wöchentlich</option>
                                 <option value="monthly">Monatlich</option>
                             </select>
                         </label>
@@ -1910,7 +2477,7 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                             <select v-model="editForm.phase" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-2 text-primary">
                                 <option value="base">Grundlage</option>
                                 <option value="build">Aufbau</option>
-                                <option value="peak">Peak / Wettkampfnaehe</option>
+                                <option value="peak">Peak / Wettkampfnähe</option>
                                 <option value="recovery">Regeneration</option>
                                 <option value="rehab">Reha / Wiedereinstieg</option>
                             </select>
@@ -2158,10 +2725,14 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
         </div>
 
         <div class="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 px-4 py-3 shadow-2xl shadow-black/30 backdrop-blur sm:hidden">
-            <div class="mx-auto grid max-w-md grid-cols-[1fr_1fr_auto] gap-2">
+            <div class="mx-auto grid max-w-md grid-cols-[1fr_1fr_1fr_auto] gap-2">
                 <button type="button" class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-buttonPrimary px-3 text-sm font-semibold text-buttonTextPrimary" @click="openModal('plan')">
                     <i class="las la-plus-circle text-lg"></i>
                     Plan
+                </button>
+                <button type="button" class="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-air-blue/50 bg-air-blue/10 px-3 text-sm font-semibold text-air-blue disabled:opacity-50" :disabled="!aiTrainingPlanAvailable" @click="openAiTrainingPlanModal()">
+                    <i class="las la-magic text-lg"></i>
+                    KI
                 </button>
                 <button type="button" class="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 text-sm font-semibold text-primary" @click="openLogPage">
                     <i class="las la-pen-alt text-lg"></i>

@@ -50,8 +50,8 @@ class Roles
     public const PLAYER = [
         'player',           // Spieler
         'youth_player',     // Jugendspieler
-        'minor_pending_consent', // Minderjaehriger Account wartet auf Zustimmung
-        'minor_player',     // Minderjaehriger Spieler mit Zustimmung
+        'minor_pending_consent', // Minderjähriger Account wartet auf Zustimmung
+        'minor_player',     // Minderjähriger Spieler mit Zustimmung
         'guest_player',     // Gastspieler
     ];
 
@@ -116,8 +116,8 @@ class Roles
             // 👤 PLAYER
             ['name' => 'player', 'description' => 'Spieler'],
             ['name' => 'youth_player', 'description' => 'Jugendspieler'],
-            ['name' => 'minor_pending_consent', 'description' => 'Minderjaehriger Account wartet auf Zustimmung der Erziehungsberechtigten'],
-            ['name' => 'minor_player', 'description' => 'Minderjaehriger Spieler mit Zustimmung der Erziehungsberechtigten'],
+            ['name' => 'minor_pending_consent', 'description' => 'Minderjähriger Account wartet auf Zustimmung der Erziehungsberechtigten'],
+            ['name' => 'minor_player', 'description' => 'Minderjähriger Spieler mit Zustimmung der Erziehungsberechtigten'],
             ['name' => 'guest_player', 'description' => 'Gastspieler'],
 
             // 👪 COMMUNITY & FAMILY & OTHER

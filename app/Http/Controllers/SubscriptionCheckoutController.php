@@ -41,7 +41,7 @@ class SubscriptionCheckoutController extends Controller
 
             return redirect()
                 ->route('guest.pricing', ['audience' => 'sportler'])
-                ->with('error', 'Dieser Abo-Plan wurde online nicht gefunden. Bitte pruefe, ob der Plan auf Hostinger existiert.');
+                ->with('error', 'Dieser Abo-Plan wurde online nicht gefunden. Bitte prüfe, ob der Plan auf Hostinger existiert.');
         }
 
         if (! $subscriptionPlan->is_active) {
@@ -91,7 +91,7 @@ class SubscriptionCheckoutController extends Controller
             'coupon_code' => ['nullable', 'string', 'max:80'],
             'accepted_terms' => ['accepted'],
         ], [
-            'accepted_terms.accepted' => 'Bitte bestaetige AGB und Widerrufshinweise, bevor du das Abo kostenpflichtig bestellst.',
+            'accepted_terms.accepted' => 'Bitte bestätige AGB und Widerrufshinweise, bevor du das Abo kostenpflichtig bestellst.',
         ]);
 
         $club = $this->resolveClub($request, $subscriptionPlan, $data['club_id'] ?? null);
@@ -99,7 +99,7 @@ class SubscriptionCheckoutController extends Controller
         $price = $subscriptionPlan->priceForCountry($country['country']);
 
         if (! $price['available']) {
-            $this->checkoutError('Dieser Abo-Plan ist in deinem Land aktuell nicht verfuegbar.');
+            $this->checkoutError('Dieser Abo-Plan ist in deinem Land aktuell nicht verfügbar.');
         }
 
         $amountCents = $data['billing_interval'] === 'yearly'
@@ -107,7 +107,7 @@ class SubscriptionCheckoutController extends Controller
             : (int) $price['monthly_price_cents'];
 
         if ($amountCents <= 0) {
-            $this->checkoutError('Kostenlose Plaene brauchen keinen Checkout.');
+            $this->checkoutError('Kostenlose Pläne brauchen keinen Checkout.');
         }
 
         $coupon = $this->resolveCoupon($data['coupon_code'] ?? null);
@@ -115,11 +115,11 @@ class SubscriptionCheckoutController extends Controller
         $payableCents = max(0, $amountCents - $discountCents);
 
         if ($payableCents <= 0) {
-            $this->checkoutError('Der Rabatt deckt den gesamten Betrag. Kostenlose Aktivierung folgt in einer spaeteren Ausbaustufe.');
+            $this->checkoutError('Der Rabatt deckt den gesamten Betrag. Kostenlose Aktivierung folgt in einer späteren Ausbaustufe.');
         }
 
         if ($data['provider'] === 'bank_transfer' && blank($this->bankTransferSettings()['iban'])) {
-            $this->checkoutError('Bankverbindung fuer Ueberweisung ist noch nicht konfiguriert.');
+            $this->checkoutError('Bankverbindung für Überweisung ist noch nicht konfiguriert.');
         }
 
         $checkout = PaymentCheckout::create([
@@ -166,7 +166,7 @@ class SubscriptionCheckoutController extends Controller
             ]);
 
             AppNotification::send($checkout->user_id, 'subscription.invoice.awaiting_transfer', [
-                'title' => 'Airmius Rechnung wartet auf Ueberweisung',
+                'title' => 'Airmius Rechnung wartet auf Überweisung',
                 'body' => $checkout->invoice->number.' - '.$checkout->payment_reference,
                 'subscription_invoice_id' => $checkout->invoice->id,
             ]);
@@ -262,13 +262,13 @@ class SubscriptionCheckoutController extends Controller
             if (! $this->syncPayPalSubscription($checkout, $request->query('subscription_id'))) {
                 return redirect()
                     ->route('guest.pricing', ['audience' => $checkout->plan?->target_actor ?: 'sportler'])
-                    ->with('error', 'PayPal konnte das Abo gerade nicht final bestaetigen. Bitte versuche es erneut oder pruefe spaeter deine Abos.');
+                    ->with('error', 'PayPal konnte das Abo gerade nicht final bestätigen. Bitte versuche es erneut oder prüfe später deine Abos.');
             }
         }
 
         return redirect()
             ->route('auth.club-memberships.index')
-            ->with('success', 'Checkout wurde verarbeitet. Dein Abo wird aktualisiert, sobald der Zahlungsanbieter die Zahlung bestaetigt.');
+            ->with('success', 'Checkout wurde verarbeitet. Dein Abo wird aktualisiert, sobald der Zahlungsanbieter die Zahlung bestätigt.');
     }
 
     public function cancel(Request $request, PaymentCheckout $checkout)
@@ -328,7 +328,7 @@ class SubscriptionCheckoutController extends Controller
 
         $this->activateCheckout($checkout);
 
-        return back()->with('success', 'Ueberweisung wurde als bezahlt markiert und das Abo aktiviert.');
+        return back()->with('success', 'Überweisung wurde als bezahlt markiert und das Abo aktiviert.');
     }
 
     public function stripeWebhook(Request $request)
@@ -470,7 +470,7 @@ class SubscriptionCheckoutController extends Controller
         }
 
         if (! $club) {
-            $this->checkoutError('Bitte erst einen Verein erstellen oder auswaehlen.');
+            $this->checkoutError('Bitte erst einen Verein erstellen oder auswählen.');
         }
 
         return $club;
@@ -529,7 +529,7 @@ class SubscriptionCheckoutController extends Controller
         $bank = $this->bankTransferSettings();
 
         if (blank($bank['iban'])) {
-            $this->checkoutError('Bankverbindung fuer Ueberweisung ist noch nicht konfiguriert.');
+            $this->checkoutError('Bankverbindung für Überweisung ist noch nicht konfiguriert.');
         }
 
         $checkout->update([
@@ -1095,7 +1095,7 @@ class SubscriptionCheckoutController extends Controller
             ->first();
 
         if (! $coupon || ! $coupon->isRedeemable()) {
-            $this->checkoutError('Der Rabattcode ist ungueltig oder abgelaufen.');
+            $this->checkoutError('Der Rabattcode ist ungültig oder abgelaufen.');
         }
 
         return $coupon;

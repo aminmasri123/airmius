@@ -44,7 +44,7 @@ class AiImagePrivacyService
         imagedestroy($target);
 
         if (! is_string($jpeg) || $jpeg === '') {
-            throw new RuntimeException('Bild konnte nicht fuer die KI vorbereitet werden.');
+            throw new RuntimeException('Bild konnte nicht für die KI vorbereitet werden.');
         }
 
         return [

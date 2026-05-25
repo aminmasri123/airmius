@@ -30,6 +30,6 @@ class ClubRegistrationReviewRequested extends Notification
             ->line('Verein: '.$this->club->name)
             ->line('Land: '.$this->club->country)
             ->line('Beantragte Vereinsnummer: '.($this->club->requested_official_club_number ?: '-'))
-            ->action('Antrag pruefen', route('admin.club-verifications.index'));
+            ->action('Antrag prüfen', route('admin.club-verifications.index'));
     }
 }

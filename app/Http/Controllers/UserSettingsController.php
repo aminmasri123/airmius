@@ -222,7 +222,7 @@ class UserSettingsController extends Controller
         $isOpenCheckout = $checkout && in_array($checkout->status, ['pending', 'awaiting_transfer'], true);
 
         if (! $isOpenInvoice || ! $isOpenCheckout) {
-            return back()->with('error', 'Nur offene Airmius-Zahlungen koennen abgebrochen werden.');
+            return back()->with('error', 'Nur offene Airmius-Zahlungen können abgebrochen werden.');
         }
 
         DB::transaction(function () use ($subscriptionInvoice, $checkout) {
@@ -253,7 +253,7 @@ class UserSettingsController extends Controller
         $isDisposableCheckout = ! $checkout || in_array($checkout->status, ['pending', 'awaiting_transfer', 'cancelled'], true);
 
         if (! $isUnpaidInvoice || ! $isDisposableCheckout) {
-            return back()->with('error', 'Bezahlte oder bereits aktivierte Zahlungen koennen nicht geloescht werden.');
+            return back()->with('error', 'Bezahlte oder bereits aktivierte Zahlungen können nicht gelöscht werden.');
         }
 
         DB::transaction(function () use ($subscriptionInvoice, $checkout) {
@@ -261,7 +261,7 @@ class UserSettingsController extends Controller
             $checkout?->delete();
         });
 
-        return back()->with('success', 'Offene Zahlung wurde geloescht.');
+        return back()->with('success', 'Offene Zahlung wurde gelöscht.');
     }
 
 

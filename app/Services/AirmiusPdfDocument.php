@@ -149,7 +149,7 @@ class AirmiusPdfDocument
         $this->fillColor(...self::BLUE)->rect(48, 82, 120, 3, true);
         $this->fillColor(...self::MUTED)->rect(0, 0, self::PAGE_WIDTH, 1, true);
         $this->text($message, 48, 64, 9, true, self::NAVY, 80);
-        $this->text('Diese Rechnung wurde automatisch erstellt und ist ohne Unterschrift gueltig.', 48, 50, 7, false, self::MUTED, 100);
+        $this->text('Diese Rechnung wurde automatisch erstellt und ist ohne Unterschrift gültig.', 48, 50, 7, false, self::MUTED, 100);
 
         $issuer = $this->issuerLine($profile);
         $tax = $this->taxLine($profile);

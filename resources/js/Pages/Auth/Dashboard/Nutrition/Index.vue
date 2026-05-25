@@ -88,7 +88,7 @@ const drinkVessels = [
         key: 'glass',
         label: 'Glas',
         amount: 250,
-        hint: 'Standardglas fuer zwischendurch',
+        hint: 'Standardglas für zwischendurch',
         title: 'Glas Wasser',
         fill: 58,
         gradient: 'from-sky-300 to-cyan-500',
@@ -96,10 +96,10 @@ const drinkVessels = [
     },
     {
         key: 'large-cup',
-        label: 'Grosser Becher',
+        label: 'Großer Becher',
         amount: 350,
         hint: 'Guter Schritt nach dem Training',
-        title: 'Grosser Becher Wasser',
+        title: 'Großer Becher Wasser',
         fill: 72,
         gradient: 'from-emerald-300 to-cyan-500',
         ring: 'border-emerald-300/45 hover:border-emerald-200',
@@ -423,7 +423,7 @@ const analyzeMealImage = async () => {
     }
 
     if (!aiMealConsent.value) {
-        aiMealError.value = 'Bitte bestaetige zuerst die KI-Analyse.'
+        aiMealError.value = 'Bitte bestätige zuerst die KI-Analyse.'
         return
     }
 
@@ -578,7 +578,7 @@ const deleteDrinkEntry = (entry) => {
 
     let handled = false
 
-    const restoreDrinkEntry = (message = 'Getraenk konnte nicht geloescht werden. Bitte versuche es erneut.') => {
+    const restoreDrinkEntry = (message = 'Getraenk konnte nicht gelöscht werden. Bitte versuche es erneut.') => {
         handled = true
         removeDeletingDrinkEntry(entry.id)
         drinkError.value = message
@@ -593,7 +593,7 @@ const deleteDrinkEntry = (entry) => {
             activeSection.value = 'drink'
         },
         onError: () => restoreDrinkEntry(),
-        onCancel: () => restoreDrinkEntry('Loeschen wurde abgebrochen. Der Eintrag ist wieder sichtbar.'),
+        onCancel: () => restoreDrinkEntry('Löschen wurde abgebrochen. Der Eintrag ist wieder sichtbar.'),
         onFinish: () => {
             if (!handled) {
                 restoreDrinkEntry()
@@ -639,7 +639,7 @@ const applyFoodResult = (food) => {
     mealForm.sugar_g = food.sugar_g ?? ''
     mealForm.source = food.code ? 'barcode' : 'manual'
     mealForm.items = [{ name: food.title, amount: food.quantity_label || food.serving_size || '1 Portion / 100 g' }]
-    mealForm.notes = `Quelle: ${food.attribution || 'Open Food Facts'}. Werte bitte prüfen, da offene Daten unvollstaendig sein koennen.`
+    mealForm.notes = `Quelle: ${food.attribution || 'Open Food Facts'}. Werte bitte prüfen, da offene Daten unvollständig sein können.`
 }
 
 const searchFoods = async () => {
@@ -673,7 +673,7 @@ const lookupBarcode = async () => {
     foodSearchResults.value = []
 
     if (foodBarcode.value.trim().length < 6) {
-        foodLookupError.value = 'Bitte einen gueltigen Barcode eingeben.'
+        foodLookupError.value = 'Bitte einen gültigen Barcode eingeben.'
         return
     }
 
@@ -721,14 +721,14 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <Head title="Ernaehrung" />
+    <Head title="Ernährung" />
 
     <div class="space-y-4">
         <section class="rounded-2xl border border-border bg-card p-3 sm:p-4 lg:p-5">
             <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div class="min-w-0">
                     <p class="text-xs font-bold uppercase text-air-blue">Airmius Fuel</p>
-                    <h1 class="mt-1 text-xl font-bold leading-tight text-primary sm:text-2xl">Ernaehrung</h1>
+                    <h1 class="mt-1 text-xl font-bold leading-tight text-primary sm:text-2xl">Ernährung</h1>
                     <p class="mt-1 hidden max-w-2xl text-sm leading-6 text-secondary sm:block">
                         Heute sehen, schnell erfassen, Ziele ruhig anpassen. Keine überladene Arbeitsflaeche mehr.
                     </p>
@@ -860,7 +860,7 @@ onBeforeUnmount(() => {
                         <p class="text-xs font-bold uppercase text-air-blue">Tageslog</p>
                         <h2 class="mt-1 text-lg font-bold text-primary">Mahlzeiten</h2>
                     </div>
-                    <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-primary">{{ sortedMeals.length }} Eintraege</span>
+                    <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-primary">{{ sortedMeals.length }} Einträge</span>
                 </div>
 
                 <div class="mt-4 space-y-3">
@@ -911,9 +911,9 @@ onBeforeUnmount(() => {
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <p class="text-xs font-bold uppercase text-cyan-200">KI-Fotoanalyse</p>
-                            <h3 class="mt-1 text-base font-black text-primary">Kalorien aus Bild schaetzen</h3>
+                            <h3 class="mt-1 text-base font-black text-primary">Kalorien aus Bild schützen</h3>
                             <p class="mt-1 text-sm leading-6 text-secondary">
-                                Bild wird verkleinert, EXIF wird entfernt. Ergebnis bleibt ein Vorschlag und muss von dir bestaetigt werden.
+                                Bild wird verkleinert, EXIF wird entfernt. Ergebnis bleibt ein Vorschlag und muss von dir bestätigt werden.
                             </p>
                         </div>
                         <span class="shrink-0 rounded-full bg-card px-3 py-1 text-xs font-black text-cyan-100">
@@ -949,7 +949,7 @@ onBeforeUnmount(() => {
 
                     <label class="mt-3 flex items-start gap-3 rounded-xl border border-border bg-card/70 p-3 text-sm text-secondary">
                         <input v-model="aiMealConsent" type="checkbox" class="mt-1 rounded border-border bg-inputBg text-air-blue">
-                        <span>Ich moechte dieses Bild zur KI-Analyse senden. Es wird nur fuer den Vorschlag genutzt und nicht automatisch als Mahlzeit gespeichert.</span>
+                        <span>Ich möchte dieses Bild zur KI-Analyse senden. Es wird nur für den Vorschlag genutzt und nicht automatisch als Mahlzeit gespeichert.</span>
                     </label>
 
                     <p v-if="aiMealError" class="mt-3 rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm font-semibold text-danger">
@@ -965,11 +965,11 @@ onBeforeUnmount(() => {
                                 </p>
                             </div>
                             <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-bold text-primary hover:bg-muted" @click="applyAiMealSuggestion">
-                                Erneut uebernehmen
+                                Erneut übernehmen
                             </button>
                         </div>
                         <p class="mt-2 text-xs leading-5 text-secondary">
-                            {{ aiMealSuggestion.notes || 'Bitte Mengen pruefen, bevor du speicherst.' }}
+                            {{ aiMealSuggestion.notes || 'Bitte Mengen prüfen, bevor du speicherst.' }}
                         </p>
                     </div>
                 </section>
@@ -1050,7 +1050,7 @@ onBeforeUnmount(() => {
                     </div>
 
                     <label class="block text-sm font-bold text-primary">Notiz
-                        <textarea v-model="mealForm.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-primary" placeholder="Gefuehl, Hunger, Timing, Besonderheiten"></textarea>
+                        <textarea v-model="mealForm.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-primary" placeholder="Gefühl, Hunger, Timing, Besonderheiten"></textarea>
                     </label>
                 </div>
 
@@ -1167,7 +1167,7 @@ onBeforeUnmount(() => {
                     <div class="rounded-2xl border border-border bg-inputBg p-3">
                         <p class="text-xs font-bold uppercase text-secondary">Modus</p>
                         <p class="mt-1 text-lg font-black text-primary">{{ goalForm.water_target_mode === 'auto' ? 'Automatisch' : 'Manuell' }}</p>
-                        <p class="mt-1 text-xs leading-5 text-secondary">Aenderbar unter Ziele.</p>
+                        <p class="mt-1 text-xs leading-5 text-secondary">?nderbar unter Ziele.</p>
                     </div>
                 </div>
 
@@ -1191,7 +1191,7 @@ onBeforeUnmount(() => {
                     <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                         <div>
                             <p class="text-sm font-bold text-primary">Nach Tasse oder Glas eintragen</p>
-                            <p class="hidden text-xs leading-5 text-secondary sm:block">Waehle die Groesse, die am besten passt. Die Menge wird direkt gespeichert.</p>
+                            <p class="hidden text-xs leading-5 text-secondary sm:block">Wähle die Grüße, die am besten passt. Die Menge wird direkt gespeichert.</p>
                         </div>
                         <span class="hidden text-xs font-bold uppercase text-cyan-200 sm:inline">Airmius Quick Drink</span>
                     </div>
@@ -1373,7 +1373,7 @@ onBeforeUnmount(() => {
 
                     <div v-if="deletingDrinkEntries.length" class="mt-4 flex items-center gap-2 rounded-xl border border-cyan-300/30 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-100">
                         <i class="las la-sync-alt animate-spin"></i>
-                        <span>{{ deletingDrinkEntries.length }} Eintrag wird geloescht...</span>
+                        <span>{{ deletingDrinkEntries.length }} Eintrag wird gelöscht...</span>
                     </div>
 
                     <div v-if="drinkEntries.length" class="mt-4 space-y-2">
@@ -1422,7 +1422,7 @@ onBeforeUnmount(() => {
         <section v-if="activeSection === 'goals'" class="grid gap-4 xl:grid-cols-[minmax(0,0.8fr),minmax(320px,0.6fr)]">
             <form class="rounded-2xl border border-border bg-card p-4 lg:p-5" @submit.prevent="saveGoal">
                 <p class="text-xs font-bold uppercase text-air-blue">Ziel</p>
-                <h2 class="mt-1 text-xl font-bold text-primary">{{ selectedGoal.label || 'Ernaehrungsziel' }}</h2>
+                <h2 class="mt-1 text-xl font-bold text-primary">{{ selectedGoal.label || 'Ernährungsziel' }}</h2>
                 <p class="mt-1 text-sm text-secondary">{{ selectedGoal.hint }}</p>
 
                 <div class="mt-4 grid gap-3 sm:grid-cols-2">
@@ -1431,7 +1431,7 @@ onBeforeUnmount(() => {
                             <option v-for="goalType in goalTypes" :key="goalType.key" :value="goalType.key">{{ goalType.label }}</option>
                         </select>
                     </label>
-                    <label class="block text-sm font-bold text-primary">Ernaehrungsstil
+                    <label class="block text-sm font-bold text-primary">Ernährungsstil
                         <select v-model="goalForm.diet_style" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
                             <option v-for="style in dietStyles" :key="style.key" :value="style.key">{{ style.label }}</option>
                         </select>

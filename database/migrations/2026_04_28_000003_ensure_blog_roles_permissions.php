@@ -12,11 +12,11 @@ return new class extends Migration
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $permissions = [
-            'blog.view' => 'Blogbeitraege anzeigen',
-            'blog.create' => 'Blogbeitraege erstellen',
-            'blog.update' => 'Blogbeitraege bearbeiten',
-            'blog.delete' => 'Blogbeitraege loeschen',
-            'blog.publish' => 'Blogbeitraege veroeffentlichen',
+            'blog.view' => 'Blogbeiträge anzeigen',
+            'blog.create' => 'Blogbeiträge erstellen',
+            'blog.update' => 'Blogbeiträge bearbeiten',
+            'blog.delete' => 'Blogbeiträge löschen',
+            'blog.publish' => 'Blogbeiträge veröffentlichen',
             'blog.manage' => 'Blog-CMS verwalten',
         ];
 

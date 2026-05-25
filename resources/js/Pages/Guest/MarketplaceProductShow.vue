@@ -164,7 +164,7 @@ const canContinueAddress = computed(() => Boolean(hasGuestContact.value && hasRe
 const canContinuePayment = computed(() => Boolean(!checkoutUnavailable.value && form.provider && selectedQuantity.value >= 1))
 const checkoutStepHint = computed(() => {
     if (checkoutStep.value === 'address' && !canContinueAddress.value) {
-        return 'Bitte Kontakt und Lieferdaten vervollstaendigen.'
+        return 'Bitte Kontakt und Lieferdaten vervollständigen.'
     }
 
     if (checkoutStep.value === 'payment' && checkoutUnavailable.value) {
@@ -262,7 +262,7 @@ const isLearningProduct = computed(() => ['online_course', 'training_plan'].incl
 const productFaqItems = computed(() => [
     {
         question: 'Wie bekomme ich das Angebot?',
-        answer: props.product.delivery_label || (props.product.is_shippable ? 'Der Anbieter bereitet den Versand nach der Bestellung vor.' : 'Du erhaeltst nach dem Kauf die weiteren Informationen digital oder per E-Mail.'),
+        answer: props.product.delivery_label || (props.product.is_shippable ? 'Der Anbieter bereitet den Versand nach der Bestellung vor.' : 'Du erhältst nach dem Kauf die weiteren Informationen digital oder per E-Mail.'),
     },
     {
         question: 'Wer ist mein Ansprechpartner?',
@@ -550,7 +550,7 @@ const updateCountry = () => {
                                         <div v-if="product.coaching_enabled" class="mt-4 rounded-lg border border-buttonPrimary/30 bg-buttonPrimary/10 p-3 text-sm text-primary">
                                             <p class="font-bold">Trainer-Feedback inklusive</p>
                                             <p v-if="product.coach_feedback_instructions" class="mt-2 text-secondary">{{ product.coach_feedback_instructions }}</p>
-                                            <p v-else class="mt-2 text-secondary">Athleten koennen Fortschritt und Fragen nach dem Kauf mit dem Trainer teilen.</p>
+                                            <p v-else class="mt-2 text-secondary">Athleten können Fortschritt und Fragen nach dem Kauf mit dem Trainer teilen.</p>
                                         </div>
                                     </div>
                                 </div>

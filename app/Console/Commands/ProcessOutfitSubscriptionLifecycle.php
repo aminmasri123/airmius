@@ -11,7 +11,7 @@ class ProcessOutfitSubscriptionLifecycle extends Command
     protected $signature = 'airmius:process-outfit-subscription-lifecycle
         {--date= : Stichtag im Format YYYY-MM-DD, Standard ist heute}';
 
-    protected $description = 'Schliesst faellige Outfit-Abo-Kuendigungen endgueltig ab.';
+    protected $description = 'Schließt fällige Outfit-Abo-Kündigungen endgültig ab.';
 
     public function handle(): int
     {
@@ -36,7 +36,7 @@ class ProcessOutfitSubscriptionLifecycle extends Command
                 }
             });
 
-        $this->info("{$cancelled} Outfit-Abos endgueltig gekuendigt.");
+        $this->info("{$cancelled} Outfit-Abos endgültig gekündigt.");
 
         return self::SUCCESS;
     }

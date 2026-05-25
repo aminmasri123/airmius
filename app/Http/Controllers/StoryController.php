@@ -122,7 +122,7 @@ class StoryController extends Controller
 
         $story->delete();
 
-        return back()->with('success', 'Story geloescht.');
+        return back()->with('success', 'Story gelöscht.');
     }
 
     private function directoryFor(array $data, int $userId): string
@@ -190,7 +190,7 @@ class StoryController extends Controller
 
         if (! $club->members_can_post_to_club) {
             throw ValidationException::withMessages([
-                'club_id' => 'Mitglieder duerfen fuer diesen Verein keine Storys erstellen.',
+                'club_id' => 'Mitglieder dürfen für diesen Verein keine Storys erstellen.',
             ]);
         }
 
@@ -224,7 +224,7 @@ class StoryController extends Controller
 
         if (! $team->club?->members_can_post_to_teams) {
             throw ValidationException::withMessages([
-                'team_id' => 'Mitglieder duerfen fuer Teams dieses Vereins keine Storys erstellen.',
+                'team_id' => 'Mitglieder dürfen für Teams dieses Vereins keine Storys erstellen.',
             ]);
         }
 

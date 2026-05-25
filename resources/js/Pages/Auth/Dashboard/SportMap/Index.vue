@@ -605,7 +605,7 @@ const landingActions = [
     {
         key: 'places',
         title: 'Sportplatz finden',
-        description: 'Plaetze in deiner Umgebung ansehen und schneller Trainingsorte entdecken.',
+        description: 'Plätze in deiner Umgebung ansehen und schneller Trainingsorte entdecken.',
         icon: 'las la-search-location',
         color: 'border-amber-400/40 bg-amber-500/10 text-amber-100',
     },
@@ -1057,7 +1057,7 @@ const applyRouteProposal = (proposal) => {
     if (metrics.routing_status === 'routed' && geometryPoints.length > 2) {
         routeGeneratorStatus.value = `Route wurde auf echten Wegen berechnet: ${formatDistance(proposal.distance_meters)}, ${formatDuration(proposal.estimated_duration_seconds)}.`
     } else {
-        routeGeneratorStatus.value = 'Routingdienst konnte keine echte Wegstrecke liefern. Bitte Startpunkt/Distanz aendern oder Routing-Konfiguration prüfen.'
+        routeGeneratorStatus.value = 'Routingdienst konnte keine echte Wegstrecke liefern. Bitte Startpunkt/Distanz ?ndern oder Routing-Konfiguration prüfen.'
     }
 
     manualMapPointStatus.value = routeGeneratorStatus.value
@@ -1080,7 +1080,7 @@ const requestRouteProposal = async (waypoints = null) => {
 
 const generateRouteProposal = () => {
     if (!isValidMapCoordinate(routeGeneratorStartPoint.value)) {
-        routeGeneratorStatus.value = 'Bitte zuerst einen gueltigen Startpunkt wählen.'
+        routeGeneratorStatus.value = 'Bitte zuerst einen gültigen Startpunkt wählen.'
         return
     }
 
@@ -1142,7 +1142,7 @@ const applyGeneratedRouteToPlanner = () => {
         `Untergrund: ${routeGeneratorSummary.value.surface}; Umgebung: ${routeGeneratorSummary.value.environment}; Steigung: ${routeGeneratorSummary.value.elevation}.`,
         routeGeneratorForm.low_traffic ? 'Verkehrsarme Strecke bevorzugt.' : '',
         routeGeneratorForm.lit ? 'Beleuchtete Wege bevorzugt.' : '',
-        routeGeneratorForm.water_breaks ? 'Trink- und Pausenpunkte gewuenscht.' : '',
+        routeGeneratorForm.water_breaks ? 'Trink- und Pausenpunkte gewünscht.' : '',
         routeGeneratorForm.include_places ? `Lieblingsorte: ${routeGeneratorForm.include_places}.` : '',
         routeGeneratorForm.avoid_places ? `Vermeiden: ${routeGeneratorForm.avoid_places}.` : '',
     ].filter(Boolean).join('\n')
@@ -1299,7 +1299,7 @@ const useCurrentLocationForPlace = () => {
             placeForm.country_code = String(address.country_code || placeForm.country_code || 'DE').toUpperCase()
             placeLocationStatus.value = 'Standort und Adresse wurden übernommen.'
         } catch (error) {
-            placeLocationStatus.value = 'Standort wurde übernommen, Adresse bitte manuell ergaenzen.'
+            placeLocationStatus.value = 'Standort wurde übernommen, Adresse bitte manuell ergänzen.'
         }
     }, () => {
         placeLocationError.value = t('sport_map.places.location_error')
@@ -1923,7 +1923,7 @@ const startRoutePlayback = () => {
     }
 
     routePlaybackState.value = 'playing'
-    routePlaybackStatus.value = 'Route-Vorschau laeuft.'
+    routePlaybackStatus.value = 'Route-Vorschau läuft.'
     cancelRoutePlaybackFrame()
 
     if (routePlaybackMarker.value) {

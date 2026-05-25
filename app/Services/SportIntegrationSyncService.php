@@ -77,8 +77,8 @@ class SportIntegrationSyncService
         $imported = $this->storeStravaActivities($account, is_array($activities) ? $activities : []);
 
         $message = $imported > 0
-            ? $imported.' Strava Aktivitaeten importiert oder aktualisiert.'
-            : 'Strava hat fuer diesen Zeitraum keine neuen Aktivitaeten geliefert.';
+            ? $imported.' Strava Aktivitäten importiert oder aktualisiert.'
+            : 'Strava hat für diesen Zeitraum keine neuen Aktivitäten geliefert.';
 
         $account->update([
             'status' => 'connected',
@@ -135,7 +135,7 @@ class SportIntegrationSyncService
                 'last_synced_at' => now(),
                 'sync_summary' => [
                     'message' => str_contains((string) $googleError, 'insufficient authentication scopes')
-                        ? 'Google Fit braucht eine neue Zustimmung fuer Distanzdaten. Bitte Verbindung entfernen und neu verbinden.'
+                        ? 'Google Fit braucht eine neue Zustimmung für Distanzdaten. Bitte Verbindung entfernen und neu verbinden.'
                         : 'Google Fit Sync fehlgeschlagen: HTTP '.$response->status().'.',
                     'google_status' => $response->status(),
                     'google_error' => Str::limit((string) $googleError, 500),
@@ -151,8 +151,8 @@ class SportIntegrationSyncService
         $message = $imported > 0
             ? $imported.' Google Fit Tagesaktivitaeten importiert oder aktualisiert.'
             : ($bucketCount > 0
-                ? 'Google Fit hat '.$bucketCount.' Tagesbereiche geliefert, aber ohne Aktivitaetswerte.'
-                : 'Google Fit hat fuer diesen Zeitraum keine Tagesbereiche geliefert.');
+                ? 'Google Fit hat '.$bucketCount.' Tagesbereiche geliefert, aber ohne Aktivitätswerte.'
+                : 'Google Fit hat für diesen Zeitraum keine Tagesbereiche geliefert.');
 
         $account->update([
             'status' => 'connected',
@@ -366,7 +366,7 @@ class SportIntegrationSyncService
             'activity_code' => $activityCode,
             'activity_codes' => $activityCodes,
             'activity_type' => $activityType,
-            'title' => $activityType === 'Aktivitaet' ? 'Google Fit Tagesaktivitaet' : $activityType,
+            'title' => $activityType === 'Aktivität' ? 'Google Fit Tagesaktivitaet' : $activityType,
             'source_kind' => 'daily_summary',
             'earliest_start_time' => $earliestStartNanos
                 ? Carbon::createFromTimestampMs((int) floor($earliestStartNanos / 1000000))->format('H:i')
@@ -387,7 +387,7 @@ class SportIntegrationSyncService
             58 => 'Radfahren',
             82 => 'Schwimmen',
             97 => 'Workout',
-        ][$code] ?? 'Aktivitaet';
+        ][$code] ?? 'Aktivität';
     }
 
     private function stravaActivityLabel(?string $type): string
@@ -415,6 +415,6 @@ class SportIntegrationSyncService
             'Rowing' => 'Rudern',
             'Kayaking' => 'Kajak',
             'StandUpPaddling' => 'SUP',
-        ][$type] ?? ($type ?: 'Aktivitaet');
+        ][$type] ?? ($type ?: 'Aktivität');
     }
 }

@@ -48,7 +48,7 @@ class UserPrivacyRetentionService
             $user->receivedFriendships()->delete();
 
             $user->forceFill([
-                'name' => 'Geloeschter Nutzer',
+                'name' => 'Gelöschter Nutzer',
                 'first_name' => null,
                 'last_name' => null,
                 'email' => 'anonymized-user-'.$user->id.'-'.Str::uuid().'@example.invalid',

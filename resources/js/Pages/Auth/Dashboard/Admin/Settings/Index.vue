@@ -48,7 +48,7 @@ const billingBrandBadge = computed(() => {
 const form = useForm({
     maintenance_enabled: Boolean(maintenance.value.enabled),
     maintenance_title: maintenance.value.title || 'Airmius ist gerade im Wartemodus',
-    maintenance_message: maintenance.value.message || 'Wir verbessern gerade die Plattform. Bitte versuche es in Kuerze erneut.',
+    maintenance_message: maintenance.value.message || 'Wir verbessern gerade die Plattform. Bitte versuche es in Kürze erneut.',
     billing_brand_name: billing.value.brand_name || 'Airmius',
     billing_company_name: billing.value.company_name || 'Airmius',
     billing_legal_name: billing.value.legal_name || '',
@@ -191,7 +191,7 @@ const save = () => {
                                 <input id="billing_legal_name" v-model="form.billing_legal_name" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary" placeholder="z. B. Airmius GmbH">
                             </div>
                             <div>
-                                <label for="billing_company_street" class="text-sm font-semibold text-primary">Strasse und Hausnummer</label>
+                                <label for="billing_company_street" class="text-sm font-semibold text-primary">Straße und Hausnummer</label>
                                 <input id="billing_company_street" v-model="form.billing_company_street" type="text" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary">
                             </div>
                             <div class="grid gap-4 sm:grid-cols-[8rem_1fr]">

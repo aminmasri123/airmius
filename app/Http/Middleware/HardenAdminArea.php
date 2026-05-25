@@ -13,10 +13,10 @@ class HardenAdminArea
     {
         if ($request->user() && ! $request->user()->email_verified_at) {
             if ($request->expectsJson()) {
-                abort(403, 'Bitte bestaetige zuerst deine E-Mail-Adresse, bevor du den Adminbereich nutzt.');
+                abort(403, 'Bitte bestätige zuerst deine E-Mail-Adresse, bevor du den Adminbereich nutzt.');
             }
 
-            return response('Bitte bestaetige zuerst deine E-Mail-Adresse, bevor du den Adminbereich nutzt.', 403);
+            return response('Bitte bestätige zuerst deine E-Mail-Adresse, bevor du den Adminbereich nutzt.', 403);
         }
 
         $response = $next($request);

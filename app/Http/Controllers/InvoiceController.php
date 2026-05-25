@@ -480,12 +480,12 @@ class InvoiceController extends Controller
      */
     public function destroy(Invoice $invoice)
     {
-        abort_if($invoice->payments()->exists(), 422, 'Rechnungen mit Zahlungen koennen nicht geloescht werden.');
-        abort_if($invoice->source && ! in_array($invoice->source, $this->deletableInvoiceSources(), true), 422, 'Diese Rechnungsart kann hier nicht geloescht werden.');
+        abort_if($invoice->payments()->exists(), 422, 'Rechnungen mit Zahlungen können nicht gelöscht werden.');
+        abort_if($invoice->source && ! in_array($invoice->source, $this->deletableInvoiceSources(), true), 422, 'Diese Rechnungsart kann hier nicht gelöscht werden.');
 
         $invoice->delete();
 
-        return back()->with('success', 'Rechnung wurde geloescht.');
+        return back()->with('success', 'Rechnung wurde gelöscht.');
     }
 
     private function notifyInvoiceRecipient(Invoice $invoice): void
@@ -501,7 +501,7 @@ class InvoiceController extends Controller
         AppNotification::send($recipient, 'invoice.created', [
             'title' => 'Neue Rechnung erhalten',
             'body' => sprintf(
-                '%s ueber %s ist jetzt in deinen Rechnungen sichtbar.',
+                '%s Über %s ist jetzt in deinen Rechnungen sichtbar.',
                 $invoice->title ?: 'Eine neue Rechnung',
                 $this->moneyFromDecimal($invoice->amount),
             ),
@@ -598,8 +598,8 @@ class InvoiceController extends Controller
             'paid' => 'bezahlt',
             'open' => 'offen',
             'pending' => 'ausstehend',
-            'awaiting_transfer' => 'wartet auf Ueberweisung',
-            'overdue' => 'ueberfaellig',
+            'awaiting_transfer' => 'wartet auf Überweisung',
+            'overdue' => 'Überfällig',
             'cancelled' => 'storniert',
             'failed' => 'fehlgeschlagen',
             default => $status ?: 'unbekannt',

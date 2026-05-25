@@ -23,11 +23,11 @@ class CommerceReturnStatusUpdated extends Notification
         $return = $this->returnRequest->loadMissing(['order', 'item']);
 
         return (new MailMessage)
-            ->subject('Ruecksendung aktualisiert')
+            ->subject('Rücksendung aktualisiert')
             ->greeting('Hallo '.($notifiable->name ?? ''))
-            ->line('Deine Ruecksendung zu '.($return->item?->title ?: 'deiner Bestellung').' wurde aktualisiert.')
+            ->line('Deine Rücksendung zu '.($return->item?->title ?: 'deiner Bestellung').' wurde aktualisiert.')
             ->line('Status: '.$return->status)
             ->line($return->resolution_note ?: 'Du kannst den aktuellen Stand in deinem Marketplace-Bereich sehen.')
-            ->action('Marketplace oeffnen', route('auth.commerce.index'));
+            ->action('Marketplace ?ffnen', route('auth.commerce.index'));
     }
 }

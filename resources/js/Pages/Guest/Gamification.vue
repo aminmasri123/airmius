@@ -20,9 +20,9 @@ const expertScores = [
 
 const principles = [
     ['Meaningful first', 'XP entsteht durch sinnvolle sportliche Aktionen, nicht durch reine Nutzungsdauer.'],
-    ['Trust weighted', 'Vertrauenswuerdige Nutzer erhalten mehr Wirkung, auffaellige Muster weniger.'],
+    ['Trust weighted', 'Vertrauenswürdige Nutzer erhalten mehr Wirkung, auffällige Muster weniger.'],
     ['Role aware', 'Sportler, Trainer, Teams und Vereine werden nach passenden Beiträgen bewertet.'],
-    ['Transparent by design', 'Regeln, Limits, Abzuege und Fortschritt sind nachvollziehbar erklaerbar.'],
+    ['Transparent by design', 'Regeln, Limits, Abzüge und Fortschritt sind nachvollziehbar erklaerbar.'],
 ]
 
 const roleCards = [
@@ -78,19 +78,19 @@ const demoProgress = computed(() => Math.min(100, Math.round((demoTotalXp.value 
 
 const organizationActions = [
     ['Training erstellt', '+5 XP', 'Team oder Verein plant eine konkrete Einheit.'],
-    ['Training durchgefuehrt', '+10 XP', 'Durchfuehrung wurde verifiziert oder nachvollziehbar dokumentiert.'],
+    ['Training durchgeführt', '+10 XP', 'Durchführung wurde verifiziert oder nachvollziehbar dokumentiert.'],
     ['Event erstellt', '+10 XP', 'Turnier, Probetraining, Camp oder Vereinsaktion wird geplant.'],
-    ['Event durchgefuehrt', '+25 XP', 'Event wurde tatsaechlich umgesetzt.'],
-    ['Vereinsprofil vollstaendig', '+15 XP', 'Struktur, Ansprechpartner und Grunddaten sind gepflegt.'],
+    ['Event durchgeführt', '+25 XP', 'Event wurde tatsächlich umgesetzt.'],
+    ['Vereinsprofil vollständig', '+15 XP', 'Struktur, Ansprechpartner und Grunddaten sind gepflegt.'],
     ['Informative Vereinsnews', '+8 XP', 'Vereinsbeitrag mit echtem Mehrwert für Mitglieder oder Öffentlichkeit.'],
 ]
 
 const safetyLayers = [
     ['Daily Caps', 'XP-relevante Wiederholungen sind pro Tag begrenzt, damit Qualität wichtiger bleibt als Masse.'],
-    ['Trust Score 70-130', 'Der Multiplikator reicht von 0,70 bis 1,30 und wird durch zuverlaessiges Verhalten beeinflusst.'],
+    ['Trust Score 70-130', 'Der Multiplikator reicht von 0,70 bis 1,30 und wird durch zuverlässiges Verhalten beeinflusst.'],
     ['Penalty Events', 'No-Shows, falsche Bestätigungen, Spam und abgelehnte Empfehlungen reduzieren XP und Trust.'],
-    ['Serverseitige Vergabe', 'XP wird ausschliesslich serverseitig berechnet und mit Quelle, Besitzer, Actor Type und Limit-Status protokolliert.'],
-    ['Moderierbare Regeln', 'Admins koennen Labels, Beschreibungen, XP, Limits, Trust Delta und Aktivitaet zentral verwalten.'],
+    ['Serverseitige Vergabe', 'XP wird ausschließlich serverseitig berechnet und mit Quelle, Besitzer, Actor Type und Limit-Status protokolliert.'],
+    ['Moderierbare Regeln', 'Admins können Labels, Beschreibungen, XP, Limits, Trust Delta und Aktivität zentral verwalten.'],
     ['Badge-Governance', 'Badges werden über XP, Level, Streak oder konkrete Gründe vergeben und bleiben auditierbar.'],
 ]
 
@@ -104,7 +104,7 @@ const levelMilestones = [
 
 const lifecycle = [
     ['Onboarding', 'Sportart, Skills und erste Teilnahme geben schnelle Orientierung.'],
-    ['Engagement', 'Streaks, Feedback und hilfreiche Beiträge halten Aktivitaet wertvoll.'],
+    ['Engagement', 'Streaks, Feedback und hilfreiche Beiträge halten Aktivität wertvoll.'],
     ['Retention', 'Level, Badges und Rollen-Raenge schaffen langfristige Entwicklungspfade.'],
     ['Reputation', 'Trust Score, Empfehlungen und Bestätigungen machen Qualität sichtbar.'],
 ]
@@ -145,7 +145,7 @@ const badges = [
                         Gamification, die sportliche Entwicklung gesund sichtbar macht.
                     </h1>
                     <p class="mt-5 max-w-3xl text-lg leading-relaxed text-secondary">
-                        Airmius belohnt Training, Zuverlaessigkeit, Kompetenz, Wissen, Teamkultur und Vereinsarbeit. Das System ist fair, rollenbasiert, auditierbar und bewusst so gebaut, dass bei jungen Sportlern kein ungesunder Leistungsdruck entsteht.
+                        Airmius belohnt Training, Zuverlässigkeit, Kompetenz, Wissen, Teamkultur und Vereinsarbeit. Das System ist fair, rollenbasiert, auditierbar und bewusst so gebaut, dass bei jungen Sportlern kein ungesunder Leistungsdruck entsteht.
                     </p>
                     <div class="mt-7 flex flex-col gap-3 sm:flex-row">
                         <Link
@@ -359,7 +359,7 @@ const badges = [
                 <div class="rounded-lg border border-border bg-card p-6">
                     <h2 class="text-2xl font-bold">Auswertung</h2>
                     <p class="mt-2 text-sm leading-relaxed text-secondary">
-                        Trust veraendert nicht das Ziel, sondern die Gewichtung: verlaessliches Verhalten wird staerker, auffaelliges Verhalten schwaecher bewertet.
+                        Trust verändert nicht das Ziel, sondern die Gewichtung: verlässliches Verhalten wird stärker, auffälliges Verhalten schwächer bewertet.
                     </p>
                     <div class="mt-5 rounded-lg bg-inputBg p-4">
                         <div class="flex items-center justify-between gap-4 text-sm">
@@ -375,7 +375,7 @@ const badges = [
                             class="mt-4 w-full accent-air-green"
                         >
                         <div class="mt-2 flex justify-between text-xs text-secondary">
-                            <span>auffaellig</span>
+                            <span>auffällig</span>
                             <span>neutral</span>
                             <span>vertrauenswuerdig</span>
                         </div>
@@ -438,7 +438,7 @@ const badges = [
                 <div class="rounded-lg border border-border bg-card p-6">
                     <h2 class="text-2xl font-bold">Strafen mit Mass</h2>
                     <p class="mt-2 text-sm text-secondary">
-                        Abzuege sind kein Druckmittel, sondern Schutz für Fairness, Verlaesslichkeit und Qualität.
+                        Abzüge sind kein Druckmittel, sondern Schutz für Fairness, Verlässlichkeit und Qualität.
                     </p>
                     <div class="mt-5 space-y-3">
                         <div v-for="[title, xp, text] in penalties" :key="title" class="rounded-lg bg-bg p-3">
@@ -470,7 +470,7 @@ const badges = [
                     <p class="text-sm font-semibold uppercase tracking-wider text-air-green">Badge-Vorschau</p>
                     <h2 class="mt-2 text-2xl font-bold text-primary">Auszeichnungen mit echter Bedeutung.</h2>
                     <p class="mt-2 max-w-3xl text-secondary">
-                        Badges sollen nicht nur huebsch aussehen. Sie markieren nachweisbare Entwicklung, Verlaesslichkeit, Wissen, Vereinsaufbau und Fair Play.
+                        Badges sollen nicht nur hübsch aussehen. Sie markieren nachweisbare Entwicklung, Verlässlichkeit, Wissen, Vereinsaufbau und Fair Play.
                     </p>
                 </div>
                 <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -495,7 +495,7 @@ const badges = [
                         <p class="text-sm font-semibold uppercase tracking-wider text-air-green">Datenschutz & Jugendschutz</p>
                         <h2 class="mt-2 text-2xl font-bold text-primary">Gesunde Motivation statt sozialer Druck.</h2>
                         <p class="mt-3 text-sm leading-relaxed text-secondary">
-                            Personenbezogene Daten werden zweckgebunden, transparent und rollenbasiert verarbeitet. Trainingsdokumentation bleibt auf berechtigte Personen beschraenkt. Bei Minderjaehrigen stehen Sicherheit, Regeneration, altersgerechte Ziele und paedagogisch sinnvolle Anerkennung im Vordergrund.
+                            Personenbezogene Daten werden zweckgebunden, transparent und rollenbasiert verarbeitet. Trainingsdokumentation bleibt auf berechtigte Personen beschraenkt. Bei Minderjährigen stehen Sicherheit, Regeneration, altersgerechte Ziele und paedagogisch sinnvolle Anerkennung im Vordergrund.
                         </p>
                     </div>
                     <div class="grid gap-3 sm:grid-cols-3">
@@ -509,7 +509,7 @@ const badges = [
                         </div>
                         <div class="rounded-lg bg-bg p-4">
                             <p class="text-xs font-bold uppercase text-air-blue">Transparency</p>
-                            <p class="mt-2 text-sm text-secondary">Regeln, Limits und Abzuege erklaerbar.</p>
+                            <p class="mt-2 text-sm text-secondary">Regeln, Limits und Abzüge erklaerbar.</p>
                         </div>
                     </div>
                 </div>
@@ -522,7 +522,7 @@ const badges = [
                             <p class="text-sm font-semibold uppercase tracking-wider text-air-blue">Fazit</p>
                             <h2 class="mt-2 text-2xl font-bold text-primary">Aus Produkt-, UX-, Fairness-, Vereins- und Sicherheits-Perspektive: 10/10.</h2>
                             <p class="mt-3 max-w-3xl text-sm leading-relaxed text-secondary">
-                                Die verbesserte Darstellung zeigt klar, warum Airmius Gamification nicht nur Punkte vergibt, sondern gesunde Entwicklung, verlaessliches Verhalten und starke Vereinsorganisation messbar macht.
+                                Die verbesserte Darstellung zeigt klar, warum Airmius Gamification nicht nur Punkte vergibt, sondern gesunde Entwicklung, verlässliches Verhalten und starke Vereinsorganisation messbar macht.
                             </p>
                         </div>
                         <Link

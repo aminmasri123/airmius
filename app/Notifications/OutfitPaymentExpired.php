@@ -23,12 +23,12 @@ class OutfitPaymentExpired extends Notification
         $subscription = $this->subscription->loadMissing('plan');
 
         return (new MailMessage)
-            ->subject('Outfit-Abo Anfrage wurde geloescht')
+            ->subject('Outfit-Abo Anfrage wurde gelöscht')
             ->greeting('Hallo '.(trim((string) ($notifiable->name ?? '')) ?: 'zusammen').',')
-            ->line('deine Outfit-Abo Anfrage wurde geloescht, weil nach 9 Tagen keine Zahlung eingegangen ist.')
+            ->line('deine Outfit-Abo Anfrage wurde gelöscht, weil nach 9 Tagen keine Zahlung eingegangen ist.')
             ->line('Abo: '.($subscription->plan?->name ?? 'Outfit-Abo'))
             ->line('Zahlungsreferenz: '.($subscription->payment_reference ?: '-'))
-            ->line('Du kannst jederzeit eine neue Anfrage starten, wenn du das Outfit-Abo weiterhin nutzen moechtest.')
+            ->line('Du kannst jederzeit eine neue Anfrage starten, wenn du das Outfit-Abo weiterhin nutzen möchtest.')
             ->action('Outfit-Abos ansehen', route('auth.outfit-subscriptions.index'));
     }
 }

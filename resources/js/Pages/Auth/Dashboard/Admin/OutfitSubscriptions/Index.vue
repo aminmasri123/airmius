@@ -621,7 +621,7 @@ const deleteSubscription = () => {
                     <p class="text-sm font-semibold uppercase text-accent">Sportkleidung-Abo Modul</p>
                     <h1 class="mt-2 text-2xl font-bold text-primary">Outfit-Abo Pläne</h1>
                     <p class="mt-2 max-w-3xl text-sm text-secondary">
-                        Verwalte monatliche Sportkleidung-Abos, Sponsor-Rabatte und Branding-Regeln. Diese Seite ist über eigene Permissions geschuetzt.
+                        Verwalte monatliche Sportkleidung-Abos, Sponsor-Rabatte und Branding-Regeln. Diese Seite ist über eigene Permissions geschätzt.
                     </p>
                 </div>
                 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
@@ -827,7 +827,7 @@ const deleteSubscription = () => {
                                 <p class="text-xs font-semibold uppercase text-amber-200">{{ issueTypeLabel(delivery.issue.type) }}</p>
                                 <p class="mt-1 text-sm font-semibold text-primary">{{ issueStatusLabel(delivery.issue.status) }}</p>
                                 <p class="mt-1 text-xs text-secondary">{{ delivery.issue.description }}</p>
-                                <p v-if="delivery.issue.exchange_size" class="mt-1 text-xs text-secondary">Groesse: {{ delivery.issue.exchange_size }}</p>
+                                <p v-if="delivery.issue.exchange_size" class="mt-1 text-xs text-secondary">Grüße: {{ delivery.issue.exchange_size }}</p>
                             </div>
                         </div>
 
@@ -999,7 +999,7 @@ const deleteSubscription = () => {
 
                     <div class="text-sm">
                         <p class="font-semibold text-primary">{{ subscription.payment_reference || 'Keine Referenz' }}</p>
-                        <p class="mt-1 text-xs text-secondary">Faellig: {{ formatDate(subscription.payment_due_at) }}</p>
+                        <p class="mt-1 text-xs text-secondary">Fällig: {{ formatDate(subscription.payment_due_at) }}</p>
                         <p v-if="subscription.payment_status !== 'paid'" class="mt-1 text-xs text-secondary">
                             Autom. Löschung: {{ formatDate(subscription.payment_expires_at) }}
                         </p>
@@ -1133,7 +1133,7 @@ const deleteSubscription = () => {
                                     <p class="mt-1 text-sm font-semibold text-primary">{{ issueStatusLabel(deliveryModal.delivery.issue.status) }}</p>
                                     <p class="mt-2 text-sm text-secondary">{{ deliveryModal.delivery.issue.description }}</p>
                                     <p v-if="deliveryModal.delivery.issue.requested_resolution" class="mt-1 text-xs text-secondary">Wunsch: {{ deliveryModal.delivery.issue.requested_resolution }}</p>
-                                    <p v-if="deliveryModal.delivery.issue.exchange_size" class="mt-1 text-xs text-secondary">Groesse: {{ deliveryModal.delivery.issue.exchange_size }}</p>
+                                    <p v-if="deliveryModal.delivery.issue.exchange_size" class="mt-1 text-xs text-secondary">Grüße: {{ deliveryModal.delivery.issue.exchange_size }}</p>
                                 </div>
                                 <span class="rounded-full border border-amber-400/40 px-3 py-1 text-xs font-semibold text-amber-200">
                                     {{ formatDate(deliveryModal.delivery.issue.requested_at) }}
@@ -1271,8 +1271,8 @@ const deleteSubscription = () => {
                         </label>
 
                         <label class="block md:col-span-2">
-                            <span class="text-sm font-semibold text-primary">Strasse</span>
-                            <input v-model="shippingAddressForm.shipping_street" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Strasse">
+                            <span class="text-sm font-semibold text-primary">Straße</span>
+                            <input v-model="shippingAddressForm.shipping_street" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Straße">
                             <span v-if="shippingAddressForm.errors.shipping_street" class="mt-1 block text-xs text-red-300">{{ shippingAddressForm.errors.shipping_street }}</span>
                         </label>
 
@@ -1516,7 +1516,7 @@ const deleteSubscription = () => {
                             <input v-model="newPlan.pause_allowed_after_months" type="number" min="0" max="24" class="mt-1 w-full rounded-lg border-border bg-card text-primary" />
                         </label>
                         <label class="block">
-                            <span class="text-sm font-semibold text-primary">Kuendigungsfrist Tage</span>
+                            <span class="text-sm font-semibold text-primary">Kündigungsfrist Tage</span>
                             <input v-model="newPlan.cancellation_notice_days" type="number" min="0" max="90" class="mt-1 w-full rounded-lg border-border bg-card text-primary" />
                         </label>
                     </div>
@@ -1526,7 +1526,7 @@ const deleteSubscription = () => {
                             v-model="newPlan.contract_terms_text"
                             rows="5"
                             class="mt-1 w-full rounded-lg border-border bg-card text-primary"
-                            placeholder="Eine Klausel pro Zeile, z.B. Pause und Kuendigung gelten nur für zukuenftige Lieferungen."
+                            placeholder="Eine Klausel pro Zeile, z.B. Pause und Kündigung gelten nur für zukünftige Lieferungen."
                         ></textarea>
                     </label>
                 </div>
@@ -1675,7 +1675,7 @@ const deleteSubscription = () => {
                         <p class="text-xs uppercase text-secondary">Vertrag</p>
                         <p class="mt-1 font-semibold text-primary">{{ plan.contract_title || `Outfit-Abo Vertrag ${plan.name}` }}</p>
                         <p class="mt-2 text-sm text-secondary">
-                            Mindestlaufzeit {{ plan.minimum_term_months ?? 3 }} Monate · Pause ab Monat {{ plan.pause_allowed_after_months ?? 3 }} · Kuendigungsfrist {{ plan.cancellation_notice_days ?? 14 }} Tage
+                            Mindestlaufzeit {{ plan.minimum_term_months ?? 3 }} Monate · Pause ab Monat {{ plan.pause_allowed_after_months ?? 3 }} · Kündigungsfrist {{ plan.cancellation_notice_days ?? 14 }} Tage
                         </p>
                         <ul v-if="plan.contract_terms?.length" class="mt-3 space-y-1 text-sm text-secondary">
                             <li v-for="term in plan.contract_terms.slice(0, 3)" :key="term">- {{ term }}</li>
@@ -1708,7 +1708,7 @@ const deleteSubscription = () => {
                                 <input v-model="formFor(plan).pause_allowed_after_months" type="number" min="0" max="24" class="mt-1 w-full rounded-lg border-border bg-card text-primary" />
                             </label>
                             <label class="block">
-                                <span class="text-sm font-semibold text-primary">Kuendigungsfrist Tage</span>
+                                <span class="text-sm font-semibold text-primary">Kündigungsfrist Tage</span>
                                 <input v-model="formFor(plan).cancellation_notice_days" type="number" min="0" max="90" class="mt-1 w-full rounded-lg border-border bg-card text-primary" />
                             </label>
                         </div>

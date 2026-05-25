@@ -23,9 +23,9 @@ class ClubRegistrationSubmitted extends Notification
         return (new MailMessage)
             ->subject('Dein Vereinsantrag wurde eingereicht')
             ->greeting('Hallo '.$notifiable->name.',')
-            ->line('dein Verein "'.$this->club->name.'" wurde angelegt und wartet jetzt auf Pruefung.')
+            ->line('dein Verein "'.$this->club->name.'" wurde angelegt und wartet jetzt auf Prüfung.')
             ->line('Du bist sofort als Club-Owner hinterlegt und kannst den Verein im Dashboard verwalten.')
-            ->line('Oeffentlich sichtbar und als offiziell markiert wird der Verein erst nach der Freigabe.')
-            ->action('Verein oeffnen', route('auth.clubs.show', $this->club->id));
+            ->line('öffentlich sichtbar und als offiziell markiert wird der Verein erst nach der Freigabe.')
+            ->action('Verein ?ffnen', route('auth.clubs.show', $this->club->id));
     }
 }

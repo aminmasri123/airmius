@@ -57,7 +57,7 @@ return [
             'kind' => 'fixed',
             'monthly_eur' => 69,
             'included_units' => 150000,
-            'unit_label' => 'Credit-Schaetzung/Monat',
+            'unit_label' => 'Credit-Schätzung/Monat',
         ],
         'graphhopper_standard' => [
             'label' => 'GraphHopper Standard',
@@ -65,7 +65,7 @@ return [
             'kind' => 'fixed',
             'monthly_eur' => 199,
             'included_units' => 450000,
-            'unit_label' => 'Credit-Schaetzung/Monat',
+            'unit_label' => 'Credit-Schätzung/Monat',
         ],
         'openrouteservice_standard' => [
             'label' => 'openrouteservice Standard',
@@ -83,7 +83,7 @@ return [
             'monthly_eur' => (float) env('PROVIDER_COST_SELF_HOSTED_ROUTING_EUR', 180),
             'included_units' => 750000,
             'unit_label' => 'Routing-Requests/Monat',
-            'risk' => 'Mehr Technikaufwand, dafuer volle Kontrolle und bessere DSGVO-Steuerung.',
+            'risk' => 'Mehr Technikaufwand, dafür volle Kontrolle und bessere DSGVO-Steuerung.',
         ],
         'mistral_text' => [
             'label' => 'Mistral Text-KI',

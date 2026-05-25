@@ -120,7 +120,7 @@ class RolePermissionController extends Controller
     public function storePermission(Request $request)
     {
         $this->authorizeAccess($request);
-        abort_unless($request->user()->hasRole('super_admin'), 403, 'Nur Super-Admins koennen neue Berechtigungen erstellen.');
+        abort_unless($request->user()->hasRole('super_admin'), 403, 'Nur Super-Admins können neue Berechtigungen erstellen.');
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9_.-]+$/', Rule::unique('permissions', 'name')],
@@ -155,7 +155,7 @@ class RolePermissionController extends Controller
         abort_unless(
             $request->user()->hasRole('super_admin'),
             403,
-            'Systemrollen duerfen nur von Super-Admins bearbeitet werden.'
+            'Systemrollen dürfen nur von Super-Admins bearbeitet werden.'
         );
     }
 
@@ -183,7 +183,7 @@ class RolePermissionController extends Controller
         abort_if(
             $selectedRestricted !== [],
             403,
-            'Diese Hochrisiko-Berechtigungen duerfen nur Super-Admins vergeben: '.implode(', ', $selectedRestricted)
+            'Diese Hochrisiko-Berechtigungen dürfen nur Super-Admins vergeben: '.implode(', ', $selectedRestricted)
         );
     }
 }

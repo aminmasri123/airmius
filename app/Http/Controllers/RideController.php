@@ -129,9 +129,9 @@ class RideController extends Controller
                 ->get(),
             'visibilities' => [
                 ['value' => 'friends', 'label' => 'Nur Freunde', 'description' => 'Datenschutzfreundlich: sichtbar für deine Freunde.'],
-                ['value' => 'club', 'label' => 'Nur Verein', 'description' => 'Sichtbar für Mitglieder des ausgewaehlten Vereins.'],
-                ['value' => 'team', 'label' => 'Nur Team', 'description' => 'Sichtbar für Mitglieder des ausgewaehlten Teams.'],
-                ['value' => 'public', 'label' => 'Oeffentlich', 'description' => 'Sichtbar für alle eingeloggten Nutzer. Kontaktdaten bleiben bis zum Beitritt verborgen.'],
+                ['value' => 'club', 'label' => 'Nur Verein', 'description' => 'Sichtbar für Mitglieder des ausgewählten Vereins.'],
+                ['value' => 'team', 'label' => 'Nur Team', 'description' => 'Sichtbar für Mitglieder des ausgewählten Teams.'],
+                ['value' => 'public', 'label' => 'öffentlich', 'description' => 'Sichtbar für alle eingeloggten Nutzer. Kontaktdaten bleiben bis zum Beitritt verborgen.'],
             ],
         ]);
     }
@@ -155,7 +155,7 @@ class RideController extends Controller
         $data = $this->validatedRideData($request);
         $participantsCount = $ride->acceptedUsers()->count();
 
-        abort_if((int) $data['seats'] < $participantsCount, 422, 'Die Plaetze duerfen nicht unter der aktuellen Mitfahrerzahl liegen.');
+        abort_if((int) $data['seats'] < $participantsCount, 422, 'Die Plätze dürfen nicht unter der aktuellen Mitfahrerzahl liegen.');
 
         $ride->update([
             ...$data,
@@ -216,7 +216,7 @@ class RideController extends Controller
         if ($result === RideService::RESULT_REQUESTED && (int) $ride->driver_id !== (int) auth()->id()) {
             AppNotification::send($ride->driver_id, 'ride.requested', [
                 'title' => 'Neue Mitfahranfrage',
-                'message' => auth()->user()->name.' moechte bei '.$ride->from.' -> '.$ride->to.' mitfahren.',
+                'message' => auth()->user()->name.' möchte bei '.$ride->from.' -> '.$ride->to.' mitfahren.',
                 'ride_id' => $ride->id,
                 'url' => route('auth.rides.index'),
             ]);
@@ -250,11 +250,11 @@ class RideController extends Controller
         if ($ownPivot->status === Ride::MEMBER_STATUS_REQUESTED) {
             $ride->users()->detach($user->id);
 
-            return back()->with('success', 'Deine offene Mitfahranfrage wurde zurueckgezogen.');
+            return back()->with('success', 'Deine offene Mitfahranfrage wurde zurückgezogen.');
         }
 
         if ($ownPivot->status !== Ride::MEMBER_STATUS_ACCEPTED) {
-            return back()->with('error', 'Die Aktion ist fuer diese Mitgliedschaft nicht moeglich.');
+            return back()->with('error', 'Die Aktion ist für diese Mitgliedschaft nicht möglich.');
         }
 
         $ride->users()->detach($user->id);
@@ -345,11 +345,11 @@ class RideController extends Controller
     {
         $this->authorize('delete', $ride);
         $participants = $ride->users()->where('users.id', '!=', $ride->driver_id)->wherePivotIn('status', [Ride::MEMBER_STATUS_REQUESTED, Ride::MEMBER_STATUS_ACCEPTED])->get();
-        $message = $ride->from.' -> '.$ride->to.' wurde geloescht.';
+        $message = $ride->from.' -> '.$ride->to.' wurde gelöscht.';
 
         foreach ($participants as $participant) {
             AppNotification::send($participant, 'ride.deleted', [
-                'title' => 'Fahrgemeinschaft geloescht',
+                'title' => 'Fahrgemeinschaft gelöscht',
                 'message' => $message,
                 'ride_id' => $ride->id,
                 'url' => route('auth.rides.index'),
@@ -358,7 +358,7 @@ class RideController extends Controller
 
         $ride->delete();
 
-        return back()->with('success', 'Fahrgemeinschaft geloescht.');
+        return back()->with('success', 'Fahrgemeinschaft gelöscht.');
     }
 
     private function validatedRideData(Request $request): array

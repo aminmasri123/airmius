@@ -130,7 +130,7 @@ class LearningStudioController extends Controller
             'position' => $course->sections()->max('position') + 1,
         ]);
 
-        return back()->with('success', 'Kapitel wurde hinzugefuegt.');
+        return back()->with('success', 'Kapitel wurde hinzugefügt.');
     }
 
     public function storeLesson(Request $request, LearningCourse $course)
@@ -147,7 +147,7 @@ class LearningStudioController extends Controller
 
         $this->recalculateCourseDuration($course);
 
-        return back()->with('success', 'Lektion wurde hinzugefuegt.');
+        return back()->with('success', 'Lektion wurde hinzugefügt.');
     }
 
     public function updateLesson(Request $request, LearningCourse $course, LearningLesson $lesson)
@@ -175,7 +175,7 @@ class LearningStudioController extends Controller
         $this->normalizeLessonPositions($course, $sectionId);
         $this->recalculateCourseDuration($course);
 
-        return back()->with('success', 'Lektion wurde geloescht.');
+        return back()->with('success', 'Lektion wurde gelöscht.');
     }
 
     public function reorderLessons(Request $request, LearningCourse $course)
@@ -242,7 +242,7 @@ class LearningStudioController extends Controller
 
         $quiz->delete();
 
-        return back()->with('success', 'Quiz wurde geloescht.');
+        return back()->with('success', 'Quiz wurde gelöscht.');
     }
 
     public function uploadAsset(Request $request, LearningCourse $course, MediaOptimizer $mediaOptimizer)
@@ -325,7 +325,7 @@ class LearningStudioController extends Controller
                 'Hallo '.$comment->user?->name.',',
                 $request->user()->name.' hat auf deine Frage im Kurs "'.$course->title.'" geantwortet.',
                 '"'.$data['body'].'"',
-                'Kurs oeffnen: '.route('guest.learning.courses.show', $course),
+                'Kurs ?ffnen: '.route('guest.learning.courses.show', $course),
             ]);
         }
 
@@ -441,7 +441,7 @@ class LearningStudioController extends Controller
             route('guest.learning.courses.show', $course),
         ]);
 
-        return back()->with('success', "Zugang fuer {$user->name} wurde freigeschaltet.");
+        return back()->with('success', "Zugang für {$user->name} wurde freigeschaltet.");
     }
 
     public function revokeEnrollment(Request $request, LearningCourse $course, LearningEnrollment $enrollment)
@@ -757,9 +757,9 @@ class LearningStudioController extends Controller
             ['key' => 'structure', 'label' => 'Kapitelstruktur gepflegt', 'done' => $course->sections->isNotEmpty()],
             ['key' => 'completion', 'label' => 'Abschlusslogik vorhanden', 'done' => $course->quizzes->isNotEmpty() || $course->assignments->where('is_required', true)->isNotEmpty()],
             ['key' => 'sales', 'label' => 'Verkaufsargumente gepflegt', 'done' => ! empty($course->sales_points)],
-            ['key' => 'faq', 'label' => 'FAQ fuer Einwaende', 'done' => ! empty($course->faq_items)],
+            ['key' => 'faq', 'label' => 'FAQ für Einwände', 'done' => ! empty($course->faq_items)],
             ['key' => 'price', 'label' => 'Preislogik geklaert', 'done' => $course->is_free || $course->price_cents > 0],
-            ['key' => 'public', 'label' => 'Oeffentlich sichtbar', 'done' => (bool) $course->is_public],
+            ['key' => 'public', 'label' => 'öffentlich sichtbar', 'done' => (bool) $course->is_public],
         ];
         $doneCount = collect($checks)->where('done', true)->count();
 
@@ -828,7 +828,7 @@ class LearningStudioController extends Controller
         }
 
         try {
-            Mail::raw(implode("\n\n", [...$lines, 'Viele Gruesse', 'Airmius']), function ($message) use ($user, $subject) {
+            Mail::raw(implode("\n\n", [...$lines, 'Viele Grüße', 'Airmius']), function ($message) use ($user, $subject) {
                 $message->to($user->email)->subject($subject);
             });
         } catch (Throwable) {
@@ -877,7 +877,7 @@ class LearningStudioController extends Controller
         $this->sendLearningMail($enrollment->user, 'Dein Zertifikat ist bereit: '.$course->title, [
             'Hallo '.$enrollment->user?->name.'.',
             'du hast den Kurs "'.$course->title.'" abgeschlossen.',
-            'Zertifikat pruefen: '.route('guest.learning.certificates.verify', $certificate->code),
+            'Zertifikat prüfen: '.route('guest.learning.certificates.verify', $certificate->code),
             'Kurs: '.route('guest.learning.courses.show', $course),
         ]);
     }

@@ -36,7 +36,7 @@ class SubscriptionCancelled extends Notification
             'end_date' => $this->date($endsAt),
             'cancel_message' => $this->mode === 'now'
                 ? 'dein Airmius Abo wurde beendet.'
-                : 'deine Airmius Abo-Kuendigung wurde zum Periodenende vorgemerkt.',
+                : 'deine Airmius Abo-Kündigung wurde zum Periodenende vorgemerkt.',
         ], route('guest.pricing'));
     }
 

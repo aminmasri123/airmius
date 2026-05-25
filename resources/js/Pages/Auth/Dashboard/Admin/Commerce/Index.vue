@@ -208,9 +208,9 @@ const rejectionReasons = [
     { value: 'missing_required_info', label: 'Pflichtangaben fehlen', text: 'Bitte ergaenze die fehlenden Pflichtangaben wie Beschreibung, Preis, Kategorie oder Lieferinformationen.' },
     { value: 'unclear_offer', label: 'Angebot ist unklar', text: 'Das Angebot ist für Käufer noch nicht eindeutig genug beschrieben. Bitte erklaere Inhalt, Umfang und Ablauf genauer.' },
     { value: 'invalid_category', label: 'Falsche Kategorie', text: 'Das Angebot passt nicht zur gewählten Kategorie. Bitte wähle die passende Marketplace-Kategorie.' },
-    { value: 'bad_images', label: 'Bilder fehlen oder sind ungeeignet', text: 'Bitte lade passende, klare Bilder hoch. Platzhalter, unscharfe oder irrefuehrende Bilder koennen nicht freigegeben werden.' },
+    { value: 'bad_images', label: 'Bilder fehlen oder sind ungeeignet', text: 'Bitte lade passende, klare Bilder hoch. Platzhalter, unscharfe oder irreführende Bilder können nicht freigegeben werden.' },
     { value: 'price_or_tax_issue', label: 'Preis, Steuer oder Versand unklar', text: 'Preis, Steuerklasse, Versand oder Lieferbedingungen sind nicht plausibel genug angegeben.' },
-    { value: 'prohibited_content', label: 'Nicht erlaubter Inhalt', text: 'Dieses Angebot enthaelt Inhalte oder Leistungen, die auf Airmius nicht veröffentlicht werden koennen.' },
+    { value: 'prohibited_content', label: 'Nicht erlaubter Inhalt', text: 'Dieses Angebot enthält Inhalte oder Leistungen, die auf Airmius nicht veröffentlicht werden können.' },
     { value: 'quality_review', label: 'Qualitätsprüfung nicht bestanden', text: 'Das Angebot erfüllt aktuell nicht die Qualitätsanforderungen für den Marketplace.' },
     { value: 'duplicate', label: 'Doppeltes Angebot', text: 'Ein sehr aehnliches Angebot existiert bereits. Bitte bearbeite das bestehende Angebot statt ein neues einzureichen.' },
     { value: 'custom', label: 'Eigener Grund', text: '' },
@@ -1380,7 +1380,7 @@ const updatePayoutProfile = (profile, status) => {
                 <div class="flex flex-col gap-1">
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Checkout</p>
                     <h2 class="text-lg font-semibold text-primary">Versandkosten verwalten</h2>
-                    <p class="text-sm text-secondary">Regeln koennen nach Ursprungslager, Lieferland und PLZ-Prefix greifen, inklusive kostenfrei ab Warenwert.</p>
+                    <p class="text-sm text-secondary">Regeln können nach Ursprungslager, Lieferland und PLZ-Prefix greifen, inklusive kostenfrei ab Warenwert.</p>
                 </div>
                 <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="storeShippingRate">
                     <input v-model="shippingRateForm.name" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Name">
@@ -1589,8 +1589,8 @@ const updatePayoutProfile = (profile, status) => {
             <article class="surface-card overflow-hidden">
                 <div class="border-b border-border p-5">
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Shop-Zugang</p>
-                    <h2 class="mt-1 text-lg font-semibold text-primary">Verkäufer-Antraege</h2>
-                    <p class="mt-1 text-sm text-secondary">Erst freigegebene Nutzer koennen eigene Marketplace-Produkte erstellen.</p>
+                    <h2 class="mt-1 text-lg font-semibold text-primary">Verkäufer-Anträge</h2>
+                    <p class="mt-1 text-sm text-secondary">Erst freigegebene Nutzer können eigene Marketplace-Produkte erstellen.</p>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="min-w-full text-left text-sm">
@@ -1640,7 +1640,7 @@ const updatePayoutProfile = (profile, status) => {
                             </tr>
                         </tbody>
                     </table>
-                    <p v-if="!sellerApplications.length" class="px-5 py-6 text-sm text-secondary">Noch keine Shop-Antraege.</p>
+                    <p v-if="!sellerApplications.length" class="px-5 py-6 text-sm text-secondary">Noch keine Shop-Anträge.</p>
                 </div>
             </article>
 
@@ -2005,7 +2005,7 @@ const updatePayoutProfile = (profile, status) => {
                     <input v-model="campaignForm.audience_interests" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interessen">
                     <input v-model="campaignForm.audience_excluded_locations" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Regionen ausschließen">
                     <input v-model="campaignForm.audience_excluded_interests" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Interessen ausschließen">
-                    <input v-model="campaignForm.audience_devices" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Geraete: desktop, mobile, tablet">
+                    <input v-model="campaignForm.audience_devices" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Geräte: desktop, mobile, tablet">
                     <input v-model="campaignForm.audience_languages" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Sprachen: de, en, fr">
                     <input v-model="campaignForm.audience_hours" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Zeitfenster: 08-22, 18:30-23:00">
                     <input v-model="campaignForm.audience_age_min" type="number" min="13" max="100" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Alter von">

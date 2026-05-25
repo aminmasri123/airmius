@@ -125,7 +125,7 @@ class PlanFeatureService
     public function ensureCanStoreUserFile(User $user, ?UploadedFile $file = null): void
     {
         if (! $this->canStoreUserFile($user, $file)) {
-            $this->fail('Dein Speicher ist ausgeschoepft. Bitte loesche Dateien oder fuehre ein Upgrade durch.');
+            $this->fail('Dein Speicher ist ausgeschoepft. Bitte lösche Dateien oder führe ein Upgrade durch.');
         }
     }
 
@@ -176,7 +176,7 @@ class PlanFeatureService
         $remaining = $this->memberInvitationRemainingToday($club);
 
         if ($amount > $remaining) {
-            $this->fail("Im Free-Plan koennen Vereine maximal {$limit} Einladungen pro Tag versenden. Heute sind noch {$remaining} moeglich.");
+            $this->fail("Im Free-Plan können Vereine maximal {$limit} Einladungen pro Tag versenden. Heute sind noch {$remaining} möglich.");
         }
     }
 
@@ -226,7 +226,7 @@ class PlanFeatureService
         $remaining = $this->manualMemberAdditionRemainingToday($club);
 
         if ($amount > $remaining) {
-            $this->fail("Im Free-Plan koennen Vereine maximal {$limit} Mitglieder pro Tag manuell hinzufuegen. Heute sind noch {$remaining} moeglich.");
+            $this->fail("Im Free-Plan können Vereine maximal {$limit} Mitglieder pro Tag manuell hinzufügen. Heute sind noch {$remaining} möglich.");
         }
     }
 

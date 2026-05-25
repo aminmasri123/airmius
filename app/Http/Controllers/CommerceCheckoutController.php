@@ -281,7 +281,7 @@ class CommerceCheckoutController extends Controller
 
         if (! $club) {
             throw ValidationException::withMessages([
-                'club_id' => 'Du kannst fuer diesen Verein keine Angebote, Add-ons, Website-Anfragen oder Ads erstellen.',
+                'club_id' => 'Du kannst für diesen Verein keine Angebote, Add-ons, Website-Anfragen oder Ads erstellen.',
             ]);
         }
 
@@ -299,9 +299,9 @@ class CommerceCheckoutController extends Controller
     private function marketplaceCategoryCommissionsForSeller(): array
     {
         $labels = [
-            'equipment' => 'Sportgeraete & Equipment',
+            'equipment' => 'Sportgeräte & Equipment',
             'apparel' => 'Bekleidung & Schuhe',
-            'nutrition' => 'Ernaehrung & Supplements',
+            'nutrition' => 'Ernährung & Supplements',
             'accessories' => 'Zubehoer',
             'digital_products' => 'Digitale Produkte',
             'product' => 'Sonstige Produkte',
@@ -374,7 +374,7 @@ class CommerceCheckoutController extends Controller
             [...$data, 'status' => 'review'],
         );
 
-        return back()->with('success', 'Auszahlungsdaten wurden gespeichert und werden geprueft.');
+        return back()->with('success', 'Auszahlungsdaten wurden gespeichert und werden geprüft.');
     }
 
     public function requestPayout(Request $request)
@@ -397,7 +397,7 @@ class CommerceCheckoutController extends Controller
         $orders = $this->eligiblePayoutOrdersFor($request->user())->get();
         if ($orders->isEmpty()) {
             throw ValidationException::withMessages([
-                'payout' => 'Es gibt aktuell keine auszahlbaren Verkaeufe. Auszahlbar sind nur abgeschlossene Verkaeufe nach 14 Tagen ohne Beschwerde oder Ruecksendung.',
+                'payout' => 'Es gibt aktuell keine auszahlbaren Verkäufe. Auszahlbar sind nur abgeschlossene Verkäufe nach 14 Tagen ohne Beschwerde oder Rücksendung.',
             ]);
         }
 
@@ -422,7 +422,7 @@ class CommerceCheckoutController extends Controller
                 ]);
         });
 
-        return back()->with('success', 'Auszahlung wurde angefordert. Airmius prueft und zahlt sie aus.');
+        return back()->with('success', 'Auszahlung wurde angefordert. Airmius prüft und zahlt sie aus.');
     }
 
     public function storeSellerApplication(Request $request)
@@ -486,13 +486,13 @@ class CommerceCheckoutController extends Controller
 
         if ($targetActor === 'verein' && ! $club) {
             throw ValidationException::withMessages([
-                'club_id' => 'Dieses Add-on ist nur fuer Vereine buchbar. Bitte waehle einen Verein aus.',
+                'club_id' => 'Dieses Add-on ist nur für Vereine buchbar. Bitte wähle einen Verein aus.',
             ]);
         }
 
         if ($targetActor !== 'verein' && $club) {
             throw ValidationException::withMessages([
-                'club_id' => 'Dieses Add-on ist fuer dein persoenliches Konto gedacht. Bitte waehle Privat / kein Verein aus.',
+                'club_id' => 'Dieses Add-on ist für dein persoenliches Konto gedacht. Bitte wähle Privat / kein Verein aus.',
             ]);
         }
 
@@ -692,7 +692,7 @@ class CommerceCheckoutController extends Controller
         DB::transaction(function () use ($cart, $shippingAddress) {
             foreach ($cart->items as $item) {
                 $product = MarketplaceProduct::query()->lockForUpdate()->findOrFail($item->marketplace_product_id);
-                abort_unless($product->status === 'published' && $this->hasSellableStock($product, $shippingAddress['country'], (int) $item->quantity), 422, $product->title.' ist nicht mehr verfuegbar.');
+                abort_unless($product->status === 'published' && $this->hasSellableStock($product, $shippingAddress['country'], (int) $item->quantity), 422, $product->title.' ist nicht mehr verfügbar.');
             }
         });
 
@@ -842,7 +842,7 @@ class CommerceCheckoutController extends Controller
 
         if (($data['learning_course_id'] ?? null) && $offerType !== 'online_course') {
             throw ValidationException::withMessages([
-                'learning_course_id' => 'Ein Learning-Kurs kann nur mit einem Kurs / E-Learning Angebot verknuepft werden.',
+                'learning_course_id' => 'Ein Learning-Kurs kann nur mit einem Kurs / E-Learning Angebot verknüpft werden.',
             ]);
         }
 
@@ -853,7 +853,7 @@ class CommerceCheckoutController extends Controller
 
             if (! $linkedCourse || $linkedCourse->status !== 'published' || ! $linkedCourse->is_public) {
                 throw ValidationException::withMessages([
-                    'learning_course_id' => 'Bitte verknuepfe nur veroeffentlichte und oeffentliche Sportschule-Kurse.',
+                    'learning_course_id' => 'Bitte verknüpfe nur veröffentlichte und öffentliche Sportschule-Kurse.',
                 ]);
             }
         }
@@ -945,8 +945,8 @@ class CommerceCheckoutController extends Controller
         }
 
         return back()->with('success', $product->fresh()->status === 'published'
-            ? 'Produkt wurde automatisch geprueft und im Marketplace veroeffentlicht.'
-            : 'Produkt wurde automatisch geprueft und abgelehnt.');
+            ? 'Produkt wurde automatisch geprüft und im Marketplace veröffentlicht.'
+            : 'Produkt wurde automatisch geprüft und abgelehnt.');
     }
 
     private function syncSellerInventories(MarketplaceProduct $product, array $inventories): void
@@ -1056,7 +1056,7 @@ class CommerceCheckoutController extends Controller
 
         if ($rows === []) {
             throw ValidationException::withMessages([
-                'import_file' => 'Die Datei enthaelt keine gueltigen Produktzeilen. Bitte nutze die Airmius-Vorlage.',
+                'import_file' => 'Die Datei enthält keine gültigen Produktzeilen. Bitte nutze die Airmius-Vorlage.',
             ]);
         }
 
@@ -1083,7 +1083,7 @@ class CommerceCheckoutController extends Controller
                 if ($product->fresh()->moderation_status === 'removed') {
                     $product->forceFill([
                         'status' => 'rejected',
-                        'rejection_reason' => 'Automatische Ablehnung wegen schwerem Moderationsrisiko. Der Fall wurde fuer Admins markiert.',
+                        'rejection_reason' => 'Automatische Ablehnung wegen schwerem Moderationsrisiko. Der Fall wurde für Admins markiert.',
                     ])->save();
                 }
 
@@ -1097,7 +1097,7 @@ class CommerceCheckoutController extends Controller
             }
         });
 
-        return back()->with('success', $created.' Produkte wurden importiert und automatisch geprueft.');
+        return back()->with('success', $created.' Produkte wurden importiert und automatisch geprüft.');
     }
 
     public function updateOwnProduct(Request $request, MarketplaceProduct $product)
@@ -1146,7 +1146,7 @@ class CommerceCheckoutController extends Controller
             $this->syncSellerInventories($product->fresh(), $inventories);
         });
 
-        return back()->with('success', 'Produkt wurde aktualisiert und zur Pruefung eingereicht.');
+        return back()->with('success', 'Produkt wurde aktualisiert und zur Prüfung eingereicht.');
     }
 
     public function updateOwnProductStatus(Request $request, MarketplaceProduct $product)
@@ -1164,7 +1164,7 @@ class CommerceCheckoutController extends Controller
 
         $message = match ($data['status']) {
             'archived' => 'Produkt wurde archiviert.',
-            'review' => 'Produkt wurde zur Pruefung eingereicht.',
+            'review' => 'Produkt wurde zur Prüfung eingereicht.',
             default => 'Produkt wurde als Entwurf gespeichert.',
         };
 
@@ -1192,7 +1192,7 @@ class CommerceCheckoutController extends Controller
 
         $product->delete();
 
-        return back()->with('success', 'Produkt wurde geloescht.');
+        return back()->with('success', 'Produkt wurde gelöscht.');
     }
 
     public function showProduct(Request $request, MarketplaceProduct $product)
@@ -1239,20 +1239,20 @@ class CommerceCheckoutController extends Controller
 
         app(CommerceOrderNotifier::class)->notifyIssueReported($order->fresh(['items.orderable', 'orderable', 'user']));
 
-        return back()->with('success', 'Problem wurde gemeldet. Airmius prueft den Fall.');
+        return back()->with('success', 'Problem wurde gemeldet. Airmius prüft den Fall.');
     }
 
     public function cancelOrder(Request $request, CommerceOrder $order)
     {
         abort_unless($order->user_id === $request->user()->id, 403);
-        abort_unless(in_array($order->type, ['marketplace_product', 'marketplace_cart'], true), 422, 'Nur Marketplace-Bestellungen koennen hier storniert werden.');
+        abort_unless(in_array($order->type, ['marketplace_product', 'marketplace_cart'], true), 422, 'Nur Marketplace-Bestellungen können hier storniert werden.');
         abort_unless(in_array($order->status, ['pending', 'awaiting_transfer', 'completed'], true), 422, 'Diese Bestellung kann nicht mehr storniert werden.');
-        abort_if(in_array($order->shipping_status, ['shipped', 'delivered'], true), 422, 'Nach dem Versand ist eine Stornierung nicht mehr moeglich. Nach Zustellung kannst du eine Ruecksendung anfragen.');
+        abort_if(in_array($order->shipping_status, ['shipped', 'delivered'], true), 422, 'Nach dem Versand ist eine Stornierung nicht mehr möglich. Nach Zustellung kannst du eine Rücksendung anfragen.');
 
         $order->loadMissing(['items.orderable', 'orderable', 'user']);
         $hasShippableItems = $order->items->contains(fn (CommerceOrderItem $item) => (bool) $item->is_shippable);
         $hasLearningProduct = $this->learningProductsForOrder($order)->isNotEmpty();
-        abort_unless($hasShippableItems || $hasLearningProduct, 422, 'Diese Bestellung kann nicht ueber diesen Storno storniert werden.');
+        abort_unless($hasShippableItems || $hasLearningProduct, 422, 'Diese Bestellung kann nicht Über diesen Storno storniert werden.');
 
         DB::transaction(function () use ($order) {
             if ($order->status === 'completed' && $order->items->contains(fn (CommerceOrderItem $item) => (bool) $item->is_shippable)) {
@@ -1273,23 +1273,23 @@ class CommerceCheckoutController extends Controller
 
         AppNotification::send($order->user_id, 'commerce.order.cancelled', [
             'title' => 'Bestellung storniert',
-            'body' => 'Deine Bestellung #'.$order->id.' wurde storniert. Falls bereits bezahlt wurde, wird die Erstattung geprueft.',
+            'body' => 'Deine Bestellung #'.$order->id.' wurde storniert. Falls bereits bezahlt wurde, wird die Erstattung geprüft.',
             'url' => route('auth.commerce.index', ['tab' => 'invoices', 'order' => $order->id]),
             'order_id' => $order->id,
         ]);
 
         app(CommerceOrderNotifier::class)->notifyBuyerCancelled($order->fresh(['items.orderable', 'orderable', 'user']));
 
-        return back()->with('success', 'Bestellung wurde storniert. Nach Versand waere nur noch eine Ruecksendung moeglich.');
+        return back()->with('success', 'Bestellung wurde storniert. Nach Versand waere nur noch eine Rücksendung möglich.');
     }
 
     public function requestReturn(Request $request, CommerceOrder $order)
     {
         abort_unless($order->user_id === $request->user()->id, 403);
-        abort_unless($order->status === 'completed', 422, 'Ruecksendungen sind nur für bezahlte Bestellungen moeglich.');
+        abort_unless($order->status === 'completed', 422, 'Rücksendungen sind nur für bezahlte Bestellungen möglich.');
 
         $hasShippableItems = $order->items()->where('is_shippable', true)->exists();
-        abort_if($hasShippableItems && $order->shipping_status !== 'delivered', 422, 'Ruecksendungen sind erst moeglich, nachdem die Bestellung zugestellt wurde.');
+        abort_if($hasShippableItems && $order->shipping_status !== 'delivered', 422, 'Rücksendungen sind erst möglich, nachdem die Bestellung zugestellt wurde.');
 
         $data = $request->validate([
             'reason' => ['required', 'string', 'max:2000'],
@@ -1299,7 +1299,7 @@ class CommerceCheckoutController extends Controller
 
         $item = $order->items()->when($data['commerce_order_item_id'] ?? null, fn ($query, $id) => $query->whereKey($id))->first();
         abort_if($item && ! $item->is_shippable, 422, 'Dieses Angebot ist nicht ruecksendepflichtig.');
-        abort_if($item && ! $this->itemStillReturnable($item), 422, 'Die Ruecksendefrist für diesen Artikel ist abgelaufen oder ausgeschlossen.');
+        abort_if($item && ! $this->itemStillReturnable($item), 422, 'Die Rücksendefrist für diesen Artikel ist abgelaufen oder ausgeschlossen.');
 
         CommerceReturnRequest::create([
             'commerce_order_id' => $order->id,
@@ -1313,7 +1313,7 @@ class CommerceCheckoutController extends Controller
             'requested_at' => now(),
         ]);
 
-        return back()->with('success', 'Ruecksendung wurde angefragt.');
+        return back()->with('success', 'Rücksendung wurde angefragt.');
     }
 
     public function downloadInvoice(Request $request, CommerceOrder $order)
@@ -1494,7 +1494,7 @@ class CommerceCheckoutController extends Controller
 
         if ($data['status'] === 'pending_review' && ! $this->campaignPaymentCompleted($campaign)) {
             throw ValidationException::withMessages([
-                'campaign_status' => 'Diese Ads-Kampagne kann erst nach Zahlung zur Pruefung eingereicht werden.',
+                'campaign_status' => 'Diese Ads-Kampagne kann erst nach Zahlung zur Prüfung eingereicht werden.',
             ]);
         }
 
@@ -1546,7 +1546,7 @@ class CommerceCheckoutController extends Controller
 
         return redirect()
             ->route('auth.commerce.index', ['tab' => 'ads'])
-            ->with('success', 'Anzeigegruppe wurde erstellt. Danach kannst du Anzeigen und Varianten dafuer anlegen.');
+            ->with('success', 'Anzeigegruppe wurde erstellt. Danach kannst du Anzeigen und Varianten dafür anlegen.');
     }
 
     public function storeOwnCampaignGroupCreatives(Request $request, AdCampaign $campaign, AdGroup $group)
@@ -1591,7 +1591,7 @@ class CommerceCheckoutController extends Controller
     {
         $this->authorizeOwnCampaign($request, $campaign);
 
-        abort_if($campaign->status === 'completed', 422, 'Abgeschlossene Ads-Kampagnen koennen nicht mehr bearbeitet werden.');
+        abort_if($campaign->status === 'completed', 422, 'Abgeschlossene Ads-Kampagnen können nicht mehr bearbeitet werden.');
 
         $minimumBudget = (int) Setting::valueFor('ads_min_budget_cents', 1000);
         $paymentCompleted = $this->campaignPaymentCompleted($campaign);
@@ -1648,7 +1648,7 @@ class CommerceCheckoutController extends Controller
             unset($data['budget_cents']);
             $data['status'] = 'pending_review';
             $data['reviewed_at'] = null;
-            $data['review_note'] = 'Nach Bearbeitung erneut zur Pruefung eingereicht.';
+            $data['review_note'] = 'Nach Bearbeitung erneut zur Prüfung eingereicht.';
         } else {
             $data['status'] = 'pending_payment';
             $data['reviewed_at'] = null;
@@ -1690,7 +1690,7 @@ class CommerceCheckoutController extends Controller
         }
 
         return back()->with('success', $paymentCompleted
-            ? 'Kampagne wurde bearbeitet und erneut zur Pruefung eingereicht.'
+            ? 'Kampagne wurde bearbeitet und erneut zur Prüfung eingereicht.'
             : 'Kampagne wurde bearbeitet. Zahlung bleibt erforderlich.');
     }
 
@@ -1714,7 +1714,7 @@ class CommerceCheckoutController extends Controller
 
         $campaign->delete();
 
-        return back()->with('success', 'Ads-Kampagne wurde geloescht.');
+        return back()->with('success', 'Ads-Kampagne wurde gelöscht.');
     }
 
     public function storeWebsiteRequest(Request $request)
@@ -1843,10 +1843,10 @@ class CommerceCheckoutController extends Controller
     public function guestReturn(Request $request, CommerceOrder $order, string $token)
     {
         $this->authorizeGuestOrder($order, $token);
-        abort_unless($order->status === 'completed', 422, 'Ruecksendungen sind nur für bezahlte Bestellungen moeglich.');
+        abort_unless($order->status === 'completed', 422, 'Rücksendungen sind nur für bezahlte Bestellungen möglich.');
 
         $hasShippableItems = $order->items()->where('is_shippable', true)->exists();
-        abort_if($hasShippableItems && $order->shipping_status !== 'delivered', 422, 'Ruecksendungen sind erst moeglich, nachdem die Bestellung zugestellt wurde.');
+        abort_if($hasShippableItems && $order->shipping_status !== 'delivered', 422, 'Rücksendungen sind erst möglich, nachdem die Bestellung zugestellt wurde.');
 
         $data = $request->validate([
             'reason' => ['required', 'string', 'max:2000'],
@@ -1865,7 +1865,7 @@ class CommerceCheckoutController extends Controller
             'requested_at' => now(),
         ]);
 
-        return back()->with('success', 'Ruecksendung wurde angefragt.');
+        return back()->with('success', 'Rücksendung wurde angefragt.');
     }
 
     public function activeAd(Request $request)
@@ -2962,7 +2962,7 @@ class CommerceCheckoutController extends Controller
                         continue;
                     }
 
-                    abort_unless($this->hasSellableStock($product), 422, $product->title.' ist nicht mehr verfuegbar.');
+                    abort_unless($this->hasSellableStock($product), 422, $product->title.' ist nicht mehr verfügbar.');
 
                     if (! (bool) $product->manages_stock) {
                         continue;
@@ -3296,7 +3296,7 @@ class CommerceCheckoutController extends Controller
     {
         return [
             'pending' => 'Offen',
-            'awaiting_transfer' => 'Wartet auf Ueberweisung',
+            'awaiting_transfer' => 'Wartet auf Überweisung',
             'pending_payment' => 'Zahlung offen',
             'paid' => 'Bezahlt',
             'completed' => 'Bezahlt',
@@ -3744,7 +3744,7 @@ class CommerceCheckoutController extends Controller
             ->first();
 
         if (! $coupon || ! $coupon->isRedeemable()) {
-            throw ValidationException::withMessages(['coupon_code' => 'Dieser Gutschein ist ungueltig oder abgelaufen.']);
+            throw ValidationException::withMessages(['coupon_code' => 'Dieser Gutschein ist ungültig oder abgelaufen.']);
         }
 
         $oldItemGross = max(0, (int) ($quote['item_gross_cents'] ?? $quote['gross_cents'] ?? 0));
@@ -4000,11 +4000,11 @@ class CommerceCheckoutController extends Controller
         }
 
         if ($priceCents === null) {
-            $errors[] = "Zeile {$line}: Preis fehlt oder ist ungueltig.";
+            $errors[] = "Zeile {$line}: Preis fehlt oder ist ungültig.";
         }
 
         if ($imageUrl !== '' && ! filter_var($imageUrl, FILTER_VALIDATE_URL)) {
-            $errors[] = "Zeile {$line}: Hauptbild-URL ist ungueltig.";
+            $errors[] = "Zeile {$line}: Hauptbild-URL ist ungültig.";
         }
 
         if ($offerType === 'physical_product' && $productType !== 'digital' && ((int) $stockQuantity) < 1) {
@@ -4264,8 +4264,8 @@ XML);
         ];
         $rows = [
             ['Airmius Marketplace Produktimport'],
-            ['Pflichtfelder: Titel, Angebotstyp, Preis_EUR und bei physischen Produkten Lagerbestand min. 1. Bilder bitte als oeffentliche URLs eintragen.'],
-            ['Provision: Die Spalten F-H sind Formeln. Wenn Preis oder Kategorie geaendert werden, aktualisieren sich Provision und Auszahlung in Excel. Beim Import rechnet Airmius die Provision serverseitig erneut mit den aktuellen Admin-Einstellungen.'],
+            ['Pflichtfelder: Titel, Angebotstyp, Preis_EUR und bei physischen Produkten Lagerbestand min. 1. Bilder bitte als öffentliche URLs eintragen.'],
+            ['Provision: Die Spalten F-H sind Formeln. Wenn Preis oder Kategorie geändert werden, aktualisieren sich Provision und Auszahlung in Excel. Beim Import rechnet Airmius die Provision serverseitig erneut mit den aktuellen Admin-Einstellungen.'],
             $headers,
             [
                 'Beispiel Trainingsball', 'physical_product', 'product', 'single', '29,99',
@@ -4273,7 +4273,7 @@ XML);
                 ['formula' => 'IF(E5="","",E5*F5/100)'],
                 ['formula' => 'IF(E5="","",E5-G5)'],
                 '10', 'BALL-1001', 'https://example.com/ball.jpg', 'https://example.com/ball-side.jpg; https://example.com/ball-box.jpg',
-                'standard', 'ja', 'Robuster Trainingsball fuer Vereinstraining.', 'Farbe: Weiss | Groesse: 5',
+                'standard', 'ja', 'Robuster Trainingsball für Vereinstraining.', 'Farbe: Weiß | Größe: 5',
                 '', '', 'nein', '',
             ],
         ];

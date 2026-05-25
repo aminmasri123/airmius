@@ -37,25 +37,25 @@ class SportIntegrationController extends Controller
         'strava' => [
             'label' => 'Strava',
             'status' => 'live_oauth',
-            'description' => 'Strava verbindet Lauf-, Rad-, Schwimm- und Workout-Daten ueber die offizielle OAuth-API.',
+            'description' => 'Strava verbindet Lauf-, Rad-, Schwimm- und Workout-Daten Über die offizielle OAuth-API.',
             'scopes' => ['read', 'activity:read_all'],
         ],
         'fitbit' => [
             'label' => 'Fitbit',
             'status' => 'planned_oauth',
-            'description' => 'Fitbit Web API kann Aktivitaeten, Schritte, Distanz, Kalorien und Gesundheitsdaten per OAuth bereitstellen. Integration ist vorgemerkt.',
+            'description' => 'Fitbit Web API kann Aktivitäten, Schritte, Distanz, Kalorien und Gesundheitsdaten per OAuth bereitstellen. Integration ist vorgemerkt.',
             'scopes' => ['activity', 'profile'],
         ],
         'polar' => [
             'label' => 'Polar',
             'status' => 'planned_oauth',
-            'description' => 'Polar AccessLink stellt Trainings- und Aktivitaetsdaten per OAuth/API bereit. Integration ist vorgemerkt.',
+            'description' => 'Polar AccessLink stellt Trainings- und Aktivitätsdaten per OAuth/API bereit. Integration ist vorgemerkt.',
             'scopes' => ['accesslink.read_all'],
         ],
         'mi_fitness' => [
             'label' => 'Mi Fitness',
             'status' => 'partner_required',
-            'description' => 'Mi Fitness hat keine einfache Standard-OAuth-Anbindung im Projekt. Die Verknuepfung wird als gewuenscht vorgemerkt.',
+            'description' => 'Mi Fitness hat keine einfache Standard-OAuth-Anbindung im Projekt. Die Verknüpfung wird als gewünscht vorgemerkt.',
             'scopes' => ['activities'],
         ],
     ];
@@ -72,7 +72,7 @@ class SportIntegrationController extends Controller
                     'display_name' => $definition['label'],
                     'status' => 'requested',
                     'scopes' => $definition['scopes'],
-                    'sync_summary' => ['message' => 'Verknuepfung vorgemerkt. Wir informieren dich, sobald dieser Anbieter freigeschaltet ist.'],
+                    'sync_summary' => ['message' => 'Verknüpfung vorgemerkt. Wir informieren dich, sobald dieser Anbieter freigeschaltet ist.'],
                 ],
             );
 
@@ -193,7 +193,7 @@ class SportIntegrationController extends Controller
                 'access_token' => $token['access_token'] ?? null,
                 'refresh_token' => $token['refresh_token'] ?? null,
                 'token_expires_at' => $this->tokenExpiresAt($provider, $token),
-                'sync_summary' => ['message' => 'Konto verbunden. Aktivitaetsimport ist vorbereitet.'],
+                'sync_summary' => ['message' => 'Konto verbunden. Aktivitätsimport ist vorbereitet.'],
             ],
         );
 
@@ -251,7 +251,7 @@ class SportIntegrationController extends Controller
 
         $account->delete();
 
-        return back()->with('success', 'Sport-App-Verknuepfung entfernt.');
+        return back()->with('success', 'Sport-App-Verknüpfung entfernt.');
     }
 
     public function destroyActivity(Request $request, ConnectedSportActivity $activity)
@@ -264,7 +264,7 @@ class SportIntegrationController extends Controller
 
         $activity->delete();
 
-        return back()->with('success', 'Importierte Aktivitaet wurde geloescht.');
+        return back()->with('success', 'Importierte Aktivität wurde gelöscht.');
     }
 
     public function updateActivity(Request $request, ConnectedSportActivity $activity)
@@ -279,7 +279,7 @@ class SportIntegrationController extends Controller
             'title' => $data['title'],
         ]);
 
-        return back()->with('success', 'Importierte Aktivitaet wurde umbenannt.');
+        return back()->with('success', 'Importierte Aktivität wurde umbenannt.');
     }
 
     public function destroyActivities(Request $request)
@@ -298,7 +298,7 @@ class SportIntegrationController extends Controller
             ->whereKey($activities->pluck('id'))
             ->delete();
 
-        return back()->with('success', $deleted.' importierte Aktivitaeten wurden geloescht.');
+        return back()->with('success', $deleted.' importierte Aktivitäten wurden gelöscht.');
     }
 
     private function definition(string $provider): array

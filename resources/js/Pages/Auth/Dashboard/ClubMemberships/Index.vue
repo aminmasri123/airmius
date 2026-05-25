@@ -789,9 +789,9 @@ const inviteExternalMember = (member) => {
                                 <p class="font-semibold text-primary">{{ request.user.name }}</p>
                                 <p class="text-sm text-secondary">
                                     {{ request.user.email }}
-                                    <span v-if="request.type === 'pause'">moechte die Mitgliedschaft pausieren</span>
+                                    <span v-if="request.type === 'pause'">möchte die Mitgliedschaft pausieren</span>
                                     <span v-else-if="request.type === 'removal_objection'">widerspricht der Entfernung aus dem Verein</span>
-                                    <span v-else>moechte Vereinsmitglied werden</span>
+                                    <span v-else>möchte Vereinsmitglied werden</span>
                                 </p>
                                 <p v-if="request.membership_type" class="mt-1 text-xs text-secondary">
                                     Typ: {{ request.membership_type.name }} · Vorschau {{ formatMoney(request.preview_amount) }} / {{ intervalLabel(request.preview_interval) }}
@@ -1093,7 +1093,7 @@ const inviteExternalMember = (member) => {
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">Naechste automatische Rechnung</label>
+                                <label class="text-xs font-semibold uppercase text-secondary">Nächste automatische Rechnung</label>
                                 <input v-model="formFor(member).contribution_next_invoice_on" type="date" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                                 <p class="mt-1 text-xs text-secondary">Automatik wird ab Pro/Elite ausgeführt.</p>
                             </div>
@@ -1230,7 +1230,7 @@ const inviteExternalMember = (member) => {
                     <div>
                         <h2 class="text-lg font-semibold text-primary">Bankabgleich</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            CSV-Umsaetze importieren, Rechnungen automatisch zuordnen und unklare Treffer manuell bestätigen.
+                            CSV-Umsätze importieren, Rechnungen automatisch zuordnen und unklare Treffer manuell bestätigen.
                         </p>
                     </div>
                     <button
@@ -1310,7 +1310,7 @@ const inviteExternalMember = (member) => {
                     <div class="max-w-2xl">
                         <h2 class="text-lg font-semibold text-primary">DATEV / SKR42</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            Exportiere bezahlte Mitgliedsbeitraege als CSV-Buchungsstapel. Konten bitte mit Steuerberatung abstimmen.
+                            Exportiere bezahlte Mitgliedsbeiträge als CSV-Buchungsstapel. Konten bitte mit Steuerberatung abstimmen.
                         </p>
                     </div>
 
@@ -1374,13 +1374,13 @@ const inviteExternalMember = (member) => {
             <div class="p-2">
                 <h2 class="text-xl font-bold text-primary">Mitglieder per E-Mail hinzufügen</h2>
                 <p class="mt-1 text-sm text-secondary">
-                    Erfasse mehrere Mitglieder auf einmal. Wenn eine Einladung aktiv ist, werden vorhandene Konten verknuepft, sonst geht eine Einladung per E-Mail raus.
+                    Erfasse mehrere Mitglieder auf einmal. Wenn eine Einladung aktiv ist, werden vorhandene Konten verknüpft, sonst geht eine Einladung per E-Mail raus.
                 </p>
                 <p
                     v-if="capabilities.member_invitation_daily_limit"
                     class="mt-2 rounded-lg border border-border bg-bg px-3 py-2 text-xs font-semibold text-secondary"
                 >
-                    Free-Limit: {{ capabilities.member_invitation_remaining_today }} von {{ capabilities.member_invitation_daily_limit }} Einladungen heute uebrig.
+                    Free-Limit: {{ capabilities.member_invitation_remaining_today }} von {{ capabilities.member_invitation_daily_limit }} Einladungen heute ?brig.
                 </p>
 
                 <form class="mt-5 space-y-4" @submit.prevent="addEmailMember">
@@ -1472,7 +1472,7 @@ const inviteExternalMember = (member) => {
                                 </div>
 
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">Naechste automatische Rechnung</label>
+                                    <label class="text-xs font-semibold uppercase text-secondary">Nächste automatische Rechnung</label>
                                     <input
                                         v-model="member.contribution_next_invoice_on"
                                         type="date"
@@ -1610,7 +1610,7 @@ const inviteExternalMember = (member) => {
 
         <Modal :show="showBankImportModal" max-width="2xl" @close="showBankImportModal = false">
             <div class="p-2">
-                <h2 class="text-xl font-bold text-primary">Bankumsaetze importieren</h2>
+                <h2 class="text-xl font-bold text-primary">Bankumsätze importieren</h2>
                 <p class="mt-1 text-sm text-secondary">
                     Lade eine CSV aus dem Online-Banking hoch. Erkannt werden typische Spalten wie Datum, Betrag, Auftraggeber, IBAN und Verwendungszweck.
                 </p>

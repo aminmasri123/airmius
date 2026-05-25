@@ -99,7 +99,7 @@ class SubscriptionController extends Controller
             'accepted_terms' => ['accepted'],
         ], [
             'provider.in' => 'Dieser Zahlungsanbieter wird mobil nicht unterstuetzt.',
-            'accepted_terms.accepted' => 'Bitte bestaetige AGB und Widerrufshinweise, bevor du das Abo kostenpflichtig bestellst.',
+            'accepted_terms.accepted' => 'Bitte bestätige AGB und Widerrufshinweise, bevor du das Abo kostenpflichtig bestellst.',
         ]);
 
         $subscriptionPlan->loadMissing('countryPrices');
@@ -109,7 +109,7 @@ class SubscriptionController extends Controller
 
         if (! $price['available']) {
             throw ValidationException::withMessages([
-                'checkout' => 'Dieser Abo-Plan ist in deinem Land aktuell nicht verfuegbar.',
+                'checkout' => 'Dieser Abo-Plan ist in deinem Land aktuell nicht verfügbar.',
             ]);
         }
 
@@ -119,12 +119,12 @@ class SubscriptionController extends Controller
 
         if ($amountCents <= 0) {
             throw ValidationException::withMessages([
-                'checkout' => 'Kostenlose Plaene brauchen keinen Checkout.',
+                'checkout' => 'Kostenlose Pläne brauchen keinen Checkout.',
             ]);
         }
 
         if ($data['provider'] === 'bank_transfer' && blank($this->bankTransferSettings()['iban'])) {
-            $this->checkoutError('Bankverbindung fuer Ueberweisung ist noch nicht konfiguriert.');
+            $this->checkoutError('Bankverbindung für Überweisung ist noch nicht konfiguriert.');
         }
 
         $this->ensureProviderIsConfigured($data['provider']);
@@ -170,7 +170,7 @@ class SubscriptionController extends Controller
 
         if ($checkout->provider === 'bank_transfer') {
             AppNotification::send($checkout->user_id, 'subscription.invoice.awaiting_transfer', [
-                'title' => 'Airmius Rechnung wartet auf Ueberweisung',
+                'title' => 'Airmius Rechnung wartet auf Überweisung',
                 'body' => $checkout->invoice?->number.' - '.$checkout->payment_reference,
                 'subscription_invoice_id' => $checkout->invoice?->id,
             ]);
@@ -304,7 +304,7 @@ class SubscriptionController extends Controller
 
         if (! $club) {
             throw ValidationException::withMessages([
-                'club_id' => 'Bitte erst einen Verein erstellen oder auswaehlen.',
+                'club_id' => 'Bitte erst einen Verein erstellen oder auswählen.',
             ]);
         }
 
@@ -396,7 +396,7 @@ class SubscriptionController extends Controller
         $bank = $this->bankTransferSettings();
 
         if (blank($bank['iban'])) {
-            $this->checkoutError('Bankverbindung fuer Ueberweisung ist noch nicht konfiguriert.');
+            $this->checkoutError('Bankverbindung für Überweisung ist noch nicht konfiguriert.');
         }
 
         $checkout->update([

@@ -92,7 +92,7 @@ class ClubController extends Controller
 
         session(['club_id' => $club->id]);
 
-        return back()->with('success', 'Verein registriert. Der Antrag wartet jetzt auf Pruefung.');
+        return back()->with('success', 'Verein registriert. Der Antrag wartet jetzt auf Prüfung.');
     }
 
     public function show(Request $request, Club $club)
@@ -242,7 +242,7 @@ class ClubController extends Controller
 
         $sponsor->delete();
 
-        return back()->with('success', 'Sponsor geloescht.');
+        return back()->with('success', 'Sponsor gelöscht.');
     }
 
     private function sponsorData(Request $request): array

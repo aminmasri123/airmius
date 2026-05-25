@@ -26,10 +26,10 @@ class OutfitPaymentReminder extends Notification
         return (new MailMessage)
             ->subject('Erinnerung: Outfit-Abo Zahlung offen')
             ->greeting('Hallo '.(trim((string) ($notifiable->name ?? '')) ?: 'zusammen').',')
-            ->line('fuer dein Outfit-Abo ist noch keine Zahlung eingegangen.')
+            ->line('für dein Outfit-Abo ist noch keine Zahlung eingegangen.')
             ->line('Abo: '.($subscription->plan?->name ?? 'Outfit-Abo'))
             ->line('Betrag: '.$amount)
-            ->line('Faellig bis: '.$this->date($subscription->payment_due_at))
+            ->line('Fällig bis: '.$this->date($subscription->payment_due_at))
             ->line('Zahlungsreferenz: '.($subscription->payment_reference ?: '-'))
             ->action('Outfit-Abo ansehen', route('auth.outfit-subscriptions.index'));
     }

@@ -73,7 +73,7 @@ class ExternalProviderUsageService
             'assumptions' => [
                 'usd_to_eur' => (float) config('provider_costs.usd_to_eur', 0.92),
                 'self_hosted_monthly_eur' => (float) config('provider_costs.self_hosted_monthly_eur', 180),
-                'note' => 'Kosten sind Schaetzwerte. Admins sollten Providerpreise und Vertraege regelmaessig aktualisieren.',
+                'note' => 'Kosten sind Schätzwerte. Admins sollten Providerpreise und Verträge regelmäßig aktualisieren.',
             ],
         ];
     }
@@ -174,7 +174,7 @@ class ExternalProviderUsageService
                 'unit' => 'Text-Requests',
                 'percent' => null,
                 'status' => $metrics['ai_text_requests'] > 0 ? 'active' : 'empty',
-                'hint' => 'Fuer Ernaehrung, Training und Blogtexte werden Tokens gezaehlt.',
+                'hint' => 'Für Ernährung, Training und Blogtexte werden Tokens gezählt.',
             ],
         ];
     }
@@ -289,7 +289,7 @@ class ExternalProviderUsageService
                 'projected_5x_eur' => round((float) ($plan['monthly_eur'] ?? 0), 2),
                 'included_units' => $included,
                 'available' => $included === 0 || $units <= $included,
-                'risk' => $plan['risk'] ?? ($included > 0 && $units > $included ? 'Volumen ueber Planannahme. Upgrade oder Vertrag pruefen.' : null),
+                'risk' => $plan['risk'] ?? ($included > 0 && $units > $included ? 'Volumen Über Planannahme. Upgrade oder Vertrag prüfen.' : null),
             ];
         }
 
@@ -354,8 +354,8 @@ class ExternalProviderUsageService
             'projected_5x_eur' => round($cost * 5, 2),
             'available' => true,
             'risk' => $plan['provider'] === 'openai'
-                ? 'Nur mit passendem AV-Vertrag, Datenminimierung und klarer Einwilligung fuer sensible Fitness-/Ernaehrungsdaten.'
-                : 'EU-/DSGVO-Vertrag und Datenminimierung pruefen.',
+                ? 'Nur mit passendem AV-Vertrag, Datenminimierung und klarer Einwilligung für sensible Fitness-/Ernährungsdaten.'
+                : 'EU-/DSGVO-Vertrag und Datenminimierung prüfen.',
         ];
     }
 
@@ -411,7 +411,7 @@ class ExternalProviderUsageService
                 return [
                     'units' => $units,
                     'target_cost_eur' => round($target, 2),
-                    'message' => "Ab ca. {$units} Einheiten/Monat eigene Infrastruktur pruefen.",
+                    'message' => "Ab ca. {$units} Einheiten/Monat eigene Infrastruktur prüfen.",
                 ];
             }
         }
@@ -427,7 +427,7 @@ class ExternalProviderUsageService
             $items[] = [
                 'level' => 'warning',
                 'title' => 'Mapbox Directions Free-Tier wird eng',
-                'body' => 'Ab 80.000 Routen-Requests pro Monat solltest du Caching, Pro-Limits und GraphHopper/eigene Infrastruktur pruefen.',
+                'body' => 'Ab 80.000 Routen-Requests pro Monat solltest du Caching, Pro-Limits und GraphHopper/eigene Infrastruktur prüfen.',
             ];
         }
 
@@ -443,7 +443,7 @@ class ExternalProviderUsageService
             $items[] = [
                 'level' => 'info',
                 'title' => 'Navigation SDK getrennt betrachten',
-                'body' => 'Navigation kostet pro aktivem Nutzer und Trip. Erst fuer Pro-Funktionen oder echte Abbiegehinweise aktivieren.',
+                'body' => 'Navigation kostet pro aktivem Nutzer und Trip. Erst für Pro-Funktionen oder echte Abbiegehinweise aktivieren.',
             ];
         }
 
@@ -451,7 +451,7 @@ class ExternalProviderUsageService
             $items[] = [
                 'level' => 'info',
                 'title' => 'KI-Daten minimieren',
-                'body' => 'Ernaehrung und Training koennen sensible Daten sein. Prompts anonymisieren, Einwilligung einholen und EU-Anbieter priorisieren.',
+                'body' => 'Ernährung und Training können sensible Daten sein. Prompts anonymisieren, Einwilligung einholen und EU-Anbieter priorisieren.',
             ];
         }
 

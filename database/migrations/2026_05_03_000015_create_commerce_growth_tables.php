@@ -107,7 +107,7 @@ return new class extends Migration
             [
                 'slug' => 'website-plus',
                 'name' => 'Website Plus',
-                'description' => 'Oeffentliche Vereinsseite, SEO und Sponsorbereiche als Add-on.',
+                'description' => 'öffentliche Vereinsseite, SEO und Sponsorbereiche als Add-on.',
                 'monthly_price_cents' => 900,
                 'yearly_price_cents' => 9000,
                 'target_actor' => 'verein',

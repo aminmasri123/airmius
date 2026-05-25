@@ -156,7 +156,7 @@ class MailCenterController extends Controller
 
         try {
             Mail::mailer($transport['mailer'])
-                ->raw('Dies ist eine Testmail fuer die Mailbox-Kategorie '.$category.'.', function ($message) use ($request, $transport, $category) {
+                ->raw('Dies ist eine Testmail für die Mailbox-Kategorie '.$category.'.', function ($message) use ($request, $transport, $category) {
                     $message
                         ->to($request->user()->email)
                         ->from($transport['address'], $transport['name'])
@@ -402,7 +402,7 @@ class MailCenterController extends Controller
         abort_unless(
             filled($request->user()?->two_factor_secret) && filled($request->user()?->two_factor_confirmed_at),
             403,
-            'Bitte aktiviere zuerst 2FA, bevor du Mail-Passwoerter aenderst.'
+            'Bitte aktiviere zuerst 2FA, bevor du Mail-Passwörter änderst.'
         );
     }
 

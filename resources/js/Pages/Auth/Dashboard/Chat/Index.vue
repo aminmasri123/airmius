@@ -1506,7 +1506,7 @@ onUnmounted(() => {
                         </div>
                         <h2 class="mt-4 text-lg font-semibold text-primary">Kein Chat geöffnet</h2>
                         <p class="mt-2 text-sm leading-6 text-secondary">
-                            Aus Datenschutzgruenden wird keine Konversation automatisch angezeigt.
+                            Aus Datenschutzgründen wird keine Konversation automatisch angezeigt.
                             Wählelinks bewusst eine Person, ein Team oder eine Gruppe aus.
                         </p>
                         <button
@@ -1552,7 +1552,7 @@ onUnmounted(() => {
                 v-if="galleryAttachments.length > 1"
                 type="button"
                 class="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20"
-                title="Naechstes Bild"
+                title="Nächstes Bild"
                 @click="showNextMedia"
             >
                 <i class="las la-angle-right text-2xl"></i>

@@ -30,10 +30,10 @@ class OutfitPaymentDunningNotice extends Notification
         $message = (new MailMessage)
             ->subject($isFinal ? 'Letzte Mahnung: Outfit-Abo Zahlung offen' : $this->level.'. Mahnung: Outfit-Abo Zahlung offen')
             ->greeting('Hallo '.(trim((string) ($notifiable->name ?? '')) ?: 'zusammen').',')
-            ->line('fuer dein laufendes Outfit-Abo ist eine Zahlung offen.')
+            ->line('für dein laufendes Outfit-Abo ist eine Zahlung offen.')
             ->line('Abo: '.($subscription->plan?->name ?? 'Outfit-Abo'))
             ->line('Betrag: '.$amount)
-            ->line('Faellig seit: '.$this->date($subscription->payment_due_at))
+            ->line('Fällig seit: '.$this->date($subscription->payment_due_at))
             ->line('Zahlungsreferenz: '.($subscription->payment_reference ?: '-'));
 
         if ($isFinal) {

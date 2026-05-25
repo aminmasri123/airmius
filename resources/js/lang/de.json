@@ -156,7 +156,7 @@
     },
     "tracks": {
       "title": "Strecke tracken",
-      "hint": "Nutze den Standort des Browsers, speichere Punkte und verknuepfe den Track optional mit einer geplanten Route.",
+      "hint": "Nutze den Standort des Browsers, speichere Punkte und verknüpfe den Track optional mit einer geplanten Route.",
       "route_optional": "Geplante Route optional",
       "free_track": "Freier Track",
       "distance": "Distanz",

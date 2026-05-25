@@ -30,12 +30,12 @@ class GuardianConsentController extends Controller
         $request->validate([
             'guardian_confirmation' => ['accepted'],
         ], [
-            'guardian_confirmation.accepted' => 'Bitte bestaetigen Sie, dass Sie erziehungsberechtigt sind.',
+            'guardian_confirmation.accepted' => 'Bitte bestätigen Sie, dass Sie erziehungsberechtigt sind.',
         ]);
 
         $this->approveMinor($request, $minor);
 
-        return $this->redirectAfterDecision($request, 'Die Registrierung wurde bestaetigt.');
+        return $this->redirectAfterDecision($request, 'Die Registrierung wurde bestätigt.');
     }
 
     public function approveDirect(Request $request, string $token): RedirectResponse
@@ -44,7 +44,7 @@ class GuardianConsentController extends Controller
 
         $this->approveMinor($request, $minor);
 
-        return $this->redirectAfterDecision($request, 'Die Registrierung wurde bestaetigt.');
+        return $this->redirectAfterDecision($request, 'Die Registrierung wurde bestätigt.');
     }
 
     public function reject(Request $request, string $token): RedirectResponse

@@ -369,7 +369,7 @@ class ClubMembershipController extends Controller
         $user = $request->user();
 
         abort_unless($club->users()->where('users.id', $user->id)->exists(), 404);
-        abort_if($club->owner_id === $user->id, 422, 'Owner koennen den Verein nicht verlassen. Weise zuerst einem anderen Mitglied die Rolle Owner zu.');
+        abort_if($club->owner_id === $user->id, 422, 'Owner können den Verein nicht verlassen. Weise zuerst einem anderen Mitglied die Rolle Owner zu.');
 
         $hasOpenDebt = Invoice::query()
             ->where('club_id', $club->id)
@@ -417,7 +417,7 @@ class ClubMembershipController extends Controller
             'user_id' => $request->user()->id,
             'type' => 'removal_objection',
             'status' => 'pending',
-            'message' => $data['message'] ?? 'Ich widerspreche der Entfernung und bitte um Pruefung.',
+            'message' => $data['message'] ?? 'Ich widerspreche der Entfernung und bitte um Prüfung.',
         ]);
 
         $this->notifyClubManagers($club, 'club.member_removal_objection', [
@@ -673,7 +673,7 @@ class ClubMembershipController extends Controller
 
             return back()->with(
                 'success',
-                "Mitglieder gespeichert: {$stats['stored']} extern, {$stats['linked']} verknuepft, {$stats['invited']} eingeladen."
+                "Mitglieder gespeichert: {$stats['stored']} extern, {$stats['linked']} verknüpft, {$stats['invited']} eingeladen."
             );
         }
 
@@ -704,7 +704,7 @@ class ClubMembershipController extends Controller
         $result = $this->storeEmailMemberData($club, $request->user(), $data, (bool) ($data['send_invitation'] ?? false));
 
         return back()->with('success', match ($result) {
-            'linked' => 'Bestehender User wurde direkt mit dem Verein verknuepft.',
+            'linked' => 'Bestehender User wurde direkt mit dem Verein verknüpft.',
             'invited' => 'Externes Mitglied gespeichert und Einladung versendet.',
             default => 'Externes Mitglied ohne Einladung gespeichert.',
         });
@@ -753,7 +753,7 @@ class ClubMembershipController extends Controller
                 'athlete_license_number' => trim((string) ($row['lizenznummer'] ?? $row['athlete_license_number'] ?? '')) ?: null,
                 'contribution_amount' => $this->normalizeMoney($row['beitrag'] ?? $row['contribution_amount'] ?? null),
                 'contribution_interval' => $this->normalizeContributionInterval($row['intervall'] ?? $row['contribution_interval'] ?? 'none'),
-                'contribution_next_invoice_on' => $this->normalizeImportDate($row['naechste_rechnung'] ?? $row['nächste_rechnung'] ?? $row['contribution_next_invoice_on'] ?? null),
+                'contribution_next_invoice_on' => $this->normalizeImportDate($row['nächste_rechnung'] ?? $row['nächste_rechnung'] ?? $row['contribution_next_invoice_on'] ?? null),
                 'sepa_iban' => $this->normalizeIban($row['iban'] ?? $row['sepa_iban'] ?? null),
                 'sepa_bic' => $this->normalizeBic($row['bic'] ?? $row['sepa_bic'] ?? null),
                 'sepa_mandate_reference' => trim((string) ($row['mandatsreferenz'] ?? $row['sepa_mandate_reference'] ?? '')) ?: null,
@@ -814,7 +814,7 @@ class ClubMembershipController extends Controller
 
         return back()->with(
             'success',
-            "Import fertig: {$stats['stored']} gespeichert, {$stats['linked']} verknuepft, {$stats['invited']} eingeladen, {$stats['skipped']} uebersprungen."
+            "Import fertig: {$stats['stored']} gespeichert, {$stats['linked']} verknüpft, {$stats['invited']} eingeladen, {$stats['skipped']} übersprungen."
         );
     }
 
@@ -938,13 +938,13 @@ class ClubMembershipController extends Controller
             });
 
             AppNotification::send($existingUser, 'club.member_linked', [
-                'title' => 'Du wurdest mit '.$externalMember->club->name.' verknuepft',
+                'title' => 'Du wurdest mit '.$externalMember->club->name.' verknüpft',
                 'body' => 'Der Verein hat deine Mitgliedschaft mit deinem Airmius-Konto verbunden.',
                 'url' => route('auth.club-memberships.index'),
                 'club_id' => $externalMember->club_id,
             ]);
 
-            return back()->with('success', 'Bestehender User wurde verknuepft.');
+            return back()->with('success', 'Bestehender User wurde verknüpft.');
         }
 
         $externalMember->update([
@@ -1001,7 +1001,7 @@ class ClubMembershipController extends Controller
 
         return redirect()
             ->route('auth.club-memberships.index')
-            ->with('success', 'Vereinsmitgliedschaft wurde mit deinem Konto verknuepft.');
+            ->with('success', 'Vereinsmitgliedschaft wurde mit deinem Konto verknüpft.');
     }
 
     public function storeInvoice(Request $request, Club $club, User $user)
@@ -1152,7 +1152,7 @@ class ClubMembershipController extends Controller
 
         AppNotification::send((int) $invoice->user_id, 'invoice.reminder', [
             'title' => 'Zahlungserinnerung',
-            'body' => 'Bitte pruefe die offene Rechnung '.$invoice->number.'.',
+            'body' => 'Bitte prüfe die offene Rechnung '.$invoice->number.'.',
             'url' => route('auth.settings'),
             'invoice_id' => $invoice->id,
         ]);
@@ -1252,7 +1252,7 @@ class ClubMembershipController extends Controller
                 'payment_id' => $payment->id,
                 'status' => 'matched',
                 'match_confidence' => max((int) $bankTransaction->match_confidence, 80),
-                'match_reason' => 'Manuell bestaetigt',
+                'match_reason' => 'Manuell bestätigt',
             ]);
         });
 
@@ -1304,7 +1304,7 @@ class ClubMembershipController extends Controller
             ->orderBy('paid_at')
             ->get();
 
-        abort_if($payments->isEmpty(), 422, 'Keine bezahlten Zahlungen im ausgewaehlten Zeitraum gefunden.');
+        abort_if($payments->isEmpty(), 422, 'Keine bezahlten Zahlungen im ausgewählten Zeitraum gefunden.');
 
         $fileName = 'airmius-datev-'.$club->id.'-'.$from->format('Ymd').'-'.$to->format('Ymd').'.csv';
 
@@ -1398,8 +1398,8 @@ class ClubMembershipController extends Controller
             ->delete();
 
         AppNotification::send($user, 'club.member_linked', [
-            'title' => 'Du wurdest mit '.$club->name.' verknuepft',
-            'body' => 'Der Verein hat dich als Mitglied hinzugefuegt.',
+            'title' => 'Du wurdest mit '.$club->name.' verknüpft',
+            'body' => 'Der Verein hat dich als Mitglied hinzugefügt.',
             'url' => route('auth.club-memberships.index'),
             'club_id' => $club->id,
         ]);
@@ -1541,7 +1541,7 @@ class ClubMembershipController extends Controller
                 'invoice' => $numberMatch,
                 'status' => 'matched',
                 'confidence' => 100,
-                'reason' => 'Rechnungsnummer und Betrag stimmen ueberein.',
+                'reason' => 'Rechnungsnummer und Betrag stimmen Überein.',
             ];
         }
 
@@ -1561,7 +1561,7 @@ class ClubMembershipController extends Controller
                     'invoice' => $invoice,
                     'status' => 'matched',
                     'confidence' => 95,
-                    'reason' => 'Betrag und IBAN stimmen ueberein.',
+                    'reason' => 'Betrag und IBAN stimmen Überein.',
                 ];
             }
 
@@ -1909,7 +1909,7 @@ XML);
             ['Airmius Mitgliederimport'],
             ['Fuellen Sie ab Zeile 5 die Mitglieder aus. Pflichtfeld ist E-Mail. Mitgliedschaft: active, non_member, pending, former. Intervall: none, monthly, quarterly, yearly, once. SEPA aktiv: ja/nein.'],
             [],
-            ['Name', 'E-Mail', 'Mitgliedschaft', 'Mitgliedsnummer', 'Lizenznummer', 'Beitrag', 'Intervall', 'Naechste_Rechnung', 'IBAN', 'BIC', 'Mandatsreferenz', 'Mandatsdatum', 'SEPA_Aktiv', 'Eintritt', 'Ende', 'Notiz'],
+            ['Name', 'E-Mail', 'Mitgliedschaft', 'Mitgliedsnummer', 'Lizenznummer', 'Beitrag', 'Intervall', 'Nächste_Rechnung', 'IBAN', 'BIC', 'Mandatsreferenz', 'Mandatsdatum', 'SEPA_Aktiv', 'Eintritt', 'Ende', 'Notiz'],
             ['Max Mustermann', 'max@example.org', 'active', 'MV-1001', 'LIC-2026-001', '12,50', 'monthly', '2026-06-01', 'DE02120300000000202051', '', 'MANDAT-1001', '2026-05-02', 'ja', '2026-05-02', '2027-05-01', 'Beispielzeile entfernen'],
         ];
 
@@ -1998,7 +1998,7 @@ XML);
             'aktiv' => 'active',
             'kein_mitglied' => 'non_member',
             'nichtmitglied' => 'non_member',
-            'pruefung' => 'pending',
+            'Prüfung' => 'pending',
             'in_pruefung' => 'pending',
             'ehemalig' => 'former',
         ];

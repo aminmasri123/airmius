@@ -18,6 +18,6 @@ class MyCustomResetPassword extends ResetPassword
         return EmailTemplate::mail('password_reset', [
             'reset_url' => $url,
             'expires_minutes' => config('auth.passwords.users.expire', 60),
-        ], $url)->salutation('Beste Gruesse, dein Airmius Team');
+        ], $url)->salutation('Beste Grüße, dein Airmius Team');
     }
 }

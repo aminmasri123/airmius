@@ -25,7 +25,7 @@ class OutfitInvoiceService
                 'user_id' => $subscription->user_id,
                 'title' => 'Outfit-Abo: '.($subscription->plan?->name ?: 'Airmius Outfit-Abo'),
                 'description' => trim(collect([
-                    'Automatisch erzeugter Beleg fuer Outfit-Abo #'.$subscription->id.'.',
+                    'Automatisch erzeugter Beleg für Outfit-Abo #'.$subscription->id.'.',
                     $subscription->sponsor?->name ? 'Sponsor: '.$subscription->sponsor->name.'.' : null,
                     'Zahlungsart: '.$this->paymentMethodLabel($subscription->payment_provider).'.',
                 ])->filter()->implode(' ')),
@@ -49,7 +49,7 @@ class OutfitInvoiceService
     {
         return match ($provider) {
             'paypal' => 'PayPal',
-            'bank_transfer' => 'Ueberweisung',
+            'bank_transfer' => 'Überweisung',
             default => $provider ?: 'Unbekannt',
         };
     }

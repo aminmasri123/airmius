@@ -353,7 +353,7 @@ const firstErrorMessage = (errors) => {
     const values = Object.values(errors || {}).flat()
     const first = values.find((value) => String(value || '').trim())
 
-    return first || 'Aktion konnte nicht abgeschlossen werden. Bitte pruefe deine Eingaben.'
+    return first || 'Aktion konnte nicht abgeschlossen werden. Bitte prüfe deine Eingaben.'
 }
 
 const showFlashFeedback = (flash = {}) => {
@@ -372,10 +372,10 @@ const showFlashFeedback = (flash = {}) => {
 
 const httpErrorMessage = (status) => {
     if (status === 401) return 'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.'
-    if (status === 403) return 'Du hast fuer diese Aktion keine Berechtigung.'
+    if (status === 403) return 'Du hast für diese Aktion keine Berechtigung.'
     if (status === 404) return 'Der angeforderte Inhalt wurde nicht gefunden.'
     if (status === 419) return 'Die Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es erneut.'
-    if (status === 422) return 'Bitte pruefe die Eingaben.'
+    if (status === 422) return 'Bitte prüfe die Eingaben.'
     if (status >= 500) return 'Serverfehler. Bitte versuche es gleich erneut.'
 
     return 'Aktion konnte nicht abgeschlossen werden.'
@@ -581,7 +581,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                         <button
                             type="button"
                             class="rounded-lg p-1.5 text-secondary hover:bg-muted hover:text-primary"
-                            aria-label="Meldung schliessen"
+                            aria-label="Meldung schließen"
                             @click="removeFeedback(feedback.id)"
                         >
                             <i class="las la-times text-lg"></i>

@@ -48,7 +48,7 @@ class SubscriptionInvoicePaid extends Notification
         return match ($method) {
             'stripe' => 'Stripe',
             'paypal' => 'PayPal',
-            'bank_transfer' => 'Ueberweisung',
+            'bank_transfer' => 'Überweisung',
             default => $method ?: '-',
         };
     }

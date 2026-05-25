@@ -29,7 +29,7 @@ const formatDate = (value) => value
 
                 <article class="mt-5 overflow-hidden rounded-xl border border-border bg-card">
                     <div class="border-b border-border bg-success/10 p-6">
-                        <p class="text-xs font-bold uppercase tracking-wide text-success">Zertifikat gueltig</p>
+                        <p class="text-xs font-bold uppercase tracking-wide text-success">Zertifikat gültig</p>
                         <h1 class="mt-2 font-heading text-3xl font-900 text-primary sm:text-5xl">{{ certificate.course_title }}</h1>
                         <p v-if="certificate.course_subtitle" class="mt-3 max-w-2xl text-sm leading-relaxed text-secondary">{{ certificate.course_subtitle }}</p>
                     </div>

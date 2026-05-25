@@ -186,7 +186,7 @@ const applyFilters = () => {
             </section>
 
             <section v-if="!posts.data.length" class="mx-auto mt-12 max-w-7xl rounded-lg border border-border bg-card p-8 text-center text-secondary">
-                Keine passenden Blogbeitraege gefunden.
+                Keine passenden Blogbeiträge gefunden.
             </section>
 
             <nav v-if="posts.links?.length > 3" class="mx-auto mt-10 flex max-w-7xl flex-wrap gap-2">

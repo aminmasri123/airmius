@@ -35,10 +35,10 @@ class AdminInvoiceCreated extends Notification
             ->line('Rechnungsnummer: '.$invoice->number)
             ->line('Titel: '.$invoice->title)
             ->line('Betrag: '.$this->amount($invoice))
-            ->line('Faellig bis: '.$this->date($invoice->due_date))
+            ->line('Fällig bis: '.$this->date($invoice->due_date))
             ->when(filled($invoice->description), fn (MailMessage $message) => $message->line($invoice->description))
             ->action('Rechnung ansehen', route('auth.settings').'#billing')
-            ->line('Bitte pruefe die Rechnung und begleiche sie fristgerecht, falls sie noch offen ist.');
+            ->line('Bitte prüfe die Rechnung und begleiche sie fristgerecht, falls sie noch offen ist.');
 
         if ($this->mailer) {
             $message->mailer($this->mailer);

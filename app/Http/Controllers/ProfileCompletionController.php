@@ -59,6 +59,6 @@ class ProfileCompletionController extends Controller
 
         $user->syncRoles(['player']);
 
-        return redirect()->route('auth.dashboard')->with('success', 'Profil vervollstaendigt.');
+        return redirect()->route('auth.dashboard')->with('success', 'Profil vervollständigt.');
     }
 }

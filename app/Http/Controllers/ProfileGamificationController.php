@@ -129,7 +129,7 @@ class ProfileGamificationController extends Controller
 
             AppNotification::send($user, 'profile.trainer_mentioned', [
                 'title' => 'Trainer-Erwaehnung erhalten',
-                'body' => $request->user()->name.' hat dich bei '.$userSportSkill->skill->name.' mit Trainer-Bezug bestaetigt.',
+                'body' => $request->user()->name.' hat dich bei '.$userSportSkill->skill->name.' mit Trainer-Bezug bestätigt.',
                 'url' => route('auth.users.show', ['user' => $user->id, 'tab' => 'skills']),
                 'skill_id' => $userSportSkill->id,
                 'endorser_id' => $request->user()->id,

@@ -268,7 +268,7 @@ const seatBadgeMeta = (ride) => {
     if (rideIsFull(ride)) {
         return {
             icon: 'la-exclamation-circle',
-            label: `${ride.participants_count}/${ride.seats} Plaetze - Voll`,
+            label: `${ride.participants_count}/${ride.seats} Plätze - Voll`,
             className: 'border border-error/40 bg-error/10 text-error',
             hint: 'Diese Fahrgemeinschaft ist voll.',
         }
@@ -277,7 +277,7 @@ const seatBadgeMeta = (ride) => {
     if (ride.join_block_reason === 'past') {
         return {
             icon: 'la-calendar-times',
-            label: `${ride.participants_count}/${ride.seats} Plaetze - Vergangen`,
+            label: `${ride.participants_count}/${ride.seats} Plätze - Vergangen`,
             className: 'border border-border bg-muted text-secondary',
             hint: joinBlockLabel(ride.join_block_reason),
         }
@@ -285,7 +285,7 @@ const seatBadgeMeta = (ride) => {
 
     return {
         icon: 'la-users',
-        label: `${ride.participants_count}/${ride.seats} Plaetze`,
+        label: `${ride.participants_count}/${ride.seats} Plätze`,
         className: 'border border-border bg-inputBg text-secondary',
         hint: 'Platzbelegung',
     }
@@ -459,7 +459,7 @@ const confirmDeleteRide = () => {
                 </div>
 
                 <div>
-                    <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Plaetze</label>
+                    <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Plätze</label>
                     <input v-model="form.seats" type="number" min="1" max="20" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required />
                     <p v-if="form.errors.seats" class="mt-1 text-xs text-error">{{ form.errors.seats }}</p>
                 </div>
@@ -518,8 +518,8 @@ const confirmDeleteRide = () => {
                         </div>
 
                         <div>
-                            <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Strasse optional</label>
-                            <input v-model="form.pickup_street" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Strasse" />
+                            <label class="text-xs font-semibold uppercase tracking-wide text-secondary">Straße optional</label>
+                            <input v-model="form.pickup_street" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Straße" />
                             <p v-if="form.errors.pickup_street" class="mt-1 text-xs text-error">{{ form.errors.pickup_street }}</p>
                         </div>
 
@@ -534,7 +534,7 @@ const confirmDeleteRide = () => {
                             <input
                                 v-model="form.pickup_note"
                                 class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"
-                                placeholder="z. B. Eingang Nord, bei den Fahrradstaendern"
+                                placeholder="z. B. Eingang Nord, bei den Fahrradständern"
                             />
                             <p v-if="form.errors.pickup_note" class="mt-1 text-xs text-error">{{ form.errors.pickup_note }}</p>
                         </div>
@@ -775,7 +775,7 @@ const confirmDeleteRide = () => {
                                     <button
                                         class="inline-flex items-center gap-1 rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-50"
                                         :disabled="rideIsFull(ride)"
-                                        :title="rideIsFull(ride) ? 'Keine freien Plaetze mehr.' : 'Mitfahranfrage annehmen.'"
+                                        :title="rideIsFull(ride) ? 'Keine freien Plätze mehr.' : 'Mitfahranfrage annehmen.'"
                                         @click="approveRequest(ride, request)"
                                     >
                                         <i class="las la-check" aria-hidden="true"></i>

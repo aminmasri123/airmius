@@ -129,7 +129,7 @@ class GenerateRecurringContributionInvoices extends Command
                 $created++;
             });
 
-        $this->info("Wiederkehrende Rechnungen erstellt: {$created}. Uebersprungen wegen Plan: {$skippedByPlan}.");
+        $this->info("Wiederkehrende Rechnungen erstellt: {$created}. Übersprungen wegen Plan: {$skippedByPlan}.");
 
         return self::SUCCESS;
     }

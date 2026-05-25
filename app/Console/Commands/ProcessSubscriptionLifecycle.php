@@ -15,11 +15,11 @@ use Illuminate\Support\Carbon;
 class ProcessSubscriptionLifecycle extends Command
 {
     protected $signature = 'airmius:process-subscription-lifecycle
-        {--grace-days=9 : Tage bis zur Zugriffseinschraenkung nach Faelligkeit}
+        {--grace-days=9 : Tage bis zur Zugriffseinschraenkung nach Fälligkeit}
         {--reminder-days=3 : Abstand zwischen Mahnungen}
         {--dry-run : Nur zaehlen, nichts speichern oder senden}';
 
-    protected $description = 'Erzeugt wiederkehrende Abo-Rechnungen, mahnt offene Zahlungen und finalisiert Kuendigungen.';
+    protected $description = 'Erzeugt wiederkehrende Abo-Rechnungen, mahnt offene Zahlungen und finalisiert Kündigungen.';
 
     public function handle(): int
     {
@@ -86,7 +86,7 @@ class ProcessSubscriptionLifecycle extends Command
 
                     $this->notifySubscriptionOwner($subscription, $subscriptionType, 'subscription.ended', [
                         'title' => 'Abo beendet',
-                        'body' => 'Dein Abo wurde zum Kuendigungsdatum beendet.',
+                        'body' => 'Dein Abo wurde zum Kündigungsdatum beendet.',
                         'subscription_type' => $subscriptionType,
                         'subscription_id' => $subscription->id,
                     ]);
@@ -242,7 +242,7 @@ class ProcessSubscriptionLifecycle extends Command
 
                     AppNotification::send($invoice->user_id, 'subscription.invoice.reminder', [
                         'title' => 'Airmius Abo-Rechnung offen',
-                        'body' => $invoice->number.' ist faellig. Bitte begleiche die Rechnung, damit dein Abo aktiv bleibt.',
+                        'body' => $invoice->number.' ist fällig. Bitte begleiche die Rechnung, damit dein Abo aktiv bleibt.',
                         'subscription_invoice_id' => $invoice->id,
                     ]);
 

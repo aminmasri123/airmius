@@ -475,7 +475,7 @@ const closeRequestModal = () => {
 
             <div v-if="requestModalOpen" class="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-8" @click.self="closeRequestModal">
                 <form class="relative mx-auto grid w-full max-w-4xl gap-8 rounded-xl border border-border bg-card p-6 pr-14 shadow-2xl lg:grid-cols-[0.85fr_1.15fr]" @submit.prevent="submitRequest">
-                    <button type="button" class="absolute right-4 top-4 rounded-lg p-2 text-secondary hover:bg-muted" aria-label="Anfrage schliessen" @click="closeRequestModal">
+                    <button type="button" class="absolute right-4 top-4 rounded-lg p-2 text-secondary hover:bg-muted" aria-label="Anfrage schließen" @click="closeRequestModal">
                         <i class="las la-times text-xl"></i>
                     </button>
                     <div>

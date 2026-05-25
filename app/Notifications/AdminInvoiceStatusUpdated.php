@@ -37,9 +37,9 @@ class AdminInvoiceStatusUpdated extends Notification
             ->line('Vorheriger Status: '.$this->statusLabel($this->oldStatus))
             ->line('Neuer Status: '.$this->statusLabel($invoice->status))
             ->line('Betrag: '.$this->amount($invoice))
-            ->line('Faellig bis: '.$this->date($invoice->due_date))
+            ->line('Fällig bis: '.$this->date($invoice->due_date))
             ->action('Rechnung ansehen', route('auth.settings').'#billing')
-            ->line('Bitte pruefe deine Rechnungsuebersicht, falls noch eine Zahlung offen ist.');
+            ->line('Bitte prüfe deine Rechnungsübersicht, falls noch eine Zahlung offen ist.');
 
         if ($this->mailer) {
             $message->mailer($this->mailer);
@@ -58,8 +58,8 @@ class AdminInvoiceStatusUpdated extends Notification
             'paid' => 'Bezahlt',
             'open' => 'Offen',
             'pending' => 'Ausstehend',
-            'awaiting_transfer' => 'Wartet auf Ueberweisung',
-            'overdue' => 'Ueberfaellig',
+            'awaiting_transfer' => 'Wartet auf Überweisung',
+            'overdue' => 'Überfällig',
             'cancelled' => 'Storniert',
             'failed' => 'Fehlgeschlagen',
             default => $status ?: '-',

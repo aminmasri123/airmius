@@ -38,6 +38,6 @@ class OrganizationJobInterestReceived extends Notification
             $message->line('Nachricht: '.$this->interest->message);
         }
 
-        return $message->action('Jobseite oeffnen', route('guest.jobs'));
+        return $message->action('Jobseite ?ffnen', route('guest.jobs'));
     }
 }

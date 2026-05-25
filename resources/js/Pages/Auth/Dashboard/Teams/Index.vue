@@ -1001,7 +1001,7 @@ const deleteJob = (job) => {
                     <div>
                         <h2 class="font-semibold text-primary">Vereinsdaten bearbeiten</h2>
                         <p class="text-xs text-secondary">
-                            Basisdaten, Adresse und Sportart pflegen. Offizielle Prüfung laeuft separat über Admin.
+                            Basisdaten, Adresse und Sportart pflegen. Offizielle Prüfung läuft separat über Admin.
                         </p>
                     </div>
                     <span
@@ -1138,7 +1138,7 @@ const deleteJob = (job) => {
                     </label>
 
                     <label v-if="activeClubEditTab(club) === 'adresse'" class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">Strasse</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">Straße</span>
                         <input v-model="clubEditFormFor(club).street" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                     </label>
 
@@ -1499,7 +1499,7 @@ const deleteJob = (job) => {
                         v-if="club.subscription_capabilities?.member_invitation_daily_limit"
                         class="text-xs text-secondary"
                     >
-                        Free-Limit: {{ club.subscription_capabilities.member_invitation_remaining_today }} von {{ club.subscription_capabilities.member_invitation_daily_limit }} Einladungen heute uebrig.
+                        Free-Limit: {{ club.subscription_capabilities.member_invitation_remaining_today }} von {{ club.subscription_capabilities.member_invitation_daily_limit }} Einladungen heute ?brig.
                     </p>
 
                     <p

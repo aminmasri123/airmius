@@ -200,7 +200,7 @@ class UploadController extends Controller
     {
         if (! $file->isValid() || (int) $file->getSize() <= 0) {
             throw ValidationException::withMessages([
-                'file' => 'Die Datei ist ungueltig oder wurde fehlerhaft uebertragen.',
+                'file' => 'Die Datei ist ungültig oder wurde fehlerhaft Übertragen.',
             ]);
         }
 
@@ -233,7 +233,7 @@ class UploadController extends Controller
         }
 
         if (! $this->isSafeFileName($originalName)) {
-            throw ValidationException::withMessages(['file' => 'Der Dateiname enthaelt ungueltige Zeichen.']);
+            throw ValidationException::withMessages(['file' => 'Der Dateiname enthält ungültige Zeichen.']);
         }
     }
 
@@ -242,7 +242,7 @@ class UploadController extends Controller
         $trimmed = trim($name);
 
         if ($trimmed === '' || ! $this->isSafeFileName($trimmed)) {
-            throw ValidationException::withMessages(['display_name' => 'Der Dateiname enthaelt ungueltige Zeichen.']);
+            throw ValidationException::withMessages(['display_name' => 'Der Dateiname enthält ungültige Zeichen.']);
         }
 
         return $trimmed;

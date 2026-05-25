@@ -18,9 +18,9 @@ return [
 
     'goal_types' => [
         ['key' => 'maintain', 'label' => 'Gewicht halten', 'hint' => 'Ausgeglichen essen und Training stabil unterstuetzen.'],
-        ['key' => 'build_muscle', 'label' => 'Muskelaufbau', 'hint' => 'Protein und genug Energie fuer Krafttraining priorisieren.'],
+        ['key' => 'build_muscle', 'label' => 'Muskelaufbau', 'hint' => 'Protein und genug Energie für Krafttraining priorisieren.'],
         ['key' => 'fat_loss', 'label' => 'Fett reduzieren', 'hint' => 'Satt essen, Protein hoch halten und Defizit moderat planen.'],
-        ['key' => 'performance', 'label' => 'Mehr Leistung', 'hint' => 'Kohlenhydrate rund ums Training und Regeneration staerken.'],
+        ['key' => 'performance', 'label' => 'Mehr Leistung', 'hint' => 'Kohlenhydrate rund ums Training und Regeneration stärken.'],
         ['key' => 'recovery', 'label' => 'Besser regenerieren', 'hint' => 'Fluessigkeit, Protein und einfache Mahlzeiten nach Belastung.'],
     ],
 
@@ -46,8 +46,8 @@ return [
             'fat_g' => 16,
             'tags' => ['regeneration', 'protein', 'schnell'],
             'diet_styles' => ['balanced', 'high_protein', 'halal'],
-            'ingredients' => ['Reis', 'Haehnchen oder Tofu', 'Gemuese', 'Joghurt-Dip'],
-            'steps' => ['Kohlenhydratbasis waehlen.', 'Proteinquelle anbraten.', 'Gemuese und Dip ergaenzen.'],
+            'ingredients' => ['Reis', 'Haehnchen oder Tofu', 'Gemüse', 'Joghurt-Dip'],
+            'steps' => ['Kohlenhydratbasis wählen.', 'Proteinquelle anbraten.', 'Gemüse und Dip ergänzen.'],
         ],
         [
             'key' => 'runner_oats',
@@ -106,31 +106,31 @@ return [
             'fat_g' => 22,
             'tags' => ['alltag', 'einfach', 'familie'],
             'diet_styles' => ['balanced', 'vegetarian', 'vegan', 'halal'],
-            'ingredients' => ['Proteinquelle', 'Vollkornbeilage', 'Gemuese', 'gesunde Fettquelle'],
-            'steps' => ['Teller halb mit Gemuese fuellen.', 'Ein Viertel Protein, ein Viertel Beilage.', 'Fettquelle bewusst portionieren.'],
+            'ingredients' => ['Proteinquelle', 'Vollkornbeilage', 'Gemüse', 'gesunde Fettquelle'],
+            'steps' => ['Teller halb mit Gemüse füllen.', 'Ein Viertel Protein, ein Viertel Beilage.', 'Fettquelle bewusst portionieren.'],
         ],
     ],
 
     'tips' => [
         'maintain' => [
-            'Baue jede Hauptmahlzeit aus Protein, Kohlenhydraten, Gemuese und etwas Fett auf.',
-            'Wenn dein Gewicht stabil bleiben soll, tracke zuerst 7 Tage ehrlich statt sofort stark zu veraendern.',
+            'Baue jede Hauptmahlzeit aus Protein, Kohlenhydraten, Gemüse und etwas Fett auf.',
+            'Wenn dein Gewicht stabil bleiben soll, tracke zuerst 7 Tage ehrlich statt sofort stark zu verändern.',
         ],
         'build_muscle' => [
-            'Protein ueber den Tag verteilen: 3-5 Portionen funktionieren oft besser als alles abends.',
+            'Protein Über den Tag verteilen: 3-5 Portionen funktionieren oft besser als alles abends.',
             'Wenn das Training schwerer wird, darf auch die Energiezufuhr steigen.',
         ],
         'fat_loss' => [
             'Halte das Defizit moderat. Zu wenig Energie macht Training und Alltag schnell schlechter.',
-            'Protein und ballaststoffreiche Lebensmittel helfen, laenger satt zu bleiben.',
+            'Protein und ballaststoffreiche Lebensmittel helfen, länger satt zu bleiben.',
         ],
         'performance' => [
             'Vor intensiven Einheiten sind leicht verdauliche Kohlenhydrate oft hilfreicher als schwere Mahlzeiten.',
             'Nach langen Einheiten Fluessigkeit, Salz und Kohlenhydrate nicht vergessen.',
         ],
         'recovery' => [
-            'Nach Training: Protein plus Kohlenhydrate ist fuer viele Sportler der einfachste Regenerationsanker.',
-            'Schlaf, Wasser und regelmaessige Mahlzeiten schlagen perfekte Detailplanung.',
+            'Nach Training: Protein plus Kohlenhydrate ist für viele Sportler der einfachste Regenerationsanker.',
+            'Schlaf, Wasser und regelmäßige Mahlzeiten schlagen perfekte Detailplanung.',
         ],
     ],
 
@@ -138,6 +138,6 @@ return [
         ['key' => 'manual', 'label' => 'Manuell'],
         ['key' => 'recipe', 'label' => 'Rezept'],
         ['key' => 'barcode', 'label' => 'Barcode vorbereitet'],
-        ['key' => 'photo_estimate', 'label' => 'Foto-Schaetzung'],
+        ['key' => 'photo_estimate', 'label' => 'Foto-Schätzung'],
     ],
 ];
