@@ -75,6 +75,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::patch('/nutrition/goal', [NutritionController::class, 'updateGoal'])->name('auth.nutrition.goal.update');
     Route::get('/nutrition/foods/search', [NutritionController::class, 'searchFoods'])->name('auth.nutrition.foods.search');
     Route::get('/nutrition/foods/barcode', [NutritionController::class, 'lookupBarcode'])->name('auth.nutrition.foods.barcode');
+    Route::post('/nutrition/ai/meal-image', [NutritionController::class, 'analyzeMealImage'])->name('auth.nutrition.ai.meal-image');
     Route::post('/nutrition/meals', [NutritionController::class, 'storeMeal'])->name('auth.nutrition.meals.store');
     Route::post('/nutrition/water', [NutritionController::class, 'storeWater'])->name('auth.nutrition.water.store');
     Route::patch('/nutrition/meals/{nutritionMeal}', [NutritionController::class, 'updateMeal'])->name('auth.nutrition.meals.update');

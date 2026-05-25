@@ -718,7 +718,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
 
                             <div
                                 v-if="notificationOpen"
-                                class="absolute right-0 top-full z-50 mt-2 w-[min(22rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-border bg-card shadow-xl"
+                                class="fixed left-3 right-3 top-16 z-50 mt-0 max-h-[calc(100dvh-5rem)] overflow-hidden rounded-2xl border border-border bg-card shadow-xl sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:max-h-none sm:w-[min(22rem,calc(100vw-1.5rem))] sm:rounded-xl"
                             >
                                 <div class="flex items-center justify-between border-b border-border px-4 py-3">
                                     <div>
@@ -737,22 +737,29 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                                     </Link>
                                 </div>
 
-                                <div v-if="latestNotifications.length" class="max-h-96 overflow-y-auto">
-                                    <div
+                                <div v-if="latestNotifications.length" class="max-h-[calc(100dvh-10rem)] overflow-y-auto sm:max-h-96">
+                                    <component
                                         v-for="notification in latestNotifications"
                                         :key="notification.id"
-                                        class="flex gap-3 border-b border-border px-4 py-3 last:border-b-0 hover:bg-muted/60"
-                                        :class="notification.read ? 'opacity-75' : ''"
+                                        :is="notification.data?.url ? 'a' : 'button'"
+                                        :href="notification.data?.url || undefined"
+                                        type="button"
+                                        class="flex w-full gap-3 border-b border-border px-3 py-3 text-left last:border-b-0 hover:bg-muted/60 sm:px-4"
+                                        :class="[
+                                            notification.read ? 'opacity-75' : '',
+                                            notification.data?.url ? 'cursor-pointer' : 'cursor-default',
+                                        ]"
+                                        @click="notification.data?.url ? openNotification(notification) : markAsRead(notification)"
                                     >
                                         <div
-                                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+                                            class="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg min-[380px]:flex"
                                             :class="notification.read ? 'bg-inputBg text-secondary' : 'bg-buttonPrimary text-buttonTextPrimary'"
                                         >
                                             <i :class="[iconFor(notification.type), 'text-lg']"></i>
                                         </div>
 
                                         <div class="min-w-0 flex-1">
-                                            <p class="truncate text-sm font-semibold text-primary">
+                                            <p class="line-clamp-2 text-sm font-semibold text-primary sm:truncate">
                                                 {{ notification.data?.title || 'Neue Benachrichtigung' }}
                                             </p>
                                             <p v-if="notification.data?.body" class="mt-0.5 line-clamp-2 text-xs text-secondary">
@@ -763,24 +770,20 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                                             </p>
                                         </div>
 
-                                        <a
+                                        <span
                                             v-if="notification.data?.url"
-                                            :href="notification.data.url"
-                                            class="self-center rounded-lg border border-border px-2 py-1 text-xs font-semibold hover:bg-inputBg"
-                                            @click="openNotification(notification)"
+                                            class="flex h-9 w-9 shrink-0 items-center justify-center self-center rounded-full border border-border text-secondary"
                                         >
-                                            Öffnen
-                                        </a>
+                                            <i class="las la-angle-right text-base"></i>
+                                        </span>
 
-                                        <button
+                                        <span
                                             v-else-if="!notification.read"
-                                            type="button"
-                                            class="self-center rounded-lg border border-border px-2 py-1 text-xs font-semibold hover:bg-inputBg"
-                                            @click="markAsRead(notification)"
+                                            class="shrink-0 self-center rounded-full border border-border px-2.5 py-1 text-[11px] font-bold text-secondary"
                                         >
-                                            Gelesen
-                                        </button>
-                                    </div>
+                                            Neu
+                                        </span>
+                                    </component>
                                 </div>
 
                                 <div v-else class="px-4 py-8 text-center">

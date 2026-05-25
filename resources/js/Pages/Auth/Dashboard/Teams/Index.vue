@@ -2000,12 +2000,27 @@ const deleteJob = (job) => {
                             <p v-if="clubForm.errors.sport_type" class="mt-1 text-xs text-error">{{ clubForm.errors.sport_type }}</p>
                         </div>
 
-                        <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
+                        <label
+                            :class="[
+                                'flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm text-primary transition',
+                                clubForm.is_official ? 'border-air-blue bg-air-blue/10' : 'border-border bg-bg',
+                            ]"
+                        >
                             <input
                                 v-model="clubForm.is_official"
                                 type="checkbox"
-                                class="mt-1 rounded border-border bg-inputBg"
+                                class="sr-only"
                             >
+                            <span
+                                :class="[
+                                    'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border text-sm transition',
+                                    clubForm.is_official
+                                        ? 'border-air-blue bg-air-blue text-white'
+                                        : 'border-border bg-inputBg text-transparent',
+                                ]"
+                            >
+                                <i class="las la-check"></i>
+                            </span>
                             <span>
                                 <span class="block font-semibold">Offizielle Prüfung beantragen</span>
                                 <span class="block text-secondary">Der Verein wird erst nach Admin-Freigabe öffentlich sichtbar und als offiziell markiert.</span>

@@ -158,18 +158,18 @@ const submitPost = () => {
     <Teleport to="body">
         <div
             v-if="showPostModal"
-            class="fixed inset-0 z-50 flex items-end bg-black/60 sm:items-center sm:p-4"
+            class="fixed inset-0 z-[80] flex items-end overflow-y-auto bg-black/60 px-3 py-4 sm:items-center sm:px-4"
             @click.self="closeComposer"
         >
             <div
-                class="max-h-[92vh] w-full overflow-y-auto rounded-t-2xl border border-border bg-card p-4 shadow-xl sm:mx-auto sm:max-w-2xl sm:rounded-2xl"
+                class="mx-auto max-h-[calc(100dvh-2rem)] w-full max-w-[min(42rem,100%)] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card p-4 shadow-xl sm:p-5"
             >
-                <div class="mb-4 flex items-center justify-between">
-                    <h2 class="text-lg font-semibold text-primary">Beitrag erstellen</h2>
+                <div class="mb-4 flex items-center justify-between gap-3">
+                    <h2 class="min-w-0 truncate text-lg font-semibold text-primary">Beitrag erstellen</h2>
 
                     <button
                         type="button"
-                        class="rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary"
+                        class="shrink-0 rounded-lg p-2 text-secondary hover:bg-muted hover:text-primary"
                         @click="closeComposer"
                     >
                         <i class="las la-times text-2xl"></i>
@@ -177,7 +177,7 @@ const submitPost = () => {
                 </div>
 
                 <form class="space-y-3" @submit.prevent="submitPost">
-                    <div class="flex items-center gap-3">
+                    <div class="flex min-w-0 items-center gap-3">
                         <img
                             v-if="user?.profile_photo_thumb"
                             :src="user.profile_photo_thumb"
@@ -192,7 +192,7 @@ const submitPost = () => {
                             {{ initials(user?.name) }}
                         </div>
 
-                        <div class="min-w-0">
+                        <div class="min-w-0 flex-1">
                             <p class="truncate text-sm font-semibold text-primary">{{ user?.name }}</p>
                             <p class="text-xs text-secondary">Neuer Beitrag</p>
                         </div>
@@ -207,16 +207,18 @@ const submitPost = () => {
 
                     <button
                         type="button"
-                        class="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
+                        class="flex w-full items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted sm:inline-flex sm:w-auto sm:justify-start"
                         @click="showComposerAdvanced = !showComposerAdvanced"
                     >
-                        <i class="las la-sliders-h"></i>
-                        Zielgruppe, Sport & Typ
+                        <span class="flex min-w-0 items-center gap-2">
+                            <i class="las la-sliders-h shrink-0"></i>
+                            <span class="truncate">Zielgruppe, Sport & Typ</span>
+                        </span>
                         <i :class="showComposerAdvanced ? 'las la-angle-up' : 'las la-angle-down'"></i>
                     </button>
 
                     <div v-if="showComposerAdvanced" class="space-y-3 rounded-lg border border-border bg-inputBg/40 p-3">
-                        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <div class="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
                             <select
                                 v-model="postForm.visibility"
                                 class="w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
@@ -364,10 +366,10 @@ const submitPost = () => {
                         class="max-h-[70vh] w-full rounded-xl border border-border object-cover"
                     />
 
-                    <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                         <button
                             type="button"
-                            class="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm font-semibold text-primary sm:w-auto"
+                            class="min-w-0 rounded-lg border border-border bg-card px-3 py-3 text-sm font-semibold text-primary sm:w-auto sm:px-4"
                             @click="imageInput?.click()"
                         >
                             <i class="las la-image"></i>
@@ -376,21 +378,22 @@ const submitPost = () => {
 
                         <button
                             type="button"
-                            class="w-full rounded-lg border border-border bg-card px-4 py-3 text-sm font-semibold text-primary sm:w-auto"
+                            class="min-w-0 rounded-lg border border-border bg-card px-3 py-3 text-sm font-semibold text-primary sm:w-auto sm:px-4"
                             @click="attachmentInput?.click()"
                         >
                             <i class="las la-video"></i>
-                            Video / Dateien
+                            <span class="hidden sm:inline">Video / Dateien</span>
+                            <span class="sm:hidden">Dateien</span>
                         </button>
 
                         <span
                             v-if="postForm.attachments.length"
-                            class="rounded-lg bg-muted px-3 py-2 text-xs text-secondary"
+                            class="col-span-2 rounded-lg bg-muted px-3 py-2 text-xs text-secondary sm:col-span-1"
                         >
                             {{ postForm.attachments.length }} Datei(en)
                         </span>
 
-                        <span class="rounded-lg bg-inputBg px-3 py-2 text-xs text-secondary">
+                        <span class="col-span-2 rounded-lg bg-inputBg px-3 py-2 text-xs text-secondary sm:col-span-1">
                             Bilder optimiert, Videos bis 50 MB
                         </span>
                     </div>

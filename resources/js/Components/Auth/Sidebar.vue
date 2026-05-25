@@ -20,6 +20,8 @@ const unreadChatsCount = computed(() => page.props.unreadChatsCount || 0)
 const pendingFriendInvitationsCount = computed(() => page.props.friendCenter?.pending_received_count || 0)
 const { can, hasAny } = usePermissions()
 const { items: clubWorkspaceItems, hasItems: canUseClubWorkspace } = useClubWorkspaceNavigation()
+const hasMultipleClubWorkspaceItems = computed(() => clubWorkspaceItems.value.length > 1)
+const singleClubWorkspaceItem = computed(() => clubWorkspaceItems.value[0] || null)
 const activeSubscriptionSlugs = computed(() => page.props.auth?.user?.active_subscription_plan_slugs || [])
 const currentSubscriptionPlan = computed(() => page.props.auth?.user?.current_subscription?.plan || null)
 const hasSportlerPro = computed(() => activeSubscriptionSlugs.value.includes('sportler-pro'))
@@ -74,9 +76,15 @@ const closeSidebar = () => {
             open ? 'translate-x-0' : (isRtl ? 'translate-x-full' : '-translate-x-full')
         ]"
     >
-        <!-- Close Button Mobile -->
+        <!-- Mobile header -->
         <div class="flex items-center justify-between p-4 md:hidden">
-            <span class="text-sm font-semibold text-primary">Menü</span>
+            <Link
+                :href="route('auth.feed.index')"
+                class="block w-40 shrink-0"
+                @click="closeSidebar"
+            >
+                <ApplicationMark />
+            </Link>
 
             <button
                 type="button"
@@ -89,7 +97,7 @@ const closeSidebar = () => {
 
         <Link
             :href="route('auth.feed.index')"
-            class="block w-48 shrink-0 px-4 py-4"
+            class="hidden w-48 shrink-0 px-4 py-4 md:block"
             @click="closeSidebar"
         >
             <ApplicationMark />
@@ -102,12 +110,20 @@ const closeSidebar = () => {
             <NavItem v-if="can('dashboard.view')" @navigate="closeSidebar" :href="route('auth.dashboard')" label="Dashboard" icon="las la-th-large" />
             <NavItem v-if="can('workspaces.view')" @navigate="closeSidebar" :href="route('auth.workspaces.index')" label="Arbeitsbereiche" icon="las la-compass" />
             <NavItem
-                v-if="canUseClubWorkspace"
+                v-if="canUseClubWorkspace && hasMultipleClubWorkspaceItems"
                 @navigate="closeSidebar"
                 :href="clubWorkspaceItems[0]?.href"
                 label="Vereinsbereich"
                 icon="las la-sitemap"
                 :subitems="clubWorkspaceItems"
+            />
+            <NavItem
+                v-else-if="singleClubWorkspaceItem"
+                @navigate="closeSidebar"
+                :href="singleClubWorkspaceItem.href"
+                :label="singleClubWorkspaceItem.label"
+                :icon="singleClubWorkspaceItem.icon"
+                :active-paths="singleClubWorkspaceItem.activePaths"
             />
             <NavItem
                 v-if="can('chat.view')"

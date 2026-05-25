@@ -44,7 +44,7 @@ class MobileMetaController extends Controller
                         'food_search_open_food_facts',
                         'training_context',
                         'barcode_ready',
-                        'photo_estimate_planned',
+                        'photo_estimate_ai',
                     ],
                     'sport_map' => [
                         'route_planning',
@@ -164,6 +164,18 @@ class MobileMetaController extends Controller
                             'weight_factor_ml_per_kg' => 33,
                             'adaptive_training_bonus' => true,
                             'quick_amounts_ml' => [150, 250, 350, 500, 750],
+                        ],
+                        'ai_features' => [
+                            'nutrition_image_analysis' => [
+                                'endpoint' => '/api/v1/nutrition/ai/meal-image',
+                                'requires_consent' => true,
+                                'requires_user_confirmation' => true,
+                                'privacy' => [
+                                    'exif_removed' => true,
+                                    'image_resized' => true,
+                                    'store_uploads' => (bool) config('airmius_ai.privacy.store_uploads', false),
+                                ],
+                            ],
                         ],
                         'recipes' => config('nutrition.recipes', []),
                         'external_sources' => [

@@ -8,16 +8,18 @@ use App\Http\Resources\Api\V1\NutritionMealResource;
 use App\Models\NutritionGoal;
 use App\Models\NutritionMeal;
 use App\Models\TrainingLog;
+use App\Services\Ai\AirmiusAiService;
 use App\Services\NutritionFoodLookupService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use RuntimeException;
 
 class NutritionController extends Controller
 {
     use ManagesNutritionPayloads;
 
-    public function index(Request $request)
+    public function index(Request $request, AirmiusAiService $ai)
     {
         $user = $request->user();
         $date = $request->date('date')?->toDateString() ?? now()->toDateString();
@@ -59,6 +61,7 @@ class NutritionController extends Controller
             'recipes' => $this->nutritionRecipes($goal->goal_type, $goal->diet_style),
             'tips' => $this->nutritionTips($goal->goal_type),
             'trainingSuggestions' => $this->trainingNutritionSuggestions($recentTraining, $goal->goal_type),
+            'aiCapabilities' => $ai->capabilities(),
             'recentTraining' => $recentTraining->map(fn (TrainingLog $log) => [
                 'id' => $log->id,
                 'title' => $log->title,
@@ -108,6 +111,32 @@ class NutritionController extends Controller
 
         return response()->json([
             'data' => $product,
+        ]);
+    }
+
+    public function analyzeMealImage(Request $request, AirmiusAiService $ai)
+    {
+        $data = $request->validate([
+            'image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.(int) config('airmius_ai.privacy.max_image_kb', 5120)],
+            'ai_consent' => ['accepted'],
+            'meal_type' => ['nullable', 'string', 'max:40'],
+            'diet_style' => ['nullable', 'string', 'max:40'],
+        ]);
+
+        try {
+            $suggestion = $ai->analyzeNutritionImage($request->user(), $data['image'], [
+                'meal_type' => $data['meal_type'] ?? null,
+                'diet_style' => $data['diet_style'] ?? null,
+            ]);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'data' => $suggestion,
+            'message' => 'KI-Vorschlag erstellt. Bitte pruefen und erst danach speichern.',
         ]);
     }
 

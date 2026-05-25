@@ -92,6 +92,13 @@ return [
             'input_per_million_eur' => (float) env('PROVIDER_COST_MISTRAL_INPUT_1M_EUR', 0.20),
             'output_per_million_eur' => (float) env('PROVIDER_COST_MISTRAL_OUTPUT_1M_EUR', 0.60),
         ],
+        'google_text' => [
+            'label' => 'Google Gemini Text/Bild',
+            'provider' => 'google',
+            'kind' => 'tokens',
+            'input_per_million_eur' => (float) env('PROVIDER_COST_GOOGLE_INPUT_1M_EUR', 0.23),
+            'output_per_million_eur' => (float) env('PROVIDER_COST_GOOGLE_OUTPUT_1M_EUR', 1.38),
+        ],
         'openai_text' => [
             'label' => 'OpenAI Text-KI',
             'provider' => 'openai',
@@ -103,11 +110,11 @@ return [
             'label' => 'IONOS AI Model Hub',
             'provider' => 'ionos',
             'kind' => 'tokens',
-            'input_per_million_eur' => (float) env('PROVIDER_COST_IONOS_INPUT_1M_EUR', 0.25),
-            'output_per_million_eur' => (float) env('PROVIDER_COST_IONOS_OUTPUT_1M_EUR', 0.75),
+            'input_per_million_eur' => (float) env('PROVIDER_COST_IONOS_INPUT_1M_EUR', 0.10),
+            'output_per_million_eur' => (float) env('PROVIDER_COST_IONOS_OUTPUT_1M_EUR', 0.30),
         ],
         'ai_image' => [
-            'label' => 'KI-Bilder',
+            'label' => 'Generische KI-Bilder',
             'provider' => 'configurable',
             'kind' => 'metered',
             'unit_label' => 'Bilder',
@@ -115,6 +122,37 @@ return [
             'tiers' => [
                 ['up_to' => null, 'price_per_1000_eur' => (float) env('PROVIDER_COST_AI_IMAGE_PER_1000_EUR', 40)],
             ],
+        ],
+        'google_vision_image' => [
+            'label' => 'Google Gemini Bildanalyse',
+            'provider' => 'google',
+            'kind' => 'metered',
+            'unit_label' => 'Analysen',
+            'free_units' => 0,
+            'tiers' => [
+                ['up_to' => null, 'price_per_1000_eur' => (float) env('PROVIDER_COST_GOOGLE_VISION_PER_1000_EUR', 1.50)],
+            ],
+        ],
+        'openai_vision_image' => [
+            'label' => 'OpenAI Bildanalyse',
+            'provider' => 'openai',
+            'kind' => 'metered',
+            'unit_label' => 'Analysen',
+            'free_units' => 0,
+            'tiers' => [
+                ['up_to' => null, 'price_per_1000_eur' => (float) env('PROVIDER_COST_OPENAI_VISION_PER_1000_EUR', 4.50)],
+            ],
+        ],
+        'ionos_vision_image' => [
+            'label' => 'IONOS Bildanalyse',
+            'provider' => 'ionos',
+            'kind' => 'metered',
+            'unit_label' => 'Analysen',
+            'free_units' => 0,
+            'tiers' => [
+                ['up_to' => null, 'price_per_1000_eur' => (float) env('PROVIDER_COST_IONOS_VISION_PER_1000_EUR', 0.60)],
+            ],
+            'risk' => 'IONOS rechnet KI nach Tokens ab. Dies ist nur ein konservativer Richtwert pro Bildanalyse.',
         ],
     ],
 ];

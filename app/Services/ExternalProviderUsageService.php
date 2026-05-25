@@ -207,7 +207,7 @@ class ExternalProviderUsageService
             ], 'mapbox_directions'),
             $this->navigationComparison($metrics),
             $this->aiTextComparison($metrics),
-            $this->comparison('KI-Bilder', 'ai', $metrics['ai_image_requests'], ['ai_image'], 'ai_image'),
+            $this->comparison('KI-Bildanalyse', 'ai', $metrics['ai_image_requests'], ['google_vision_image', 'ionos_vision_image', 'openai_vision_image', 'ai_image'], 'google_vision_image'),
         ];
     }
 
@@ -253,7 +253,7 @@ class ExternalProviderUsageService
 
     private function aiTextComparison(array $metrics): array
     {
-        $plans = collect(['mistral_text', 'ionos_text', 'openai_text'])
+        $plans = collect(['google_text', 'mistral_text', 'ionos_text', 'openai_text'])
             ->map(fn ($key) => $this->tokenEstimate($key, $metrics['ai_input_tokens'], $metrics['ai_output_tokens']))
             ->values()
             ->all();

@@ -74,6 +74,9 @@ class LegalPageController extends Controller
                     'Bei erteilter Einwilligung zu personalisierter Werbung können einfache Interessen aus der Plattformnutzung, insbesondere Marketplace-Kategorien und Produktinteressen, verwendet werden, um passendere Anzeigen auszuspielen.',
                     'Werbeagentur- und Website-Service-Daten: Website-Anfragen von Vereinen, gewünschte Domain, Ziele, Notizen, Angebotsstatus und Kommunikationsstand.',
                     'Datei- und Mediendaten: hochgeladene Bilder, Videos, Anhänge, Dateityp, Dateigröße, Speicherpfad, komprimierte Medienversionen, automatisch erzeugte Video-Vorschaubilder und technische Auslieferungsdaten über Cloudflare R2/CDN.',
+                    'Trainings-, Ernährungs- und Trinkdaten: Trainingspläne, Einheiten, Logs, Übungen, Sätze, Sportart, Dauer, Distanz, Intensität, Mahlzeiten, Lebensmittel, Nährwerte, Trinkmengen, Ziele und Fortschrittswerte.',
+                    'Sportkarten- und Routendaten: Startpunkte, Zielpunkte, Wegpunkte, Trackpunkte, Sportplätze, hochgeladene Sportplatzbilder, Ortsangaben, optionale Browser-Standortdaten sowie daraus berechnete Routen- und Distanzdaten.',
+                    'KI-Nutzungsdaten: Anfragen an KI-Funktionen, zum Beispiel hochgeladene Essensbilder, daraus entfernte Metadaten, verkleinerte Bildversionen, Prompt-Kontext wie Mahlzeitentyp oder Ernährungsstil, KI-Antworten, Modellname, Anbieter, Token-/Nutzungszähler und Fehlerstatus.',
                     'Technische Daten: IP-Adresse, Browserdaten, Logdaten, Sitzungsdaten, Sprache, Zeitzone und Sicherheitsereignisse.',
                 ],
             ],
@@ -89,6 +92,8 @@ class LegalPageController extends Controller
                     'Eltern-/Erziehungsberechtigtenzustimmung bei minderjährigen Nutzern.',
                     'Bereitstellung eines Elternbereichs zur Prüfung verknüpfter Kinder, zum Widerruf der Zustimmung und zur optionalen Erstellung eines Elternkontos.',
                     'Benachrichtigungen, Support, Fehleranalyse und Verbesserung der Plattform.',
+                    'Bereitstellung von Ernährungs-, Trink-, Trainings- und Sportkartenfunktionen, einschließlich Routenplanung, Tracking, Sportplatzsuche und Sportplatzeinträgen.',
+                    'Bereitstellung optionaler KI-Funktionen, insbesondere zur Schätzung von Nährwerten aus Essensbildern, zur Unterstützung bei Trainings- und Ernährungsplanung sowie zur Erstellung oder Vorbereitung von Blog- und Hilfetexten.',
                     'Abwicklung von Airmius-Abos, Add-ons, Marketplace-Bestellungen, Anbieterprovisionen und Werbeagentur-/Website-Service-Anfragen.',
                     'Ausspielung und Messung von klar gekennzeichneten Sponsor- und Ads-Kampagnen, soweit dies für Betrieb, Abrechnung und Betrugsschutz erforderlich ist.',
                     'Personalisierte Ausspielung von Anzeigen und Retargeting nur nach vorheriger Einwilligung des eingeloggten Nutzers.',
@@ -103,6 +108,9 @@ class LegalPageController extends Controller
                     'Art. 6 Abs. 1 lit. b DSGVO: Verwaltung von Mitgliedschafts-, Beitrags- und Rechnungsfunktionen, soweit diese für die Nutzung von Vereinsfunktionen oder vereinbarte Leistungen erforderlich sind.',
                     'Art. 6 Abs. 1 lit. f DSGVO: berechtigtes Interesse an Sicherheit, Missbrauchsprävention, Moderation und Plattformbetrieb.',
                     'Art. 6 Abs. 1 lit. f DSGVO: berechtigte Interessen von Airmius und berechtigten Vereinsverantwortlichen an nachvollziehbarer Vereins-, Beitrags- und Zahlungsverwaltung.',
+                    'Art. 6 Abs. 1 lit. b DSGVO: Bereitstellung von Trainings-, Ernährungs-, Trink-, Karten-, Routing- und Trackingfunktionen, soweit diese vom Nutzer verwendet werden.',
+                    'Art. 6 Abs. 1 lit. a DSGVO: Einwilligung für optionale KI-Bildanalyse, Browser-Standortzugriff, Live-Tracking, personalisierte Trainings-/Ernährungsvorschläge und vergleichbare freiwillige Funktionen.',
+                    'Art. 9 Abs. 2 lit. a DSGVO: ausdrückliche Einwilligung, soweit freiwillig eingegebene Trainings-, Gesundheits-, Ernährungs- oder Körperdaten als besondere Kategorien personenbezogener Daten einzuordnen sind.',
                     'Art. 6 Abs. 1 lit. c DSGVO: gesetzliche Pflichten.',
                     'Art. 6 Abs. 1 lit. b DSGVO: Zahlungsabwicklung, Add-on-Buchungen, Marketplace-Bestellungen und Werbeagentur-/Website-Service-Anfragen.',
                     'Art. 6 Abs. 1 lit. f DSGVO: berechtigtes Interesse an kontextueller Anzeigenbereitstellung, Missbrauchsvermeidung, Abrechnung von Provisionen und wirtschaftlichem Plattformbetrieb.',
@@ -122,12 +130,25 @@ class LegalPageController extends Controller
                 ],
             ],
             [
-                'title' => '6. Empfänger und Dienstleister',
+                'title' => '6. KI-gestützte Funktionen',
+                'body' => [
+                    'KI-Funktionen sind optional. Vor einer Bildanalyse muss der Nutzer ausdrücklich bestätigen, dass das Bild zur Analyse an den konfigurierten KI-Anbieter gesendet werden darf.',
+                    'Essensbilder werden vor der KI-Übermittlung verkleinert und Metadaten wie EXIF-Informationen werden entfernt, soweit dies technisch möglich ist. Die Bildanalyse erstellt nur einen Vorschlag; eine Mahlzeit wird erst gespeichert, wenn der Nutzer den Vorschlag prüft und übernimmt.',
+                    'Airmius kann je nach Konfiguration Google Gemini, OpenAI, IONOS AI Model Hub oder andere vertraglich eingebundene KI-Anbieter verwenden. Der konkrete Anbieter kann aus technischen, datenschutzrechtlichen, Qualitäts- oder Kostengründen gewechselt werden.',
+                    'Bei IONOS AI Model Hub ist eine OpenAI-kompatible API vorgesehen; Airmius kann diesen Anbieter bevorzugen, wenn europäische bzw. deutsche Datenverarbeitung vertraglich und technisch passend eingerichtet ist.',
+                    'KI-Ergebnisse sind Schätzungen und dienen der Unterstützung. Sie ersetzen keine medizinische, ernährungswissenschaftliche, therapeutische oder sportmedizinische Beratung.',
+                    'Airmius speichert keine rohen KI-Bild-Uploads dauerhaft, solange die Funktion entsprechend konfiguriert ist. Gespeichert werden nur vom Nutzer bestätigte Mahlzeiten, technische Nutzungszähler, Fehlerstatus und erforderliche Nachweise zur Sicherheit, Abrechnung oder Missbrauchsprävention.',
+                ],
+            ],
+            [
+                'title' => '7. Empfänger und Dienstleister',
                 'body' => [
                     'Airmius nutzt Hostinger als Hosting-Anbieter für den Betrieb der Plattform. Mit Hostinger gilt nach Anbieterangabe ein Vertrag zur Auftragsverarbeitung nach Art. 28 DSGVO über die Konto- bzw. Vertragsannahme als abgeschlossen.',
                     'Airmius nutzt Cloudflare für Objektspeicher und Medienauslieferung, insbesondere Cloudflare R2 und Cloudflare CDN. Nach Anbieterangabe ist der Cloudflare Customer DPA für Self-Serve-Kunden Bestandteil der Cloudflare Self-Serve Subscription Agreement und umfasst unter anderem EU-Standardvertragsklauseln sowie Data-Privacy-Framework-Bezüge.',
                     'Cloudflare ist ein US-Anbieter. Internationale Datenübermittlungen können daher nicht pauschal ausgeschlossen werden; sie werden nach Anbieterangabe über DPA, SCCs und DPF abgesichert.',
                     'Soweit möglich wird die Konfiguration auf europäische Datenhaltung und DSGVO-konforme Verarbeitung ausgerichtet. Eine verbindliche Zusicherung, dass alle Cloudflare-Daten und Metadaten ausschließlich in der EU verbleiben, besteht nur, wenn passende Cloudflare-Datenlokalisierungsfunktionen wie Regional Services, Metadata Boundary oder Geo Key Manager tatsächlich gebucht und aktiviert sind.',
+                    'Für KI-Funktionen können je nach Konfiguration Google, OpenAI, IONOS AI Model Hub oder andere vertraglich geprüfte Anbieter eingesetzt werden. Vor produktiver Nutzung müssen passende Auftragsverarbeitungsvereinbarungen, Datenübermittlungsmechanismen und Anbieterbedingungen geprüft und dokumentiert werden.',
+                    'Für Sportkarte und Routenplanung können OpenStreetMap-Kartendaten und ein konfigurierter Routing-Dienst wie OSRM, openrouteservice, GraphHopper, Mapbox oder eine eigene Airmius-Infrastruktur genutzt werden. Dabei können Startpunkte, Ziele, Wegpunkte, Standortdaten und technische Verbindungsdaten an den jeweiligen Kartendienst oder Routing-Dienst übertragen werden.',
                     'Airmius kann außerdem technische Dienstleister für E-Mail-Versand, Sicherheit, Fehleranalyse und Zahlungsabwicklung einsetzen, wenn dies für den Plattformbetrieb erforderlich ist.',
                     'Für Zahlungen können Stripe, PayPal und Banküberweisung eingesetzt werden. Dabei werden die für Zahlung, Betrugsschutz, Rechnung und Nachweis erforderlichen Daten an den jeweiligen Zahlungsdienstleister übermittelt oder von diesem verarbeitet.',
                     'Marketplace-Anbieter, Sponsoren und Werbeagentur-/Website-Service-Anfragende erhalten nur die Daten, die für Angebot, Vertragserfüllung, Kommunikation, Abrechnung oder gesetzliche Pflichten erforderlich sind.',
@@ -138,7 +159,7 @@ class LegalPageController extends Controller
                 ],
             ],
             [
-                'title' => '7. Speicherdauer',
+                'title' => '8. Speicherdauer',
                 'body' => [
                     'Daten werden gelöscht oder anonymisiert, sobald sie für die genannten Zwecke nicht mehr erforderlich sind.',
                     'Accountdaten werden grundsätzlich bis zur Löschung des Kontos gespeichert, soweit keine gesetzlichen Aufbewahrungspflichten oder berechtigten Interessen entgegenstehen.',
@@ -150,11 +171,13 @@ class LegalPageController extends Controller
                     'Commerce-, Provisions-, Ads- und Werbeagentur-/Website-Service-Daten werden solange gespeichert, wie dies für Vertrag, Abrechnung, Nachweis, Support, Missbrauchsprävention oder gesetzliche Aufbewahrungspflichten erforderlich ist.',
                     'Ad-Ereignisse für Kampagnenmessung werden grundsätzlich nach der in der Plattform konfigurierten Aufbewahrungsfrist gelöscht, derzeit regelmäßig nach bis zu 180 Tagen, soweit keine gesetzlichen Aufbewahrungspflichten, Abrechnungsnachweise oder Missbrauchsfälle entgegenstehen.',
                     'Hochgeladene Medien und Dateien werden grundsätzlich solange gespeichert, wie sie für Profil, Feed, Chat, Verein, Team, Event oder Dateiablage erforderlich sind.',
+                    'Rohbilder für KI-Analysen werden grundsätzlich nicht dauerhaft gespeichert, wenn die Funktion auf flüchtige Verarbeitung eingestellt ist. Bestätigte Mahlzeiten, Trinkmengen, Trainingsdaten, Routen, Tracks oder Sportplätze bleiben gespeichert, bis der Nutzer sie löscht oder gesetzliche bzw. berechtigte Gründe entgegenstehen.',
+                    'Standort-, Track- und Routingdaten werden nur gespeichert, wenn der Nutzer sie speichert, veröffentlicht oder mit einem Training, Sportplatz oder Track verknüpft. Reine Vorschau- oder Berechnungsdaten werden möglichst kurz gehalten.',
                     'Moderations- und Sicherheitsdaten können zur Nachvollziehbarkeit und Missbrauchsvermeidung länger gespeichert werden.',
                 ],
             ],
             [
-                'title' => '8. Werbung, Personalisierung und Conversion-Messung',
+                'title' => '9. Werbung, Personalisierung und Conversion-Messung',
                 'body' => [
                     'Airmius kann kontextuelle Anzeigen, interne Hinweise und Sponsorflächen anzeigen. Kontextuell bedeutet, dass die Anzeige zum Bereich oder Inhalt der Seite passt, ohne dass dafür ein persönliches Interessenprofil verwendet wird.',
                     'Personalisierte Anzeigen, Retargeting und Conversion-Messung werden nur aktiviert, wenn du dies in deinen Datenschutzeinstellungen ausdrücklich erlaubst.',
@@ -164,7 +187,7 @@ class LegalPageController extends Controller
                 ],
             ],
             [
-                'title' => '9. Rechte betroffener Personen',
+                'title' => '10. Rechte betroffener Personen',
                 'body' => [
                     'Du hast Rechte auf Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Widerspruch.',
                     'Soweit die Verarbeitung auf Einwilligung beruht, kannst du diese mit Wirkung für die Zukunft widerrufen.',
@@ -172,7 +195,7 @@ class LegalPageController extends Controller
                 ],
             ],
             [
-                'title' => '10. Cookies und lokale Speicherung',
+                'title' => '11. Cookies und lokale Speicherung',
                 'body' => [
                     'Airmius verwendet notwendige Cookies und lokale Speichermechanismen für Login, Sicherheit, Sprache, Theme und Sitzungsfunktionen.',
                     'Beim Abruf von Bildern, Dateien und statischen Inhalten können technisch notwendige Verbindungsdaten durch Hostinger und Cloudflare verarbeitet werden, um Hosting, Speicherung, Sicherheit und CDN-Auslieferung bereitzustellen.',
@@ -181,7 +204,7 @@ class LegalPageController extends Controller
                     'Analyse- oder Marketing-Technologien werden nur eingesetzt, wenn sie in der Cookie-Seite genannt werden und eine erforderliche Einwilligung vorliegt.',
                 ],
             ],
-        ], 'Hostinger und Cloudflare sind als Dienstleister ergänzt. Bitte lege die aktuellen AVV/DPA-PDFs intern ab und prüfe vor Livegang, ob Cloudflare-Datenlokalisierung tatsächlich gebucht und aktiv ist, falls du EU-only verbindlich zusichern möchtest.');
+        ], 'Stand: 25.05.2026. KI-, Karten-, Routing-, Ernährungs- und Trackingfunktionen sind ergänzt. Bitte lege die aktuellen AVV/DPA-Unterlagen der tatsächlich genutzten Anbieter intern ab und lasse die Texte vor Livegang rechtlich final prüfen.');
     }
 
     public function terms(): Response
@@ -268,6 +291,25 @@ class LegalPageController extends Controller
                 ],
             ],
             [
+                'title' => '5d. Sportkarte, Routenplanung und Standortfunktionen',
+                'body' => [
+                    'Sportkarte, Routenplanung, Tracking und Sportplatzfunktionen dienen der Planung und Dokumentation sportlicher Aktivitäten. Sie ersetzen keine eigene Prüfung der Umgebung, Verkehrsregeln, Wegbeschaffenheit, Wetterlage oder persönlichen Leistungsfähigkeit.',
+                    'Standortzugriff und Live-Tracking werden nur genutzt, wenn der Nutzer dies im Browser oder Gerät erlaubt. Der Nutzer kann die Berechtigung jederzeit über Browser- oder Geräteeinstellungen widerrufen.',
+                    'Automatisch generierte Routen sind Vorschläge. Nutzer müssen prüfen, ob Wege tatsächlich zugänglich, sicher, erlaubt und für die jeweilige Sportart geeignet sind.',
+                    'Nutzer dürfen Sportplätze, Bilder und Ortsinformationen nur eintragen, wenn sie rechtmäßig erhoben wurden und keine Rechte Dritter verletzt werden.',
+                ],
+            ],
+            [
+                'title' => '5e. KI-Funktionen, Ernährung und Trainingsvorschläge',
+                'body' => [
+                    'KI-Funktionen unterstützen bei Schätzungen, Strukturierung, Trainingsideen, Ernährungsvorschlägen, Blogtexten oder vergleichbaren Inhalten. Sie liefern keine verbindlichen Diagnosen, keine medizinische Beratung und keine Garantie für sportlichen Erfolg.',
+                    'Kalorien-, Nährwert-, Trink- und Trainingsangaben können ungenau sein. Nutzer müssen KI-Vorschläge prüfen, bevor sie diese speichern oder darauf aufbauen.',
+                    'Bei Beschwerden, Erkrankungen, Schwangerschaft, Essstörungen, Verletzungen oder besonderer Belastung sollte vor Nutzung von Trainings- oder Ernährungsempfehlungen fachlicher Rat eingeholt werden.',
+                    'Nutzer dürfen keine Bilder, Gesundheitsdaten oder personenbezogenen Daten anderer Personen an KI-Funktionen übermitteln, wenn dafür keine erforderliche Berechtigung oder Einwilligung vorliegt.',
+                    'Airmius kann KI-Funktionen beschränken, pausieren oder Anbieter wechseln, wenn dies aus Datenschutz-, Sicherheits-, Qualitäts-, Verfügbarkeits- oder Kostengründen erforderlich ist.',
+                ],
+            ],
+            [
                 'title' => '6. Verbotene Nutzung',
                 'body' => [
                     'Verboten sind insbesondere Beleidigungen, Mobbing, Hassrede, Drohungen, sexuelle Inhalte gegenüber Minderjährigen, Gewaltaufrufe, Spam, Betrug und rechtswidrige Inhalte.',
@@ -276,6 +318,7 @@ class LegalPageController extends Controller
                     'Verboten sind irreführende Marketplace-Angebote, Scheinangebote, gefälschte Bewertungen, verbotene Produkte, Rechteverletzungen oder Umgehung der Airmius-Provisions- und Zahlungslogik.',
                     'Verboten sind Werbekampagnen, die Nutzer täuschen, Minderjährige unangemessen ansprechen oder gegen Jugendschutz, Datenschutz, Wettbewerbsrecht oder Plattformregeln verstoßen.',
                     'Verboten ist auch die missbräuchliche Nutzung der Vereinsverwaltung, insbesondere falsche Mitgliedsdaten, falsche Zahlungsmarkierungen, unbegründete Mahnungen oder die Nutzung von Beitragsdaten zur Belästigung oder Bloßstellung.',
+                    'Verboten ist die Nutzung von KI-, Karten-, Routing- oder Trackingfunktionen zur Überwachung, Belästigung, Täuschung, Gefährdung oder rechtswidrigen Verarbeitung von Daten anderer Personen.',
                 ],
             ],
             [
@@ -302,6 +345,7 @@ class LegalPageController extends Controller
                     'Für Nutzerinhalte ist grundsätzlich der jeweilige Nutzer verantwortlich.',
                     'Für Marketplace-Angebote, Werbeaussagen und externe Zielseiten ist grundsätzlich der jeweilige Anbieter oder Sponsor verantwortlich, soweit Airmius nicht selbst Vertragspartner oder Anbieter der Leistung ist.',
                     'Für von Vereinsverantwortlichen eingetragene Mitglieds-, Beitrags-, Rechnungs- und Zahlungsdaten ist grundsätzlich der jeweilige Verein bzw. die eingetragene verantwortliche Person zuständig.',
+                    'Für KI-Vorschläge, automatisch generierte Routen, Trackdaten, Kalorienschätzungen und Trainingshinweise gilt: Sie sind Hilfsmittel und müssen eigenverantwortlich geprüft werden.',
                 ],
             ],
             [
@@ -314,7 +358,7 @@ class LegalPageController extends Controller
                     'Airmius kann Konten bei schweren oder wiederholten Verstößen sperren oder kündigen.',
                 ],
             ],
-        ], 'Stand: 02.05.2026');
+        ], 'Stand: 25.05.2026');
     }
 
     public function community(): Response

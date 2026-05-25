@@ -261,9 +261,9 @@ const selectSegment = (segment) => {
 
         <main class="relative z-10 mx-auto max-w-[86rem] pb-24 pt-0 md:pb-14 md:pr-28 2xl:pr-24">
             <section class="border-b border-border bg-bg px-3 py-2 shadow-sm sm:px-4 sm:py-3">
-                <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2 text-primary shadow-sm sm:px-5 sm:py-3">
+                <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 text-primary shadow-sm sm:flex-nowrap sm:gap-3 sm:px-5 sm:py-3">
                     <div class="flex min-w-0 flex-1 items-center gap-3">
-                        <img :src="marketplaceLogo" alt="AIRMIUS" class="h-9 w-auto max-w-[9rem] shrink-0 object-contain sm:h-12 sm:max-w-none" @error="applyLogoFallback">
+                        <img :src="marketplaceLogo" alt="AIRMIUS" class="h-9 w-auto max-w-[8.25rem] shrink-0 object-contain sm:h-12 sm:max-w-none" @error="applyLogoFallback">
                         <div class="hidden min-w-0 sm:block">
                             <p class="font-heading text-lg font-900 leading-tight sm:text-2xl">AIRMIUS Marketplace</p>
                             <p class="truncate text-xs font-semibold text-secondary sm:text-sm">
@@ -271,7 +271,7 @@ const selectSegment = (segment) => {
                             </p>
                         </div>
                     </div>
-                    <div class="flex shrink-0 items-center justify-end gap-2 text-sm font-black">
+                    <div class="flex shrink-0 items-center justify-end gap-1.5 text-xs font-black sm:gap-2 sm:text-sm">
                         <Link
                             v-if="currentUser"
                             :href="route('auth.commerce.cart.index')"
@@ -292,14 +292,14 @@ const selectSegment = (segment) => {
                             <Link
                                 v-if="canLogin"
                                 :href="loginHref"
-                                class="rounded-full border border-border px-3 py-2 text-secondary transition hover:border-buttonPrimary hover:text-primary"
+                                class="rounded-full border border-border px-2.5 py-2 text-secondary transition hover:border-buttonPrimary hover:text-primary sm:px-3"
                             >
                                 Anmelden
                             </Link>
                             <Link
                                 v-if="canRegister"
                                 :href="registerHref"
-                                class="rounded-full bg-buttonPrimary px-3 py-2 text-buttonTextPrimary transition hover:bg-buttonPrimaryHover"
+                                class="rounded-full bg-buttonPrimary px-2.5 py-2 text-buttonTextPrimary transition hover:bg-buttonPrimaryHover sm:px-3"
                             >
                                 Registrieren
                             </Link>

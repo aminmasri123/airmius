@@ -20,11 +20,17 @@ const canSendFriendRequest = ref(props.viewer.can_send_friend_request)
 const friendInvitationId = ref(props.viewer.friend_invitation_id)
 const friendshipNotice = ref(null)
 const friendshipProcessing = ref(false)
+const profileActionMenuOpen = ref(false)
+const activeProfileTab = ref(props.activeTab || 'overview')
 
 watch(() => props.viewer, (viewer) => {
     friendshipStatus.value = viewer.friendship_status
     canSendFriendRequest.value = viewer.can_send_friend_request
     friendInvitationId.value = viewer.friend_invitation_id
+})
+
+watch(() => props.activeTab, (tab) => {
+    activeProfileTab.value = tab || 'overview'
 })
 
 const follow = () => {
@@ -167,6 +173,7 @@ const reportForm = useForm({
 })
 
 const openProfileReport = () => {
+    profileActionMenuOpen.value = false
     reportForm.type = 'user'
     reportForm.id = props.profileUser.id
     reportForm.reason = 'other'
@@ -185,6 +192,10 @@ const submitProfileReport = () => {
         preserveScroll: true,
         onSuccess: closeProfileReport,
     })
+}
+
+const toggleProfileActionMenu = () => {
+    profileActionMenuOpen.value = !profileActionMenuOpen.value
 }
 
 const skillForms = ref({})
@@ -257,7 +268,17 @@ const tabs = computed(() => [
     { key: 'recommendations', label: 'Empfehlungen', icon: 'las la-star' },
 ])
 
-const tabHref = (tab) => route('auth.users.show', { user: props.profileUser.id, tab })
+const selectProfileTab = (tab) => {
+    activeProfileTab.value = tab
+
+    if (typeof window === 'undefined') {
+        return
+    }
+
+    const url = new URL(window.location.href)
+    url.searchParams.set('tab', tab)
+    window.history.replaceState({}, '', url)
+}
 
 const groupedSkills = computed(() => {
     return props.profileUser.sport_skills.reduce((groups, skill) => {
@@ -401,117 +422,134 @@ const rejectRecommendation = (recommendation) => {
                             </div>
                         </div>
 
-                        <div class="flex flex-wrap gap-2 lg:justify-end">
+                        <div class="flex w-full flex-col gap-2 lg:w-auto lg:items-end">
                             <Link
                                 v-if="viewer.is_self"
                                 :href="route('profile.show')"
-                                class="inline-flex items-center gap-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
+                                class="inline-flex items-center justify-center gap-2 rounded-xl bg-buttonPrimary px-4 py-2.5 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
                             >
                                 <i class="las la-user-edit text-lg"></i>
                                 Profil bearbeiten
                             </Link>
 
                             <template v-else>
+                                <div class="relative flex w-full flex-wrap items-stretch gap-2 lg:w-auto lg:justify-end">
                                 <button
-                                    v-if="viewer.can_send_message"
-                                    type="button"
-                                    class="inline-flex items-center gap-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
-                                    @click="sendMessage"
-                                >
-                                    <i class="las la-comment text-lg"></i>
-                                    Nachricht
-                                </button>
-                                <span v-else-if="viewer.is_blocked" class="inline-flex items-center rounded-lg border border-border px-4 py-2 text-sm text-secondary">
+                                v-if="viewer.can_send_message"
+                                type="button"
+                                class="inline-flex min-h-11 min-w-[7.25rem] flex-1 items-center justify-center gap-1 rounded-xl bg-buttonPrimary px-2.5 py-2 text-xs font-bold text-buttonTextPrimary hover:bg-buttonPrimaryHover sm:gap-2 sm:px-4 sm:text-sm lg:flex-none"
+                                @click="sendMessage"
+                            >
+                                <i class="las la-comment text-lg"></i>
+                                <span>Nachricht</span>
+                            </button>
+                                <span v-else-if="viewer.is_blocked" class="inline-flex min-h-11 min-w-[7.25rem] flex-1 items-center justify-center rounded-xl border border-border px-2.5 py-2 text-center text-xs text-secondary sm:px-4 sm:text-sm lg:flex-none">
                                     Nachrichten blockiert
                                 </span>
 
                                 <button
-                                    v-if="viewer.can_follow && !viewer.is_following"
-                                    type="button"
-                                    class="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
-                                    @click="follow"
-                                >
+                                v-if="viewer.can_follow && !viewer.is_following"
+                                type="button"
+                                class="inline-flex min-h-11 min-w-[7.25rem] flex-1 items-center justify-center gap-1 rounded-xl border border-border bg-card px-2.5 py-2 text-xs font-bold text-primary hover:border-borderHover sm:gap-2 sm:px-4 sm:text-sm lg:flex-none"
+                                @click="follow"
+                            >
                                     <i class="las la-plus text-lg"></i>
-                                    Folgen
+                                    <span>Folgen</span>
                                 </button>
                                 <button
-                                    v-else-if="viewer.can_follow"
-                                    type="button"
-                                    class="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
-                                    @click="unfollow"
-                                >
+                                v-else-if="viewer.can_follow"
+                                type="button"
+                                class="inline-flex min-h-11 min-w-[7.25rem] flex-1 items-center justify-center gap-1 rounded-xl border border-border bg-card px-2.5 py-2 text-xs font-bold text-primary hover:border-borderHover sm:gap-2 sm:px-4 sm:text-sm lg:flex-none"
+                                @click="unfollow"
+                            >
                                     <i class="las la-user-minus text-lg"></i>
-                                    Entfolgen
+                                    <span>Entfolgen</span>
                                 </button>
 
                                 <button
-                                    v-if="canSendFriendRequest"
-                                    type="button"
-                                    :disabled="friendshipProcessing"
-                                    class="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover disabled:cursor-wait disabled:opacity-70"
-                                    @click="sendFriendRequest"
-                                >
+                                v-if="canSendFriendRequest"
+                                type="button"
+                                :disabled="friendshipProcessing"
+                                class="inline-flex min-h-11 min-w-[7.25rem] flex-1 items-center justify-center gap-1 rounded-xl border border-border bg-card px-2.5 py-2 text-xs font-bold text-primary hover:border-borderHover disabled:cursor-wait disabled:opacity-70 sm:gap-2 sm:px-4 sm:text-sm lg:flex-none"
+                                @click="sendFriendRequest"
+                            >
                                     <i class="las la-user-plus text-lg"></i>
-                                    Freundschaft
+                                    <span>Freund</span>
                                 </button>
                                 <button
-                                    v-else-if="friendshipStatus === 'received'"
-                                    type="button"
-                                    :disabled="friendshipProcessing"
-                                    class="inline-flex items-center gap-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover disabled:cursor-wait disabled:opacity-70"
-                                    @click="acceptFriendRequest"
-                                >
+                                v-else-if="friendshipStatus === 'received'"
+                                type="button"
+                                :disabled="friendshipProcessing"
+                                class="inline-flex min-h-11 min-w-[7.25rem] flex-1 items-center justify-center gap-1 rounded-xl bg-buttonPrimary px-2.5 py-2 text-xs font-bold text-buttonTextPrimary hover:bg-buttonPrimaryHover disabled:cursor-wait disabled:opacity-70 sm:gap-2 sm:px-4 sm:text-sm lg:flex-none"
+                                @click="acceptFriendRequest"
+                            >
                                     <i class="las la-check text-lg"></i>
-                                    Annehmen
+                                    <span>Annehmen</span>
                                 </button>
-                                <span v-else-if="friendshipStatus === 'sent'" class="inline-flex items-center rounded-lg border border-border px-4 py-2 text-sm text-secondary">
-                                    Anfrage gesendet
+                                <span v-else-if="friendshipStatus === 'sent'" class="inline-flex min-h-11 min-w-[7.25rem] flex-1 items-center justify-center gap-1 rounded-xl border border-success/35 bg-success/10 px-2.5 py-2 text-center text-xs font-bold text-success sm:gap-2 sm:px-4 sm:text-sm lg:flex-none">
+                                    <i class="las la-check-circle text-lg"></i>
+                                    <span>Anfrage</span>
                                 </span>
                                 <button
                                     v-else-if="friendshipStatus === 'friends'"
                                     type="button"
-                                    class="inline-flex items-center gap-2 rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
+                                    class="inline-flex min-h-11 min-w-[7.25rem] flex-1 items-center justify-center gap-1 rounded-xl border border-error/40 px-2.5 py-2 text-xs font-bold text-error hover:bg-error/10 sm:gap-2 sm:px-4 sm:text-sm lg:flex-none"
                                     @click="removeFriend"
                                 >
                                     <i class="las la-user-times text-lg"></i>
-                                    Entfernen
+                                    <span>Entfernen</span>
                                 </button>
 
                                 <button
                                     type="button"
-                                    class="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
-                                    @click="openProfileReport"
+                                    class="inline-flex min-h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-primary hover:border-borderHover"
+                                    aria-label="Weitere Aktionen"
+                                    @click="toggleProfileActionMenu"
                                 >
-                                    <i class="las la-flag text-lg"></i>
-                                    Melden
+                                    <i class="las la-ellipsis-v text-xl"></i>
                                 </button>
+                                <div
+                                    v-if="profileActionMenuOpen"
+                                    class="absolute right-0 top-full z-20 mt-2 w-48 overflow-hidden rounded-2xl border border-border bg-card shadow-xl"
+                                >
+                                    <button
+                                        type="button"
+                                        class="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-bold text-primary hover:bg-inputBg"
+                                        @click="openProfileReport"
+                                    >
+                                        <i class="las la-flag text-lg"></i>
+                                        Melden
+                                    </button>
+                                    <button
+                                        v-if="viewer.has_blocked"
+                                        type="button"
+                                        class="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-bold text-primary hover:bg-inputBg"
+                                        @click="profileActionMenuOpen = false; unblockUser()"
+                                    >
+                                        <i class="las la-unlock text-lg"></i>
+                                        Entblockieren
+                                    </button>
+                                    <button
+                                        v-else
+                                        type="button"
+                                        class="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-bold text-error hover:bg-error/10"
+                                        @click="profileActionMenuOpen = false; blockUser()"
+                                    >
+                                        <i class="las la-ban text-lg"></i>
+                                        Blockieren
+                                    </button>
+                                </div>
+                                </div>
                                 <p
                                     v-if="friendshipNotice"
                                     :class="[
-                                        'w-full text-sm font-semibold sm:w-auto',
+                                        'rounded-xl border px-3 py-2 text-center text-xs font-bold lg:w-full lg:border-0 lg:p-0 lg:text-left lg:text-sm',
                                         friendshipNotice.type === 'error' ? 'text-error' : 'text-success',
+                                        friendshipNotice.type === 'error' ? 'border-error/30 bg-error/10' : 'border-success/30 bg-success/10',
                                     ]"
                                 >
                                     {{ friendshipNotice.message }}
                                 </p>
-                                <button
-                                    v-if="viewer.has_blocked"
-                                    type="button"
-                                    class="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
-                                    @click="unblockUser"
-                                >
-                                    <i class="las la-unlock text-lg"></i>
-                                    Entblockieren
-                                </button>
-                                <button
-                                    v-else
-                                    type="button"
-                                    class="inline-flex items-center gap-2 rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
-                                    @click="blockUser"
-                                >
-                                    <i class="las la-ban text-lg"></i>
-                                    Blockieren
-                                </button>
                             </template>
                         </div>
                     </div>
@@ -519,40 +557,40 @@ const rejectRecommendation = (recommendation) => {
             </section>
 
             <template v-if="viewer.can_view_private_profile">
-                <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <section class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5">
                     <div
                         v-for="stat in profileStats"
                         :key="stat.label"
-                        class="rounded-xl border border-border bg-card p-4 shadow-sm"
+                        class="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4"
                     >
-                        <div class="text-2xl font-bold text-primary">{{ stat.value }}</div>
-                        <div class="mt-1 text-xs font-semibold uppercase tracking-wide text-secondary">{{ stat.label }}</div>
+                        <div class="text-xl font-bold text-primary sm:text-2xl">{{ stat.value }}</div>
+                        <div class="mt-1 text-[11px] font-semibold uppercase text-secondary sm:text-xs">{{ stat.label }}</div>
                     </div>
                 </section>
 
-                <nav class="overflow-x-auto rounded-xl border border-border bg-card p-2 shadow-sm">
-                    <div class="flex min-w-max gap-2">
-                        <Link
+                <nav class="rounded-xl border border-border bg-card p-2 shadow-sm">
+                    <div class="grid grid-cols-2 gap-2 sm:flex sm:min-w-max">
+                        <button
                             v-for="tab in tabs"
                             :key="tab.key"
-                            :href="tabHref(tab.key)"
-                            preserve-scroll
+                            type="button"
                             :class="[
-                                'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition',
-                                activeTab === tab.key
+                                'inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold transition sm:gap-2 sm:px-4 sm:text-sm',
+                                activeProfileTab === tab.key
                                     ? 'bg-buttonPrimary text-buttonTextPrimary'
                                     : 'text-secondary hover:bg-inputBg hover:text-primary',
                             ]"
+                            @click="selectProfileTab(tab.key)"
                         >
                             <i :class="[tab.icon, 'text-lg']"></i>
                             {{ tab.label }}
-                        </Link>
+                        </button>
                     </div>
                 </nav>
 
-                <section :class="['grid gap-6', activeTab === 'overview' ? 'xl:grid-cols-[minmax(0,1fr)_360px]' : '']">
-                    <div v-if="['overview', 'sports', 'skills', 'posts'].includes(activeTab)" class="space-y-6">
-                        <section v-if="activeTab === 'overview'" class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+                <section :class="['grid gap-6', activeProfileTab === 'overview' ? 'xl:grid-cols-[minmax(0,1fr)_360px]' : '']">
+                    <div v-if="['overview', 'sports', 'skills', 'posts'].includes(activeProfileTab)" class="space-y-6">
+                        <section v-if="activeProfileTab === 'overview'" class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
                             <div class="grid lg:grid-cols-[1.25fr_.75fr]">
                                 <div class="p-5 sm:p-6">
                                     <div class="flex flex-wrap items-center gap-2">
@@ -609,7 +647,7 @@ const rejectRecommendation = (recommendation) => {
                             </div>
                         </section>
 
-                        <section v-if="activeTab === 'overview'" class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
+                        <section v-if="activeProfileTab === 'overview'" class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
                             <div class="flex items-center justify-between gap-4">
                                 <div>
                                     <h2 class="text-lg font-bold text-primary">Profil</h2>
@@ -625,7 +663,7 @@ const rejectRecommendation = (recommendation) => {
                             </p>
                         </section>
 
-                        <section v-if="activeTab === 'sports'" class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
+                        <section v-if="activeProfileTab === 'sports'" class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
                                     <h2 class="text-lg font-bold text-primary">Sportliches Profil</h2>
@@ -686,7 +724,7 @@ const rejectRecommendation = (recommendation) => {
                             </div>
                         </section>
 
-                        <section v-if="activeTab === 'skills'" class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
+                        <section v-if="activeProfileTab === 'skills'" class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
                             <div>
                                 <h2 class="text-lg font-bold text-primary">Skills & Bestätigungen</h2>
                                 <p class="mt-1 text-sm text-secondary">Skills entstehen aus den gewählten Sportarten und können bestätigt werden.</p>
@@ -770,7 +808,7 @@ const rejectRecommendation = (recommendation) => {
                             </div>
                         </section>
 
-                        <section v-if="activeTab === 'posts'" class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
+                        <section v-if="activeProfileTab === 'posts'" class="rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
                             <div class="flex items-center justify-between gap-4">
                                 <div>
                                     <h2 class="text-lg font-bold text-primary">Aktuelle Beiträge</h2>
@@ -799,8 +837,8 @@ const rejectRecommendation = (recommendation) => {
                         </section>
                     </div>
 
-                    <aside v-if="['overview', 'network', 'recommendations'].includes(activeTab)" class="space-y-6">
-                        <section v-if="activeTab === 'network' || activeTab === 'overview'" class="rounded-xl border border-border bg-card p-5 shadow-sm">
+                    <aside v-if="['overview', 'network', 'recommendations'].includes(activeProfileTab)" class="space-y-6">
+                        <section v-if="activeProfileTab === 'network' || activeProfileTab === 'overview'" class="rounded-xl border border-border bg-card p-5 shadow-sm">
                             <h2 class="text-sm font-bold uppercase tracking-wide text-secondary">Teams</h2>
                             <div class="mt-4 space-y-2">
                                 <Link v-for="team in profileUser.teams" :key="team.id" :href="route('auth.teams.show', team.id)" class="flex items-center gap-3 rounded-lg p-2 hover:bg-inputBg">
@@ -811,7 +849,7 @@ const rejectRecommendation = (recommendation) => {
                             </div>
                         </section>
 
-                        <section v-if="activeTab === 'network' || activeTab === 'overview'" class="rounded-xl border border-border bg-card p-5 shadow-sm">
+                        <section v-if="activeProfileTab === 'network' || activeProfileTab === 'overview'" class="rounded-xl border border-border bg-card p-5 shadow-sm">
                             <h2 class="text-sm font-bold uppercase tracking-wide text-secondary">Vereine</h2>
                             <div class="mt-4 space-y-2">
                                 <Link v-for="club in profileUser.clubs" :key="club.id" :href="route('auth.clubs.show', club.id)" class="flex items-center gap-3 rounded-lg p-2 hover:bg-inputBg">
@@ -822,7 +860,7 @@ const rejectRecommendation = (recommendation) => {
                             </div>
                         </section>
 
-                        <section v-if="activeTab === 'recommendations'" class="rounded-xl border border-border bg-card p-5 shadow-sm">
+                        <section v-if="activeProfileTab === 'recommendations'" class="rounded-xl border border-border bg-card p-5 shadow-sm">
                             <h2 class="text-sm font-bold uppercase tracking-wide text-secondary">Empfehlungen</h2>
 
                             <form v-if="!viewer.is_self" class="mt-4 space-y-3 rounded-xl border border-border bg-bg p-4" @submit.prevent="sendRecommendation">

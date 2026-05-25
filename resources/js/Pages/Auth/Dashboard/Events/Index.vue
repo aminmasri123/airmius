@@ -693,8 +693,8 @@ const resetFilters = () => {
     <Head :title="$t('events.title')" />
 
     <div class="space-y-5">
-        <section class="overflow-hidden rounded-lg border border-border bg-card">
-            <div class="flex flex-col gap-5 p-5 lg:flex-row lg:items-start lg:justify-between">
+        <section class="overflow-hidden rounded-xl border border-border bg-card">
+            <div class="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-start lg:justify-between">
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-buttonPrimary text-buttonTextPrimary">
@@ -723,7 +723,7 @@ const resetFilters = () => {
 
                 <button
                     type="button"
-                    class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover"
+                    class="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover sm:w-auto"
                     @click="openCreateModal"
                 >
                     <i class="las la-plus text-lg"></i>
@@ -731,18 +731,18 @@ const resetFilters = () => {
                 </button>
             </div>
 
-            <div class="grid border-t border-border sm:grid-cols-3">
-                <div class="border-b border-border p-4 sm:border-b-0 sm:border-r">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Kommend</p>
-                    <p class="mt-1 text-2xl font-bold text-primary">{{ upcomingEventsCount }}</p>
+            <div class="grid grid-cols-3 gap-2 border-t border-border p-3 sm:gap-0 sm:p-0">
+                <div class="rounded-xl border border-border bg-inputBg p-3 text-center sm:rounded-none sm:border-0 sm:border-r sm:bg-transparent sm:p-4 sm:text-left">
+                    <p class="text-[10px] font-semibold uppercase text-secondary sm:text-xs sm:tracking-wide">Kommend</p>
+                    <p class="mt-1 text-xl font-bold text-primary sm:text-2xl">{{ upcomingEventsCount }}</p>
                 </div>
-                <div class="border-b border-border p-4 sm:border-b-0 sm:border-r">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Heute</p>
-                    <p class="mt-1 text-2xl font-bold text-primary">{{ todayEventsCount }}</p>
+                <div class="rounded-xl border border-border bg-inputBg p-3 text-center sm:rounded-none sm:border-0 sm:border-r sm:bg-transparent sm:p-4 sm:text-left">
+                    <p class="text-[10px] font-semibold uppercase text-secondary sm:text-xs sm:tracking-wide">Heute</p>
+                    <p class="mt-1 text-xl font-bold text-primary sm:text-2xl">{{ todayEventsCount }}</p>
                 </div>
-                <div class="p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Abgesagt</p>
-                    <p class="mt-1 text-2xl font-bold text-primary">{{ cancelledEventsCount }}</p>
+                <div class="rounded-xl border border-border bg-inputBg p-3 text-center sm:rounded-none sm:border-0 sm:bg-transparent sm:p-4 sm:text-left">
+                    <p class="text-[10px] font-semibold uppercase text-secondary sm:text-xs sm:tracking-wide">Abgesagt</p>
+                    <p class="mt-1 text-xl font-bold text-primary sm:text-2xl">{{ cancelledEventsCount }}</p>
                 </div>
             </div>
         </section>

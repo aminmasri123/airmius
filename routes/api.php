@@ -88,6 +88,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::patch('/nutrition/goal', [NutritionController::class, 'updateGoal'])->name('nutrition.goal.update');
         Route::get('/nutrition/foods/search', [NutritionController::class, 'searchFoods'])->name('nutrition.foods.search');
         Route::get('/nutrition/foods/barcode', [NutritionController::class, 'lookupBarcode'])->name('nutrition.foods.barcode');
+        Route::post('/nutrition/ai/meal-image', [NutritionController::class, 'analyzeMealImage'])->name('nutrition.ai.meal-image');
         Route::post('/nutrition/meals', [NutritionController::class, 'storeMeal'])->name('nutrition.meals.store');
         Route::post('/nutrition/water', [NutritionController::class, 'storeWater'])->name('nutrition.water.store');
         Route::patch('/nutrition/meals/{nutritionMeal}', [NutritionController::class, 'updateMeal'])->name('nutrition.meals.update');

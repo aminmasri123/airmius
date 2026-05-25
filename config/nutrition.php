@@ -138,6 +138,6 @@ return [
         ['key' => 'manual', 'label' => 'Manuell'],
         ['key' => 'recipe', 'label' => 'Rezept'],
         ['key' => 'barcode', 'label' => 'Barcode vorbereitet'],
-        ['key' => 'photo_estimate', 'label' => 'Foto-Schaetzung geplant'],
+        ['key' => 'photo_estimate', 'label' => 'Foto-Schaetzung'],
     ],
 ];

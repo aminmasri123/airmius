@@ -46,6 +46,7 @@ const renameTarget = ref(null)
 const renameType = ref('file')
 const page = usePage()
 const isFiltering = ref(false)
+const showMobileFilters = ref(false)
 const SEARCH_DEBOUNCE_MS = 350
 let searchDebounceTimer = null
 
@@ -581,16 +582,36 @@ watch(showShareModal, async (show) => {
 
             <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_260px] 2xl:grid-cols-[minmax(0,1fr)_300px]">
                 <section class="min-w-0 rounded-lg border border-border bg-card">
-                    <div class="flex flex-col gap-2 border-b border-border p-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <h1 class="text-lg font-semibold text-primary">{{ currentFolder?.name || 'Dateimanager' }}</h1>
+                    <div class="flex flex-col gap-2 border-b border-border p-3">
+                        <div class="flex items-start justify-between gap-3 sm:items-center">
+                            <div class="min-w-0">
+                            <h1 class="truncate text-lg font-semibold text-primary">{{ currentFolder?.name || 'Dateimanager' }}</h1>
                             <p class="text-sm text-secondary">{{ totalFolders }} Ordner · {{ totalFiles }} Dateien</p>
+                            </div>
+
+                            <div class="flex shrink-0 items-center gap-2">
+                                <button
+                                    type="button"
+                                    class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border px-3 text-sm font-semibold text-primary hover:bg-inputBg md:hidden"
+                                    :aria-expanded="showMobileFilters"
+                                    @click="showMobileFilters = !showMobileFilters"
+                                >
+                                    <i class="las la-sliders-h text-lg"></i>
+                                    Suchfilter
+                                </button>
+                            </div>
                         </div>
-                        <div class="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-center">
+
+                        <div
+                            :class="[
+                                showMobileFilters ? 'grid' : 'hidden',
+                                'w-full grid-cols-1 gap-2 md:grid md:grid-cols-2 xl:flex xl:flex-wrap xl:items-center xl:justify-end',
+                            ]"
+                        >
                             <div class="relative sm:col-span-2 xl:col-span-1">
                                 <input
                                     v-model="fileSearch"
-                                    class="h-9 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:w-44"
+                                    class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:h-9 xl:w-44"
                                     placeholder="Suchen..."
                                     :disabled="isFiltering"
                                     aria-label="Dateien und Ordner durchsuchen"
@@ -600,7 +621,7 @@ watch(showShareModal, async (show) => {
                             </div>
                             <select
                                 v-model="filesPerPage"
-                                class="h-9 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:w-36"
+                                class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:h-9 xl:w-36"
                                 aria-label="Dateien pro Seite"
                                 :disabled="isFiltering"
                                 @change="applyFilters"
@@ -611,7 +632,7 @@ watch(showShareModal, async (show) => {
                             </select>
                             <select
                                 v-model="foldersPerPage"
-                                class="h-9 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:w-36"
+                                class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:h-9 xl:w-36"
                                 aria-label="Ordner pro Seite"
                                 :disabled="isFiltering"
                                 @change="applyFilters"
@@ -622,7 +643,7 @@ watch(showShareModal, async (show) => {
                             </select>
                             <select
                                 v-model="folderSort"
-                                class="h-9 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:w-44"
+                                class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:h-9 xl:w-44"
                                 aria-label="Ordner sortieren"
                                 :disabled="isFiltering"
                                 @change="applyFilters"
@@ -633,7 +654,7 @@ watch(showShareModal, async (show) => {
                             </select>
                             <select
                                 v-model="fileSort"
-                                class="h-9 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:w-44"
+                                class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:h-9 xl:w-44"
                                 aria-label="Dateien sortieren"
                                 :disabled="isFiltering"
                                 @change="applyFilters"

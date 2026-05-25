@@ -17,6 +17,7 @@ const props = defineProps({
     tips: { type: Array, default: () => [] },
     trainingSuggestions: { type: Array, default: () => [] },
     recentTraining: { type: Array, default: () => [] },
+    aiCapabilities: { type: Object, default: () => ({}) },
 })
 
 const selectedDateValue = ref(props.selectedDate)
@@ -30,6 +31,12 @@ const foodBarcode = ref('')
 const foodLookupLoading = ref(false)
 const foodLookupError = ref('')
 const foodSearchResults = ref([])
+const aiMealImageFile = ref(null)
+const aiMealImageInput = ref(null)
+const aiMealConsent = ref(false)
+const aiMealAnalyzing = ref(false)
+const aiMealError = ref('')
+const aiMealSuggestion = ref(null)
 const drinkSelectOpen = ref(false)
 const drinkSearchQuery = ref('Wasser')
 const drinkSelectRef = ref(null)
@@ -208,6 +215,14 @@ const maxWeekWater = computed(() => Math.max(1, Number(waterTargetMl.value || 0)
 const waterConsumedMl = computed(() => Math.max(0, Number(props.todaySummary.water_ml || 0) + pendingWaterMl.value - deletingWaterMl.value))
 const waterLeftMl = computed(() => Math.max(0, waterTargetMl.value - waterConsumedMl.value))
 const waterProgress = computed(() => progressValue(waterConsumedMl.value, waterTargetMl.value))
+const aiNutritionImage = computed(() => props.aiCapabilities?.nutrition_image_analysis || {})
+const aiMealImageAvailable = computed(() => Boolean(aiNutritionImage.value.available))
+const aiMealProviderLabel = computed(() => {
+    const provider = aiNutritionImage.value.primary_provider || props.aiCapabilities?.primary_provider || 'google'
+    const match = (props.aiCapabilities?.available_providers || []).find((item) => item.key === provider)
+
+    return match?.label || provider
+})
 const filteredDrinkOptions = computed(() => {
     const search = normalizeDrinkSearch(drinkSearchQuery.value)
 
@@ -388,6 +403,77 @@ const editMeal = (meal) => {
     mealForm.training_context = meal.training_context || ''
     mealForm.items = meal.items?.length ? meal.items.map((item) => ({ name: item.name || '', amount: item.amount || '' })) : emptyItems()
     mealForm.notes = meal.notes || ''
+}
+
+const onAiMealImageSelected = (event) => {
+    aiMealImageFile.value = event.target.files?.[0] || null
+    aiMealError.value = ''
+    aiMealSuggestion.value = null
+}
+
+const analyzeMealImage = async () => {
+    if (!aiMealImageAvailable.value) {
+        aiMealError.value = 'KI-Bildanalyse ist noch nicht konfiguriert.'
+        return
+    }
+
+    if (!aiMealImageFile.value) {
+        aiMealError.value = 'Bitte zuerst ein Essensbild auswählen.'
+        return
+    }
+
+    if (!aiMealConsent.value) {
+        aiMealError.value = 'Bitte bestaetige zuerst die KI-Analyse.'
+        return
+    }
+
+    aiMealAnalyzing.value = true
+    aiMealError.value = ''
+    aiMealSuggestion.value = null
+
+    const payload = new FormData()
+    payload.append('image', aiMealImageFile.value)
+    payload.append('ai_consent', '1')
+    payload.append('meal_type', mealForm.meal_type || '')
+    payload.append('diet_style', goalForm.diet_style || '')
+
+    try {
+        const response = await window.axios.post(route('auth.nutrition.ai.meal-image'), payload, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        })
+
+        aiMealSuggestion.value = response.data?.data || null
+        if (aiMealSuggestion.value) {
+            applyAiMealSuggestion()
+        }
+    } catch (error) {
+        aiMealError.value = error.response?.data?.message || 'Bildanalyse konnte nicht abgeschlossen werden.'
+    } finally {
+        aiMealAnalyzing.value = false
+    }
+}
+
+const applyAiMealSuggestion = () => {
+    const suggestion = aiMealSuggestion.value
+    if (!suggestion) return
+
+    mealForm.title = suggestion.title || mealForm.title
+    mealForm.calories = suggestion.calories ?? mealForm.calories
+    mealForm.protein_g = suggestion.protein_g ?? mealForm.protein_g
+    mealForm.carbs_g = suggestion.carbs_g ?? mealForm.carbs_g
+    mealForm.fat_g = suggestion.fat_g ?? mealForm.fat_g
+    mealForm.fiber_g = suggestion.fiber_g ?? mealForm.fiber_g
+    mealForm.sugar_g = suggestion.sugar_g ?? mealForm.sugar_g
+    mealForm.water_ml = suggestion.water_ml ?? mealForm.water_ml
+    mealForm.source = 'photo_estimate'
+    mealForm.items = suggestion.items?.length
+        ? suggestion.items.map((item) => ({ name: item.name || '', amount: item.amount || '' }))
+        : mealForm.items
+    mealForm.notes = [
+        suggestion.notes,
+        ...(suggestion.warnings || []),
+    ].filter(Boolean).join(' ')
+    showAdvancedMeal.value = true
 }
 
 const saveGoal = () => {
@@ -820,6 +906,73 @@ onBeforeUnmount(() => {
                         Neu
                     </button>
                 </div>
+
+                <section class="mt-4 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-4">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p class="text-xs font-bold uppercase text-cyan-200">KI-Fotoanalyse</p>
+                            <h3 class="mt-1 text-base font-black text-primary">Kalorien aus Bild schaetzen</h3>
+                            <p class="mt-1 text-sm leading-6 text-secondary">
+                                Bild wird verkleinert, EXIF wird entfernt. Ergebnis bleibt ein Vorschlag und muss von dir bestaetigt werden.
+                            </p>
+                        </div>
+                        <span class="shrink-0 rounded-full bg-card px-3 py-1 text-xs font-black text-cyan-100">
+                            {{ aiMealImageAvailable ? aiMealProviderLabel : 'Nicht konfiguriert' }}
+                        </span>
+                    </div>
+
+                    <div class="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr),auto]">
+                        <label class="block text-sm font-bold text-primary">
+                            Essensbild
+                            <input
+                                ref="aiMealImageInput"
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-sm text-primary file:mr-3 file:rounded-lg file:border-0 file:bg-buttonPrimary file:px-3 file:py-2 file:text-sm file:font-bold file:text-buttonTextPrimary"
+                                :disabled="aiMealAnalyzing"
+                                @change="onAiMealImageSelected"
+                            >
+                        </label>
+                        <button
+                            type="button"
+                            class="self-end rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-bold text-buttonTextPrimary disabled:opacity-60"
+                            :disabled="aiMealAnalyzing || !aiMealImageAvailable"
+                            @click="analyzeMealImage"
+                        >
+                            <span v-if="aiMealAnalyzing" class="inline-flex items-center gap-2">
+                                <i class="las la-sync-alt animate-spin"></i>
+                                Analysiere
+                            </span>
+                            <span v-else>Bild analysieren</span>
+                        </button>
+                    </div>
+
+                    <label class="mt-3 flex items-start gap-3 rounded-xl border border-border bg-card/70 p-3 text-sm text-secondary">
+                        <input v-model="aiMealConsent" type="checkbox" class="mt-1 rounded border-border bg-inputBg text-air-blue">
+                        <span>Ich moechte dieses Bild zur KI-Analyse senden. Es wird nur fuer den Vorschlag genutzt und nicht automatisch als Mahlzeit gespeichert.</span>
+                    </label>
+
+                    <p v-if="aiMealError" class="mt-3 rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm font-semibold text-danger">
+                        {{ aiMealError }}
+                    </p>
+
+                    <div v-if="aiMealSuggestion" class="mt-3 rounded-xl border border-cyan-300/30 bg-card p-3">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <p class="text-sm font-black text-primary">{{ aiMealSuggestion.title }}</p>
+                                <p class="mt-1 text-xs leading-5 text-secondary">
+                                    {{ formatNumber(aiMealSuggestion.calories || 0) }} kcal · {{ formatNumber(aiMealSuggestion.protein_g || 0, 1) }} g Protein · Sicherheit {{ Math.round((aiMealSuggestion.confidence || 0) * 100) }}%
+                                </p>
+                            </div>
+                            <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-bold text-primary hover:bg-muted" @click="applyAiMealSuggestion">
+                                Erneut uebernehmen
+                            </button>
+                        </div>
+                        <p class="mt-2 text-xs leading-5 text-secondary">
+                            {{ aiMealSuggestion.notes || 'Bitte Mengen pruefen, bevor du speicherst.' }}
+                        </p>
+                    </div>
+                </section>
 
                 <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
                     <button
