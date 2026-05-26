@@ -385,6 +385,13 @@ const sessionPace = computed(() => {
 
     return `${minutes}:${seconds} min/km`
 })
+const sessionSpeedKmh = computed(() => {
+    if (!sessionDistanceKm.value || !sessionMinutes.value) return ''
+
+    const kmh = sessionDistanceKm.value / (sessionMinutes.value / 60)
+
+    return `${formatNumber(kmh, 1)} km/h`
+})
 const selectedAthleteId = computed(() => String(form.user_id || page.props.auth?.user?.id || ''))
 const recentForAthlete = computed(() => props.recentExercises?.[selectedAthleteId.value] || [])
 const recentSportChoices = computed(() => (props.recentSports?.[selectedAthleteId.value] || [])
@@ -1586,6 +1593,10 @@ onUnmounted(() => {
                         <div v-if="sessionPace" class="rounded-xl border border-air-blue/30 bg-air-blue/10 p-3">
                             <p class="text-[11px] font-semibold uppercase tracking-wide text-air-blue">Pace</p>
                             <p class="mt-1 text-sm font-semibold text-primary">{{ sessionPace }}</p>
+                        </div>
+                        <div v-if="sessionSpeedKmh" class="rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-3">
+                            <p class="text-[11px] font-semibold uppercase tracking-wide text-emerald-300">km/h</p>
+                            <p class="mt-1 text-sm font-semibold text-primary">{{ sessionSpeedKmh }}</p>
                         </div>
                         <div v-if="usesGymSets && gymVolumeKg" class="rounded-xl border border-air-blue/30 bg-air-blue/10 p-3">
                             <p class="text-[11px] font-semibold uppercase tracking-wide text-air-blue">Volumen</p>

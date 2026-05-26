@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Setting;
+use App\Services\Ai\AiProviderTokenStatusService;
 use App\Support\EmailTemplate;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,10 +14,14 @@ class SettingController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): Response
+    public function index(AiProviderTokenStatusService $aiTokenStatus): Response
     {
         return Inertia::render('Auth/Dashboard/Admin/Settings/Index', [
             'settings' => [
+                'ai_token_status' => [
+                    'providers' => $aiTokenStatus->all(),
+                    'alerts' => $aiTokenStatus->alerts(),
+                ],
                 'maintenance' => [
                     'enabled' => Setting::boolFor('maintenance_mode'),
                     'title' => Setting::valueFor('maintenance_title', 'Airmius ist gerade im Wartemodus'),

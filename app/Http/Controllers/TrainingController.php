@@ -11,6 +11,8 @@ use App\Models\TrainingPlan;
 use App\Models\TrainingPlanItem;
 use App\Models\User;
 use App\Services\Ai\AirmiusAiService;
+use App\Services\Training\AthleteSportProfileService;
+use App\Services\Training\TrainingPlanQualityService;
 use App\Support\Roles;
 use App\Support\AppNotification;
 use Carbon\CarbonImmutable;
@@ -203,8 +205,12 @@ class TrainingController extends Controller
         return back()->with('success', 'Feedback wurde gesendet.');
     }
 
-    public function previewAiTrainingPlan(Request $request, AirmiusAiService $ai)
-    {
+    public function previewAiTrainingPlan(
+        Request $request,
+        AirmiusAiService $ai,
+        AthleteSportProfileService $sportProfiles,
+        TrainingPlanQualityService $quality,
+    ) {
         $maxPlanItems = $this->aiTrainingPlanMaxItems();
         $data = $request->validate([
             'title' => ['nullable', 'string', 'max:160'],
@@ -222,6 +228,7 @@ class TrainingController extends Controller
             'preferences' => ['nullable', 'string', 'max:1200'],
             'revision_instruction' => ['nullable', 'string', 'max:1200'],
             'current_plan' => ['nullable', 'array'],
+            'allow_profile_estimate' => ['sometimes', 'boolean'],
         ]);
 
         if (((int) $data['weeks'] * (int) $data['sessions_per_week']) > $maxPlanItems) {
@@ -230,10 +237,54 @@ class TrainingController extends Controller
             ], 422);
         }
 
-        try {
+        $profileReadiness = $sportProfiles->readiness($request->user(), $data['sport_type']);
+
+        $missing = collect($profileReadiness['missing'] ?? [])
+            ->pluck('label')
+            ->filter()
+            ->take(6)
+            ->implode(', ');
+        $allowProfileEstimate = (bool) ($data['allow_profile_estimate'] ?? false);
+
+        if (! $profileReadiness['ready'] && ! $allowProfileEstimate) {
             return response()->json([
-                'message' => 'KI-Vorschlag erstellt. Bitte prüfen und erst danach speichern.',
-                'plan' => $ai->generateTrainingPlan($request->user(), $data),
+                'message' => 'Für einen zuverlässigen KI-Trainingsplan fehlen noch Leistungsdaten für '.$profileReadiness['sport']['name'].'. Möchtest du sie jetzt nachtragen? Fehlend: '.$missing.'. Wenn du die Werte nicht kennst, kannst du bewusst mit vorsichtigen Schätzungen fortfahren.',
+                'missing_profile_fields' => $profileReadiness['missing'] ?? [],
+                'profile_completion_url' => route('auth.settings', ['tab' => 'sport-profile']),
+                'profile_estimate_allowed' => true,
+            ], 422);
+        }
+
+        $data['athlete_profile'] = $profileReadiness['profile'];
+        $data['profile_readiness'] = [
+            'ready' => (bool) $profileReadiness['ready'],
+            'score' => (int) ($profileReadiness['score'] ?? 0),
+            'missing' => $profileReadiness['missing'] ?? [],
+            'sport' => $profileReadiness['sport'] ?? null,
+            'group' => $profileReadiness['group'] ?? 'generic',
+        ];
+        $data['profile_estimate_mode'] = ! $profileReadiness['ready'];
+
+        try {
+            $plan = $ai->generateTrainingPlan($request->user(), $data);
+            $plan['quality_check'] = $quality->evaluate($plan, $profileReadiness, $data);
+
+            if (! $profileReadiness['ready']) {
+                $plan['warnings'] = array_values(array_unique(array_filter([
+                    ...($plan['warnings'] ?? []),
+                    'Der Plan wurde mit vorsichtigen Schätzungen erstellt, weil Leistungsdaten fehlen: '.$missing.'.',
+                ])));
+                $plan['analysis_tips'] = array_values(array_unique(array_filter([
+                    ...($plan['analysis_tips'] ?? []),
+                    'Trage die fehlenden Sportprofildaten später nach und generiere den Plan neu, wenn du präzisere Pace-, Umfangs- oder Belastungswerte möchtest.',
+                ])));
+            }
+
+            return response()->json([
+                'message' => $profileReadiness['ready']
+                    ? 'KI-Vorschlag erstellt und mit Airmius-Regeln geprüft. Bitte erst danach speichern.'
+                    : 'Konservativer KI-Vorschlag mit Schätzungen erstellt und mit Airmius-Regeln geprüft. Bitte genau prüfen, bevor du speicherst.',
+                'plan' => $plan,
             ]);
         } catch (\Throwable $exception) {
             return response()->json([
@@ -260,6 +311,7 @@ class TrainingController extends Controller
             'plan.adjustment_tips.*' => ['nullable', 'string', 'max:300'],
             'plan.warnings' => ['nullable', 'array'],
             'plan.warnings.*' => ['nullable', 'string', 'max:300'],
+            'plan.quality_check' => ['nullable', 'array'],
             'plan.provider' => ['nullable', 'string', 'max:80'],
             'plan.provider_label' => ['nullable', 'string', 'max:120'],
             'plan.model' => ['nullable', 'string', 'max:160'],
@@ -335,6 +387,7 @@ class TrainingController extends Controller
                         'analysis_tips' => array_values(array_filter($planPayload['analysis_tips'] ?? [])),
                         'adjustment_tips' => array_values(array_filter($planPayload['adjustment_tips'] ?? [])),
                         'warnings' => array_values(array_filter($planPayload['warnings'] ?? [])),
+                        'quality_check' => $planPayload['quality_check'] ?? null,
                         'generated_at' => now()->toIso8601String(),
                     ],
                 ],

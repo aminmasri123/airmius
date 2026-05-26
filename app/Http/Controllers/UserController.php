@@ -8,6 +8,7 @@ use App\Models\Friendship;
 use App\Models\Post;
 use App\Models\Sport;
 use App\Models\UserBlock;
+use App\Models\UserSport;
 use App\Models\UserBadge;
 use App\Models\UserSportSkill;
 use App\Services\GamificationService;
@@ -211,6 +212,7 @@ class UserController extends Controller
                     'status' => $profile->status,
                     'experience_level' => $profile->experience_level,
                     'sport' => $profile->sport,
+                    'performance_metrics' => $this->visiblePerformanceMetrics($profile, $viewer, $user),
                 ])->values() : [],
                 'sport_skills' => $profileVisible ? $sportSkills->map(fn (UserSportSkill $userSkill) => [
                     'id' => $userSkill->id,
@@ -344,6 +346,120 @@ class UserController extends Controller
             ->delete();
 
         return back()->with('success', 'Blockierung wurde aufgehoben.');
+    }
+
+    private function visiblePerformanceMetrics(UserSport $profile, User $viewer, User $profileUser): array
+    {
+        $metrics = $profile->performance_metrics ?? [];
+        $visibility = $profile->performance_visibility ?? [];
+        $isSelf = (int) $viewer->id === (int) $profileUser->id;
+
+        return collect($metrics)
+            ->filter(fn ($value, $key) => $value !== null && $value !== '' && ($isSelf || ($visibility[$key] ?? 'private') === 'public'))
+            ->map(fn ($value, $key) => [
+                'key' => $key,
+                'label' => $this->performanceMetricLabel((string) $key),
+                'value' => $value,
+                'visibility' => $visibility[$key] ?? 'private',
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function performanceMetricLabel(string $key): string
+    {
+        return [
+            'weekly_km' => 'Aktuelle Wochen-km',
+            'longest_run_km' => 'Längster Lauf',
+            'run_best_100m_time' => '100-m-Bestzeit',
+            'run_best_200m_time' => '200-m-Bestzeit',
+            'run_best_400m_time' => '400-m-Bestzeit',
+            'run_best_800m_time' => '800-m-Bestzeit',
+            'run_best_1500m_time' => '1500-m-Bestzeit',
+            'run_best_3000m_time' => '3000-m-Bestzeit',
+            'best_100m_time' => '100-m-Bestzeit',
+            'best_200m_time' => '200-m-Bestzeit',
+            'best_400m_time' => '400-m-Bestzeit',
+            'best_800m_time' => '800-m-Bestzeit',
+            'best_1500m_time' => '1500-m-Bestzeit',
+            'best_3000m_time' => '3000-m-Bestzeit',
+            'best_5k_time' => '5-km-Bestzeit',
+            'best_10k_time' => '10-km-Bestzeit',
+            'best_half_marathon_time' => 'Halbmarathon-Bestzeit',
+            'best_marathon_time' => 'Marathon-Bestzeit',
+            'vma_kmh' => 'VMA',
+            'training_experience_months' => 'Trainingserfahrung',
+            'weekly_sessions' => 'Einheiten pro Woche',
+            'training_goal' => 'Trainingsziel',
+            'bodyweight_kg' => 'Körpergewicht',
+            'bench_press_1rm_kg' => 'Bankdrücken 1RM',
+            'squat_1rm_kg' => 'Kniebeuge 1RM',
+            'deadlift_1rm_kg' => 'Kreuzheben 1RM',
+            'overhead_press_1rm_kg' => 'Schulterdrücken 1RM',
+            'leg_press_1rm_kg' => 'Beinpresse max.',
+            'pullups_max_reps' => 'Klimmzüge max.',
+            'dips_max_reps' => 'Dips max.',
+            'pushups_max_reps' => 'Liegestütze max.',
+            'plank_seconds' => 'Plank-Zeit',
+            'wall_sit_seconds' => 'Wall-Sit-Zeit',
+            'burpees_1min' => 'Burpees in 1 Minute',
+            'jump_rope_1min' => 'Seilspringen max./Minute',
+            'equipment' => 'Equipment',
+            'main_lifts' => 'Weitere Kraftwerte / Notizen',
+            'weak_points' => 'Schwachstellen',
+            'longest_ride_km' => 'Längste Fahrt',
+            'weekly_elevation_m' => 'Höhenmeter pro Woche',
+            'ftp_watts' => 'FTP',
+            'power_20min_watts' => '20-Minuten-Leistung',
+            'threshold_hr_bpm' => 'Schwellenpuls',
+            'max_hr_bpm' => 'Maximalpuls',
+            'avg_speed_kmh' => 'Durchschnittsgeschwindigkeit',
+            'cadence_rpm' => 'Trittfrequenz',
+            'bike_type' => 'Radtyp',
+            'terrain_preference' => 'Terrain / Strecke',
+            'pool_length_m' => 'Beckenlänge',
+            'technique_level' => 'Technikniveau',
+            'main_stroke' => 'Hauptlage',
+            'swim_best_50m_time' => '50-m-Zeit',
+            'swim_best_100m_time' => '100-m-Zeit',
+            'swim_best_200m_time' => '200-m-Zeit',
+            'swim_best_400m_time' => '400-m-Zeit',
+            'swim_best_800m_time' => '800-m-Zeit',
+            'swim_best_1500m_time' => '1500-m-Zeit',
+            'weekly_meters' => 'Wochenmeter',
+            'position' => 'Position',
+            'season_phase' => 'Saisonphase',
+            'match_day' => 'Spieltag',
+            'training_days' => 'Teamtrainingstage',
+            'matches_per_week' => 'Spiele pro Woche',
+            'match_minutes' => 'Spielminuten',
+            'preferred_foot_or_side' => 'Starke Seite',
+            'sprint_30m_time' => '30-m-Sprint',
+            'cooper_12min_m' => 'Cooper-Test',
+            'yo_yo_level' => 'Yo-Yo-Test',
+            'vertical_jump_cm' => 'Sprunghöhe',
+            'focus_needs' => 'Schwerpunkte',
+            'playing_level' => 'Spielniveau',
+            'dominant_hand' => 'Starke Hand',
+            'match_frequency' => 'Matchhäufigkeit',
+            'serve_speed_kmh' => 'Aufschlaggeschwindigkeit',
+            'technical_focus' => 'Technischer Schwerpunkt',
+            'weight_class_kg' => 'Gewichtsklasse / Körpergewicht',
+            'sparring_frequency' => 'Sparring',
+            'competition_date' => 'Wettkampf / Prüfung',
+            'weekly_hours' => 'Trainingsstunden pro Woche',
+            'longest_session_minutes' => 'Längste Einheit',
+            'primary_disciplines' => 'Disziplinen / Schwerpunkte',
+            'race_goal' => 'Ziel / Event',
+            'mobility_goal' => 'Beweglichkeitsziel',
+            'pain_areas' => 'Schmerzbereiche',
+            'current_frequency' => 'Aktueller Umfang',
+            'current_volume' => 'Aktueller Umfang',
+            'performance_reference' => 'Leistungsreferenz',
+            'injuries' => 'Verletzungen / Einschränkungen',
+            'available_days' => 'Verfügbare Trainingstage',
+            'experience' => 'Erfahrung',
+        ][$key] ?? str($key)->replace('_', ' ')->headline()->toString();
     }
 
     /**

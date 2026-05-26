@@ -1,6 +1,6 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
-import { Head, router, useForm } from '@inertiajs/vue3'
+import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { computed, reactive, ref } from 'vue'
 
 defineOptions({ layout: AppLayout })
@@ -114,6 +114,10 @@ const aiTrainingPlanMessage = ref('')
 const aiTrainingPlanGenerating = ref(false)
 const aiTrainingPlanSaving = ref(false)
 const aiPlanSourcePlan = ref(null)
+const aiProfileMissingFields = ref([])
+const aiProfileCompletionUrl = ref('')
+const aiProfileMissingMessage = ref('')
+const aiProfileEstimateAllowed = ref(false)
 
 const aiPlanSteps = [
     { label: 'Ziel', hint: 'Was soll besser werden?', icon: 'las la-bullseye' },
@@ -143,6 +147,7 @@ const aiPlanDefaults = () => ({
     constraints: '',
     preferences: '',
     revision_instruction: '',
+    allow_profile_estimate: false,
 })
 
 const aiPlanForm = reactive(aiPlanDefaults())
@@ -454,6 +459,18 @@ const aiTrainingProviderLabel = computed(() => {
     return match?.label || provider
 })
 
+const qualityStatusClass = (status) => ({
+    ok: 'border-success/30 bg-success/10 text-success',
+    warning: 'border-warning/30 bg-warning/10 text-warning',
+    danger: 'border-danger/30 bg-danger/10 text-danger',
+}[status] || 'border-border bg-inputBg text-secondary')
+
+const qualityRiskClass = (risk) => ({
+    niedrig: 'border-success/30 bg-success/10 text-success',
+    mittel: 'border-warning/30 bg-warning/10 text-warning',
+    hoch: 'border-danger/30 bg-danger/10 text-danger',
+}[risk] || 'border-border bg-inputBg text-secondary')
+
 const aiGeneratedPlans = computed(() => (props.plans || []).filter((plan) => plan.settings?.ai_generation))
 const aiGeneratedPlanInsights = computed(() => aiGeneratedPlans.value
     .flatMap((plan) => [
@@ -572,11 +589,20 @@ const resetAiTrainingPlanForm = () => {
     aiTrainingPlanError.value = ''
     aiTrainingPlanMessage.value = ''
     aiPlanSourcePlan.value = null
+    aiProfileMissingFields.value = []
+    aiProfileCompletionUrl.value = ''
+    aiProfileMissingMessage.value = ''
+    aiProfileEstimateAllowed.value = false
 }
 
 const selectAiPlanSportType = (sportKey) => {
     aiPlanForm.sport_type = sportKey
     aiPlanForm.training_type = defaultTrainingTypeForSport()
+    aiPlanForm.allow_profile_estimate = false
+    aiProfileMissingFields.value = []
+    aiProfileCompletionUrl.value = ''
+    aiProfileMissingMessage.value = ''
+    aiProfileEstimateAllowed.value = false
 }
 
 const setAiPlanDurationPreset = (weeks) => {
@@ -643,7 +669,16 @@ const continueAiTrainingPlan = () => {
     generateAiTrainingPlan(false)
 }
 
-const generateAiTrainingPlan = async (revise = false) => {
+const generateAiTrainingPlanWithProfileEstimates = () => {
+    aiPlanForm.allow_profile_estimate = true
+    aiProfileMissingFields.value = []
+    aiProfileCompletionUrl.value = ''
+    aiProfileMissingMessage.value = ''
+    aiProfileEstimateAllowed.value = false
+    generateAiTrainingPlan(false, true)
+}
+
+const generateAiTrainingPlan = async (revise = false, allowProfileEstimate = false) => {
     if (!aiTrainingPlanAvailable.value) {
         aiTrainingPlanError.value = aiTrainingPlan.value.access_reason || 'KI-Trainingspläne sind für dein aktuelles Kontingent nicht verfügbar.'
         return
@@ -674,6 +709,10 @@ const generateAiTrainingPlan = async (revise = false) => {
     aiTrainingPlanGenerating.value = true
     aiTrainingPlanError.value = ''
     aiTrainingPlanMessage.value = ''
+    aiProfileMissingFields.value = []
+    aiProfileCompletionUrl.value = ''
+    aiProfileMissingMessage.value = ''
+    aiProfileEstimateAllowed.value = false
 
     try {
         const response = await window.axios.post(route('auth.training.ai.plans.preview'), {
@@ -692,13 +731,34 @@ const generateAiTrainingPlan = async (revise = false) => {
             preferences: aiPlanForm.preferences,
             revision_instruction: revise || aiPlanSourcePlan.value ? aiPlanForm.revision_instruction : '',
             current_plan: revise || aiPlanSourcePlan.value ? (aiTrainingPlanPreview.value || compactPlanForAi(aiPlanSourcePlan.value)) : null,
+            allow_profile_estimate: Boolean(allowProfileEstimate || aiPlanForm.allow_profile_estimate),
         })
 
         aiTrainingPlanPreview.value = response.data?.plan || null
         aiTrainingPlanMessage.value = response.data?.message || 'KI-Vorschlag erstellt.'
+        aiProfileMissingFields.value = []
+        aiProfileCompletionUrl.value = ''
+        aiProfileMissingMessage.value = ''
+        aiProfileEstimateAllowed.value = false
+        aiPlanForm.allow_profile_estimate = false
         aiPlanStep.value = 2
     } catch (error) {
-        aiTrainingPlanError.value = error.response?.data?.message || 'KI-Trainingsplan konnte nicht erstellt werden.'
+        const responseData = error.response?.data || {}
+        const missingFields = responseData.missing_profile_fields || []
+
+        if (missingFields.length) {
+            aiTrainingPlanError.value = ''
+            aiTrainingPlanMessage.value = ''
+            aiProfileMissingFields.value = missingFields
+            aiProfileCompletionUrl.value = responseData.profile_completion_url || route('auth.settings', { tab: 'sport-profile' })
+            aiProfileMissingMessage.value = responseData.message || 'Für einen zuverlässigen Plan fehlen noch Sportprofil-Daten.'
+            aiProfileEstimateAllowed.value = Boolean(responseData.profile_estimate_allowed)
+            aiPlanForm.allow_profile_estimate = false
+            aiPlanStep.value = 1
+            return
+        }
+
+        aiTrainingPlanError.value = responseData.message || 'KI-Trainingsplan konnte nicht erstellt werden.'
     } finally {
         aiTrainingPlanGenerating.value = false
     }
@@ -1355,20 +1415,6 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
             </div>
 
             <aside class="hidden space-y-3 sm:block">
-                <section class="hidden rounded-2xl border border-border bg-card p-4 sm:block">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Schnellstart</p>
-                    <div class="mt-3 grid gap-2">
-                        <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary" @click="openModal('plan')">
-                            Plan erstellen
-                        </button>
-                        <button type="button" class="rounded-xl border border-air-blue/50 bg-air-blue/10 px-4 py-3 text-sm font-semibold text-air-blue hover:bg-air-blue/15 disabled:cursor-not-allowed disabled:opacity-50" :disabled="!aiTrainingPlanAvailable" @click="openAiTrainingPlanModal()">
-                            KI-Plan erstellen
-                        </button>
-                        <button type="button" class="rounded-xl border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted" @click="openLogPage">
-                            Training dokumentieren
-                        </button>
-                    </div>
-                </section>
                 <section class="rounded-2xl border border-border bg-card p-4">
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Aufmerksamkeit</p>
                     <div class="mt-3 grid grid-cols-2 gap-2">
@@ -1974,6 +2020,42 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                         {{ aiTrainingPlanError || aiTrainingPlanMessage }}
                     </div>
 
+                    <div v-if="aiProfileMissingFields.length" class="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm">
+                        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                            <div class="min-w-0">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-warning">Sportprofil ergänzen</p>
+                                <h3 class="mt-1 text-base font-semibold text-primary">Möchtest du die Daten vor dem Generieren nachtragen?</h3>
+                                <p class="mt-2 max-w-3xl text-sm text-primary">{{ aiProfileMissingMessage }}</p>
+                                <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                                    <div v-for="field in aiProfileMissingFields" :key="field.key" class="rounded-xl border border-warning/30 bg-bg/70 px-3 py-2">
+                                        <p class="text-xs font-semibold text-warning">{{ field.label }}</p>
+                                        <p v-if="field.help" class="mt-1 text-xs text-secondary">{{ field.help }}</p>
+                                    </div>
+                                </div>
+                                <p class="mt-3 text-xs text-secondary">
+                                    Wenn du die Werte nicht kennst, kann Airmius trotzdem starten, aber nur vorsichtig und allgemeiner. Präziser wird es erst mit nachgetragenen Leistungsdaten.
+                                </p>
+                            </div>
+                            <div class="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col">
+                                <Link
+                                    :href="aiProfileCompletionUrl"
+                                    class="inline-flex items-center justify-center rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary"
+                                >
+                                    Daten jetzt nachtragen
+                                </Link>
+                                <button
+                                    v-if="aiProfileEstimateAllowed"
+                                    type="button"
+                                    class="inline-flex items-center justify-center rounded-xl border border-warning/50 px-4 py-2 text-sm font-semibold text-warning hover:bg-warning/10 disabled:opacity-60"
+                                    :disabled="aiTrainingPlanGenerating"
+                                    @click="generateAiTrainingPlanWithProfileEstimates"
+                                >
+                                    Ich kenne sie nicht - vorsichtig generieren
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <section v-if="aiPlanStep === 0" class="rounded-2xl border border-border bg-card p-4">
                         <div class="flex flex-wrap items-center justify-between gap-3">
                             <div>
@@ -2111,6 +2193,53 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                             <div class="mt-4 rounded-xl border border-air-blue/25 bg-bg/50 p-3">
                                 <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Warum genau so?</p>
                                 <p class="mt-1 text-sm text-primary">{{ aiTrainingPlanPreview.convincing_explanation }}</p>
+                            </div>
+                        </div>
+
+                        <div v-if="aiTrainingPlanPreview?.quality_check" class="rounded-2xl border border-border bg-card p-4">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Airmius-Regelwerk</p>
+                                    <h4 class="mt-1 text-lg font-semibold text-primary">Technische Prüfung</h4>
+                                    <p class="mt-1 text-sm text-secondary">
+                                        Airmius prüft Umfang, Steigerung, Belastung, Regeneration und sportartspezifische Risiken.
+                                    </p>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="rounded-full border px-3 py-1 text-xs font-semibold" :class="qualityRiskClass(aiTrainingPlanPreview.quality_check.risk)">
+                                        Risiko: {{ aiTrainingPlanPreview.quality_check.risk }}
+                                    </span>
+                                    <span class="rounded-full border border-air-blue/40 bg-air-blue/10 px-3 py-1 text-xs font-semibold text-air-blue">
+                                        {{ aiTrainingPlanPreview.quality_check.score }} / 100
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 grid gap-2 md:grid-cols-2">
+                                <div
+                                    v-for="check in aiTrainingPlanPreview.quality_check.checks || []"
+                                    :key="check.key"
+                                    class="rounded-xl border px-3 py-2"
+                                    :class="qualityStatusClass(check.status)"
+                                >
+                                    <p class="text-sm font-semibold">{{ check.label }}</p>
+                                    <p class="mt-1 text-xs opacity-90">{{ check.message }}</p>
+                                </div>
+                            </div>
+
+                            <div v-if="(aiTrainingPlanPreview.quality_check.warnings || []).length || (aiTrainingPlanPreview.quality_check.suggestions || []).length" class="mt-4 grid gap-3 lg:grid-cols-2">
+                                <section v-if="(aiTrainingPlanPreview.quality_check.warnings || []).length" class="rounded-xl border border-warning/30 bg-warning/10 p-3">
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-warning">Warnungen</p>
+                                    <ul class="mt-2 space-y-1 text-xs text-primary">
+                                        <li v-for="warning in aiTrainingPlanPreview.quality_check.warnings" :key="warning">- {{ warning }}</li>
+                                    </ul>
+                                </section>
+                                <section v-if="(aiTrainingPlanPreview.quality_check.suggestions || []).length" class="rounded-xl border border-success/30 bg-success/10 p-3">
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-success">Verbesserungen</p>
+                                    <ul class="mt-2 space-y-1 text-xs text-primary">
+                                        <li v-for="suggestion in aiTrainingPlanPreview.quality_check.suggestions" :key="suggestion">- {{ suggestion }}</li>
+                                    </ul>
+                                </section>
                             </div>
                         </div>
 

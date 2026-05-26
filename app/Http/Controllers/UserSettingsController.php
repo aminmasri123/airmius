@@ -8,17 +8,19 @@ use App\Models\Payment;
 use App\Models\Setting;
 use App\Models\Sport;
 use App\Models\SubscriptionInvoice;
+use App\Services\Training\AthleteSportProfileService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Validation\Rule;
 
 class UserSettingsController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request)
+    public function index(Request $request, AthleteSportProfileService $sportProfiles)
     {
         return Inertia::render('Auth/Dashboard/Settings/Index', [
             'profileAddress' => $request->user()->only([
@@ -46,6 +48,7 @@ class UserSettingsController extends Controller
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'name', 'slug', 'category']),
+            'sportProfiles' => $sportProfiles->settingsPayload($request->user()),
             'billingHistory' => [
                 'airmius_bank' => [
                     'bank_account_holder' => Setting::valueFor('billing_bank_account_holder', 'Airmius'),
@@ -211,6 +214,31 @@ class UserSettingsController extends Controller
             ]);
 
             return back()->with('success', 'Einstellungen wurden gespeichert.');
+    }
+
+    public function updateSportProfile(Request $request, Sport $sport, AthleteSportProfileService $sportProfiles)
+    {
+        $data = $request->validate([
+            'status' => ['required', Rule::in(['active', 'wants_to_learn', 'coach', 'interested'])],
+            'experience_level' => ['required', Rule::in(['beginner', 'intermediate', 'advanced', 'expert', 'elite'])],
+            'visibility' => ['required', Rule::in(['private', 'trainer', 'public'])],
+            'metrics' => ['nullable', 'array'],
+            'metric_visibility' => ['nullable', 'array'],
+        ]);
+
+        $sportProfiles->updateProfile($request->user(), $sport, $data);
+
+        return back();
+    }
+
+    public function destroySportProfile(Request $request, Sport $sport)
+    {
+        $request->user()
+            ->sportProfiles()
+            ->where('sport_id', $sport->id)
+            ->delete();
+
+        return back();
     }
 
     public function cancelOpenPayment(Request $request, SubscriptionInvoice $subscriptionInvoice)

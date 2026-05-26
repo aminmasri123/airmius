@@ -1,10 +1,11 @@
 <script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useTheme } from '@/services/useTheme'
 import LanguageDropdown from '@/Components/LanguageDropdown.vue'
 import DeleteConfirmModal from '@/Components/Auth/DeleteConfirmModal.vue'
+import { useI18n } from 'vue-i18n'
 
 // Jetstream Components
 import DeleteUserForm from '@/Pages/Profile/Partials/DeleteUserForm.vue'
@@ -15,6 +16,7 @@ import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue'
 import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfileInformationForm.vue'
 
 defineOptions({ layout: AppLayout })
+const { t, te } = useI18n()
 
 // Props
 const props = defineProps({
@@ -31,6 +33,10 @@ const props = defineProps({
         default: () => ({ radius_km: null, sport_ids: [], filters: {} }),
     },
     sports: {
+        type: Array,
+        default: () => [],
+    },
+    sportProfiles: {
         type: Array,
         default: () => [],
     },
@@ -66,7 +72,36 @@ const props = defineProps({
 })
 
 // Tabs
-const activeTab = ref('profile')
+const settingsTabs = [
+    'profile',
+    'address',
+    'billing',
+    'roles',
+    'activities',
+    'integrations',
+    'design',
+    'language',
+    'privacy',
+    'sport-profile',
+    'security',
+]
+const initialTab = new URLSearchParams(window.location.search).get('tab')
+const activeTab = ref(settingsTabs.includes(initialTab) ? initialTab : 'profile')
+const setActiveTab = (tab) => {
+    if (!settingsTabs.includes(tab)) return
+
+    activeTab.value = tab
+
+    const url = new URL(window.location.href)
+
+    if (tab === 'profile') {
+        url.searchParams.delete('tab')
+    } else {
+        url.searchParams.set('tab', tab)
+    }
+
+    window.history.replaceState({}, '', url)
+}
 const openPaymentModal = ref({
     show: false,
     action: null,
@@ -106,6 +141,28 @@ const bankTransferModal = ref({
     show: false,
     type: null,
     invoice: null,
+})
+const sportProfileNotice = ref(null)
+const savingSportProfileId = ref(null)
+const selectedSportProfileId = ref('')
+const sportProfileSearch = ref('')
+const sportProfilePickerOpen = ref(false)
+const selectedSportProfileIds = ref(props.sportProfiles.filter((profile) => profile.has_profile).map((profile) => Number(profile.sport.id)))
+const activeSportProfileId = ref(selectedSportProfileIds.value[0] || '')
+const sportProfileRemoveModal = ref({
+    show: false,
+    profile: null,
+})
+const sportProfileForms = reactive({})
+
+props.sportProfiles.forEach((profile) => {
+    sportProfileForms[profile.sport.id] = {
+        status: profile.status || 'active',
+        experience_level: profile.experience_level || 'beginner',
+        visibility: profile.visibility || 'private',
+        metrics: Object.fromEntries((profile.fields || []).map((field) => [field.key, profile.metrics?.[field.key] ?? ''])),
+        metric_visibility: Object.fromEntries((profile.fields || []).map((field) => [field.key, profile.metric_visibility?.[field.key] || field.default_visibility || 'private'])),
+    }
 })
 
 const tabClass = (tab) =>
@@ -188,6 +245,395 @@ const toggleDefaultSport = (sportId) => {
     form.event_default_sport_ids = selected.includes(id)
         ? selected.filter((value) => value !== id)
         : [...selected, id]
+}
+
+const i18nText = (key, fallback, params = {}) => (te(key) ? t(key, params) : fallback)
+const sportProfileText = (key, fallback, params = {}) => i18nText(`settings.sport_profile.${key}`, fallback, params)
+const sportStatusLabel = (value) => sportProfileText(`statuses.${value}`, value)
+const sportExperienceLabel = (value) => sportProfileText(`levels.${value}`, value)
+const metricVisibilityLabel = (value) => sportProfileText(`visibility.${value}`, value)
+const sportProfileGroupLabel = (value) => sportProfileText(`groups.${value}`, value)
+const sportMetricLabel = (field) => sportProfileText(`fields.${field.key}`, field.label)
+const sportMetricPlaceholder = (field) => sportProfileText(`placeholders.${field.key}`, field.help || '')
+const trainingDayOptions = [
+    { key: 'monday', short: 'Mo', long: 'Montag' },
+    { key: 'tuesday', short: 'Di', long: 'Dienstag' },
+    { key: 'wednesday', short: 'Mi', long: 'Mittwoch' },
+    { key: 'thursday', short: 'Do', long: 'Donnerstag' },
+    { key: 'friday', short: 'Fr', long: 'Freitag' },
+    { key: 'saturday', short: 'Sa', long: 'Samstag' },
+    { key: 'sunday', short: 'So', long: 'Sonntag' },
+]
+const trainingDayAliases = {
+    monday: ['monday', 'mon', 'mo', 'montag', 'lundi', 'lun', 'الاثنين'],
+    tuesday: ['tuesday', 'tue', 'di', 'dienstag', 'mardi', 'mar', 'الثلاثاء'],
+    wednesday: ['wednesday', 'wed', 'mi', 'mittwoch', 'mercredi', 'mer', 'الأربعاء', 'الاربعاء'],
+    thursday: ['thursday', 'thu', 'do', 'donnerstag', 'jeudi', 'jeu', 'الخميس'],
+    friday: ['friday', 'fri', 'fr', 'freitag', 'vendredi', 'ven', 'الجمعة'],
+    saturday: ['saturday', 'sat', 'sa', 'samstag', 'samedi', 'sam', 'السبت'],
+    sunday: ['sunday', 'sun', 'so', 'sonntag', 'dimanche', 'dim', 'الأحد', 'الاحد'],
+}
+const weekendAliases = ['weekend', 'weekends', 'wochenende', 'week-end', 'عطلة', 'نهاية']
+
+const todayDate = new Date().toISOString().slice(0, 10)
+const isExperienceDateField = (field) => field.type === 'date' || field.key === 'experience'
+const isTrainingDaysField = (field) => ['available_days', 'training_days'].includes(field.key)
+const runningBestTimeKeys = [
+    'run_best_100m_time',
+    'run_best_200m_time',
+    'run_best_400m_time',
+    'run_best_800m_time',
+    'run_best_1500m_time',
+    'run_best_3000m_time',
+    'best_5k_time',
+    'best_10k_time',
+    'best_half_marathon_time',
+    'best_marathon_time',
+]
+const strengthPerformanceKeys = [
+    'bodyweight_kg',
+    'bench_press_1rm_kg',
+    'squat_1rm_kg',
+    'deadlift_1rm_kg',
+    'overhead_press_1rm_kg',
+    'leg_press_1rm_kg',
+    'pullups_max_reps',
+    'dips_max_reps',
+    'pushups_max_reps',
+    'plank_seconds',
+    'wall_sit_seconds',
+    'burpees_1min',
+    'jump_rope_1min',
+]
+const cyclingPerformanceKeys = [
+    'weekly_elevation_m',
+    'ftp_watts',
+    'power_20min_watts',
+    'threshold_hr_bpm',
+    'max_hr_bpm',
+    'avg_speed_kmh',
+    'cadence_rpm',
+]
+const swimmingBestTimeKeys = [
+    'swim_best_50m_time',
+    'swim_best_100m_time',
+    'swim_best_200m_time',
+    'swim_best_400m_time',
+    'swim_best_800m_time',
+    'swim_best_1500m_time',
+]
+const teamPerformanceKeys = [
+    'matches_per_week',
+    'match_minutes',
+    'sprint_30m_time',
+    'cooper_12min_m',
+    'yo_yo_level',
+    'vertical_jump_cm',
+]
+const performanceSectionConfigs = {
+    running: {
+        keys: runningBestTimeKeys,
+        titleKey: 'running_best_times_title',
+        title: 'Bestzeiten',
+        hintKey: 'running_best_times_hint',
+        hint: 'Optional: Trage nur die Distanzen ein, die du wirklich kennst. Das hilft der KI bei Pace, Intervallen und Regeneration.',
+        classes: 'border-air-blue/30 bg-air-blue/5',
+    },
+    strength: {
+        keys: strengthPerformanceKeys,
+        titleKey: 'strength_performance_title',
+        title: 'Kraftwerte & Fitness-Tests',
+        hintKey: 'strength_performance_hint',
+        hint: 'Optional: Trage geschätzte oder getestete Werte ein. Das hilft der KI bei Übungsauswahl, Intensität, Progression und Regeneration.',
+        classes: 'border-success/30 bg-success/5',
+    },
+    cycling: {
+        keys: cyclingPerformanceKeys,
+        titleKey: 'cycling_performance_title',
+        title: 'Radsport-Leistungswerte',
+        hintKey: 'cycling_performance_hint',
+        hint: 'Optional: Leistung, Puls, Höhenmeter und Trittfrequenz machen Radpläne deutlich genauer.',
+        classes: 'border-info/30 bg-info/5',
+    },
+    swimming: {
+        keys: swimmingBestTimeKeys,
+        titleKey: 'swimming_best_times_title',
+        title: 'Schwimmzeiten',
+        hintKey: 'swimming_best_times_hint',
+        hint: 'Optional: Zeiten über mehrere Distanzen helfen bei Intervallen, Techniktempo und Ausdauerbereichen.',
+        classes: 'border-air-blue/30 bg-air-blue/5',
+    },
+    team: {
+        keys: teamPerformanceKeys,
+        titleKey: 'team_performance_title',
+        title: 'Spiel- & Athletikwerte',
+        hintKey: 'team_performance_hint',
+        hint: 'Optional: Spielbelastung, Sprint, Ausdauer und Sprungkraft helfen bei Belastungssteuerung und Athletik.',
+        classes: 'border-warning/30 bg-warning/5',
+    },
+}
+const isRunningBestTimeField = (field) => runningBestTimeKeys.includes(field.key)
+const isStrengthPerformanceField = (field) => strengthPerformanceKeys.includes(field.key)
+const groupedPerformanceKeys = Object.values(performanceSectionConfigs).flatMap((config) => config.keys)
+const isGroupedPerformanceField = (field) => groupedPerformanceKeys.includes(field.key)
+const runningBestTimeFields = (profile) => profile.group === 'running'
+    ? (profile.fields || []).filter(isRunningBestTimeField)
+    : []
+const strengthPerformanceFields = (profile) => profile.group === 'strength'
+    ? (profile.fields || []).filter(isStrengthPerformanceField)
+    : []
+const performanceSectionsForSportProfile = (profile) => {
+    const config = performanceSectionConfigs[profile.group]
+
+    if (!config) return []
+
+    const fields = (profile.fields || []).filter((field) => config.keys.includes(field.key))
+
+    if (!fields.length) return []
+
+    return [{
+        ...config,
+        key: profile.group,
+        fields,
+    }]
+}
+const sportProfileRegularFields = (profile) => (profile.fields || []).filter((field) => !isGroupedPerformanceField(field))
+const sportMetricInputType = (field) => {
+    if (isExperienceDateField(field)) return 'date'
+
+    return field.type === 'number' ? 'number' : 'text'
+}
+const trainingDayLabel = (key, type = 'short') => {
+    const option = trainingDayOptions.find((day) => day.key === key)
+
+    return sportProfileText(`days.${key}.${type}`, option?.[type] || key)
+}
+const normalizedTrainingDayTokens = (value) => String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .split(/[\s,;|/+]+/)
+    .filter(Boolean)
+const selectedTrainingDays = (form, field) => {
+    const tokens = normalizedTrainingDayTokens(form.metrics[field.key])
+    const selected = new Set()
+
+    if (tokens.some((token) => weekendAliases.includes(token))) {
+        selected.add('saturday')
+        selected.add('sunday')
+    }
+
+    trainingDayOptions.forEach((day) => {
+        if ((trainingDayAliases[day.key] || []).some((alias) => tokens.includes(alias))) {
+            selected.add(day.key)
+        }
+    })
+
+    return trainingDayOptions
+        .map((day) => day.key)
+        .filter((key) => selected.has(key))
+}
+const isTrainingDaySelected = (form, field, key) => selectedTrainingDays(form, field).includes(key)
+const toggleTrainingDay = (form, field, key) => {
+    const selected = new Set(selectedTrainingDays(form, field))
+
+    if (selected.has(key)) {
+        selected.delete(key)
+    } else {
+        selected.add(key)
+    }
+
+    form.metrics[field.key] = trainingDayOptions
+        .map((day) => day.key)
+        .filter((dayKey) => selected.has(dayKey))
+        .join(',')
+}
+const sportExperienceDuration = (dateValue) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateValue || ''))) return ''
+
+    const start = new Date(`${dateValue}T00:00:00`)
+    const today = new Date()
+
+    if (Number.isNaN(start.getTime())) return ''
+    if (start > today) return sportProfileText('duration.future', 'Startdatum liegt in der Zukunft')
+
+    let years = today.getFullYear() - start.getFullYear()
+    let months = today.getMonth() - start.getMonth()
+
+    if (today.getDate() < start.getDate()) {
+        months -= 1
+    }
+
+    if (months < 0) {
+        years -= 1
+        months += 12
+    }
+
+    const parts = []
+
+    if (years > 0) {
+        parts.push(`${years} ${years === 1 ? sportProfileText('duration.year', 'Jahr') : sportProfileText('duration.years', 'Jahre')}`)
+    }
+
+    if (months > 0) {
+        parts.push(`${months} ${months === 1 ? sportProfileText('duration.month', 'Monat') : sportProfileText('duration.months', 'Monate')}`)
+    }
+
+    const durationValue = parts.length
+        ? parts.join(` ${sportProfileText('duration.and', 'und')} `)
+        : sportProfileText('duration.less_than_month', 'weniger als 1 Monat')
+
+    return sportProfileText('duration.experience', '{value} Erfahrung', { value: durationValue })
+}
+
+const selectedSportProfiles = computed(() => props.sportProfiles.filter((profile) => selectedSportProfileIds.value.includes(Number(profile.sport.id))))
+const availableSportProfiles = computed(() => props.sportProfiles.filter((profile) => !selectedSportProfileIds.value.includes(Number(profile.sport.id))))
+watch(selectedSportProfileIds, (ids) => {
+    const selected = ids.map(Number)
+
+    if (!selected.length) {
+        activeSportProfileId.value = ''
+        return
+    }
+
+    if (!selected.includes(Number(activeSportProfileId.value))) {
+        activeSportProfileId.value = selected[0]
+    }
+}, { immediate: true })
+const filteredAvailableSportProfiles = computed(() => {
+    const query = sportProfileSearch.value.trim().toLowerCase()
+
+    if (!query) return availableSportProfiles.value
+
+    return availableSportProfiles.value.filter((profile) => [
+        profile.sport.name,
+        profile.sport.slug,
+        profile.sport.category,
+        profile.group,
+    ].filter(Boolean).some((value) => String(value).toLowerCase().includes(query)))
+})
+const selectedSportProfile = computed(() => props.sportProfiles.find((profile) => Number(profile.sport.id) === Number(selectedSportProfileId.value)) || null)
+
+const chooseSportProfile = (profile) => {
+    selectedSportProfileId.value = profile.sport.id
+    sportProfileSearch.value = profile.sport.name
+    sportProfilePickerOpen.value = false
+}
+
+const clearSportProfileChoice = () => {
+    selectedSportProfileId.value = ''
+    sportProfileSearch.value = ''
+    sportProfilePickerOpen.value = true
+}
+
+const addSelectedSportProfile = () => {
+    const sportId = Number(selectedSportProfileId.value)
+    const profile = props.sportProfiles.find((item) => Number(item.sport.id) === sportId)
+
+    if (!profile || selectedSportProfileIds.value.includes(sportId)) return
+
+    const previousSelectedIds = [...selectedSportProfileIds.value]
+
+    selectedSportProfileIds.value = [...selectedSportProfileIds.value, sportId]
+    activeSportProfileId.value = sportId
+    selectedSportProfileId.value = ''
+    sportProfileSearch.value = ''
+    sportProfilePickerOpen.value = false
+    sportProfileNotice.value = null
+    savingSportProfileId.value = sportId
+
+    router.put(route('auth.settings.sport-profiles.update', sportId), sportProfileForms[sportId], {
+        preserveScroll: true,
+        onSuccess: () => {
+            sportProfileNotice.value = {
+                type: 'success',
+                message: sportProfileText('notices.added', '{sport} wurde hinzugefügt und dauerhaft gespeichert.', { sport: profile.sport.name }),
+            }
+        },
+        onError: () => {
+            selectedSportProfileIds.value = previousSelectedIds
+            activeSportProfileId.value = previousSelectedIds[0] || ''
+            sportProfileNotice.value = {
+                type: 'error',
+                message: sportProfileText('notices.add_failed', '{sport} konnte nicht hinzugefügt werden.', { sport: profile.sport.name }),
+            }
+        },
+        onFinish: () => {
+            savingSportProfileId.value = null
+        },
+    })
+}
+
+const saveSportProfile = (profile) => {
+    const sportId = profile.sport.id
+
+    sportProfileNotice.value = null
+    savingSportProfileId.value = sportId
+
+    router.put(route('auth.settings.sport-profiles.update', sportId), sportProfileForms[sportId], {
+        preserveScroll: true,
+        onSuccess: () => {
+            sportProfileNotice.value = {
+                type: 'success',
+                message: sportProfileText('notices.saved', '{sport}: Leistungsdaten gespeichert.', { sport: profile.sport.name }),
+            }
+        },
+        onError: () => {
+            sportProfileNotice.value = {
+                type: 'error',
+                message: sportProfileText('notices.save_failed', '{sport}: Bitte prüfe die Eingaben.', { sport: profile.sport.name }),
+            }
+        },
+        onFinish: () => {
+            savingSportProfileId.value = null
+        },
+    })
+}
+
+const openSportProfileRemoveModal = (profile) => {
+    sportProfileRemoveModal.value = {
+        show: true,
+        profile,
+    }
+}
+
+const closeSportProfileRemoveModal = () => {
+    sportProfileRemoveModal.value = {
+        show: false,
+        profile: null,
+    }
+}
+
+const confirmSportProfileRemove = () => {
+    const profile = sportProfileRemoveModal.value.profile
+    if (!profile) return
+
+    const sportId = Number(profile.sport.id)
+    savingSportProfileId.value = sportId
+
+    router.delete(route('auth.settings.sport-profiles.destroy', sportId), {
+        preserveScroll: true,
+        onSuccess: () => {
+            selectedSportProfileIds.value = selectedSportProfileIds.value.filter((id) => id !== sportId)
+            if (Number(activeSportProfileId.value) === sportId) {
+                activeSportProfileId.value = selectedSportProfileIds.value[0] || ''
+            }
+            sportProfileNotice.value = {
+                type: 'success',
+                message: sportProfileText('notices.removed', '{sport} wurde aus deinem Sportprofil entfernt.', { sport: profile.sport.name }),
+            }
+            closeSportProfileRemoveModal()
+        },
+        onError: () => {
+            sportProfileNotice.value = {
+                type: 'error',
+                message: sportProfileText('notices.remove_failed', '{sport} konnte nicht entfernt werden.', { sport: profile.sport.name }),
+            }
+        },
+        onFinish: () => {
+            savingSportProfileId.value = null
+        },
+    })
 }
 
 const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
@@ -627,21 +1073,355 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
 
         <!-- TABS -->
         <div class="surface-card p-3 flex flex-wrap gap-2">
-            <button @click="activeTab = 'profile'" :class="tabClass('profile')">Profil</button>
-            <button @click="activeTab = 'address'" :class="tabClass('address')">Adresse</button>
-            <button @click="activeTab = 'billing'" :class="tabClass('billing')">Zahlungen</button>
-            <button @click="activeTab = 'roles'" :class="tabClass('roles')">Rollen</button>
-            <button @click="activeTab = 'activities'" :class="tabClass('activities')">Aktivitäten</button>
-            <button @click="activeTab = 'integrations'" :class="tabClass('integrations')">Verknüpfungen</button>
-            <button @click="activeTab = 'design'" :class="tabClass('design')">Design</button>
-            <button @click="activeTab = 'language'" :class="tabClass('language')">Sprache</button>
-            <button @click="activeTab = 'privacy'" :class="tabClass('privacy')">Privatsphäre</button>
-            <button @click="activeTab = 'security'" :class="tabClass('security')">Sicherheit</button>
+            <button @click="setActiveTab('profile')" :class="tabClass('profile')">Profil</button>
+            <button @click="setActiveTab('address')" :class="tabClass('address')">Adresse</button>
+            <button @click="setActiveTab('billing')" :class="tabClass('billing')">Zahlungen</button>
+            <button @click="setActiveTab('roles')" :class="tabClass('roles')">Rollen</button>
+            <button @click="setActiveTab('activities')" :class="tabClass('activities')">Aktivitäten</button>
+            <button @click="setActiveTab('integrations')" :class="tabClass('integrations')">Verknüpfungen</button>
+            <button @click="setActiveTab('design')" :class="tabClass('design')">Design</button>
+            <button @click="setActiveTab('language')" :class="tabClass('language')">Sprache</button>
+            <button @click="setActiveTab('privacy')" :class="tabClass('privacy')">Privatsphäre</button>
+            <button @click="setActiveTab('sport-profile')" :class="tabClass('sport-profile')">{{ sportProfileText('tab', 'Sportprofil') }}</button>
+            <button @click="setActiveTab('security')" :class="tabClass('security')">Sicherheit</button>
         </div>
 
         <!-- PROFIL -->
         <div v-if="activeTab === 'profile'" class="surface-card p-5 space-y-6">
             <UpdateProfileInformationForm :user="$page.props.auth.user" />
+        </div>
+
+        <!-- SPORTPROFIL -->
+        <div v-if="activeTab === 'sport-profile'" class="space-y-5">
+            <section class="surface-card p-5">
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ sportProfileText('eyebrow', 'KI-Trainingspläne') }}</p>
+                        <h2 class="mt-1 text-xl font-semibold text-primary">{{ sportProfileText('title', 'Sportprofil & Leistungsdaten') }}</h2>
+                        <p class="mt-2 max-w-3xl text-sm text-secondary">
+                            {{ sportProfileText('subtitle', 'Diese Daten machen KI-Pläne persönlicher und sicherer. Airmius nutzt sie für Pace, Umfang, Regeneration, Verletzungsrisiko und realistische Steigerung.') }}
+                        </p>
+                    </div>
+                    <span class="rounded-full border border-border px-3 py-1 text-xs font-semibold text-secondary">
+                        {{ sportProfileText('default_private', 'Standard: privat') }}
+                    </span>
+                </div>
+
+                <div
+                    v-if="sportProfileNotice"
+                    class="mt-4 rounded-lg border px-4 py-3 text-sm font-semibold"
+                    :class="sportProfileNotice.type === 'success'
+                        ? 'border-success/30 bg-success/10 text-success'
+                        : 'border-error/30 bg-error/10 text-error'"
+                >
+                    {{ sportProfileNotice.message }}
+                </div>
+
+                <div class="mt-5 rounded-2xl border border-border bg-bg p-4">
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
+                        <label class="block flex-1 text-sm font-semibold text-primary">
+                            {{ sportProfileText('add_sport', 'Sportart hinzufügen') }}
+                            <div class="relative mt-2">
+                                <div class="flex min-h-11 items-center gap-2 rounded-xl border border-border bg-inputBg px-3 focus-within:border-air-blue">
+                                    <i class="las la-search text-lg text-secondary"></i>
+                                    <input
+                                        id="sport-profile-search"
+                                        v-model="sportProfileSearch"
+                                        type="search"
+                                        class="min-w-0 flex-1 border-0 bg-transparent py-2 text-sm font-semibold text-primary outline-none placeholder:text-secondary"
+                                        :placeholder="availableSportProfiles.length ? sportProfileText('search_or_select', 'Sportart suchen oder auswählen') : sportProfileText('all_selected', 'Alle ausgewählten Sportarten sind bereits hinzugefügt')"
+                                        :disabled="!availableSportProfiles.length"
+                                        autocomplete="off"
+                                        @focus="sportProfilePickerOpen = true"
+                                        @input="selectedSportProfileId = ''; sportProfilePickerOpen = true"
+                                        @keydown.escape="sportProfilePickerOpen = false"
+                                    />
+                                    <button
+                                        v-if="selectedSportProfile"
+                                        type="button"
+                                        class="rounded-full border border-border px-2 py-1 text-xs font-semibold text-secondary hover:bg-muted"
+                                        @click="clearSportProfileChoice"
+                                    >
+                                        {{ sportProfileText('change', 'Ändern') }}
+                                    </button>
+                                </div>
+
+                                <div
+                                    v-if="sportProfilePickerOpen && availableSportProfiles.length"
+                                    class="absolute z-30 mt-2 max-h-72 w-full overflow-y-auto rounded-xl border border-border bg-card p-2 shadow-2xl"
+                                >
+                                    <button
+                                        v-for="profile in filteredAvailableSportProfiles"
+                                        :key="profile.sport.id"
+                                        type="button"
+                                        class="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-muted"
+                                        @click="chooseSportProfile(profile)"
+                                    >
+                                        <span>
+                                            <span class="block font-semibold text-primary">{{ profile.sport.name }}</span>
+                                            <span class="text-xs text-secondary">{{ profile.group }}{{ profile.sport.category ? ` · ${profile.sport.category}` : '' }}</span>
+                                        </span>
+                                        <i class="las la-plus text-lg text-air-blue"></i>
+                                    </button>
+                                    <p v-if="!filteredAvailableSportProfiles.length" class="px-3 py-4 text-sm text-secondary">
+                                        {{ sportProfileText('no_sport_found', 'Keine Sportart gefunden.') }}
+                                    </p>
+                                </div>
+                            </div>
+                            <select v-model="selectedSportProfileId" class="hidden" :disabled="!availableSportProfiles.length">
+                                <option value="">{{ availableSportProfiles.length ? sportProfileText('select_sport', 'Sportart auswählen') : sportProfileText('all_selected', 'Alle ausgewählten Sportarten sind bereits hinzugefügt') }}</option>
+                                <option v-for="profile in availableSportProfiles" :key="profile.sport.id" :value="profile.sport.id">
+                                    {{ profile.sport.name }}
+                                </option>
+                            </select>
+                        </label>
+                        <button
+                            type="button"
+                            class="rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50"
+                            :disabled="!selectedSportProfileId || savingSportProfileId"
+                            @click="addSelectedSportProfile"
+                        >
+                            {{ sportProfileText('add', 'Hinzufügen') }}
+                        </button>
+                    </div>
+                    <p class="mt-2 text-xs text-secondary">
+                        {{ sportProfileText('add_hint', 'Es werden nur Sportarten angezeigt, die du hier auswählst und wirklich betreibst.') }}
+                    </p>
+                </div>
+            </section>
+
+            <div v-if="selectedSportProfiles.length" class="space-y-4">
+                <div class="surface-card p-3">
+                    <div class="flex gap-2 overflow-x-auto pb-1">
+                        <button
+                            v-for="profile in selectedSportProfiles"
+                            :key="profile.sport.id"
+                            type="button"
+                            class="min-w-[220px] rounded-xl border p-3 text-left transition"
+                            :class="Number(activeSportProfileId) === Number(profile.sport.id)
+                                ? 'border-air-blue bg-air-blue/15 text-primary'
+                                : 'border-border bg-bg text-secondary hover:border-air-blue/60 hover:text-primary'"
+                            @click="activeSportProfileId = Number(profile.sport.id)"
+                        >
+                            <span class="block text-xs font-semibold uppercase tracking-wide">
+                                {{ sportProfileGroupLabel(profile.group) }}
+                            </span>
+                            <span class="mt-1 flex items-center justify-between gap-3">
+                                <span class="truncate text-sm font-semibold">{{ profile.sport.name }}</span>
+                                <span
+                                    class="shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold"
+                                    :class="profile.readiness.ready ? 'border-success/30 bg-success/10 text-success' : 'border-warning/30 bg-warning/10 text-warning'"
+                                >
+                                    {{ profile.readiness.score }}%
+                                </span>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <article
+                    v-for="profile in selectedSportProfiles"
+                    :key="profile.sport.id"
+                    v-show="Number(activeSportProfileId) === Number(profile.sport.id)"
+                    class="surface-card overflow-hidden"
+                >
+                    <div class="border-b border-border p-5">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ sportProfileGroupLabel(profile.group) }}</p>
+                                <h3 class="mt-1 text-lg font-semibold text-primary">{{ profile.sport.name }}</h3>
+                                <p class="mt-1 text-sm text-secondary">
+                                    {{ profile.readiness.ready ? sportProfileText('ready', 'Bereit für KI-Trainingspläne.') : sportProfileText('not_ready', 'Noch nicht vollständig für zuverlässige KI-Pläne.') }}
+                                </p>
+                            </div>
+                            <span
+                                class="inline-flex items-center justify-center rounded-full border px-3 py-1 text-xs font-semibold"
+                                :class="profile.readiness.ready ? 'border-success/30 bg-success/10 text-success' : 'border-warning/30 bg-warning/10 text-warning'"
+                            >
+                                {{ profile.readiness.score }}%
+                            </span>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="mt-4 rounded-xl border border-error/30 px-3 py-2 text-xs font-semibold text-error hover:bg-error/10"
+                            :disabled="savingSportProfileId === profile.sport.id"
+                            @click="openSportProfileRemoveModal(profile)"
+                        >
+                            {{ sportProfileText('remove_sport', 'Sportart entfernen') }}
+                        </button>
+
+                        <div v-if="profile.readiness.missing?.length" class="mt-4 rounded-xl border border-warning/30 bg-warning/10 p-3">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-warning">{{ sportProfileText('missing_title', 'Fehlt noch') }}</p>
+                            <div class="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-warning">
+                                <span v-for="field in profile.readiness.missing" :key="field.key" class="rounded-full bg-bg px-2.5 py-1">
+                                    {{ sportMetricLabel(field) }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form
+                        v-if="sportProfileForms[profile.sport.id]"
+                        class="space-y-4 p-5"
+                        @submit.prevent="saveSportProfile(profile)"
+                    >
+                        <div class="grid gap-3 md:grid-cols-3">
+                            <label class="block text-sm font-semibold text-primary">{{ sportProfileText('status_label', 'Status') }}
+                                <select v-model="sportProfileForms[profile.sport.id].status" class="input mt-2">
+                                    <option value="active">{{ sportStatusLabel('active') }}</option>
+                                    <option value="wants_to_learn">{{ sportStatusLabel('wants_to_learn') }}</option>
+                                    <option value="coach">{{ sportStatusLabel('coach') }}</option>
+                                    <option value="interested">{{ sportStatusLabel('interested') }}</option>
+                                </select>
+                            </label>
+                            <label class="block text-sm font-semibold text-primary">{{ sportProfileText('level_label', 'Niveau') }}
+                                <select v-model="sportProfileForms[profile.sport.id].experience_level" class="input mt-2">
+                                    <option value="beginner">{{ sportExperienceLabel('beginner') }}</option>
+                                    <option value="intermediate">{{ sportExperienceLabel('intermediate') }}</option>
+                                    <option value="advanced">{{ sportExperienceLabel('advanced') }}</option>
+                                    <option value="expert">{{ sportExperienceLabel('expert') }}</option>
+                                    <option value="elite">{{ sportExperienceLabel('elite') }}</option>
+                                </select>
+                            </label>
+                            <label class="block text-sm font-semibold text-primary">{{ sportProfileText('profile_visibility_label', 'Profil-Sichtbarkeit') }}
+                                <select v-model="sportProfileForms[profile.sport.id].visibility" class="input mt-2">
+                                    <option value="private">{{ metricVisibilityLabel('private') }}</option>
+                                    <option value="trainer">{{ metricVisibilityLabel('trainer') }}</option>
+                                    <option value="public">{{ metricVisibilityLabel('public') }}</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <div class="grid gap-3">
+                            <section
+                                v-for="section in performanceSectionsForSportProfile(profile)"
+                                :key="section.key"
+                                class="rounded-xl border p-3"
+                                :class="section.classes"
+                            >
+                                <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                                    <div>
+                                        <p class="text-sm font-semibold text-primary">
+                                            {{ sportProfileText(section.titleKey, section.title) }}
+                                        </p>
+                                        <p class="text-xs text-secondary">
+                                            {{ sportProfileText(section.hintKey, section.hint) }}
+                                        </p>
+                                    </div>
+                                    <span class="rounded-full border border-border px-2.5 py-1 text-xs font-semibold text-secondary">
+                                        {{ sportProfileText('optional', 'Optional') }}
+                                    </span>
+                                </div>
+
+                                <div class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                    <div
+                                        v-for="field in section.fields"
+                                        :key="field.key"
+                                        class="rounded-xl border border-border bg-bg p-3"
+                                    >
+                                        <label class="block text-xs font-semibold uppercase tracking-wide text-secondary">
+                                            {{ sportMetricLabel(field) }}
+                                            <span v-if="field.unit" class="normal-case text-secondary">({{ field.unit }})</span>
+                                            <input
+                                                v-model="sportProfileForms[profile.sport.id].metrics[field.key]"
+                                                :type="sportMetricInputType(field)"
+                                                :step="field.type === 'number' ? '0.01' : undefined"
+                                                :min="field.type === 'number' ? 0 : undefined"
+                                                class="input mt-2 text-sm normal-case tracking-normal"
+                                                :placeholder="sportMetricPlaceholder(field)"
+                                            />
+                                        </label>
+                                        <label class="mt-2 block text-xs font-semibold uppercase tracking-wide text-secondary">
+                                            {{ sportProfileText('visible_label', 'Sichtbar') }}
+                                            <select v-model="sportProfileForms[profile.sport.id].metric_visibility[field.key]" class="input mt-1 text-sm normal-case tracking-normal">
+                                                <option value="private">{{ metricVisibilityLabel('private') }}</option>
+                                                <option value="trainer">{{ metricVisibilityLabel('trainer') }}</option>
+                                                <option value="public">{{ metricVisibilityLabel('public') }}</option>
+                                            </select>
+                                        </label>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <div
+                                v-for="field in sportProfileRegularFields(profile)"
+                                :key="field.key"
+                                class="rounded-xl border border-border bg-bg p-3"
+                            >
+                                <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                                    <label class="block flex-1 text-sm font-semibold text-primary">
+                                        {{ sportMetricLabel(field) }}
+                                        <span v-if="field.required" class="text-error">*</span>
+                                        <span v-if="field.unit" class="text-secondary">({{ field.unit }})</span>
+                                        <div
+                                            v-if="isTrainingDaysField(field)"
+                                            class="mt-3 flex flex-wrap gap-2"
+                                        >
+                                            <button
+                                                v-for="day in trainingDayOptions"
+                                                :key="day.key"
+                                                type="button"
+                                                class="min-w-12 rounded-xl border px-3 py-2 text-sm font-semibold transition"
+                                                :class="isTrainingDaySelected(sportProfileForms[profile.sport.id], field, day.key)
+                                                    ? 'border-air-blue bg-air-blue/20 text-air-blue'
+                                                    : 'border-border bg-inputBg text-secondary hover:border-air-blue/60 hover:text-primary'"
+                                                :aria-pressed="isTrainingDaySelected(sportProfileForms[profile.sport.id], field, day.key)"
+                                                :title="trainingDayLabel(day.key, 'long')"
+                                                @click="toggleTrainingDay(sportProfileForms[profile.sport.id], field, day.key)"
+                                            >
+                                                {{ trainingDayLabel(day.key, 'short') }}
+                                            </button>
+                                        </div>
+                                        <textarea
+                                            v-else-if="field.type === 'textarea'"
+                                            v-model="sportProfileForms[profile.sport.id].metrics[field.key]"
+                                            rows="2"
+                                            class="input mt-2"
+                                            :placeholder="sportMetricPlaceholder(field)"
+                                        />
+                                        <input
+                                            v-else
+                                            v-model="sportProfileForms[profile.sport.id].metrics[field.key]"
+                                            :type="sportMetricInputType(field)"
+                                            :step="field.type === 'number' && !isExperienceDateField(field) ? '0.01' : undefined"
+                                            :max="isExperienceDateField(field) ? todayDate : undefined"
+                                            class="input mt-2"
+                                            :placeholder="sportMetricPlaceholder(field)"
+                                        />
+                                        <span
+                                            v-if="isExperienceDateField(field) && sportExperienceDuration(sportProfileForms[profile.sport.id].metrics[field.key])"
+                                            class="mt-2 block text-xs font-semibold text-air-blue"
+                                        >
+                                            {{ sportExperienceDuration(sportProfileForms[profile.sport.id].metrics[field.key]) }}
+                                        </span>
+                                    </label>
+                                    <label class="block w-full text-xs font-semibold uppercase tracking-wide text-secondary md:w-40">
+                                        {{ sportProfileText('visible_label', 'Sichtbar') }}
+                                        <select v-model="sportProfileForms[profile.sport.id].metric_visibility[field.key]" class="input mt-2 text-sm normal-case tracking-normal">
+                                            <option value="private">{{ metricVisibilityLabel('private') }}</option>
+                                            <option value="trainer">{{ metricVisibilityLabel('trainer') }}</option>
+                                            <option value="public">{{ metricVisibilityLabel('public') }}</option>
+                                        </select>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            type="submit"
+                            class="w-full rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60"
+                            :disabled="savingSportProfileId === profile.sport.id"
+                        >
+                            {{ savingSportProfileId === profile.sport.id ? sportProfileText('saving', 'Speichert...') : sportProfileText('save_profile', 'Sportprofil speichern') }}
+                        </button>
+                    </form>
+                </article>
+            </div>
+
+            <div v-else class="surface-card p-6 text-sm text-secondary">
+                {{ sportProfileText('empty_selected', 'Noch keine Sportart ausgewählt. Füge oben zuerst die Sportart hinzu, die du wirklich trainierst.') }}
+            </div>
         </div>
 
         <!-- ROLLEN -->
@@ -1514,6 +2294,16 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                 </div>
             </section>
         </div>
+
+        <DeleteConfirmModal
+            :show="sportProfileRemoveModal.show"
+            :title="sportProfileText('remove_sport', 'Sportart entfernen')"
+            :message="sportProfileText('remove_message', 'Möchtest du {sport} aus deinem Sportprofil entfernen? Die hinterlegten Leistungsdaten werden gelöscht.', { sport: sportProfileRemoveModal.profile?.sport?.name || sportProfileText('this_sport', 'diese Sportart') })"
+            :confirm-text="sportProfileText('remove_confirm', 'entfernen')"
+            :cancel-text="sportProfileText('back', 'Zurück')"
+            @confirm="confirmSportProfileRemove"
+            @cancel="closeSportProfileRemoveModal"
+        />
 
         <DeleteConfirmModal
             :show="openPaymentModal.show"

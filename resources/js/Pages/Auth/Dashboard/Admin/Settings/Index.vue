@@ -16,6 +16,9 @@ const page = usePage()
 const maintenance = computed(() => props.settings.maintenance || {})
 const billing = computed(() => props.settings.billing || {})
 const emailTemplates = computed(() => props.settings.email_templates || [])
+const aiTokenStatus = computed(() => props.settings.ai_token_status || {})
+const aiProviderTokens = computed(() => aiTokenStatus.value.providers || [])
+const aiTokenAlerts = computed(() => aiTokenStatus.value.alerts || [])
 const activeEmailKey = ref(emailTemplates.value[0]?.key || null)
 const activeEmailTemplate = computed(() => emailTemplates.value.find((template) => template.key === activeEmailKey.value) || emailTemplates.value[0])
 
@@ -44,6 +47,28 @@ const billingBrandBadge = computed(() => {
 
     return `${parts[0].slice(0, 1)}${parts[1].slice(0, 1)}`.toUpperCase()
 })
+
+const tokenSeverityClass = (severity) => ({
+    success: 'border-success/30 bg-success/10 text-success',
+    warning: 'border-warning/35 bg-warning/10 text-warning',
+    danger: 'border-error/35 bg-error/10 text-error',
+    neutral: 'border-border bg-muted text-secondary',
+}[severity] || 'border-border bg-card text-secondary')
+
+const tokenDotClass = (severity) => ({
+    success: 'bg-success',
+    warning: 'bg-warning',
+    danger: 'bg-error',
+    neutral: 'bg-secondary',
+}[severity] || 'bg-secondary')
+
+const tokenExpiryLabel = (token) => {
+    if (!token.has_api_key) return 'Kein API-Key gesetzt'
+    if (!token.has_model) return 'Kein Modell gesetzt'
+    if (!token.expires_at_human) return 'Kein Ablaufdatum im Key erkennbar'
+
+    return token.expires_at_human
+}
 
 const form = useForm({
     maintenance_enabled: Boolean(maintenance.value.enabled),
@@ -93,8 +118,88 @@ const save = () => {
                 </p>
             </div>
 
+            <div v-if="aiTokenAlerts.length" class="border-b border-border bg-bg px-5 py-4">
+                <div
+                    v-for="alert in aiTokenAlerts"
+                    :key="alert.key"
+                    class="rounded-lg border p-4"
+                    :class="tokenSeverityClass(alert.severity)"
+                >
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide">KI-Anbieter Warnung</p>
+                            <h2 class="mt-1 text-base font-semibold">{{ alert.label }}: {{ alert.status_label }}</h2>
+                            <p class="mt-1 text-sm">{{ alert.message }}</p>
+                        </div>
+                        <span class="rounded-full border border-current/30 px-3 py-1 text-xs font-semibold">
+                            Ablauf: {{ tokenExpiryLabel(alert) }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid gap-0 lg:grid-cols-[1fr_22rem]">
                 <form class="space-y-5 p-5" @submit.prevent="save">
+                    <div class="rounded-lg border border-border bg-bg p-4">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <h2 class="text-lg font-semibold text-primary">KI-Token & Anbieter</h2>
+                                <p class="mt-1 text-sm text-secondary">
+                                    Kontrolliere Ablaufdatum und Konfiguration deiner KI-Anbieter. Tokens werden aus Sicherheitsgründen nie angezeigt.
+                                </p>
+                            </div>
+                            <span class="rounded-full bg-air-blue/15 px-3 py-1 text-xs font-semibold text-air-blue">
+                                {{ aiProviderTokens.length }} Anbieter
+                            </span>
+                        </div>
+
+                        <div class="mt-4 grid gap-3 md:grid-cols-2">
+                            <div
+                                v-for="token in aiProviderTokens"
+                                :key="token.key"
+                                class="rounded-lg border border-border bg-card p-4"
+                            >
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p class="text-sm font-semibold text-primary">{{ token.label }}</p>
+                                        <p class="mt-1 text-xs text-secondary">{{ token.model || 'Kein Modell gesetzt' }}</p>
+                                    </div>
+                                    <span class="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold" :class="tokenSeverityClass(token.severity)">
+                                        <span class="h-2 w-2 rounded-full" :class="tokenDotClass(token.severity)"></span>
+                                        {{ token.status_label }}
+                                    </span>
+                                </div>
+
+                                <dl class="mt-4 space-y-2 text-sm">
+                                    <div class="flex justify-between gap-3">
+                                        <dt class="text-secondary">API-Key</dt>
+                                        <dd class="font-semibold" :class="token.has_api_key ? 'text-success' : 'text-error'">
+                                            {{ token.has_api_key ? 'gesetzt' : 'fehlt' }}
+                                        </dd>
+                                    </div>
+                                    <div class="flex justify-between gap-3">
+                                        <dt class="text-secondary">Ablaufdatum</dt>
+                                        <dd class="text-right font-semibold text-primary">{{ tokenExpiryLabel(token) }}</dd>
+                                    </div>
+                                    <div v-if="token.days_remaining !== null" class="flex justify-between gap-3">
+                                        <dt class="text-secondary">Restzeit</dt>
+                                        <dd class="font-semibold text-primary">
+                                            {{ token.days_remaining > 0 ? `${token.days_remaining} Tage` : 'abgelaufen' }}
+                                        </dd>
+                                    </div>
+                                </dl>
+
+                                <p class="mt-3 rounded-lg border px-3 py-2 text-xs leading-5" :class="tokenSeverityClass(token.severity)">
+                                    {{ token.message }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <p class="mt-3 text-xs text-secondary">
+                            Airmius prüft die Tokens stündlich per Scheduler und sendet Admin-Benachrichtigungen, wenn ein Anbieter abläuft oder nicht korrekt konfiguriert ist.
+                        </p>
+                    </div>
+
                     <div class="rounded-lg border border-border bg-bg p-4">
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                             <div>

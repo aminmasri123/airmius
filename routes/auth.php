@@ -110,6 +110,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     //SETTINGS
     Route::get('/settings', [UserSettingsController::class, 'index'])->name('auth.settings');
     Route::put('/settings', [UserSettingsController::class, 'update'])->name('auth.settings.update');
+    Route::put('/settings/sport-profiles/{sport}', [UserSettingsController::class, 'updateSportProfile'])->name('auth.settings.sport-profiles.update');
+    Route::delete('/settings/sport-profiles/{sport}', [UserSettingsController::class, 'destroySportProfile'])->name('auth.settings.sport-profiles.destroy');
     Route::post('/settings/subscription-invoices/{subscriptionInvoice}/cancel-open-payment', [UserSettingsController::class, 'cancelOpenPayment'])->name('auth.settings.subscription-invoices.cancel-open-payment');
     Route::delete('/settings/subscription-invoices/{subscriptionInvoice}/open-payment', [UserSettingsController::class, 'destroyOpenPayment'])->name('auth.settings.subscription-invoices.destroy-open-payment');
     Route::get('/badges', [UserBadgeController::class, 'index'])->name('auth.badges.index');

@@ -121,11 +121,11 @@ class AirmiusAiService
                     'needs_user_confirmation' => true,
                 ];
             } catch (Throwable $exception) {
-                $lastError = $exception;
+                $lastError = $this->friendlyProviderException($provider, $exception, 'das Bild nicht analysieren');
                 $this->recordUsage($user, $provider, [
                     'usage' => [],
                     'model' => config("airmius_ai.providers.{$provider}.model"),
-                ], $preparedImage, 'error', ['error' => Str::limit($exception->getMessage(), 120, '')]);
+                ], $preparedImage, 'error', ['error' => Str::limit($lastError->getMessage(), 120, '')]);
             }
         }
 
@@ -156,6 +156,8 @@ class AirmiusAiService
             throw new RuntimeException("Dein aktuelles KI-Kontingent erlaubt Trainingspläne bis {$entitlement['max_weeks']} Wochen. Für längere Pläne brauchst du die nächste Stufe.");
         }
 
+        $this->extendExecutionTime($this->trainingPlanTimeout() + 20);
+
         $providers = array_values(array_unique(array_filter([
             $feature['primary_provider'] ?? config('airmius_ai.primary_provider', 'ionos'),
             $feature['fallback_provider'] ?? config('airmius_ai.fallback_provider', 'openai'),
@@ -185,11 +187,11 @@ class AirmiusAiService
                     'needs_user_confirmation' => true,
                 ];
             } catch (Throwable $exception) {
-                $lastError = $exception;
+                $lastError = $this->friendlyProviderException($provider, $exception, 'den Trainingsplan nicht erstellen');
                 $this->recordTextUsage($user, $provider, [
                     'usage' => [],
                     'model' => config("airmius_ai.providers.{$provider}.model"),
-                ], 'training_plan_generation', 'error', ['error' => Str::limit($exception->getMessage(), 120, '')]);
+                ], 'training_plan_generation', 'error', ['error' => Str::limit($lastError->getMessage(), 120, '')]);
             }
         }
 
@@ -204,6 +206,7 @@ class AirmiusAiService
             ."/v1beta/models/{$model}:generateContent";
 
         $response = Http::timeout((int) config('airmius_ai.timeout', 20))
+            ->connectTimeout($this->aiConnectTimeout())
             ->acceptJson()
             ->post($url.'?key='.$provider['api_key'], [
                 'contents' => [[
@@ -246,6 +249,7 @@ class AirmiusAiService
         $url = rtrim((string) ($provider['base_url'] ?? 'https://api.openai.com/v1'), '/').'/responses';
 
         $response = Http::timeout((int) config('airmius_ai.timeout', 20))
+            ->connectTimeout($this->aiConnectTimeout())
             ->withToken((string) ($provider['api_key'] ?? ''))
             ->acceptJson()
             ->post($url, [
@@ -282,8 +286,10 @@ class AirmiusAiService
         $provider = config("airmius_ai.providers.{$providerKey}");
         $model = $provider['model'] ?? null;
         $url = rtrim((string) ($provider['base_url'] ?? ''), '/').'/chat/completions';
+        $this->ensureProviderTokenIsUsable($providerKey, (string) ($provider['api_key'] ?? ''));
 
         $response = Http::timeout((int) config('airmius_ai.timeout', 20))
+            ->connectTimeout($this->aiConnectTimeout())
             ->withToken((string) ($provider['api_key'] ?? ''))
             ->acceptJson()
             ->post($url, [
@@ -303,7 +309,7 @@ class AirmiusAiService
             ]);
 
         if ($response->failed()) {
-            throw new RuntimeException(config("airmius_ai.providers.{$providerKey}.label", $providerKey).' konnte das Bild nicht analysieren.');
+            throw new RuntimeException($this->providerFailureMessage($providerKey, 'das Bild nicht analysieren', $response));
         }
 
         $payload = $response->json();
@@ -326,7 +332,8 @@ class AirmiusAiService
         $url = rtrim((string) ($provider['base_url'] ?? 'https://generativelanguage.googleapis.com'), '/')
             ."/v1beta/models/{$model}:generateContent";
 
-        $response = Http::timeout((int) config('airmius_ai.timeout', 20))
+        $response = Http::timeout($this->trainingPlanTimeout())
+            ->connectTimeout($this->aiConnectTimeout())
             ->acceptJson()
             ->post($url.'?key='.$provider['api_key'], [
                 'contents' => [[
@@ -365,7 +372,8 @@ class AirmiusAiService
         $model = $provider['model'] ?? 'gpt-5.4-mini';
         $url = rtrim((string) ($provider['base_url'] ?? 'https://api.openai.com/v1'), '/').'/responses';
 
-        $response = Http::timeout((int) config('airmius_ai.timeout', 20))
+        $response = Http::timeout($this->trainingPlanTimeout())
+            ->connectTimeout($this->aiConnectTimeout())
             ->withToken((string) ($provider['api_key'] ?? ''))
             ->acceptJson()
             ->post($url, [
@@ -401,8 +409,10 @@ class AirmiusAiService
         $provider = config("airmius_ai.providers.{$providerKey}");
         $model = $provider['model'] ?? null;
         $url = rtrim((string) ($provider['base_url'] ?? ''), '/').'/chat/completions';
+        $this->ensureProviderTokenIsUsable($providerKey, (string) ($provider['api_key'] ?? ''));
 
-        $response = Http::timeout((int) config('airmius_ai.timeout', 20))
+        $response = Http::timeout($this->trainingPlanTimeout())
+            ->connectTimeout($this->aiConnectTimeout())
             ->withToken((string) ($provider['api_key'] ?? ''))
             ->acceptJson()
             ->post($url, [
@@ -417,7 +427,7 @@ class AirmiusAiService
             ]);
 
         if ($response->failed()) {
-            throw new RuntimeException(config("airmius_ai.providers.{$providerKey}.label", $providerKey).' konnte den Trainingsplan nicht erstellen.');
+            throw new RuntimeException($this->providerFailureMessage($providerKey, 'den Trainingsplan nicht erstellen', $response));
         }
 
         $payload = $response->json();
@@ -481,6 +491,9 @@ PROMPT;
             'equipment' => $context['equipment'] ?? '',
             'constraints' => $context['constraints'] ?? '',
             'preferences' => $context['preferences'] ?? '',
+            'athlete_profile' => $context['athlete_profile'] ?? null,
+            'profile_readiness' => $context['profile_readiness'] ?? null,
+            'profile_estimate_mode' => (bool) ($context['profile_estimate_mode'] ?? false),
             'current_plan' => $context['current_plan'] ?? null,
             'revision_instruction' => $context['revision_instruction'] ?? '',
             'requested_items' => $requestedItems,
@@ -498,6 +511,10 @@ Unterscheide sauber: sport_type ist die echte Sportart (z. B. laufen, gym, schwi
 Wenn die Nutzerdaten training_type "balanced" oder leer enthalten, kombiniere die sinnvollen Schwerpunkte automatisch ausgewogen. Bei Laufen z. B. Grundlage, Tempo/Intervalle, Technik/Stabilität und Regeneration; bei Gym z. B. Kraft, Hypertrophie, Mobility und Entlastung.
 Bei Gym: keine Distanzfelder erzwingen; nutze Sätze, Wiederholungen, Gewicht kg als "anpassen", Pause und Tempo.
 Bei Intervallen/Laufen/Rad/Schwimmen: Distanz, Wiederholungen, Pace/Tempo, Pausen und Intensität sinnvoll eintragen.
+Pace-Regel für Laufen: Erfinde keine exakten min/km-Werte, wenn keine echte Referenz wie aktuelle 5-km-Zeit, 10-km-Zeit, VMA, Schwellentempo oder bekannte Zielpace in den Nutzerdaten steht. Nutze dann verständliche relative Angaben wie "locker im Sprechtempo", "5-km-Gefühl", "RPE 7-8", "Zone 2" oder "kontrolliert zügig". Verwechsle niemals km/h mit min/km: Werte wie 16-17 min/km sind für harte Laufintervalle unbrauchbar.
+Wenn eine echte numerische Lauf-Pace vorhanden ist, gib in metrics zusätzlich "km/h" an. Beispiel: {"Pace": "5:00 min/km", "km/h": "12,0 km/h"}. Bei relativen Pace-Angaben keine km/h erfinden.
+Nutze athlete_profile als harte Grundlage. Wenn dort Leistungsdaten, Verletzungen, verfügbare Tage oder Equipment stehen, muss der Plan darauf Rücksicht nehmen und darf keine stärkeren Annahmen treffen.
+Wenn profile_estimate_mode true ist oder profile_readiness.ready false ist: erstelle nur einen konservativen, allgemeineren Plan. Keine aggressiven Umfangssprünge, keine exakten Pace-/Gewichtsziele ohne echte Referenz, keine Hochrisiko-Einheiten. Nenne in convincing_explanation und warnings klar, dass fehlende Daten geschätzt wurden und dass der Nutzer sein Sportprofil nachtragen sollte. Nutze relative Intensitäten wie locker, mittel, RPE, Zone oder Technikfokus statt erfundener Zahlen.
 Antworte ausschließlich als JSON. Maximal {$maxItems} Einheiten.
 
 Nutzerdaten:
@@ -586,23 +603,29 @@ PROMPT;
             ->filter(fn ($item) => is_array($item) && trim((string) ($item['title'] ?? '')) !== '')
             ->take($maxItems)
             ->values()
-            ->map(fn (array $item, int $index) => [
-                'week' => max(1, min(104, (int) ($item['week'] ?? floor($index / max(1, (int) ($settings['weekly_sessions'] ?? $context['sessions_per_week'] ?? 3))) + 1))),
-                'day' => Str::limit(trim((string) ($item['day'] ?? '')), 24, ''),
-                'title' => Str::limit(trim((string) ($item['title'] ?? 'Trainingseinheit')), 160, ''),
-                'sport_type' => Str::limit(trim((string) ($item['sport_type'] ?? $context['sport_type'] ?? 'laufen')), 80, ''),
-                'training_type' => Str::limit(trim((string) ($item['training_type'] ?? $context['training_type'] ?? 'generic')), 80, ''),
-                'focus' => Str::limit(trim((string) ($item['focus'] ?? '')), 160, ''),
-                'description' => Str::limit(trim((string) ($item['description'] ?? $item['rationale'] ?? '')), 3000, ''),
-                'duration_minutes' => $this->boundedInt($item['duration_minutes'] ?? null, 0, 14400),
-                'distance_km' => $this->boundedFloat($item['distance_km'] ?? null, 0, 10000),
-                'calories' => $this->boundedInt($item['calories'] ?? null, 0, 200000),
-                'intensity' => $this->enumValue((string) ($item['intensity'] ?? 'mittel'), ['locker', 'mittel', 'hart', 'recovery'], 'mittel'),
-                'load' => $this->enumValue((string) ($item['load'] ?? 'medium'), ['low', 'medium', 'high', 'test'], 'medium'),
-                'todos' => $this->normalizeStringList($item['todos'] ?? []),
-                'metrics' => $this->normalizeMetrics($item['metrics'] ?? []),
-                'rationale' => Str::limit(trim((string) ($item['rationale'] ?? '')), 500, ''),
-            ])
+            ->map(function (array $item, int $index) use ($settings, $context) {
+                $sportType = Str::limit(trim((string) ($item['sport_type'] ?? $context['sport_type'] ?? 'laufen')), 80, '');
+                $trainingType = Str::limit(trim((string) ($item['training_type'] ?? $context['training_type'] ?? 'generic')), 80, '');
+                $intensity = $this->enumValue((string) ($item['intensity'] ?? 'mittel'), ['locker', 'mittel', 'hart', 'recovery'], 'mittel');
+
+                return [
+                    'week' => max(1, min(104, (int) ($item['week'] ?? floor($index / max(1, (int) ($settings['weekly_sessions'] ?? $context['sessions_per_week'] ?? 3))) + 1))),
+                    'day' => Str::limit(trim((string) ($item['day'] ?? '')), 24, ''),
+                    'title' => Str::limit(trim((string) ($item['title'] ?? 'Trainingseinheit')), 160, ''),
+                    'sport_type' => $sportType,
+                    'training_type' => $trainingType,
+                    'focus' => Str::limit(trim((string) ($item['focus'] ?? '')), 160, ''),
+                    'description' => $this->sanitizeRunningPaceText(Str::limit(trim((string) ($item['description'] ?? $item['rationale'] ?? '')), 3000, ''), $sportType, $trainingType, $intensity),
+                    'duration_minutes' => $this->boundedInt($item['duration_minutes'] ?? null, 0, 14400),
+                    'distance_km' => $this->boundedFloat($item['distance_km'] ?? null, 0, 10000),
+                    'calories' => $this->boundedInt($item['calories'] ?? null, 0, 200000),
+                    'intensity' => $intensity,
+                    'load' => $this->enumValue((string) ($item['load'] ?? 'medium'), ['low', 'medium', 'high', 'test'], 'medium'),
+                    'todos' => $this->normalizeStringList($item['todos'] ?? []),
+                    'metrics' => $this->normalizeMetrics($item['metrics'] ?? [], $sportType, $trainingType, $intensity),
+                    'rationale' => $this->sanitizeRunningPaceText(Str::limit(trim((string) ($item['rationale'] ?? '')), 500, ''), $sportType, $trainingType, $intensity),
+                ];
+            })
             ->all();
 
         if ($items === []) {
@@ -650,7 +673,26 @@ PROMPT;
 
     private function trainingPlanOutputTokens(): int
     {
-        return max(3200, min(12000, (int) config('airmius_ai.features.training_plan_generation.output_tokens', 9000)));
+        return max(3200, min(12000, (int) config('airmius_ai.features.training_plan_generation.output_tokens', 7000)));
+    }
+
+    private function trainingPlanTimeout(): int
+    {
+        return max(30, min(180, (int) config('airmius_ai.features.training_plan_generation.timeout', 90)));
+    }
+
+    private function aiConnectTimeout(): int
+    {
+        return max(3, min(30, (int) config('airmius_ai.connect_timeout', 10)));
+    }
+
+    private function extendExecutionTime(int $seconds): void
+    {
+        if (! function_exists('set_time_limit')) {
+            return;
+        }
+
+        @set_time_limit(max(30, $seconds));
     }
 
     private function trainingPlanEntitlement(User $user): array
@@ -776,19 +818,227 @@ PROMPT;
             ->count();
     }
 
-    private function normalizeMetrics(mixed $value): array
+    private function normalizeMetrics(mixed $value, ?string $sportType = null, ?string $trainingType = null, ?string $intensity = null): array
     {
         if (! is_array($value)) {
             return [];
         }
 
-        return collect($value)
-            ->mapWithKeys(fn ($metricValue, $key) => [
-                Str::limit(trim((string) $key), 60, '') => Str::limit(is_array($metricValue) ? implode(', ', $metricValue) : trim((string) $metricValue), 140, ''),
-            ])
+        $metrics = collect($value)
+            ->mapWithKeys(function ($metricValue, $key) use ($sportType, $trainingType, $intensity) {
+                $metricKey = Str::limit(trim((string) $key), 60, '');
+                $metricText = is_array($metricValue) ? implode(', ', $metricValue) : trim((string) $metricValue);
+
+                return [
+                    $metricKey => Str::limit($this->sanitizeRunningPaceText($metricText, $sportType, $trainingType, $intensity), 140, ''),
+                ];
+            })
             ->filter(fn ($metricValue, $key) => $key !== '' && $metricValue !== '')
             ->take(10)
             ->all();
+
+        return $this->appendRunningSpeedMetric($metrics, $sportType);
+    }
+
+    private function appendRunningSpeedMetric(array $metrics, ?string $sportType): array
+    {
+        if (! $this->isRunningSport($sportType) || $metrics === []) {
+            return $metrics;
+        }
+
+        foreach ($metrics as $key => $metricValue) {
+            $keyText = Str::lower((string) $key);
+            $valueText = Str::lower((string) $metricValue);
+
+            if (
+                str_contains($keyText, 'km/h')
+                || str_contains($keyText, 'geschwindigkeit')
+                || str_contains($keyText, 'speed')
+                || str_contains($valueText, 'km/h')
+            ) {
+                return $metrics;
+            }
+        }
+
+        foreach ($metrics as $key => $metricValue) {
+            $keyText = Str::lower((string) $key);
+            $metricText = trim((string) $metricValue);
+
+            if (
+                ! str_contains($keyText, 'pace')
+                && ! str_contains($keyText, 'tempo')
+                && preg_match('/min\s*\/\s*km/i', $metricText) !== 1
+            ) {
+                continue;
+            }
+
+            $speedLabel = $this->runningSpeedLabelFromPace($metricText);
+
+            if ($speedLabel === null) {
+                continue;
+            }
+
+            if (count($metrics) >= 10) {
+                $metrics = array_slice($metrics, 0, 9, true);
+            }
+
+            $metrics['km/h'] = $speedLabel;
+
+            break;
+        }
+
+        return $metrics;
+    }
+
+    private function runningSpeedLabelFromPace(string $text): ?string
+    {
+        $text = trim($text);
+        $hasUnit = preg_match('/min\s*\/\s*km/i', $text) === 1;
+        $isUnitlessClockPace = preg_match('/^\s*\d{1,2}:\d{2}\s*(?:(?:-|–|bis)\s*\d{1,2}:\d{2})?\s*$/i', $text) === 1;
+
+        if (! $hasUnit && ! $isUnitlessClockPace) {
+            return null;
+        }
+
+        if (preg_match('/\b(\d{1,2}(?::\d{2}|[,.]\d+)?)\s*(?:-|–|bis)\s*(\d{1,2}(?::\d{2}|[,.]\d+)?)\s*(?:min\s*\/\s*km)?\b/i', $text, $matches) === 1) {
+            $first = $this->parsePaceMinutes($matches[1] ?? '');
+            $second = $this->parsePaceMinutes($matches[2] ?? '');
+
+            if (! $this->isPlausibleRunningPaceMinutes($first) || ! $this->isPlausibleRunningPaceMinutes($second)) {
+                return null;
+            }
+
+            return $this->formatKmhRange(60 / $first, 60 / $second);
+        }
+
+        if (preg_match('/\b(\d{1,2}(?::\d{2}|[,.]\d+)?)\s*(?:min\s*\/\s*km)?\b/i', $text, $matches) === 1) {
+            $minutes = $this->parsePaceMinutes($matches[1] ?? '');
+
+            if (! $this->isPlausibleRunningPaceMinutes($minutes)) {
+                return null;
+            }
+
+            return $this->formatKmh(60 / $minutes);
+        }
+
+        return null;
+    }
+
+    private function parsePaceMinutes(string $value): ?float
+    {
+        $value = trim(str_replace(',', '.', $value));
+
+        if (preg_match('/^(\d{1,2}):(\d{2})$/', $value, $matches) === 1) {
+            $seconds = (int) $matches[2];
+
+            if ($seconds >= 60) {
+                return null;
+            }
+
+            return (float) $matches[1] + ($seconds / 60);
+        }
+
+        return is_numeric($value) ? (float) $value : null;
+    }
+
+    private function isPlausibleRunningPaceMinutes(?float $minutes): bool
+    {
+        return $minutes !== null && $minutes >= 2.0 && $minutes < 11.0;
+    }
+
+    private function formatKmhRange(float $firstSpeed, float $secondSpeed): string
+    {
+        $speeds = [$firstSpeed, $secondSpeed];
+        sort($speeds);
+
+        $first = round($speeds[0], 1);
+        $second = round($speeds[1], 1);
+
+        if (abs($first - $second) < 0.1) {
+            return $this->formatKmh($first);
+        }
+
+        return number_format($first, 1, ',', '').'-'.number_format($second, 1, ',', '').' km/h';
+    }
+
+    private function formatKmh(float $speed): string
+    {
+        return number_format(round($speed, 1), 1, ',', '').' km/h';
+    }
+
+    private function sanitizeRunningPaceText(string $text, ?string $sportType, ?string $trainingType, ?string $intensity): string
+    {
+        if ($text === '' || ! $this->isRunningSport($sportType)) {
+            return $text;
+        }
+
+        $text = preg_replace_callback(
+            '/\b5\s*km-?Zielpace\s*\(([^)]*min\s*\/\s*km[^)]*)\)/i',
+            fn (array $matches) => $this->containsImplausibleRunningPace($matches[1])
+                ? $this->relativeRunningPaceLabel($trainingType, $intensity)
+                : $matches[0],
+            $text,
+        ) ?? $text;
+
+        return preg_replace_callback(
+            '/\b(\d{1,2}(?::\d{2}|[,.]\d+)?)\s*(?:-|–|bis)\s*(\d{1,2}(?::\d{2}|[,.]\d+)?)\s*min\s*\/\s*km\b|\b(\d{1,2}(?::\d{2}|[,.]\d+)?)\s*min\s*\/\s*km\b/i',
+            function (array $matches) use ($trainingType, $intensity) {
+                $firstRaw = ($matches[1] ?? '') !== '' ? $matches[1] : ($matches[3] ?? '');
+                $secondRaw = ($matches[2] ?? '') !== '' ? $matches[2] : $firstRaw;
+                $first = $this->parsePaceMinutes($firstRaw);
+                $second = $this->parsePaceMinutes($secondRaw);
+
+                if ($this->isPlausibleRunningPaceMinutes($first) && $this->isPlausibleRunningPaceMinutes($second)) {
+                    return $matches[0];
+                }
+
+                return $this->relativeRunningPaceLabel($trainingType, $intensity);
+            },
+            $text,
+        ) ?? $text;
+    }
+
+    private function containsImplausibleRunningPace(string $text): bool
+    {
+        preg_match_all(
+            '/\b(\d{1,2}(?::\d{2}|[,.]\d+)?)\s*(?:-|–|bis)\s*(\d{1,2}(?::\d{2}|[,.]\d+)?)\s*min\s*\/\s*km\b|\b(\d{1,2}(?::\d{2}|[,.]\d+)?)\s*min\s*\/\s*km\b/i',
+            $text,
+            $matches,
+            PREG_SET_ORDER,
+        );
+
+        foreach ($matches as $match) {
+            $firstRaw = ($match[1] ?? '') !== '' ? $match[1] : ($match[3] ?? '');
+            $secondRaw = ($match[2] ?? '') !== '' ? $match[2] : $firstRaw;
+            $first = $this->parsePaceMinutes($firstRaw);
+            $second = $this->parsePaceMinutes($secondRaw);
+
+            if (! $this->isPlausibleRunningPaceMinutes($first) || ! $this->isPlausibleRunningPaceMinutes($second)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function relativeRunningPaceLabel(?string $trainingType, ?string $intensity): string
+    {
+        if (in_array($trainingType, ['run_interval'], true) || $intensity === 'hart') {
+            return '5-km-Gefühl (RPE 7-8)';
+        }
+
+        if (in_array($trainingType, ['tempo_run'], true) || $intensity === 'mittel') {
+            return 'kontrolliert zügig (RPE 6-7)';
+        }
+
+        return 'locker im Sprechtempo';
+    }
+
+    private function isRunningSport(?string $sportType): bool
+    {
+        $value = Str::lower(trim((string) $sportType));
+
+        return in_array($value, ['laufen', 'running', 'run', 'joggen', 'jogging'], true);
     }
 
     private function boundedInt(mixed $value, int $min, int $max): ?int
@@ -868,6 +1118,110 @@ PROMPT;
     {
         return filled(config("airmius_ai.providers.{$provider}.api_key"))
             && filled(config("airmius_ai.providers.{$provider}.model"));
+    }
+
+    private function ensureProviderTokenIsUsable(string $providerKey, string $apiKey): void
+    {
+        $expiresAt = $this->jwtExpiresAt($apiKey);
+
+        if ($providerKey === 'ionos' && $expiresAt !== null && $expiresAt <= time()) {
+            throw new RuntimeException('IONOS AI API-Key ist abgelaufen. Bitte erstelle im IONOS AI Model Hub einen neuen API-Key und aktualisiere IONOS_AI_API_KEY.');
+        }
+    }
+
+    private function jwtExpiresAt(string $token): ?int
+    {
+        $parts = explode('.', $token);
+
+        if (count($parts) < 2) {
+            return null;
+        }
+
+        $payload = strtr($parts[1], '-_', '+/');
+        $payload .= str_repeat('=', (4 - strlen($payload) % 4) % 4);
+        $json = base64_decode($payload, true);
+
+        if ($json === false) {
+            return null;
+        }
+
+        $decoded = json_decode($json, true);
+
+        return is_array($decoded) && isset($decoded['exp']) ? (int) $decoded['exp'] : null;
+    }
+
+    private function providerFailureMessage(string $providerKey, string $action, mixed $response): string
+    {
+        $label = config("airmius_ai.providers.{$providerKey}.label", $providerKey);
+        $message = "{$label} konnte {$action}.";
+        $status = method_exists($response, 'status') ? (int) $response->status() : null;
+        $details = $this->providerFailureDetails($response);
+
+        if ($status) {
+            $message .= " Status {$status}.";
+        }
+
+        if (in_array($status, [401, 403], true)) {
+            $message .= ' Bitte API-Key, Berechtigungen und Modellzugriff prüfen.';
+        }
+
+        if ($details !== '') {
+            $message .= ' Anbieter: '.$details;
+        }
+
+        return $message;
+    }
+
+    private function providerFailureDetails(mixed $response): string
+    {
+        try {
+            $payload = method_exists($response, 'json') ? $response->json() : null;
+        } catch (Throwable) {
+            $payload = null;
+        }
+
+        $detail = is_array($payload)
+            ? (data_get($payload, 'error.message') ?? data_get($payload, 'message') ?? data_get($payload, 'detail'))
+            : null;
+
+        if (is_array($detail)) {
+            $detail = json_encode($detail, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        }
+
+        if (! is_string($detail) || trim($detail) === '') {
+            $detail = method_exists($response, 'body') ? (string) $response->body() : '';
+        }
+
+        return Str::limit(trim(preg_replace('/\s+/', ' ', $detail)), 180, '');
+    }
+
+    private function friendlyProviderException(string $providerKey, Throwable $exception, string $action): RuntimeException
+    {
+        if (! $this->isTimeoutException($exception)) {
+            return $exception instanceof RuntimeException
+                ? $exception
+                : new RuntimeException($exception->getMessage(), (int) $exception->getCode(), $exception);
+        }
+
+        $label = config("airmius_ai.providers.{$providerKey}.label", $providerKey);
+        $timeout = str_contains($action, 'Trainingsplan')
+            ? $this->trainingPlanTimeout()
+            : (int) config('airmius_ai.timeout', 20);
+
+        return new RuntimeException(
+            "{$label} hat nach {$timeout} Sekunden noch keine Antwort geliefert. Bitte erneut versuchen oder einen kleineren Plan erstellen; falls es häufiger passiert, Timeout erhöhen oder einen Fallback-Anbieter konfigurieren.",
+            0,
+            $exception,
+        );
+    }
+
+    private function isTimeoutException(Throwable $exception): bool
+    {
+        $message = $exception->getMessage();
+
+        return str_contains($message, 'cURL error 28')
+            || str_contains($message, 'Operation timed out')
+            || str_contains($message, 'timed out');
     }
 
     private function recordUsage(User $user, string $provider, array $result, array $image, string $status, array $metadata = []): void

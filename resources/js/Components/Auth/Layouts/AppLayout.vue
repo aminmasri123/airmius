@@ -155,6 +155,8 @@ const iconFor = (type) => ({
     'commerce.order.shipping_updated': 'las la-shipping-fast',
     'invoice.created': 'las la-file-invoice',
     'invoice.status_updated': 'las la-file-invoice-dollar',
+    'admin.ai_token.problem': 'las la-key',
+    'admin.ai_token.expiring': 'las la-key',
 }[type] || 'las la-bell')
 
 const formatNotificationDate = (value) => {

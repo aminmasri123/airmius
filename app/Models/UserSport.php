@@ -12,7 +12,19 @@ class UserSport extends Model
         'status',
         'experience_level',
         'visibility',
+        'performance_metrics',
+        'performance_visibility',
+        'training_profile_completed_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'performance_metrics' => 'array',
+            'performance_visibility' => 'array',
+            'training_profile_completed_at' => 'datetime',
+        ];
+    }
 
     public function user()
     {

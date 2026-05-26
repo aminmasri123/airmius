@@ -719,6 +719,20 @@ const rejectRecommendation = (recommendation) => {
                                             {{ levelLabel(profile.experience_level) }}
                                         </span>
                                     </div>
+                                    <div v-if="profile.performance_metrics?.length" class="mt-4 grid gap-2">
+                                        <div
+                                            v-for="metric in profile.performance_metrics"
+                                            :key="metric.key"
+                                            class="rounded-lg border border-border bg-card px-3 py-2"
+                                        >
+                                            <p class="text-[11px] font-semibold uppercase tracking-wide text-secondary">
+                                                {{ metric.label }}
+                                            </p>
+                                            <p class="mt-1 break-words text-sm font-semibold text-primary">
+                                                {{ metric.value }}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </article>
                                 <p v-if="!profileUser.sport_profiles.length" class="text-sm text-secondary">Noch keine Sportarten hinterlegt.</p>
                             </div>

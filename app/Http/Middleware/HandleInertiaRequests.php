@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use App\Support\ClubRoles;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 class HandleInertiaRequests extends Middleware
@@ -98,6 +99,16 @@ class HandleInertiaRequests extends Middleware
         $storageUsage = $user
             ? app(\App\Services\PlanFeatureService::class)->userStorageSummary($user)
             : null;
+        $flash = [
+            'success' => $request->session()->get('success'),
+            'error' => $request->session()->get('error'),
+            'message' => $request->session()->get('message'),
+        ];
+        $flashId = $request->session()->get('flash_id');
+
+        if (! $flashId && collect($flash)->filter(fn ($value) => filled($value))->isNotEmpty()) {
+            $flashId = (string) Str::uuid();
+        }
 
         return array_merge(parent::share($request), [
             'csrf_token' => csrf_token(),
@@ -184,10 +195,10 @@ class HandleInertiaRequests extends Middleware
             'loginImages' => fn () => $this->loginImages(),
 
             'flash' => [
-                'id' => fn () => $request->session()->get('flash_id'),
-                'success' => fn () => $request->session()->get('success'),
-                'error' => fn () => $request->session()->get('error'),
-                'message' => fn () => $request->session()->get('message'),
+                'id' => $flashId,
+                'success' => $flash['success'],
+                'error' => $flash['error'],
+                'message' => $flash['message'],
             ],
 
             'locale' => $user?->language

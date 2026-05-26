@@ -16,6 +16,7 @@ return [
     'primary_provider' => env('AIRMIUS_AI_PRIMARY_PROVIDER', 'ionos'),
     'fallback_provider' => env('AIRMIUS_AI_FALLBACK_PROVIDER', 'openai'),
     'timeout' => (int) env('AIRMIUS_AI_TIMEOUT', 20),
+    'connect_timeout' => (int) env('AIRMIUS_AI_CONNECT_TIMEOUT', 10),
 
     'privacy' => [
         'strip_exif' => true,
@@ -36,7 +37,8 @@ return [
             'primary_provider' => env('AIRMIUS_AI_TRAINING_PLAN_PROVIDER', env('AIRMIUS_AI_PRIMARY_PROVIDER', 'ionos')),
             'fallback_provider' => env('AIRMIUS_AI_TRAINING_PLAN_FALLBACK_PROVIDER', env('AIRMIUS_AI_FALLBACK_PROVIDER', 'openai')),
             'max_items' => (int) env('AIRMIUS_AI_TRAINING_PLAN_MAX_ITEMS', 156),
-            'output_tokens' => (int) env('AIRMIUS_AI_TRAINING_PLAN_OUTPUT_TOKENS', 9000),
+            'output_tokens' => (int) env('AIRMIUS_AI_TRAINING_PLAN_OUTPUT_TOKENS', 7000),
+            'timeout' => (int) env('AIRMIUS_AI_TRAINING_PLAN_TIMEOUT', 90),
         ],
     ],
 
