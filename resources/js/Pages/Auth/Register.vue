@@ -56,7 +56,7 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Register" />
+    <Head :title="$t('Registrieren')" />
 
     <AuthenticationCard>
         <div class="mx-auto h-36 w-36 md:h-48 md:w-48">
@@ -69,21 +69,21 @@ const submit = () => {
                 class="flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
             >
                 <i class="lab la-google text-lg"></i>
-                Mit Google registrieren
+                {{ $t('Mit Google registrieren') }}
             </a>
             <a
                 :href="route('social-auth.redirect', 'microsoft')"
                 class="flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
             >
                 <i class="lab la-microsoft text-lg"></i>
-                Mit Outlook registrieren
+                {{ $t('Mit Outlook registrieren') }}
             </a>
         </div>
 
         <form @submit.prevent="submit">
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
-                    <InputLabel for="first_name" value="Vorname" />
+                    <InputLabel for="first_name" :value="$t('Vorname')" />
                     <TextInput
                         id="first_name"
                         v-model="form.first_name"
@@ -97,7 +97,7 @@ const submit = () => {
                 </div>
 
                 <div>
-                    <InputLabel for="last_name" value="Nachname" />
+                    <InputLabel for="last_name" :value="$t('Nachname')" />
                     <TextInput
                         id="last_name"
                         v-model="form.last_name"
@@ -111,7 +111,7 @@ const submit = () => {
             </div>
 
             <div class="mt-4">
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" :value="$t('Email')" />
                 <TextInput
                     id="email"
                     v-model="form.email"
@@ -125,7 +125,7 @@ const submit = () => {
 
             <div class="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
-                    <InputLabel for="birth_date" value="Geburtsdatum" />
+                    <InputLabel for="birth_date" :value="$t('Geburtsdatum')" />
                     <TextInput
                         id="birth_date"
                         v-model="form.birth_date"
@@ -138,7 +138,7 @@ const submit = () => {
                 </div>
 
                 <div>
-                    <InputLabel for="country" value="Land" />
+                    <InputLabel for="country" :value="$t('Land')" />
                     <select
                         id="country"
                         v-model="form.country"
@@ -236,7 +236,7 @@ const submit = () => {
             </div> -->
 
             <div v-if="requiresGuardianConsent" class="mt-4">
-                <InputLabel for="guardian_email" value="E-Mail des Erziehungsberechtigten" />
+                <InputLabel for="guardian_email" :value="$t('E-Mail des Erziehungsberechtigten')" />
                 <TextInput
                     id="guardian_email"
                     v-model="form.guardian_email"
@@ -246,13 +246,13 @@ const submit = () => {
                     autocomplete="email"
                 />
                 <p class="mt-2 text-sm text-secondary">
-                    Unter 16 Jahren ist eine Zustimmung eines Erziehungsberechtigten erforderlich.
+                    {{ $t('Unter 16 Jahren ist eine Zustimmung eines Erziehungsberechtigten erforderlich.') }}
                 </p>
                 <InputError class="mt-2" :message="form.errors.guardian_email" />
             </div>
 
             <div class="mt-4">
-                <InputLabel for="password" value="Password" />
+                <InputLabel for="password" :value="$t('Password')" />
                 <TextInput
                     id="password"
                     v-model="form.password"
@@ -265,7 +265,7 @@ const submit = () => {
             </div>
 
             <div class="mt-4">
-                <InputLabel for="password_confirmation" value="Confirm Password" />
+                <InputLabel for="password_confirmation" :value="$t('Confirm Password')" />
                 <TextInput
                     id="password_confirmation"
                     v-model="form.password_confirmation"
@@ -283,18 +283,18 @@ const submit = () => {
                         <Checkbox id="terms" v-model:checked="form.terms" name="terms" required />
 
                         <div class="ms-2">
-                            Ich akzeptiere die
+                            {{ $t('Ich akzeptiere die') }}
                             <a
                                 target="_blank"
                                 :href="route('terms.show')"
                                 class="rounded-md text-sm text-secondary underline hover:text-primary focus:outline-none focus:ring-2 focus:ring-borderHover focus:ring-offset-2"
-                            >AGB</a>
-                            und die
+                            >{{ $t('AGB') }}</a>
+                            {{ $t('und die') }}
                             <a
                                 target="_blank"
                                 :href="route('policy.show')"
                                 class="rounded-md text-sm text-secondary underline hover:text-primary focus:outline-none focus:ring-2 focus:ring-borderHover focus:ring-offset-2"
-                            >Datenschutzerklärung</a>
+                            >{{ $t('Datenschutzerklärung') }}</a>
                         </div>
                     </div>
                     <InputError class="mt-2" :message="form.errors.terms" />

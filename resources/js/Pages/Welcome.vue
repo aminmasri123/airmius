@@ -1,6 +1,7 @@
 ﻿<script setup>
 import { useForm } from '@inertiajs/vue3'
 import { computed, nextTick, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Nav from '@/Components/Guest/Nav.vue'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
@@ -12,6 +13,8 @@ const props = defineProps({
     laravelVersion: String,
     phpVersion: String,
 })
+
+const { t } = useI18n()
 
 const safeRoute = (name, fallback = '') => {
     try {
@@ -62,13 +65,13 @@ const trackLandingEvent = (eventName, payload = {}) => {
 const heroPrimaryCta = computed(() => {
     return props.canRegister ? safeRoute('register', '/register') : safeRoute('login', '/login')
 })
-const heroPrimaryCtaLabel = computed(() => (props.canRegister ? heroCopy.value.primaryCta : 'Anmelden'))
+const heroPrimaryCtaLabel = computed(() => (props.canRegister ? heroCopy.value.primaryCta : t('Anmelden')))
 const canonicalUrl = computed(() => typeof window !== 'undefined' ? `${window.location.origin}/` : '/')
 const pageSchema = computed(() => {
     const applicationSchema = {
         '@type': 'SoftwareApplication',
         name: 'Airmius',
-        description: 'Plattform für Sportvereine, Teams und Sportler: Organisation, Kommunikation und Vereinsverwaltung an einem Ort.',
+        description: t('guest.welcome.seo.description'),
         applicationCategory: 'BusinessApplication',
         operatingSystem: 'Web',
         url: typeof window !== 'undefined' ? window.location.origin : undefined,
@@ -83,7 +86,7 @@ const pageSchema = computed(() => {
 
     const faqSchema = {
         '@type': 'FAQPage',
-        mainEntity: faqItems.map((faq) => ({
+        mainEntity: faqItems.value.map((faq) => ({
             '@type': 'Question',
             name: faq.question,
             acceptedAnswer: {
@@ -101,42 +104,185 @@ const pageSchema = computed(() => {
 const contactSubmitRoute = computed(() => safeRoute('contact.store', safeRoute('kontakt.store', '/kontakt-und-melden')))
 
 const tabs = [
-    { key: 'sportler', label: 'Sportler' },
-    { key: 'trainer', label: 'Trainer' },
-    { key: 'vereine', label: 'Vereine' },
+    { key: 'sportler', labelKey: 'guest.welcome.audiences.athletes' },
+    { key: 'trainer', labelKey: 'guest.welcome.audiences.coaches' },
+    { key: 'vereine', labelKey: 'guest.welcome.audiences.clubs' },
 ]
 
 const heroTrustItems = [
     {
+        key: 'start',
         icon: 'las la-bolt',
-        title: 'Schnell starten',
-        text: 'Ohne Kreditkarte testen',
+        titleKey: 'guest.welcome.hero.trust.start.title',
+        textKey: 'guest.welcome.hero.trust.start.text',
     },
     {
+        key: 'privacy',
         icon: 'las la-shield-alt',
-        title: 'DSGVO-konform',
-        text: 'Rollen und Rechte im Griff',
+        titleKey: 'guest.welcome.hero.trust.privacy.title',
+        textKey: 'guest.welcome.hero.trust.privacy.text',
     },
     {
+        key: 'central',
         icon: 'las la-layer-group',
-        title: 'Alles zentral',
-        text: 'Chat, Termine, Teams',
+        titleKey: 'guest.welcome.hero.trust.central.title',
+        textKey: 'guest.welcome.hero.trust.central.text',
     },
 ]
 
-const proofPoints = [
+const proofPoints = computed(() => [
     {
-        value: '1 App',
-        label: 'statt WhatsApp, Excel und E-Mail',
+        value: t('guest.welcome.problem.proof.app.value'),
+        label: t('guest.welcome.problem.proof.app.label'),
     },
     {
-        value: '3 Rollen',
-        label: 'Sportler, Trainer und Vereine',
+        value: t('guest.welcome.problem.proof.roles.value'),
+        label: t('guest.welcome.problem.proof.roles.label'),
     },
     {
-        value: '0 Chaos',
-        label: 'durch klare Kommunikation',
+        value: t('guest.welcome.problem.proof.chaos.value'),
+        label: t('guest.welcome.problem.proof.chaos.label'),
     },
+])
+
+const problemCards = [
+    {
+        key: 'communication',
+        icon: 'las la-comment-dots',
+        titleKey: 'guest.welcome.problem.cards.communication.title',
+        textKey: 'guest.welcome.problem.cards.communication.text',
+        solutionKey: 'guest.welcome.problem.cards.communication.solution',
+    },
+    {
+        key: 'time',
+        icon: 'las la-clock',
+        titleKey: 'guest.welcome.problem.cards.time.title',
+        textKey: 'guest.welcome.problem.cards.time.text',
+        solutionKey: 'guest.welcome.problem.cards.time.solution',
+    },
+    {
+        key: 'overview',
+        icon: 'las la-eye-slash',
+        titleKey: 'guest.welcome.problem.cards.overview.title',
+        textKey: 'guest.welcome.problem.cards.overview.text',
+        solutionKey: 'guest.welcome.problem.cards.overview.solution',
+    },
+]
+
+const mockupCards = [
+    {
+        key: 'chat',
+        icon: 'las la-comment',
+        bgClass: 'bg-air-blue/10',
+        borderClass: 'border-air-blue/20',
+        iconBgClass: 'bg-air-blue/20',
+        iconTextClass: 'text-air-blue',
+        titleKey: 'guest.welcome.mockup.chat.title',
+        textKey: 'guest.welcome.mockup.chat.text',
+    },
+    {
+        key: 'game',
+        icon: 'las la-calendar',
+        bgClass: 'bg-air-green/10',
+        borderClass: 'border-air-green/20',
+        iconBgClass: 'bg-air-green/20',
+        iconTextClass: 'text-air-green',
+        titleKey: 'guest.welcome.mockup.game.title',
+        textKey: 'guest.welcome.mockup.game.text',
+    },
+    {
+        key: 'stats',
+        icon: 'las la-chart-bar',
+        bgClass: 'bg-air-orange/10',
+        borderClass: 'border-air-orange/20',
+        iconBgClass: 'bg-air-orange/20',
+        iconTextClass: 'text-air-orange',
+        titleKey: 'guest.welcome.mockup.stats.title',
+        textKey: 'guest.welcome.mockup.stats.text',
+    },
+]
+
+const mockupStats = [
+    { key: 'players', value: '24', labelKey: 'guest.welcome.mockup.numbers.players' },
+    { key: 'accepted', value: '18', labelKey: 'guest.welcome.mockup.numbers.accepted' },
+    { key: 'declined', value: '3', labelKey: 'guest.welcome.mockup.numbers.declined' },
+]
+
+const benefitCards = {
+    sportler: [
+        ['las la-grip-lines', 'guest.welcome.benefits.cards.athletes.all.title', 'guest.welcome.benefits.cards.athletes.all.text'],
+        ['las la-comment', 'guest.welcome.benefits.cards.athletes.chat.title', 'guest.welcome.benefits.cards.athletes.chat.text'],
+        ['las la-mouse-pointer', 'guest.welcome.benefits.cards.athletes.rsvp.title', 'guest.welcome.benefits.cards.athletes.rsvp.text'],
+        ['las la-heart', 'guest.welcome.benefits.cards.athletes.live.title', 'guest.welcome.benefits.cards.athletes.live.text'],
+        ['las la-chart-bar', 'guest.welcome.benefits.cards.athletes.stats.title', 'guest.welcome.benefits.cards.athletes.stats.text'],
+        ['las la-history', 'guest.welcome.benefits.cards.athletes.history.title', 'guest.welcome.benefits.cards.athletes.history.text'],
+        ['las la-bolt', 'guest.welcome.benefits.cards.athletes.motivation.title', 'guest.welcome.benefits.cards.athletes.motivation.text'],
+        ['las la-mobile', 'guest.welcome.benefits.cards.athletes.available.title', 'guest.welcome.benefits.cards.athletes.available.text'],
+        ['las la-car', 'guest.welcome.benefits.cards.athletes.rides.title', 'guest.welcome.benefits.cards.athletes.rides.text'],
+        ['las la-shopping-bag', 'guest.welcome.benefits.cards.athletes.groupbuy.title', 'guest.welcome.benefits.cards.athletes.groupbuy.text'],
+        ['las la-users', 'guest.welcome.benefits.cards.athletes.buddy.title', 'guest.welcome.benefits.cards.athletes.buddy.text', 'col-span-2 sm:col-span-1'],
+    ],
+    trainer: [
+        ['las la-clock', 'guest.welcome.benefits.cards.coaches.time.title', 'guest.welcome.benefits.cards.coaches.time.text'],
+        ['las la-tasks', 'guest.welcome.benefits.cards.coaches.lists.title', 'guest.welcome.benefits.cards.coaches.lists.text'],
+        ['las la-user-check', 'guest.welcome.benefits.cards.coaches.attendance.title', 'guest.welcome.benefits.cards.coaches.attendance.text'],
+        ['las la-users', 'guest.welcome.benefits.cards.coaches.teams.title', 'guest.welcome.benefits.cards.coaches.teams.text'],
+        ['las la-calendar-plus', 'guest.welcome.benefits.cards.coaches.planning.title', 'guest.welcome.benefits.cards.coaches.planning.text'],
+        ['las la-eye', 'guest.welcome.benefits.cards.coaches.participants.title', 'guest.welcome.benefits.cards.coaches.participants.text'],
+        ['las la-bullhorn', 'guest.welcome.benefits.cards.coaches.communication.title', 'guest.welcome.benefits.cards.coaches.communication.text'],
+        ['las la-chart-line', 'guest.welcome.benefits.cards.coaches.analytics.title', 'guest.welcome.benefits.cards.coaches.analytics.text'],
+    ],
+    vereine: [
+        ['las la-laptop', 'guest.welcome.benefits.cards.clubs.digital.title', 'guest.welcome.benefits.cards.clubs.digital.text'],
+        ['las la-building', 'guest.welcome.benefits.cards.clubs.admin.title', 'guest.welcome.benefits.cards.clubs.admin.text'],
+        ['las la-sitemap', 'guest.welcome.benefits.cards.clubs.structure.title', 'guest.welcome.benefits.cards.clubs.structure.text'],
+        ['las la-share-alt', 'guest.welcome.benefits.cards.clubs.levels.title', 'guest.welcome.benefits.cards.clubs.levels.text'],
+        ['las la-piggy-bank', 'guest.welcome.benefits.cards.clubs.savings.title', 'guest.welcome.benefits.cards.clubs.savings.text'],
+        ['las la-star', 'guest.welcome.benefits.cards.clubs.professional.title', 'guest.welcome.benefits.cards.clubs.professional.text'],
+        ['las la-wallet', 'guest.welcome.benefits.cards.clubs.fees.title', 'guest.welcome.benefits.cards.clubs.fees.text'],
+        ['las la-handshake', 'guest.welcome.benefits.cards.clubs.sponsors.title', 'guest.welcome.benefits.cards.clubs.sponsors.text'],
+        ['las la-file-invoice', 'guest.welcome.benefits.cards.clubs.accounting.title', 'guest.welcome.benefits.cards.clubs.accounting.text'],
+        ['las la-calendar-plus', 'guest.welcome.benefits.cards.clubs.events.title', 'guest.welcome.benefits.cards.clubs.events.text'],
+    ],
+}
+
+const featureCards = [
+    ['las la-comments', 'air-blue', 'guest.welcome.features.cards.chat.title', 'guest.welcome.features.cards.chat.text'],
+    ['las la-dumbbell', 'air-green', 'guest.welcome.features.cards.training.title', 'guest.welcome.features.cards.training.text'],
+    ['las la-calendar', 'air-orange', 'guest.welcome.features.cards.calendar.title', 'guest.welcome.features.cards.calendar.text'],
+    ['las la-users', 'air-blue', 'guest.welcome.features.cards.team.title', 'guest.welcome.features.cards.team.text'],
+    ['las la-chart-bar', 'air-green', 'guest.welcome.features.cards.analytics.title', 'guest.welcome.features.cards.analytics.text'],
+    ['las la-clipboard', 'air-orange', 'guest.welcome.features.cards.attendance.title', 'guest.welcome.features.cards.attendance.text'],
+]
+
+const sportChips = [
+    ['football', '⚽', 'guest.welcome.sports.items.football'],
+    ['basketball', '🏀', 'guest.welcome.sports.items.basketball'],
+    ['fitness', '🏋️', 'guest.welcome.sports.items.fitness'],
+    ['tennis', '🎾', 'guest.welcome.sports.items.tennis'],
+    ['volleyball', '🏐', 'guest.welcome.sports.items.volleyball'],
+    ['swimming', '🏊', 'guest.welcome.sports.items.swimming'],
+    ['gymnastics', '🤸', 'guest.welcome.sports.items.gymnastics'],
+    ['cycling', '🚴', 'guest.welcome.sports.items.cycling'],
+    ['martial', '🥊', 'guest.welcome.sports.items.martial'],
+    ['more', '+', 'guest.welcome.sports.items.more'],
+]
+
+const aboutCards = [
+    ['las la-rocket', 'air-blue', 'guest.welcome.about.vision.title', 'guest.welcome.about.vision.text'],
+    ['las la-crosshairs', 'air-green', 'guest.welcome.about.mission.title', 'guest.welcome.about.mission.text'],
+]
+
+const aboutBadges = [
+    ['las la-shield-alt', 'air-blue', 'guest.welcome.about.badges.privacy.title', 'guest.welcome.about.badges.privacy.text'],
+    ['las la-flag', 'air-orange', 'guest.welcome.about.badges.germany.title', 'guest.welcome.about.badges.germany.text'],
+    ['las la-heart', 'air-green', 'guest.welcome.about.badges.heart.title', 'guest.welcome.about.badges.heart.text'],
+]
+
+const blogCards = [
+    ['las la-brain', 'air-blue', 'guest.welcome.blog.cards.training.category', 'guest.welcome.blog.cards.training.title', 'guest.welcome.blog.cards.training.text'],
+    ['las la-fire', 'air-green', 'guest.welcome.blog.cards.motivation.category', 'guest.welcome.blog.cards.motivation.title', 'guest.welcome.blog.cards.motivation.text'],
+    ['las la-laptop-code', 'air-orange', 'guest.welcome.blog.cards.digital.category', 'guest.welcome.blog.cards.digital.title', 'guest.welcome.blog.cards.digital.text'],
 ]
 
 // Inertia Form für Validation + Loading State
@@ -149,22 +295,22 @@ const heroVariant = ref('A')
 const heroCopy = computed(() => {
     if (heroVariant.value === 'B') {
         return {
-            badge: 'Jetzt 14 Tage kostenlos testen',
-            title: 'Sport-Organisation ohne Chaos',
-            highlight: 'dein Team',
-            subtitle: 'Alles für Sportler, Teams und Vereine in einer App.',
-            primaryCta: 'Jetzt starten',
-            secondaryCta: 'Funktionen sehen',
+            badge: t('guest.welcome.hero.variant_b.badge'),
+            title: t('guest.welcome.hero.variant_b.title'),
+            highlight: t('guest.welcome.hero.variant_b.highlight'),
+            subtitle: t('guest.welcome.hero.variant_b.subtitle'),
+            primaryCta: t('guest.welcome.hero.variant_b.primary_cta'),
+            secondaryCta: t('guest.welcome.hero.variant_b.secondary_cta'),
         }
     }
 
     return {
-        badge: 'Jetzt in der Beta - Kostenlos starten',
-        title: 'Das soziale Netzwerk für deinen',
-        highlight: 'Sport',
-        subtitle: 'Für Sportler, Teams und Vereine. Organisation, Kommunikation und Vernetzung – vereint in einer App.',
-        primaryCta: 'Jetzt kostenlos starten',
-        secondaryCta: 'Vorteile entdecken',
+        badge: t('guest.welcome.hero.variant_a.badge'),
+        title: t('guest.welcome.hero.variant_a.title'),
+        highlight: t('guest.welcome.hero.variant_a.highlight'),
+        subtitle: t('guest.welcome.hero.variant_a.subtitle'),
+        primaryCta: t('guest.welcome.hero.variant_a.primary_cta'),
+        secondaryCta: t('guest.welcome.hero.variant_a.secondary_cta'),
     }
 })
 const nameInputRef = ref(null)
@@ -172,24 +318,24 @@ const emailInputRef = ref(null)
 const messageInputRef = ref(null)
 const formSuccess = ref(false)
 
-const faqItems = [
+const faqItems = computed(() => [
     {
-        question: 'Brauche ich technische Vorkenntnisse, um Airmius zu nutzen?',
-        answer: 'Nein. Airmius ist für Trainer, Spieler und Vereinsverantwortliche gebaut und mit gewohnten Bedienmustern wie Chat, Kalender und Listen intuitiv nutzbar.',
+        question: t('guest.welcome.faq.items.tech.question'),
+        answer: t('guest.welcome.faq.items.tech.answer'),
     },
     {
-        question: 'Kann ich den Wechsel von WhatsApp und Excel einfach starten?',
-        answer: 'Ja. Viele Prozesse lassen sich direkt übernehmen: Trainingstermine, Teilnahmelisten, Teamstrukturen und Nachrichten, damit nichts verloren geht.',
+        question: t('guest.welcome.faq.items.switch.question'),
+        answer: t('guest.welcome.faq.items.switch.answer'),
     },
     {
-        question: 'Was kostet der Einstieg?',
-        answer: 'Der Einstieg ist schnell möglich. Wir helfen dir dabei, den passenden Paketumfang passend zur Teamgröße zu finden.',
+        question: t('guest.welcome.faq.items.cost.question'),
+        answer: t('guest.welcome.faq.items.cost.answer'),
     },
     {
-        question: 'Wie ist der Datenschutz geregelt?',
-        answer: 'Die Plattform legt Wert auf Rollensteuerung, Datensicherheit und transparente Verwaltung durch zentrale Berechtigungen.',
+        question: t('guest.welcome.faq.items.privacy.question'),
+        answer: t('guest.welcome.faq.items.privacy.answer'),
     },
-]
+])
 
 // ========================
 // METHODS
@@ -254,19 +400,19 @@ const validateContactForm = () => {
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
     if (!trimmedName) {
-        form.setError('name', 'Bitte gib deinen Namen ein.')
+        form.setError('name', t('guest.welcome.contact.validation.name_required'))
     }
 
     if (!trimmedEmail) {
-        form.setError('email', 'Bitte gib deine E-Mail-Adresse ein.')
+        form.setError('email', t('guest.welcome.contact.validation.email_required'))
     } else if (!emailPattern.test(trimmedEmail)) {
-        form.setError('email', 'Bitte gib eine gültige E-Mail-Adresse ein.')
+        form.setError('email', t('guest.welcome.contact.validation.email_invalid'))
     }
 
     if (!trimmedMessage) {
-        form.setError('message', 'Bitte schreibe uns mindestens eine kurze Nachricht.')
+        form.setError('message', t('guest.welcome.contact.validation.message_required'))
     } else if (trimmedMessage.length < 8) {
-        form.setError('message', 'Bitte formuliere deine Nachricht etwas ausführlicher.')
+        form.setError('message', t('guest.welcome.contact.validation.message_short'))
     }
 
     if (Object.keys(form.errors).length > 0) {
@@ -371,13 +517,13 @@ const onBannerSecondaryCtaClick = () => {
 <template>
 
     <SeoHead
-        title="Airmius - Sportvereine, Teams und Sportler digital vernetzen"
-        description="Airmius ist die Plattform für Sportler, Trainer, Teams und Vereine: Organisation, Kommunikation, Trainingsplanung und Vereinsverwaltung an einem Ort."
+        :title="t('guest.welcome.seo.title')"
+        :description="t('guest.welcome.seo.description')"
         :schema="pageSchema"
         :canonical="canonicalUrl"
     />
     <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:bg-card focus:px-4 focus:py-2 focus:rounded-lg focus:border focus:border-border">
-        Zum Seiteninhalt springen
+        {{ t('guest.welcome.skip_to_content') }}
     </a>
     <div id="app" class="w-full h-full bg-bg text-primary overflow-auto">
         <!-- NAV -->
@@ -419,16 +565,16 @@ const onBannerSecondaryCtaClick = () => {
                     </div>
                     <div
                         class="anim-fade-d4 mt-8 flex flex-wrap items-center gap-4 justify-center lg:justify-start text-sm text-gray-500">
-                        <span v-for="item in heroTrustItems" :key="item.title" class="flex items-center gap-1.5">
-                            <i class="las la-check-circle text-air-green" aria-hidden="true"></i>{{ item.title }}
+                        <span v-for="item in heroTrustItems" :key="item.key" class="flex items-center gap-1.5">
+                            <i class="las la-check-circle text-air-green" aria-hidden="true"></i>{{ t(item.titleKey) }}
                         </span>
                     </div>
                     <div class="anim-fade-d4 mt-6 hidden sm:grid sm:grid-cols-3 gap-3 max-w-2xl mx-auto lg:mx-0">
-                        <div v-for="item in heroTrustItems" :key="item.text"
+                        <div v-for="item in heroTrustItems" :key="item.key"
                             class="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left">
                             <i :class="[item.icon, 'text-air-green text-xl mb-2']" aria-hidden="true"></i>
-                            <div class="font-heading font-700 text-sm text-white">{{ item.title }}</div>
-                            <p class="mt-1 text-xs text-gray-500 leading-snug">{{ item.text }}</p>
+                            <div class="font-heading font-700 text-sm text-white">{{ t(item.titleKey) }}</div>
+                            <p class="mt-1 text-xs text-gray-500 leading-snug">{{ t(item.textKey) }}</p>
                         </div>
                     </div>
                 </div>
@@ -447,50 +593,23 @@ const onBannerSecondaryCtaClick = () => {
                         </div>
                         <div class="space-y-3">
                             <div
-                                class="card-item item-1 bg-air-blue/10 border border-air-blue/20 rounded-xl p-3 flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-lg bg-air-blue/20 flex items-center justify-center">
-                                    <i class="las la-comment text-air-blue"></i>
+                                v-for="(card, index) in mockupCards"
+                                :key="card.key"
+                                :class="[`card-item item-${index + 1}`, card.bgClass, card.borderClass]"
+                                class="border rounded-xl p-3 flex items-center gap-3">
+                                <div :class="card.iconBgClass" class="w-10 h-10 rounded-lg flex items-center justify-center">
+                                    <i :class="[card.icon, card.iconTextClass]"></i>
                                 </div>
                                 <div>
-                                    <div class="text-xs text-gray-400">Team Chat</div>
-                                    <div class="text-sm font-medium">Training morgen um 18:00 OK</div>
-                                </div>
-                            </div>
-
-                            <div
-                                class="card-item item-2 bg-air-green/10 border border-air-green/20 rounded-xl p-3 flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-lg bg-air-green/20 flex items-center justify-center">
-                                    <i class="las la-calendar text-air-green"></i>
-                                </div>
-                                <div>
-                                    <div class="text-xs text-gray-400">Nächstes Spiel</div>
-                                    <div class="text-sm font-medium">Sa, 15:30 – FC Muster vs. Sportfreunde</div>
-                                </div>
-                            </div>
-
-                            <div
-                                class="card-item item-3 bg-air-orange/10 border border-air-orange/20 rounded-xl p-3 flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-lg bg-air-orange/20 flex items-center justify-center">
-                                    <i class="las la-chart-bar text-air-orange"></i>
-                                </div>
-                                <div>
-                                    <div class="text-xs text-gray-400">Deine Statistik</div>
-                                    <div class="text-sm font-medium">12 Trainings · 89% Anwesenheit</div>
+                                    <div class="text-xs text-gray-400">{{ t(card.titleKey) }}</div>
+                                    <div class="text-sm font-medium">{{ t(card.textKey) }}</div>
                                 </div>
                             </div>
 
                             <div class="flex gap-2 mt-2 card-item item-4">
-                                <div class="flex-1 bg-white/5 rounded-lg p-2 text-center">
-                                    <div class="text-2xl font-heading font-bold text-air-blue">24</div>
-                                    <div class="text-[10px] text-gray-500">Spieler</div>
-                                </div>
-                                <div class="flex-1 bg-white/5 rounded-lg p-2 text-center">
-                                    <div class="text-2xl font-heading font-bold text-air-green">18</div>
-                                    <div class="text-[10px] text-gray-500">Zusagen</div>
-                                </div>
-                                <div class="flex-1 bg-white/5 rounded-lg p-2 text-center">
-                                    <div class="text-2xl font-heading font-bold text-air-orange">3</div>
-                                    <div class="text-[10px] text-gray-500">Absagen</div>
+                                <div v-for="(stat, index) in mockupStats" :key="stat.key" class="flex-1 bg-white/5 rounded-lg p-2 text-center">
+                                    <div :class="['text-2xl font-heading font-bold', index === 0 ? 'text-air-blue' : index === 1 ? 'text-air-green' : 'text-air-orange']">{{ stat.value }}</div>
+                                    <div class="text-[10px] text-gray-500">{{ t(stat.labelKey) }}</div>
                                 </div>
                             </div>
                         </div>
@@ -502,44 +621,24 @@ const onBannerSecondaryCtaClick = () => {
         <section class="py-16 sm:py-24 px-4 border-t border-white/5 min-h-screen sm:h-dvh flex items-center">
             <div class="max-w-6xl mx-auto">
                 <div class="text-center mb-14">
-                    <h2 class="font-heading font-800 text-3xl sm:text-4xl">Statt <span class="text-red-400">5
-                            Tools</span> nur <span class="text-air-green">eine Lösung</span></h2>
-                    <p class="text-gray-400 mt-3 max-w-2xl mx-auto">WhatsApp, Excel, OneNote, E-Mail, Telefon?!</p>
-                    <p class="text-gray-400 mt-2"> Schluss mit dem Chaos! AIRMIUS vereint alles.</p>
+                    <h2 class="font-heading font-800 text-3xl sm:text-4xl">
+                        {{ t('guest.welcome.problem.title_before') }}
+                        <span class="text-red-400">{{ t('guest.welcome.problem.title_bad') }}</span>
+                        {{ t('guest.welcome.problem.title_middle') }}
+                        <span class="text-air-green">{{ t('guest.welcome.problem.title_good') }}</span>
+                    </h2>
+                    <p class="text-gray-400 mt-3 max-w-2xl mx-auto">{{ t('guest.welcome.problem.subtitle') }}</p>
+                    <p class="text-gray-400 mt-2">{{ t('guest.welcome.problem.description') }}</p>
                 </div>
                 <div class="grid sm:grid-cols-3 gap-6">
-                    <div class="grad-card rounded-2xl p-6 text-center">
+                    <div v-for="card in problemCards" :key="card.key" class="grad-card rounded-2xl p-6 text-center">
                         <div class="w-14 h-14 mx-auto rounded-xl bg-red-500/10 flex items-center justify-center mb-4">
-                            <i class="las la-comment-dots text-red-400 text-3xl"></i>
+                            <i :class="[card.icon, 'text-red-400 text-3xl']"></i>
                         </div>
-                        <h3 class="font-heading font-700 text-lg mb-2">Chaos bei Kommunikation</h3>
-                        <p class="text-sm text-gray-400">Infos gehen in WhatsApp-Gruppen unter. Wichtige Nachrichten
-                            werden übersehen.</p>
+                        <h3 class="font-heading font-700 text-lg mb-2">{{ t(card.titleKey) }}</h3>
+                        <p class="text-sm text-gray-400">{{ t(card.textKey) }}</p>
                         <div class="mt-4 pt-4 border-t border-white/5">
-                            <span class="text-air-green text-sm font-semibold">→ Zentraler Team-Chat mit Struktur</span>
-                        </div>
-                    </div>
-
-                    <div class="grad-card rounded-2xl p-6 text-center">
-                        <div class="w-14 h-14 mx-auto rounded-xl bg-red-500/10 flex items-center justify-center mb-4">
-                            <i class="las la-clock text-red-400 text-3xl"></i>
-                        </div>
-                        <h3 class="font-heading font-700 text-lg mb-2">Hoher Zeitaufwand</h3>
-                        <p class="text-sm text-gray-400">Manuelle Listen, endlose Abfragen, Zettelwirtschaft. Zeit, die
-                            im Training fehlt.</p>
-                        <div class="mt-4 pt-4 border-t border-white/5">
-                            <span class="text-air-green text-sm font-semibold">→ Automatisierte Prozesse</span>
-                        </div>
-                    </div>
-                    <div class="grad-card rounded-2xl p-6 text-center">
-                        <div class="w-14 h-14 mx-auto rounded-xl bg-red-500/10 flex items-center justify-center mb-4">
-                            <i class="las la-eye-slash text-red-400 text-3xl"></i>
-                        </div>
-                        <h3 class="font-heading font-700 text-lg mb-2">Fehlende Übersicht</h3>
-                        <p class="text-sm text-gray-400">Wer kommt? Wann ist Training? Wo stehen wir? Keiner weiß
-                            Bescheid.</p>
-                        <div class="mt-4 pt-4 border-t border-white/5">
-                            <span class="text-air-green text-sm font-semibold">→ Echtzeit-Dashboard für alles</span>
+                            <span class="text-air-green text-sm font-semibold">→ {{ t(card.solutionKey) }}</span>
                         </div>
                     </div>
                 </div>
@@ -558,21 +657,18 @@ const onBannerSecondaryCtaClick = () => {
             <div class="max-w-6xl mx-auto">
                 <div class="text-center mb-8 sm:mb-10 px-2">
                     <span
-                        class="text-air-blue text-xs sm:text-sm font-semibold uppercase tracking-wider">Vorteile</span>
+                        class="text-air-blue text-xs sm:text-sm font-semibold uppercase tracking-wider">{{ t('guest.nav.benefits') }}</span>
                     <h2 class="font-heading font-800 text-2xl sm:text-3xl lg:text-4xl mt-2 leading-tight">
-                        Eine App für <span
-                            class="bg-gradient-to-r from-air-blue to-air-green bg-clip-text text-transparent">alle im
-                            Sport</span>
+                        {{ t('guest.welcome.benefits.title_before') }}
+                        <span class="bg-gradient-to-r from-air-blue to-air-green bg-clip-text text-transparent">{{ t('guest.welcome.benefits.title_highlight') }}</span>
                     </h2>
-                    <p class="text-gray-400 mt-3 text-sm sm:text-base max-w-xl mx-auto">Egal ob Sportler, Trainer oder
-                        Verein – AIRMIUS macht
-                        deinen Alltag einfacher.</p>
+                    <p class="text-gray-400 mt-3 text-sm sm:text-base max-w-xl mx-auto">{{ t('guest.welcome.benefits.subtitle') }}</p>
                 </div>
 
                 <!-- Tabs: Mobil nur Icons, horizontal scroll -->
                 <div class="mb-8 sm:mb-10 flex justify-center px-4">
                     <div class="inline-flex bg-white/5 rounded-full p-1 gap-1 flex-wrap justify-center" role="tablist"
-                        aria-label="Zielgruppen">
+                        :aria-label="t('guest.welcome.benefits.audience_label')">
                         <button v-for="tab in tabs" :key="tab.key" type="button" :id="`tab-${tab.key}`"
                             :aria-controls="`tabpanel-${tab.key}`" :aria-selected="activeTab === tab.key"
                             :tabindex="activeTab === tab.key ? 0 : -1" @click="switchTab(tab.key)"
@@ -580,293 +676,54 @@ const onBannerSecondaryCtaClick = () => {
                             'rounded-full px-4 sm:px-5 py-2.5 text-sm font-semibold transition-all flex items-center gap-2 whitespace-nowrap',
                             activeTab === tab.key ? 'tab-active' : 'text-gray-400 hover:text-white'
                         ]">
-                            {{ tab.label }}
+                            {{ t(tab.labelKey) }}
                         </button>
                     </div>
                 </div>
 
-                <!-- Sportler: 2 Spalten mobil -->
                 <div v-if="activeTab === 'sportler'" id="tabpanel-sportler" role="tabpanel" aria-labelledby="tab-sportler"
                     class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-grip-lines text-air-blue text-lg sm:text-xl"></i>
+                    <div
+                        v-for="(card, index) in benefitCards.sportler"
+                        :key="card[1]"
+                        :class="card[3] || ''"
+                        class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5"
+                    >
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i :class="[card[0], 'text-air-blue text-lg sm:text-xl']"></i>
                         </div>
-                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Alles an einem Ort</h4>
-                        <p class="text-xs text-gray-400 leading-snug">Training, Spiele, Nachrichten – eine App
-                            für alles.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-comment text-air-blue text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Kein WhatsApp-Chaos</h4>
-                        <p class="text-xs text-gray-400 leading-snug">Strukturierte Kommunikation statt
-                            endloser Gruppenflut.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-mouse-pointer text-air-blue text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Ein-Klick Zu-/Absage
-                        </h4>
-                        <p class="text-xs text-gray-400 leading-snug">Teilnahme bestätigen war noch nie so
-                            einfach.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-heart text-air-blue text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Echtzeit-Übersicht</h4>
-                        <p class="text-xs text-gray-400 leading-snug">Immer wissen, was wann wo stattfindet.
-                        </p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-chart-bar text-air-blue text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Persönliche Statistiken
-                        </h4>
-                        <p class="text-xs text-gray-400 leading-snug">Dein Fortschritt auf einen Blick –
-                            Motivation pur.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-history text-air-blue text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Trainingshistorie</h4>
-                        <p class="text-xs text-gray-400 leading-snug">Alle vergangenen Einheiten jederzeit
-                            einsehen.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-bolt text-air-blue text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Motivation steigern</h4>
-                        <p class="text-xs text-gray-400 leading-snug">Sichtbarer Fortschritt = mehr Leistung.
-                        </p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-mobile text-air-blue text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Überall verfügbar</h4>
-                        <p class="text-xs text-gray-400 leading-snug">Smartphone, Tablet, Desktop – immer
-                            dabei.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-car text-air-blue text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Fahrgemeinschaften</h4>
-                        <p class="text-xs text-gray-400 leading-snug">Gemeinsam zu Training & Events fahren –
-                            Kosten teilen.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-shopping-bag text-air-blue text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Einkaufsgemeinschaft
-                        </h4>
-                        <p class="text-xs text-gray-400 leading-snug">Bestellt euer Equipment gemeinsam zum
-                            exklusiven Preis.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-3 sm:p-5 col-span-2 sm:col-span-1">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-blue/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-users text-air-blue text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">Sport-Buddy finden</h4>
-                        <p class="text-xs text-gray-400 leading-snug">Finde jederzeit Leute zum Laufen,
-                            Trainieren oder Spielen.</p>
+                        <h4 class="font-heading font-600 text-xs sm:text-sm mb-1 leading-tight">{{ t(card[1]) }}</h4>
+                        <p class="text-xs text-gray-400 leading-snug">{{ t(card[2]) }}</p>
                     </div>
                 </div>
 
-                <!-- Trainer: 1 Spalte mobil -->
                 <div v-if="activeTab === 'trainer'" id="tabpanel-trainer" role="tabpanel" aria-labelledby="tab-trainer"
                     class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-clock text-air-green text-lg sm:text-xl"></i>
+                    <div
+                        v-for="card in benefitCards.trainer"
+                        :key="card[1]"
+                        class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5"
+                    >
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i :class="[card[0], 'text-air-green text-lg sm:text-xl']"></i>
                         </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Massive Zeitersparnis</h4>
-                        <p class="text-xs text-gray-400">Automatisiere Routineaufgaben und fokussiere dich aufs
-                            Training.</p>
-                    </div>
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-tasks text-air-green text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Keine manuellen Listen</h4>
-                        <p class="text-xs text-gray-400">Schluss mit Excel-Tabellen und handgeschriebenen Listen.</p>
-                    </div>
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-user-check text-air-green text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Auto-Anwesenheit</h4>
-                        <p class="text-xs text-gray-400">Automatische Erfassung – wer war da, wer nicht.</p>
-                    </div>
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-users text-air-green text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Teamverwaltung</h4>
-                        <p class="text-xs text-gray-400">Spieler hinzufügen, Gruppen erstellen, Struktur schaffen.</p>
-                    </div>
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-calendar-plus text-air-green text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Trainings- & Spielplanung</h4>
-                        <p class="text-xs text-gray-400">Termine erstellen in Sekunden – auch wiederkehrend.</p>
-                    </div>
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-eye text-air-green text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Echtzeit-Teilnehmer</h4>
-                        <p class="text-xs text-gray-400">Sofort sehen, wer zugesagt hat – keine Nachfragen mehr.</p>
-                    </div>
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-bullhorn text-air-green text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Zentrale Kommunikation</h4>
-                        <p class="text-xs text-gray-400">Keine Infoverluste mehr – alle erreichen, sofort.</p>
-                    </div>
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-green/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-chart-line text-air-green text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Leistungsanalysen</h4>
-                        <p class="text-xs text-gray-400">Datenbasiert bessere Entscheidungen treffen.</p>
+                        <h4 class="font-heading font-600 text-sm mb-1">{{ t(card[1]) }}</h4>
+                        <p class="text-xs text-gray-400">{{ t(card[2]) }}</p>
                     </div>
                 </div>
 
-                <!-- Vereine: 1 Spalte mobil -->
                 <div v-if="activeTab === 'vereine'" id="tabpanel-vereine" role="tabpanel" aria-labelledby="tab-vereine"
                     class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-laptop text-air-orange text-lg sm:text-xl"></i>
+                    <div
+                        v-for="card in benefitCards.vereine"
+                        :key="card[1]"
+                        class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5"
+                    >
+                        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
+                            <i :class="[card[0], 'text-air-orange text-lg sm:text-xl']"></i>
                         </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Digitalisierung</h4>
-                        <p class="text-xs text-gray-400">Kein Excel, kein Papier – moderner Vereinsbetrieb.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-building text-air-orange text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Zentrale Verwaltung</h4>
-                        <p class="text-xs text-gray-400">Alle Teams & Mitglieder übersichtlich an einem Ort.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-sitemap text-air-orange text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Klare Strukturen</h4>
-                        <p class="text-xs text-gray-400">Hierarchien und Rollen sauber abgebildet.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-share-alt text-air-orange text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Ebenenübergreifend</h4>
-                        <p class="text-xs text-gray-400">Vorstand → Trainer → Spieler – Infos fließen reibungslos.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-piggy-bank text-air-orange text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Zeit- & Kostenersparnis</h4>
-                        <p class="text-xs text-gray-400">Weniger Aufwand, weniger Kosten, mehr Fokus.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-star text-air-orange text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Professionelle Wirkung</h4>
-                        <p class="text-xs text-gray-400">Mehr Attraktivität für neue Mitglieder & Sponsoren.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-wallet text-air-orange text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Beiträge verwalten</h4>
-                        <p class="text-xs text-gray-400">Mitgliedsbeiträge einziehen, Mahnungen automatisieren,
-                            Überblick behalten.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-handshake text-air-orange text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Sponsoren-Management</h4>
-                        <p class="text-xs text-gray-400">Sponsoren pflegen, Pakete verwalten, Sichtbarkeit messen –
-                            alles zentral.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-file-invoice text-air-orange text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Belege & Abrechnung</h4>
-                        <p class="text-xs text-gray-400">Rechnungen & Quittungen digital ablegen, Ausgaben tracken,
-                            Kassenbuch führen.</p>
-                    </div>
-
-                    <div class="benefit-card grad-card rounded-xl sm:rounded-2xl p-4 sm:p-5">
-                        <div
-                            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-air-orange/15 flex items-center justify-center mb-2 sm:mb-3">
-                            <i class="las la-calendar-plus text-air-orange text-lg sm:text-xl"></i>
-                        </div>
-                        <h4 class="font-heading font-600 text-sm mb-1">Termine für alle</h4>
-                        <p class="text-xs text-gray-400">Versammlungen, Events & Spieltage anlegen – mit Zu-/Absagen für
-                            den ganzen Verein.</p>
+                        <h4 class="font-heading font-600 text-sm mb-1">{{ t(card[1]) }}</h4>
+                        <p class="text-xs text-gray-400">{{ t(card[2]) }}</p>
                     </div>
                 </div>
             </div>
@@ -877,64 +734,25 @@ const onBannerSecondaryCtaClick = () => {
             style="background: radial-gradient(ellipse 60% 40% at 50% 100%, rgba(0,102,255,.08) 0%, transparent 60%);">
             <div class="max-w-6xl mx-auto">
                 <div class="text-center mb-14">
-                    <span class="text-air-green text-sm font-semibold uppercase tracking-wider">Funktionen</span>
-                    <h2 class="font-heading font-800 text-3xl sm:text-4xl mt-2">Alles, was du brauchst</h2>
-                    <p class="text-gray-400 mt-3 max-w-xl mx-auto">Leistungsstarke Features, einfach zu bedienen.</p>
+                    <span class="text-air-green text-sm font-semibold uppercase tracking-wider">{{ t('guest.nav.features') }}</span>
+                    <h2 class="font-heading font-800 text-3xl sm:text-4xl mt-2">{{ t('guest.welcome.features.title') }}</h2>
+                    <p class="text-gray-400 mt-3 max-w-xl mx-auto">{{ t('guest.welcome.features.subtitle') }}</p>
                 </div>
                 <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div class="grad-card rounded-2xl p-6 hover:border-air-blue/30 transition group">
+                    <div
+                        v-for="card in featureCards"
+                        :key="card[2]"
+                        :class="card[1] === 'air-blue' ? 'hover:border-air-blue/30' : card[1] === 'air-green' ? 'hover:border-air-green/30' : 'hover:border-air-orange/30'"
+                        class="grad-card rounded-2xl p-6 transition group"
+                    >
                         <div
-                            class="w-12 h-12 rounded-xl bg-air-blue/15 flex items-center justify-center mb-4 group-hover:glow-blue transition">
-                            <i class="las la-comments text-air-blue text-2xl"></i>
+                            :class="card[1] === 'air-blue' ? 'bg-air-blue/15 group-hover:glow-blue' : card[1] === 'air-green' ? 'bg-air-green/15 group-hover:glow-green' : 'bg-air-orange/15 group-hover:glow-orange'"
+                            class="w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition"
+                        >
+                            <i :class="[card[0], card[1] === 'air-blue' ? 'text-air-blue' : card[1] === 'air-green' ? 'text-air-green' : 'text-air-orange', 'text-2xl']"></i>
                         </div>
-                        <h3 class="font-heading font-700 mb-2">Team-Chat</h3>
-                        <p class="text-sm text-gray-400">Echtzeit-Kommunikation wie WhatsApp – aber strukturiert,
-                            übersichtlich und ohne Ablenkung.</p>
-                    </div>
-                    <div class="grad-card rounded-2xl p-6 hover:border-air-green/30 transition group">
-                        <div
-                            class="w-12 h-12 rounded-xl bg-air-green/15 flex items-center justify-center mb-4 group-hover:glow-green transition">
-                            <i class="las la-dumbbell text-air-green text-2xl"></i>
-                        </div>
-                        <h3 class="font-heading font-700 mb-2">Trainingsplanung</h3>
-                        <p class="text-sm text-gray-400">Erstelle Trainingspläne, wiederkehrende Termine und teile sie
-                            mit dem ganzen Team.</p>
-                    </div>
-                    <div class="grad-card rounded-2xl p-6 hover:border-air-orange/30 transition group">
-                        <div
-                            class="w-12 h-12 rounded-xl bg-air-orange/15 flex items-center justify-center mb-4 group-hover:glow-orange transition">
-                            <i class="las la-calendar text-air-orange text-2xl"></i>
-                        </div>
-                        <h3 class="font-heading font-700 mb-2">Terminverwaltung</h3>
-                        <p class="text-sm text-gray-400">Spiele, Training, Events – alles im Kalender. Mit Erinnerungen
-                            und Zu-/Absagen.</p>
-                    </div>
-                    <div class="grad-card rounded-2xl p-6 hover:border-air-blue/30 transition group">
-                        <div
-                            class="w-12 h-12 rounded-xl bg-air-blue/15 flex items-center justify-center mb-4 group-hover:glow-blue transition">
-                            <i class="las la-users text-air-blue text-2xl"></i>
-                        </div>
-                        <h3 class="font-heading font-700 mb-2">Teammanagement</h3>
-                        <p class="text-sm text-gray-400">Spieler verwalten, Rollen zuweisen, Teams strukturieren – alles
-                            zentral.</p>
-                    </div>
-                    <div class="grad-card rounded-2xl p-6 hover:border-air-green/30 transition group">
-                        <div
-                            class="w-12 h-12 rounded-xl bg-air-green/15 flex items-center justify-center mb-4 group-hover:glow-green transition">
-                            <i class="las la-chart-bar text-air-green text-2xl"></i>
-                        </div>
-                        <h3 class="font-heading font-700 mb-2">Statistiken & Analysen</h3>
-                        <p class="text-sm text-gray-400">Leistungsdaten, Anwesenheitsquoten und Fortschritt – visuell
-                            aufbereitet.</p>
-                    </div>
-                    <div class="grad-card rounded-2xl p-6 hover:border-air-orange/30 transition group">
-                        <div
-                            class="w-12 h-12 rounded-xl bg-air-orange/15 flex items-center justify-center mb-4 group-hover:glow-orange transition">
-                            <i class="las la-clipboard text-air-orange text-2xl"></i>
-                        </div>
-                        <h3 class="font-heading font-700 mb-2">Anwesenheitssystem</h3>
-                        <p class="text-sm text-gray-400">Automatische Erfassung, wer dabei war. Keine Listen, kein
-                            Nachfragen.</p>
+                        <h3 class="font-heading font-700 mb-2">{{ t(card[2]) }}</h3>
+                        <p class="text-sm text-gray-400">{{ t(card[3]) }}</p>
                     </div>
                 </div>
             </div>
@@ -943,113 +761,52 @@ const onBannerSecondaryCtaClick = () => {
         <!-- SPORTARTEN -->
         <section id="sportarten" class="py-16 sm:py-24 px-4 border-t border-white/5">
             <div class="max-w-6xl mx-auto text-center">
-                <span class="text-air-orange text-sm font-semibold uppercase tracking-wider">Sportarten</span>
-                <h2 class="font-heading font-800 text-3xl sm:text-4xl mt-2">Für jede Sportart gemacht</h2>
-                <p class="text-gray-400 mt-3 max-w-xl mx-auto">Teamsport oder Einzelsport – AIRMIUS passt sich an.</p>
+                <span class="text-air-orange text-sm font-semibold uppercase tracking-wider">{{ t('guest.nav.sports') }}</span>
+                <h2 class="font-heading font-800 text-3xl sm:text-4xl mt-2">{{ t('guest.welcome.sports.title') }}</h2>
+                <p class="text-gray-400 mt-3 max-w-xl mx-auto">{{ t('guest.welcome.sports.subtitle') }}</p>
                 <div class="mt-12 flex flex-wrap justify-center gap-4">
                     <div
-                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-air-blue/30 transition">
-                        <span class="text-3xl">⚽</span><span class="font-heading font-600">Fußball</span>
-                    </div>
-                    <div
-                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-air-green/30 transition">
-                        <span class="text-3xl">🏀</span><span class="font-heading font-600">Basketball</span>
-                    </div>
-                    <div
-                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-air-orange/30 transition">
-                        <span class="text-3xl">🏋️</span><span class="font-heading font-600">Fitness</span>
-                    </div>
-                    <div
-                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-air-blue/30 transition">
-                        <span class="text-3xl">🎾</span><span class="font-heading font-600">Tennis</span>
-                    </div>
-                    <div
-                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-air-green/30 transition">
-                        <span class="text-3xl">🏐</span><span class="font-heading font-600">Volleyball</span>
-                    </div>
-                    <div
-                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-air-orange/30 transition">
-                        <span class="text-3xl">🏊</span><span class="font-heading font-600">Schwimmen</span>
-                    </div>
-                    <div
-                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-air-blue/30 transition">
-                        <span class="text-3xl">🤸</span><span class="font-heading font-600">Turnen</span>
-                    </div>
-                    <div
-                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-air-green/30 transition">
-                        <span class="text-3xl">🚴</span><span class="font-heading font-600">Radsport</span>
-                    </div>
-                    <div
-                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-air-orange/30 transition">
-                        <span class="text-3xl">🥊</span><span class="font-heading font-600">Kampfsport</span>
-                    </div>
-                    <div
-                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 hover:border-white/10 transition">
-                        <span class="text-3xl">+</span>
-                        <span class="font-heading font-600 text-gray-400">und viele mehr</span>
+                        v-for="(sport, index) in sportChips"
+                        :key="sport[0]"
+                        :class="index % 3 === 0 ? 'hover:border-air-blue/30' : index % 3 === 1 ? 'hover:border-air-green/30' : index % 3 === 2 ? 'hover:border-air-orange/30' : 'hover:border-white/10'"
+                        class="grad-card rounded-2xl px-6 py-5 flex items-center gap-3 transition"
+                    >
+                        <span class="text-3xl">{{ sport[1] }}</span>
+                        <span :class="sport[0] === 'more' ? 'text-gray-400' : ''" class="font-heading font-600">{{ t(sport[2]) }}</span>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- ÜBER UNS -->
+        <!-- ?BER UNS -->
         <section id="ueber" class="py-16 sm:py-24 px-4 border-t border-white/5"
             style="background: radial-gradient(ellipse 50% 40% at 20% 50%, rgba(0,200,83,.06) 0%, transparent 50%);">
             <div class="max-w-5xl mx-auto">
                 <div class="text-center mb-14">
-                    <span class="text-air-blue text-sm font-semibold uppercase tracking-wider">Über uns</span>
-                    <h2 class="font-heading font-800 text-3xl sm:text-4xl mt-2">Wir digitalisieren den Sport</h2>
+                    <span class="text-air-blue text-sm font-semibold uppercase tracking-wider">{{ t('guest.nav.about') }}</span>
+                    <h2 class="font-heading font-800 text-3xl sm:text-4xl mt-2">{{ t('guest.welcome.about.title') }}</h2>
                 </div>
 
                 <div class="grid md:grid-cols-2 gap-8">
-                    <div class="grad-card rounded-2xl p-8">
-                        <div class="w-12 h-12 rounded-xl bg-air-blue/15 flex items-center justify-center mb-4">
-                            <i class="las la-rocket text-air-blue text-2xl"></i>
+                    <div v-for="card in aboutCards" :key="card[2]" class="grad-card rounded-2xl p-8">
+                        <div
+                            :class="card[1] === 'air-blue' ? 'bg-air-blue/15' : 'bg-air-green/15'"
+                            class="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
+                        >
+                            <i :class="[card[0], card[1] === 'air-blue' ? 'text-air-blue' : 'text-air-green', 'text-2xl']"></i>
                         </div>
-                        <h3 class="font-heading font-700 text-xl mb-3">Unsere Vision</h3>
-                        <p class="text-gray-400 leading-relaxed">
-                            Die Digitalisierung im Sport vorantreiben. Wir bauen ein soziales Netzwerk für den Sport –
-                            vergleichbar mit LinkedIn für berufliche Chancen und Airmius für sportliche Vernetzung.
-                            Technologie soll den Sport besser, fairer und für alle zugänglicher machen.
-                        </p>
-                    </div>
-
-                    <div class="grad-card rounded-2xl p-8">
-                        <div class="w-12 h-12 rounded-xl bg-air-green/15 flex items-center justify-center mb-4">
-                            <i class="las la-crosshairs text-air-green text-2xl"></i>
-                        </div>
-                        <h3 class="font-heading font-700 text-xl mb-3">Unsere Mission</h3>
-                        <p class="text-gray-400 leading-relaxed">
-                            Sport einfacher organisieren und Menschen verbinden. Wir schaffen eine Plattform, auf der
-                            Trainer, Spieler und Vereine sich vernetzen, Chancen entdecken und ihre sportliche Zukunft
-                            gestalten können. <br> Alles an einem Ort!
-                        </p>
+                        <h3 class="font-heading font-700 text-xl mb-3">{{ t(card[2]) }}</h3>
+                        <p class="text-gray-400 leading-relaxed">{{ t(card[3]) }}</p>
                     </div>
                 </div>
 
                 <div class="mt-8 grid sm:grid-cols-3 gap-4">
-                    <div class="grad-card rounded-xl p-5 text-center">
+                    <div v-for="badge in aboutBadges" :key="badge[2]" class="grad-card rounded-xl p-5 text-center">
                         <div class="flex items-center justify-center gap-2 mb-2">
-                            <i class="las la-shield-alt text-air-blue"></i>
-                            <span class="font-heading font-600">DSGVO-konform</span>
+                            <i :class="[badge[0], badge[1] === 'air-blue' ? 'text-air-blue' : badge[1] === 'air-green' ? 'text-air-green' : 'text-air-orange']"></i>
+                            <span class="font-heading font-600">{{ t(badge[2]) }}</span>
                         </div>
-                        <p class="text-xs text-gray-500">Datenschutz nach höchsten Standards</p>
-                    </div>
-
-                    <div class="grad-card rounded-xl p-5 text-center">
-                        <div class="flex items-center justify-center gap-2 mb-2">
-                            <i class="las la-flag text-air-orange"></i>
-                            <span class="font-heading font-600">Made in Germany</span>
-                        </div>
-                        <p class="text-xs text-gray-500">Entwickelt und gehostet in Deutschland</p>
-                    </div>
-
-                    <div class="grad-card rounded-xl p-5 text-center">
-                        <div class="flex items-center justify-center gap-2 mb-2">
-                            <i class="las la-heart text-air-green"></i>
-                            <span class="font-heading font-600">Startup mit Herz</span>
-                        </div>
-                        <p class="text-xs text-gray-500">Von Sportlern für Sportler gebaut</p>
+                        <p class="text-xs text-gray-500">{{ t(badge[3]) }}</p>
                     </div>
                 </div>
             </div>
@@ -1059,46 +816,26 @@ const onBannerSecondaryCtaClick = () => {
         <section id="blog" class="py-16 sm:py-24 px-4 border-t border-white/5">
             <div class="max-w-6xl mx-auto">
                 <div class="text-center mb-14">
-                    <span class="text-air-green text-sm font-semibold uppercase tracking-wider">Blog</span>
-                    <h2 class="font-heading font-800 text-3xl sm:text-4xl mt-2">Neuigkeiten & Tipps</h2>
+                    <span class="text-air-green text-sm font-semibold uppercase tracking-wider">{{ t('guest.nav.blog') }}</span>
+                    <h2 class="font-heading font-800 text-3xl sm:text-4xl mt-2">{{ t('guest.welcome.blog.title') }}</h2>
                 </div>
                 <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div class="grad-card rounded-2xl overflow-hidden group hover:border-air-blue/20 transition">
+                    <div
+                        v-for="card in blogCards"
+                        :key="card[3]"
+                        :class="card[1] === 'air-blue' ? 'hover:border-air-blue/20' : card[1] === 'air-green' ? 'hover:border-air-green/20' : 'hover:border-air-orange/20'"
+                        class="grad-card rounded-2xl overflow-hidden group transition"
+                    >
                         <div
-                            class="h-40 bg-gradient-to-br from-air-blue/20 to-air-blue/5 flex items-center justify-center">
-                            <i class="las la-brain text-air-blue text-5xl opacity-60"></i>
+                            :class="card[1] === 'air-blue' ? 'from-air-blue/20 to-air-blue/5' : card[1] === 'air-green' ? 'from-air-green/20 to-air-green/5' : 'from-air-orange/20 to-air-orange/5'"
+                            class="h-40 bg-gradient-to-br flex items-center justify-center"
+                        >
+                            <i :class="[card[0], card[1] === 'air-blue' ? 'text-air-blue' : card[1] === 'air-green' ? 'text-air-green' : 'text-air-orange', 'text-5xl opacity-60']"></i>
                         </div>
                         <div class="p-5">
-                            <span class="text-xs uppercase tracking-wider text-air-blue font-semibold">Training</span>
-                            <h3 class="font-heading font-600 mt-2 mb-2 group-hover:text-air-blue transition">5 Tipps für
-                                effektiveres Mannschaftstraining</h3>
-                            <p class="text-xs text-gray-500">Wie du mit einfachen Methoden das Beste aus jeder Einheit
-                                holst.</p>
-                        </div>
-                    </div>
-                    <div class="grad-card rounded-2xl overflow-hidden group hover:border-air-green/20 transition">
-                        <div
-                            class="h-40 bg-gradient-to-br from-air-green/20 to-air-green/5 flex items-center justify-center">
-                            <i class="las la-fire text-air-green text-5xl opacity-60"></i>
-                        </div>
-                        <div class="p-5">
-                            <span class="text-xs uppercase tracking-wider text-air-green font-semibold">Motivation</span>
-                            <h3 class="font-heading font-600 mt-2 mb-2 group-hover:text-air-green transition">Wie du
-                                dein Team langfristig motivierst</h3>
-                            <p class="text-xs text-gray-500">Strategien für mehr Engagement und Teamgeist.</p>
-                        </div>
-                    </div>
-                    <div class="grad-card rounded-2xl overflow-hidden group hover:border-air-orange/20 transition">
-                        <div
-                            class="h-40 bg-gradient-to-br from-air-orange/20 to-air-orange/5 flex items-center justify-center">
-                            <i class="las la-laptop-code text-air-orange text-5xl opacity-60"></i>
-                        </div>
-                        <div class="p-5">
-                            <span
-                                class="text-xs uppercase tracking-wider text-air-orange font-semibold">Digitalisierung</span>
-                            <h3 class="font-heading font-600 mt-2 mb-2 group-hover:text-air-orange transition">Warum
-                                dein Verein jetzt digital werden muss</h3>
-                            <p class="text-xs text-gray-500">Der Wettbewerbsvorteil durch moderne Vereinsführung.</p>
+                            <span :class="card[1] === 'air-blue' ? 'text-air-blue' : card[1] === 'air-green' ? 'text-air-green' : 'text-air-orange'" class="text-xs uppercase tracking-wider font-semibold">{{ t(card[2]) }}</span>
+                            <h3 :class="card[1] === 'air-blue' ? 'group-hover:text-air-blue' : card[1] === 'air-green' ? 'group-hover:text-air-green' : 'group-hover:text-air-orange'" class="font-heading font-600 mt-2 mb-2 transition">{{ t(card[3]) }}</h3>
+                            <p class="text-xs text-gray-500">{{ t(card[4]) }}</p>
                         </div>
                     </div>
                 </div>
@@ -1109,9 +846,9 @@ const onBannerSecondaryCtaClick = () => {
         <section id="faq" class="py-16 sm:py-24 px-4 border-t border-white/5">
             <div class="max-w-3xl mx-auto">
                 <div class="text-center mb-10">
-                    <span class="text-air-blue text-xs sm:text-sm font-semibold uppercase tracking-wider">FAQ</span>
-                    <h2 class="font-heading font-800 text-2xl sm:text-3xl mt-2">Häufige Fragen</h2>
-                    <p class="text-gray-400 mt-3 text-sm sm:text-base">Alles, was du vor dem Start wissen musst.</p>
+                    <span class="text-air-blue text-xs sm:text-sm font-semibold uppercase tracking-wider">{{ t('guest.welcome.faq.eyebrow') }}</span>
+                    <h2 class="font-heading font-800 text-2xl sm:text-3xl mt-2">{{ t('guest.welcome.faq.title') }}</h2>
+                    <p class="text-gray-400 mt-3 text-sm sm:text-base">{{ t('guest.welcome.faq.subtitle') }}</p>
                 </div>
                 <div class="space-y-3">
                     <details v-for="faq in faqItems" :key="faq.question" class="grad-card rounded-2xl p-4 sm:p-5">
@@ -1131,86 +868,86 @@ const onBannerSecondaryCtaClick = () => {
             style="background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(0,102,255,.08) 0%, transparent 50%);">
             <div class="max-w-3xl mx-auto">
                 <div class="text-center mb-10">
-                    <span class="text-air-blue text-sm font-semibold uppercase tracking-wider">Kontakt</span>
-                    <h2 class="font-heading font-800 text-3xl sm:text-4xl mt-2">Schreib uns</h2>
-                    <p class="text-gray-400 mt-3">Fragen, Feedback oder Partnerschaften? Wir freuen uns auf dich.</p>
+                    <span class="text-air-blue text-sm font-semibold uppercase tracking-wider">{{ t('guest.nav.contact') }}</span>
+                    <h2 class="font-heading font-800 text-3xl sm:text-4xl mt-2">{{ t('guest.welcome.contact.title') }}</h2>
+                    <p class="text-gray-400 mt-3">{{ t('guest.welcome.contact.subtitle') }}</p>
                 </div>
                 <h3 id="kontakt-form-title" class="font-heading font-700 text-lg sm:text-xl text-white mb-2">
-                    Kontakt aufnehmen</h3>
+                    {{ t('guest.welcome.contact.form_title') }}</h3>
                 <p id="kontakt-form-hinweis" class="text-xs text-gray-400 mb-2">
-                    Wir antworten so schnell wie möglich.</p>
+                    {{ t('guest.welcome.contact.form_hint') }}</p>
                 <form novalidate @submit.prevent="submitForm" class="grad-card rounded-2xl p-6 sm:p-8 space-y-5"
                     aria-labelledby="kontakt-form-title" aria-describedby="kontakt-form-hinweis">
                     <div class="grid sm:grid-cols-2 gap-5">
                         <div>
-                            <label for="cf-name" class="block text-sm font-medium text-gray-300 mb-1.5">Name</label>
+                            <label for="cf-name" class="block text-sm font-medium text-gray-300 mb-1.5">{{ t('guest.welcome.contact.name_label') }}</label>
                             <input id="cf-name" v-model="form.name" name="name" autocomplete="name" required
                                 :aria-invalid="Boolean(form.errors.name)"
                                 :aria-describedby="form.errors.name ? 'cf-name-error' : 'cf-name-help'" type="text"
-                                ref="nameInputRef" placeholder="Dein Name" @input="clearFieldError('name')"
+                                ref="nameInputRef" :placeholder="t('guest.welcome.contact.name_placeholder')" @input="clearFieldError('name')"
                                 class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-air-blue/50 transition">
-                            <p id="cf-name-help" class="sr-only text-gray-500 text-xs mt-1">Bitte gib deinen Namen ein.</p>
+                            <p id="cf-name-help" class="sr-only text-gray-500 text-xs mt-1">{{ t('guest.welcome.contact.name_help') }}</p>
                             <div v-if="form.errors.name" id="cf-name-error" role="alert" class="text-red-400 text-xs mt-1">{{ form.errors.name }}</div>
                         </div>
                         <div>
-                            <label for="cf-email" class="block text-sm font-medium text-gray-300 mb-1.5">E-Mail</label>
+                            <label for="cf-email" class="block text-sm font-medium text-gray-300 mb-1.5">{{ t('guest.welcome.contact.email_label') }}</label>
                             <input id="cf-email" v-model="form.email" name="email" autocomplete="email" required
                                 :aria-invalid="Boolean(form.errors.email)"
                                 :aria-describedby="form.errors.email ? 'cf-email-error' : 'cf-email-help'" type="email"
                                 ref="emailInputRef"
                                 @input="clearFieldError('email')"
-                                placeholder="deine@email.de"
+                                :placeholder="t('guest.welcome.contact.email_placeholder')"
                                 class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-air-blue/50 transition">
-                            <p id="cf-email-help" class="sr-only text-gray-500 text-xs mt-1">Bitte gib eine gültige E-Mail-Adresse an.</p>
+                            <p id="cf-email-help" class="sr-only text-gray-500 text-xs mt-1">{{ t('guest.welcome.contact.email_help') }}</p>
                             <div v-if="form.errors.email" id="cf-email-error" class="text-red-400 text-xs mt-1">{{ form.errors.email }}
                             </div>
                         </div>
                     </div>
                     <div>
-                        <label for="cf-msg" class="block text-sm font-medium text-gray-300 mb-1.5">Nachricht</label>
+                        <label for="cf-msg" class="block text-sm font-medium text-gray-300 mb-1.5">{{ t('guest.welcome.contact.message_label') }}</label>
                         <textarea id="cf-msg" v-model="form.message" name="message" required rows="4"
                             :aria-invalid="Boolean(form.errors.message)"
                             :aria-describedby="form.errors.message ? 'cf-message-error' : 'cf-msg-help'"
-                            placeholder="Was möchtest du uns sagen?"
+                            :placeholder="t('guest.welcome.contact.message_placeholder')"
                             ref="messageInputRef" @input="clearFieldError('message')"
                             class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-air-blue/50 transition resize-none"></textarea>
-                            <p id="cf-msg-help" class="sr-only text-gray-500 text-xs mt-1">Kurze Anwendungsfrage, Feedback oder Supportbedarf.</p>
+                            <p id="cf-msg-help" class="sr-only text-gray-500 text-xs mt-1">{{ t('guest.welcome.contact.message_help') }}</p>
                             <div v-if="form.errors.message" id="cf-message-error" class="text-red-400 text-xs mt-1">{{ form.errors.message }}
                             </div>
                     </div>
                     <button type="submit" :disabled="form.processing"
                         class="w-full bg-air-blue hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-full transition">
-                        <span v-if="form.processing">Wird gesendet...</span>
-                        <span v-else>Nachricht senden</span>
+                        <span v-if="form.processing">{{ t('guest.welcome.contact.sending') }}</span>
+                        <span v-else>{{ t('guest.welcome.contact.submit') }}</span>
                     </button>
                     <div v-show="formSuccess" role="status" aria-live="polite" class="text-center text-air-green text-sm font-medium py-2">
-                        Danke! Deine Nachricht wurde gesendet.
+                        {{ t('guest.welcome.contact.success') }}
                     </div>
                 </form>
                 <div class="mt-8 flex justify-center gap-5">
                     <button type="button" @click="scrollTo('blog')"
-                        aria-label="Zum Blog-Bereich scrollen"
+                        :aria-label="t('guest.welcome.contact.social.blog_aria')"
                         class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:border-air-blue/50 transition">
                         <i class="lab la-instagram text-gray-400" aria-hidden="true"></i>
-                        <span class="sr-only">Blog lesen</span>
+                        <span class="sr-only">{{ t('guest.welcome.contact.social.blog') }}</span>
                     </button>
                     <button type="button" @click="scrollTo('funktionen')"
-                        aria-label="Zum Funktionsbereich scrollen"
+                        :aria-label="t('guest.welcome.contact.social.features_aria')"
                         class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:border-air-blue/50 transition">
                         <i class="lab la-twitter text-gray-400" aria-hidden="true"></i>
-                        <span class="sr-only">Funktionen ansehen</span>
+                        <span class="sr-only">{{ t('guest.welcome.contact.social.features') }}</span>
                     </button>
                     <button type="button" @click="scrollTo('ueber')"
-                        aria-label="Zum Über-uns-Bereich scrollen"
+                        :aria-label="t('guest.welcome.contact.social.about_aria')"
                         class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:border-air-blue/50 transition">
                         <i class="lab la-linkedin text-gray-400" aria-hidden="true"></i>
-                        <span class="sr-only">Über uns ansehen</span>
+                        <span class="sr-only">{{ t('guest.welcome.contact.social.about') }}</span>
                     </button>
                     <button type="button" @click="scrollTo('kontakt')"
-                        aria-label="Zum Kontaktformular scrollen"
+                        :aria-label="t('guest.welcome.contact.social.contact_aria')"
                         class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:border-air-blue/50 transition">
                         <i class="lab la-facebook text-gray-400" aria-hidden="true"></i>
-                        <span class="sr-only">Kontaktbereich</span>
+                        <span class="sr-only">{{ t('guest.welcome.contact.social.contact') }}</span>
                     </button>
                 </div>
             </div>
@@ -1220,9 +957,8 @@ const onBannerSecondaryCtaClick = () => {
         <section class="py-16 px-4 border-t border-white/5">
             <div class="max-w-4xl mx-auto text-center grad-card rounded-3xl p-10 sm:p-14"
                 style="background: linear-gradient(135deg, rgba(0,102,255,.15), rgba(0,200,83,.1), rgba(255,109,0,.08)); border-color: rgba(0,102,255,.2);">
-                <h2 class="font-heading font-800 text-3xl sm:text-4xl">Bereit, dein Team zu digitalisieren?</h2>
-                <p class="text-gray-400 mt-3 max-w-lg mx-auto">Starte jetzt kostenlos und erlebe, wie einfach
-                    Sportorganisation sein kann.</p>
+                <h2 class="font-heading font-800 text-3xl sm:text-4xl">{{ t('guest.welcome.cta.title') }}</h2>
+                <p class="text-gray-400 mt-3 max-w-lg mx-auto">{{ t('guest.welcome.cta.subtitle') }}</p>
                 <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
                     <a :href="heroPrimaryCta" @click="onBannerPrimaryCtaClick"
                         class="bg-air-blue hover:bg-blue-600 glow-blue text-white font-bold px-8 py-3.5 rounded-full transition">

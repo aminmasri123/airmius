@@ -1,8 +1,11 @@
 <script setup>
 import { Head, Link, usePage } from '@inertiajs/vue3'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue'
+import LanguageDropdown from '@/Components/LanguageDropdown.vue'
 
-defineProps({
+const props = defineProps({
     title: {
         type: String,
         default: 'Airmius ist gerade im Wartemodus',
@@ -18,26 +21,47 @@ defineProps({
 })
 
 const page = usePage()
+const { t } = useI18n()
+
+const defaultTitle = 'Airmius ist gerade im Wartemodus'
+const defaultMessage = 'Wir verbessern gerade die Plattform. Bitte versuche es in Kürze erneut.'
+const legacyDefaultMessage = 'Wir verbessern gerade die Plattform. Bitte versuche es in Kürze erneut.'
+
+const translatedOrCustom = (value, defaults, key) => {
+    const normalized = String(value || '').trim()
+
+    return !normalized || defaults.includes(normalized) ? t(key) : normalized
+}
+
+const localizedTitle = computed(() => translatedOrCustom(props.title, [defaultTitle], 'maintenance.title'))
+const localizedMessage = computed(() => translatedOrCustom(props.message, [defaultMessage, legacyDefaultMessage], 'maintenance.message'))
 </script>
 
 <template>
-    <Head :title="title" />
+    <Head :title="localizedTitle" />
 
-    <main class="min-h-screen bg-bg text-primary">
+    <main data-no-auto-translate class="min-h-screen bg-bg text-primary">
         <div class="mx-auto flex min-h-screen w-full max-w-6xl items-center px-5 py-10">
             <section class="grid w-full overflow-hidden rounded-lg border border-border bg-card shadow-xl md:grid-cols-[1fr_24rem]">
+                <div class="flex items-center justify-end gap-2 border-b border-border bg-bg/80 px-4 py-3 md:col-span-2 sm:px-6">
+                    <span class="hidden text-xs font-semibold uppercase tracking-wide text-secondary sm:inline">
+                        {{ t('maintenance.language_label') }}
+                    </span>
+                    <LanguageDropdown align="end" />
+                </div>
+
                 <div class="p-6 sm:p-10">
                     <div class="h-24 w-24">
                         <AuthenticationCardLogo />
                     </div>
 
                     <div class="mt-10 max-w-2xl">
-                        <p class="text-sm font-semibold uppercase tracking-wide text-secondary">Wartemodus</p>
+                        <p class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ t('maintenance.eyebrow') }}</p>
                         <h1 class="mt-3 text-3xl font-semibold text-primary sm:text-5xl">
-                            {{ title }}
+                            {{ localizedTitle }}
                         </h1>
                         <p class="mt-5 text-base leading-7 text-secondary sm:text-lg">
-                            {{ message }}
+                            {{ localizedMessage }}
                         </p>
                     </div>
 
@@ -47,7 +71,7 @@ const page = usePage()
                             :href="route('login')"
                             class="btn-primary"
                         >
-                            Für Admins anmelden
+                            {{ t('maintenance.admin_login') }}
                         </Link>
 
                         <Link
@@ -57,7 +81,7 @@ const page = usePage()
                             as="button"
                             class="btn"
                         >
-                            Abmelden
+                            {{ t('maintenance.logout') }}
                         </Link>
                     </div>
                 </div>
@@ -71,8 +95,8 @@ const page = usePage()
                                         <i class="las la-wrench text-xl"></i>
                                     </span>
                                     <div>
-                                        <p class="font-semibold text-primary">Plattform wird aktualisiert</p>
-                                        <p class="text-sm text-secondary">Bitte später erneut versuchen.</p>
+                                        <p class="font-semibold text-primary">{{ t('maintenance.updating_title') }}</p>
+                                        <p class="text-sm text-secondary">{{ t('maintenance.updating_text') }}</p>
                                     </div>
                                 </div>
                             </div>
@@ -83,20 +107,20 @@ const page = usePage()
                                         <i class="las la-shield-alt text-xl"></i>
                                     </span>
                                     <div>
-                                        <p class="font-semibold text-primary">Daten bleiben geschützt</p>
-                                        <p class="text-sm text-secondary">Der Zugriff ist vorübergehend eingeschränkt.</p>
+                                        <p class="font-semibold text-primary">{{ t('maintenance.protected_title') }}</p>
+                                        <p class="text-sm text-secondary">{{ t('maintenance.protected_text') }}</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="rounded-lg border border-border bg-card p-4">
-                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Status</p>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ t('maintenance.status_label') }}</p>
                             <div class="mt-3 h-2 overflow-hidden rounded-full bg-muted">
                                 <div class="h-full w-3/4 rounded-full bg-buttonPrimary"></div>
                             </div>
                             <p class="mt-3 text-sm text-secondary">
-                                Airmius kommt gleich wieder zurück.
+                                {{ t('maintenance.status_text') }}
                             </p>
                         </div>
                     </div>

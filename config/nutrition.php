@@ -8,7 +8,7 @@ return [
     ],
 
     'meal_types' => [
-        ['key' => 'breakfast', 'label' => 'Fruehstueck', 'icon' => 'las la-mug-hot', 'theme' => 'amber'],
+        ['key' => 'breakfast', 'label' => 'Frühstück', 'icon' => 'las la-mug-hot', 'theme' => 'amber'],
         ['key' => 'lunch', 'label' => 'Mittagessen', 'icon' => 'las la-utensils', 'theme' => 'emerald'],
         ['key' => 'dinner', 'label' => 'Abendessen', 'icon' => 'las la-moon', 'theme' => 'indigo'],
         ['key' => 'snack', 'label' => 'Snack', 'icon' => 'las la-apple-alt', 'theme' => 'rose'],
@@ -17,11 +17,11 @@ return [
     ],
 
     'goal_types' => [
-        ['key' => 'maintain', 'label' => 'Gewicht halten', 'hint' => 'Ausgeglichen essen und Training stabil unterstuetzen.'],
+        ['key' => 'maintain', 'label' => 'Gewicht halten', 'hint' => 'Ausgeglichen essen und Training stabil unterstützen.'],
         ['key' => 'build_muscle', 'label' => 'Muskelaufbau', 'hint' => 'Protein und genug Energie für Krafttraining priorisieren.'],
         ['key' => 'fat_loss', 'label' => 'Fett reduzieren', 'hint' => 'Satt essen, Protein hoch halten und Defizit moderat planen.'],
         ['key' => 'performance', 'label' => 'Mehr Leistung', 'hint' => 'Kohlenhydrate rund ums Training und Regeneration stärken.'],
-        ['key' => 'recovery', 'label' => 'Besser regenerieren', 'hint' => 'Fluessigkeit, Protein und einfache Mahlzeiten nach Belastung.'],
+        ['key' => 'recovery', 'label' => 'Besser regenerieren', 'hint' => 'Flüssigkeit, Protein und einfache Mahlzeiten nach Belastung.'],
     ],
 
     'diet_styles' => [
@@ -46,7 +46,7 @@ return [
             'fat_g' => 16,
             'tags' => ['regeneration', 'protein', 'schnell'],
             'diet_styles' => ['balanced', 'high_protein', 'halal'],
-            'ingredients' => ['Reis', 'Haehnchen oder Tofu', 'Gemüse', 'Joghurt-Dip'],
+            'ingredients' => ['Reis', 'Hähnchen oder Tofu', 'Gemüse', 'Joghurt-Dip'],
             'steps' => ['Kohlenhydratbasis wählen.', 'Proteinquelle anbraten.', 'Gemüse und Dip ergänzen.'],
         ],
         [
@@ -59,10 +59,10 @@ return [
             'protein_g' => 25,
             'carbs_g' => 72,
             'fat_g' => 12,
-            'tags' => ['laufen', 'energie', 'fruehstueck'],
+            'tags' => ['laufen', 'energie', 'frühstück'],
             'diet_styles' => ['balanced', 'vegetarian', 'high_protein'],
             'ingredients' => ['Haferflocken', 'Banane', 'Skyr oder Sojajoghurt', 'Honig'],
-            'steps' => ['Haferflocken mit Milch oder Wasser kochen.', 'Banane und Skyr dazugeben.', 'Leicht suessen und 60-90 Minuten vor dem Training essen.'],
+            'steps' => ['Haferflocken mit Milch oder Wasser kochen.', 'Banane und Skyr dazugeben.', 'Leicht süßen und 60-90 Minuten vor dem Training essen.'],
         ],
         [
             'key' => 'lean_protein_plate',
@@ -76,7 +76,7 @@ return [
             'fat_g' => 14,
             'tags' => ['satt', 'kalorienarm', 'protein'],
             'diet_styles' => ['balanced', 'high_protein', 'low_carb', 'halal'],
-            'ingredients' => ['Mageres Protein', 'Kartoffeln oder Vollkornreis', 'Salat', 'Olivenoel-Zitronen-Dressing'],
+            'ingredients' => ['Mageres Protein', 'Kartoffeln oder Vollkornreis', 'Salat', 'Olivenöl-Zitronen-Dressing'],
             'steps' => ['Proteinquelle garen.', 'Beilage portionieren.', 'Viel Salat dazugeben und Dressing sparsam dosieren.'],
         ],
         [
@@ -126,7 +126,7 @@ return [
         ],
         'performance' => [
             'Vor intensiven Einheiten sind leicht verdauliche Kohlenhydrate oft hilfreicher als schwere Mahlzeiten.',
-            'Nach langen Einheiten Fluessigkeit, Salz und Kohlenhydrate nicht vergessen.',
+            'Nach langen Einheiten Flüssigkeit, Salz und Kohlenhydrate nicht vergessen.',
         ],
         'recovery' => [
             'Nach Training: Protein plus Kohlenhydrate ist für viele Sportler der einfachste Regenerationsanker.',

@@ -204,6 +204,12 @@ const rejectionModal = useForm({
     selectedReason: '',
     reason: '',
 })
+const productDeleteModal = ref({
+    open: false,
+    product: null,
+    confirmation: '',
+    processing: false,
+})
 const rejectionReasons = [
     { value: 'missing_required_info', label: 'Pflichtangaben fehlen', text: 'Bitte ergaenze die fehlenden Pflichtangaben wie Beschreibung, Preis, Kategorie oder Lieferinformationen.' },
     { value: 'unclear_offer', label: 'Angebot ist unklar', text: 'Das Angebot ist für Käufer noch nicht eindeutig genug beschrieben. Bitte erklaere Inhalt, Umfang und Ablauf genauer.' },
@@ -745,6 +751,44 @@ const submitRejection = () => {
             rejectionModal.product = null
             rejectionModal.selectedReason = ''
             rejectionModal.reason = ''
+        },
+    })
+}
+
+const openDeleteProduct = (product) => {
+    productDeleteModal.value = {
+        open: true,
+        product,
+        confirmation: '',
+        processing: false,
+    }
+}
+
+const closeDeleteProduct = () => {
+    productDeleteModal.value = {
+        open: false,
+        product: null,
+        confirmation: '',
+        processing: false,
+    }
+}
+
+const destroyProduct = () => {
+    const product = productDeleteModal.value.product
+    if (!product || productDeleteModal.value.confirmation !== 'delete') {
+        return
+    }
+
+    productDeleteModal.value.processing = true
+    router.delete(route('admin.commerce.products.destroy', product.id), {
+        preserveScroll: true,
+        only: ['products', 'summary', 'auditLogs', 'sellerReports'],
+        data: {
+            confirmation: productDeleteModal.value.confirmation,
+        },
+        onSuccess: closeDeleteProduct,
+        onFinish: () => {
+            productDeleteModal.value.processing = false
         },
     })
 }
@@ -1901,8 +1945,9 @@ const updatePayoutProfile = (profile, status) => {
                                     <option value="published">Freigegeben</option>
                                     <option value="archived">Archiviert</option>
                                 </select>
-                                <button class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="openEditProduct(product)">Bearbeiten</button>
-                                <button class="rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="updateProductStatus(product, 'rejected')">Ablehnen</button>
+                                <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary" @click="openEditProduct(product)">Bearbeiten</button>
+                                <button type="button" class="rounded-lg border border-warning/40 px-3 py-2 text-xs font-semibold text-warning" @click="updateProductStatus(product, 'rejected')">Ablehnen</button>
+                                <button type="button" class="rounded-lg border border-danger/40 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger/10" @click="openDeleteProduct(product)">Löschen</button>
                             </div>
                         </div>
                     </div>
@@ -2779,6 +2824,40 @@ const updatePayoutProfile = (profile, status) => {
                 <div class="mt-5 flex justify-end gap-3">
                     <button class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="rejectionModal.open = false">Abbrechen</button>
                     <button class="rounded-lg bg-warning px-4 py-2 text-sm font-semibold text-white" :disabled="!rejectionModal.reason.trim()" @click="submitRejection">Ablehnen</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="productDeleteModal.open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+            <div class="w-full max-w-lg rounded-xl border border-danger/30 bg-card p-5 shadow-2xl">
+                <div class="flex items-start gap-3">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger">
+                        <i class="las la-trash text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-danger">Produkt löschen</p>
+                        <h2 class="mt-1 text-lg font-semibold text-primary">{{ productDeleteModal.product?.title }}</h2>
+                        <p class="mt-2 text-sm leading-6 text-secondary">
+                            Produkte ohne Bestellungen werden endgültig gelöscht. Wenn bereits Bestellungen existieren, wird das Produkt aus Sicherheitsgründen archiviert, damit Rechnungen und Käufe nachvollziehbar bleiben.
+                        </p>
+                    </div>
+                </div>
+                <label class="mt-5 block">
+                    <span class="text-xs font-semibold uppercase text-secondary">Zur Bestätigung delete eingeben</span>
+                    <input v-model="productDeleteModal.confirmation" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="delete">
+                </label>
+                <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" :disabled="productDeleteModal.processing" @click="closeDeleteProduct">
+                        Abbrechen
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-lg bg-danger px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        :disabled="productDeleteModal.confirmation !== 'delete' || productDeleteModal.processing"
+                        @click="destroyProduct"
+                    >
+                        Löschen
+                    </button>
                 </div>
             </div>
         </div>

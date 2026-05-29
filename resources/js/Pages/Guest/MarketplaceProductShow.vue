@@ -7,6 +7,7 @@ import UserCard from '@/Components/Auth/UserCard.vue'
 import { useTheme } from '@/services/useTheme'
 import { applyLogoFallback, logoWordmark } from '@/services/logoAssets'
 import { computed, nextTick, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -25,6 +26,7 @@ const props = defineProps({
 
 const page = usePage()
 const { isDark } = useTheme()
+const { t, locale } = useI18n()
 const currentUser = computed(() => props.authUser || page.props.auth?.user || null)
 const isAuthenticated = computed(() => Boolean(currentUser.value))
 const marketplaceLogo = computed(() => logoWordmark(isDark.value))
@@ -80,22 +82,22 @@ const sideBannerStyle = computed(() => ({
     width: `${Math.max(148, Math.min(192, Number(sideBannerDimensions.value.width || 192)))}px`,
 }))
 const categoryLabels = {
-    product: 'Produkt',
-    course: 'Kurs',
-    camp: 'Camp',
-    service: 'Service',
-    outfit_subscription: 'Outfit-Abo',
+    product: t('Produkt'),
+    course: t('Kurs'),
+    camp: t('Camp'),
+    service: t('Service'),
+    outfit_subscription: t('Outfit-Abo'),
 }
 const productFacts = computed(() => [
-    ['Artikelnummer', props.product.sku || '-'],
-    ['Kategorie', categoryLabels[props.product.category] || props.product.category],
-    ['Versand', props.product.is_shippable ? 'Versandpflichtig' : 'Digital / ohne Versand'],
-    ['Rückgabe', `${props.product.return_window_days ?? 14} Tage (${props.product.return_policy_type || 'standard'})`],
+    [t('Artikelnummer'), props.product.sku || '-'],
+    [t('Kategorie'), categoryLabels[props.product.category] || props.product.category],
+    [t('Versand'), props.product.is_shippable ? t('Versandpflichtig') : t('Digital / ohne Versand')],
+    [t('Rückgabe'), t('{days} Tage ({policy})', { days: props.product.return_window_days ?? 14, policy: props.product.return_policy_type || 'standard' })],
 ])
 const purchaseFacts = computed(() => [
-    { label: 'Lieferung', value: props.product.delivery_label || (props.product.is_shippable ? 'Versand nach Bestellung' : 'Digital / Termin'), icon: 'las la-truck' },
-    { label: 'Rückgabe', value: props.product.return_label || `${props.product.return_window_days ?? 14} Tage`, icon: 'las la-undo' },
-    { label: 'Anbieter', value: props.product.provider_name || 'Airmius Anbieter', icon: 'las la-store' },
+    { label: t('Lieferung'), value: props.product.delivery_label || (props.product.is_shippable ? t('Versand nach Bestellung') : t('Digital / Termin')), icon: 'las la-truck' },
+    { label: t('Rückgabe'), value: props.product.return_label || t('{days} Tage', { days: props.product.return_window_days ?? 14 }), icon: 'las la-undo' },
+    { label: t('Anbieter'), value: props.product.provider_name || t('Airmius Anbieter'), icon: 'las la-store' },
 ])
 const galleryImages = computed(() => {
     const images = props.product.gallery_images?.length ? props.product.gallery_images : [props.product.image_url]
@@ -137,9 +139,9 @@ const selectedProviderLabel = computed(() => selectedPaymentProvider.value?.labe
 const checkoutUnavailable = computed(() => !paymentProviderItems.value.length)
 const checkoutStep = ref('address')
 const checkoutSteps = [
-    { key: 'address', label: 'Adresse', icon: 'las la-map-marker-alt' },
-    { key: 'payment', label: 'Menge', icon: 'las la-shopping-bag' },
-    { key: 'review', label: 'Prüfen', icon: 'las la-clipboard-check' },
+    { key: 'address', label: t('Adresse'), icon: 'las la-map-marker-alt' },
+    { key: 'payment', label: t('Menge'), icon: 'las la-shopping-bag' },
+    { key: 'review', label: t('Prüfen'), icon: 'las la-clipboard-check' },
 ]
 const isShippableProduct = computed(() => Boolean(props.product.is_shippable))
 const hasGuestContact = computed(() => isAuthenticated.value
@@ -164,19 +166,19 @@ const canContinueAddress = computed(() => Boolean(hasGuestContact.value && hasRe
 const canContinuePayment = computed(() => Boolean(!checkoutUnavailable.value && form.provider && selectedQuantity.value >= 1))
 const checkoutStepHint = computed(() => {
     if (checkoutStep.value === 'address' && !canContinueAddress.value) {
-        return 'Bitte Kontakt und Lieferdaten vervollständigen.'
+        return t('Bitte Kontakt und Lieferdaten vervollständigen.')
     }
 
     if (checkoutStep.value === 'payment' && checkoutUnavailable.value) {
-        return 'Aktuell ist noch keine Zahlungsart für diesen Marketplace konfiguriert.'
+        return t('Aktuell ist noch keine Zahlungsart für diesen Marketplace konfiguriert.')
     }
 
     if (checkoutStep.value === 'payment' && !canContinuePayment.value) {
-        return 'Bitte Zahlungsart und Menge prüfen.'
+        return t('Bitte Zahlungsart und Menge prüfen.')
     }
 
     if (checkoutStep.value === 'review' && !form.accepted_terms) {
-        return 'AGB und Widerruf muessen vor dem Kauf bestätigt werden.'
+        return t('AGB und Widerruf müssen vor dem Kauf bestätigt werden.')
     }
 
     return ''
@@ -228,7 +230,7 @@ const productSchema = computed(() => ({
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: props.product.title,
-    description: props.product.description || `Marketplace-Angebot ${props.product.title}`,
+    description: props.product.description || t('Marketplace-Angebot {title}', { title: props.product.title }),
     image: galleryImages.value,
     sku: props.product.sku || undefined,
     category: categoryLabels[props.product.category] || props.product.category,
@@ -251,7 +253,7 @@ const productSchema = computed(() => ({
 }))
 const savedAddressOptions = computed(() => props.shippingAddresses || [])
 const regionNames = typeof Intl !== 'undefined' && Intl.DisplayNames
-    ? new Intl.DisplayNames(['de'], { type: 'region' })
+    ? new Intl.DisplayNames([locale.value || 'de'], { type: 'region' })
     : null
 const deliveryCountryOptions = computed(() => props.pricingCountries.map((country) => ({
     country: country.country,
@@ -261,20 +263,20 @@ const relatedProductItems = computed(() => props.relatedProducts || [])
 const isLearningProduct = computed(() => ['online_course', 'training_plan'].includes(props.product.offer_type))
 const productFaqItems = computed(() => [
     {
-        question: 'Wie bekomme ich das Angebot?',
-        answer: props.product.delivery_label || (props.product.is_shippable ? 'Der Anbieter bereitet den Versand nach der Bestellung vor.' : 'Du erhältst nach dem Kauf die weiteren Informationen digital oder per E-Mail.'),
+        question: t('Wie bekomme ich das Angebot?'),
+        answer: props.product.delivery_label || (props.product.is_shippable ? t('Der Anbieter bereitet den Versand nach der Bestellung vor.') : t('Du erhältst nach dem Kauf die weiteren Informationen digital oder per E-Mail.')),
     },
     {
-        question: 'Wer ist mein Ansprechpartner?',
-        answer: `${props.product.provider_profile?.name || props.product.provider_name || 'Der Anbieter'} ist für Angebotsdetails und Erfüllung zustaendig. Airmius stellt Checkout, Status und Belege bereit.`,
+        question: t('Wer ist mein Ansprechpartner?'),
+        answer: t('{provider} ist für Angebotsdetails und Erfüllung zuständig. Airmius stellt Checkout, Status und Belege bereit.', { provider: props.product.provider_profile?.name || props.product.provider_name || t('Der Anbieter') }),
     },
     {
-        question: 'Wie wird der Endpreis berechnet?',
-        answer: 'Steuer, Versand und Gesamtpreis werden anhand von Lieferland und Kundentyp vor dem Abschluss angezeigt.',
+        question: t('Wie wird der Endpreis berechnet?'),
+        answer: t('Steuer, Versand und Gesamtpreis werden anhand von Lieferland und Kundentyp vor dem Abschluss angezeigt.'),
     },
     {
-        question: 'Welche Rückgabe gilt?',
-        answer: props.product.return_label || 'Die Rückgabe richtet sich nach Angebotstyp, Richtlinie und gesetzlicher Lage.',
+        question: t('Welche Rückgabe gilt?'),
+        answer: props.product.return_label || t('Die Rückgabe richtet sich nach Angebotstyp, Richtlinie und gesetzlicher Lage.'),
     },
 ])
 
@@ -356,8 +358,8 @@ const updateCountry = () => {
 
 <template>
     <SeoHead
-        :title="`${product.title} kaufen`"
-        :description="product.description || 'Marketplace-Angebot auf Airmius ansehen und als Gast bestellen.'"
+        :title="$t('marketplace.product.seo_title', { title: product.title })"
+        :description="product.description || $t('Marketplace-Angebot auf Airmius ansehen und als Gast bestellen.')"
         type="product"
         :image="activeProductImage || undefined"
         :schema="productSchema"
@@ -391,8 +393,8 @@ const updateCountry = () => {
                             <i class="las la-arrow-left text-xl"></i>
                         </span>
                         <span class="hidden min-w-0 sm:block">
-                            <span class="block font-heading text-lg font-900 leading-tight sm:text-2xl">AIRMIUS Marketplace</span>
-                            <span class="block truncate text-xs font-semibold text-secondary sm:text-sm">Zurück zu allen Sport Deals</span>
+                            <span class="block font-heading text-lg font-900 leading-tight sm:text-2xl">{{ $t("AIRMIUS Marketplace") }}</span>
+                            <span class="block truncate text-xs font-semibold text-secondary sm:text-sm">{{ $t("Zurück zu allen Sport Deals") }}</span>
                         </span>
                     </Link>
                     <div class="flex shrink-0 items-center justify-end gap-2 text-sm font-black">
@@ -400,8 +402,8 @@ const updateCountry = () => {
                             v-if="currentUser"
                             :href="route('auth.commerce.cart.index')"
                             class="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary"
-                            aria-label="Warenkorb"
-                            title="Warenkorb"
+                            :aria-label="$t('Warenkorb')"
+                            :title="$t('Warenkorb')"
                         >
                             <i class="las la-shopping-cart text-xl"></i>
                             <span
@@ -418,14 +420,14 @@ const updateCountry = () => {
                                 :href="loginHref"
                                 class="rounded-full border border-border px-3 py-2 text-secondary transition hover:border-buttonPrimary hover:text-primary"
                             >
-                                Anmelden
+                                {{ $t("Anmelden") }}
                             </Link>
                             <Link
                                 v-if="canRegister"
                                 :href="registerHref"
                                 class="rounded-full bg-buttonPrimary px-3 py-2 text-buttonTextPrimary transition hover:bg-buttonPrimaryHover"
                             >
-                                Registrieren
+                                {{ $t("Registrieren") }}
                             </Link>
                         </template>
                     </div>
@@ -445,11 +447,11 @@ const updateCountry = () => {
                                 <div class="absolute bottom-0 left-0 max-w-3xl p-6 text-white">
                                     <p class="text-xs font-black uppercase tracking-wide text-white/80">{{ categoryLabels[product.category] || product.category }}</p>
                                     <h1 class="mt-2 font-heading text-4xl font-900 leading-tight md:text-5xl">{{ product.title }}</h1>
-                                    <p class="mt-3 text-sm font-semibold text-white/90">{{ product.provider_name || 'Airmius Anbieter' }}</p>
+                                    <p class="mt-3 text-sm font-semibold text-white/90">{{ product.provider_name || $t('Airmius Anbieter') }}</p>
                                 </div>
                             </div>
                             <div class="border-l border-border p-5">
-                                <p class="text-xs font-black uppercase tracking-wide text-secondary">Produktinformation</p>
+                                <p class="text-xs font-black uppercase tracking-wide text-secondary">{{ $t("Produktinformation") }}</p>
                                 <dl class="mt-4 grid gap-3">
                                     <div v-for="fact in productFacts" :key="fact[0]" class="rounded border border-border bg-bg p-3">
                                         <dt class="text-[11px] font-bold uppercase text-secondary">{{ fact[0] }}</dt>
@@ -457,7 +459,7 @@ const updateCountry = () => {
                                     </div>
                                 </dl>
                                 <div v-if="galleryImages.length > 1" class="mt-4">
-                                    <p class="text-xs font-black uppercase tracking-wide text-secondary">Bilder</p>
+                                    <p class="text-xs font-black uppercase tracking-wide text-secondary">{{ $t("Bilder") }}</p>
                                     <div class="mt-2 grid grid-cols-4 gap-2">
                                         <button
                                             v-for="image in galleryImages"
@@ -474,19 +476,19 @@ const updateCountry = () => {
                                     </div>
                                 </div>
                                 <div class="mt-5 rounded border border-border bg-bg p-4">
-                                    <p class="text-xs font-black uppercase tracking-wide text-secondary">Preis</p>
+                                    <p class="text-xs font-black uppercase tracking-wide text-secondary">{{ $t("Preis") }}</p>
                                     <p class="mt-1 text-3xl font-black text-primary">{{ formatMoney(visiblePriceCents, price.currency) }}</p>
                                     <p class="mt-2 text-xs leading-5 text-secondary">
-                                        Steuer und Versand werden im Checkout aus Lieferadresse und Kundentyp berechnet.
+                                        {{ $t("Steuer und Versand werden im Checkout aus Lieferadresse und Kundentyp berechnet.") }}
                                     </p>
                                     <div class="mt-4 grid gap-2 text-xs font-semibold text-secondary">
                                         <p class="flex items-center gap-2">
                                             <i class="las la-shield-alt text-lg text-buttonPrimary"></i>
-                                            Anbieter, Preis und Steuer werden vor Abschluss ausgewiesen.
+                                            {{ $t("Anbieter, Preis und Steuer werden vor Abschluss ausgewiesen.") }}
                                         </p>
                                         <p class="flex items-center gap-2">
                                             <i class="las la-undo text-lg text-buttonPrimary"></i>
-                                            Rückgabe: {{ product.return_window_days ?? 14 }} Tage nach Richtlinie.
+                                            {{ $t('Rückgabe:') }} {{ product.return_window_days ?? 14 }} {{ $t('Tage nach Richtlinie.') }}
                                         </p>
                                     </div>
                                     <div class="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
@@ -495,14 +497,14 @@ const updateCountry = () => {
                                             class="rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
                                             @click="openCheckout"
                                         >
-                                            Jetzt kaufen
+                                            {{ $t("Jetzt kaufen") }}
                                         </button>
                                         <button
                                             type="button"
                                             class="rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted"
                                             @click="addToCart"
                                         >
-                                            In den Einkaufswagen
+                                            {{ $t("In den Einkaufswagen") }}
                                         </button>
                                     </div>
                                 </div>
@@ -525,13 +527,13 @@ const updateCountry = () => {
                         </div>
                         <div class="grid gap-5 border-t border-border p-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
                             <div>
-                                <h2 class="text-lg font-black text-primary">Beschreibung</h2>
+                                <h2 class="text-lg font-black text-primary">{{ $t("Beschreibung") }}</h2>
                                 <p class="mt-3 whitespace-pre-line text-sm leading-7 text-secondary">
-                                    {{ product.description || 'Keine Beschreibung hinterlegt.' }}
+                                    {{ product.description || $t('Keine Beschreibung hinterlegt.') }}
                                 </p>
                                 <div v-if="isLearningProduct" class="mt-6 grid gap-4 md:grid-cols-2">
                                     <div v-if="product.course_outline?.length" class="rounded-lg border border-border bg-bg p-4">
-                                        <h3 class="text-sm font-black uppercase text-secondary">Inhalt</h3>
+                                        <h3 class="text-sm font-black uppercase text-secondary">{{ $t("Inhalt") }}</h3>
                                         <ol class="mt-3 space-y-3">
                                             <li v-for="(item, index) in product.course_outline" :key="item" class="flex gap-3 text-sm text-primary">
                                                 <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-buttonPrimary text-xs font-black text-buttonTextPrimary">{{ index + 1 }}</span>
@@ -540,7 +542,7 @@ const updateCountry = () => {
                                         </ol>
                                     </div>
                                     <div v-if="product.learning_goals?.length || product.coaching_enabled" class="rounded-lg border border-border bg-bg p-4">
-                                        <h3 class="text-sm font-black uppercase text-secondary">Lernziel</h3>
+                                        <h3 class="text-sm font-black uppercase text-secondary">{{ $t("Lernziel") }}</h3>
                                         <ul v-if="product.learning_goals?.length" class="mt-3 space-y-2">
                                             <li v-for="goal in product.learning_goals" :key="goal" class="flex gap-2 text-sm text-primary">
                                                 <i class="las la-check mt-0.5 text-lg text-buttonPrimary"></i>
@@ -548,15 +550,15 @@ const updateCountry = () => {
                                             </li>
                                         </ul>
                                         <div v-if="product.coaching_enabled" class="mt-4 rounded-lg border border-buttonPrimary/30 bg-buttonPrimary/10 p-3 text-sm text-primary">
-                                            <p class="font-bold">Trainer-Feedback inklusive</p>
+                                            <p class="font-bold">{{ $t("Trainer-Feedback inklusive") }}</p>
                                             <p v-if="product.coach_feedback_instructions" class="mt-2 text-secondary">{{ product.coach_feedback_instructions }}</p>
-                                            <p v-else class="mt-2 text-secondary">Athleten können Fortschritt und Fragen nach dem Kauf mit dem Trainer teilen.</p>
+                                            <p v-else class="mt-2 text-secondary">{{ $t("Athleten können Fortschritt und Fragen nach dem Kauf mit dem Trainer teilen.") }}</p>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="mt-6 rounded border border-border bg-bg p-4">
-                                    <h2 class="text-lg font-black text-primary">Haeufige Fragen</h2>
+                                    <h2 class="text-lg font-black text-primary">{{ $t("Häufige Fragen") }}</h2>
                                     <div class="mt-3 divide-y divide-border">
                                         <details
                                             v-for="item in productFaqItems"
@@ -574,7 +576,7 @@ const updateCountry = () => {
                             </div>
                             <div>
                                 <div class="rounded border border-border bg-bg p-4">
-                                    <p class="text-xs font-black uppercase tracking-wide text-secondary">Anbieter</p>
+                                    <p class="text-xs font-black uppercase tracking-wide text-secondary">{{ $t("Anbieter") }}</p>
                                     <div class="mt-3 flex items-center gap-3">
                                         <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded bg-buttonPrimary/10 text-sm font-black text-buttonPrimary">
                                             <img v-if="product.provider_profile?.logo_url" :src="product.provider_profile.logo_url" :alt="product.provider_profile.name" class="h-full w-full object-cover" />
@@ -582,11 +584,11 @@ const updateCountry = () => {
                                         </span>
                                         <span class="min-w-0">
                                             <span class="flex items-center gap-1 text-base font-black text-primary">
-                                                {{ product.provider_profile?.name || product.provider_name || 'Airmius Anbieter' }}
+                                                {{ product.provider_profile?.name || product.provider_name || $t('Airmius Anbieter') }}
                                                 <i v-if="product.provider_profile?.verified" class="las la-check-circle text-lg text-success"></i>
                                             </span>
-                                            <span class="mt-1 block text-xs font-semibold text-secondary">{{ product.provider_profile?.type || product.provider_type || 'Marketplace Anbieter' }}</span>
-                                            <span class="mt-1 block text-xs text-secondary">{{ product.provider_profile?.location || 'Online' }}</span>
+                                            <span class="mt-1 block text-xs font-semibold text-secondary">{{ product.provider_profile?.type || product.provider_type || $t('Marketplace Anbieter') }}</span>
+                                            <span class="mt-1 block text-xs text-secondary">{{ product.provider_profile?.location || $t('Online') }}</span>
                                         </span>
                                     </div>
                                     <div class="mt-3 flex flex-wrap gap-1">
@@ -603,37 +605,37 @@ const updateCountry = () => {
                                         :href="product.provider_profile.url"
                                         class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded border border-buttonPrimary/40 px-3 py-2 text-xs font-black text-buttonPrimary hover:bg-buttonPrimary hover:text-buttonTextPrimary"
                                     >
-                                        Anbieterprofil ansehen
+                                        {{ $t("Anbieterprofil ansehen") }}
                                         <i class="las la-arrow-right text-base"></i>
                                     </Link>
                                 </div>
 
-                                <h2 class="mt-6 text-lg font-black text-primary">Varianten</h2>
+                                <h2 class="mt-6 text-lg font-black text-primary">{{ $t("Varianten") }}</h2>
                                 <div v-if="displayAttributes.length" class="mt-3 grid gap-3">
                                     <label v-for="attribute in displayAttributes" :key="attribute.name" class="block">
                                         <span class="text-xs font-bold uppercase text-secondary">{{ attribute.name }}</span>
                                         <select v-model="selectedAttributes[attribute.name]" class="mt-1 w-full rounded-lg border-border bg-bg text-sm font-semibold text-primary">
-                                            <option value="">Bitte wählen</option>
+                                            <option value="">{{ $t("Bitte wählen") }}</option>
                                             <option v-for="option in attribute.values" :key="option" :value="option">
                                                 {{ option }}
                                             </option>
                                         </select>
                                     </label>
                                     <div v-if="selectedVariant" class="rounded-lg border border-border bg-bg p-3 text-xs text-secondary">
-                                        <p v-if="selectedVariant.sku">Artikelnummer: {{ selectedVariant.sku }}</p>
-                                        <p v-if="selectedVariant.stock_quantity !== null">Bestand: {{ selectedVariant.stock_quantity }}</p>
+                                        <p v-if="selectedVariant.sku">{{ $t('Artikelnummer:') }} {{ selectedVariant.sku }}</p>
+                                        <p v-if="selectedVariant.stock_quantity !== null">{{ $t('Bestand:') }} {{ selectedVariant.stock_quantity }}</p>
                                     </div>
                                 </div>
-                                <p v-else class="mt-3 text-sm text-secondary">Noch keine Eigenschaften hinterlegt.</p>
+                                <p v-else class="mt-3 text-sm text-secondary">{{ $t("Noch keine Eigenschaften hinterlegt.") }}</p>
 
-                                <h2 class="mt-6 text-lg font-black text-primary">Merkmale</h2>
+                                <h2 class="mt-6 text-lg font-black text-primary">{{ $t("Merkmale") }}</h2>
                                 <ul v-if="product.features?.length" class="mt-3 space-y-2">
                                     <li v-for="feature in product.features" :key="feature" class="flex gap-2 text-sm font-semibold text-primary">
                                         <i class="las la-check mt-0.5 text-lg text-buttonPrimary"></i>
                                         <span>{{ feature }}</span>
                                     </li>
                                 </ul>
-                                <p v-else class="mt-3 text-sm text-secondary">Noch keine Merkmale hinterlegt.</p>
+                                <p v-else class="mt-3 text-sm text-secondary">{{ $t("Noch keine Merkmale hinterlegt.") }}</p>
                             </div>
                         </div>
                     </article>
@@ -642,17 +644,17 @@ const updateCountry = () => {
                         <div v-if="page.props.flash?.success" class="mb-4 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm font-semibold text-success">
                             {{ page.props.flash.success }}
                         </div>
-                        <p class="text-xs uppercase text-secondary">Preis</p>
+                        <p class="text-xs uppercase text-secondary">{{ $t("Preis") }}</p>
                         <p class="mt-2 text-3xl font-bold text-primary">{{ formatMoney(visiblePriceCents, price.currency) }}</p>
                         <div class="mt-2 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
                             <p>
-                                {{ formatMoney(price.net_cents, price.currency) }} netto
+                                {{ formatMoney(price.net_cents, price.currency) }} {{ $t('netto') }}
                             </p>
                             <p>
                                 {{ formatMoney(price.tax_cents, price.currency) }} {{ price.tax_label }} ({{ price.tax_rate }}%)
                             </p>
                             <p v-if="price.is_estimate" class="mt-2 text-xs">
-                                Steuer/Währung sind eine technische Schätzung und werden beim finalen Checkout geprüft.
+                                {{ $t("Steuer/Währung sind eine technische Schätzung und werden beim finalen Checkout geprüft.") }}
                             </p>
                         </div>
 
@@ -681,68 +683,68 @@ const updateCountry = () => {
                         <form class="mt-6 space-y-4" @submit.prevent="checkout">
                             <section v-show="checkoutStep === 'address'" class="space-y-4">
                             <div v-if="isAuthenticated" class="rounded-lg border border-border bg-bg p-3">
-                                <label class="text-xs font-bold uppercase text-secondary">Adresse</label>
+                                <label class="text-xs font-bold uppercase text-secondary">{{ $t("Adresse") }}</label>
                                 <select v-model="addressChoice" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                                     <option v-if="profileAddress" value="profile">
-                                        Meine Adresse{{ profileAddress.summary ? ` - ${profileAddress.summary}` : '' }}
+                                        {{ $t('Meine Adresse') }}{{ profileAddress.summary ? ` - ${profileAddress.summary}` : '' }}
                                     </option>
                                     <option v-for="address in savedAddressOptions" :key="address.id" :value="`saved:${address.id}`">
                                         {{ address.label }}{{ address.summary ? ` - ${address.summary}` : '' }}
                                     </option>
-                                    <option value="new">Neue Lieferadresse</option>
+                                    <option value="new">{{ $t("Neue Lieferadresse") }}</option>
                                 </select>
                             </div>
 
                             <div class="rounded-lg border border-buttonPrimary/20 bg-buttonPrimary/10 p-3 text-sm text-primary">
                                 <p class="flex items-center gap-2 font-black">
                                     <i class="las la-lock text-lg text-buttonPrimary"></i>
-                                    Sicherer Checkout
+                                    {{ $t("Sicherer Checkout") }}
                                 </p>
                                 <div class="mt-3 grid gap-2 text-xs font-semibold text-secondary">
                                     <p class="flex items-center gap-2">
                                         <i :class="[selectedPaymentProvider?.icon || 'las la-credit-card', 'text-base text-buttonPrimary']"></i>
-                                        Zahlungsart: {{ selectedProviderLabel || 'Nicht konfiguriert' }}
+                                        {{ $t('Zahlungsart:') }} {{ selectedProviderLabel || $t('Nicht konfiguriert') }}
                                     </p>
                                     <p class="flex items-center gap-2">
                                         <i class="las la-file-invoice text-base text-buttonPrimary"></i>
-                                        Preis, Steuer und Versand werden vor Abschluss angezeigt.
+                                        {{ $t("Preis, Steuer und Versand werden vor Abschluss angezeigt.") }}
                                     </p>
                                     <p class="flex items-center gap-2">
                                         <i class="las la-envelope text-base text-buttonPrimary"></i>
-                                        Bestellstatus und Rechnung kommen per E-Mail.
+                                        {{ $t("Bestellstatus und Rechnung kommen per E-Mail.") }}
                                     </p>
                                 </div>
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">Land der Lieferadresse</label>
+                                <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Land der Lieferadresse") }}</label>
                                 <select v-model="form.shipping_country" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" @change="updateCountry">
                                     <option v-for="country in deliveryCountryOptions" :key="country.country" :value="country.country">
                                         {{ country.label }}
                                     </option>
                                 </select>
-                                <p class="mt-1 text-xs text-secondary">Die Steuer wird daraus automatisch berechnet.</p>
+                                <p class="mt-1 text-xs text-secondary">{{ $t("Die Steuer wird daraus automatisch berechnet.") }}</p>
                                 <p v-if="form.errors.shipping_country" class="mt-1 text-sm text-red-400">{{ form.errors.shipping_country }}</p>
                             </div>
 
                             <div class="grid gap-3 sm:grid-cols-[1fr_7rem]">
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">Straße</label>
+                                    <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Straße") }}</label>
                                     <input v-model="form.shipping_street" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" autocomplete="shipping street-address" />
                                 </div>
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">Nr.</label>
+                                    <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Nr.") }}</label>
                                     <input v-model="form.shipping_house_number" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" autocomplete="shipping address-line2" />
                                 </div>
                             </div>
 
                             <div class="grid gap-3 sm:grid-cols-[8rem_1fr]">
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">PLZ</label>
+                                    <label class="text-xs font-semibold uppercase text-secondary">{{ $t("PLZ") }}</label>
                                     <input v-model="form.shipping_postal_code" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" autocomplete="shipping postal-code" />
                                 </div>
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">Ort</label>
+                                    <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Ort") }}</label>
                                     <input v-model="form.shipping_city" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" autocomplete="shipping address-level2" />
                                 </div>
                             </div>
@@ -750,51 +752,51 @@ const updateCountry = () => {
                             <template v-if="isAuthenticated">
                                 <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
                                     <input v-model="form.save_shipping_address" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
-                                    <span>Diese Lieferadresse speichern</span>
+                                    <span>{{ $t("Diese Lieferadresse speichern") }}</span>
                                 </label>
                                 <input
                                     v-if="form.save_shipping_address"
                                     v-model="form.shipping_address_label"
                                     class="w-full rounded-lg border-border bg-inputBg text-sm text-primary"
-                                    placeholder="Name der Lieferadresse, z. B. Zuhause"
+                                    :placeholder="$t('Name der Lieferadresse, z. B. Zuhause')"
                                 >
                             </template>
 
                             <div v-if="!isAuthenticated">
-                                <label class="text-xs font-semibold uppercase text-secondary">Name</label>
+                                <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Name") }}</label>
                                 <input v-model="form.guest_name" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required autocomplete="name" />
                                 <p v-if="form.errors.guest_name" class="mt-1 text-sm text-red-400">{{ form.errors.guest_name }}</p>
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">Kundentyp</label>
+                                <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Kundentyp") }}</label>
                                 <select v-model="form.customer_type" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
-                                    <option value="consumer">Privatkunde</option>
-                                    <option value="business">Firma / Verein</option>
+                                    <option value="consumer">{{ $t("Privatkunde") }}</option>
+                                    <option value="business">{{ $t("Firma / Verein") }}</option>
                                 </select>
                             </div>
 
                             <div v-if="form.customer_type === 'business'" class="space-y-3">
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">Firma / Verein</label>
+                                    <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Firma / Verein") }}</label>
                                     <input v-model="form.customer_company" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" autocomplete="organization" />
                                 </div>
                                 <div>
-                                    <label class="text-xs font-semibold uppercase text-secondary">USt-IdNr.</label>
-                                    <input v-model="form.customer_vat_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary uppercase" placeholder="z. B. ATU..." />
+                                    <label class="text-xs font-semibold uppercase text-secondary">{{ $t("USt-IdNr.") }}</label>
+                                    <input v-model="form.customer_vat_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary uppercase" :placeholder="$t('z. B. ATU...')" />
                                 </div>
                             </div>
 
                             <div v-if="!isAuthenticated">
-                                <label class="text-xs font-semibold uppercase text-secondary">E-Mail</label>
+                                <label class="text-xs font-semibold uppercase text-secondary">{{ $t("E-Mail") }}</label>
                                 <input v-model="form.guest_email" type="email" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" required autocomplete="email" />
                                 <p v-if="form.errors.guest_email" class="mt-1 text-sm text-red-400">{{ form.errors.guest_email }}</p>
                             </div>
 
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">Zahlungsart</label>
+                                <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Zahlungsart") }}</label>
                                 <select v-model="form.provider" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" :disabled="checkoutUnavailable">
-                                    <option v-if="checkoutUnavailable" value="">Keine Zahlungsart konfiguriert</option>
+                                    <option v-if="checkoutUnavailable" value="">{{ $t("Keine Zahlungsart konfiguriert") }}</option>
                                     <option v-for="provider in paymentProviderItems" :key="provider.value" :value="provider.value">
                                         {{ provider.label }}
                                     </option>
@@ -809,13 +811,13 @@ const updateCountry = () => {
                                 :disabled="!canContinueAddress"
                                 @click="nextCheckoutStep"
                             >
-                                Weiter zu Menge & Preis
+                                {{ $t("Weiter zu Menge & Preis") }}
                             </button>
                             </section>
 
                             <section v-show="checkoutStep === 'payment'" class="space-y-4">
                             <div>
-                                <label class="text-xs font-semibold uppercase text-secondary">Menge</label>
+                                <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Menge") }}</label>
                                 <input
                                     v-model.number="form.quantity"
                                     type="number"
@@ -826,7 +828,7 @@ const updateCountry = () => {
                                     @blur="normalizeQuantity"
                                     class="mt-1 h-12 w-full rounded-lg border-border bg-inputBg text-primary"
                                 />
-                                <p class="mt-1 text-xs text-secondary">Verfügbar: {{ maxQuantity }}</p>
+                                <p class="mt-1 text-xs text-secondary">{{ $t('Verfügbar:') }} {{ maxQuantity }}</p>
                                 <p v-if="form.errors.quantity" class="mt-1 text-sm text-red-400">{{ form.errors.quantity }}</p>
                             </div>
 
@@ -836,7 +838,7 @@ const updateCountry = () => {
                                     class="flex-1 rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted"
                                     @click="previousCheckoutStep"
                                 >
-                                    Zurück
+                                    {{ $t("Zurück") }}
                                 </button>
                                 <button
                                     type="button"
@@ -844,25 +846,25 @@ const updateCountry = () => {
                                     :disabled="!canContinuePayment"
                                     @click="nextCheckoutStep"
                                 >
-                                    Prüfen
+                                    {{ $t("Prüfen") }}
                                 </button>
                             </div>
                             </section>
 
                             <section v-show="checkoutStep === 'review'" class="space-y-4">
                             <div class="rounded-lg border border-buttonPrimary/20 bg-buttonPrimary/10 p-3 text-xs font-semibold text-secondary">
-                                <p class="mb-2 text-sm font-black text-primary">Bestellung prüfen</p>
+                                <p class="mb-2 text-sm font-black text-primary">{{ $t("Bestellung prüfen") }}</p>
                                 <div class="grid gap-2">
                                     <p class="flex justify-between gap-3">
-                                        <span>Lieferland</span>
+                                        <span>{{ $t("Lieferland") }}</span>
                                         <span class="text-right text-primary">{{ form.shipping_country }}</span>
                                     </p>
                                     <p class="flex justify-between gap-3">
-                                        <span>Zahlungsart</span>
+                                        <span>{{ $t("Zahlungsart") }}</span>
                                         <span class="text-right text-primary">{{ selectedProviderLabel }}</span>
                                     </p>
                                     <p class="flex justify-between gap-3">
-                                        <span>Menge</span>
+                                        <span>{{ $t("Menge") }}</span>
                                         <span class="text-right text-primary">{{ selectedQuantity }}</span>
                                     </p>
                                 </div>
@@ -870,7 +872,7 @@ const updateCountry = () => {
 
                             <div class="rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
                                 <p class="flex justify-between gap-3">
-                                    <span>Zwischensumme</span>
+                                    <span>{{ $t("Zwischensumme") }}</span>
                                     <span class="font-semibold text-primary">{{ formatMoney(selectedItemGrossCents, price.currency) }}</span>
                                 </p>
                                 <p class="mt-1 flex justify-between gap-3">
@@ -878,26 +880,26 @@ const updateCountry = () => {
                                     <span class="font-semibold text-primary">{{ formatMoney(price.shipping_gross_cents, price.currency) }}</span>
                                 </p>
                                 <p class="mt-3 flex justify-between gap-3 border-t border-border pt-3 text-base font-black text-primary">
-                                    <span>Gesamt</span>
+                                    <span>{{ $t("Gesamt") }}</span>
                                     <span>{{ formatMoney(selectedTotalGrossCents, price.currency) }}</span>
                                 </p>
-                                <p v-if="price.reverse_charge" class="mt-2 text-xs text-air-blue">Reverse-Charge: Steuerschuld geht auf den Leistungsempfänger über.</p>
-                                <p v-else-if="price.tax_rule === 'export_outside_eu'" class="mt-2 text-xs text-air-blue">Export außerhalb der EU: keine EU-MwSt. berechnet.</p>
+                                <p v-if="price.reverse_charge" class="mt-2 text-xs text-air-blue">{{ $t("Reverse-Charge: Steuerschuld geht auf den Leistungsempfänger über.") }}</p>
+                                <p v-else-if="price.tax_rule === 'export_outside_eu'" class="mt-2 text-xs text-air-blue">{{ $t("Export außerhalb der EU: keine EU-MwSt. berechnet.") }}</p>
                             </div>
 
                             <div v-if="product.learning_course_id" class="rounded-lg border border-border bg-bg p-3">
-                                <label class="text-xs font-semibold uppercase text-secondary">Kurs-Gutschein</label>
-                                <input v-model="form.coupon_code" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Code eingeben">
+                                <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Kurs-Gutschein") }}</label>
+                                <input v-model="form.coupon_code" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="$t('Code eingeben')">
                                 <p v-if="form.errors.coupon_code" class="mt-1 text-sm text-red-400">{{ form.errors.coupon_code }}</p>
                             </div>
 
                             <label class="flex items-start gap-3 rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
                                 <input v-model="form.accepted_terms" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                                 <span>
-                                    Ich akzeptiere
-                                    <Link :href="route('terms.show')" target="_blank" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>AGB</Link>
-                                    und
-                                    <Link :href="route('legal.withdrawal')" target="_blank" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>Widerrufshinweise</Link>.
+                                    {{ $t("Ich akzeptiere") }}
+                                    <Link :href="route('terms.show')" target="_blank" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>{{ $t("AGB") }}</Link>
+                                    {{ $t("und") }}
+                                    <Link :href="route('legal.withdrawal')" target="_blank" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>{{ $t("Widerrufshinweise") }}</Link>.
                                     Mir ist bewusst, dass der jeweilige Anbieter für sein Angebot verantwortlich sein kann.
                                 </span>
                             </label>
@@ -908,7 +910,7 @@ const updateCountry = () => {
                                 class="w-full rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted"
                                 @click="previousCheckoutStep"
                             >
-                                Zurück zu Menge
+                                {{ $t("Zurück zu Menge") }}
                             </button>
 
                             <button
@@ -916,7 +918,7 @@ const updateCountry = () => {
                                 :disabled="form.processing || !form.accepted_terms"
                                 :class="{ 'opacity-60': form.processing || !form.accepted_terms }"
                             >
-                                Jetzt kaufen
+                                {{ $t("Jetzt kaufen") }}
                             </button>
 
                             <button
@@ -924,7 +926,7 @@ const updateCountry = () => {
                                 class="w-full rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted"
                                 @click="addToCart"
                             >
-                                In den Einkaufswagen
+                                {{ $t("In den Einkaufswagen") }}
                             </button>
 
                             <Link v-if="isAuthenticated" :href="route('auth.commerce.cart.index')" class="hidden text-center text-sm font-semibold text-air-blue">
@@ -932,7 +934,7 @@ const updateCountry = () => {
                             </Link>
 
                             <Link v-else :href="route('login')" class="hidden text-center text-sm font-semibold text-air-blue">
-                                Mit Konto anmelden
+                                {{ $t("Mit Konto anmelden") }}
                             </Link>
                             </section>
                         </form>
@@ -944,11 +946,11 @@ const updateCountry = () => {
                 <div class="rounded border border-border bg-card shadow-sm">
                     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
                         <div>
-                            <p class="text-xs font-black uppercase tracking-wide text-secondary">Marketplace</p>
-                            <h2 class="text-lg font-black text-primary">Ähnliche Produkte</h2>
+                            <p class="text-xs font-black uppercase tracking-wide text-secondary">{{ $t("Marketplace") }}</p>
+                            <h2 class="text-lg font-black text-primary">{{ $t("Ähnliche Produkte") }}</h2>
                         </div>
                         <Link :href="route('guest.marketplace')" class="text-sm font-bold text-buttonPrimary hover:text-buttonPrimaryHover">
-                            Alle Angebote ansehen
+                            {{ $t("Alle Angebote ansehen") }}
                         </Link>
                     </div>
 

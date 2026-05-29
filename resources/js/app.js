@@ -40,6 +40,34 @@ const autoDictionaryFor = (i18n, locale) => {
     return messages.auto || {};
 };
 
+const autoPatternsFor = (i18n, locale) => {
+    const messages = i18n.global.messages.value?.[locale] || {};
+
+    return Array.isArray(messages.auto_patterns) ? messages.auto_patterns : [];
+};
+
+const translateAutoPattern = (i18n, locale, source) => {
+    const patterns = autoPatternsFor(i18n, locale);
+
+    for (const pattern of patterns) {
+        if (!pattern?.source || !pattern?.target) {
+            continue;
+        }
+
+        try {
+            const regex = new RegExp(pattern.source, pattern.flags || '');
+
+            if (regex.test(source)) {
+                return source.replace(regex, pattern.target);
+            }
+        } catch (error) {
+            // Ignore invalid optional auto-translation patterns.
+        }
+    }
+
+    return null;
+};
+
 const translateAutoText = (i18n, locale, text) => {
     const source = String(text || '').trim();
 
@@ -47,10 +75,37 @@ const translateAutoText = (i18n, locale, text) => {
         return source;
     }
 
-    const autoTranslation = autoDictionaryFor(i18n, locale)[source];
+    const dictionary = autoDictionaryFor(i18n, locale);
+    const autoTranslation = dictionary[source];
 
     if (autoTranslation) {
         return autoTranslation;
+    }
+
+    const trailingPunctuation = source.match(/([.!?؟])$/)?.[1];
+    if (trailingPunctuation) {
+        const withoutTrailingPunctuation = source.slice(0, -trailingPunctuation.length).trim();
+        const normalizedTranslation = dictionary[withoutTrailingPunctuation];
+
+        if (normalizedTranslation) {
+            return `${normalizedTranslation}${trailingPunctuation}`;
+        }
+    }
+
+    const leadingPunctuation = source.match(/^([.!?؟])/)?.[1];
+    if (leadingPunctuation) {
+        const withoutLeadingPunctuation = source.slice(leadingPunctuation.length).trim();
+        const normalizedTranslation = dictionary[withoutLeadingPunctuation];
+
+        if (normalizedTranslation) {
+            return normalizedTranslation;
+        }
+    }
+
+    const patternTranslation = translateAutoPattern(i18n, locale, source);
+
+    if (patternTranslation) {
+        return patternTranslation;
     }
 
     return i18n.global.te(source, locale) ? i18n.global.t(source) : source;
@@ -86,6 +141,10 @@ const autoTranslateVisibleText = (root, i18n) => {
                 return NodeFilter.FILTER_REJECT;
             }
 
+            if (parent.closest('[data-no-auto-translate]')) {
+                return NodeFilter.FILTER_REJECT;
+            }
+
             return NodeFilter.FILTER_ACCEPT;
         },
     });
@@ -96,14 +155,28 @@ const autoTranslateVisibleText = (root, i18n) => {
     }
 
     textNodes.forEach((node) => {
-        const original = autoTranslatedTextNodes.get(node) || node.nodeValue;
-        const translated = translateAutoText(i18n, locale, original);
+        const cached = autoTranslatedTextNodes.get(node);
+        let original = cached?.original || node.nodeValue;
 
-        autoTranslatedTextNodes.set(node, original);
-        node.nodeValue = locale === 'de' ? original : preserveOuterWhitespace(original, translated);
+        if (cached && locale !== 'de' && node.nodeValue !== cached.translated) {
+            original = node.nodeValue;
+        }
+
+        const translated = translateAutoText(i18n, locale, original);
+        const nextValue = locale === 'de' ? original : preserveOuterWhitespace(original, translated);
+
+        autoTranslatedTextNodes.set(node, { original, translated: nextValue });
+
+        if (node.nodeValue !== nextValue) {
+            node.nodeValue = nextValue;
+        }
     });
 
     root.querySelectorAll?.('[placeholder], [title], [aria-label], img[alt]').forEach((element) => {
+        if (element.closest('[data-no-auto-translate]')) {
+            return;
+        }
+
         let originals = autoTranslatedAttributes.get(element);
 
         if (!originals) {
@@ -116,9 +189,22 @@ const autoTranslateVisibleText = (root, i18n) => {
                 return;
             }
 
-            originals[attribute] = originals[attribute] || element.getAttribute(attribute);
-            const translated = translateAutoText(i18n, locale, originals[attribute]);
-            element.setAttribute(attribute, locale === 'de' ? originals[attribute] : translated);
+            const currentValue = element.getAttribute(attribute);
+            const cached = originals[attribute];
+            let original = cached?.original || currentValue;
+
+            if (cached && locale !== 'de' && currentValue !== cached.translated) {
+                original = currentValue;
+            }
+
+            const translated = translateAutoText(i18n, locale, original);
+            const nextValue = locale === 'de' ? original : translated;
+
+            originals[attribute] = { original, translated: nextValue };
+
+            if (element.getAttribute(attribute) !== nextValue) {
+                element.setAttribute(attribute, nextValue);
+            }
         });
     });
 
@@ -146,8 +232,16 @@ const installAutoTranslation = (root, i18n) => {
     };
 
     const observer = new MutationObserver(run);
-    observer.observe(root, { childList: true, subtree: true });
+    observer.observe(root, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: autoTranslateAttributes,
+    });
     run();
+    window.setTimeout(run, 0);
+    window.setTimeout(run, 250);
 
     return run;
 };

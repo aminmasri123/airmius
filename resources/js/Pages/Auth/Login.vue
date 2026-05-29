@@ -83,9 +83,9 @@ const goBack = () => {
                 </div>
 
                 <div class="mb-4 rounded-lg border border-border bg-inputBg p-3 text-sm text-secondary">
-                    Eltern/Erziehungsberechtigte?
+                    {{ $t('Eltern/Erziehungsberechtigte?') }}
                     <Link :href="route('guardian-access.create')" class="font-semibold text-primary underline">
-                        Elternbereich ohne Konto öffnen
+                        {{ $t('Elternbereich ohne Konto öffnen') }}
                     </Link>
                 </div>
 
@@ -95,14 +95,14 @@ const goBack = () => {
                         class="flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
                     >
                         <i class="lab la-google text-lg"></i>
-                        Mit Google anmelden
+                        {{ $t('Mit Google anmelden') }}
                     </a>
                     <a
                         :href="route('social-auth.redirect', 'microsoft')"
                         class="flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
                     >
                         <i class="lab la-microsoft text-lg"></i>
-                        Mit Outlook anmelden
+                        {{ $t('Mit Outlook anmelden') }}
                     </a>
                 </div>
 

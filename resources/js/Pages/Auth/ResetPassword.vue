@@ -28,7 +28,7 @@ const submit = () => {
 
 <template>
 
-    <Head title="Reset Password" />
+    <Head :title="$t('Passwort zurücksetzen')" />
 
     <AuthenticationCard>
         <template #logo>
@@ -40,7 +40,7 @@ const submit = () => {
 
         <form @submit.prevent="submit">
             <div>
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" :value="$t('Email')" />
                 <TextInput
                     id="email"
                     v-model="form.email"

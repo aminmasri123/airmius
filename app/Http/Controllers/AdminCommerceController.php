@@ -6,6 +6,7 @@ use App\Models\AdCampaign;
 use App\Models\AdCreative;
 use App\Models\AdEvent;
 use App\Models\CommerceOrder;
+use App\Models\CommerceOrderItem;
 use App\Models\CommerceReturnRequest;
 use App\Models\CommerceAuditLog;
 use App\Models\CommerceWarehouse;
@@ -220,6 +221,31 @@ class AdminCommerceController extends Controller
         $this->audit->log('product.updated', $product, $before, $product->fresh()->only(['title', 'price_cents', 'status', 'stock_quantity', 'tax_class']));
 
         return back()->with('success', 'Marketplace-Produkt aktualisiert.');
+    }
+
+    public function destroyProduct(Request $request, MarketplaceProduct $product)
+    {
+        $before = $product->only(['title', 'price_cents', 'status', 'moderation_status', 'stock_quantity', 'tax_class']);
+        $hasOrders = CommerceOrder::query()
+            ->where('orderable_type', MarketplaceProduct::class)
+            ->where('orderable_id', $product->id)
+            ->exists()
+            || CommerceOrderItem::query()
+                ->where('orderable_type', MarketplaceProduct::class)
+                ->where('orderable_id', $product->id)
+                ->exists();
+
+        if ($hasOrders) {
+            $product->update(['status' => 'archived']);
+            $this->audit->log('product.archived_after_delete_request', $product, $before, $product->fresh()->only(['title', 'price_cents', 'status', 'moderation_status', 'stock_quantity', 'tax_class']));
+
+            return back()->with('success', 'Produkt hat bereits Bestellungen und wurde deshalb archiviert.');
+        }
+
+        $this->audit->log('product.deleted', $product, $before, [], 'Admin hat das Marketplace-Produkt geloescht.');
+        $product->delete();
+
+        return back()->with('success', 'Marketplace-Produkt wurde geloescht.');
     }
 
     public function updateSellerApplication(Request $request, MarketplaceSellerApplication $sellerApplication)

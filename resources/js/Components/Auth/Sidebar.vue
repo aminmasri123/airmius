@@ -177,7 +177,7 @@ const closeSidebar = () => {
                 @click="closeSidebar"
             >
                 <div class="flex items-center justify-between gap-2">
-                    <span class="text-xs font-semibold uppercase text-secondary">Speicher</span>
+                    <span class="text-xs font-semibold uppercase text-secondary">{{ $t('Speicher') }}</span>
                     <span class="text-xs font-bold text-primary">{{ storageUsage.used_percent }}%</span>
                 </div>
                 <div class="mt-2 h-1.5 rounded-full bg-card">
@@ -187,7 +187,7 @@ const closeSidebar = () => {
                     ></div>
                 </div>
                 <p class="mt-2 text-xs text-secondary">
-                    {{ formatStorage(storageUsage.remaining_bytes) }} frei
+                    {{ formatStorage(storageUsage.remaining_bytes) }} {{ $t('frei') }}
                 </p>
             </Link>
 

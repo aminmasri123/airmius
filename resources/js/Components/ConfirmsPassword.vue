@@ -5,6 +5,7 @@ import InputError from './InputError.vue';
 import PrimaryButton from './PrimaryButton.vue';
 import SecondaryButton from './SecondaryButton.vue';
 import TextInput from './TextInput.vue';
+import { useI18n } from 'vue-i18n'
 
 const emit = defineEmits(['confirmed']);
 
@@ -24,6 +25,9 @@ defineProps({
 });
 
 const confirmingPassword = ref(false);
+const { t, te } = useI18n()
+
+const localize = (value) => te(value) ? t(value) : value
 
 const form = reactive({
     password: '',
@@ -78,11 +82,11 @@ const closeModal = () => {
 
         <DialogModal :show="confirmingPassword" @close="closeModal">
             <template #title>
-                {{ title }}
+                {{ localize(title) }}
             </template>
 
             <template #content>
-                {{ content }}
+                {{ localize(content) }}
 
                 <div class="mt-4">
                     <TextInput
@@ -90,7 +94,7 @@ const closeModal = () => {
                         v-model="form.password"
                         type="password"
                         class="mt-1 block w-3/4"
-                        placeholder="Password"
+                        :placeholder="$t('Password')"
                         autocomplete="current-password"
                         @keyup.enter="confirmPassword"
                     />
@@ -101,7 +105,7 @@ const closeModal = () => {
 
             <template #footer>
                 <SecondaryButton @click="closeModal">
-                    Cancel
+                    {{ $t('Cancel') }}
                 </SecondaryButton>
 
                 <PrimaryButton
@@ -110,7 +114,7 @@ const closeModal = () => {
                     :disabled="form.processing"
                     @click="confirmPassword"
                 >
-                    {{ button }}
+                    {{ localize(button) }}
                 </PrimaryButton>
             </template>
         </DialogModal>

@@ -4,6 +4,7 @@ import AuthenticationCard from '@/Components/AuthenticationCard.vue'
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
     guardianEmail: { type: String, default: '' },
@@ -14,6 +15,7 @@ const props = defineProps({
 })
 
 const page = usePage()
+const { t, locale } = useI18n()
 const resendForm = useForm({})
 const wholeSeconds = (value) => Math.max(0, Math.ceil(Number(value) || 0))
 const resendCooldown = ref(wholeSeconds(props.resendAvailableIn))
@@ -21,16 +23,23 @@ let resendTimer = null
 
 const resendDisabled = computed(() => resendForm.processing || resendCooldown.value > 0 || Boolean(props.approvedAt))
 const resendLabel = computed(() => {
-    if (resendForm.processing) return 'E-Mail wird gesendet...'
-    if (resendCooldown.value > 0) return `Erneut senden in ${resendCooldown.value}s`
+    if (resendForm.processing) return t('E-Mail wird gesendet...')
+    if (resendCooldown.value > 0) return t('Erneut senden in {seconds}s', { seconds: resendCooldown.value })
 
-    return 'E-Mail erneut senden'
+    return t('E-Mail erneut senden')
 })
+
+const localeForIntl = computed(() => ({
+    ar: 'ar',
+    en: 'en-US',
+    fr: 'fr-FR',
+    de: 'de-DE',
+}[locale.value] || 'de-DE'))
 
 const formatDateTime = (value) => {
     if (!value) return ''
 
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(localeForIntl.value, {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -77,7 +86,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <Head title="Zustimmung erforderlich" />
+    <Head :title="$t('Zustimmung erforderlich')" />
 
     <AuthenticationCard>
         <div class="mx-auto h-36 w-36 md:h-48 md:w-48">
@@ -93,42 +102,40 @@ onUnmounted(() => {
             </div>
 
             <h1 class="mt-4 text-xl font-semibold text-primary">
-                {{ rejectedAt ? 'Zustimmung wurde abgelehnt' : 'Zustimmung der Eltern ausstehend' }}
+                {{ rejectedAt ? $t('Zustimmung wurde abgelehnt') : $t('Zustimmung der Eltern ausstehend') }}
             </h1>
 
             <p v-if="!rejectedAt" class="mt-3 text-sm leading-6 text-secondary">
-                Du kannst dich anmelden, aber das soziale Netzwerk bleibt gesperrt, bis dein Elternteil oder
-                Erziehungsberechtigter zugestimmt hat.
+                {{ $t('Du kannst dich anmelden, aber das soziale Netzwerk bleibt gesperrt, bis dein Elternteil oder Erziehungsberechtigter zugestimmt hat.') }}
             </p>
 
             <p v-else class="mt-3 text-sm leading-6 text-secondary">
-                Dein Elternteil oder Erziehungsberechtigter hat die Registrierung abgelehnt.
-                Die sozialen Funktionen bleiben deshalb gesperrt.
+                {{ $t('Dein Elternteil oder Erziehungsberechtigter hat die Registrierung abgelehnt. Die sozialen Funktionen bleiben deshalb gesperrt.') }}
             </p>
 
             <div class="mt-5 rounded-lg border border-border bg-inputBg p-4 text-left text-sm text-secondary">
                 <p v-if="guardianEmail">
-                    E-Mail gesendet an:
+                    {{ $t('E-Mail gesendet an:') }}
                     <span class="font-semibold text-primary">{{ guardianEmail }}</span>
                 </p>
                 <p v-if="requestedAt" class="mt-1">
-                    Gesendet am:
+                    {{ $t('Gesendet am:') }}
                     <span class="font-semibold text-primary">{{ formatDateTime(requestedAt) }}</span>
                 </p>
                 <p v-if="rejectedAt" class="mt-1">
-                    Abgelehnt am:
+                    {{ $t('Abgelehnt am:') }}
                     <span class="font-semibold text-primary">{{ formatDateTime(rejectedAt) }}</span>
                 </p>
                 <p v-if="approvedAt" class="mt-1">
-                    Bestätigt am:
+                    {{ $t('Bestätigt am:') }}
                     <span class="font-semibold text-primary">{{ formatDateTime(approvedAt) }}</span>
                 </p>
             </div>
 
             <div class="mt-4 rounded-lg border border-border bg-inputBg p-4 text-left text-sm text-secondary">
-                Eltern können den Elternbereich nutzen, um später Zustimmungen zu prüfen oder zu widerrufen:
+                {{ $t('Eltern können den Elternbereich nutzen, um später Zustimmungen zu prüfen oder zu widerrufen:') }}
                 <Link :href="route('guardian-access.create')" class="font-semibold text-primary underline">
-                    Elternbereich öffnen
+                    {{ $t('Elternbereich öffnen') }}
                 </Link>
             </div>
 
@@ -146,12 +153,12 @@ onUnmounted(() => {
                     {{ page.props.errors.resend }}
                 </p>
                 <p v-else class="text-xs text-secondary">
-                    Du kannst die E-Mail einmal pro Minute erneut senden.
+                    {{ $t('Du kannst die E-Mail einmal pro Minute erneut senden.') }}
                 </p>
             </div>
 
             <PrimaryButton class="mt-4" @click="logout">
-                Abmelden
+                {{ $t('Abmelden') }}
             </PrimaryButton>
         </div>
     </AuthenticationCard>

@@ -162,6 +162,7 @@ props.sportProfiles.forEach((profile) => {
         visibility: profile.visibility || 'private',
         metrics: Object.fromEntries((profile.fields || []).map((field) => [field.key, profile.metrics?.[field.key] ?? ''])),
         metric_visibility: Object.fromEntries((profile.fields || []).map((field) => [field.key, profile.metric_visibility?.[field.key] || field.default_visibility || 'private'])),
+        unknown_metrics: Object.fromEntries((profile.fields || []).map((field) => [field.key, (profile.metrics?._unknown_fields || []).includes(field.key)])),
     }
 })
 
@@ -435,6 +436,7 @@ const selectedTrainingDays = (form, field) => {
 }
 const isTrainingDaySelected = (form, field, key) => selectedTrainingDays(form, field).includes(key)
 const toggleTrainingDay = (form, field, key) => {
+    form.unknown_metrics[field.key] = false
     const selected = new Set(selectedTrainingDays(form, field))
 
     if (selected.has(key)) {
@@ -447,6 +449,19 @@ const toggleTrainingDay = (form, field, key) => {
         .map((day) => day.key)
         .filter((dayKey) => selected.has(dayKey))
         .join(',')
+}
+const isMetricUnknown = (form, field) => Boolean(form.unknown_metrics?.[field.key])
+const clearMetricUnknown = (form, field) => {
+    if (form.unknown_metrics?.[field.key]) {
+        form.unknown_metrics[field.key] = false
+    }
+}
+const toggleMetricUnknown = (form, field) => {
+    form.unknown_metrics[field.key] = !form.unknown_metrics[field.key]
+
+    if (form.unknown_metrics[field.key]) {
+        form.metrics[field.key] = ''
+    }
 }
 const sportExperienceDuration = (dateValue) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateValue || ''))) return ''
@@ -810,7 +825,7 @@ const subscriptionCancelModalMessage = () => {
     const plan = subscription?.plan?.name || 'dieses Abo'
     const endsAt = subscription?.current_period_ends_at || subscription?.trial_ends_at
 
-    return `Moechtest du dein ${plan} zum Ende der aktuellen Laufzeit kündigen? ${endsAt ? `Es endet am ${formatDate(endsAt)}.` : ''}`
+    return `Möchtest du dein ${plan} zum Ende der aktuellen Laufzeit kündigen? ${endsAt ? `Es endet am ${formatDate(endsAt)}.` : ''}`
 }
 
 const openSubscriptionCancelModal = (subscription) => {
@@ -1049,15 +1064,15 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
 </script>
 
 <template>
-    <Head title="Einstellungen" />
+    <Head :title="t('Einstellungen')" />
 
     <div class="space-y-5">
 
         <!-- HEADER -->
         <div class="surface-card p-5">
-            <h1 class="text-xl font-semibold text-primary">Einstellungen</h1>
+            <h1 class="text-xl font-semibold text-primary">{{ t('Einstellungen') }}</h1>
             <p class="mt-1 text-sm text-secondary">
-                Profil, Sicherheit, Design und Adresse verwalten.
+                {{ t('settings.header_subtitle') }}
             </p>
         </div>
 
@@ -1073,17 +1088,17 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
 
         <!-- TABS -->
         <div class="surface-card p-3 flex flex-wrap gap-2">
-            <button @click="setActiveTab('profile')" :class="tabClass('profile')">Profil</button>
-            <button @click="setActiveTab('address')" :class="tabClass('address')">Adresse</button>
-            <button @click="setActiveTab('billing')" :class="tabClass('billing')">Zahlungen</button>
-            <button @click="setActiveTab('roles')" :class="tabClass('roles')">Rollen</button>
-            <button @click="setActiveTab('activities')" :class="tabClass('activities')">Aktivitäten</button>
-            <button @click="setActiveTab('integrations')" :class="tabClass('integrations')">Verknüpfungen</button>
-            <button @click="setActiveTab('design')" :class="tabClass('design')">Design</button>
-            <button @click="setActiveTab('language')" :class="tabClass('language')">Sprache</button>
-            <button @click="setActiveTab('privacy')" :class="tabClass('privacy')">Privatsphäre</button>
+            <button @click="setActiveTab('profile')" :class="tabClass('profile')">{{ t('Profil') }}</button>
+            <button @click="setActiveTab('address')" :class="tabClass('address')">{{ t('Adresse') }}</button>
+            <button @click="setActiveTab('billing')" :class="tabClass('billing')">{{ t('Zahlungen') }}</button>
+            <button @click="setActiveTab('roles')" :class="tabClass('roles')">{{ t('Rollen') }}</button>
+            <button @click="setActiveTab('activities')" :class="tabClass('activities')">{{ t('Aktivitäten') }}</button>
+            <button @click="setActiveTab('integrations')" :class="tabClass('integrations')">{{ t('Verknüpfungen') }}</button>
+            <button @click="setActiveTab('design')" :class="tabClass('design')">{{ t('Design') }}</button>
+            <button @click="setActiveTab('language')" :class="tabClass('language')">{{ t('Sprache') }}</button>
+            <button @click="setActiveTab('privacy')" :class="tabClass('privacy')">{{ t('Privatsphäre') }}</button>
             <button @click="setActiveTab('sport-profile')" :class="tabClass('sport-profile')">{{ sportProfileText('tab', 'Sportprofil') }}</button>
-            <button @click="setActiveTab('security')" :class="tabClass('security')">Sicherheit</button>
+            <button @click="setActiveTab('security')" :class="tabClass('security')">{{ t('Sicherheit') }}</button>
         </div>
 
         <!-- PROFIL -->
@@ -1259,6 +1274,14 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                 </span>
                             </div>
                         </div>
+                        <div v-if="profile.readiness.unknown?.length" class="mt-4 rounded-xl border border-air-blue/30 bg-air-blue/10 p-3">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ sportProfileText('unknown_title', 'Wird geschätzt') }}</p>
+                            <div class="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-air-blue">
+                                <span v-for="field in profile.readiness.unknown" :key="field.key" class="rounded-full bg-bg px-2.5 py-1">
+                                    {{ sportMetricLabel(field) }}
+                                </span>
+                            </div>
+                        </div>
                     </div>
 
                     <form
@@ -1328,10 +1351,21 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                                 :type="sportMetricInputType(field)"
                                                 :step="field.type === 'number' ? '0.01' : undefined"
                                                 :min="field.type === 'number' ? 0 : undefined"
+                                                :disabled="isMetricUnknown(sportProfileForms[profile.sport.id], field)"
                                                 class="input mt-2 text-sm normal-case tracking-normal"
-                                                :placeholder="sportMetricPlaceholder(field)"
+                                                :placeholder="isMetricUnknown(sportProfileForms[profile.sport.id], field) ? sportProfileText('unknown_placeholder', 'Wird vorsichtig geschätzt') : sportMetricPlaceholder(field)"
+                                                @input="clearMetricUnknown(sportProfileForms[profile.sport.id], field)"
                                             />
                                         </label>
+                                        <button
+                                            v-if="field.required"
+                                            type="button"
+                                            class="mt-2 rounded-lg border px-2.5 py-1.5 text-xs font-semibold"
+                                            :class="isMetricUnknown(sportProfileForms[profile.sport.id], field) ? 'border-air-blue/50 bg-air-blue/10 text-air-blue' : 'border-border text-secondary hover:text-primary'"
+                                            @click="toggleMetricUnknown(sportProfileForms[profile.sport.id], field)"
+                                        >
+                                            {{ isMetricUnknown(sportProfileForms[profile.sport.id], field) ? sportProfileText('unknown_marked', 'Wird geschätzt') : sportProfileText('unknown_action', 'Weiß ich nicht') }}
+                                        </button>
                                         <label class="mt-2 block text-xs font-semibold uppercase tracking-wide text-secondary">
                                             {{ sportProfileText('visible_label', 'Sichtbar') }}
                                             <select v-model="sportProfileForms[profile.sport.id].metric_visibility[field.key]" class="input mt-1 text-sm normal-case tracking-normal">
@@ -1366,6 +1400,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                                 :class="isTrainingDaySelected(sportProfileForms[profile.sport.id], field, day.key)
                                                     ? 'border-air-blue bg-air-blue/20 text-air-blue'
                                                     : 'border-border bg-inputBg text-secondary hover:border-air-blue/60 hover:text-primary'"
+                                                :disabled="isMetricUnknown(sportProfileForms[profile.sport.id], field)"
                                                 :aria-pressed="isTrainingDaySelected(sportProfileForms[profile.sport.id], field, day.key)"
                                                 :title="trainingDayLabel(day.key, 'long')"
                                                 @click="toggleTrainingDay(sportProfileForms[profile.sport.id], field, day.key)"
@@ -1377,8 +1412,10 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                             v-else-if="field.type === 'textarea'"
                                             v-model="sportProfileForms[profile.sport.id].metrics[field.key]"
                                             rows="2"
+                                            :disabled="isMetricUnknown(sportProfileForms[profile.sport.id], field)"
                                             class="input mt-2"
-                                            :placeholder="sportMetricPlaceholder(field)"
+                                            :placeholder="isMetricUnknown(sportProfileForms[profile.sport.id], field) ? sportProfileText('unknown_placeholder', 'Wird vorsichtig geschätzt') : sportMetricPlaceholder(field)"
+                                            @input="clearMetricUnknown(sportProfileForms[profile.sport.id], field)"
                                         />
                                         <input
                                             v-else
@@ -1386,9 +1423,20 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                             :type="sportMetricInputType(field)"
                                             :step="field.type === 'number' && !isExperienceDateField(field) ? '0.01' : undefined"
                                             :max="isExperienceDateField(field) ? todayDate : undefined"
+                                            :disabled="isMetricUnknown(sportProfileForms[profile.sport.id], field)"
                                             class="input mt-2"
-                                            :placeholder="sportMetricPlaceholder(field)"
+                                            :placeholder="isMetricUnknown(sportProfileForms[profile.sport.id], field) ? sportProfileText('unknown_placeholder', 'Wird vorsichtig geschätzt') : sportMetricPlaceholder(field)"
+                                            @input="clearMetricUnknown(sportProfileForms[profile.sport.id], field)"
                                         />
+                                        <button
+                                            v-if="field.required"
+                                            type="button"
+                                            class="mt-2 rounded-lg border px-2.5 py-1.5 text-xs font-semibold"
+                                            :class="isMetricUnknown(sportProfileForms[profile.sport.id], field) ? 'border-air-blue/50 bg-air-blue/10 text-air-blue' : 'border-border text-secondary hover:text-primary'"
+                                            @click="toggleMetricUnknown(sportProfileForms[profile.sport.id], field)"
+                                        >
+                                            {{ isMetricUnknown(sportProfileForms[profile.sport.id], field) ? sportProfileText('unknown_marked', 'Wird geschätzt') : sportProfileText('unknown_action', 'Weiß ich nicht') }}
+                                        </button>
                                         <span
                                             v-if="isExperienceDateField(field) && sportExperienceDuration(sportProfileForms[profile.sport.id].metrics[field.key])"
                                             class="mt-2 block text-xs font-semibold text-air-blue"
@@ -1545,9 +1593,9 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
 
         <!-- SPRACHE -->
         <div v-if="activeTab === 'language'" class="surface-card relative z-20 overflow-visible p-5">
-            <h2 class="text-sm font-semibold text-secondary mb-3">Sprache</h2>
+            <h2 class="text-sm font-semibold text-secondary mb-3">{{ t('Sprache') }}</h2>
             <p class="mb-3 text-sm text-secondary">
-                Wähle die Sprache für Navigation, Seiten und Bedienelemente.
+                {{ t('settings.language_description') }}
             </p>
             <LanguageDropdown align="start" />
         </div>

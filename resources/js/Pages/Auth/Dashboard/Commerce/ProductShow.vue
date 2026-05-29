@@ -72,7 +72,7 @@ const attributeOptions = (value) => String(value || '')
         </div>
 
         <section class="surface-card p-5">
-            <Link :href="route('auth.commerce.index')" class="text-sm font-semibold text-air-blue">Zurück zum Marketplace</Link>
+            <Link :href="route('auth.commerce.index')" class="text-sm font-semibold text-air-blue">{{ $t("Zurück zum Marketplace") }}</Link>
             <div class="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
                 <article>
                     <div class="mb-5 overflow-hidden rounded-xl border border-border bg-inputBg">
@@ -97,10 +97,10 @@ const attributeOptions = (value) => String(value || '')
                     </div>
                     <p class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ product.category }}</p>
                     <h1 class="mt-2 text-3xl font-bold text-primary">{{ product.title }}</h1>
-                    <p class="mt-4 whitespace-pre-line text-sm leading-7 text-secondary">{{ product.description || 'Keine Beschreibung hinterlegt.' }}</p>
+                    <p class="mt-4 whitespace-pre-line text-sm leading-7 text-secondary">{{ product.description || $t('Keine Beschreibung hinterlegt.') }}</p>
 
                     <div v-if="product.product_attributes?.length" class="mt-6 rounded-lg border border-border bg-bg p-4">
-                        <h2 class="font-semibold text-primary">Varianten</h2>
+                        <h2 class="font-semibold text-primary">{{ $t("Varianten") }}</h2>
                         <div class="mt-3 grid gap-3 sm:grid-cols-2">
                             <label v-for="attribute in product.product_attributes" :key="`${attribute.name}-${attribute.value}`" class="block">
                                 <span class="text-xs font-semibold uppercase text-secondary">{{ attribute.name }}</span>
@@ -115,28 +115,28 @@ const attributeOptions = (value) => String(value || '')
 
                     <div class="mt-6 grid gap-3 sm:grid-cols-2">
                         <div class="rounded-lg border border-border bg-bg p-4">
-                            <p class="text-xs uppercase text-secondary">Anbieter</p>
-                            <p class="mt-1 font-semibold text-primary">{{ product.user?.name || product.club?.name || 'Airmius Anbieter' }}</p>
+                            <p class="text-xs uppercase text-secondary">{{ $t("Anbieter") }}</p>
+                            <p class="mt-1 font-semibold text-primary">{{ product.user?.name || product.club?.name || $t('Airmius Anbieter') }}</p>
                         </div>
                         <div class="rounded-lg border border-border bg-bg p-4">
-                            <p class="text-xs uppercase text-secondary">Status</p>
+                            <p class="text-xs uppercase text-secondary">{{ $t('Status') }}</p>
                             <p class="mt-1 font-semibold text-primary">{{ product.status }}</p>
                         </div>
                     </div>
                 </article>
 
                 <aside class="rounded-lg border border-border bg-bg p-5">
-                    <p class="text-xs uppercase text-secondary">Preis</p>
+                    <p class="text-xs uppercase text-secondary">{{ $t("Preis") }}</p>
                     <p class="mt-2 text-3xl font-bold text-primary">{{ formatMoney(price.gross_cents, price.currency) }}</p>
                     <div class="mt-2 rounded-lg border border-border bg-card p-3 text-sm text-secondary">
-                        <p>{{ formatMoney(price.net_cents, price.currency) }} netto</p>
+                        <p>{{ formatMoney(price.net_cents, price.currency) }} {{ $t('netto') }}</p>
                         <p>{{ formatMoney(price.tax_cents, price.currency) }} {{ price.tax_label }} ({{ price.tax_rate }}%)</p>
-                        <p class="mt-1">{{ price.shipping_label || 'Versand' }}: {{ formatMoney(price.shipping_gross_cents, price.currency) }}</p>
+                        <p class="mt-1">{{ price.shipping_label || $t('Versand') }}: {{ formatMoney(price.shipping_gross_cents, price.currency) }}</p>
                     </div>
 
                     <form class="mt-5 space-y-4" @submit.prevent="checkout">
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Lieferland</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Lieferland") }}</label>
                             <select v-model="form.shipping_country" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
                                 <option v-for="country in pricingCountries" :key="country.country" :value="country.country">
                                     {{ country.label }}
@@ -145,56 +145,56 @@ const attributeOptions = (value) => String(value || '')
                         </div>
 
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Kundentyp</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Kundentyp") }}</label>
                             <select v-model="form.customer_type" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
-                                <option value="consumer">Privatkunde</option>
-                                <option value="business">Firma / Verein</option>
+                                <option value="consumer">{{ $t("Privatkunde") }}</option>
+                                <option value="business">{{ $t("Firma / Verein") }}</option>
                             </select>
                         </div>
                         <div v-if="form.customer_type === 'business'" class="grid gap-3">
-                            <input v-model="form.customer_company" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Firma / Verein">
-                            <input v-model="form.customer_vat_id" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" placeholder="USt-IdNr.">
+                            <input v-model="form.customer_company" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="$t('Firma / Verein')">
+                            <input v-model="form.customer_vat_id" class="rounded-lg border-border bg-inputBg text-sm uppercase text-primary" :placeholder="$t('USt-IdNr.')">
                         </div>
 
                         <div class="grid gap-3 sm:grid-cols-[1fr_5rem]">
-                            <input v-model="form.shipping_street" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Straße">
-                            <input v-model="form.shipping_house_number" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Nr.">
+                            <input v-model="form.shipping_street" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="$t('Straße')">
+                            <input v-model="form.shipping_house_number" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="$t('Nr.')">
                         </div>
                         <div class="grid gap-3 sm:grid-cols-[7rem_1fr]">
-                            <input v-model="form.shipping_postal_code" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="PLZ">
-                            <input v-model="form.shipping_city" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Ort">
+                            <input v-model="form.shipping_postal_code" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="$t('PLZ')">
+                            <input v-model="form.shipping_city" class="rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="$t('Ort')">
                         </div>
 
                         <div>
-                            <label class="text-xs font-semibold uppercase text-secondary">Zahlungsart</label>
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Zahlungsart") }}</label>
                             <select v-model="form.provider" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
-                                <option value="bank_transfer">Überweisung</option>
-                                <option value="stripe">Stripe</option>
-                                <option value="paypal">PayPal</option>
+                                <option value="bank_transfer">{{ $t("Überweisung") }}</option>
+                                <option value="stripe">{{ $t("Stripe") }}</option>
+                                <option value="paypal">{{ $t("PayPal") }}</option>
                             </select>
                         </div>
 
                         <div v-if="product.learning_course_id">
-                            <label class="text-xs font-semibold uppercase text-secondary">Kurs-Gutschein</label>
-                            <input v-model="form.coupon_code" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Code eingeben">
+                            <label class="text-xs font-semibold uppercase text-secondary">{{ $t("Kurs-Gutschein") }}</label>
+                            <input v-model="form.coupon_code" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" :placeholder="$t('Code eingeben')">
                             <p v-if="form.errors.coupon_code" class="mt-1 text-sm text-error">{{ form.errors.coupon_code }}</p>
                         </div>
 
                         <label class="flex items-start gap-3 text-sm text-secondary">
                             <input v-model="form.accepted_terms" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                             <span>
-                                Ich akzeptiere AGB und Widerrufshinweise. Mir ist bewusst, dass der jeweilige Anbieter für sein Angebot verantwortlich sein kann.
+                                {{ $t("Ich akzeptiere AGB und Widerrufshinweise. Mir ist bewusst, dass der jeweilige Anbieter für sein Angebot verantwortlich sein kann.") }}
                             </span>
                         </label>
 
                         <button class="w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary">
-                            Kaufen
+                            {{ $t("Kaufen") }}
                         </button>
                         <button type="button" class="w-full rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted" @click="addToCart">
-                            In den Warenkorb
+                            {{ $t("In den Warenkorb") }}
                         </button>
                         <Link :href="route('auth.commerce.cart.index')" class="block text-center text-sm font-semibold text-air-blue">
-                            Einkaufswagen ansehen
+                            {{ $t("Einkaufswagen ansehen") }}
                         </Link>
                     </form>
                 </aside>

@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, useAttrs } from 'vue';
+import { useI18n } from 'vue-i18n'
 
 defineProps({
     modelValue: String,
@@ -9,6 +10,7 @@ defineEmits(['update:modelValue']);
 defineOptions({ inheritAttrs: false });
 
 const attrs = useAttrs();
+const { t } = useI18n()
 const input = ref(null);
 const showPassword = ref(false);
 const isPassword = computed(() => attrs.type === 'password');
@@ -41,8 +43,8 @@ defineExpose({ focus: () => input.value.focus() });
         <button
             type="button"
             class="absolute inset-y-0 right-2 my-auto flex h-8 w-8 items-center justify-center rounded-md text-secondary transition hover:bg-muted hover:text-primary"
-            :aria-label="showPassword ? 'Kennwort verbergen' : 'Kennwort anzeigen'"
-            :title="showPassword ? 'Kennwort verbergen' : 'Kennwort anzeigen'"
+            :aria-label="showPassword ? t('Kennwort verbergen') : t('Kennwort anzeigen')"
+            :title="showPassword ? t('Kennwort verbergen') : t('Kennwort anzeigen')"
             @click="showPassword = !showPassword"
         >
             <i :class="showPassword ? 'las la-eye-slash' : 'las la-eye'" class="text-lg"></i>

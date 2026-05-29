@@ -4,12 +4,14 @@ import Sidebar from '@/Components/Auth/Sidebar.vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import UserCard from '@/Components/Auth/UserCard.vue'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
     title: String
 })
 
 const page = usePage()
+const { t, te } = useI18n()
 
 const componentTitles = {
     'Auth/Dashboard/Index': 'Dashboard',
@@ -78,6 +80,11 @@ const pageTitle = computed(() => {
         || componentTitles[page.component]
         || 'Airmius'
 })
+const translatedPageTitle = computed(() => {
+    const title = pageTitle.value
+
+    return te(title) ? t(title) : title
+})
 
 const notificationOpen = ref(false)
 const notificationBox = ref(null)
@@ -89,6 +96,7 @@ const searchResults = ref([])
 const searchLoading = ref(false)
 const currentStatus = ref(page.props.auth?.user?.status || 'online')
 const sidebarOpen = ref(false)
+const isRtl = computed(() => page.props.direction === 'rtl')
 const notificationsMarkedReadLocally = ref(false)
 const feedbackMessages = ref([])
 
@@ -538,7 +546,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
 
 <template>
 
-    <Head :title="pageTitle" />
+    <Head :title="translatedPageTitle" />
 
     <div class="h-dvh w-full overflow-hidden bg-bg text-primary">
         <Sidebar :open="sidebarOpen" @close="sidebarOpen = false" />
@@ -593,7 +601,10 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
             </div>
         </Teleport>
 
-        <div class="flex h-dvh min-w-0 flex-1 flex-col md:pl-[260px]">
+        <div
+            class="flex h-dvh min-w-0 flex-1 flex-col"
+            :class="isRtl ? 'md:pr-[260px]' : 'md:pl-[260px]'"
+        >
             <!-- Topbar -->
             <header class="sticky top-0 z-40 shrink-0 border-b border-border bg-card/95 backdrop-blur">
                 <div class="flex h-16 items-center justify-between px-3 sm:px-4 lg:px-6">
@@ -609,7 +620,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
 
                         <!-- Titel -->
                         <h1 class="truncate text-base font-semibold sm:text-lg">
-                            {{ pageTitle }}
+                            {{ translatedPageTitle }}
                         </h1>
                     </div>
 
@@ -620,7 +631,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                             class="hidden items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted lg:flex"
                         >
                             <i class="las la-external-link-alt text-lg"></i>
-                            <span>Gastseite</span>
+                            <span>{{ t('Gastseite') }}</span>
                         </Link>
 
                         <!-- Search Mobile -->
@@ -643,11 +654,11 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                             >
                                 <div class="max-h-96 overflow-y-auto">
                                     <div v-if="searchTerm.trim().length < 2" class="p-4 text-sm text-secondary">
-                                        Mindestens 2 Zeichen eingeben.
+                                        {{ t('search.min_chars') }}
                                     </div>
 
                                     <div v-else-if="searchLoading" class="p-4 text-sm text-secondary">
-                        Suche läuft...
+                                        {{ t('search.loading') }}
                                     </div>
 
                                     <div v-else-if="searchResults.length">
@@ -678,13 +689,13 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
 
                                             <button v-if="result.join_url" type="button" @click="requestJoin(result)"
                                                 class="shrink-0 rounded-lg border border-border px-2 py-2 text-xs hover:bg-inputBg">
-                                                Beitreten
+                                                {{ t('Beitreten') }}
                                             </button>
                                         </div>
                                     </div>
 
                                     <div v-else class="p-4 text-center text-sm text-secondary">
-                                        Keine passenden Ergebnisse.
+                                        {{ t('search.no_results') }}
                                     </div>
                                 </div>
                             </div>
@@ -724,9 +735,9 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                             >
                                 <div class="flex items-center justify-between border-b border-border px-4 py-3">
                                     <div>
-                                        <p class="text-sm font-semibold text-primary">Benachrichtigungen</p>
+                                        <p class="text-sm font-semibold text-primary">{{ t('Benachrichtigungen') }}</p>
                                         <p class="text-xs text-secondary">
-                                            {{ unreadCount ? `${unreadCount} ungelesen` : 'Alles gelesen' }}
+                                            {{ unreadCount ? t('notifications.unread_count', { count: unreadCount }) : t('Alles gelesen') }}
                                         </p>
                                     </div>
 
@@ -735,7 +746,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                                         class="rounded-lg px-2 py-1 text-xs font-semibold text-secondary hover:bg-muted hover:text-primary"
                                         @click="closeNotifications"
                                     >
-                                        Alle
+                                        {{ t('Alle') }}
                                     </Link>
                                 </div>
 
@@ -762,7 +773,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
 
                                         <div class="min-w-0 flex-1">
                                             <p class="line-clamp-2 text-sm font-semibold text-primary sm:truncate">
-                                                {{ notification.data?.title || 'Neue Benachrichtigung' }}
+                                                {{ notification.data?.title || t('Neue Benachrichtigung') }}
                                             </p>
                                             <p v-if="notification.data?.body" class="mt-0.5 line-clamp-2 text-xs text-secondary">
                                                 {{ notification.data.body }}
@@ -783,7 +794,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                                             v-else-if="!notification.read"
                                             class="shrink-0 self-center rounded-full border border-border px-2.5 py-1 text-[11px] font-bold text-secondary"
                                         >
-                                            Neu
+                                            {{ t('Neu') }}
                                         </span>
                                     </component>
                                 </div>
@@ -792,8 +803,8 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                                     <div class="mx-auto flex h-11 w-11 items-center justify-center rounded-lg bg-muted text-secondary">
                                         <i class="las la-bell-slash text-xl"></i>
                                     </div>
-                                    <p class="mt-3 text-sm font-semibold text-primary">Keine Benachrichtigungen</p>
-                                    <p class="mt-1 text-xs text-secondary">Neue Anfragen und Updates erscheinen hier.</p>
+                                    <p class="mt-3 text-sm font-semibold text-primary">{{ t('Keine Benachrichtigungen') }}</p>
+                                    <p class="mt-1 text-xs text-secondary">{{ t('layout.notifications_empty_hint') }}</p>
                                 </div>
                             </div>
                         </div>
@@ -823,17 +834,17 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
                             <button type="button"
                                 class="rounded-lg px-3 py-2 text-sm text-secondary hover:bg-muted hover:text-primary"
                                 @click="closeSearch">
-                                Schließen
+                                {{ t('Schließen') }}
                             </button>
                         </div>
 
                         <div class="max-h-[70vh] overflow-y-auto">
                             <div v-if="searchTerm.trim().length < 2" class="p-4 text-sm text-secondary">
-                                Mindestens 2 Zeichen eingeben.
+                                {{ t('search.min_chars') }}
                             </div>
 
                             <div v-else-if="searchLoading" class="p-4 text-sm text-secondary">
-                                Suche läuft...
+                                {{ t('search.loading') }}
                             </div>
 
                             <div v-else-if="searchResults.length">
@@ -864,13 +875,13 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
 
                                     <button v-if="result.join_url" type="button" @click="requestJoin(result)"
                                         class="shrink-0 rounded-lg border border-border px-2 py-2 text-xs hover:bg-inputBg">
-                                        Beitreten
+                                        {{ t('Beitreten') }}
                                     </button>
                                 </div>
                             </div>
 
                             <div v-else class="p-4 text-center text-sm text-secondary">
-                                Keine passenden Ergebnisse.
+                                {{ t('search.no_results') }}
                             </div>
                         </div>
                     </div>

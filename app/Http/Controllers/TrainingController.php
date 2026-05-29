@@ -239,7 +239,11 @@ class TrainingController extends Controller
 
         $profileReadiness = $sportProfiles->readiness($request->user(), $data['sport_type']);
 
-        $missing = collect($profileReadiness['missing'] ?? [])
+        $profileFieldsToResolve = collect([
+            ...($profileReadiness['missing'] ?? []),
+            ...($profileReadiness['unknown'] ?? []),
+        ]);
+        $missing = $profileFieldsToResolve
             ->pluck('label')
             ->filter()
             ->take(6)
@@ -249,7 +253,7 @@ class TrainingController extends Controller
         if (! $profileReadiness['ready'] && ! $allowProfileEstimate) {
             return response()->json([
                 'message' => 'Für einen zuverlässigen KI-Trainingsplan fehlen noch Leistungsdaten für '.$profileReadiness['sport']['name'].'. Möchtest du sie jetzt nachtragen? Fehlend: '.$missing.'. Wenn du die Werte nicht kennst, kannst du bewusst mit vorsichtigen Schätzungen fortfahren.',
-                'missing_profile_fields' => $profileReadiness['missing'] ?? [],
+                'missing_profile_fields' => $profileFieldsToResolve->values()->all(),
                 'profile_completion_url' => route('auth.settings', ['tab' => 'sport-profile']),
                 'profile_estimate_allowed' => true,
             ], 422);
@@ -260,6 +264,7 @@ class TrainingController extends Controller
             'ready' => (bool) $profileReadiness['ready'],
             'score' => (int) ($profileReadiness['score'] ?? 0),
             'missing' => $profileReadiness['missing'] ?? [],
+            'unknown' => $profileReadiness['unknown'] ?? [],
             'sport' => $profileReadiness['sport'] ?? null,
             'group' => $profileReadiness['group'] ?? 'generic',
         ];
@@ -267,6 +272,8 @@ class TrainingController extends Controller
 
         try {
             $plan = $ai->generateTrainingPlan($request->user(), $data);
+            $plan['profile_estimate_mode'] = ! $profileReadiness['ready'];
+            $plan['profile_readiness'] = $data['profile_readiness'];
             $plan['quality_check'] = $quality->evaluate($plan, $profileReadiness, $data);
 
             if (! $profileReadiness['ready']) {
@@ -312,6 +319,8 @@ class TrainingController extends Controller
             'plan.warnings' => ['nullable', 'array'],
             'plan.warnings.*' => ['nullable', 'string', 'max:300'],
             'plan.quality_check' => ['nullable', 'array'],
+            'plan.profile_estimate_mode' => ['nullable', 'boolean'],
+            'plan.profile_readiness' => ['nullable', 'array'],
             'plan.provider' => ['nullable', 'string', 'max:80'],
             'plan.provider_label' => ['nullable', 'string', 'max:120'],
             'plan.model' => ['nullable', 'string', 'max:160'],
@@ -388,6 +397,8 @@ class TrainingController extends Controller
                         'adjustment_tips' => array_values(array_filter($planPayload['adjustment_tips'] ?? [])),
                         'warnings' => array_values(array_filter($planPayload['warnings'] ?? [])),
                         'quality_check' => $planPayload['quality_check'] ?? null,
+                        'profile_estimate_mode' => (bool) ($planPayload['profile_estimate_mode'] ?? false),
+                        'profile_readiness' => $planPayload['profile_readiness'] ?? null,
                         'generated_at' => now()->toIso8601String(),
                     ],
                 ],

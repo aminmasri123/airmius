@@ -224,6 +224,7 @@ class UserSettingsController extends Controller
             'visibility' => ['required', Rule::in(['private', 'trainer', 'public'])],
             'metrics' => ['nullable', 'array'],
             'metric_visibility' => ['nullable', 'array'],
+            'unknown_metrics' => ['nullable', 'array'],
         ]);
 
         $sportProfiles->updateProfile($request->user(), $sport, $data);

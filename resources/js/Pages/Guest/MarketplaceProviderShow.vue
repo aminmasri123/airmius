@@ -7,6 +7,7 @@ import SeoHead from '@/Components/Guest/SeoHead.vue'
 import UserCard from '@/Components/Auth/UserCard.vue'
 import { useTheme } from '@/services/useTheme'
 import { applyLogoFallback, logoWordmark } from '@/services/logoAssets'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -20,6 +21,7 @@ const props = defineProps({
 
 const page = usePage()
 const { isDark } = useTheme()
+const { t } = useI18n()
 const currentUser = computed(() => props.authUser || page.props.auth?.user || null)
 const marketplaceLogo = computed(() => logoWordmark(isDark.value))
 const cartItemCount = computed(() => Number(props.cart?.items_count || 0))
@@ -33,11 +35,11 @@ const sideBannerStyle = computed(() => ({
 }))
 
 const categoryLabels = {
-    product: 'Produkt',
-    course: 'Kurs',
-    camp: 'Camp',
-    service: 'Service',
-    outfit_subscription: 'Outfit-Abo',
+    product: t('Produkt'),
+    course: t('Kurs'),
+    camp: t('Camp'),
+    service: t('Service'),
+    outfit_subscription: t('Outfit-Abo'),
 }
 
 const formatPrice = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
@@ -52,7 +54,7 @@ const price = (item) => item.price || {
 
 const grossPrice = (item) => formatPrice(price(item).gross_cents, price(item).currency)
 const shortDescription = (text, length = 110) => {
-    if (!text) return 'Marketplace-Angebot auf Airmius.'
+    if (!text) return t('Marketplace-Angebot auf Airmius.')
     if (text.length <= length) return text
 
     return `${text.slice(0, length).trim()}...`
@@ -61,8 +63,8 @@ const shortDescription = (text, length = 110) => {
 
 <template>
     <SeoHead
-        :title="`${provider.name} im Airmius Marketplace`"
-        :description="provider.description || `${provider.name} Angebote im Airmius Marketplace ansehen.`"
+        :title="$t('marketplace.provider.seo_title', { name: provider.name })"
+        :description="provider.description || $t('marketplace.provider.seo_description', { name: provider.name })"
         :image="provider.logo_url || provider.cover_url || undefined"
     />
 
@@ -94,8 +96,8 @@ const shortDescription = (text, length = 110) => {
                             <i class="las la-arrow-left text-xl"></i>
                         </span>
                         <span class="hidden min-w-0 sm:block">
-                            <span class="block font-heading text-lg font-900 leading-tight sm:text-2xl">AIRMIUS Marketplace</span>
-                            <span class="block truncate text-xs font-semibold text-secondary sm:text-sm">Zurück zu allen Angeboten</span>
+                            <span class="block font-heading text-lg font-900 leading-tight sm:text-2xl">{{ $t("AIRMIUS Marketplace") }}</span>
+                            <span class="block truncate text-xs font-semibold text-secondary sm:text-sm">{{ $t("Zurück zu allen Angeboten") }}</span>
                         </span>
                     </Link>
                     <div class="flex shrink-0 items-center justify-end gap-2 text-sm font-black">
@@ -103,8 +105,8 @@ const shortDescription = (text, length = 110) => {
                             v-if="currentUser"
                             :href="route('auth.commerce.cart.index')"
                             class="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary"
-                            aria-label="Warenkorb"
-                            title="Warenkorb"
+                            :aria-label="$t('Warenkorb')"
+                            :title="$t('Warenkorb')"
                         >
                             <i class="las la-shopping-cart text-xl"></i>
                             <span
@@ -117,10 +119,10 @@ const shortDescription = (text, length = 110) => {
                         <UserCard v-if="currentUser" />
                         <template v-else>
                             <Link v-if="canLogin" :href="route('login', { redirect: '/marketplace' })" class="rounded-full border border-border px-3 py-2 text-secondary transition hover:border-buttonPrimary hover:text-primary">
-                                Anmelden
+                                {{ $t("Anmelden") }}
                             </Link>
                             <Link v-if="canRegister" :href="route('register', { redirect: '/marketplace' })" class="rounded-full bg-buttonPrimary px-3 py-2 text-buttonTextPrimary transition hover:bg-buttonPrimaryHover">
-                                Registrieren
+                                {{ $t("Registrieren") }}
                             </Link>
                         </template>
                     </div>
@@ -149,11 +151,11 @@ const shortDescription = (text, length = 110) => {
                             <div class="grid gap-2 text-sm font-semibold text-white/90">
                                 <span class="inline-flex items-center gap-2 rounded bg-white/15 px-3 py-2 backdrop-blur">
                                     <i class="las la-map-marker-alt text-lg"></i>
-                                    {{ provider.location || 'Online' }}
+                                    {{ provider.location || $t('Online') }}
                                 </span>
                                 <span v-if="provider.verified" class="inline-flex items-center gap-2 rounded bg-success/20 px-3 py-2 text-white backdrop-blur">
                                     <i class="las la-check-circle text-lg"></i>
-                                    Verifizierter Anbieter
+                                    {{ $t("Verifizierter Anbieter") }}
                                 </span>
                             </div>
                         </div>
@@ -161,16 +163,16 @@ const shortDescription = (text, length = 110) => {
 
                     <div class="grid gap-3 border-t border-border bg-bg/60 p-4 md:grid-cols-3">
                         <div class="rounded border border-border bg-card p-4">
-                            <p class="text-xs font-black uppercase text-secondary">Angebote</p>
+                            <p class="text-xs font-black uppercase text-secondary">{{ $t("Angebote") }}</p>
                             <p class="mt-1 text-2xl font-black text-primary">{{ products.total || productItems.length }}</p>
                         </div>
                         <div class="rounded border border-border bg-card p-4">
-                            <p class="text-xs font-black uppercase text-secondary">Standort</p>
-                            <p class="mt-1 text-sm font-semibold text-primary">{{ provider.location || 'Online' }}</p>
+                            <p class="text-xs font-black uppercase text-secondary">{{ $t("Standort") }}</p>
+                            <p class="mt-1 text-sm font-semibold text-primary">{{ provider.location || $t('Online') }}</p>
                         </div>
                         <div class="rounded border border-border bg-card p-4">
-                            <p class="text-xs font-black uppercase text-secondary">Vertrauen</p>
-                            <p class="mt-1 text-sm font-semibold text-primary">{{ provider.verified ? 'Verifiziertes Profil' : 'Marketplace-Anbieter' }}</p>
+                            <p class="text-xs font-black uppercase text-secondary">{{ $t("Vertrauen") }}</p>
+                            <p class="mt-1 text-sm font-semibold text-primary">{{ provider.verified ? $t('Verifiziertes Profil') : $t('Marketplace-Anbieter') }}</p>
                         </div>
                     </div>
                 </div>
@@ -180,11 +182,11 @@ const shortDescription = (text, length = 110) => {
                 <div class="rounded border border-border bg-card shadow-sm">
                     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
                         <div>
-                            <p class="text-xs font-black uppercase tracking-wide text-secondary">Anbieter-Sortiment</p>
-                            <h2 class="text-lg font-black text-primary">Alle Angebote von {{ provider.name }}</h2>
+                            <p class="text-xs font-black uppercase tracking-wide text-secondary">{{ $t("Anbieter-Sortiment") }}</p>
+                            <h2 class="text-lg font-black text-primary">{{ $t('Alle Angebote von {name}', { name: provider.name }) }}</h2>
                         </div>
                         <Link :href="route('guest.marketplace')" class="rounded border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted">
-                            Marketplace ansehen
+                            {{ $t("Marketplace ansehen") }}
                         </Link>
                     </div>
 
@@ -226,8 +228,8 @@ const shortDescription = (text, length = 110) => {
                     </div>
 
                     <div v-else class="p-8 text-center">
-                        <p class="text-lg font-bold text-primary">Noch keine verfügbaren Angebote.</p>
-                        <p class="mt-2 text-sm text-secondary">Schau später wieder vorbei oder entdecke andere Anbieter im Marketplace.</p>
+                        <p class="text-lg font-bold text-primary">{{ $t("Noch keine verfügbaren Angebote.") }}</p>
+                        <p class="mt-2 text-sm text-secondary">{{ $t("Schau später wieder vorbei oder entdecke andere Anbieter im Marketplace.") }}</p>
                     </div>
 
                     <div v-if="paginationLinks.length > 1" class="flex flex-wrap justify-center gap-2 border-t border-border px-4 py-4">

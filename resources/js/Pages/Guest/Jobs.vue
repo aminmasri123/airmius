@@ -18,7 +18,7 @@ const props = defineProps({
 })
 
 const page = usePage()
-const { t, te } = useI18n()
+const { t, te, locale } = useI18n()
 const user = computed(() => page.props.auth?.user)
 const errors = computed(() => page.props.errors || {})
 const selectedJob = ref(null)
@@ -26,14 +26,14 @@ const interestNotice = ref(null)
 const interestPageNotice = ref(null)
 
 const roleOptions = [
-    { value: 'all', label: 'Alle Rollen' },
-    { value: 'professional', label: 'Beruflich' },
-    { value: 'volunteer', label: 'Ehrenamt' },
+    { value: 'all', labelKey: 'guest.jobs.filters.roles.all' },
+    { value: 'professional', labelKey: 'guest.jobs.filters.roles.professional' },
+    { value: 'volunteer', labelKey: 'guest.jobs.filters.roles.volunteer' },
 ]
 
 const sortOptions = [
-    { value: 'newest', label: 'Neueste zuerst' },
-    { value: 'oldest', label: 'Älteste zuerst' },
+    { value: 'newest', labelKey: 'guest.jobs.filters.sort.newest' },
+    { value: 'oldest', labelKey: 'guest.jobs.filters.sort.oldest' },
 ]
 
 const filterForm = ref({
@@ -61,6 +61,13 @@ const values = [
 const jobItems = computed(() => props.jobs?.data || [])
 const paginationLinks = computed(() => (props.jobs?.links || []).filter((link) => link.url))
 const totalJobs = computed(() => Number(props.jobs?.total || jobItems.value.length))
+const dateLocale = computed(() => {
+    if (locale.value === 'ar') return 'ar'
+    if (locale.value === 'fr') return 'fr-FR'
+    if (locale.value === 'en') return 'en-US'
+
+    return 'de-DE'
+})
 
 const hasActiveFilters = computed(() => Boolean(
     filterForm.value.role !== 'all'
@@ -70,37 +77,39 @@ const hasActiveFilters = computed(() => Boolean(
 ))
 
 const visibleRoleLabel = computed(() => {
-    return roleOptions.find((option) => option.value === filterForm.value.role)?.label || 'Alle Rollen'
+    const option = roleOptions.find((item) => item.value === filterForm.value.role)
+
+    return option ? t(option.labelKey) : t('guest.jobs.filters.roles.all')
 })
 
 const resultSummary = computed(() => {
     const total = totalJobs.value
 
     if (!total) {
-        return 'Derzeit sind keine offenen Rollen verfügbar.'
+        return t('guest.jobs.results.none')
     }
 
     if (filterForm.value.role === 'professional') {
-        return `${total} ${total === 1 ? 'berufliche Rolle' : 'berufliche Rollen'} gefunden.`
+        return t(total === 1 ? 'guest.jobs.results.professional_one' : 'guest.jobs.results.professional_many', { total })
     }
 
     if (filterForm.value.role === 'volunteer') {
-        return `${total} ${total === 1 ? 'Ehrenamtsangebot' : 'Ehrenamtsangebote'} gefunden.`
+        return t(total === 1 ? 'guest.jobs.results.volunteer_one' : 'guest.jobs.results.volunteer_many', { total })
     }
 
-    return `${total} offene ${total === 1 ? 'Rolle' : 'Rollen'} gefunden.`
+    return t(total === 1 ? 'guest.jobs.results.open_one' : 'guest.jobs.results.open_many', { total })
 })
 
 const emptyStateText = computed(() => {
     if (hasActiveFilters.value) {
-        return 'Zu deinen aktuellen Filtern gibt es gerade keine offenen Rollen.'
+        return t('guest.jobs.empty.filtered_text')
     }
 
-    return 'Schau bald wieder vorbei. Neue Jobs und Ehrenamtsrollen werden hier veröffentlicht.'
+    return t('guest.jobs.empty.default_text')
 })
 
 const sportLabel = (value) => {
-    if (!value) return 'Sportart offen'
+    if (!value) return t('guest.jobs.meta.sport_open')
 
     const sport = props.sports.find((sport) => sport.slug === value || sport.name === value)
     const slug = sport?.slug || value
@@ -110,9 +119,9 @@ const sportLabel = (value) => {
 }
 
 const roleLabel = (value) => {
-    if (value === 'professional') return 'Beruflich'
+    if (value === 'professional') return t('guest.jobs.filters.roles.professional')
 
-    return 'Ehrenamt'
+    return t('guest.jobs.filters.roles.volunteer')
 }
 
 const clubAddress = (club) => {
@@ -124,9 +133,9 @@ const clubAddress = (club) => {
 
 const formatJobMeta = (job) => {
     return [
-        job.location || 'Ort offen',
-        job.workload || 'Umfang offen',
-        job.employment_type || 'Flexibel',
+        job.location || t('guest.jobs.meta.location_open'),
+        job.workload || t('guest.jobs.meta.workload_open'),
+        job.employment_type || t('guest.jobs.meta.flexible'),
     ].join(' · ')
 }
 
@@ -135,7 +144,7 @@ const formatDate = (isoDate) => {
         return null
     }
 
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(dateLocale.value, {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
@@ -202,11 +211,11 @@ const submitInterest = () => {
         onSuccess: () => {
             interestNotice.value = {
                 type: 'success',
-                message: 'Dein Interesse wurde gesendet.',
+                message: t('guest.jobs.interest.success'),
             }
             interestPageNotice.value = {
                 type: 'success',
-                message: `Dein Interesse für "${selectedJob.value.title}" wurde an den Verein gesendet.`,
+                message: t('guest.jobs.interest.page_success', { title: selectedJob.value.title }),
             }
             interestForm.value = {
                 name: user.value?.name || '',
@@ -219,7 +228,7 @@ const submitInterest = () => {
         onError: () => {
             interestNotice.value = {
                 type: 'error',
-                message: 'Bitte prüfe deine Angaben.',
+                message: t('guest.jobs.interest.error'),
             }
             interestPageNotice.value = null
         },
@@ -232,8 +241,8 @@ const submitInterest = () => {
 
 <template>
     <SeoHead
-        title="Jobs im Sport"
-        description="Finde Jobs, Ehrenamt und Vereinsrollen im Sport. Airmius verbindet Vereine, Organisationen und Menschen, die den Sport gestalten."
+        :title="t('guest.jobs.meta_title')"
+        :description="t('guest.jobs.meta_description')"
     />
 
     <div class="min-h-screen bg-bg text-primary">
@@ -293,21 +302,21 @@ const submitInterest = () => {
                     @submit.prevent="applyFilters"
                 >
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">Rollenart</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ t('guest.jobs.filters.role_type') }}</span>
                         <select
                             id="jobs-filter-role"
                             v-model="filterForm.role"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                            aria-label="Rollenart"
+                            :aria-label="t('guest.jobs.filters.role_type')"
                         >
                             <option v-for="option in roleOptions" :key="option.value" :value="option.value">
-                                {{ option.label }}
+                                {{ t(option.labelKey) }}
                             </option>
                         </select>
                     </label>
 
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">Sportart</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ t('guest.jobs.filters.sport') }}</span>
                         <SearchableSelect
                             id="jobs-filter-sport"
                             v-model="filterForm.sport_type"
@@ -316,34 +325,34 @@ const submitInterest = () => {
                             value-key="slug"
                             translation-prefix="sports"
                             category-translation-prefix="sport_categories"
-                            placeholder="Sportart suchen"
-                            aria-label="Sportart"
+                            :placeholder="t('guest.jobs.filters.sport_placeholder')"
+                            :aria-label="t('guest.jobs.filters.sport')"
                         />
                     </label>
 
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">Adresse / Ort</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ t('guest.jobs.filters.address') }}</span>
                         <input
                             id="jobs-filter-address"
                             v-model="filterForm.address"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
                             type="search"
-                            placeholder="Stadt, PLZ, Land oder Adresse"
-                            aria-label="Adresse oder Ort"
+                            :placeholder="t('guest.jobs.filters.address_placeholder')"
+                            :aria-label="t('guest.jobs.filters.address_aria')"
                             autocomplete="address-line1"
                         >
                     </label>
 
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">Sortierung</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ t('guest.jobs.filters.sort_label') }}</span>
                         <select
                             id="jobs-filter-sort"
                             v-model="filterForm.sort"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                            aria-label="Sortierung"
+                            :aria-label="t('guest.jobs.filters.sort_label')"
                         >
                             <option v-for="option in sortOptions" :key="option.value" :value="option.value">
-                                {{ option.label }}
+                                {{ t(option.labelKey) }}
                             </option>
                         </select>
                     </label>
@@ -352,18 +361,18 @@ const submitInterest = () => {
                         <button
                             type="submit"
                             class="w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60 md:w-auto"
-                            aria-label="Jobs filtern"
+                            :aria-label="t('guest.jobs.filters.submit_aria')"
                         >
-                            Filtern
+                            {{ t('guest.jobs.filters.submit') }}
                         </button>
                         <button
                             v-if="hasActiveFilters"
                             type="button"
                             class="w-full rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted md:w-auto"
                             @click="resetFilters"
-                            aria-label="Filter zurücksetzen"
+                            :aria-label="t('guest.jobs.filters.reset')"
                         >
-                            Zurücksetzen
+                            {{ t('guest.jobs.filters.reset') }}
                         </button>
                     </div>
                 </form>
@@ -398,7 +407,7 @@ const submitInterest = () => {
                                 {{ job.description }}
                             </p>
                             <p v-if="job.published_at" class="mt-2 text-xs text-secondary">
-                                Veröffentlicht am {{ formatDate(job.published_at) }}
+                                {{ t('guest.jobs.meta.published_on', { date: formatDate(job.published_at) }) }}
                             </p>
                         </div>
 
@@ -407,7 +416,7 @@ const submitInterest = () => {
                                 type="button"
                                 class="w-full rounded-full border border-border px-4 py-2 text-center text-sm font-semibold text-primary transition hover:bg-muted"
                                 @click="openInterestModal(job)"
-                                :aria-label="`Jetzt für ${job.title} bewerben`"
+                                :aria-label="t('guest.jobs.interest.apply_aria', { title: job.title })"
                             >
                                 {{ $t('guest.jobs.apply') }}
                             </button>
@@ -417,24 +426,24 @@ const submitInterest = () => {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 class="w-full rounded-full border border-air-blue/30 px-4 py-2 text-center text-sm font-semibold text-air-blue transition hover:bg-air-blue/10"
-                                :aria-label="`Externe Bewerbung für ${job.title} öffnen`"
+                                :aria-label="t('guest.jobs.interest.external_aria', { title: job.title })"
                             >
-                                Direkt bewerben
+                                {{ t('guest.jobs.interest.apply_external') }}
                             </a>
                             <a
                                 v-if="job.contact_email"
                                 :href="`mailto:${job.contact_email}`"
                                 class="w-full rounded-full border border-border px-4 py-2 text-center text-sm font-semibold text-primary transition hover:bg-muted"
-                                :aria-label="`E-Mail an Verein für ${job.title} senden`"
+                                :aria-label="t('guest.jobs.interest.email_club_aria', { title: job.title })"
                             >
-                                E-Mail an Verein
+                                {{ t('guest.jobs.interest.email_club') }}
                             </a>
                         </div>
                     </article>
 
                     <div v-if="!jobItems.length" class="surface-card p-8 text-center text-sm text-secondary">
                         <p class="mb-2 font-semibold text-primary">
-                            {{ hasActiveFilters ? 'Keine passenden Rollen gefunden.' : 'Derzeit sind keine offenen Rollen veröffentlicht.' }}
+                            {{ hasActiveFilters ? t('guest.jobs.empty.filtered_title') : t('guest.jobs.empty.default_title') }}
                         </p>
                         <p class="mx-auto mb-4 max-w-lg">
                             {{ emptyStateText }}
@@ -444,9 +453,9 @@ const submitInterest = () => {
                             type="button"
                             class="w-full rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted md:w-auto"
                             @click="resetFilters"
-                            aria-label="Filter zurücksetzen"
+                            :aria-label="t('guest.jobs.filters.reset')"
                         >
-                            Filter zurücksetzen
+                            {{ t('guest.jobs.filters.reset') }}
                         </button>
                     </div>
                 </div>
@@ -479,10 +488,10 @@ const submitInterest = () => {
                         {{ selectedJob.club?.name }}
                     </p>
                     <h2 class="mt-1 text-xl font-bold text-primary" id="jobs-interest-title">
-                        Interesse melden
+                        {{ t('guest.jobs.interest.title') }}
                     </h2>
                     <p class="mt-2 text-sm text-secondary" id="jobs-interest-intro">
-                        Deine Angaben werden an den Verein weitergeleitet. Du musst dafür nicht angemeldet sein.
+                        {{ t('guest.jobs.interest.intro') }}
                     </p>
                 </div>
 
@@ -510,18 +519,18 @@ const submitInterest = () => {
                     v-if="selectedJob.application_url"
                     class="rounded-lg border border-air-blue/30 bg-air-blue/10 p-3 text-sm text-secondary"
                 >
-                    <span class="block font-semibold text-primary">Externe Bewerbung vorhanden</span>
+                    <span class="block font-semibold text-primary">{{ t('guest.jobs.interest.external_available') }}</span>
                     <span class="mt-1 block">
-                        Du kannst dein Interesse hier senden oder dich direkt über das externe Formular bewerben.
+                        {{ t('guest.jobs.interest.external_hint') }}
                     </span>
                     <a
                         :href="selectedJob.application_url"
                         target="_blank"
                         rel="noopener noreferrer"
-                        :aria-label="`Externes Bewerbungsformular für ${selectedJob.title} öffnen`"
+                        :aria-label="t('guest.jobs.interest.external_form_aria', { title: selectedJob.title })"
                         class="mt-3 inline-flex rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
                     >
-                        Extern bewerben
+                        {{ t('guest.jobs.interest.apply_external') }}
                     </a>
                 </div>
 
@@ -529,11 +538,11 @@ const submitInterest = () => {
                     v-if="selectedJob.contact_email"
                     class="rounded-lg border border-border bg-card p-3 text-sm text-secondary"
                 >
-                    <span class="block font-semibold text-primary">Direkte Kontaktmöglichkeit</span>
+                    <span class="block font-semibold text-primary">{{ t('guest.jobs.interest.direct_contact') }}</span>
                     <a
                         :href="`mailto:${selectedJob.contact_email}`"
                         class="mt-1 block text-air-blue underline decoration-air-blue/30 hover:decoration-current"
-                        :aria-label="`Kontakt per E-Mail an ${selectedJob.contact_email} senden`"
+                        :aria-label="t('guest.jobs.interest.contact_email_aria', { email: selectedJob.contact_email })"
                     >
                         {{ selectedJob.contact_email }}
                     </a>
@@ -541,19 +550,19 @@ const submitInterest = () => {
 
                 <div class="grid gap-3 sm:grid-cols-2">
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">Name *</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ t('guest.jobs.interest.name_label') }} *</span>
                         <input
                             id="jobs-interest-name"
                             v-model="interestForm.name"
                             required
                             autocomplete="name"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                            placeholder="Dein Name"
+                            :placeholder="t('guest.jobs.interest.name_placeholder')"
                             :aria-describedby="errors.name ? 'jobs-interest-name-error' : 'jobs-interest-name-help'"
                             :aria-invalid="Boolean(errors.name)"
                         >
                         <span id="jobs-interest-name-help" class="text-xs text-secondary">
-                            Bitte gib deinen vollständigen Namen ein.
+                            {{ t('guest.jobs.interest.name_help') }}
                         </span>
                         <span v-if="errors.name" id="jobs-interest-name-error" class="mt-1 block text-xs text-error">
                             {{ errors.name }}
@@ -561,7 +570,7 @@ const submitInterest = () => {
                     </label>
 
                     <label class="block">
-                        <span class="text-xs font-semibold uppercase text-secondary">E-Mail *</span>
+                        <span class="text-xs font-semibold uppercase text-secondary">{{ t('guest.jobs.interest.email_label') }} *</span>
                         <input
                             id="jobs-interest-email"
                             v-model="interestForm.email"
@@ -569,12 +578,12 @@ const submitInterest = () => {
                             type="email"
                             autocomplete="email"
                             class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                            placeholder="dein@email.de"
+                            placeholder="name@example.com"
                             :aria-describedby="errors.email ? 'jobs-interest-email-error' : 'jobs-interest-email-help'"
                             :aria-invalid="Boolean(errors.email)"
                         >
                         <span id="jobs-interest-email-help" class="text-xs text-secondary">
-                            Wir verwenden deine Adresse nur für diese Kontaktaufnahme.
+                            {{ t('guest.jobs.interest.email_help') }}
                         </span>
                         <span v-if="errors.email" id="jobs-interest-email-error" class="mt-1 block text-xs text-error">
                             {{ errors.email }}
@@ -583,7 +592,7 @@ const submitInterest = () => {
                 </div>
 
                 <label class="block">
-                    <span class="text-xs font-semibold uppercase text-secondary">Telefon optional</span>
+                    <span class="text-xs font-semibold uppercase text-secondary">{{ t('guest.jobs.interest.phone_label') }}</span>
                     <input
                         id="jobs-interest-phone"
                         v-model="interestForm.phone"
@@ -591,26 +600,26 @@ const submitInterest = () => {
                         inputmode="tel"
                         aria-describedby="jobs-interest-phone-help"
                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                        placeholder="Telefonnummer"
+                        :placeholder="t('guest.jobs.interest.phone_placeholder')"
                     >
                     <span id="jobs-interest-phone-help" class="text-xs text-secondary">
-                        Optional: Gib eine Telefonnummer für eine direkte Kontaktaufnahme an.
+                        {{ t('guest.jobs.interest.phone_help') }}
                     </span>
                     <span v-if="errors.phone" class="mt-1 block text-xs text-error">{{ errors.phone }}</span>
                 </label>
 
                 <label class="block">
-                    <span class="text-xs font-semibold uppercase text-secondary">Nachricht optional</span>
+                    <span class="text-xs font-semibold uppercase text-secondary">{{ t('guest.jobs.interest.message_label') }}</span>
                     <textarea
                         id="jobs-interest-message"
                         v-model="interestForm.message"
                         rows="4"
                         class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-3 text-sm text-primary"
-                        placeholder="Kurz vorstellen, Erfahrung nennen oder Rückfrage stellen."
+                        :placeholder="t('guest.jobs.interest.message_placeholder')"
                         aria-describedby="jobs-interest-message-help"
                     ></textarea>
                     <span id="jobs-interest-message-help" class="text-xs text-secondary">
-                        Kurzer Hinweis, warum du dich für diese Rolle interessiert hast.
+                        {{ t('guest.jobs.interest.message_help') }}
                     </span>
                     <span v-if="errors.message" class="mt-1 block text-xs text-error">{{ errors.message }}</span>
                 </label>
@@ -620,18 +629,18 @@ const submitInterest = () => {
                         type="button"
                         class="rounded-lg border border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted"
                         @click="closeInterestModal"
-                        aria-label="Modal schließen"
+                        :aria-label="t('guest.jobs.interest.close')"
                     >
-                        Schließen
+                        {{ t('guest.jobs.interest.close') }}
                     </button>
                     <button
                         type="submit"
                         class="rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60"
                         :disabled="isSubmittingInterest"
                         :aria-busy="isSubmittingInterest"
-                        :aria-label="isSubmittingInterest ? 'Interesse wird gesendet' : 'Interesse senden'"
+                        :aria-label="isSubmittingInterest ? t('guest.jobs.interest.sending') : t('guest.jobs.interest.send')"
                     >
-                        {{ isSubmittingInterest ? 'Wird gesendet…' : 'Interesse senden' }}
+                        {{ isSubmittingInterest ? t('guest.jobs.interest.sending') : t('guest.jobs.interest.send') }}
                     </button>
                 </div>
             </form>

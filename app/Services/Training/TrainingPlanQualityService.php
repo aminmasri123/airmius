@@ -51,7 +51,10 @@ class TrainingPlanQualityService
         $score -= $specificPenalty;
 
         if (! ($profileReadiness['ready'] ?? false)) {
-            $warnings[] = 'Das Sportprofil ist nicht vollständig. Der Plan kann nur grob bewertet werden.';
+            $unknownLabels = collect($profileReadiness['unknown'] ?? [])->pluck('label')->filter()->implode(', ');
+            $warnings[] = $unknownLabels !== ''
+                ? 'Einige Pflichtdaten wurden als unbekannt markiert: '.$unknownLabels.'. Der Plan kann nur vorsichtig bewertet werden.'
+                : 'Das Sportprofil ist nicht vollständig. Der Plan kann nur grob bewertet werden.';
             $suggestions[] = 'Trage die fehlenden Leistungsdaten nach und generiere den Plan danach erneut.';
             $score -= 20;
             $checks[] = [

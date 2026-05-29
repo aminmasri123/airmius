@@ -123,6 +123,7 @@ Route::middleware([
     Route::put('/admin/commerce/addons/{addon}', [AdminCommerceController::class, 'updateAddon'])->middleware('can:subscriptions.manage')->name('admin.commerce.addons.update');
     Route::post('/admin/commerce/products', [AdminCommerceController::class, 'storeProduct'])->middleware('can:subscriptions.manage')->name('admin.commerce.products.store');
     Route::put('/admin/commerce/products/{product}', [AdminCommerceController::class, 'updateProduct'])->middleware('can:subscriptions.manage')->name('admin.commerce.products.update');
+    Route::delete('/admin/commerce/products/{product}', [AdminCommerceController::class, 'destroyProduct'])->middleware('can:subscriptions.manage')->name('admin.commerce.products.destroy');
     Route::post('/admin/commerce/products/{product}/stock', [AdminCommerceController::class, 'adjustProductStock'])->middleware('can:subscriptions.manage')->name('admin.commerce.products.stock.adjust');
     Route::put('/admin/commerce/seller-applications/{sellerApplication}', [AdminCommerceController::class, 'updateSellerApplication'])->middleware('can:subscriptions.manage')->name('admin.commerce.seller-applications.update');
     Route::post('/admin/commerce/marketplace-visuals', [AdminCommerceController::class, 'updateMarketplaceVisuals'])->middleware('can:subscriptions.manage')->name('admin.commerce.marketplace-visuals.update');

@@ -43,7 +43,7 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Profil vervollständigen" />
+    <Head :title="$t('Profil vervollständigen')" />
 
     <AuthenticationCard>
         <div class="mx-auto h-36 w-36 md:h-48 md:w-48">
@@ -51,19 +51,19 @@ const submit = () => {
         </div>
 
         <div class="mb-5 rounded-lg border border-border bg-inputBg p-4 text-sm text-secondary">
-            Bitte vervollständige dein Profil. Das ist wichtig für Jugendschutz, Elternzustimmung und faire Nutzung der Plattform.
+            {{ $t('Bitte vervollständige dein Profil. Das ist wichtig für Jugendschutz, Elternzustimmung und faire Nutzung der Plattform.') }}
         </div>
 
         <form @submit.prevent="submit">
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
-                    <InputLabel for="first_name" value="Vorname" />
+                    <InputLabel for="first_name" :value="$t('Vorname')" />
                     <TextInput id="first_name" v-model="form.first_name" type="text" class="mt-1 block w-full" required autocomplete="given-name" />
                     <InputError class="mt-2" :message="form.errors.first_name" />
                 </div>
 
                 <div>
-                    <InputLabel for="last_name" value="Nachname" />
+                    <InputLabel for="last_name" :value="$t('Nachname')" />
                     <TextInput id="last_name" v-model="form.last_name" type="text" class="mt-1 block w-full" required autocomplete="family-name" />
                     <InputError class="mt-2" :message="form.errors.last_name" />
                 </div>
@@ -71,39 +71,39 @@ const submit = () => {
 
             <div class="mt-4 grid gap-4 sm:grid-cols-2">
                 <div>
-                    <InputLabel for="birth_date" value="Geburtsdatum" />
+                    <InputLabel for="birth_date" :value="$t('Geburtsdatum')" />
                     <TextInput id="birth_date" v-model="form.birth_date" type="date" class="mt-1 block w-full" required autocomplete="bday" />
                     <InputError class="mt-2" :message="form.errors.birth_date" />
                 </div>
 
                 <div>
-                    <InputLabel for="country" value="Land" />
+                    <InputLabel for="country" :value="$t('Land')" />
                     <select id="country" v-model="form.country" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary" required autocomplete="country">
-                        <option value="DE">Deutschland</option>
-                        <option value="AT">Oesterreich</option>
-                        <option value="CH">Schweiz</option>
-                        <option value="FR">Frankreich</option>
-                        <option value="NL">Niederlande</option>
-                        <option value="BE">Belgien</option>
-                        <option value="TR">Tuerkei</option>
-                        <option value="US">USA</option>
+                        <option value="DE">{{ $t('Deutschland') }}</option>
+                        <option value="AT">{{ $t('Österreich') }}</option>
+                        <option value="CH">{{ $t('Schweiz') }}</option>
+                        <option value="FR">{{ $t('Frankreich') }}</option>
+                        <option value="NL">{{ $t('Niederlande') }}</option>
+                        <option value="BE">{{ $t('Belgien') }}</option>
+                        <option value="TR">{{ $t('Türkei') }}</option>
+                        <option value="US">{{ $t('USA') }}</option>
                     </select>
                     <InputError class="mt-2" :message="form.errors.country" />
                 </div>
             </div>
 
             <div v-if="requiresGuardianConsent" class="mt-4">
-                <InputLabel for="guardian_email" value="E-Mail des Erziehungsberechtigten" />
+                <InputLabel for="guardian_email" :value="$t('E-Mail des Erziehungsberechtigten')" />
                 <TextInput id="guardian_email" v-model="form.guardian_email" type="email" class="mt-1 block w-full" required autocomplete="email" />
                 <p class="mt-2 text-sm text-secondary">
-                    Unter 16 Jahren ist eine Zustimmung eines Erziehungsberechtigten erforderlich.
+                    {{ $t('Unter 16 Jahren ist eine Zustimmung eines Erziehungsberechtigten erforderlich.') }}
                 </p>
                 <InputError class="mt-2" :message="form.errors.guardian_email" />
             </div>
 
             <div class="mt-5 flex justify-end">
                 <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                    Profil speichern
+                    {{ $t('Profil speichern') }}
                 </PrimaryButton>
             </div>
         </form>

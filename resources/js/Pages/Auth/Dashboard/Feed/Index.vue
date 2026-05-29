@@ -251,7 +251,7 @@ const visitPage = (url) => url && router.visit(url, {
     <AppLayout title="Feed">
 
         <Head title="Feed" />
-          <div class="mx-auto grid w-full max-w-6xl grid-cols-1 gap-4 overflow-hidden px-3 pb-24 sm:px-4 md:gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div class="mx-auto grid w-full max-w-[1500px] grid-cols-1 gap-4 overflow-hidden px-3 pb-24 sm:px-4 md:gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
 
         <section class="min-w-0 space-y-4">
 
@@ -703,7 +703,7 @@ const visitPage = (url) => url && router.visit(url, {
                     </div>
 
                     <div v-else class="text-sm text-secondary">
-                        {{ $t('Keine Teams/Clubs vorhanden.') }}
+                        {{ $t('teams.empty') }}
                     </div>
                 </div>
             </div>

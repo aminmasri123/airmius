@@ -53,7 +53,22 @@ class AthleteSportProfileService
     {
         $fields = $this->fieldsForSport($sport->slug ?: $sport->name);
         $allowedKeys = collect($fields)->pluck('key')->all();
+        $unknownKeys = collect($data['unknown_metrics'] ?? [])
+            ->filter(fn ($value) => filter_var($value, FILTER_VALIDATE_BOOLEAN))
+            ->keys()
+            ->intersect($allowedKeys)
+            ->values()
+            ->all();
         $metrics = $this->sanitizeMetrics($data['metrics'] ?? [], $fields);
+
+        foreach ($unknownKeys as $key) {
+            unset($metrics[$key]);
+        }
+
+        if ($unknownKeys !== []) {
+            $metrics['_unknown_fields'] = $unknownKeys;
+        }
+
         $visibility = collect($data['metric_visibility'] ?? [])
             ->only($allowedKeys)
             ->map(fn ($value) => in_array($value, ['private', 'trainer', 'public'], true) ? $value : 'private')
@@ -275,29 +290,37 @@ class AthleteSportProfileService
     private function readinessFromMetrics(array $metrics, array $fields, bool $hasProfile): array
     {
         $requiredFields = collect($fields)->where('required', true)->values();
+        $unknownKeys = collect($metrics['_unknown_fields'] ?? [])
+            ->filter()
+            ->map(fn ($value) => (string) $value)
+            ->unique()
+            ->values();
         $missing = $requiredFields
+            ->reject(fn (array $field) => $unknownKeys->contains($field['key']))
             ->filter(fn (array $field) => blank($metrics[$field['key']] ?? null))
+            ->map(fn (array $field) => $this->readinessFieldPayload($field))
+            ->values()
+            ->all();
+        $unknown = $requiredFields
+            ->filter(fn (array $field) => $unknownKeys->contains($field['key']))
             ->map(fn (array $field) => [
-                'key' => $field['key'],
-                'label' => $field['label'],
-                'help' => $field['help'] ?? null,
+                ...$this->readinessFieldPayload($field),
+                'unknown' => true,
             ])
             ->values()
             ->all();
         $requiredCount = max(1, $requiredFields->count());
-        $completedCount = $requiredCount - count($missing);
+        $completedCount = $requiredCount - count($missing) - count($unknown);
+        $notReadyFields = [...$missing, ...$unknown];
 
         return [
-            'ready' => $hasProfile && $missing === [],
+            'ready' => $hasProfile && $notReadyFields === [],
             'score' => $hasProfile ? (int) round(($completedCount / $requiredCount) * 100) : 0,
             'missing' => $hasProfile ? $missing : $requiredFields
-                ->map(fn (array $field) => [
-                    'key' => $field['key'],
-                    'label' => $field['label'],
-                    'help' => $field['help'] ?? null,
-                ])
+                ->map(fn (array $field) => $this->readinessFieldPayload($field))
                 ->values()
                 ->all(),
+            'unknown' => $hasProfile ? $unknown : [],
         ];
     }
 
@@ -347,6 +370,15 @@ class AthleteSportProfileService
         }
 
         return $metrics;
+    }
+
+    private function readinessFieldPayload(array $field): array
+    {
+        return [
+            'key' => $field['key'],
+            'label' => $field['label'],
+            'help' => $field['help'] ?? null,
+        ];
     }
 
     private function trainingDaysLabel(string $value): ?string

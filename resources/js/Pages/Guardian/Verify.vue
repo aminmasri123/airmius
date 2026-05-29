@@ -7,6 +7,7 @@ import InputLabel from '@/Components/InputLabel.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 import TextInput from '@/Components/TextInput.vue'
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 defineProps({
     email: {
@@ -16,6 +17,7 @@ defineProps({
 })
 
 const page = usePage()
+const { t } = useI18n()
 const confirmForm = useForm({
     code: '',
 })
@@ -48,7 +50,7 @@ const resendCode = () => {
     resendForm.post(route('guardian-access.store'), {
         preserveScroll: true,
         onError: (errors) => {
-            resendError.value = errors?.email || 'Der Code konnte nicht erneut gesendet werden. Bitte versuche es erneut.'
+            resendError.value = errors?.email || t('Der Code konnte nicht erneut gesendet werden. Bitte versuche es erneut.')
         },
         onSuccess: () => {
             resendError.value = ''
@@ -58,7 +60,7 @@ const resendCode = () => {
 </script>
 
 <template>
-    <Head title="Eltern-Code bestätigen" />
+    <Head :title="$t('Eltern-Code bestätigen')" />
 
     <AuthenticationCard>
         <div class="mx-auto h-36 w-36 md:h-48 md:w-48">
@@ -66,11 +68,11 @@ const resendCode = () => {
         </div>
 
         <div class="rounded-lg border border-border bg-card p-6">
-            <h1 class="text-xl font-semibold text-primary">Code bestätigen</h1>
+            <h1 class="text-xl font-semibold text-primary">{{ $t('Code bestätigen') }}</h1>
             <p class="mt-2 text-sm leading-6 text-secondary">
-                Wir haben einen 6-stelligen Code an
-                <span class="font-semibold text-primary">{{ email || 'deine E-Mail' }}</span>
-                gesendet, wenn diese Adresse bei uns gespeichert ist.
+                {{ $t('Wir haben einen 6-stelligen Code an') }}
+                <span class="font-semibold text-primary">{{ email || $t('deine E-Mail') }}</span>
+                {{ $t('gesendet, wenn diese Adresse bei uns gespeichert ist.') }}
             </p>
 
             <div v-if="page.props.flash?.status || page.props.status" class="mt-4 rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success" role="status" aria-live="polite">
@@ -83,7 +85,7 @@ const resendCode = () => {
 
             <form class="mt-5 space-y-4" @submit.prevent="submit">
                 <div>
-                    <InputLabel for="code" value="Code" />
+                    <InputLabel for="code" :value="$t('Code')" />
                     <TextInput
                         id="code"
                         v-model="confirmForm.code"
@@ -108,7 +110,7 @@ const resendCode = () => {
                         :class="{ 'opacity-60': isSubmitting }"
                         :aria-busy="isSubmitting"
                     >
-                        Zugang öffnen
+                        {{ $t('Zugang öffnen') }}
                     </PrimaryButton>
 
                     <button
@@ -118,13 +120,13 @@ const resendCode = () => {
                         :aria-busy="isResending"
                         @click="resendCode"
                     >
-                        Code erneut senden
+                        {{ $t('Code erneut senden') }}
                     </button>
                 </div>
             </form>
 
             <div class="mt-5 text-sm text-secondary">
-                <Link :href="route('guardian-access.create')" class="underline hover:text-primary">Andere E-Mail verwenden</Link>
+                <Link :href="route('guardian-access.create')" class="underline hover:text-primary">{{ $t('Andere E-Mail verwenden') }}</Link>
             </div>
         </div>
     </AuthenticationCard>

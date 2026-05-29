@@ -1647,6 +1647,9 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                                         <span v-if="plan.settings?.ai_generation" class="rounded-full border border-air-blue/40 bg-air-blue/10 px-2.5 py-1 text-xs font-semibold text-air-blue">
                                             KI-generiert
                                         </span>
+                                        <span v-if="plan.settings?.ai_generation?.profile_estimate_mode" class="rounded-full border border-warning/40 bg-warning/10 px-2.5 py-1 text-xs font-semibold text-warning">
+                                            Schätzmodus
+                                        </span>
                                     </div>
                                     <h3 class="mt-3 truncate text-lg font-semibold text-primary">{{ plan.title }}</h3>
                                     <p class="mt-1 hidden line-clamp-2 text-sm text-secondary md:block">{{ plan.description || 'Keine Beschreibung hinterlegt.' }}</p>
@@ -2189,10 +2192,17 @@ const sportAccent = (key) => sports.find((sport) => sport.key === key)?.accent |
                                 <span class="rounded-full border border-air-blue/40 px-3 py-1 text-xs font-semibold text-air-blue">
                                     {{ aiTrainingPlanPreview.items?.length || 0 }} Einheiten
                                 </span>
+                                <span v-if="aiTrainingPlanPreview.profile_estimate_mode" class="rounded-full border border-warning/40 bg-warning/10 px-3 py-1 text-xs font-semibold text-warning">
+                                    Schätzmodus
+                                </span>
                             </div>
                             <div class="mt-4 rounded-xl border border-air-blue/25 bg-bg/50 p-3">
                                 <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Warum genau so?</p>
                                 <p class="mt-1 text-sm text-primary">{{ aiTrainingPlanPreview.convincing_explanation }}</p>
+                            </div>
+                            <div v-if="aiTrainingPlanPreview.profile_estimate_mode" class="mt-3 rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm text-primary">
+                                <p class="font-semibold text-warning">Mit Schätzungen erstellt</p>
+                                <p class="mt-1 text-xs text-secondary">Einige Leistungsdaten fehlen oder wurden als unbekannt markiert. Der Vorschlag ist deshalb bewusst vorsichtig und sollte vor dem Speichern genauer geprüft werden.</p>
                             </div>
                         </div>
 

@@ -2,6 +2,7 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 defineOptions({ layout: AppLayout })
 
@@ -19,6 +20,70 @@ const props = defineProps({
     recentTraining: { type: Array, default: () => [] },
     aiCapabilities: { type: Object, default: () => ({}) },
 })
+
+const { locale, messages, te, t } = useI18n({ useScope: 'global' })
+
+const tAutoPattern = (source) => {
+    const patterns = messages.value?.[locale.value]?.auto_patterns || []
+
+    for (const pattern of patterns) {
+        if (!pattern?.source || !pattern?.target) {
+            continue
+        }
+
+        try {
+            const regex = new RegExp(pattern.source, pattern.flags || '')
+
+            if (regex.test(source)) {
+                return source.replace(regex, pattern.target)
+            }
+        } catch (error) {
+            // Optional translation patterns should never break the page.
+        }
+    }
+
+    return null
+}
+
+const tAuto = (value) => {
+    const source = String(value ?? '').trim()
+
+    if (!source || locale.value === 'de') {
+        return source
+    }
+
+    const dictionary = messages.value?.[locale.value]?.auto || {}
+
+    if (dictionary[source]) {
+        return dictionary[source]
+    }
+
+    const trailingPunctuation = source.match(/([.!?؟])$/)?.[1]
+    if (trailingPunctuation) {
+        const normalized = source.slice(0, -trailingPunctuation.length).trim()
+
+        if (dictionary[normalized]) {
+            return `${dictionary[normalized]}${trailingPunctuation}`
+        }
+    }
+
+    const leadingPunctuation = source.match(/^([.!?؟])/)?.[1]
+    if (leadingPunctuation) {
+        const normalized = source.slice(leadingPunctuation.length).trim()
+
+        if (dictionary[normalized]) {
+            return dictionary[normalized]
+        }
+    }
+
+    const patternTranslation = tAutoPattern(source)
+
+    if (patternTranslation) {
+        return patternTranslation
+    }
+
+    return te(source) ? t(source) : source
+}
 
 const selectedDateValue = ref(props.selectedDate)
 const editingMealId = ref(null)
@@ -47,8 +112,8 @@ const popularDrinkOptions = [
     { label: 'Sprudelwasser', category: 'Wasser', amount: 250, aliases: ['sparkling water', 'wasser mit kohlensaeure'] },
     { label: 'Infused Water', category: 'Wasser', amount: 250, aliases: ['zitrone', 'gurke', 'mint water'] },
     { label: 'Kokoswasser', category: 'Wasser', amount: 250, aliases: ['coconut water'] },
-    { label: 'Kraeutertee', category: 'Tee', amount: 250, aliases: ['tee', 'herbal tea'] },
-    { label: 'Gruener Tee', category: 'Tee', amount: 250, aliases: ['green tea'] },
+    { label: 'Kräutertee', category: 'Tee', amount: 250, aliases: ['tee', 'herbal tea'] },
+    { label: 'Grüner Tee', category: 'Tee', amount: 250, aliases: ['green tea'] },
     { label: 'Schwarzer Tee', category: 'Tee', amount: 250, aliases: ['black tea'] },
     { label: 'Eistee', category: 'Tee', amount: 330, aliases: ['iced tea'] },
     { label: 'Kaffee', category: 'Kaffee', amount: 200, aliases: ['coffee', 'filterkaffee'] },
@@ -68,7 +133,7 @@ const popularDrinkOptions = [
     { label: 'Cola Zero', category: 'Softdrink', amount: 330, aliases: ['coke zero', 'cola light'] },
     { label: 'Limonade', category: 'Softdrink', amount: 330, aliases: ['lemonade', 'sprite', 'fanta'] },
     { label: 'Energy Drink', category: 'Softdrink', amount: 250, aliases: ['red bull', 'monster'] },
-    { label: 'Isotonisches Getraenk', category: 'Sport', amount: 500, aliases: ['isodrink', 'sports drink', 'elektrolyt'] },
+    { label: 'Isotonisches Getränk', category: 'Sport', amount: 500, aliases: ['isodrink', 'sports drink', 'elektrolyt'] },
     { label: 'Elektrolyt-Drink', category: 'Sport', amount: 500, aliases: ['hydration', 'salze'] },
     { label: 'Pre-Workout', category: 'Sport', amount: 300, aliases: ['booster'] },
     { label: 'Alkoholfreies Bier', category: 'Sport', amount: 330, aliases: ['recovery bier'] },
@@ -255,18 +320,18 @@ const filteredRecipes = computed(() => {
     return props.recipes
 })
 
-const nutritionSections = [
-    { key: 'today', label: 'Heute', hint: 'Überblick', icon: 'las la-chart-pie' },
-    { key: 'add', label: 'Erfassen', hint: 'Mahlzeit', icon: 'las la-plus-circle' },
-    { key: 'drink', label: 'Trinken', hint: 'Wasser', icon: 'las la-tint' },
-    { key: 'goals', label: 'Ziele', hint: 'Plan', icon: 'las la-bullseye' },
-    { key: 'ideas', label: 'Ideen', hint: 'Rezepte', icon: 'las la-lightbulb' },
-]
+const nutritionSections = computed(() => [
+    { key: 'today', label: tAuto('Heute'), hint: tAuto('Überblick'), icon: 'las la-chart-pie' },
+    { key: 'add', label: tAuto('Erfassen'), hint: tAuto('Mahlzeit'), icon: 'las la-plus-circle' },
+    { key: 'drink', label: tAuto('Trinken'), hint: tAuto('Wasser'), icon: 'las la-tint' },
+    { key: 'goals', label: tAuto('Ziele'), hint: tAuto('Plan'), icon: 'las la-bullseye' },
+    { key: 'ideas', label: tAuto('Ideen'), hint: tAuto('Rezepte'), icon: 'las la-lightbulb' },
+])
 
 const macroCards = computed(() => [
     {
         key: 'calories',
-        label: 'Kalorien',
+        label: tAuto('Kalorien'),
         value: Number(props.todaySummary.calories || 0),
         target: Number(goalForm.daily_calories_target || 0),
         unit: 'kcal',
@@ -275,7 +340,7 @@ const macroCards = computed(() => [
     },
     {
         key: 'protein_g',
-        label: 'Protein',
+        label: tAuto('Protein'),
         value: Number(props.todaySummary.protein_g || 0),
         target: Number(goalForm.protein_target_g || 0),
         unit: 'g',
@@ -284,7 +349,7 @@ const macroCards = computed(() => [
     },
     {
         key: 'carbs_g',
-        label: 'Kohlenhydrate',
+        label: tAuto('Kohlenhydrate'),
         value: Number(props.todaySummary.carbs_g || 0),
         target: Number(goalForm.carbs_target_g || 0),
         unit: 'g',
@@ -293,7 +358,7 @@ const macroCards = computed(() => [
     },
     {
         key: 'fat_g',
-        label: 'Fett',
+        label: tAuto('Fett'),
         value: Number(props.todaySummary.fat_g || 0),
         target: Number(goalForm.fat_target_g || 0),
         unit: 'g',
@@ -309,10 +374,17 @@ const progressValue = (value, target) => {
     return Math.min(100, Math.round((Number(value || 0) / max) * 100))
 }
 
+const numberLocale = computed(() => ({
+    ar: 'ar',
+    en: 'en-US',
+    fr: 'fr-FR',
+    de: 'de-DE',
+}[locale.value] || 'de-DE'))
+
 const formatNumber = (value, digits = 0) => {
     const number = Number(value || 0)
 
-    return number.toLocaleString('de-DE', {
+    return number.toLocaleString(numberLocale.value, {
         minimumFractionDigits: digits,
         maximumFractionDigits: digits,
     })
@@ -322,7 +394,7 @@ const formatWater = (value) => {
     const ml = Number(value || 0)
 
     if (ml >= 1000) {
-        return `${(ml / 1000).toLocaleString('de-DE', { maximumFractionDigits: 1 })} l`
+        return `${(ml / 1000).toLocaleString(numberLocale.value, { maximumFractionDigits: 1 })} l`
     }
 
     return `${formatNumber(ml)} ml`
@@ -578,7 +650,7 @@ const deleteDrinkEntry = (entry) => {
 
     let handled = false
 
-    const restoreDrinkEntry = (message = 'Getraenk konnte nicht gelöscht werden. Bitte versuche es erneut.') => {
+    const restoreDrinkEntry = (message = 'Getränk konnte nicht gelöscht werden. Bitte versuche es erneut.') => {
         handled = true
         removeDeletingDrinkEntry(entry.id)
         drinkError.value = message
@@ -721,22 +793,22 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <Head title="Ernährung" />
+    <Head :title="tAuto('Ernährung')" />
 
     <div class="space-y-4">
         <section class="rounded-2xl border border-border bg-card p-3 sm:p-4 lg:p-5">
             <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div class="min-w-0">
-                    <p class="text-xs font-bold uppercase text-air-blue">Airmius Fuel</p>
-                    <h1 class="mt-1 text-xl font-bold leading-tight text-primary sm:text-2xl">Ernährung</h1>
+                    <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Airmius Fuel') }}</p>
+                    <h1 class="mt-1 text-xl font-bold leading-tight text-primary sm:text-2xl">{{ tAuto('Ernährung') }}</h1>
                     <p class="mt-1 hidden max-w-2xl text-sm leading-6 text-secondary sm:block">
-                        Heute sehen, schnell erfassen, Ziele ruhig anpassen. Keine überladene Arbeitsflaeche mehr.
+                        {{ tAuto('Heute sehen, schnell erfassen, Ziele ruhig anpassen. Keine überladene Arbeitsfläche mehr.') }}
                     </p>
                 </div>
                 <div class="flex w-full gap-2 sm:w-auto">
                     <input v-model="selectedDateValue" type="date" class="min-w-0 flex-1 rounded-xl border border-border bg-inputBg px-3 py-2 text-sm text-primary sm:w-44" @change="changeDate">
                     <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary" @click="changeDate">
-                        Laden
+                        {{ tAuto('Laden') }}
                     </button>
                 </div>
             </div>
@@ -768,18 +840,18 @@ onBeforeUnmount(() => {
                 <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
                     <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                         <div>
-                            <p class="text-xs font-bold uppercase text-air-blue">Heute</p>
-                            <h2 class="mt-1 text-xl font-bold text-primary">{{ formatNumber(todaySummary.calories || 0) }} kcal gegessen</h2>
+                            <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Heute') }}</p>
+                            <h2 class="mt-1 text-xl font-bold text-primary">{{ tAuto(`${formatNumber(todaySummary.calories || 0)} kcal gegessen`) }}</h2>
                             <p class="mt-1 text-sm text-secondary">
-                                {{ formatNumber(caloriesLeft) }} kcal bis zu deinem Tagesziel.
+                                {{ tAuto(`${formatNumber(caloriesLeft)} kcal bis zu deinem Tagesziel.`) }}
                             </p>
                         </div>
                         <div class="flex gap-2">
                             <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary" @click="activeSection = 'add'">
-                                Mahlzeit erfassen
+                                {{ tAuto('Mahlzeit erfassen') }}
                             </button>
                             <button type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-bold text-primary hover:bg-muted" @click="activeSection = 'ideas'">
-                                Ideen
+                                {{ tAuto('Ideen') }}
                             </button>
                         </div>
                     </div>
@@ -807,10 +879,10 @@ onBeforeUnmount(() => {
                     <div class="mt-4 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-4">
                         <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                             <div>
-                                <p class="text-xs font-bold uppercase text-cyan-200">Trinken</p>
-                                <h3 class="mt-1 text-xl font-black text-primary">{{ formatWater(waterConsumedMl) }} getrunken</h3>
+                                <p class="text-xs font-bold uppercase text-cyan-200">{{ tAuto('Trinken') }}</p>
+                                <h3 class="mt-1 text-xl font-black text-primary">{{ tAuto(`${formatWater(waterConsumedMl)} getrunken`) }}</h3>
                                 <p class="mt-1 text-sm text-secondary">
-                                    {{ formatWater(waterLeftMl) }} bis zu deinem Tagesziel von {{ formatWater(waterTargetMl) }}.
+                                    {{ tAuto(`${formatWater(waterLeftMl)} bis zu deinem Tagesziel von ${formatWater(waterTargetMl)}.`) }}
                                 </p>
                             </div>
                             <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -830,7 +902,7 @@ onBeforeUnmount(() => {
                             <div class="h-full rounded-full bg-gradient-to-r from-cyan-400 to-air-blue" :style="{ width: `${waterProgress}%` }"></div>
                         </div>
                         <button type="button" class="mt-3 text-sm font-bold text-cyan-200 hover:text-primary" @click="activeSection = 'drink'">
-                            Trinken genau verwalten
+                            {{ tAuto('Trinken genau verwalten') }}
                         </button>
                     </div>
                 </section>
@@ -838,10 +910,10 @@ onBeforeUnmount(() => {
                 <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <p class="text-xs font-bold uppercase text-air-blue">Verlauf</p>
-                            <h2 class="mt-1 text-lg font-bold text-primary">Letzte 7 Tage</h2>
+                            <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Verlauf') }}</p>
+                            <h2 class="mt-1 text-lg font-bold text-primary">{{ tAuto('Letzte 7 Tage') }}</h2>
                         </div>
-                        <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-secondary">{{ formatNumber(todaySummary.water_ml || 0) }} ml Wasser</span>
+                        <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-secondary">{{ tAuto(`${formatNumber(todaySummary.water_ml || 0)} ml Wasser`) }}</span>
                     </div>
                     <div class="mt-4 flex h-28 items-end gap-2">
                         <div v-for="day in weeklySummaries" :key="day.date" class="flex min-w-0 flex-1 flex-col items-center gap-2">
@@ -857,10 +929,10 @@ onBeforeUnmount(() => {
             <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <p class="text-xs font-bold uppercase text-air-blue">Tageslog</p>
-                        <h2 class="mt-1 text-lg font-bold text-primary">Mahlzeiten</h2>
+                        <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Tageslog') }}</p>
+                        <h2 class="mt-1 text-lg font-bold text-primary">{{ tAuto('Mahlzeiten') }}</h2>
                     </div>
-                    <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-primary">{{ sortedMeals.length }} Einträge</span>
+                    <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-primary">{{ tAuto(`${sortedMeals.length} Einträge`) }}</span>
                 </div>
 
                 <div class="mt-4 space-y-3">
@@ -869,16 +941,16 @@ onBeforeUnmount(() => {
                             <div class="min-w-0">
                                 <p class="text-xs font-bold uppercase text-secondary">
                                     <i :class="[mealTypeMeta(meal.meal_type).icon, 'me-1']"></i>
-                                    {{ mealTypeMeta(meal.meal_type).label }}
+                                    {{ tAuto(mealTypeMeta(meal.meal_type).label) }}
                                 </p>
                                 <h3 class="mt-1 truncate text-base font-bold text-primary">{{ meal.title }}</h3>
-                                <p class="mt-1 text-sm text-secondary">{{ formatNumber(meal.calories) }} kcal - {{ formatNumber(meal.protein_g, 1) }} g Protein</p>
+                                <p class="mt-1 text-sm text-secondary">{{ tAuto(`${formatNumber(meal.calories)} kcal - ${formatNumber(meal.protein_g, 1)} g Protein`) }}</p>
                             </div>
                             <div class="flex shrink-0 gap-1">
-                                <button type="button" class="rounded-lg border border-border px-2.5 py-2 text-primary hover:bg-muted" title="Bearbeiten" @click="editMeal(meal)">
+                                <button type="button" class="rounded-lg border border-border px-2.5 py-2 text-primary hover:bg-muted" :title="tAuto('Bearbeiten')" @click="editMeal(meal)">
                                     <i class="las la-pen"></i>
                                 </button>
-                                <button type="button" class="rounded-lg border border-danger/30 px-2.5 py-2 text-danger hover:bg-danger/10" title="Löschen" @click="deleteCandidate = meal">
+                                <button type="button" class="rounded-lg border border-danger/30 px-2.5 py-2 text-danger hover:bg-danger/10" :title="tAuto('Löschen')" @click="deleteCandidate = meal">
                                     <i class="las la-trash"></i>
                                 </button>
                             </div>
@@ -887,8 +959,8 @@ onBeforeUnmount(() => {
 
                     <div v-if="!sortedMeals.length" class="rounded-xl border border-dashed border-border bg-inputBg p-6 text-center">
                         <i class="las la-apple-alt text-4xl text-air-blue"></i>
-                        <p class="mt-3 text-base font-bold text-primary">Noch nichts erfasst.</p>
-                        <p class="mt-1 text-sm text-secondary">Eine grobe Mahlzeit reicht für den Anfang.</p>
+                        <p class="mt-3 text-base font-bold text-primary">{{ tAuto('Noch nichts erfasst.') }}</p>
+                        <p class="mt-1 text-sm text-secondary">{{ tAuto('Eine grobe Mahlzeit reicht für den Anfang.') }}</p>
                     </div>
                 </div>
             </section>
@@ -898,32 +970,32 @@ onBeforeUnmount(() => {
             <form class="rounded-2xl border border-border bg-card p-4 lg:p-5" @submit.prevent="submitMeal">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <p class="text-xs font-bold uppercase text-air-blue">Mahlzeit</p>
-                        <h2 class="mt-1 text-xl font-bold text-primary">{{ editingMealId ? 'Mahlzeit bearbeiten' : 'Schnell erfassen' }}</h2>
-                        <p class="mt-1 text-sm text-secondary">Nur Name und Kalorien sind Pflicht. Details bleiben optional.</p>
+                        <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Mahlzeit') }}</p>
+                        <h2 class="mt-1 text-xl font-bold text-primary">{{ editingMealId ? tAuto('Mahlzeit bearbeiten') : tAuto('Schnell erfassen') }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ tAuto('Nur Name und Kalorien sind Pflicht. Details bleiben optional.') }}</p>
                     </div>
                     <button v-if="editingMealId" type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-bold text-primary hover:bg-muted" @click="resetMealForm">
-                        Neu
+                        {{ tAuto('Neu') }}
                     </button>
                 </div>
 
                 <section class="mt-4 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-4">
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                            <p class="text-xs font-bold uppercase text-cyan-200">KI-Fotoanalyse</p>
-                            <h3 class="mt-1 text-base font-black text-primary">Kalorien aus Bild schützen</h3>
+                            <p class="text-xs font-bold uppercase text-cyan-200">{{ tAuto('KI-Fotoanalyse') }}</p>
+                            <h3 class="mt-1 text-base font-black text-primary">{{ tAuto('Kalorien aus Bild schützen') }}</h3>
                             <p class="mt-1 text-sm leading-6 text-secondary">
-                                Bild wird verkleinert, EXIF wird entfernt. Ergebnis bleibt ein Vorschlag und muss von dir bestätigt werden.
+                                {{ tAuto('Bild wird verkleinert, EXIF wird entfernt. Ergebnis bleibt ein Vorschlag und muss von dir bestätigt werden.') }}
                             </p>
                         </div>
                         <span class="shrink-0 rounded-full bg-card px-3 py-1 text-xs font-black text-cyan-100">
-                            {{ aiMealImageAvailable ? aiMealProviderLabel : 'Nicht konfiguriert' }}
+                            {{ aiMealImageAvailable ? aiMealProviderLabel : tAuto('Nicht konfiguriert') }}
                         </span>
                     </div>
 
                     <div class="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr),auto]">
                         <label class="block text-sm font-bold text-primary">
-                            Essensbild
+                            {{ tAuto('Essensbild') }}
                             <input
                                 ref="aiMealImageInput"
                                 type="file"
@@ -941,15 +1013,15 @@ onBeforeUnmount(() => {
                         >
                             <span v-if="aiMealAnalyzing" class="inline-flex items-center gap-2">
                                 <i class="las la-sync-alt animate-spin"></i>
-                                Analysiere
+                                {{ tAuto('Analysiere') }}
                             </span>
-                            <span v-else>Bild analysieren</span>
+                            <span v-else>{{ tAuto('Bild analysieren') }}</span>
                         </button>
                     </div>
 
                     <label class="mt-3 flex items-start gap-3 rounded-xl border border-border bg-card/70 p-3 text-sm text-secondary">
                         <input v-model="aiMealConsent" type="checkbox" class="mt-1 rounded border-border bg-inputBg text-air-blue">
-                        <span>Ich möchte dieses Bild zur KI-Analyse senden. Es wird nur für den Vorschlag genutzt und nicht automatisch als Mahlzeit gespeichert.</span>
+                        <span>{{ tAuto('Ich möchte dieses Bild zur KI-Analyse senden. Es wird nur für den Vorschlag genutzt und nicht automatisch als Mahlzeit gespeichert.') }}</span>
                     </label>
 
                     <p v-if="aiMealError" class="mt-3 rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm font-semibold text-danger">
@@ -961,15 +1033,15 @@ onBeforeUnmount(() => {
                             <div>
                                 <p class="text-sm font-black text-primary">{{ aiMealSuggestion.title }}</p>
                                 <p class="mt-1 text-xs leading-5 text-secondary">
-                                    {{ formatNumber(aiMealSuggestion.calories || 0) }} kcal · {{ formatNumber(aiMealSuggestion.protein_g || 0, 1) }} g Protein · Sicherheit {{ Math.round((aiMealSuggestion.confidence || 0) * 100) }}%
+                                    {{ tAuto(`${formatNumber(aiMealSuggestion.calories || 0)} kcal · ${formatNumber(aiMealSuggestion.protein_g || 0, 1)} g Protein · Sicherheit ${Math.round((aiMealSuggestion.confidence || 0) * 100)}%`) }}
                                 </p>
                             </div>
                             <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-bold text-primary hover:bg-muted" @click="applyAiMealSuggestion">
-                                Erneut übernehmen
+                                {{ tAuto('Erneut übernehmen') }}
                             </button>
                         </div>
                         <p class="mt-2 text-xs leading-5 text-secondary">
-                            {{ aiMealSuggestion.notes || 'Bitte Mengen prüfen, bevor du speicherst.' }}
+                            {{ tAuto(aiMealSuggestion.notes || 'Bitte Mengen prüfen, bevor du speicherst.') }}
                         </p>
                     </div>
                 </section>
@@ -986,62 +1058,62 @@ onBeforeUnmount(() => {
                         @click="mealForm.meal_type = type.key"
                     >
                         <i :class="[type.icon, 'text-lg']"></i>
-                        <span class="mt-1 block text-xs font-bold">{{ type.label }}</span>
+                        <span class="mt-1 block text-xs font-bold">{{ tAuto(type.label) }}</span>
                     </button>
                 </div>
 
                 <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                    <label class="block text-sm font-bold text-primary sm:col-span-2">Was hast du gegessen?
-                        <input v-model="mealForm.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. Bowl, Banane, Proteinshake" required>
+                    <label class="block text-sm font-bold text-primary sm:col-span-2">{{ tAuto('Was hast du gegessen?') }}
+                        <input v-model="mealForm.title" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" :placeholder="tAuto('z. B. Bowl, Banane, Proteinshake')" required>
                     </label>
-                    <label class="block text-sm font-bold text-primary">Kalorien
-                        <input v-model="mealForm.calories" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. 520" required>
+                    <label class="block text-sm font-bold text-primary">{{ tAuto('Kalorien') }}
+                        <input v-model="mealForm.calories" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" :placeholder="tAuto('z. B. 520')" required>
                     </label>
-                    <label class="block text-sm font-bold text-primary">Protein optional
-                        <input v-model="mealForm.protein_g" type="number" min="0" step="0.1" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. 32">
+                    <label class="block text-sm font-bold text-primary">{{ tAuto('Protein optional') }}
+                        <input v-model="mealForm.protein_g" type="number" min="0" step="0.1" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" :placeholder="tAuto('z. B. 32')">
                     </label>
                 </div>
 
                 <button type="button" class="mt-4 flex w-full items-center justify-between rounded-xl border border-border bg-inputBg px-4 py-3 text-sm font-bold text-primary hover:bg-muted" @click="showAdvancedMeal = !showAdvancedMeal">
-                    <span>Mehr Details</span>
+                    <span>{{ tAuto('Mehr Details') }}</span>
                     <i :class="[showAdvancedMeal ? 'las la-angle-up' : 'las la-angle-down', 'text-lg']"></i>
                 </button>
 
                 <div v-if="showAdvancedMeal" class="mt-4 space-y-4 rounded-2xl border border-border bg-inputBg p-3">
                     <div class="grid gap-3 sm:grid-cols-2">
-                        <label class="block text-sm font-bold text-primary">Datum
+                        <label class="block text-sm font-bold text-primary">{{ tAuto('Datum') }}
                             <input v-model="mealForm.eaten_on" type="date" class="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-primary">
                         </label>
-                        <label class="block text-sm font-bold text-primary">Training-Bezug
+                        <label class="block text-sm font-bold text-primary">{{ tAuto('Training-Bezug') }}
                             <select v-model="mealForm.training_context" class="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-primary">
-                                <option value="">Ohne Bezug</option>
-                                <option value="pre_workout">Vor dem Training</option>
-                                <option value="post_workout">Nach dem Training</option>
+                                <option value="">{{ tAuto('Ohne Bezug') }}</option>
+                                <option value="pre_workout">{{ tAuto('Vor dem Training') }}</option>
+                                <option value="post_workout">{{ tAuto('Nach dem Training') }}</option>
                                 <option v-for="log in recentTraining" :key="log.id" :value="`training_log:${log.id}`">{{ log.title }}</option>
                             </select>
                         </label>
-                        <label class="block text-sm font-bold text-primary">Kohlenhydrate g
+                        <label class="block text-sm font-bold text-primary">{{ tAuto('Kohlenhydrate g') }}
                             <input v-model="mealForm.carbs_g" type="number" min="0" step="0.1" class="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-primary">
                         </label>
-                        <label class="block text-sm font-bold text-primary">Fett g
+                        <label class="block text-sm font-bold text-primary">{{ tAuto('Fett g') }}
                             <input v-model="mealForm.fat_g" type="number" min="0" step="0.1" class="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-primary">
                         </label>
-                        <label class="block text-sm font-bold text-primary">Wasser ml
+                        <label class="block text-sm font-bold text-primary">{{ tAuto('Wasser ml') }}
                             <input v-model="mealForm.water_ml" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-primary">
                         </label>
                     </div>
 
                     <div>
                         <div class="flex items-center justify-between gap-3">
-                            <p class="text-sm font-bold text-primary">Zutaten / Portionen</p>
+                            <p class="text-sm font-bold text-primary">{{ tAuto('Zutaten / Portionen') }}</p>
                             <button type="button" class="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-primary hover:bg-muted" @click="addItemRow">
-                                Zeile
+                                {{ tAuto('Zeile') }}
                             </button>
                         </div>
                         <div class="mt-3 space-y-2">
                             <div v-for="(item, index) in mealForm.items" :key="index" class="grid gap-2 sm:grid-cols-[minmax(0,1fr),130px,auto]">
-                                <input v-model="item.name" class="rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="Lebensmittel">
-                                <input v-model="item.amount" class="rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="Menge">
+                                <input v-model="item.name" class="rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" :placeholder="tAuto('Lebensmittel')">
+                                <input v-model="item.amount" class="rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" :placeholder="tAuto('Menge')">
                                 <button type="button" class="rounded-lg border border-border px-3 py-2 text-sm text-danger hover:bg-danger/10" @click="removeItemRow(index)">
                                     <i class="las la-trash"></i>
                                 </button>
@@ -1049,17 +1121,17 @@ onBeforeUnmount(() => {
                         </div>
                     </div>
 
-                    <label class="block text-sm font-bold text-primary">Notiz
-                        <textarea v-model="mealForm.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-primary" placeholder="Gefühl, Hunger, Timing, Besonderheiten"></textarea>
+                    <label class="block text-sm font-bold text-primary">{{ tAuto('Notiz') }}
+                        <textarea v-model="mealForm.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2 text-primary" :placeholder="tAuto('Gefühl, Hunger, Timing, Besonderheiten')"></textarea>
                     </label>
                 </div>
 
                 <div v-if="Object.keys(mealForm.errors).length" class="mt-4 rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
-                    Bitte prüfe die Eingaben.
+                    {{ tAuto('Bitte prüfe die Eingaben.') }}
                 </div>
 
                 <button type="submit" class="mt-4 w-full rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-bold text-buttonTextPrimary disabled:opacity-60" :disabled="mealForm.processing">
-                    {{ editingMealId ? 'Speichern' : 'Hinzufügen' }}
+                    {{ editingMealId ? tAuto('Speichern') : tAuto('Hinzufügen') }}
                 </button>
             </form>
 
@@ -1067,23 +1139,23 @@ onBeforeUnmount(() => {
                 <section class="rounded-2xl border border-air-blue/25 bg-air-blue/10 p-4">
                     <div class="flex items-start justify-between gap-3">
                         <div>
-                            <p class="text-xs font-bold uppercase text-air-blue">Suche</p>
-                            <h2 class="mt-1 text-lg font-bold text-primary">Lebensmittel finden</h2>
-                            <p class="mt-1 text-sm text-secondary">Name oder Barcode suchen, dann übernehmen.</p>
+                            <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Suche') }}</p>
+                            <h2 class="mt-1 text-lg font-bold text-primary">{{ tAuto('Lebensmittel finden') }}</h2>
+                            <p class="mt-1 text-sm text-secondary">{{ tAuto('Name oder Barcode suchen, dann übernehmen.') }}</p>
                         </div>
-                        <span class="rounded-full bg-card px-3 py-1 text-[11px] font-bold text-primary">kostenlos</span>
+                        <span class="rounded-full bg-card px-3 py-1 text-[11px] font-bold text-primary">{{ tAuto('kostenlos') }}</span>
                     </div>
                     <div class="mt-4 grid gap-2">
                         <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr),auto]">
-                            <input v-model="foodSearchQuery" class="rounded-xl border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="z. B. Skyr, Banane">
+                            <input v-model="foodSearchQuery" class="rounded-xl border border-border bg-card px-3 py-2 text-sm text-primary" :placeholder="tAuto('z. B. Skyr, Banane')">
                             <button type="button" class="rounded-xl border border-air-blue/40 px-4 py-2 text-sm font-bold text-primary hover:bg-air-blue/15 disabled:opacity-60" :disabled="foodLookupLoading" @click="searchFoods">
-                                Suchen
+                                {{ tAuto('Suchen') }}
                             </button>
                         </div>
                         <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr),auto]">
-                            <input v-model="foodBarcode" class="rounded-xl border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="Barcode">
+                            <input v-model="foodBarcode" class="rounded-xl border border-border bg-card px-3 py-2 text-sm text-primary" :placeholder="tAuto('Barcode')">
                             <button type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-bold text-primary hover:bg-muted disabled:opacity-60" :disabled="foodLookupLoading" @click="lookupBarcode">
-                                Barcode
+                                {{ tAuto('Barcode') }}
                             </button>
                         </div>
                     </div>
@@ -1098,21 +1170,21 @@ onBeforeUnmount(() => {
                             </div>
                             <div class="min-w-0 flex-1">
                                 <p class="truncate text-sm font-bold text-primary">{{ food.title }}</p>
-                                <p class="truncate text-xs text-secondary">{{ food.brand || 'Open Food Facts' }} - {{ food.quantity_label }}</p>
-                                <p class="mt-1 text-xs text-secondary">{{ food.calories }} kcal - {{ food.protein_g }} g Protein</p>
+                                <p class="truncate text-xs text-secondary">{{ tAuto(food.brand || 'Open Food Facts') }} - {{ food.quantity_label }}</p>
+                                <p class="mt-1 text-xs text-secondary">{{ tAuto(`${food.calories} kcal - ${food.protein_g} g Protein`) }}</p>
                             </div>
                             <button type="button" class="shrink-0 rounded-lg bg-buttonPrimary px-3 py-2 text-xs font-bold text-buttonTextPrimary" @click="applyFoodResult(food)">
-                                Übernehmen
+                                {{ tAuto('Übernehmen') }}
                             </button>
                         </article>
                     </div>
                 </section>
 
                 <section class="rounded-2xl border border-border bg-card p-4">
-                    <p class="text-xs font-bold uppercase text-air-blue">Heute bisher</p>
+                    <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Heute bisher') }}</p>
                     <div class="mt-3 grid grid-cols-2 gap-2">
                         <span class="rounded-xl border border-border bg-inputBg p-3 text-xs text-secondary"><b class="block text-lg text-primary">{{ formatNumber(todaySummary.calories || 0) }}</b>kcal</span>
-                        <span class="rounded-xl border border-border bg-inputBg p-3 text-xs text-secondary"><b class="block text-lg text-primary">{{ formatNumber(todaySummary.protein_g || 0, 1) }} g</b>Protein</span>
+                        <span class="rounded-xl border border-border bg-inputBg p-3 text-xs text-secondary"><b class="block text-lg text-primary">{{ formatNumber(todaySummary.protein_g || 0, 1) }} g</b>{{ tAuto('Protein') }}</span>
                     </div>
                 </section>
             </aside>
@@ -1122,21 +1194,21 @@ onBeforeUnmount(() => {
             <form class="rounded-2xl border border-border bg-card p-3 sm:p-4 lg:p-5" @submit.prevent="submitDrink()">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <p class="text-xs font-bold uppercase text-cyan-200">Trinken</p>
+                        <p class="text-xs font-bold uppercase text-cyan-200">{{ tAuto('Trinken') }}</p>
                         <div class="mt-1 flex items-center gap-2">
-                            <h2 class="text-xl font-black text-primary sm:text-2xl">{{ formatWater(waterConsumedMl) }} heute</h2>
+                            <h2 class="text-xl font-black text-primary sm:text-2xl">{{ tAuto(`${formatWater(waterConsumedMl)} heute`) }}</h2>
                             <button
                                 type="button"
                                 class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-inputBg text-secondary hover:border-cyan-300 hover:text-primary sm:h-9 sm:w-9"
-                                title="Wasserziel einstellen"
-                                aria-label="Wasserziel einstellen"
+                                :title="tAuto('Wasserziel einstellen')"
+                                :aria-label="tAuto('Wasserziel einstellen')"
                                 @click="activeSection = 'goals'"
                             >
                                 <i class="las la-cog text-xl"></i>
                             </button>
                         </div>
                         <p class="mt-1 text-sm leading-5 text-secondary sm:leading-6">
-                            Ziel: {{ formatWater(waterTargetMl) }}. Noch {{ formatWater(waterLeftMl) }} offen.
+                            {{ tAuto(`Ziel: ${formatWater(waterTargetMl)}. Noch ${formatWater(waterLeftMl)} offen.`) }}
                         </p>
                     </div>
                 </div>
@@ -1153,26 +1225,26 @@ onBeforeUnmount(() => {
 
                 <div class="mt-4 hidden gap-3 md:grid md:grid-cols-3">
                     <div class="rounded-2xl border border-border bg-inputBg p-3">
-                        <p class="text-xs font-bold uppercase text-secondary">Basis</p>
+                        <p class="text-xs font-bold uppercase text-secondary">{{ tAuto('Basis') }}</p>
                         <p class="mt-1 text-lg font-black text-primary">{{ formatWater(waterBaseMl) }}</p>
                         <p class="mt-1 text-xs leading-5 text-secondary">
-                            {{ goalForm.body_weight_kg ? 'Aus deinem Gewicht berechnet.' : 'Standard, bis Gewicht gepflegt ist.' }}
+                            {{ goalForm.body_weight_kg ? tAuto('Aus deinem Gewicht berechnet.') : tAuto('Standard, bis Gewicht gepflegt ist.') }}
                         </p>
                     </div>
                     <div class="rounded-2xl border border-border bg-inputBg p-3">
-                        <p class="text-xs font-bold uppercase text-secondary">Training heute</p>
+                        <p class="text-xs font-bold uppercase text-secondary">{{ tAuto('Training heute') }}</p>
                         <p class="mt-1 text-lg font-black text-primary">+{{ formatWater(waterTrainingExtraMl) }}</p>
-                        <p class="mt-1 text-xs leading-5 text-secondary">Dauer, Sportart und Intensitaet werden beruecksichtigt.</p>
+                        <p class="mt-1 text-xs leading-5 text-secondary">{{ tAuto('Dauer, Sportart und Intensität werden berücksichtigt.') }}</p>
                     </div>
                     <div class="rounded-2xl border border-border bg-inputBg p-3">
-                        <p class="text-xs font-bold uppercase text-secondary">Modus</p>
-                        <p class="mt-1 text-lg font-black text-primary">{{ goalForm.water_target_mode === 'auto' ? 'Automatisch' : 'Manuell' }}</p>
-                        <p class="mt-1 text-xs leading-5 text-secondary">?nderbar unter Ziele.</p>
+                        <p class="text-xs font-bold uppercase text-secondary">{{ tAuto('Modus') }}</p>
+                        <p class="mt-1 text-lg font-black text-primary">{{ goalForm.water_target_mode === 'auto' ? tAuto('Automatisch') : tAuto('Manuell') }}</p>
+                        <p class="mt-1 text-xs leading-5 text-secondary">{{ tAuto('Änderbar unter Ziele.') }}</p>
                     </div>
                 </div>
 
                 <div class="mt-4 sm:hidden">
-                    <p class="text-sm font-bold text-primary">Schnelle Menge</p>
+                    <p class="text-sm font-bold text-primary">{{ tAuto('Schnelle Menge') }}</p>
                     <div class="mt-3 grid grid-cols-4 gap-2">
                         <button
                             v-for="amount in quickDrinkAmounts"
@@ -1190,10 +1262,10 @@ onBeforeUnmount(() => {
                 <div class="mt-4 sm:mt-5">
                     <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                         <div>
-                            <p class="text-sm font-bold text-primary">Nach Tasse oder Glas eintragen</p>
-                            <p class="hidden text-xs leading-5 text-secondary sm:block">Wähle die Grüße, die am besten passt. Die Menge wird direkt gespeichert.</p>
+                            <p class="text-sm font-bold text-primary">{{ tAuto('Nach Tasse oder Glas eintragen') }}</p>
+                            <p class="hidden text-xs leading-5 text-secondary sm:block">{{ tAuto('Wähle die Größe, die am besten passt. Die Menge wird direkt gespeichert.') }}</p>
                         </div>
-                        <span class="hidden text-xs font-bold uppercase text-cyan-200 sm:inline">Airmius Quick Drink</span>
+                        <span class="hidden text-xs font-bold uppercase text-cyan-200 sm:inline">{{ tAuto('Airmius Quick Drink') }}</span>
                     </div>
                     <div class="mt-3 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
                         <button
@@ -1207,8 +1279,8 @@ onBeforeUnmount(() => {
                         >
                             <div class="flex items-start justify-between gap-2">
                                 <div class="min-w-0">
-                                    <p class="truncate text-sm font-black text-primary">{{ vessel.label }}</p>
-                                    <p class="mt-1 text-xs text-secondary">{{ vessel.hint }}</p>
+                                    <p class="truncate text-sm font-black text-primary">{{ tAuto(vessel.label) }}</p>
+                                    <p class="mt-1 text-xs text-secondary">{{ tAuto(vessel.hint) }}</p>
                                 </div>
                                 <span class="rounded-full bg-card px-2.5 py-1 text-xs font-black text-cyan-100">{{ vessel.amount }} ml</span>
                             </div>
@@ -1231,7 +1303,7 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div class="mt-5 hidden sm:block">
-                    <p class="text-sm font-bold text-primary">Oder schnelle Menge eintragen</p>
+                    <p class="text-sm font-bold text-primary">{{ tAuto('Oder schnelle Menge eintragen') }}</p>
                     <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                         <button
                             v-for="amount in quickDrinkAmounts"
@@ -1248,12 +1320,12 @@ onBeforeUnmount(() => {
 
                 <div class="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1.2fr),minmax(0,0.8fr),auto]">
                     <div ref="drinkSelectRef" class="relative block text-sm font-bold text-primary">
-                        <span>Getränk</span>
+                        <span>{{ tAuto('Getränk') }}</span>
                         <div class="mt-2 flex rounded-xl border border-border bg-inputBg focus-within:border-cyan-300">
                             <input
                                 :value="drinkSearchQuery"
                                 class="min-w-0 flex-1 rounded-l-xl border-0 bg-transparent px-3 py-3 text-primary placeholder-secondary focus:ring-0"
-                                placeholder="Getränk suchen oder eigenes schreiben"
+                                :placeholder="tAuto('Getränk suchen oder eigenes schreiben')"
                                 autocomplete="off"
                                 @focus="drinkSelectOpen = true"
                                 @input="updateDrinkSearch($event.target.value)"
@@ -1264,7 +1336,7 @@ onBeforeUnmount(() => {
                                 v-if="drinkSearchQuery"
                                 type="button"
                                 class="px-2 text-secondary hover:text-primary"
-                                title="Leeren"
+                                :title="tAuto('Leeren')"
                                 @click="clearDrinkSearch"
                             >
                                 <i class="las la-times"></i>
@@ -1272,7 +1344,7 @@ onBeforeUnmount(() => {
                             <button
                                 type="button"
                                 class="rounded-r-xl px-3 text-secondary hover:text-primary"
-                                title="Getränke anzeigen"
+                                :title="tAuto('Getränke anzeigen')"
                                 @click="drinkSelectOpen = !drinkSelectOpen"
                             >
                                 <i class="las la-angle-down"></i>
@@ -1293,8 +1365,8 @@ onBeforeUnmount(() => {
                                     <i class="las la-plus"></i>
                                 </span>
                                 <span class="min-w-0">
-                                    <span class="block truncate text-sm font-black text-primary">"{{ drinkSearchQuery.trim() }}" verwenden</span>
-                                    <span class="block text-xs font-semibold text-secondary">Eigenes Getränk speichern</span>
+                                    <span class="block truncate text-sm font-black text-primary">{{ tAuto(`"${drinkSearchQuery.trim()}" verwenden`) }}</span>
+                                    <span class="block text-xs font-semibold text-secondary">{{ tAuto('Eigenes Getränk speichern') }}</span>
                                 </span>
                             </button>
 
@@ -1306,28 +1378,28 @@ onBeforeUnmount(() => {
                                 @mousedown.prevent="selectDrinkOption(drink)"
                             >
                                 <span class="min-w-0">
-                                    <span class="block truncate text-sm font-black text-primary">{{ drink.label }}</span>
-                                    <span class="block text-xs font-semibold text-secondary">{{ drink.category }}</span>
+                                    <span class="block truncate text-sm font-black text-primary">{{ tAuto(drink.label) }}</span>
+                                    <span class="block text-xs font-semibold text-secondary">{{ tAuto(drink.category) }}</span>
                                 </span>
                                 <span class="shrink-0 rounded-full bg-inputBg px-2.5 py-1 text-xs font-black text-cyan-100">{{ drink.amount }} ml</span>
                             </button>
 
                             <div v-if="!filteredDrinkOptions.length && !customDrinkNameAvailable" class="rounded-xl border border-dashed border-border px-3 py-4 text-sm font-semibold text-secondary">
-                                Kein Getränk gefunden. Schreibe einfach dein eigenes.
+                                {{ tAuto('Kein Getränk gefunden. Schreibe einfach dein eigenes.') }}
                             </div>
                         </div>
                     </div>
-                    <label class="block text-sm font-bold text-primary">Menge in ml
+                    <label class="block text-sm font-bold text-primary">{{ tAuto('Menge in ml') }}
                         <input v-model="drinkForm.amount_ml" type="number" min="1" max="5000" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="250">
                     </label>
                     <button type="submit" class="self-end rounded-xl bg-buttonPrimary px-5 py-3 text-sm font-bold text-buttonTextPrimary disabled:opacity-60" :disabled="drinkForm.processing">
-                        Eintragen
+                        {{ tAuto('Eintragen') }}
                     </button>
                 </div>
                 <input v-model="drinkForm.eaten_on" type="hidden">
 
                 <p v-if="drinkError || drinkForm.errors.amount_ml || drinkForm.errors.title" class="mt-3 rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
-                    {{ drinkError || 'Bitte Menge zwischen 1 und 5000 ml eingeben.' }}
+                    {{ tAuto(drinkError || 'Bitte Menge zwischen 1 und 5000 ml eingeben.') }}
                 </p>
             </form>
 
@@ -1338,10 +1410,10 @@ onBeforeUnmount(() => {
                             <i class="las la-lightbulb text-2xl"></i>
                         </span>
                         <div class="min-w-0">
-                            <p class="text-xs font-bold uppercase text-cyan-200">Trink-Tipps</p>
-                            <h3 class="mt-1 text-lg font-black text-primary">Kurz wissen, besser tracken</h3>
+                            <p class="text-xs font-bold uppercase text-cyan-200">{{ tAuto('Trink-Tipps') }}</p>
+                            <h3 class="mt-1 text-lg font-black text-primary">{{ tAuto('Kurz wissen, besser tracken') }}</h3>
                             <p class="mt-1 text-sm leading-6 text-secondary">
-                                Orientierung zu Wasserziel, Training und Alltag.
+                                {{ tAuto('Orientierung zu Wasserziel, Training und Alltag.') }}
                             </p>
                         </div>
                     </div>
@@ -1351,13 +1423,13 @@ onBeforeUnmount(() => {
                             class="rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-bold text-buttonTextPrimary"
                             @click="showDrinkTips = true"
                         >
-                            Tipps öffnen
+                            {{ tAuto('Tipps öffnen') }}
                         </button>
                         <Link
                             :href="route('guest.blog.index', { search: 'Trinken' })"
                             class="rounded-xl border border-border bg-card px-4 py-3 text-center text-sm font-bold text-primary hover:border-cyan-300 hover:bg-cyan-400/10"
                         >
-                            Blog zu Trinken
+                            {{ tAuto('Blog zu Trinken') }}
                         </Link>
                     </div>
                 </section>
@@ -1365,15 +1437,15 @@ onBeforeUnmount(() => {
                 <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
                     <div class="flex items-start justify-between gap-3">
                         <div>
-                            <p class="text-xs font-bold uppercase text-air-blue">Heute</p>
-                            <h2 class="mt-1 text-lg font-bold text-primary">Getränke</h2>
+                            <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Heute') }}</p>
+                            <h2 class="mt-1 text-lg font-bold text-primary">{{ tAuto('Getränke') }}</h2>
                         </div>
                         <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-primary">{{ drinkEntries.length }}</span>
                     </div>
 
                     <div v-if="deletingDrinkEntries.length" class="mt-4 flex items-center gap-2 rounded-xl border border-cyan-300/30 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-100">
                         <i class="las la-sync-alt animate-spin"></i>
-                        <span>{{ deletingDrinkEntries.length }} Eintrag wird gelöscht...</span>
+                        <span>{{ tAuto(`${deletingDrinkEntries.length} Eintrag wird gelöscht...`) }}</span>
                     </div>
 
                     <div v-if="drinkEntries.length" class="mt-4 space-y-2">
@@ -1384,29 +1456,29 @@ onBeforeUnmount(() => {
                             :class="entry.is_pending ? 'border-cyan-300/50 bg-cyan-400/10' : 'border-border'"
                         >
                             <div class="min-w-0">
-                                <p class="truncate text-sm font-bold text-primary">{{ entry.title }}</p>
+                                <p class="truncate text-sm font-bold text-primary">{{ tAuto(entry.title) }}</p>
                                 <p class="text-xs text-secondary">
                                     {{ formatWater(entry.water_ml) }}
-                                    <span v-if="entry.is_pending" class="ml-1 font-bold text-cyan-200">wird gespeichert...</span>
+                                    <span v-if="entry.is_pending" class="ml-1 font-bold text-cyan-200">{{ tAuto('wird gespeichert...') }}</span>
                                 </p>
                             </div>
-                            <button v-if="!entry.is_pending" type="button" class="rounded-lg border border-danger/30 px-2.5 py-2 text-danger hover:bg-danger/10" title="Löschen" @click="deleteDrinkEntry(entry)">
+                            <button v-if="!entry.is_pending" type="button" class="rounded-lg border border-danger/30 px-2.5 py-2 text-danger hover:bg-danger/10" :title="tAuto('Löschen')" @click="deleteDrinkEntry(entry)">
                                 <i class="las la-trash"></i>
                             </button>
-                            <span v-else class="rounded-lg border border-cyan-300/30 px-2.5 py-2 text-cyan-200" title="Wird gespeichert">
+                            <span v-else class="rounded-lg border border-cyan-300/30 px-2.5 py-2 text-cyan-200" :title="tAuto('Wird gespeichert')">
                                 <i class="las la-sync-alt animate-spin"></i>
                             </span>
                         </article>
                     </div>
                     <div v-else class="mt-4 rounded-xl border border-dashed border-border bg-inputBg p-6 text-center">
                         <i class="las la-tint text-4xl text-cyan-200"></i>
-                        <p class="mt-3 text-base font-bold text-primary">Noch nichts getrunken eingetragen.</p>
-                        <p class="mt-1 text-sm text-secondary">Ein Tippen auf +250 ml reicht während des Tages.</p>
+                        <p class="mt-3 text-base font-bold text-primary">{{ tAuto('Noch nichts getrunken eingetragen.') }}</p>
+                        <p class="mt-1 text-sm text-secondary">{{ tAuto('Ein Tippen auf +250 ml reicht während des Tages.') }}</p>
                     </div>
                 </section>
 
                 <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
-                    <p class="text-xs font-bold uppercase text-air-blue">7 Tage Wasser</p>
+                    <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('7 Tage Wasser') }}</p>
                     <div class="mt-4 flex h-28 items-end gap-2">
                         <div v-for="day in weeklySummaries" :key="`water-${day.date}`" class="flex min-w-0 flex-1 flex-col items-center gap-2">
                             <div class="flex h-20 w-full items-end rounded-full bg-inputBg px-1">
@@ -1421,82 +1493,82 @@ onBeforeUnmount(() => {
 
         <section v-if="activeSection === 'goals'" class="grid gap-4 xl:grid-cols-[minmax(0,0.8fr),minmax(320px,0.6fr)]">
             <form class="rounded-2xl border border-border bg-card p-4 lg:p-5" @submit.prevent="saveGoal">
-                <p class="text-xs font-bold uppercase text-air-blue">Ziel</p>
-                <h2 class="mt-1 text-xl font-bold text-primary">{{ selectedGoal.label || 'Ernährungsziel' }}</h2>
-                <p class="mt-1 text-sm text-secondary">{{ selectedGoal.hint }}</p>
+                <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Ziel') }}</p>
+                <h2 class="mt-1 text-xl font-bold text-primary">{{ tAuto(selectedGoal.label || 'Ernährungsziel') }}</h2>
+                <p class="mt-1 text-sm text-secondary">{{ tAuto(selectedGoal.hint) }}</p>
 
                 <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                    <label class="block text-sm font-bold text-primary">Ziel
+                    <label class="block text-sm font-bold text-primary">{{ tAuto('Ziel') }}
                         <select v-model="goalForm.goal_type" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
-                            <option v-for="goalType in goalTypes" :key="goalType.key" :value="goalType.key">{{ goalType.label }}</option>
+                            <option v-for="goalType in goalTypes" :key="goalType.key" :value="goalType.key">{{ tAuto(goalType.label) }}</option>
                         </select>
                     </label>
-                    <label class="block text-sm font-bold text-primary">Ernährungsstil
+                    <label class="block text-sm font-bold text-primary">{{ tAuto('Ernährungsstil') }}
                         <select v-model="goalForm.diet_style" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
-                            <option v-for="style in dietStyles" :key="style.key" :value="style.key">{{ style.label }}</option>
+                            <option v-for="style in dietStyles" :key="style.key" :value="style.key">{{ tAuto(style.label) }}</option>
                         </select>
                     </label>
-                    <label class="block text-sm font-bold text-primary">Kalorienziel
+                    <label class="block text-sm font-bold text-primary">{{ tAuto('Kalorienziel') }}
                         <input v-model="goalForm.daily_calories_target" type="number" min="800" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
                     </label>
-                    <label class="block text-sm font-bold text-primary">Proteinziel
+                    <label class="block text-sm font-bold text-primary">{{ tAuto('Proteinziel') }}
                         <input v-model="goalForm.protein_target_g" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
                     </label>
-                    <label class="block text-sm font-bold text-primary">Kohlenhydrate
+                    <label class="block text-sm font-bold text-primary">{{ tAuto('Kohlenhydrate') }}
                         <input v-model="goalForm.carbs_target_g" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
                     </label>
-                    <label class="block text-sm font-bold text-primary">Fett
+                    <label class="block text-sm font-bold text-primary">{{ tAuto('Fett') }}
                         <input v-model="goalForm.fat_target_g" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
                     </label>
-                    <label class="block text-sm font-bold text-primary">Trinkziel
+                    <label class="block text-sm font-bold text-primary">{{ tAuto('Trinkziel') }}
                         <select v-model="goalForm.water_target_mode" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary">
-                            <option value="auto">Automatisch nach Gewicht und Training</option>
-                            <option value="manual">Manuell festlegen</option>
+                            <option value="auto">{{ tAuto('Automatisch nach Gewicht und Training') }}</option>
+                            <option value="manual">{{ tAuto('Manuell festlegen') }}</option>
                         </select>
                     </label>
-                    <label class="block text-sm font-bold text-primary">Gewicht kg
-                        <input v-model="goalForm.body_weight_kg" type="number" min="20" max="300" step="0.1" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="z. B. 75">
+                    <label class="block text-sm font-bold text-primary">{{ tAuto('Gewicht kg') }}
+                        <input v-model="goalForm.body_weight_kg" type="number" min="20" max="300" step="0.1" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" :placeholder="tAuto('z. B. 75')">
                     </label>
-                    <label class="block text-sm font-bold text-primary">Manuelles Wasserziel ml
+                    <label class="block text-sm font-bold text-primary">{{ tAuto('Manuelles Wasserziel ml') }}
                         <input v-model="goalForm.water_target_ml" type="number" min="0" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" :disabled="goalForm.water_target_mode === 'auto'">
                         <span class="mt-1 block text-xs font-semibold text-secondary">
-                            {{ goalForm.water_target_mode === 'auto' ? `Heute empfohlen: ${formatWater(suggestedWaterTargetMl)}` : 'Dieses Ziel bleibt jeden Tag gleich.' }}
+                            {{ goalForm.water_target_mode === 'auto' ? tAuto(`Heute empfohlen: ${formatWater(suggestedWaterTargetMl)}`) : tAuto('Dieses Ziel bleibt jeden Tag gleich.') }}
                         </span>
                     </label>
-                    <label class="block text-sm font-bold text-primary sm:col-span-2">Notiz
-                        <textarea v-model="goalForm.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" placeholder="Allergien, Vorlieben, Trainer-Hinweise"></textarea>
+                    <label class="block text-sm font-bold text-primary sm:col-span-2">{{ tAuto('Notiz') }}
+                        <textarea v-model="goalForm.notes" rows="3" class="mt-2 w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-primary" :placeholder="tAuto('Allergien, Vorlieben, Trainer-Hinweise')"></textarea>
                     </label>
                 </div>
                 <button type="submit" class="mt-4 w-full rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-bold text-buttonTextPrimary disabled:opacity-60" :disabled="goalForm.processing">
-                    Ziel speichern
+                    {{ tAuto('Ziel speichern') }}
                 </button>
             </form>
 
             <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
-                <p class="text-xs font-bold uppercase text-air-blue">Trinkziel heute</p>
+                <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Trinkziel heute') }}</p>
                 <div class="mt-3 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-4">
                     <p class="text-3xl font-black text-primary">{{ formatWater(waterTargetMl) }}</p>
                     <p class="mt-2 text-sm leading-6 text-secondary">
-                        Basis {{ formatWater(waterBaseMl) }} + Training {{ formatWater(waterTrainingExtraMl) }}.
-                        {{ goalForm.water_target_mode === 'auto' ? 'Airmius passt das Tagesziel automatisch an.' : 'Manueller Modus nutzt dein festes Ziel.' }}
+                        {{ tAuto('Basis') }} {{ formatWater(waterBaseMl) }} + {{ tAuto('Training') }} {{ formatWater(waterTrainingExtraMl) }}.
+                        {{ goalForm.water_target_mode === 'auto' ? tAuto('Airmius passt das Tagesziel automatisch an.') : tAuto('Manueller Modus nutzt dein festes Ziel.') }}
                     </p>
                 </div>
                 <div v-if="waterRecommendation.details?.length" class="mt-3 space-y-2">
                     <article v-for="detail in waterRecommendation.details" :key="`water-training-${detail.id}`" class="rounded-xl border border-border bg-inputBg p-3">
-                        <p class="text-sm font-bold text-primary">{{ detail.title }}</p>
+                        <p class="text-sm font-bold text-primary">{{ tAuto(detail.title) }}</p>
                         <p class="mt-1 text-xs text-secondary">
-                            {{ detail.duration_minutes || 0 }} min - {{ detail.sport_type || 'Training' }} - +{{ formatWater(detail.extra_ml) }}
+                            {{ detail.duration_minutes || 0 }} {{ tAuto('min') }} - {{ tAuto(detail.sport_type || 'Training') }} - +{{ formatWater(detail.extra_ml) }}
                         </p>
                     </article>
                 </div>
                 <p v-else class="mt-3 rounded-xl border border-border bg-inputBg p-3 text-sm leading-6 text-secondary">
-                    Heute ist kein Training im Trinkziel eingerechnet.
+                    {{ tAuto('Heute ist kein Training im Trinkziel eingerechnet.') }}
                 </p>
 
-                <p class="mt-5 text-xs font-bold uppercase text-air-blue">Tipps</p>
+                <p class="mt-5 text-xs font-bold uppercase text-air-blue">{{ tAuto('Tipps') }}</p>
                 <div class="mt-3 space-y-2">
                     <p v-for="tip in tips" :key="tip" class="rounded-xl border border-border bg-inputBg p-3 text-sm leading-6 text-secondary">
-                        {{ tip }}
+                        {{ tAuto(tip) }}
                     </p>
                 </div>
             </section>
@@ -1506,18 +1578,18 @@ onBeforeUnmount(() => {
             <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
                 <div class="flex items-center justify-between gap-3">
                     <div>
-                        <p class="text-xs font-bold uppercase text-air-blue">Rezepte</p>
-                        <h2 class="mt-1 text-xl font-bold text-primary">Schnell übernehmen</h2>
+                        <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Rezepte') }}</p>
+                        <h2 class="mt-1 text-xl font-bold text-primary">{{ tAuto('Schnell übernehmen') }}</h2>
                     </div>
                     <div class="grid grid-cols-3 gap-2">
                         <button type="button" :class="['rounded-lg border px-3 py-2 text-xs font-bold', recipeFilter === 'all' ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border text-secondary hover:bg-muted']" @click="recipeFilter = 'all'">
-                            Alle
+                            {{ tAuto('Alle') }}
                         </button>
                         <button type="button" :class="['rounded-lg border px-3 py-2 text-xs font-bold', recipeFilter === 'goal' ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border text-secondary hover:bg-muted']" @click="recipeFilter = 'goal'">
-                            Ziel
+                            {{ tAuto('Ziel') }}
                         </button>
                         <button type="button" :class="['rounded-lg border px-3 py-2 text-xs font-bold', recipeFilter === 'style' ? 'border-air-blue bg-air-blue/15 text-primary' : 'border-border text-secondary hover:bg-muted']" @click="recipeFilter = 'style'">
-                            Stil
+                            {{ tAuto('Stil') }}
                         </button>
                     </div>
                 </div>
@@ -1525,11 +1597,11 @@ onBeforeUnmount(() => {
                     <article v-for="recipe in filteredRecipes" :key="recipe.key" class="rounded-xl border border-border bg-inputBg p-4">
                         <div class="flex items-start justify-between gap-3">
                             <div>
-                                <p class="text-xs font-bold uppercase text-secondary">{{ recipe.category }} - {{ recipe.prep_minutes }} min</p>
-                                <h3 class="mt-1 font-bold text-primary">{{ recipe.title }}</h3>
+                                <p class="text-xs font-bold uppercase text-secondary">{{ tAuto(recipe.category) }} - {{ recipe.prep_minutes }} {{ tAuto('min') }}</p>
+                                <h3 class="mt-1 font-bold text-primary">{{ tAuto(recipe.title) }}</h3>
                             </div>
                             <button type="button" class="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-primary hover:bg-muted" @click="applyRecipe(recipe)">
-                                Nutzen
+                                {{ tAuto('Nutzen') }}
                             </button>
                         </div>
                         <div class="mt-3 grid grid-cols-4 gap-2 text-center text-[11px] text-secondary">
@@ -1543,16 +1615,16 @@ onBeforeUnmount(() => {
             </section>
 
             <section class="rounded-2xl border border-border bg-card p-4 lg:p-5">
-                <p class="text-xs font-bold uppercase text-air-blue">Training-Bezug</p>
+                <p class="text-xs font-bold uppercase text-air-blue">{{ tAuto('Training-Bezug') }}</p>
                 <div class="mt-3 space-y-2">
                     <article v-for="suggestion in trainingSuggestions" :key="suggestion.title + suggestion.body" class="rounded-xl border border-border bg-inputBg p-3">
                         <div class="flex items-start justify-between gap-3">
                             <div>
-                                <p class="text-sm font-bold text-primary">{{ suggestion.title }}</p>
-                                <p class="mt-1 text-sm leading-6 text-secondary">{{ suggestion.body }}</p>
+                                <p class="text-sm font-bold text-primary">{{ tAuto(suggestion.title) }}</p>
+                                <p class="mt-1 text-sm leading-6 text-secondary">{{ tAuto(suggestion.body) }}</p>
                             </div>
                             <button type="button" class="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-primary hover:bg-muted" @click="applyTrainingSuggestion(suggestion)">
-                                Nutzen
+                                {{ tAuto('Nutzen') }}
                             </button>
                         </div>
                     </article>
@@ -1562,16 +1634,16 @@ onBeforeUnmount(() => {
 
         <div v-if="deleteCandidate" class="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-4 sm:items-center">
             <div class="w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-2xl">
-                <h2 class="text-lg font-bold text-primary">Eintrag löschen?</h2>
+                <h2 class="text-lg font-bold text-primary">{{ tAuto('Eintrag löschen?') }}</h2>
                 <p class="mt-2 text-sm text-secondary">
-                    "{{ deleteCandidate.title }}" wird aus deinem Tageslog entfernt.
+                    {{ tAuto(`"${deleteCandidate.title}" wird aus deinem Tageslog entfernt.`) }}
                 </p>
                 <div class="mt-5 flex justify-end gap-2">
                     <button type="button" class="rounded-xl border border-border px-4 py-2 text-sm font-bold text-primary hover:bg-muted" @click="deleteCandidate = null">
-                        Abbrechen
+                        {{ tAuto('Abbrechen') }}
                     </button>
                     <button type="button" class="rounded-xl bg-danger px-4 py-2 text-sm font-bold text-white" @click="confirmDelete">
-                        Löschen
+                        {{ tAuto('Löschen') }}
                     </button>
                 </div>
             </div>
@@ -1581,16 +1653,16 @@ onBeforeUnmount(() => {
             <section class="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border border-border bg-card shadow-2xl sm:rounded-2xl">
                 <header class="flex items-start justify-between gap-3 border-b border-border p-4 sm:p-5">
                     <div class="min-w-0">
-                        <p class="text-xs font-bold uppercase text-cyan-200">Trinken</p>
-                        <h2 class="mt-1 text-xl font-black text-primary sm:text-2xl">Tipps rund ums Trinken</h2>
+                        <p class="text-xs font-bold uppercase text-cyan-200">{{ tAuto('Trinken') }}</p>
+                        <h2 class="mt-1 text-xl font-black text-primary sm:text-2xl">{{ tAuto('Tipps rund ums Trinken') }}</h2>
                         <p class="mt-1 text-sm leading-6 text-secondary">
-                            Einfache Orientierung für Alltag, Training und Regeneration.
+                            {{ tAuto('Einfache Orientierung für Alltag, Training und Regeneration.') }}
                         </p>
                     </div>
                     <button
                         type="button"
                         class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-primary hover:bg-muted"
-                        aria-label="Schließen"
+                        :aria-label="tAuto('Schließen')"
                         @click="showDrinkTips = false"
                     >
                         <i class="las la-times text-xl"></i>
@@ -1605,17 +1677,17 @@ onBeforeUnmount(() => {
                                     <i :class="[tip.icon, 'text-xl']"></i>
                                 </span>
                                 <div>
-                                    <h3 class="font-bold text-primary">{{ tip.title }}</h3>
-                                    <p class="mt-1 text-sm leading-6 text-secondary">{{ tip.body }}</p>
+                                    <h3 class="font-bold text-primary">{{ tAuto(tip.title) }}</h3>
+                                    <p class="mt-1 text-sm leading-6 text-secondary">{{ tAuto(tip.body) }}</p>
                                 </div>
                             </div>
                         </article>
                     </div>
 
                     <div class="mt-4 rounded-2xl border border-cyan-400/25 bg-cyan-400/10 p-4">
-                        <p class="text-sm font-bold text-primary">Dein aktueller Stand</p>
+                        <p class="text-sm font-bold text-primary">{{ tAuto('Dein aktueller Stand') }}</p>
                         <p class="mt-1 text-sm leading-6 text-secondary">
-                            Heute: {{ formatWater(waterConsumedMl) }} von {{ formatWater(waterTargetMl) }}. Noch {{ formatWater(waterLeftMl) }} offen.
+                            {{ tAuto(`Heute: ${formatWater(waterConsumedMl)} von ${formatWater(waterTargetMl)}. Noch ${formatWater(waterLeftMl)} offen.`) }}
                         </p>
                         <div class="mt-3 h-3 overflow-hidden rounded-full bg-card">
                             <div class="h-full rounded-full bg-gradient-to-r from-cyan-400 to-air-blue" :style="{ width: `${waterProgress}%` }"></div>
@@ -1629,10 +1701,10 @@ onBeforeUnmount(() => {
                         class="rounded-xl border border-border px-4 py-3 text-center text-sm font-bold text-primary hover:border-cyan-300 hover:bg-cyan-400/10"
                         @click="showDrinkTips = false"
                     >
-                        Mehr im Blog lesen
+                        {{ tAuto('Mehr im Blog lesen') }}
                     </Link>
                     <button type="button" class="rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-bold text-buttonTextPrimary" @click="showDrinkTips = false">
-                        Verstanden
+                        {{ tAuto('Verstanden') }}
                     </button>
                 </footer>
             </section>

@@ -1112,12 +1112,12 @@ const deleteJob = (job) => {
                         <span class="text-xs font-semibold uppercase text-secondary">Land</span>
                         <select v-model="clubEditFormFor(club).country" required class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                             <option value="DE">Deutschland</option>
-                            <option value="AT">Oesterreich</option>
+                            <option value="AT">Österreich</option>
                             <option value="CH">Schweiz</option>
                             <option value="FR">Frankreich</option>
                             <option value="NL">Niederlande</option>
                             <option value="BE">Belgien</option>
-                            <option value="TR">Tuerkei</option>
+                            <option value="TR">Türkei</option>
                             <option value="US">USA</option>
                         </select>
                     </label>

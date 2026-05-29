@@ -4,6 +4,7 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'
 import SeoHead from '@/Components/Guest/SeoHead.vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
     authUser: { type: Object, default: null },
@@ -15,6 +16,7 @@ const props = defineProps({
     marketplaceVisuals: { type: Object, default: () => ({}) },
 })
 
+const { t } = useI18n()
 const initialAddress = props.profileAddress || props.shippingAddresses[0] || props.checkoutAddress || {}
 const cartCheckoutForm = useForm({
     provider: 'bank_transfer',
@@ -91,7 +93,7 @@ const checkoutCart = () => {
     checkoutError.value = ''
 
     if (!cartCheckoutForm.accepted_terms) {
-        checkoutError.value = 'Bitte akzeptiere AGB und Widerrufshinweise, bevor du die Bestellung abschickst.'
+        checkoutError.value = t('Bitte akzeptiere AGB und Widerrufshinweise, bevor du die Bestellung abschickst.')
         cartCheckoutForm.setError('accepted_terms', checkoutError.value)
         return
     }
@@ -99,15 +101,15 @@ const checkoutCart = () => {
     cartCheckoutForm.post(route('auth.commerce.cart.checkout'), {
         preserveScroll: true,
         onError: () => {
-            checkoutError.value = 'Bitte prüfe die markierten Felder.'
+            checkoutError.value = t('Bitte prüfe die markierten Felder.')
         },
     })
 }
 </script>
 
 <template>
-    <Head title="Warenkorb" />
-    <SeoHead title="Airmius Warenkorb" description="Deine ausgewählten Marketplace-Produkte im Airmius Warenkorb." />
+    <Head :title="$t('Warenkorb')" />
+    <SeoHead :title="$t('Airmius Warenkorb')" :description="$t('Deine ausgewählten Marketplace-Produkte im Airmius Warenkorb.')" />
 
     <div class="min-h-screen bg-bg text-primary">
         <Subnav vertical />
@@ -118,8 +120,8 @@ const checkoutCart = () => {
         >
             <div class="absolute inset-0 bg-buttonPrimary/10"></div>
             <div class="absolute inset-x-4 top-72 text-center text-buttonTextPrimary drop-shadow">
-                <p class="font-heading text-3xl font-900 leading-none">AIRMIUS</p>
-                <p class="mt-2 text-sm font-black uppercase tracking-wide">Warenkorb</p>
+                <p class="font-heading text-3xl font-900 leading-none">{{ $t("AIRMIUS") }}</p>
+                <p class="mt-2 text-sm font-black uppercase tracking-wide">{{ $t("Warenkorb") }}</p>
             </div>
         </aside>
 
@@ -129,8 +131,8 @@ const checkoutCart = () => {
         >
             <div class="absolute inset-0 bg-buttonPrimary/10"></div>
             <div class="absolute inset-x-4 top-72 text-center text-buttonTextPrimary drop-shadow">
-                <p class="scale-x-[-1] font-heading text-3xl font-900 leading-none">AIRMIUS</p>
-                <p class="mt-2 scale-x-[-1] text-sm font-black uppercase tracking-wide">Marketplace</p>
+                <p class="scale-x-[-1] font-heading text-3xl font-900 leading-none">{{ $t("AIRMIUS") }}</p>
+                <p class="mt-2 scale-x-[-1] text-sm font-black uppercase tracking-wide">{{ $t("Marketplace") }}</p>
             </div>
         </aside>
 
@@ -142,17 +144,17 @@ const checkoutCart = () => {
                             <i class="las la-running text-2xl"></i>
                         </div>
                         <div class="min-w-0">
-                            <p class="font-heading text-lg font-900 leading-tight sm:text-2xl">AIRMIUS Marketplace</p>
+                            <p class="font-heading text-lg font-900 leading-tight sm:text-2xl">{{ $t("AIRMIUS Marketplace") }}</p>
                             <p class="truncate text-xs font-semibold text-secondary sm:text-sm">
-                                Zurück zu Sport Deals, Kursen, Camps und Services
+                                {{ $t("Zurück zu Sport Deals, Kursen, Camps und Services") }}
                             </p>
                         </div>
                     </Link>
                     <Link
                         :href="route('auth.commerce.cart.index')"
                         class="relative inline-flex h-11 w-11 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary"
-                        aria-label="Warenkorb"
-                        title="Warenkorb"
+                        :aria-label="$t('Warenkorb')"
+                        :title="$t('Warenkorb')"
                     >
                         <i class="las la-shopping-cart text-2xl"></i>
                         <span
@@ -167,16 +169,16 @@ const checkoutCart = () => {
 
             <section class="mx-auto max-w-7xl px-4 py-5">
                 <div class="rounded bg-card p-5 shadow-sm">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Marketplace</p>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">{{ $t("Marketplace") }}</p>
                     <div class="mt-1 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                         <div>
-                            <h1 class="font-heading text-3xl font-900 text-primary">Warenkorb</h1>
+                            <h1 class="font-heading text-3xl font-900 text-primary">{{ $t("Warenkorb") }}</h1>
                             <p class="mt-2 max-w-2xl text-sm text-secondary">
-                                Nur die Produkte, die du in den Einkaufswagen gelegt hast, werden hier angezeigt.
+                                {{ $t("Nur die Produkte, die du in den Einkaufswagen gelegt hast, werden hier angezeigt.") }}
                             </p>
                         </div>
                         <Link :href="route('guest.marketplace')" class="inline-flex w-fit rounded bg-buttonPrimary px-4 py-3 text-sm font-black text-buttonTextPrimary">
-                            Weiter einkaufen
+                            {{ $t("Weiter einkaufen") }}
                         </Link>
                     </div>
                 </div>
@@ -185,8 +187,8 @@ const checkoutCart = () => {
             <section v-if="cartItems.length" class="mx-auto grid max-w-7xl gap-5 px-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
                 <div class="overflow-hidden rounded bg-card shadow-sm">
                     <div class="border-b border-border p-5">
-                        <h2 class="text-lg font-black text-primary">Ausgewählte Artikel</h2>
-                        <p class="mt-1 text-sm text-secondary">{{ cartItemCount }} Artikel im Warenkorb</p>
+                        <h2 class="text-lg font-black text-primary">{{ $t("Ausgewählte Artikel") }}</h2>
+                        <p class="mt-1 text-sm text-secondary">{{ $t('{count} Artikel im Warenkorb', { count: cartItemCount }) }}</p>
                     </div>
 
                     <div class="divide-y divide-border">
@@ -200,18 +202,18 @@ const checkoutCart = () => {
 
                             <div class="min-w-0">
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <span class="rounded-full bg-muted px-2.5 py-1 text-xs font-bold uppercase text-secondary">{{ item.product?.category || 'Produkt' }}</span>
-                                    <span v-if="item.product?.sku" class="text-xs text-secondary">Art.-Nr. {{ item.product.sku }}</span>
+                                    <span class="rounded-full bg-muted px-2.5 py-1 text-xs font-bold uppercase text-secondary">{{ item.product?.category || $t('Produkt') }}</span>
+                                    <span v-if="item.product?.sku" class="text-xs text-secondary">{{ $t('Art.-Nr.') }} {{ item.product.sku }}</span>
                                 </div>
                                 <Link :href="item.product?.show_url || route('auth.commerce.products.show', item.product?.id)" class="mt-2 block break-words text-base font-black text-primary hover:text-buttonPrimary">
                                     {{ item.product?.title }}
                                 </Link>
                                 <p class="mt-1 line-clamp-2 text-sm text-secondary">{{ item.product?.description }}</p>
-                                <p class="mt-2 text-xs font-bold text-success">Verfügbar: {{ item.product?.stock_quantity }} Stück</p>
+                                <p class="mt-2 text-xs font-bold text-success">{{ $t('Verfügbar:') }} {{ item.product?.stock_quantity }} {{ $t('Stück') }}</p>
                             </div>
 
                             <div>
-                                <label class="text-xs font-bold uppercase text-secondary">Menge</label>
+                                <label class="text-xs font-bold uppercase text-secondary">{{ $t("Menge") }}</label>
                                 <input
                                     :value="item.quantity"
                                     type="number"
@@ -225,7 +227,7 @@ const checkoutCart = () => {
                             <div class="flex items-center justify-between gap-3 md:block md:text-right">
                                 <p class="text-lg font-black text-primary">{{ formatMoney(item.line_total_cents, item.product?.currency || cart.summary?.currency || 'EUR') }}</p>
                                 <button class="mt-0 rounded border border-error/40 px-3 py-2 text-xs font-bold text-error hover:bg-error/10 md:mt-3" @click="removeCartItem(item)">
-                                    Entfernen
+                                    {{ $t("Entfernen") }}
                                 </button>
                             </div>
                         </article>
@@ -233,23 +235,23 @@ const checkoutCart = () => {
                 </div>
 
                 <form class="h-fit rounded bg-card p-5 shadow-sm" @submit.prevent="checkoutCart">
-                    <h2 class="text-lg font-black text-primary">Bestellung</h2>
+                    <h2 class="text-lg font-black text-primary">{{ $t("Bestellung") }}</h2>
                     <div class="mt-4 space-y-3 rounded border border-border bg-bg p-4 text-sm">
                         <div class="flex justify-between gap-4 text-secondary">
-                            <span>Warenwert</span>
+                            <span>{{ $t("Warenwert") }}</span>
                             <span class="font-bold text-primary">{{ formatMoney(cart.summary?.item_gross_cents, cart.summary?.currency) }}</span>
                         </div>
                         <div class="flex justify-between gap-4 text-secondary">
-                            <span>Versand</span>
+                            <span>{{ $t("Versand") }}</span>
                             <span class="font-bold text-primary">{{ formatMoney(cart.summary?.shipping_cents, cart.summary?.currency) }}</span>
                         </div>
                         <div class="flex justify-between gap-4 text-secondary">
-                            <span>Steuer</span>
+                            <span>{{ $t("Steuer") }}</span>
                             <span class="font-bold text-primary">{{ formatMoney(cart.summary?.tax_cents, cart.summary?.currency) }}</span>
                         </div>
                         <div class="border-t border-border pt-3">
                             <div class="flex justify-between gap-4 text-base font-black text-primary">
-                                <span>Gesamt</span>
+                                <span>{{ $t("Gesamt") }}</span>
                                 <span>{{ formatMoney(cart.summary?.amount_cents, cart.summary?.currency) }}</span>
                             </div>
                         </div>
@@ -260,55 +262,55 @@ const checkoutCart = () => {
                             <option v-for="country in pricingCountries" :key="country.country" :value="country.country">{{ country.label }}</option>
                         </select>
                         <select v-model="cartCheckoutForm.provider" class="rounded border-border bg-inputBg text-sm text-primary">
-                            <option value="bank_transfer">Überweisung</option>
-                            <option value="stripe">Stripe</option>
-                            <option value="paypal">PayPal</option>
+                            <option value="bank_transfer">{{ $t("Überweisung") }}</option>
+                            <option value="stripe">{{ $t("Stripe") }}</option>
+                            <option value="paypal">{{ $t("PayPal") }}</option>
                         </select>
                         <select v-model="cartCheckoutForm.customer_type" class="rounded border-border bg-inputBg text-sm text-primary">
-                            <option value="consumer">Privatkunde</option>
-                            <option value="business">Firma / Verein</option>
+                            <option value="consumer">{{ $t("Privatkunde") }}</option>
+                            <option value="business">{{ $t("Firma / Verein") }}</option>
                         </select>
-                        <input v-if="cartCheckoutForm.customer_type === 'business'" v-model="cartCheckoutForm.customer_vat_id" class="rounded border-border bg-inputBg text-sm uppercase text-primary" placeholder="USt-IdNr.">
-                        <input v-if="cartCheckoutForm.customer_type === 'business'" v-model="cartCheckoutForm.customer_company" class="rounded border-border bg-inputBg text-sm text-primary" placeholder="Firma / Verein">
+                        <input v-if="cartCheckoutForm.customer_type === 'business'" v-model="cartCheckoutForm.customer_vat_id" class="rounded border-border bg-inputBg text-sm uppercase text-primary" :placeholder="$t('USt-IdNr.')">
+                        <input v-if="cartCheckoutForm.customer_type === 'business'" v-model="cartCheckoutForm.customer_company" class="rounded border-border bg-inputBg text-sm text-primary" :placeholder="$t('Firma / Verein')">
                         <div class="rounded border border-border bg-bg p-3">
-                            <label class="text-xs font-bold uppercase text-secondary">Adresse</label>
+                            <label class="text-xs font-bold uppercase text-secondary">{{ $t("Adresse") }}</label>
                             <select v-model="addressChoice" class="mt-2 w-full rounded border-border bg-inputBg text-sm text-primary">
                                 <option v-if="profileAddress" value="profile">
-                                    Meine Adresse{{ profileAddress.summary ? ` - ${profileAddress.summary}` : '' }}
+                                    {{ $t('Meine Adresse') }}{{ profileAddress.summary ? ` - ${profileAddress.summary}` : '' }}
                                 </option>
                                 <option v-for="address in savedAddressOptions" :key="address.id" :value="`saved:${address.id}`">
                                     {{ address.label }}{{ address.summary ? ` - ${address.summary}` : '' }}
                                 </option>
-                                <option value="new">Neue Lieferadresse</option>
+                                <option value="new">{{ $t("Neue Lieferadresse") }}</option>
                             </select>
                         </div>
                         <div class="grid gap-3 sm:grid-cols-[1fr_6rem]">
-                            <input v-model="cartCheckoutForm.shipping_street" class="rounded border-border bg-inputBg text-sm text-primary" placeholder="Straße">
-                            <input v-model="cartCheckoutForm.shipping_house_number" class="rounded border-border bg-inputBg text-sm text-primary" placeholder="Nr.">
+                            <input v-model="cartCheckoutForm.shipping_street" class="rounded border-border bg-inputBg text-sm text-primary" :placeholder="$t('Straße')">
+                            <input v-model="cartCheckoutForm.shipping_house_number" class="rounded border-border bg-inputBg text-sm text-primary" :placeholder="$t('Nr.')">
                         </div>
                         <div class="grid gap-3 sm:grid-cols-[8rem_1fr]">
-                            <input v-model="cartCheckoutForm.shipping_postal_code" class="rounded border-border bg-inputBg text-sm text-primary" placeholder="PLZ">
-                            <input v-model="cartCheckoutForm.shipping_city" class="rounded border-border bg-inputBg text-sm text-primary" placeholder="Ort">
+                            <input v-model="cartCheckoutForm.shipping_postal_code" class="rounded border-border bg-inputBg text-sm text-primary" :placeholder="$t('PLZ')">
+                            <input v-model="cartCheckoutForm.shipping_city" class="rounded border-border bg-inputBg text-sm text-primary" :placeholder="$t('Ort')">
                         </div>
                         <label class="flex items-start gap-3 rounded border border-border bg-bg p-3 text-sm text-secondary">
                             <input v-model="cartCheckoutForm.save_shipping_address" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
-                            <span>Diese Lieferadresse speichern</span>
+                            <span>{{ $t("Diese Lieferadresse speichern") }}</span>
                         </label>
                         <input
                             v-if="cartCheckoutForm.save_shipping_address"
                             v-model="cartCheckoutForm.shipping_address_label"
                             class="rounded border-border bg-inputBg text-sm text-primary"
-                            placeholder="Name der Lieferadresse, z. B. Zuhause"
+                            :placeholder="$t('Name der Lieferadresse, z. B. Zuhause')"
                         >
                     </div>
 
                     <label class="mt-4 flex items-start gap-3 rounded border border-border bg-bg p-3 text-sm text-secondary">
                         <input v-model="cartCheckoutForm.accepted_terms" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                         <span>
-                            Ich akzeptiere
-                            <Link :href="route('terms.show')" target="_blank" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>AGB</Link>
-                            und
-                            <Link :href="route('legal.withdrawal')" target="_blank" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>Widerrufshinweise</Link>.
+                            {{ $t("Ich akzeptiere") }}
+                            <Link :href="route('terms.show')" target="_blank" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>{{ $t("AGB") }}</Link>
+                            {{ $t("und") }}
+                            <Link :href="route('legal.withdrawal')" target="_blank" class="font-semibold text-air-blue underline underline-offset-2" @click.stop>{{ $t("Widerrufshinweise") }}</Link>.
                         </span>
                     </label>
                     <p v-if="cartCheckoutForm.errors.accepted_terms" class="mt-2 rounded border border-error/30 bg-error/10 px-3 py-2 text-sm font-semibold text-error">
@@ -319,7 +321,7 @@ const checkoutCart = () => {
                     </p>
 
                     <button class="mt-5 w-full rounded bg-buttonPrimary px-4 py-3 text-sm font-black text-buttonTextPrimary disabled:opacity-50" :disabled="cartCheckoutForm.processing">
-                        {{ cartCheckoutForm.processing ? 'Checkout wird gestartet...' : 'Jetzt kaufen' }}
+                        {{ cartCheckoutForm.processing ? $t('Checkout wird gestartet...') : $t('Jetzt kaufen') }}
                     </button>
                 </form>
             </section>
@@ -330,11 +332,11 @@ const checkoutCart = () => {
                         <i class="las la-shopping-bag text-3xl text-buttonPrimary"></i>
                     </div>
                     <div>
-                        <h2 class="text-xl font-black text-primary">Dein Warenkorb ist leer</h2>
-                        <p class="mt-2 text-sm text-secondary">Füge ein Marketplace-Produkt hinzu, dann erscheint es hier.</p>
+                        <h2 class="text-xl font-black text-primary">{{ $t("Dein Warenkorb ist leer") }}</h2>
+                        <p class="mt-2 text-sm text-secondary">{{ $t("Füge ein Marketplace-Produkt hinzu, dann erscheint es hier.") }}</p>
                     </div>
                     <Link :href="route('guest.marketplace')" class="mx-auto rounded bg-buttonPrimary px-4 py-3 text-sm font-black text-buttonTextPrimary">
-                        Marketplace ansehen
+                        {{ $t("Marketplace ansehen") }}
                     </Link>
                 </div>
             </section>

@@ -8,6 +8,7 @@ import AdSlot from '@/Components/Ads/AdSlot.vue'
 import UserCard from '@/Components/Auth/UserCard.vue'
 import { useTheme } from '@/services/useTheme'
 import { applyLogoFallback, logoWordmark } from '@/services/logoAssets'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
     canLogin: Boolean,
@@ -35,7 +36,9 @@ const props = defineProps({
 
 const page = usePage()
 const { isDark } = useTheme()
+const { t, locale } = useI18n()
 const currentUser = computed(() => props.authUser || page.props.auth?.user || null)
+const isRtlLocale = computed(() => locale.value === 'ar' || page.props.direction === 'rtl')
 const marketplaceLogo = computed(() => logoWordmark(isDark.value))
 const marketplaceReturnTo = '/marketplace'
 const loginHref = computed(() => route('login', { redirect: marketplaceReturnTo }))
@@ -51,11 +54,11 @@ const form = ref({
 const mobileFilterOpen = ref(false)
 
 const categoryLabels = {
-    product: 'Produkt',
-    course: 'Kurs',
-    camp: 'Camp',
-    service: 'Service',
-    outfit_subscription: 'Outfit-Abo',
+    product: t('Produkt'),
+    course: t('Kurs'),
+    camp: t('Camp'),
+    service: t('Service'),
+    outfit_subscription: t('Outfit-Abo'),
 }
 
 const productItems = computed(() => props.products?.data || [])
@@ -86,22 +89,22 @@ const mobilePromoSlides = computed(() => {
         return [
             {
                 id: 'marketplace-start',
-                title: 'Sport Deals für Training und Team',
-                subtitle: 'Produkte, Kurse, Camps und Services an einem Ort.',
+                title: t('Sport Deals für Training und Team'),
+                subtitle: t('Produkte, Kurse, Camps und Services an einem Ort.'),
                 image_url: props.marketplaceVisuals.hero_banner || '',
                 href: route('guest.marketplace'),
-                badge: 'AIRMIUS',
+                badge: t('AIRMIUS'),
             },
         ]
     }
 
     return uniqueProducts.map((item, index) => ({
         id: item.id || `mobile-slide-${index}`,
-        title: index === 0 ? 'Sport Deals für Training und Team' : item.title,
+        title: index === 0 ? t('Sport Deals für Training und Team') : item.title,
         subtitle: item.badge || availabilityLabel(item),
         image_url: index === 0 ? (props.marketplaceVisuals.hero_banner || item.image_url) : item.image_url,
         href: item.show_url || route('guest.marketplace'),
-        badge: index === 0 ? 'AIRMIUS MARKETPLACE' : (categoryLabels[item.category] || 'Angebot'),
+        badge: index === 0 ? t('AIRMIUS MARKETPLACE') : (categoryLabels[item.category] || t('Angebot')),
     }))
 })
 const activeSegment = computed(() => props.segments.find((segment) => segment.value === form.value.segment) || props.segments[0] || null)
@@ -123,19 +126,19 @@ const productGroups = computed(() => {
 
     return Object.entries(groups).map(([key, items]) => ({
         key,
-        label: segmentLookup.value[key]?.label || categoryLabels[items[0]?.category] || 'Angebote',
+        label: segmentLookup.value[key]?.label || categoryLabels[items[0]?.category] || t('Angebote'),
         icon: segmentLookup.value[key]?.icon || 'las la-shopping-bag',
         items,
     }))
 })
 
 const quickTiles = computed(() => [
-    { label: 'Aktuell', hint: 'Heute beliebt', icon: 'las la-bolt', category: '', search: '' },
-    { label: 'Produkte', hint: 'Equipment', icon: 'las la-shopping-bag', category: 'product', search: '' },
-    { label: 'Kurse', hint: 'Online & vor Ort', icon: 'las la-video', category: 'course', search: '' },
-    { label: 'Camps', hint: 'Events & Training', icon: 'las la-campground', category: 'camp', search: '' },
-    { label: 'Services', hint: 'Analyse & Beratung', icon: 'las la-hands-helping', category: 'service', search: '' },
-    { label: 'Outfit-Abo', hint: 'Sportkleidung', icon: 'las la-tshirt', category: 'outfit_subscription', search: '' },
+    { label: t('Aktuell'), hint: t('Heute beliebt'), icon: 'las la-bolt', category: '', search: '' },
+    { label: t('Produkte'), hint: t('Equipment'), icon: 'las la-shopping-bag', category: 'product', search: '' },
+    { label: t('Kurse'), hint: t('Online & vor Ort'), icon: 'las la-video', category: 'course', search: '' },
+    { label: t('Camps'), hint: t('Events & Training'), icon: 'las la-campground', category: 'camp', search: '' },
+    { label: t('Services'), hint: t('Analyse & Beratung'), icon: 'las la-hands-helping', category: 'service', search: '' },
+    { label: t('Outfit-Abo'), hint: t('Sportkleidung'), icon: 'las la-tshirt', category: 'outfit_subscription', search: '' },
 ])
 
 const formatPrice = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
@@ -157,33 +160,33 @@ const netPrice = (item) => formatPrice(price(item).net_cents, price(item).curren
 const taxInfo = (item) => {
     const quote = price(item)
 
-    return `${netPrice(item)} netto · ${formatPrice(quote.tax_cents, quote.currency)} ${quote.tax_label} (${quote.tax_rate}%)`
+    return `${netPrice(item)} ${t('netto')} · ${formatPrice(quote.tax_cents, quote.currency)} ${quote.tax_label} (${quote.tax_rate}%)`
 }
 
 const availabilityLabel = (item) => {
     if (item.category === 'outfit_subscription') {
-        return item.items_per_box ? `${item.items_per_box} Teile je Box` : 'Monatlich kuendbar'
+        return item.items_per_box ? t('{count} Teile je Box', { count: item.items_per_box }) : t('Monatlich kündbar')
     }
 
     if (item.offer_type === 'online_course' || item.offer_type === 'training_plan' || item.category === 'service') {
-        return 'Digital / Termin'
+        return t('Digital / Termin')
     }
 
     if (!item.manages_stock) {
-        return 'Auf Anfrage'
+        return t('Auf Anfrage')
     }
 
     const stock = Number(item.stock_quantity || 0)
 
     if (stock <= 0) {
-        return 'Aktuell vergriffen'
+        return t('Aktuell vergriffen')
     }
 
-    return stock <= 5 ? `Nur ${stock} verfügbar` : 'Auf Lager'
+    return stock <= 5 ? t('Nur {count} verfügbar', { count: stock }) : t('Auf Lager')
 }
 
 const shortDescription = (text, length = 92) => {
-    if (!text) return 'Sportangebot aus dem Airmius Marketplace.'
+    if (!text) return t('Sportangebot aus dem Airmius Marketplace.')
     if (text.length <= length) return text
 
     return `${text.slice(0, length).trim()}...`
@@ -236,8 +239,8 @@ const selectSegment = (segment) => {
 
 <template>
     <SeoHead
-        title="Airmius Sport Marketplace"
-        description="Sportfokussierter Marketplace für Produkte, Kurse, Camps und Services. Gäste können direkt ohne Konto bestellen."
+        :title="$t('Airmius Sport Marketplace')"
+        :description="$t('Sportfokussierter Marketplace für Produkte, Kurse, Camps und Services. Gäste können direkt ohne Konto bestellen.')"
     />
 
     <div class="min-h-screen bg-bg text-primary">
@@ -259,15 +262,18 @@ const selectSegment = (segment) => {
             <div class="absolute inset-0 bg-bg/35"></div>
         </aside>
 
-        <main class="relative z-10 mx-auto max-w-[86rem] pb-24 pt-0 md:pb-14 md:pr-28 2xl:pr-24">
+        <main
+            class="relative z-10 mx-auto max-w-[86rem] pb-24 pt-0 md:pb-14"
+            :class="isRtlLocale ? 'md:pl-44 2xl:pl-48' : 'md:pr-44 2xl:pr-48'"
+        >
             <section class="border-b border-border bg-bg px-3 py-2 shadow-sm sm:px-4 sm:py-3">
                 <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 text-primary shadow-sm sm:flex-nowrap sm:gap-3 sm:px-5 sm:py-3">
                     <div class="flex min-w-0 flex-1 items-center gap-3">
                         <img :src="marketplaceLogo" alt="AIRMIUS" class="h-9 w-auto max-w-[8.25rem] shrink-0 object-contain sm:h-12 sm:max-w-none" @error="applyLogoFallback">
                         <div class="hidden min-w-0 sm:block">
-                            <p class="font-heading text-lg font-900 leading-tight sm:text-2xl">AIRMIUS Marketplace</p>
+                            <p class="font-heading text-lg font-900 leading-tight sm:text-2xl">{{ $t("AIRMIUS Marketplace") }}</p>
                             <p class="truncate text-xs font-semibold text-secondary sm:text-sm">
-                                Sport Deals, Kurse, Camps und Services passend zu deinem Design
+                                {{ $t("Sport Deals, Kurse, Camps und Services passend zu deinem Design") }}
                             </p>
                         </div>
                     </div>
@@ -276,8 +282,8 @@ const selectSegment = (segment) => {
                             v-if="currentUser"
                             :href="route('auth.commerce.cart.index')"
                             class="relative inline-flex h-10 w-10 items-center justify-center rounded-full bg-buttonPrimary text-buttonTextPrimary"
-                            aria-label="Warenkorb"
-                            title="Warenkorb"
+                            :aria-label="$t('Warenkorb')"
+                            :title="$t('Warenkorb')"
                         >
                             <i class="las la-shopping-cart text-xl"></i>
                             <span
@@ -294,14 +300,14 @@ const selectSegment = (segment) => {
                                 :href="loginHref"
                                 class="rounded-full border border-border px-2.5 py-2 text-secondary transition hover:border-buttonPrimary hover:text-primary sm:px-3"
                             >
-                                Anmelden
+                                {{ $t("Anmelden") }}
                             </Link>
                             <Link
                                 v-if="canRegister"
                                 :href="registerHref"
                                 class="rounded-full bg-buttonPrimary px-2.5 py-2 text-buttonTextPrimary transition hover:bg-buttonPrimaryHover sm:px-3"
                             >
-                                Registrieren
+                                {{ $t("Registrieren") }}
                             </Link>
                         </template>
                     </div>
@@ -315,13 +321,13 @@ const selectSegment = (segment) => {
                         <input
                             v-model="form.search"
                             class="h-12 w-full rounded-xl border-border bg-inputBg py-3 pl-12 pr-12 text-sm font-semibold text-primary outline-none transition placeholder:text-secondary/70 focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25"
-                            placeholder="Was suchst du?"
+                            :placeholder="$t('Was suchst du?')"
                         />
                         <button
                             v-if="form.search"
                             type="button"
                             class="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-muted text-secondary transition hover:bg-buttonPrimary hover:text-buttonTextPrimary"
-                            aria-label="Suche leeren"
+                            :aria-label="$t('Suche leeren')"
                             @click="form.search = ''"
                         >
                             <i class="las la-times"></i>
@@ -336,12 +342,12 @@ const selectSegment = (segment) => {
                         @click="mobileFilterOpen = !mobileFilterOpen"
                     >
                         <i class="las la-sliders-h text-xl"></i>
-                        <span class="sr-only">Filter</span>
+                        <span class="sr-only">{{ $t("Filter") }}</span>
                     </button>
 
                     <div class="hidden gap-3 lg:order-1 lg:grid lg:grid-cols-5">
                         <label class="relative block">
-                            <span class="sr-only">Kategorie</span>
+                            <span class="sr-only">{{ $t("Kategorie") }}</span>
                             <select v-model="form.category" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
                                 <option v-for="category in categories" :key="category.value" :value="category.value">
                                     {{ category.label }}
@@ -349,7 +355,7 @@ const selectSegment = (segment) => {
                             </select>
                         </label>
                         <label class="relative block">
-                            <span class="sr-only">Bereich</span>
+                            <span class="sr-only">{{ $t("Bereich") }}</span>
                             <select v-model="form.segment" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
                                 <option v-for="segment in segments" :key="segment.value || 'all'" :value="segment.value">
                                     {{ segment.label }}
@@ -357,7 +363,7 @@ const selectSegment = (segment) => {
                             </select>
                         </label>
                         <label class="relative block">
-                            <span class="sr-only">Verfügbarkeit</span>
+                            <span class="sr-only">{{ $t("Verfügbarkeit") }}</span>
                             <select v-model="form.availability" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
                                 <option v-for="option in availabilityOptions" :key="option.value || 'all'" :value="option.value">
                                     {{ option.label }}
@@ -365,7 +371,7 @@ const selectSegment = (segment) => {
                             </select>
                         </label>
                         <label class="relative block">
-                            <span class="sr-only">Sortierung</span>
+                            <span class="sr-only">{{ $t("Sortierung") }}</span>
                             <select v-model="form.sort" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
                                 <option v-for="option in sortOptions" :key="option.value" :value="option.value">
                                     {{ option.label }}
@@ -373,9 +379,9 @@ const selectSegment = (segment) => {
                             </select>
                         </label>
                         <label class="relative block sm:col-span-2 xl:col-span-2">
-                            <span class="sr-only">Land</span>
+                            <span class="sr-only">{{ $t("Land") }}</span>
                             <select v-model="form.country" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25" @change="search">
-                                <option value="">Land automatisch</option>
+                                <option value="">{{ $t("Land automatisch") }}</option>
                                 <option v-for="country in pricingCountries" :key="country.country" :value="country.country">
                                     {{ country.label }}
                                 </option>
@@ -386,10 +392,10 @@ const selectSegment = (segment) => {
                     <div class="order-3 grid grid-cols-[auto] gap-2 lg:order-3 lg:w-auto lg:shrink-0 lg:grid-cols-[1fr_auto]">
                         <button class="flex h-12 w-12 items-center justify-center rounded-xl bg-buttonPrimary text-sm font-black text-buttonTextPrimary shadow-sm transition hover:bg-buttonPrimaryHover focus:outline-none focus:ring-2 focus:ring-buttonPrimary/30 lg:w-auto lg:px-6">
                             <i class="las la-search text-xl lg:hidden"></i>
-                            <span class="hidden lg:inline">Suchen</span>
+                            <span class="hidden lg:inline">{{ $t("Suchen") }}</span>
                         </button>
                         <button type="button" class="hidden h-12 rounded border border-border bg-card px-4 text-sm font-bold text-primary transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-buttonPrimary/20 sm:block" @click="reset">
-                            Reset
+                            {{ $t("Reset") }}
                         </button>
                     </div>
 
@@ -399,13 +405,13 @@ const selectSegment = (segment) => {
                         class="order-4 col-span-3 grid max-h-[70vh] gap-3 overflow-y-auto rounded-xl border border-border bg-card p-3 shadow-2xl shadow-black/20 lg:hidden"
                     >
                         <div class="flex items-center justify-between gap-3">
-                            <p class="text-sm font-black text-primary">Filter & Kategorien</p>
-                            <span class="rounded-full bg-muted px-2 py-1 text-[11px] font-bold text-secondary">{{ totalProducts }} Treffer</span>
+                            <p class="text-sm font-black text-primary">{{ $t("Filter & Kategorien") }}</p>
+                            <span class="rounded-full bg-muted px-2 py-1 text-[11px] font-bold text-secondary">{{ $t('{count} Treffer', { count: totalProducts }) }}</span>
                         </div>
 
                         <div class="grid gap-2">
                             <label class="relative block">
-                                <span class="sr-only">Kategorie</span>
+                                <span class="sr-only">{{ $t("Kategorie") }}</span>
                                 <select v-model="form.category" class="h-11 w-full rounded-xl border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
                                     <option v-for="category in categories" :key="category.value" :value="category.value">
                                         {{ category.label }}
@@ -413,7 +419,7 @@ const selectSegment = (segment) => {
                                 </select>
                             </label>
                             <label class="relative block">
-                                <span class="sr-only">Bereich</span>
+                                <span class="sr-only">{{ $t("Bereich") }}</span>
                                 <select v-model="form.segment" class="h-11 w-full rounded-xl border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
                                     <option v-for="segment in segments" :key="segment.value || 'all'" :value="segment.value">
                                         {{ segment.label }}
@@ -424,8 +430,8 @@ const selectSegment = (segment) => {
 
                         <section>
                             <div class="mb-2 flex items-center justify-between gap-3">
-                                <p class="text-xs font-black uppercase text-secondary">Schnellwahl</p>
-                                <button type="button" class="text-xs font-bold text-buttonPrimary" @click="reset(); mobileFilterOpen = false">Reset</button>
+                                <p class="text-xs font-black uppercase text-secondary">{{ $t("Schnellwahl") }}</p>
+                                <button type="button" class="text-xs font-bold text-buttonPrimary" @click="reset(); mobileFilterOpen = false">{{ $t("Reset") }}</button>
                             </div>
                             <div class="grid grid-cols-2 gap-2">
                                 <button
@@ -444,7 +450,7 @@ const selectSegment = (segment) => {
                         </section>
 
                         <section>
-                            <p class="mb-2 text-xs font-black uppercase text-secondary">Sportarten</p>
+                            <p class="mb-2 text-xs font-black uppercase text-secondary">{{ $t("Sportarten") }}</p>
                             <div class="flex flex-wrap gap-2">
                                 <button
                                     v-for="category in sportCategories"
@@ -460,7 +466,7 @@ const selectSegment = (segment) => {
                         </section>
 
                         <section>
-                            <p class="mb-2 text-xs font-black uppercase text-secondary">Produktbereiche</p>
+                            <p class="mb-2 text-xs font-black uppercase text-secondary">{{ $t("Produktbereiche") }}</p>
                             <div class="flex flex-wrap gap-2">
                                 <button
                                     v-for="segment in segments"
@@ -478,20 +484,20 @@ const selectSegment = (segment) => {
 
                         <div class="grid grid-cols-[1fr_auto] gap-2">
                             <button class="h-11 rounded-xl bg-buttonPrimary px-4 text-sm font-black text-buttonTextPrimary shadow-sm transition hover:bg-buttonPrimaryHover focus:outline-none focus:ring-2 focus:ring-buttonPrimary/30" @click="mobileFilterOpen = false">
-                                Anwenden
+                                {{ $t("Anwenden") }}
                             </button>
                             <button type="button" class="h-11 rounded-xl border border-border bg-card px-4 text-sm font-bold text-primary transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-buttonPrimary/20" @click="reset(); mobileFilterOpen = false">
-                                Reset
+                                {{ $t("Reset") }}
                             </button>
                         </div>
                     </div>
                 </form>
 
                 <div class="mx-auto mt-2 flex max-w-7xl gap-2 overflow-x-auto pb-1 text-xs font-semibold text-secondary sm:mt-3 sm:flex-wrap">
-                    <span class="rounded bg-muted px-2 py-1">Kategorie: {{ activeCategory?.label || 'Alle' }}</span>
-                    <span class="rounded bg-muted px-2 py-1">Bereich: {{ activeSegment?.label || 'Alle Bereiche' }}</span>
-                    <span class="hidden rounded bg-muted px-2 py-1 sm:inline">Status: {{ activeAvailability?.label || 'Alle' }}</span>
-                    <span class="shrink-0 rounded bg-buttonPrimary/15 px-2 py-1 text-buttonPrimary">{{ totalProducts }} Treffer</span>
+                    <span class="rounded bg-muted px-2 py-1">{{ $t('Kategorie:') }} {{ activeCategory?.label || $t('Alle') }}</span>
+                    <span class="rounded bg-muted px-2 py-1">{{ $t('Bereich:') }} {{ activeSegment?.label || $t('Alle Bereiche') }}</span>
+                    <span class="hidden rounded bg-muted px-2 py-1 sm:inline">{{ $t('Status:') }} {{ activeAvailability?.label || $t('Alle') }}</span>
+                    <span class="shrink-0 rounded bg-buttonPrimary/15 px-2 py-1 text-buttonPrimary">{{ $t('{count} Treffer', { count: totalProducts }) }}</span>
                 </div>
             </section>
 
@@ -518,7 +524,7 @@ const selectSegment = (segment) => {
                                 <h1 class="line-clamp-2 font-heading text-2xl font-900 leading-tight">{{ slide.title }}</h1>
                                 <p class="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-white/85">{{ slide.subtitle }}</p>
                                 <span class="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs font-black text-bg">
-                                    Entdecken
+                                    {{ $t("Entdecken") }}
                                     <i class="las la-arrow-right text-base"></i>
                                 </span>
                             </div>
@@ -586,27 +592,27 @@ const selectSegment = (segment) => {
                         />
                         <div class="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent"></div>
                         <div class="relative flex min-h-[15rem] max-w-2xl flex-col justify-end p-5 text-white md:min-h-[22rem] md:justify-center md:p-8">
-                            <p class="text-xs font-black uppercase tracking-wide text-white/80">Airmius Marketplace</p>
+                            <p class="text-xs font-black uppercase tracking-wide text-white/80">{{ $t("Airmius Marketplace") }}</p>
                             <h1 class="mt-2 font-heading text-2xl font-900 leading-tight md:text-5xl">
-                                Sport Deals für Training, Team und Wettkampf
+                                {{ $t("Sport Deals für Training, Team und Wettkampf") }}
                             </h1>
                             <p class="mt-3 hidden max-w-xl text-sm leading-6 text-white/90 sm:block md:mt-4">
-                                Weniger scrollen, schneller finden: Kategorien, Aktionen und kuratierte Reihen statt alle Produkte auf einmal.
+                                {{ $t("Weniger scrollen, schneller finden: Kategorien, Aktionen und kuratierte Reihen statt alle Produkte auf einmal.") }}
                             </p>
                             <span class="mt-4 inline-flex w-fit rounded-xl bg-buttonPrimary px-4 py-2.5 text-sm font-black text-buttonTextPrimary md:mt-5 md:py-3">
-                                Jetzt entdecken
+                                {{ $t("Jetzt entdecken") }}
                             </span>
                         </div>
                     </Link>
 
                     <div class="grid gap-4">
                         <div class="rounded border border-border bg-card p-4 shadow-sm">
-                            <p class="text-sm font-black text-primary">Hilfe & Bestellung</p>
-                            <p class="mt-1 text-xs leading-5 text-secondary">Gastbestellung, Login-Bestellung und Anbieterangebote sind vorbereitet.</p>
+                            <p class="text-sm font-black text-primary">{{ $t("Hilfe & Bestellung") }}</p>
+                            <p class="mt-1 text-xs leading-5 text-secondary">{{ $t("Gastbestellung, Login-Bestellung und Anbieterangebote sind vorbereitet.") }}</p>
                         </div>
                         <Link :href="currentUser ? route('auth.commerce.index') : route('login')" class="rounded border border-border bg-card p-4 shadow-sm transition hover:bg-muted">
-                            <p class="text-sm font-black text-primary">Anbieter werden</p>
-                            <p class="mt-1 text-xs leading-5 text-secondary">Vereine, Trainer und Shops können Angebote einstellen.</p>
+                            <p class="text-sm font-black text-primary">{{ $t("Anbieter werden") }}</p>
+                            <p class="mt-1 text-xs leading-5 text-secondary">{{ $t("Vereine, Trainer und Shops können Angebote einstellen.") }}</p>
                         </Link>
                         <Link
                             v-for="product in heroSideProducts"
@@ -620,7 +626,7 @@ const selectSegment = (segment) => {
                             </div>
                             <div class="min-w-0 flex-1">
                                 <p class="line-clamp-2 break-words text-xs font-black leading-4 text-primary">{{ product.title }}</p>
-                                <p class="text-xs font-bold text-buttonPrimary">{{ grossPrice(product) }} brutto</p>
+                                <p class="text-xs font-bold text-buttonPrimary">{{ grossPrice(product) }} {{ $t('brutto') }}</p>
                             </div>
                         </Link>
                     </div>
@@ -669,10 +675,10 @@ const selectSegment = (segment) => {
                 <div class="rounded bg-card p-3 shadow-sm">
                     <div class="flex items-center justify-between gap-3">
                         <div>
-                            <h2 class="text-sm font-black text-primary">Produktbereiche</h2>
-                            <p class="text-xs text-secondary">Aktiv: {{ activeSegment?.label || 'Alle Bereiche' }}</p>
+                            <h2 class="text-sm font-black text-primary">{{ $t("Produktbereiche") }}</h2>
+                            <p class="text-xs text-secondary">{{ $t('Aktiv:') }} {{ activeSegment?.label || $t('Alle Bereiche') }}</p>
                         </div>
-                        <button class="text-xs font-bold text-buttonPrimary" @click="selectSegment({ value: '' })">Alle anzeigen</button>
+                        <button class="text-xs font-bold text-buttonPrimary" @click="selectSegment({ value: '' })">{{ $t("Alle anzeigen") }}</button>
                     </div>
                     <div class="mt-3 flex gap-2 overflow-x-auto overscroll-x-contain rounded-lg pb-2 [scrollbar-color:theme(colors.border)_transparent] [scrollbar-width:thin]">
                         <button
@@ -695,9 +701,9 @@ const selectSegment = (segment) => {
                     <div class="flex items-center justify-between gap-4">
                         <h2 class="flex items-center gap-2 text-lg font-black">
                             <i class="las la-bolt text-2xl"></i>
-                            Aktuelle Angebote
+                            {{ $t("Aktuelle Angebote") }}
                         </h2>
-                        <span class="hidden text-sm font-bold sm:inline">Schnellvergleich nach Preis, Steuer und Anbieter</span>
+                        <span class="hidden text-sm font-bold sm:inline">{{ $t("Schnellvergleich nach Preis, Steuer und Anbieter") }}</span>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-2 rounded-b bg-card p-3 shadow-sm md:grid-cols-4 xl:grid-cols-6">
@@ -715,7 +721,7 @@ const selectSegment = (segment) => {
                         <div class="flex flex-1 flex-col p-2">
                             <h3 class="line-clamp-2 min-h-[2.25rem] text-xs font-semibold text-primary">{{ product.title }}</h3>
                             <p class="mt-1 text-sm font-black text-primary">{{ grossPrice(product) }}</p>
-                            <p class="text-[11px] text-secondary">brutto · {{ netPrice(product) }} netto</p>
+                                                <p class="text-[11px] text-secondary">{{ $t('brutto') }} · {{ netPrice(product) }} {{ $t('netto') }}</p>
                             <p class="mt-1 truncate text-[11px] font-semibold text-secondary">{{ product.delivery_label }}</p>
                             <p v-if="product.old_price_cents" class="text-[11px] text-secondary line-through">{{ formatPrice(product.old_price_cents, price(product).currency) }}</p>
                         </div>
@@ -729,7 +735,7 @@ const selectSegment = (segment) => {
 
             <section class="mx-auto mt-4 hidden max-w-7xl gap-4 px-4 md:grid xl:grid-cols-[1fr_20rem]">
                 <div class="rounded bg-card p-4 shadow-sm">
-                    <h2 class="text-center text-lg font-black text-primary">Alles für deinen Sportalltag</h2>
+                    <h2 class="text-center text-lg font-black text-primary">{{ $t("Alles für deinen Sportalltag") }}</h2>
                     <div class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
                         <Link
                             v-for="product in essentialDeals"
@@ -747,7 +753,7 @@ const selectSegment = (segment) => {
                 </div>
 
                 <div class="rounded bg-card p-4 shadow-sm">
-                    <h2 class="text-lg font-black text-primary">Offizielle Stores</h2>
+                    <h2 class="text-lg font-black text-primary">{{ $t("Offizielle Stores") }}</h2>
                     <div class="mt-3 grid grid-cols-2 gap-2">
                         <div
                             v-for="store in officialStores"
@@ -765,8 +771,8 @@ const selectSegment = (segment) => {
             <section class="mx-auto mt-4 hidden max-w-7xl space-y-4 px-4 md:block">
                 <div v-if="learningDeals.length" class="rounded bg-card shadow-sm">
                     <div class="flex items-center justify-between border-b border-border px-4 py-3">
-                        <h2 class="text-lg font-black text-primary">Kurse & Camps</h2>
-                        <button class="text-sm font-bold text-buttonPrimary" @click="selectQuickTile({ category: 'course' })">Mehr sehen</button>
+                        <h2 class="text-lg font-black text-primary">{{ $t("Kurse & Camps") }}</h2>
+                        <button class="text-sm font-bold text-buttonPrimary" @click="selectQuickTile({ category: 'course' })">{{ $t("Mehr sehen") }}</button>
                     </div>
                     <div class="grid grid-cols-2 gap-2 p-3 md:grid-cols-5">
                         <Link v-for="product in learningDeals" :key="product.id" :href="product.show_url" class="group">
@@ -776,15 +782,15 @@ const selectSegment = (segment) => {
                             </div>
                             <p class="mt-2 line-clamp-2 text-xs font-semibold text-primary">{{ product.title }}</p>
                             <p class="text-sm font-black text-primary">{{ grossPrice(product) }}</p>
-                            <p class="text-[11px] text-secondary">{{ netPrice(product) }} netto</p>
+                                    <p class="text-[11px] text-secondary">{{ netPrice(product) }} {{ $t('netto') }}</p>
                         </Link>
                     </div>
                 </div>
 
                 <div v-if="serviceDeals.length" class="rounded bg-card shadow-sm">
                     <div class="flex items-center justify-between border-b border-border px-4 py-3">
-                        <h2 class="text-lg font-black text-primary">Services & Analysen</h2>
-                        <button class="text-sm font-bold text-buttonPrimary" @click="selectQuickTile({ category: 'service' })">Mehr sehen</button>
+                        <h2 class="text-lg font-black text-primary">{{ $t("Services & Analysen") }}</h2>
+                        <button class="text-sm font-bold text-buttonPrimary" @click="selectQuickTile({ category: 'service' })">{{ $t("Mehr sehen") }}</button>
                     </div>
                     <div class="grid grid-cols-2 gap-2 p-3 md:grid-cols-5">
                         <Link v-for="product in serviceDeals" :key="product.id" :href="product.show_url" class="group">
@@ -794,15 +800,15 @@ const selectSegment = (segment) => {
                             </div>
                             <p class="mt-2 line-clamp-2 text-xs font-semibold text-primary">{{ product.title }}</p>
                             <p class="text-sm font-black text-primary">{{ grossPrice(product) }}</p>
-                            <p class="text-[11px] text-secondary">{{ netPrice(product) }} netto</p>
+                                        <p class="text-[11px] text-secondary">{{ netPrice(product) }} {{ $t('netto') }}</p>
                         </Link>
                     </div>
                 </div>
 
                 <div v-if="outfitPlans.length" class="rounded bg-card shadow-sm">
                     <div class="flex items-center justify-between border-b border-border px-4 py-3">
-                        <h2 class="text-lg font-black text-primary">Outfit-Abos</h2>
-                        <button class="text-sm font-bold text-buttonPrimary" @click="selectQuickTile({ category: 'outfit_subscription' })">Mehr sehen</button>
+                        <h2 class="text-lg font-black text-primary">{{ $t("Outfit-Abos") }}</h2>
+                        <button class="text-sm font-bold text-buttonPrimary" @click="selectQuickTile({ category: 'outfit_subscription' })">{{ $t("Mehr sehen") }}</button>
                     </div>
                     <div class="grid grid-cols-2 gap-2 p-3 md:grid-cols-4">
                         <Link v-for="plan in outfitPlans" :key="plan.id" :href="route('login')" class="rounded border border-border p-3 transition hover:border-borderHover">
@@ -811,7 +817,7 @@ const selectSegment = (segment) => {
                             </div>
                             <p class="mt-2 line-clamp-2 text-xs font-semibold text-primary">{{ plan.title }}</p>
                             <p class="text-sm font-black text-primary">{{ grossPrice(plan) }}</p>
-                            <p class="text-[11px] text-secondary">{{ netPrice(plan) }} netto</p>
+                                        <p class="text-[11px] text-secondary">{{ netPrice(plan) }} {{ $t('netto') }}</p>
                         </Link>
                     </div>
                 </div>
@@ -821,13 +827,13 @@ const selectSegment = (segment) => {
                 <div class="rounded bg-card shadow-sm">
                     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border px-3 py-3 sm:px-4">
                         <div>
-                            <h2 class="text-base font-black text-primary sm:text-lg">Alle Angebote</h2>
+                            <h2 class="text-base font-black text-primary sm:text-lg">{{ $t("Alle Angebote") }}</h2>
                             <p class="text-xs text-secondary">
-                                {{ totalProducts }} Treffer, angezeigt werden maximal {{ products.per_page || 40 }} pro Seite.
+                                {{ $t('{count} Treffer, angezeigt werden maximal {perPage} pro Seite.', { count: totalProducts, perPage: products.per_page || 40 }) }}
                             </p>
                         </div>
                         <Link :href="currentUser ? route('auth.commerce.index') : route('login')" class="hidden rounded bg-buttonPrimary px-4 py-2 text-sm font-black text-buttonTextPrimary hover:bg-buttonPrimaryHover sm:inline-flex">
-                            Angebot einstellen
+                            {{ $t("Angebot einstellen") }}
                         </Link>
                     </div>
 
@@ -889,7 +895,7 @@ const selectSegment = (segment) => {
                                                 </span>
                                             </div>
                                             <span class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded border border-buttonPrimary/40 px-3 py-2 text-xs font-black text-buttonPrimary transition group-hover:bg-buttonPrimary group-hover:text-buttonTextPrimary">
-                                                Details ansehen
+                                                {{ $t("Details ansehen") }}
                                                 <i class="las la-arrow-right text-base"></i>
                                             </span>
                                         </div>
@@ -902,13 +908,13 @@ const selectSegment = (segment) => {
                             <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-buttonPrimary/10 text-buttonPrimary">
                                 <i class="las la-search text-3xl"></i>
                             </span>
-                            <p class="mt-4 text-lg font-bold text-primary">Keine passenden Angebote gefunden.</p>
+                            <p class="mt-4 text-lg font-bold text-primary">{{ $t("Keine passenden Angebote gefunden.") }}</p>
                             <p class="mx-auto mt-2 max-w-xl text-sm leading-6 text-secondary">
-                                Probiere einen allgemeineren Suchbegriff, entferne Filter oder springe direkt in einen beliebten Bereich.
+                                {{ $t("Probiere einen allgemeineren Suchbegriff, entferne Filter oder springe direkt in einen beliebten Bereich.") }}
                             </p>
                             <div class="mt-5 flex flex-wrap justify-center gap-2">
                                 <button class="rounded bg-buttonPrimary px-4 py-2 text-sm font-black text-buttonTextPrimary hover:bg-buttonPrimaryHover" @click="reset">
-                                    Filter zurücksetzen
+                                    {{ $t("Filter zurücksetzen") }}
                                 </button>
                                 <button
                                     v-for="tile in quickTiles.slice(1, 5)"

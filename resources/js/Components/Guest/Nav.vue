@@ -47,7 +47,7 @@ const navItems = [
     { id: 'vorteile', label: 'guest.nav.benefits' },
     { id: 'funktionen', label: 'guest.nav.features' },
     { id: 'sportarten', label: 'guest.nav.sports' },
-    { id: 'shop', label: 'Shop', href: route('guest.marketplace') },
+    { id: 'shop', label: 'guest.nav.shop', href: route('guest.marketplace') },
     { id: 'ueber', label: 'guest.nav.about' },
     { id: 'kontakt', label: 'guest.nav.contact' },
 ]
@@ -55,35 +55,35 @@ const navItems = [
 
 <template>
     <nav id="nav" class="fixed top-0 left-0 w-full z-50 nav-blur border-b backdrop-blur">
-        <div class="relative mx-auto flex h-16 max-w-7xl items-center px-4 sm:px-6">
-            <button @click="scrollTo('hero')" class="flex items-center gap-2 font-heading font-900 text-xl tracking-tight">
+        <div class="relative mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6">
+            <button @click="scrollTo('hero')" class="flex shrink-0 items-center gap-2 font-heading font-900 text-xl tracking-tight">
                 <ApplicationLogo class="w-8 h-8" />
                 <span class="text-primary font-[--ubuntu]">AIRMIUS</span>
             </button>
 
-            <div class="absolute left-1/2 hidden -translate-x-1/2 items-center gap-6 text-sm font-medium text-secondary md:flex">
+            <div class="hidden min-w-0 flex-1 items-center justify-center gap-4 overflow-hidden text-sm font-medium text-secondary lg:flex xl:gap-6">
                 <template v-for="item in navItems" :key="item.id">
                     <Link
                         v-if="item.href"
                         :href="item.href"
-                        class="hover:text-primary transition"
+                        class="whitespace-nowrap hover:text-primary transition"
                     >
                         {{ $t(item.label) }}
                     </Link>
                     <button
                         v-else
                         @click="scrollTo(item.id)"
-                        class="hover:text-primary transition"
+                        class="whitespace-nowrap hover:text-primary transition"
                     >
                         {{ $t(item.label) }}
                     </button>
                 </template>
-                <Link :href="route('guest.blog.index')" class="hover:text-primary transition">
-                    {{ $t('Blog') }}
+                <Link :href="route('guest.blog.index')" class="whitespace-nowrap hover:text-primary transition">
+                    {{ $t('guest.nav.blog') }}
                 </Link>
             </div>
 
-            <div class="ml-auto flex items-center gap-2 sm:gap-3">
+            <div class="flex shrink-0 items-center gap-2 sm:gap-3">
                 <LanguageDropdown />
 
                 <Link
@@ -91,7 +91,7 @@ const navItems = [
                     :href="route('login')"
                     class="hidden lg:inline-block text-sm font-semibold text-air-blue hover:text-borderHover transition"
                 >
-                    {{ $t('Anmelden') }}
+                    {{ $t('guest.nav.login') }}
                 </Link>
 
                 <Link
@@ -99,7 +99,7 @@ const navItems = [
                     :href="route('register')"
                     class="hidden rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary transition hover:bg-buttonPrimaryHover lg:inline-flex"
                 >
-                    {{ $t('Registrieren') }}
+                    {{ $t('guest.nav.register') }}
                 </Link>
 
                 <Link
@@ -107,14 +107,14 @@ const navItems = [
                     :href="route('auth.feed.index')"
                     class="hidden sm:inline-flex items-center text-sm font-semibold text-air-blue hover:text-borderHover transition"
                 >
-                    <i class="las la-rocket"></i><span class="ml-2">{{ $t("Feed") }}</span>
+                    <i class="las la-rocket"></i><span class="ml-2">{{ $t('guest.nav.feed') }}</span>
                 </Link>
 
                 <div v-if="$page.props.auth.user">
                     <UserCard />
                 </div>
 
-                <button @click="toggleMobile" class="md:hidden text-primary hover:text-air-blue p-2">
+                <button @click="toggleMobile" class="lg:hidden text-primary hover:text-air-blue p-2">
                     <i class="las la-bars text-2xl"></i>
                 </button>
             </div>
@@ -130,7 +130,7 @@ const navItems = [
             leave-from-class="opacity-100"
             leave-to-class="opacity-0"
         >
-            <div v-if="mobileOpen" class="fixed inset-0 z-[99999] md:hidden">
+            <div v-if="mobileOpen" class="fixed inset-0 z-[99999] lg:hidden">
                 <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" @click="mobileOpen = false"></div>
 
                 <Transition
@@ -171,7 +171,7 @@ const navItems = [
                                 @click="mobileOpen = false"
                                 class="text-left py-3 text-lg text-secondary hover:text-primary transition"
                             >
-                                {{ $t('Blog') }}
+                                {{ $t('guest.nav.blog') }}
                             </Link>
 
                             <Link
@@ -179,7 +179,7 @@ const navItems = [
                                 @click="mobileOpen = false"
                                 class="text-left py-3 text-lg text-secondary hover:text-primary transition"
                             >
-                                {{ $t('Werbeagentur') }}
+                                {{ $t('guest.nav.agency') }}
                             </Link>
 
                             <div class="border-t border-border my-4"></div>
@@ -190,7 +190,7 @@ const navItems = [
                                 @click="mobileOpen = false"
                                 class="text-left py-3 text-lg text-air-blue hover:text-borderHover transition"
                             >
-                                {{ $t('Feed') }}
+                                {{ $t('guest.nav.feed') }}
                             </Link>
 
                             <Link
@@ -199,7 +199,7 @@ const navItems = [
                                 @click="mobileOpen = false"
                                 class="text-left py-3 text-lg text-air-blue hover:text-borderHover transition"
                             >
-                                {{ $t('Profile') }}
+                                {{ $t('guest.nav.profile') }}
                             </Link>
 
                             <Link
@@ -208,7 +208,7 @@ const navItems = [
                                 @click="mobileOpen = false"
                                 class="text-left py-3 text-lg text-air-blue hover:text-borderHover transition"
                             >
-                                {{ $t('Settings') }}
+                                {{ $t('guest.nav.settings') }}
                             </Link>
 
                             <Link
@@ -217,7 +217,7 @@ const navItems = [
                                 @click="mobileOpen = false"
                                 class="text-left py-3 text-lg text-air-blue hover:text-borderHover transition"
                             >
-                                {{ $t('Anmelden') }}
+                                {{ $t('guest.nav.login') }}
                             </Link>
 
                             <Link
@@ -226,7 +226,7 @@ const navItems = [
                                 @click="mobileOpen = false"
                                 class="text-left py-3 text-lg font-semibold text-air-blue hover:text-borderHover transition"
                             >
-                                {{ $t('Registrieren') }}
+                                {{ $t('guest.nav.register') }}
                             </Link>
                         </div>
                     </div>
