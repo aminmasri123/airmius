@@ -13,7 +13,7 @@ class AirmiusLegalProfile
     {
         $brandName = Setting::valueFor('billing_brand_name');
         if (! filled($brandName)) {
-            $brandName = Setting::valueFor('billing_company_name', 'airmius.billing.company_name', 'Airmius');
+            $brandName = Setting::valueFor('billing_company_name', config('airmius.billing.company_name', 'Airmius'));
         }
 
         return [

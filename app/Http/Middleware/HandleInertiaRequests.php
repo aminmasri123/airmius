@@ -240,6 +240,8 @@ class HandleInertiaRequests extends Middleware
             'club.jobs.manage' => $user->can('club.jobs.manage'),
             'club-memberships.view' => $user->hasAnyRole(\App\Support\Roles::FULL_ACCESS)
                 || tap($user->clubs(), fn ($query) => ClubRoles::whereAny($query, ClubRoles::ELEVATED))->exists(),
+            'club-cockpit.view' => $user->hasAnyRole(\App\Support\Roles::FULL_ACCESS)
+                || tap($user->clubs(), fn ($query) => ClubRoles::whereAny($query, ClubRoles::ELEVATED))->exists(),
 
             'teams.view' => $user->can('viewAny', \App\Models\Team::class),
             'teams.create' => $user->can('create', \App\Models\Team::class),

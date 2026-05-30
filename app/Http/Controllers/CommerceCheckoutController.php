@@ -20,6 +20,8 @@ use App\Models\LearningCourse;
 use App\Models\LearningCoupon;
 use App\Models\LearningEnrollment;
 use App\Models\MarketplacePayout;
+use App\Models\MarketplaceProviderLocation;
+use App\Models\MarketplaceProviderProfile;
 use App\Models\MarketplaceSellerApplication;
 use App\Models\MarketplaceProduct;
 use App\Models\MarketplaceProductInventory;
@@ -177,6 +179,11 @@ class CommerceCheckoutController extends Controller
             'payoutProfile' => PayoutProfile::query()
                 ->where('user_id', $request->user()->id)
                 ->first(),
+            'providerProfile' => $this->marketplaceProviderProfileResource(
+                MarketplaceProviderProfile::query()->where('user_id', $request->user()->id)->first(),
+                $request->user(),
+            ),
+            'providerLocations' => $this->providerLocationsForUser($request->user()),
             'payoutSummary' => $this->payoutSummaryFor($request->user()->id),
             'myPayouts' => MarketplacePayout::query()
                 ->where('user_id', $request->user()->id)
@@ -375,6 +382,57 @@ class CommerceCheckoutController extends Controller
         );
 
         return back()->with('success', 'Auszahlungsdaten wurden gespeichert und werden geprüft.');
+    }
+
+    public function storeProviderProfile(Request $request)
+    {
+        $data = $request->validate($this->providerProfileRules());
+        $profile = $this->providerProfileForUser($request->user());
+
+        $profile->forceFill([
+            ...$data,
+            'legal_country' => strtoupper((string) ($data['legal_country'] ?? 'DE')),
+            'status' => 'active',
+        ])->save();
+
+        return back()->with('success', 'Anbieterprofil wurde gespeichert. Öffentliche Daten erscheinen im Marketplace.');
+    }
+
+    public function storeProviderLocation(Request $request)
+    {
+        $profile = $this->providerProfileForUser($request->user());
+        $data = $request->validate($this->providerLocationRules());
+
+        $profile->locations()->create([
+            ...$data,
+            'country' => strtoupper((string) ($data['country'] ?? 'DE')),
+            'sort_order' => ((int) MarketplaceProviderLocation::query()
+                ->where('marketplace_provider_profile_id', $profile->id)
+                ->max('sort_order')) + 1,
+        ]);
+
+        return back()->with('success', 'Standort wurde gespeichert und kann im Marketplace angezeigt werden.');
+    }
+
+    public function updateProviderLocation(Request $request, MarketplaceProviderLocation $location)
+    {
+        $this->authorizeProviderLocation($request, $location);
+        $data = $request->validate($this->providerLocationRules());
+
+        $location->forceFill([
+            ...$data,
+            'country' => strtoupper((string) ($data['country'] ?? 'DE')),
+        ])->save();
+
+        return back()->with('success', 'Standort wurde aktualisiert.');
+    }
+
+    public function destroyProviderLocation(Request $request, MarketplaceProviderLocation $location)
+    {
+        $this->authorizeProviderLocation($request, $location);
+        $location->delete();
+
+        return back()->with('success', 'Standort wurde entfernt.');
     }
 
     public function requestPayout(Request $request)
@@ -3871,6 +3929,147 @@ class CommerceCheckoutController extends Controller
             'house_number' => $user->house_number,
             'is_default' => false,
         ]);
+    }
+
+    private function providerProfileForUser(User $user): MarketplaceProviderProfile
+    {
+        return MarketplaceProviderProfile::query()->firstOrCreate(
+            ['user_id' => $user->id],
+            [
+                'display_name' => $user->name,
+                'support_email' => $user->email,
+                'legal_country' => strtoupper((string) ($user->country ?: 'DE')),
+                'legal_state' => $user->state,
+                'legal_postal_code' => $user->postal_code,
+                'legal_city' => $user->city,
+                'legal_street' => $user->street,
+                'legal_house_number' => $user->house_number,
+                'provider_type' => 'private',
+                'status' => 'draft',
+            ],
+        );
+    }
+
+    private function marketplaceProviderProfileResource(?MarketplaceProviderProfile $profile, ?User $user = null): array
+    {
+        return [
+            'id' => $profile?->id,
+            'display_name' => $profile?->display_name ?: $user?->name,
+            'legal_name' => $profile?->legal_name,
+            'provider_type' => $profile?->provider_type ?: 'private',
+            'support_email' => $profile?->support_email ?: $user?->email,
+            'phone' => $profile?->phone,
+            'website' => $profile?->website,
+            'logo_url' => $profile?->logo_url,
+            'public_description' => $profile?->public_description,
+            'legal_country' => $profile?->legal_country ?: ($user?->country ?: 'DE'),
+            'legal_state' => $profile?->legal_state ?: $user?->state,
+            'legal_postal_code' => $profile?->legal_postal_code ?: $user?->postal_code,
+            'legal_city' => $profile?->legal_city ?: $user?->city,
+            'legal_street' => $profile?->legal_street ?: $user?->street,
+            'legal_house_number' => $profile?->legal_house_number ?: $user?->house_number,
+            'show_public_address' => (bool) $profile?->show_public_address,
+            'show_support_email' => $profile ? (bool) $profile->show_support_email : true,
+            'show_phone' => (bool) $profile?->show_phone,
+            'status' => $profile?->status ?: 'draft',
+        ];
+    }
+
+    private function providerLocationsForUser(User $user): array
+    {
+        $profile = MarketplaceProviderProfile::query()
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (! $profile) {
+            return [];
+        }
+
+        return $profile->locations()
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (MarketplaceProviderLocation $location) => $this->marketplaceProviderLocationResource($location))
+            ->all();
+    }
+
+    private function marketplaceProviderLocationResource(MarketplaceProviderLocation $location): array
+    {
+        return [
+            'id' => $location->id,
+            'name' => $location->name,
+            'type' => $location->type,
+            'country' => $location->country ?: 'DE',
+            'state' => $location->state,
+            'postal_code' => $location->postal_code,
+            'city' => $location->city,
+            'street' => $location->street,
+            'house_number' => $location->house_number,
+            'opening_hours' => $location->opening_hours,
+            'note' => $location->note,
+            'phone' => $location->phone,
+            'email' => $location->email,
+            'image_url' => $location->image_url,
+            'latitude' => $location->latitude,
+            'longitude' => $location->longitude,
+            'pickup_enabled' => (bool) $location->pickup_enabled,
+            'returns_enabled' => (bool) $location->returns_enabled,
+            'is_public' => (bool) $location->is_public,
+            'address' => $location->addressSummary(),
+        ];
+    }
+
+    private function providerProfileRules(): array
+    {
+        return [
+            'display_name' => ['required', 'string', 'max:255'],
+            'legal_name' => ['nullable', 'string', 'max:255'],
+            'provider_type' => ['required', Rule::in(['private', 'business', 'club'])],
+            'support_email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:80'],
+            'website' => ['nullable', 'url', 'max:500'],
+            'logo_url' => ['nullable', 'url', 'max:1000'],
+            'public_description' => ['nullable', 'string', 'max:2000'],
+            'legal_country' => ['required', 'string', 'size:2'],
+            'legal_state' => ['nullable', 'string', 'max:120'],
+            'legal_postal_code' => ['nullable', 'string', 'max:30'],
+            'legal_city' => ['nullable', 'string', 'max:120'],
+            'legal_street' => ['nullable', 'string', 'max:180'],
+            'legal_house_number' => ['nullable', 'string', 'max:40'],
+            'show_public_address' => ['boolean'],
+            'show_support_email' => ['boolean'],
+            'show_phone' => ['boolean'],
+        ];
+    }
+
+    private function providerLocationRules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:255'],
+            'type' => ['required', Rule::in(['boutique', 'branch', 'pickup', 'warehouse', 'partner'])],
+            'country' => ['required', 'string', 'size:2'],
+            'state' => ['nullable', 'string', 'max:120'],
+            'postal_code' => ['nullable', 'string', 'max:30'],
+            'city' => ['nullable', 'string', 'max:120'],
+            'street' => ['nullable', 'string', 'max:180'],
+            'house_number' => ['nullable', 'string', 'max:40'],
+            'opening_hours' => ['nullable', 'string', 'max:1000'],
+            'note' => ['nullable', 'string', 'max:1000'],
+            'phone' => ['nullable', 'string', 'max:80'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'image_url' => ['nullable', 'url', 'max:1000'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'pickup_enabled' => ['boolean'],
+            'returns_enabled' => ['boolean'],
+            'is_public' => ['boolean'],
+        ];
+    }
+
+    private function authorizeProviderLocation(Request $request, MarketplaceProviderLocation $location): void
+    {
+        $location->loadMissing('providerProfile:id,user_id');
+        abort_unless((int) $location->providerProfile?->user_id === (int) $request->user()->id, 403);
     }
 
     private function shippingAddressesFor(?\App\Models\User $user): array

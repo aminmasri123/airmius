@@ -37,6 +37,10 @@ const props = defineProps({
         type: Object,
         default: () => ({}),
     },
+    sportMapAccess: {
+        type: Object,
+        default: () => ({}),
+    },
 })
 
 const { t, te } = useI18n()
@@ -47,6 +51,7 @@ const trackingStartedAt = ref(null)
 const trackingError = ref('')
 const activeTrackingSlide = ref(0)
 const trackingFullscreen = ref(false)
+const editingTrackId = ref(null)
 const placeLocationError = ref('')
 const placeLocationStatus = ref('')
 const draftRouteGeometryPoints = ref([])
@@ -155,6 +160,11 @@ const trackForm = useForm({
     started_at: null,
     ended_at: null,
     track_points: [],
+})
+
+const editTrackForm = useForm({
+    title: '',
+    sport_type: 'running',
 })
 
 const placeForm = useForm({
@@ -598,9 +608,9 @@ const mapAttribution = computed(() => mapOverlaySource.value
 const mapHasRealTiles = computed(() => visibleMapTileCount.value > 0)
 const mapStatusText = computed(() => {
     if (manualMapPointStatus.value) return manualMapPointStatus.value
-    if (!mapPoints.value.length) return 'Noch keine Punkte. Plane eine Route, starte Tracking oder füge einen Sportplatz hinzu.'
+    if (!mapPoints.value.length) return 'Karte bereit. Plane eine Route, starte Tracking oder füge einen Sportplatz hinzu.'
 
-    return `${mapPoints.value.length} Kartenpunkte geladen.`
+    return 'Karte bereit.'
 })
 const placePreviewImages = computed(() => [
     ...splitList(placeImageUrlsText.value),
@@ -885,6 +895,23 @@ const routeGeneratorEstimatedMinutes = computed(() => {
 })
 
 const routeGeneratorDefaultSpeedKmh = computed(() => routeGeneratorSpeedsKmh[routeGeneratorForm.sport_type] || routeGeneratorSpeedsKmh.other)
+const routeGenerationAccess = computed(() => props.sportMapAccess?.route_generation || {
+    available: true,
+    label: 'Free Routing',
+    monthly_limit: 10,
+    monthly_used: 0,
+    monthly_remaining: 10,
+    reason: null,
+})
+const routeGenerationLimitLabel = computed(() => {
+    const access = routeGenerationAccess.value
+
+    if (access.monthly_limit === null) {
+        return `${access.label || 'Routing'}: unbegrenzt`
+    }
+
+    return `${access.label || 'Routing'}: ${access.monthly_remaining ?? 0}/${access.monthly_limit} Vorschlaege diesen Monat offen`
+})
 
 const routeGeneratorTargetSpeedKmh = computed(() => {
     if (routeGeneratorForm.pace_mode === 'pace' && Number(routeGeneratorForm.pace_min_per_km) > 0) {
@@ -1264,7 +1291,8 @@ const requestRouteProposal = async (waypoints = null) => {
         const response = await window.axios.post(route('auth.sport-route-proposals.store'), routeProposalPayload(waypoints))
         applyRouteProposal(response.data?.data)
     } catch (error) {
-        routeGeneratorStatus.value = error.response?.data?.message
+        routeGeneratorStatus.value = error.response?.data?.errors?.route_generation?.[0]
+            || error.response?.data?.message
             || 'Route konnte nicht berechnet werden. Bitte prüfe Startpunkt, Distanz und Internetverbindung.'
     } finally {
         isGeneratingRoute.value = false
@@ -1273,6 +1301,11 @@ const requestRouteProposal = async (waypoints = null) => {
 
 const generateRouteProposal = () => {
     if (isGeneratingRoute.value) return
+
+    if (!routeGenerationAccess.value.available) {
+        routeGeneratorStatus.value = routeGenerationAccess.value.reason || 'Automatische Routengenerierung ist in deinem aktuellen Plan nicht verfuegbar.'
+        return
+    }
 
     if (!isValidMapCoordinate(routeGeneratorStartPoint.value)) {
         routeGeneratorStatus.value = 'Bitte zuerst einen gültigen Startpunkt wählen.'
@@ -1494,12 +1527,35 @@ const resetTrackPoints = () => {
     trackingPoints.value = []
     trackingStartedAt.value = null
     trackingError.value = ''
-    manualMapPointStatus.value = 'Trackpunkte wurden zurückgesetzt.'
+    manualMapPointStatus.value = 'Track wurde zurückgesetzt.'
 }
 
 const deleteCurrentTrackDraft = () => {
     resetTrackPoints()
     closeTrackingFullscreen()
+}
+
+const startTrackEdit = (track) => {
+    editingTrackId.value = track.id
+    editTrackForm.title = track.title || ''
+    editTrackForm.sport_type = track.sport_type || 'running'
+    editTrackForm.clearErrors()
+}
+
+const cancelTrackEdit = () => {
+    editingTrackId.value = null
+    editTrackForm.reset()
+    editTrackForm.clearErrors()
+}
+
+const updateSavedTrack = (track) => {
+    editTrackForm.put(route('auth.sport-tracks.update', track.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            editingTrackId.value = null
+            editTrackForm.reset()
+        },
+    })
 }
 
 const saveTrack = () => {
@@ -1683,7 +1739,7 @@ const removeLastActiveMapPoint = () => {
 const resetActiveMapPoints = () => {
     if (activeMapPointCount.value === 0) {
         resetMapView()
-        manualMapPointStatus.value = 'Karte wurde zentriert. Es gibt aktuell keine Punkte zum Zurücksetzen.'
+        manualMapPointStatus.value = 'Karte wurde zentriert. Es gibt aktuell keine Einträge zum Zurücksetzen.'
         return
     }
 
@@ -2305,8 +2361,20 @@ onUnmounted(() => {
                         <div class="space-y-5">
                             <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
                                 <p class="text-xs font-black uppercase tracking-wide text-air-blue">Aktueller Lauf</p>
-                                <p class="mt-2 truncate text-base font-black text-primary">{{ trackForm.title || defaultTrackTitle() }}</p>
-                                <p class="mt-1 text-sm text-secondary">{{ sportLabel(trackForm.sport_type) }} - {{ trackingElapsedLabel }}</p>
+                                <label class="mt-3 block">
+                                    <span class="sr-only">Bezeichnung</span>
+                                    <input
+                                        v-model="trackForm.title"
+                                        class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-base font-black text-primary placeholder:text-secondary"
+                                        :placeholder="defaultTrackTitle()"
+                                    >
+                                </label>
+                                <label class="mt-3 block">
+                                    <span class="sr-only">Sportart</span>
+                                    <select v-model="trackForm.sport_type" class="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm font-bold text-primary">
+                                        <option v-for="sport in sportTypes" :key="sport.key" :value="sport.key">{{ catalogLabel(sport, sport.key) }}</option>
+                                    </select>
+                                </label>
                             </div>
 
                             <div class="py-4 text-center">
@@ -2374,7 +2442,7 @@ onUnmounted(() => {
                                 <p class="text-xs font-black uppercase tracking-wide text-air-blue">Karte</p>
                                 <h3 class="text-lg font-black text-primary">Live-Position</h3>
                             </div>
-                            <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-secondary">{{ mapPoints.length }} Punkte</span>
+                            <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-secondary">Live</span>
                         </div>
                         <div
                             class="relative min-h-0 flex-1 select-none overflow-hidden"
@@ -2575,7 +2643,7 @@ onUnmounted(() => {
                                 </button>
                             </div>
                             <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-secondary">
-                                {{ mapPoints.length }} {{ $t('sport_map.points') }}
+                                Interaktive Karte
                             </span>
                         </div>
                     </div>
@@ -2929,6 +2997,9 @@ onUnmounted(() => {
                     <p v-if="routeGeneratorStatus && routeGeneratorStep !== 3" class="rounded-lg bg-air-blue/10 px-3 py-2 text-sm font-semibold text-air-blue">
                         {{ routeGeneratorStatus }}
                     </p>
+                    <p class="rounded-lg border border-border bg-inputBg px-3 py-2 text-xs font-semibold text-secondary">
+                        {{ routeGenerationLimitLabel }}
+                    </p>
 
                     <div v-if="routeGeneratorStep === 1" class="grid gap-5 lg:grid-cols-[minmax(0,0.9fr),minmax(0,1.1fr)]">
                         <div class="space-y-4">
@@ -3257,7 +3328,7 @@ onUnmounted(() => {
                             </div>
 
                             <div class="flex flex-wrap gap-2">
-                                <button type="button" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60" :disabled="isGeneratingRoute" @click="generateRouteProposal">
+                                <button type="button" class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60" :disabled="isGeneratingRoute || !routeGenerationAccess.available" @click="generateRouteProposal">
                                     <i class="las la-magic"></i>
                                     {{ isGeneratingRoute ? 'Berechnet...' : 'Vorschlag generieren' }}
                                 </button>
@@ -3278,7 +3349,7 @@ onUnmounted(() => {
                                     <p class="text-sm font-bold text-primary">{{ generatedRouteTitle() }}</p>
                                     <p class="mt-1 text-xs text-secondary">{{ routeGeneratorSummary.environment }} - {{ routeGeneratorSummary.elevation }} - {{ routeGeneratorSummary.difficulty }}</p>
                                 </div>
-                                <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-primary">{{ generatedRoutePoints.length }} Kontrollpunkte</span>
+                                <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-primary">Vorschlag bereit</span>
                             </div>
 
                             <div class="mt-4 space-y-2">
@@ -3331,7 +3402,7 @@ onUnmounted(() => {
                             <button v-if="routeGeneratorStep < 3" type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" @click="setGeneratorStep(routeGeneratorStep + 1)">
                                 Weiter
                             </button>
-                            <button v-else type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60" :disabled="isGeneratingRoute" @click="generateRouteProposal">
+                            <button v-else type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:cursor-not-allowed disabled:opacity-60" :disabled="isGeneratingRoute || !routeGenerationAccess.available" @click="generateRouteProposal">
                                 {{ isGeneratingRoute ? 'Berechnet...' : 'Neu generieren' }}
                             </button>
                         </div>
@@ -3493,7 +3564,7 @@ onUnmounted(() => {
                                                 <p class="text-xs font-black uppercase tracking-wide text-air-blue">Karte</p>
                                                 <h3 class="text-lg font-black text-primary">Position</h3>
                                             </div>
-                                            <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-secondary">{{ mapPoints.length }} Punkte</span>
+                                            <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-secondary">Live</span>
                                         </div>
                                         <div class="relative h-[calc(100%-76px)] select-none overflow-hidden" style="background-color: #efe6d1; user-select: none; -webkit-user-select: none;" @click="handleMapClick" @selectstart.prevent @dragstart.prevent>
                                             <div class="absolute inset-0 z-0" style="background-color: #efe6d1;"></div>
@@ -3625,7 +3696,7 @@ onUnmounted(() => {
                                             <p class="text-xs font-bold uppercase tracking-wide text-air-blue">Slide 2</p>
                                             <h4 class="text-base font-black text-primary">Karte</h4>
                                         </div>
-                                        <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-secondary">{{ mapPoints.length }} Punkte</span>
+                                        <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-secondary">Karte</span>
                                     </div>
                                     <div
                                         class="relative h-72 touch-pan-x select-none overflow-hidden"
@@ -3738,7 +3809,7 @@ onUnmounted(() => {
                                 </div>
                             </div>
 
-                            <div class="-mx-3 mt-3 hidden snap-x gap-3 overflow-x-auto px-3 pb-1 sm:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
+                            <div class="-mx-3 mt-3 hidden snap-x gap-3 overflow-x-auto px-3 pb-1 sm:mx-0 lg:grid lg:grid-cols-3 lg:overflow-visible lg:px-0">
                                 <div class="min-w-[128px] snap-start rounded-2xl border border-border bg-card/80 p-3">
                                     <p class="text-xs font-bold uppercase text-secondary">Pace</p>
                                     <p class="mt-1 text-xl font-bold text-primary">{{ trackingAveragePaceLabel }}</p>
@@ -3746,10 +3817,6 @@ onUnmounted(() => {
                                 <div class="min-w-[128px] snap-start rounded-2xl border border-border bg-card/80 p-3">
                                     <p class="text-xs font-bold uppercase text-secondary">km/h</p>
                                     <p class="mt-1 text-xl font-bold text-primary">{{ trackingAverageSpeedLabel }}</p>
-                                </div>
-                                <div class="min-w-[128px] snap-start rounded-2xl border border-border bg-card/80 p-3">
-                                    <p class="text-xs font-bold uppercase text-secondary">{{ $t('sport_map.points') }}</p>
-                                    <p class="mt-1 text-xl font-bold text-primary">{{ trackingPoints.length }}</p>
                                 </div>
                                 <div class="min-w-[128px] snap-start rounded-2xl border border-border bg-card/80 p-3">
                                     <p class="text-xs font-bold uppercase text-secondary">GPS</p>
@@ -3784,8 +3851,8 @@ onUnmounted(() => {
                         <details class="rounded-2xl border border-border bg-inputBg p-4">
                             <summary class="flex cursor-pointer list-none items-center justify-between gap-3">
                                 <span>
-                                    <span class="block text-xs font-bold uppercase tracking-wide text-secondary">Details</span>
-                                    <span class="block text-base font-bold text-primary">Optional vorbereiten</span>
+                                    <span class="block text-xs font-bold uppercase tracking-wide text-secondary">Vorbereitung</span>
+                                    <span class="block text-base font-bold text-primary">Bezeichnung & Sportart</span>
                                 </span>
                                 <span class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-secondary">
                                     <i class="las la-sliders-h"></i>
@@ -3795,7 +3862,7 @@ onUnmounted(() => {
                             <div class="mt-4 grid gap-3 border-t border-border pt-4">
                                 <label class="space-y-1">
                                     <span class="text-xs font-semibold text-secondary">{{ $t('sport_map.form.title') }}</span>
-                                    <input v-model="trackForm.title" class="w-full rounded-xl border border-border bg-card px-3 py-3 text-sm" placeholder="Wird beim Start automatisch gesetzt">
+                                    <input v-model="trackForm.title" class="w-full rounded-xl border border-border bg-card px-3 py-3 text-sm" placeholder="z. B. Morgenlauf, 5-km-Runde, Intervalltraining">
                                 </label>
                                 <label class="space-y-1">
                                     <span class="text-xs font-semibold text-secondary">{{ $t('sport_map.form.sport') }}</span>
@@ -3825,18 +3892,65 @@ onUnmounted(() => {
 
                         <div class="mt-3 grid gap-3">
                             <article v-for="track in tracks" :key="track.id" class="rounded-xl border border-border bg-card p-4">
-                                <div class="flex items-start justify-between gap-3">
+                                <div v-if="editingTrackId === track.id" class="grid gap-3">
+                                    <label class="space-y-1">
+                                        <span class="text-xs font-semibold text-secondary">Bezeichnung</span>
+                                        <input
+                                            v-model="editTrackForm.title"
+                                            class="w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-sm font-semibold text-primary"
+                                            placeholder="z. B. Morgenlauf, 5-km-Runde"
+                                        >
+                                        <span v-if="editTrackForm.errors.title" class="text-xs font-semibold text-red-500">{{ editTrackForm.errors.title }}</span>
+                                    </label>
+                                    <label class="space-y-1">
+                                        <span class="text-xs font-semibold text-secondary">Sportart</span>
+                                        <select v-model="editTrackForm.sport_type" class="w-full rounded-xl border border-border bg-inputBg px-3 py-3 text-sm font-semibold text-primary">
+                                            <option v-for="sport in sportTypes" :key="sport.key" :value="sport.key">{{ catalogLabel(sport, sport.key) }}</option>
+                                        </select>
+                                        <span v-if="editTrackForm.errors.sport_type" class="text-xs font-semibold text-red-500">{{ editTrackForm.errors.sport_type }}</span>
+                                    </label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <button
+                                            type="button"
+                                            class="inline-flex min-h-11 items-center justify-center rounded-xl bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary disabled:opacity-50"
+                                            :disabled="editTrackForm.processing || !editTrackForm.title"
+                                            @click="updateSavedTrack(track)"
+                                        >
+                                            Speichern
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="inline-flex min-h-11 items-center justify-center rounded-xl border border-border px-4 py-2 text-sm font-bold text-primary"
+                                            :disabled="editTrackForm.processing"
+                                            @click="cancelTrackEdit"
+                                        >
+                                            Abbrechen
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div v-else class="flex items-start justify-between gap-3">
                                     <div class="min-w-0">
                                         <p class="truncate text-sm font-bold text-primary">{{ track.title }}</p>
                                         <p class="mt-1 text-xs text-secondary">{{ sportLabel(track.sport_type) }} - {{ trackStatusLabel(track.status) }}</p>
                                     </div>
-                                    <span class="shrink-0 rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-primary">{{ formatDistance(track.distance_meters) }}</span>
+                                    <div class="flex shrink-0 items-center gap-2">
+                                        <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-primary">{{ formatDistance(track.distance_meters) }}</span>
+                                        <button
+                                            v-if="track.can_edit"
+                                            type="button"
+                                            class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-inputBg text-primary hover:bg-muted"
+                                            aria-label="Track bearbeiten"
+                                            @click="startTrackEdit(track)"
+                                        >
+                                            <i class="las la-pen"></i>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-secondary sm:grid-cols-4">
+                                <div v-if="editingTrackId !== track.id" class="mt-3 grid grid-cols-1 gap-2 text-xs text-secondary sm:grid-cols-3">
                                     <span class="rounded-lg bg-inputBg px-3 py-2">{{ formatDuration(track.duration_seconds) }}</span>
                                     <span class="rounded-lg bg-inputBg px-3 py-2">{{ trackAveragePaceLabel(track) }}</span>
                                     <span class="rounded-lg bg-inputBg px-3 py-2">{{ trackAverageSpeedLabel(track) }}</span>
-                                    <span class="rounded-lg bg-inputBg px-3 py-2">{{ $t('sport_map.tracks.points_count', { count: track.track_points?.length || 0 }) }}</span>
                                 </div>
                             </article>
                             <div v-if="!tracks.length" class="rounded-xl border border-dashed border-border bg-card/60 p-5 text-center">

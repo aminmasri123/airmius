@@ -5,6 +5,15 @@ export const useClubWorkspaceNavigation = () => {
     const { can } = usePermissions()
 
     const items = computed(() => [
+        can('club-cockpit.view')
+            ? {
+                key: 'cockpit',
+                label: 'Vereins-Cockpit',
+                href: route('auth.club-cockpit.index'),
+                icon: 'las la-tachometer-alt',
+                activePaths: ['/club-cockpit'],
+            }
+            : null,
         can('team.index')
             ? {
                 key: 'structure',

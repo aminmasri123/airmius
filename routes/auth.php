@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ClubController;
+use App\Http\Controllers\ClubCockpitController;
 use App\Http\Controllers\ClubMembershipController;
 use App\Http\Controllers\CommerceCheckoutController;
 use App\Http\Controllers\CommentController;
@@ -52,6 +53,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('auth.dashboard');
     Route::patch('/dashboard/preferences', [DashboardController::class, 'updatePreferences'])->name('auth.dashboard.preferences.update');
     Route::get('/workspaces', [RoleWorkspaceController::class, 'index'])->name('auth.workspaces.index');
+    Route::get('/club-cockpit', [ClubCockpitController::class, 'index'])->name('auth.club-cockpit.index');
     Route::get('/training', [TrainingController::class, 'index'])->name('auth.training.index');
     Route::post('/training/activities', [TrainingController::class, 'storeActivity'])->name('auth.training.activities.store');
     Route::get('/training/logs/create', [TrainingController::class, 'createLog'])->name('auth.training.logs.create');
@@ -166,6 +168,10 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::get('/commerce/orders/{order}/invoice', [CommerceCheckoutController::class, 'downloadInvoice'])->name('auth.commerce.orders.invoice');
     Route::get('/commerce/orders/{order}/credit-note', [CommerceCheckoutController::class, 'downloadCreditNote'])->name('auth.commerce.orders.credit-note');
     Route::post('/commerce/seller-application', [CommerceCheckoutController::class, 'storeSellerApplication'])->name('auth.commerce.seller-application.store');
+    Route::post('/commerce/provider-profile', [CommerceCheckoutController::class, 'storeProviderProfile'])->name('auth.commerce.provider-profile.store');
+    Route::post('/commerce/provider-locations', [CommerceCheckoutController::class, 'storeProviderLocation'])->name('auth.commerce.provider-locations.store');
+    Route::put('/commerce/provider-locations/{location}', [CommerceCheckoutController::class, 'updateProviderLocation'])->name('auth.commerce.provider-locations.update');
+    Route::delete('/commerce/provider-locations/{location}', [CommerceCheckoutController::class, 'destroyProviderLocation'])->name('auth.commerce.provider-locations.destroy');
     Route::get('/commerce/products/import-template', [CommerceCheckoutController::class, 'downloadProductImportTemplate'])->name('auth.commerce.products.import-template');
     Route::post('/commerce/products/import', [CommerceCheckoutController::class, 'importOwnProducts'])->name('auth.commerce.products.import');
     Route::post('/commerce/products', [CommerceCheckoutController::class, 'storeOwnProduct'])->name('auth.commerce.products.store');

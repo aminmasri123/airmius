@@ -9,6 +9,8 @@ use App\Models\Club;
 use App\Models\LearningCoupon;
 use App\Models\MarketplaceProduct;
 use App\Models\MarketplaceProductInventory;
+use App\Models\MarketplaceProviderLocation;
+use App\Models\MarketplaceProviderProfile;
 use App\Models\OutfitSubscriptionPlan;
 use App\Models\Setting;
 use App\Models\User;
@@ -117,6 +119,7 @@ class PublicMarketplaceController extends Controller
             'outfitPlans' => $outfitPlans,
             'sportCategories' => $this->sportCategories(),
             'officialStores' => $this->officialStores(),
+            'providerLocations' => $this->publicMarketplaceLocations(),
             'categories' => [
                 ['value' => '', 'label' => 'Alle'],
                 ['value' => 'product', 'label' => 'Produkte'],
@@ -184,9 +187,9 @@ class PublicMarketplaceController extends Controller
             'cart' => $this->cartBadge($request),
             'provider' => [
                 ...$providerProfile,
-                'description' => $type === 'club'
+                'description' => $providerProfile['description'] ?: ($type === 'club'
                     ? trim((string) ($provider->sport_type ? 'Sport: '.$provider->sport_type : 'Marketplace-Anbieter auf Airmius.'))
-                    : trim((string) ($provider->bio ?: 'Marketplace-Anbieter auf Airmius.')),
+                    : trim((string) ($provider->bio ?: 'Marketplace-Anbieter auf Airmius.'))),
                 'cover_url' => $type === 'club' && $provider->cover_image ? UploadStorage::url($provider->cover_image) : null,
             ],
             'products' => $products,
@@ -853,19 +856,27 @@ class PublicMarketplaceController extends Controller
     {
         $club = $product->club;
         $user = $product->user;
-        $name = $club?->name ?: ($user?->name ?: 'Airmius Anbieter');
-        $location = trim(implode(', ', array_filter([
+        $profile = $this->providerProfileModel($club, $user);
+        $name = $profile?->publicName() ?: ($club?->name ?: ($user?->name ?: 'Airmius Anbieter'));
+        $location = $profile?->publicAddressSummary() ?: trim(implode(', ', array_filter([
             $club?->city ?: $user?->city,
             strtoupper((string) ($club?->country ?: $user?->country ?: '')),
         ])));
+        $locations = $profile ? $this->publicProviderLocations($profile) : [];
 
         return [
             'name' => $name,
-            'type' => $this->providerType($product),
-            'logo_url' => $club?->logo ? UploadStorage::url($club->logo) : null,
+            'type' => $profile ? $this->providerTypeLabel($profile, $club) : $this->providerType($product),
+            'logo_url' => $profile?->logo_url ?: ($club?->logo ? UploadStorage::url($club->logo) : null),
             'initials' => Str::upper(Str::substr($name, 0, 2)),
             'location' => $location ?: 'Online',
             'verified' => $club?->verification_status === 'verified',
+            'description' => $profile?->public_description,
+            'support_email' => $profile?->show_support_email ? $profile->support_email : null,
+            'phone' => $profile?->show_phone ? $profile->phone : null,
+            'website' => $profile?->website,
+            'locations' => $locations,
+            'has_pickup' => collect($locations)->contains(fn (array $location) => (bool) $location['pickup_enabled']),
             'url' => $club
                 ? route('guest.marketplace.providers.show', ['type' => 'club', 'id' => $club->id])
                 : ($user ? route('guest.marketplace.providers.show', ['type' => 'user', 'id' => $user->id]) : null),
@@ -874,22 +885,131 @@ class PublicMarketplaceController extends Controller
 
     private function providerProfileFromModel(Club|User $provider, string $type): array
     {
-        $name = $provider->name ?: 'Airmius Anbieter';
-        $location = trim(implode(', ', array_filter([
+        $profile = $type === 'club'
+            ? MarketplaceProviderProfile::query()->where('club_id', $provider->id)->with('locations')->first()
+            : MarketplaceProviderProfile::query()->where('user_id', $provider->id)->with('locations')->first();
+        $name = $profile?->publicName() ?: ($provider->name ?: 'Airmius Anbieter');
+        $location = $profile?->publicAddressSummary() ?: trim(implode(', ', array_filter([
             $provider->city,
             strtoupper((string) ($provider->country ?: '')),
         ])));
         $verified = $type === 'club' && $provider->verification_status === 'verified';
+        $locations = $profile ? $this->publicProviderLocations($profile) : [];
 
         return [
             'name' => $name,
-            'type' => $verified ? 'Verifizierter Verein' : ($type === 'club' ? 'Verein / Anbieter' : 'Airmius Anbieter'),
-            'logo_url' => $type === 'club' && $provider->logo ? UploadStorage::url($provider->logo) : null,
+            'type' => $profile ? $this->providerTypeLabel($profile, $type === 'club' ? $provider : null) : ($verified ? 'Verifizierter Verein' : ($type === 'club' ? 'Verein / Anbieter' : 'Airmius Anbieter')),
+            'logo_url' => $profile?->logo_url ?: ($type === 'club' && $provider->logo ? UploadStorage::url($provider->logo) : null),
             'initials' => Str::upper(Str::substr($name, 0, 2)),
             'location' => $location ?: 'Online',
             'verified' => $verified,
+            'description' => $profile?->public_description,
+            'support_email' => $profile?->show_support_email ? $profile->support_email : null,
+            'phone' => $profile?->show_phone ? $profile->phone : null,
+            'website' => $profile?->website,
+            'locations' => $locations,
+            'has_pickup' => collect($locations)->contains(fn (array $location) => (bool) $location['pickup_enabled']),
             'url' => route('guest.marketplace.providers.show', ['type' => $type, 'id' => $provider->id]),
         ];
+    }
+
+    private function providerProfileModel(?Club $club, ?User $user): ?MarketplaceProviderProfile
+    {
+        return MarketplaceProviderProfile::query()
+            ->with('locations')
+            ->when($club, fn ($query) => $query->where('club_id', $club->id))
+            ->when(! $club && $user, fn ($query) => $query->where('user_id', $user->id))
+            ->first();
+    }
+
+    private function publicProviderLocations(MarketplaceProviderProfile $profile): array
+    {
+        return $profile->locations()
+            ->where('is_public', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->limit(6)
+            ->get()
+            ->map(fn (MarketplaceProviderLocation $location) => [
+                'id' => $location->id,
+                'name' => $location->name,
+                'type' => $location->type,
+                'address' => $location->addressSummary(),
+                'city' => $location->city,
+                'country' => $location->country,
+                'opening_hours' => $location->opening_hours,
+                'note' => $location->note,
+                'phone' => $location->phone,
+                'email' => $location->email,
+                'image_url' => $location->image_url,
+                'pickup_enabled' => (bool) $location->pickup_enabled,
+                'returns_enabled' => (bool) $location->returns_enabled,
+            ])
+            ->all();
+    }
+
+    private function publicMarketplaceLocations(): array
+    {
+        return MarketplaceProviderLocation::query()
+            ->with([
+                'providerProfile:id,user_id,club_id,display_name,provider_type,logo_url,status,show_support_email,support_email,show_phone,phone',
+                'providerProfile.user:id,name',
+                'providerProfile.club:id,name,logo,verification_status',
+            ])
+            ->where('is_public', true)
+            ->orderByDesc('pickup_enabled')
+            ->orderBy('country')
+            ->orderBy('city')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->limit(30)
+            ->get()
+            ->map(function (MarketplaceProviderLocation $location) {
+                $profile = $location->providerProfile;
+                $club = $profile?->club;
+                $user = $profile?->user;
+                $providerName = $profile?->publicName() ?: ($club?->name ?: ($user?->name ?: 'Airmius Anbieter'));
+
+                return [
+                    'id' => $location->id,
+                    'name' => $location->name,
+                    'type' => $location->type,
+                    'address' => $location->addressSummary(),
+                    'city' => $location->city,
+                    'country' => $location->country,
+                    'opening_hours' => $location->opening_hours,
+                    'note' => $location->note,
+                    'phone' => $location->phone ?: ($profile?->show_phone ? $profile->phone : null),
+                    'email' => $location->email ?: ($profile?->show_support_email ? $profile->support_email : null),
+                    'image_url' => $location->image_url,
+                    'pickup_enabled' => (bool) $location->pickup_enabled,
+                    'returns_enabled' => (bool) $location->returns_enabled,
+                    'provider' => [
+                        'name' => $providerName,
+                        'type' => $profile ? $this->providerTypeLabel($profile, $club) : 'Airmius Anbieter',
+                        'logo_url' => $profile?->logo_url ?: ($club?->logo ? UploadStorage::url($club->logo) : null),
+                        'initials' => Str::upper(Str::substr($providerName, 0, 2)),
+                        'verified' => $club?->verification_status === 'verified',
+                        'url' => $club
+                            ? route('guest.marketplace.providers.show', ['type' => 'club', 'id' => $club->id])
+                            : ($user ? route('guest.marketplace.providers.show', ['type' => 'user', 'id' => $user->id]) : null),
+                    ],
+                ];
+            })
+            ->all();
+    }
+
+    private function providerTypeLabel(MarketplaceProviderProfile $profile, ?Club $club = null): string
+    {
+        if ($club?->verification_status === 'verified') {
+            return 'Verifizierter Verein';
+        }
+
+        return match ($profile->provider_type) {
+            'business' => 'Shop / Anbieter',
+            'club' => 'Verein / Anbieter',
+            default => 'Airmius Anbieter',
+        };
     }
 
     private function deliveryLabel(MarketplaceProduct $product): string

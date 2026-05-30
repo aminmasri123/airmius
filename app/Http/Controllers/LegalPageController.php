@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\AirmiusLegalProfile;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -142,13 +143,14 @@ class LegalPageController extends Controller
             ],
             [
                 'title' => '7. Empfänger und Dienstleister',
-                'body' => [
+                'body' => array_merge([
                     'Airmius nutzt Hostinger als Hosting-Anbieter für den Betrieb der Plattform. Mit Hostinger gilt nach Anbieterangabe ein Vertrag zur Auftragsverarbeitung nach Art. 28 DSGVO über die Konto- bzw. Vertragsannahme als abgeschlossen.',
                     'Airmius nutzt Cloudflare für Objektspeicher und Medienauslieferung, insbesondere Cloudflare R2 und Cloudflare CDN. Nach Anbieterangabe ist der Cloudflare Customer DPA für Self-Serve-Kunden Bestandteil der Cloudflare Self-Serve Subscription Agreement und umfasst unter anderem EU-Standardvertragsklauseln sowie Data-Privacy-Framework-Bezüge.',
                     'Cloudflare ist ein US-Anbieter. Internationale Datenübermittlungen können daher nicht pauschal ausgeschlossen werden; sie werden nach Anbieterangabe über DPA, SCCs und DPF abgesichert.',
                     'Soweit möglich wird die Konfiguration auf europäische Datenhaltung und DSGVO-konforme Verarbeitung ausgerichtet. Eine verbindliche Zusicherung, dass alle Cloudflare-Daten und Metadaten ausschließlich in der EU verbleiben, besteht nur, wenn passende Cloudflare-Datenlokalisierungsfunktionen wie Regional Services, Metadata Boundary oder Geo Key Manager tatsächlich gebucht und aktiviert sind.',
                     'Für KI-Funktionen können je nach Konfiguration Google, OpenAI, IONOS AI Model Hub oder andere vertraglich geprüfte Anbieter eingesetzt werden. Vor produktiver Nutzung müssen passende Auftragsverarbeitungsvereinbarungen, Datenübermittlungsmechanismen und Anbieterbedingungen geprüft und dokumentiert werden.',
                     'Für Sportkarte und Routenplanung können OpenStreetMap-Kartendaten und ein konfigurierter Routing-Dienst wie OSRM, openrouteservice, GraphHopper, Mapbox oder eine eigene Airmius-Infrastruktur genutzt werden. Dabei können Startpunkte, Ziele, Wegpunkte, Standortdaten und technische Verbindungsdaten an den jeweiligen Kartendienst oder Routing-Dienst übertragen werden.',
+                ], $this->routingProviderLegalLines(), [
                     'Airmius kann außerdem technische Dienstleister für E-Mail-Versand, Sicherheit, Fehleranalyse und Zahlungsabwicklung einsetzen, wenn dies für den Plattformbetrieb erforderlich ist.',
                     'Für Zahlungen können Stripe, PayPal und Banküberweisung eingesetzt werden. Dabei werden die für Zahlung, Betrugsschutz, Rechnung und Nachweis erforderlichen Daten an den jeweiligen Zahlungsdienstleister übermittelt oder von diesem verarbeitet.',
                     'Marketplace-Anbieter, Sponsoren und Werbeagentur-/Website-Service-Anfragende erhalten nur die Daten, die für Angebot, Vertragserfüllung, Kommunikation, Abrechnung oder gesetzliche Pflichten erforderlich sind.',
@@ -156,7 +158,7 @@ class LegalPageController extends Controller
                     'Vereinsverantwortliche wie Owner, Admins und Manager können im Rahmen ihrer Berechtigungen Mitglieder-, Beitrags-, Rechnungs- und Zahlungsdaten ihres Vereins einsehen und bearbeiten.',
                     'Mit Auftragsverarbeitern werden Verträge nach Art. 28 DSGVO geschlossen.',
                     'Daten werden nur weitergegeben, wenn dies für den Plattformbetrieb erforderlich ist, eine Rechtsgrundlage besteht oder eine gesetzliche Pflicht vorliegt.',
-                ],
+                ]),
             ],
             [
                 'title' => '8. Speicherdauer',
@@ -292,12 +294,13 @@ class LegalPageController extends Controller
             ],
             [
                 'title' => '5d. Sportkarte, Routenplanung und Standortfunktionen',
-                'body' => [
+                'body' => array_merge([
                     'Sportkarte, Routenplanung, Tracking und Sportplatzfunktionen dienen der Planung und Dokumentation sportlicher Aktivitäten. Sie ersetzen keine eigene Prüfung der Umgebung, Verkehrsregeln, Wegbeschaffenheit, Wetterlage oder persönlichen Leistungsfähigkeit.',
                     'Standortzugriff und Live-Tracking werden nur genutzt, wenn der Nutzer dies im Browser oder Gerät erlaubt. Der Nutzer kann die Berechtigung jederzeit über Browser- oder Geräteeinstellungen widerrufen.',
                     'Automatisch generierte Routen sind Vorschläge. Nutzer müssen prüfen, ob Wege tatsächlich zugänglich, sicher, erlaubt und für die jeweilige Sportart geeignet sind.',
+                ], $this->routingProviderTermsLines(), [
                     'Nutzer dürfen Sportplätze, Bilder und Ortsinformationen nur eintragen, wenn sie rechtmäßig erhoben wurden und keine Rechte Dritter verletzt werden.',
-                ],
+                ]),
             ],
             [
                 'title' => '5e. KI-Funktionen, Ernährung und Trainingsvorschläge',
@@ -566,30 +569,60 @@ class LegalPageController extends Controller
 
     private function legalProfile(): array
     {
+        $billing = app(AirmiusLegalProfile::class)->data();
+
+        $providerName = $this->cleanLegalValue($billing['legal_name'] ?? '')
+            ?: $this->cleanLegalValue($billing['company_name'] ?? '')
+            ?: (string) config('legal.provider_name');
+
+        $street = $this->cleanLegalValue($billing['street'] ?? '') ?: (string) config('legal.street');
+        $postalCode = $this->cleanLegalValue($billing['postal_code'] ?? '');
+        $city = $this->cleanLegalValue($billing['city'] ?? '') ?: (string) config('legal.city');
+        $country = $this->cleanLegalValue($billing['country'] ?? '') ?: (string) config('legal.country');
+        $email = $this->cleanLegalValue($billing['email'] ?? '') ?: (string) config('legal.email');
+        $vatId = $this->cleanLegalValue($billing['vat_id'] ?? '') ?: (string) config('legal.vat_id');
+        $registerParts = array_values(array_filter([
+            $this->cleanLegalValue($billing['court'] ?? ''),
+            $this->cleanLegalValue($billing['registration_number'] ?? ''),
+        ]));
+        $representative = $this->cleanLegalValue($billing['managing_director'] ?? '') ?: (string) config('legal.representative');
+
         return [
-            'provider_name' => (string) config('legal.provider_name'),
-            'street' => (string) config('legal.street'),
-            'city' => (string) config('legal.city'),
-            'country' => (string) config('legal.country'),
-            'email' => (string) config('legal.email'),
+            'provider_name' => $providerName,
+            'street' => $street,
+            'postal_code' => $postalCode,
+            'city' => $city,
+            'country' => $country,
+            'email' => $email,
             'support_email' => (string) config('legal.support_email'),
             'privacy_email' => (string) config('legal.privacy_email'),
             'legal_email' => (string) config('legal.legal_email'),
             'phone' => (string) config('legal.phone'),
-            'representative' => (string) config('legal.representative'),
-            'register' => (string) config('legal.register'),
-            'vat_id' => (string) config('legal.vat_id'),
+            'representative' => $representative,
+            'register' => $registerParts ? implode(', ', $registerParts) : (string) config('legal.register'),
+            'vat_id' => $vatId,
             'supervisory_authority' => (string) config('legal.supervisory_authority'),
-            'content_responsible' => (string) config('legal.content_responsible'),
+            'content_responsible' => $providerName.', '.$this->singleLineAddress([
+                'provider_name' => '',
+                'street' => $street,
+                'postal_code' => $postalCode,
+                'city' => $city,
+                'country' => $country,
+            ]),
         ];
     }
 
     private function addressLines(array $legal): array
     {
+        $cityLine = trim(implode(' ', array_filter([
+            $legal['postal_code'] ?? '',
+            $legal['city'] ?? '',
+        ])));
+
         return array_values(array_filter([
             $legal['provider_name'],
             $legal['street'],
-            $legal['city'],
+            $cityLine,
             $legal['country'],
         ]));
     }
@@ -597,5 +630,52 @@ class LegalPageController extends Controller
     private function singleLineAddress(array $legal): string
     {
         return implode(', ', $this->addressLines($legal));
+    }
+
+    private function cleanLegalValue(?string $value): string
+    {
+        $value = trim((string) $value);
+
+        return in_array($value, ['', 'Nicht angegeben'], true) ? '' : $value;
+    }
+
+    private function routingProviderLegalLines(): array
+    {
+        $providers = collect([
+            config('sport_map.routing.provider'),
+            config('sport_map.routing.route_generator_provider'),
+        ])
+            ->filter()
+            ->map(fn ($provider) => strtolower((string) $provider))
+            ->unique()
+            ->values();
+
+        if (! $providers->contains('graphhopper')) {
+            return [];
+        }
+
+        return [
+            'Aktuell ist GraphHopper als Routing-Dienst für Routenberechnung bzw. Routengenerierung konfiguriert. Bei Nutzung der Sportkarte können dafür Startpunkt, Zielpunkt, Wegpunkte, Sportart, Routingprofil und technische Verbindungsdaten an GraphHopper übertragen werden.',
+        ];
+    }
+
+    private function routingProviderTermsLines(): array
+    {
+        $providers = collect([
+            config('sport_map.routing.provider'),
+            config('sport_map.routing.route_generator_provider'),
+        ])
+            ->filter()
+            ->map(fn ($provider) => strtolower((string) $provider))
+            ->unique()
+            ->values();
+
+        if (! $providers->contains('graphhopper')) {
+            return [];
+        }
+
+        return [
+            'Für die technische Routenberechnung kann Airmius aktuell GraphHopper einsetzen. Die Route bleibt trotzdem ein Vorschlag; maßgeblich sind immer reale Weglage, Verkehrsregeln, Sperrungen und deine eigene Sicherheit.',
+        ];
     }
 }

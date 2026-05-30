@@ -11,6 +11,7 @@ use App\Models\SportPlace;
 use App\Models\SportRoute;
 use App\Models\SportRouteTrack;
 use App\Services\ExternalProviderUsageService;
+use App\Services\SportMapEntitlementService;
 use App\Services\SportRouteMetricService;
 use App\Services\SportRouteRoutingService;
 use Illuminate\Http\Request;
@@ -20,7 +21,7 @@ class SportMapController extends Controller
 {
     use ManagesSportMapPayloads;
 
-    public function index(Request $request, SportRouteMetricService $metrics, ExternalProviderUsageService $usage)
+    public function index(Request $request, SportRouteMetricService $metrics, ExternalProviderUsageService $usage, SportMapEntitlementService $entitlements)
     {
         $user = $request->user();
         $usage->record(
@@ -78,6 +79,7 @@ class SportMapController extends Controller
             'tracks' => SportTrackResource::collection($tracks)->resolve(),
             'places' => SportPlaceResource::collection($places)->resolve(),
             'mapConfig' => config('sport_map.map', []),
+            'sportMapAccess' => $entitlements->capabilities($user),
             'sportCatalog' => Sport::query()
                 ->where('is_active', true)
                 ->orderBy('sort_order')
@@ -99,8 +101,10 @@ class SportMapController extends Controller
         return back()->with('success', 'Route "'.$route->title.'" wurde geplant.');
     }
 
-    public function generateRouteProposal(Request $request, SportRouteRoutingService $routing)
+    public function generateRouteProposal(Request $request, SportRouteRoutingService $routing, SportMapEntitlementService $entitlements)
     {
+        $entitlements->ensureCanGenerateRoute($request->user());
+
         return response()->json([
             'data' => $routing->generateProposal($this->validateRouteProposalData($request)),
         ]);

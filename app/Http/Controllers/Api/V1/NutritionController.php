@@ -51,7 +51,7 @@ class NutritionController extends Controller
                 'catalog' => $this->nutritionCatalog(),
                 'recipes' => $this->nutritionRecipes($goal->goal_type, $goal->diet_style),
                 'tips' => $this->nutritionTips($goal->goal_type),
-                'ai_capabilities' => $ai->capabilities(),
+                'ai_capabilities' => $ai->capabilities($user),
             ],
         ]);
     }

@@ -282,6 +282,7 @@ const waterLeftMl = computed(() => Math.max(0, waterTargetMl.value - waterConsum
 const waterProgress = computed(() => progressValue(waterConsumedMl.value, waterTargetMl.value))
 const aiNutritionImage = computed(() => props.aiCapabilities?.nutrition_image_analysis || {})
 const aiMealImageAvailable = computed(() => Boolean(aiNutritionImage.value.available))
+const aiMealImageAccessReason = computed(() => aiNutritionImage.value.access_reason || tAuto('KI-Bildanalyse ist in Sportler Pro, Trainer Pro oder einem passenden Vereinsplan enthalten.'))
 const aiMealProviderLabel = computed(() => {
     const provider = aiNutritionImage.value.primary_provider || props.aiCapabilities?.primary_provider || 'google'
     const match = (props.aiCapabilities?.available_providers || []).find((item) => item.key === provider)
@@ -485,7 +486,7 @@ const onAiMealImageSelected = (event) => {
 
 const analyzeMealImage = async () => {
     if (!aiMealImageAvailable.value) {
-        aiMealError.value = 'KI-Bildanalyse ist noch nicht konfiguriert.'
+        aiMealError.value = aiMealImageAccessReason.value
         return
     }
 
@@ -989,9 +990,13 @@ onBeforeUnmount(() => {
                             </p>
                         </div>
                         <span class="shrink-0 rounded-full bg-card px-3 py-1 text-xs font-black text-cyan-100">
-                            {{ aiMealImageAvailable ? aiMealProviderLabel : tAuto('Nicht konfiguriert') }}
+                            {{ aiMealImageAvailable ? aiMealProviderLabel : tAuto('Pro-Funktion') }}
                         </span>
                     </div>
+
+                    <p v-if="!aiMealImageAvailable" class="mt-3 rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm font-semibold text-warning">
+                        {{ aiMealImageAccessReason }}
+                    </p>
 
                     <div class="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr),auto]">
                         <label class="block text-sm font-bold text-primary">

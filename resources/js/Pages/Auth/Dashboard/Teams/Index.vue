@@ -1499,7 +1499,7 @@ const deleteJob = (job) => {
                         v-if="club.subscription_capabilities?.member_invitation_daily_limit"
                         class="text-xs text-secondary"
                     >
-                        Free-Limit: {{ club.subscription_capabilities.member_invitation_remaining_today }} von {{ club.subscription_capabilities.member_invitation_daily_limit }} Einladungen heute ?brig.
+                        Free-Limit: {{ club.subscription_capabilities.member_invitation_remaining_today }} von {{ club.subscription_capabilities.member_invitation_daily_limit }} Einladungen heute übrig.
                     </p>
 
                     <p

@@ -61,7 +61,7 @@ class NutritionController extends Controller
             'recipes' => $this->nutritionRecipes($goal->goal_type, $goal->diet_style),
             'tips' => $this->nutritionTips($goal->goal_type),
             'trainingSuggestions' => $this->trainingNutritionSuggestions($recentTraining, $goal->goal_type),
-            'aiCapabilities' => $ai->capabilities(),
+            'aiCapabilities' => $ai->capabilities($user),
             'recentTraining' => $recentTraining->map(fn (TrainingLog $log) => [
                 'id' => $log->id,
                 'title' => $log->title,

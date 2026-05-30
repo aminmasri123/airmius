@@ -10,6 +10,7 @@ use App\Http\Resources\Api\V1\SportTrackResource;
 use App\Models\SportPlace;
 use App\Models\SportRoute;
 use App\Models\SportRouteTrack;
+use App\Services\SportMapEntitlementService;
 use App\Services\SportRouteMetricService;
 use App\Services\SportRouteRoutingService;
 use Illuminate\Http\Request;
@@ -44,8 +45,10 @@ class SportMapController extends Controller
             ->setStatusCode(201);
     }
 
-    public function generateRouteProposal(Request $request, SportRouteRoutingService $routing)
+    public function generateRouteProposal(Request $request, SportRouteRoutingService $routing, SportMapEntitlementService $entitlements)
     {
+        $entitlements->ensureCanGenerateRoute($request->user());
+
         return response()->json([
             'data' => $routing->generateProposal($this->validateRouteProposalData($request)),
         ]);

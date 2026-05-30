@@ -16,6 +16,7 @@ const { t, te } = useI18n()
 const componentTitles = {
     'Auth/Dashboard/Index': 'Dashboard',
     'Auth/Dashboard/Workspaces/Index': 'Arbeitsbereiche',
+    'Auth/Dashboard/ClubCockpit/Index': 'Vereins-Cockpit',
     'Auth/Dashboard/Feed/Index': 'Feed',
     'Auth/Dashboard/Files/Index': 'Dateien',
     'Auth/Dashboard/Events/Index': 'Events',

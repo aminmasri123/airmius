@@ -98,6 +98,106 @@ if (requestedAudience && audiences.some((audience) => audience.key === requested
 const currentAudience = computed(() => audiences.find((audience) => audience.key === selectedAudience.value) || audiences[2])
 const visiblePlans = computed(() => props.planGroups[selectedAudience.value] || [])
 
+const planPill = (label, tone = 'neutral') => ({ label, tone })
+
+const audienceDecisionMatrix = {
+    sportler: [
+        { area: 'Training dokumentieren', free: planPill('frei'), premium: planPill('Pro nur für KI/Analyse', 'pro'), note: 'Dokumentation soll nicht blockiert werden.' },
+        { area: 'Sportkarte & Tracking', free: planPill('frei'), premium: planPill('mehr Route-Limit', 'pro'), note: 'OSM-Karte und GPS bleiben Basisfunktion.' },
+        { area: 'Routen generieren', free: planPill('10/Monat'), premium: planPill('150/Monat', 'pro'), note: 'Externe Routingkosten bleiben kontrollierbar.' },
+        { area: 'KI-Bildanalyse Ernährung', free: planPill('nicht enthalten', 'locked'), premium: planPill('Sportler Pro', 'pro'), note: 'Bild-KI kostet Anbieter-Geld und braucht klare Zustimmung.' },
+        { area: 'KI-Trainingspläne', free: planPill('kurz limitiert'), premium: planPill('länger + mehr Versuche', 'pro'), note: 'Free testet, Pro bekommt ernsthafte Planung.' },
+    ],
+    trainer: [
+        { area: 'Im Verein trainieren', free: planPill('frei im Vereinsplan'), premium: planPill('Club/Pro für Verein', 'pro'), note: 'Trainer sollen innerhalb eines Vereins nicht extra bezahlen müssen.' },
+        { area: 'Eigene Gruppen', free: planPill('nicht enthalten', 'locked'), premium: planPill('Trainer Pro', 'pro'), note: 'Eigene Kundengruppen sind ein eigener Business-Use-Case.' },
+        { area: 'KI-Planung & Regelprüfung', free: planPill('nicht enthalten', 'locked'), premium: planPill('Trainer Pro / Vereins-Pro', 'pro'), note: 'Mehr Verantwortung, KI-Kosten und Prüfpflicht.' },
+        { area: 'Kurse & Camps', free: planPill('später ansehen'), premium: planPill('Trainer Pro', 'pro'), note: 'Verkauf und Teilnehmerverwaltung gehören ins Premium-Paket.' },
+    ],
+    verein: [
+        { area: 'Starten mit Verein', free: planPill('Free: 1 Team / 25 Mitglieder'), premium: planPill('Starter für Wachstum', 'pro'), note: 'Kleine Vereine können risikofrei testen.' },
+        { area: 'Mitglieder aufnehmen', free: planPill('limitiert'), premium: planPill('Starter', 'pro'), note: 'Onboarding, Import und saubere Stammdaten sparen echte Büroarbeit.' },
+        { area: 'Rechnungen & Zahlungen', free: planPill('nicht enthalten', 'locked'), premium: planPill('Starter / Pro', 'pro'), note: 'Finanzen brauchen Verlässlichkeit, Protokollierung und Support.' },
+        { area: 'Trainer- & Vereins-Cockpit', free: planPill('Basis'), premium: planPill('Club', 'pro'), note: 'Operative Steuerung ist der Kernnutzen für zahlende Vereine.' },
+        { area: 'SEPA, DATEV, Bankabgleich', free: planPill('nicht enthalten', 'locked'), premium: planPill('Pro', 'pro'), note: 'Buchhaltung ist ein klarer professioneller Mehrwert.' },
+        { area: 'API, eigene Regeln, Audit', free: planPill('nicht enthalten', 'locked'), premium: planPill('Elite', 'pro'), note: 'Das braucht Sonderlogik, Sicherheit und Begleitung.' },
+    ],
+    eltern: [
+        { area: 'Kinderübersicht', free: planPill('frei'), premium: planPill('kein Eltern-Premium geplant'), note: 'Kinderschutz und Zustimmung bleiben Vertrauensbasis.' },
+        { area: 'Vereinsinfos & Termine', free: planPill('frei über Verein'), premium: planPill('abhängig vom Verein', 'pro'), note: 'Eltern zahlen nicht doppelt für Vereinsorganisation.' },
+    ],
+    sponsor: [
+        { area: 'Sponsorprofil', free: planPill('nicht öffentlich buchbar'), premium: planPill('Sponsor Local', 'pro'), note: 'B2B-Sichtbarkeit wird als eigenes Angebot verkauft.' },
+        { area: 'Reporting & Kampagnen', free: planPill('nicht enthalten', 'locked'), premium: planPill('Sponsor Pro später', 'pro'), note: 'Messung und Laufzeiten brauchen Betreuung.' },
+    ],
+    anbieter: [
+        { area: 'Produkte & Services', free: planPill('Marketplace-Basis'), premium: planPill('Provision/Add-on', 'pro'), note: 'Airmius verdient dort, wo Umsatz entsteht.' },
+        { area: 'Standorte & Abholung', free: planPill('Basis'), premium: planPill('Premium-Sichtbarkeit später', 'pro'), note: 'Echte Filialen und Abholstationen stärken Vertrauen.' },
+    ],
+}
+
+const currentDecisionRows = computed(() => audienceDecisionMatrix[selectedAudience.value] || [])
+const decisionPillClass = (tone) => ({
+    pro: 'border-air-blue/40 bg-air-blue/10 text-air-blue',
+    locked: 'border-warning/40 bg-warning/10 text-warning',
+    neutral: 'border-border bg-bg text-primary',
+})[tone || 'neutral']
+
+const accessRules = {
+    sportler: [
+        { feature: 'Persönliches Dashboard, Feed, Chat, Dateien 1 GB', plan: 'Free', reason: 'Soll Einstieg und tägliche Nutzung nicht blockieren.' },
+        { feature: 'Sportkarte, Tracking, Sportplätze, 10 automatische Routenvorschläge/Monat', plan: 'Free', reason: 'Basis-Bewegung und Orte sollen kostenlos bleiben; externe Routingkosten bleiben begrenzt.' },
+        { feature: 'KI-Ernährungsbild, Trainings-KI kurz, Profilportfolio', plan: 'Sportler Pro', reason: 'Hat externe Kosten und persönlichen Premium-Nutzen.' },
+        { feature: 'Erweiterte Analyse, Sichtbarkeit, Bewerbungsmappe, bis 150 Routenvorschläge/Monat', plan: 'Sportler Pro', reason: 'Mehrwert für ambitionierte Sportler und kontrollierte Providerkosten.' },
+    ],
+    trainer: [
+        { feature: 'Trainer-Cockpit im Verein, Teamkommunikation, Training dokumentieren', plan: 'Free im Vereinsplan', reason: 'Trainer sollen im Verein ohne Extra-Hürde arbeiten.' },
+        { feature: 'Eigene Trainingsgruppen, Vorlagen, Kurse, Camps', plan: 'Trainer Pro', reason: 'Solo-Trainer erzeugen eigenen Verwaltungs- und Umsatznutzen.' },
+        { feature: 'KI-Planung, Regelprüfung, Belastungswarnungen', plan: 'Trainer Pro / Vereins-Pro', reason: 'Kostet KI und braucht höhere Verantwortung.' },
+    ],
+    verein: [
+        { feature: 'Vereinsprofil, 1 Team, Basis-Mitglieder, Basis-Chat', plan: 'Free', reason: 'Kleine Vereine können starten und Airmius testen.' },
+        { feature: 'Mitglieder-Onboarding, Import, Rechnungen, Zahlungshistorie', plan: 'Starter', reason: 'Echte Verwaltung spart Arbeit und rechtfertigt Abo.' },
+        { feature: 'Vereins-Cockpit, QR-Anwesenheit, Sponsoren, Mahnungen, Sportorte/Standorte', plan: 'Club', reason: 'Das sind operative Vereinsfunktionen mit dauerhaftem Nutzen.' },
+        { feature: 'Saisonplanung, Belastungssteuerung, SEPA, DATEV, Bankabgleich', plan: 'Pro', reason: 'Professionelle Verwaltung und Analyse für größere Vereine.' },
+        { feature: 'API, Multi-Standort, Audit, eigene Regeln', plan: 'Elite', reason: 'Braucht Support, Sicherheit und Sonderlogik.' },
+    ],
+    eltern: [
+        { feature: 'Kinderüberblick, Zustimmung, Widerruf, Sicherheit', plan: 'Free', reason: 'Kinderschutz und Vertrauen dürfen nicht hinter Paywall liegen.' },
+        { feature: 'Zahlungsübersicht, Termine, Vereinsinfos', plan: 'Free / Vereinsplan', reason: 'Hängt vom Verein ab, nicht vom Eltern-Abo.' },
+    ],
+    sponsor: [
+        { feature: 'Sponsorprofil, Vereinsplatzierungen, Kampagnen', plan: 'Sponsor Local', reason: 'B2B-Sichtbarkeit ist ein eigener Umsatzbereich.' },
+        { feature: 'Reporting, Laufzeiten, Zielgruppen, Conversion', plan: 'Sponsor Pro später', reason: 'Erweiterte Werbung braucht Messung und Support.' },
+    ],
+    anbieter: [
+        { feature: 'Marketplace-Profil, Produkte, Standorte, Abholung', plan: 'Anbieter Marketplace', reason: 'Anbieter nutzen Airmius kommerziell.' },
+        { feature: 'Premium-Platzierungen, Kampagnen, Auszahlungen', plan: 'Provision / Add-on', reason: 'Kosten entstehen durch Reichweite, Zahlung und Support.' },
+    ],
+    werbeagentur: [
+        { feature: 'Vereinswebsite, Landingpages, Kampagnen', plan: 'Angebot', reason: 'Umfang ist individuell und wird nicht pauschal bepreist.' },
+        { feature: 'SEO, Texte, Sponsorenbereiche, rechtliche Grundstruktur', plan: 'Angebot', reason: 'Projektarbeit mit Abnahme statt Standard-Abo.' },
+    ],
+    enterprise: [
+        { feature: 'Mandanten, Migration, Schnittstellen, SLA, AVV', plan: 'Enterprise', reason: 'Braucht Vertrag, Support und technische Begleitung.' },
+        { feature: 'Eigene Regeln, API, Audit, Datenexporte', plan: 'Enterprise', reason: 'Für Verbände und große Organisationen.' },
+    ],
+}
+
+const roadmap = [
+    { phase: '1', title: 'Vereins-Cockpit', plan: 'Club', text: 'Offene Anfragen, Rechnungen, SEPA-Lücken, Events, Speicher, Aufgaben und Schnellaktionen.' },
+    { phase: '2', title: 'Trainer-Cockpit', plan: 'Free im Verein / Trainer Pro', text: 'Heute anstehende Einheiten, offene Feedbacks, Teamform, Verletzungen und schnelle Dokumentation.' },
+    { phase: '3', title: 'QR-Anwesenheit', plan: 'Club', text: 'Check-in für Trainings und Events, manuelle Korrektur, Abwesenheitsgründe und Auswertung.' },
+    { phase: '4', title: 'Übungsbibliothek', plan: 'Free lesen / Pro verwalten', text: 'Airmius-Übungen, eigene Vereinsübungen, Medien, Ziele, Equipment und Risiken.' },
+    { phase: '5', title: 'Mitglieder-Onboarding', plan: 'Starter', text: 'Schrittweise Aufnahme mit Team, Beitrag, Einwilligungen, Elternlogik und Einladung.' },
+    { phase: '6', title: 'Saisonplanung', plan: 'Pro', text: 'Saisonphasen, Wochen, Ziele, Tests, Spiele/Wettkämpfe und Planfortschritt.' },
+    { phase: '7', title: 'Belastung & Risiko', plan: 'Pro', text: 'Umfang, Intensität, Regeneration, Verletzungswarnungen und klare Empfehlungen.' },
+    { phase: '8', title: 'KI + Airmius-Regeln', plan: 'Sportler Pro / Trainer Pro / Club Pro', text: 'KI erstellt, Airmius prüft Umfang, Pace, Regeneration, Risiko und Nachvollziehbarkeit.' },
+    { phase: '9', title: 'Verwaltung Plus', plan: 'Pro / Elite', text: 'Material, Hallen, Helfer, Medienrechte, Sponsoren-CRM, Vereinsberichte und Exporte.' },
+]
+
+const currentAccessRules = computed(() => accessRules[selectedAudience.value] || [])
+
 const formatPrice = (cents, currency = 'EUR') => {
     if (!cents) return `0 ${currency}`
 
@@ -325,6 +425,43 @@ const startCheckout = async () => {
                 </div>
             </section>
 
+            <section v-if="currentDecisionRows.length" class="mx-auto mt-6 max-w-7xl rounded-lg border border-border bg-card p-5">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Abo-Entscheidung</p>
+                        <h2 class="mt-1 text-2xl font-bold text-primary">Was bleibt frei, was gehört in Premium?</h2>
+                    </div>
+                    <p class="max-w-2xl text-sm leading-6 text-secondary">
+                        Die Tabelle macht die Produktlogik sichtbar: Basisnutzung bleibt niedrigschwellig, kostenintensive oder professionelle Funktionen werden begrenzt oder bezahlt.
+                    </p>
+                </div>
+
+                <div class="mt-5 overflow-hidden rounded-lg border border-border">
+                    <div class="hidden grid-cols-[1.1fr_0.8fr_0.8fr_1.4fr] gap-0 border-b border-border bg-bg px-4 py-3 text-xs font-semibold uppercase tracking-wide text-secondary md:grid">
+                        <span>Funktion</span>
+                        <span>Free/Basis</span>
+                        <span>Premium</span>
+                        <span>Warum?</span>
+                    </div>
+                    <div
+                        v-for="row in currentDecisionRows"
+                        :key="row.area"
+                        class="grid gap-3 border-b border-border px-4 py-4 text-sm last:border-b-0 md:grid-cols-[1.1fr_0.8fr_0.8fr_1.4fr] md:items-center"
+                    >
+                        <div>
+                            <p class="font-semibold text-primary">{{ row.area }}</p>
+                        </div>
+                        <span class="inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-semibold" :class="decisionPillClass(row.free.tone)">
+                            {{ row.free.label }}
+                        </span>
+                        <span class="inline-flex w-fit rounded-full border px-2.5 py-1 text-xs font-semibold" :class="decisionPillClass(row.premium.tone)">
+                            {{ row.premium.label }}
+                        </span>
+                        <p class="text-sm leading-6 text-secondary">{{ row.note }}</p>
+                    </div>
+                </div>
+            </section>
+
             <section class="mx-auto mt-8 max-w-7xl">
                 <div class="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
                     <aside class="rounded-lg border border-border bg-card p-6">
@@ -335,6 +472,12 @@ const startCheckout = async () => {
                             <p class="font-semibold text-primary">Produktregel</p>
                             <p class="mt-2">
                                 Airmius bleibt für Sportler und Eltern niedrigschwellig. Bezahlt wird dort, wo echte Verwaltung, Reichweite, Support oder Umsatz entsteht.
+                            </p>
+                        </div>
+                        <div v-if="currentAccessRules.length" class="mt-4 rounded-lg border border-air-blue/30 bg-air-blue/10 p-4 text-sm">
+                            <p class="font-semibold text-primary">Free oder Premium?</p>
+                            <p class="mt-2 text-secondary">
+                                Basis bleibt frei. Premium beginnt dort, wo Airmius Verwaltung automatisiert, externe Kosten erzeugt oder professionellen Support braucht.
                             </p>
                         </div>
                         <div v-if="selectedAudience === 'werbeagentur'" class="mt-4 rounded-lg border border-air-blue/40 bg-air-blue/10 p-4 text-sm text-secondary">
@@ -499,6 +642,57 @@ const startCheckout = async () => {
                             </div>
                         </article>
                     </div>
+                </div>
+            </section>
+
+            <section v-if="currentAccessRules.length" class="mx-auto mt-10 max-w-7xl rounded-lg border border-border bg-card p-5">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Funktionslogik</p>
+                        <h2 class="mt-1 text-2xl font-bold text-primary">Was ist kostenlos, was gehört in Premium?</h2>
+                    </div>
+                    <p class="max-w-2xl text-sm leading-6 text-secondary">
+                        Diese Einordnung ist die Grundlage für die nächsten Module. So bleibt Airmius fair für kleine Nutzer, aber tragfähig für Vereine, Trainer und Anbieter.
+                    </p>
+                </div>
+
+                <div class="mt-5 grid gap-3 lg:grid-cols-3">
+                    <article
+                        v-for="rule in currentAccessRules"
+                        :key="`${selectedAudience}-${rule.feature}`"
+                        class="rounded-lg border border-border bg-bg p-4"
+                    >
+                        <span class="inline-flex rounded-full bg-air-blue/10 px-2 py-1 text-xs font-semibold text-air-blue">{{ rule.plan }}</span>
+                        <h3 class="mt-3 text-base font-bold text-primary">{{ rule.feature }}</h3>
+                        <p class="mt-2 text-sm leading-6 text-secondary">{{ rule.reason }}</p>
+                    </article>
+                </div>
+            </section>
+
+            <section class="mx-auto mt-10 max-w-7xl rounded-lg border border-border bg-card p-5">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Ausbauplan</p>
+                        <h2 class="mt-1 text-2xl font-bold text-primary">Reihenfolge für die fehlenden Vereins- und Trainerfunktionen</h2>
+                    </div>
+                    <p class="max-w-2xl text-sm leading-6 text-secondary">
+                        Die Reihenfolge ist bewusst produktorientiert: erst Cockpits und Anwesenheit, danach Planung, Analyse und schwere Verwaltungsfunktionen.
+                    </p>
+                </div>
+
+                <div class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <article
+                        v-for="item in roadmap"
+                        :key="item.phase"
+                        class="rounded-lg border border-border bg-bg p-4"
+                    >
+                        <div class="flex items-start justify-between gap-3">
+                            <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-buttonPrimary text-sm font-bold text-buttonTextPrimary">{{ item.phase }}</span>
+                            <span class="rounded-full bg-inputBg px-2 py-1 text-xs font-semibold text-secondary">{{ item.plan }}</span>
+                        </div>
+                        <h3 class="mt-4 text-lg font-bold text-primary">{{ item.title }}</h3>
+                        <p class="mt-2 text-sm leading-6 text-secondary">{{ item.text }}</p>
+                    </article>
                 </div>
             </section>
         </main>

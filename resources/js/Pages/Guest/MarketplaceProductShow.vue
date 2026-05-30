@@ -600,6 +600,14 @@ const updateCountry = () => {
                                             {{ badge }}
                                         </span>
                                     </div>
+                                    <div v-if="product.provider_profile?.locations?.length" class="mt-4 space-y-2 rounded border border-border bg-card p-3">
+                                        <p class="text-xs font-black uppercase text-secondary">{{ $t('Abholung & Standorte') }}</p>
+                                        <div v-for="location in product.provider_profile.locations.slice(0, 3)" :key="location.id" class="text-xs text-secondary">
+                                            <p class="font-bold text-primary">{{ location.name }}</p>
+                                            <p>{{ location.address }}</p>
+                                            <p v-if="location.opening_hours">{{ location.opening_hours }}</p>
+                                        </div>
+                                    </div>
                                     <Link
                                         v-if="product.provider_profile?.url"
                                         :href="product.provider_profile.url"

@@ -713,6 +713,7 @@ class ClubMembershipController extends Controller
     public function importEmailMembers(Request $request, Club $club)
     {
         $this->authorize('update', $club);
+        $this->planFeatures->ensureAllows($club, 'member_import');
 
         $data = $request->validate([
             'file' => ['required', 'file', 'max:10240'],

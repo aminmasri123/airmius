@@ -175,6 +175,22 @@ const shortDescription = (text, length = 110) => {
                             <p class="mt-1 text-sm font-semibold text-primary">{{ provider.verified ? $t('Verifiziertes Profil') : $t('Marketplace-Anbieter') }}</p>
                         </div>
                     </div>
+                    <div v-if="provider.locations?.length" class="border-t border-border bg-bg/60 p-4">
+                        <p class="text-xs font-black uppercase tracking-wide text-secondary">{{ $t('Standorte & Abholung') }}</p>
+                        <div class="mt-3 grid gap-3 md:grid-cols-3">
+                            <article v-for="location in provider.locations" :key="location.id" class="rounded border border-border bg-card p-4">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <h3 class="font-black text-primary">{{ location.name }}</h3>
+                                        <p class="mt-1 text-sm text-secondary">{{ location.address }}</p>
+                                    </div>
+                                    <span v-if="location.pickup_enabled" class="rounded bg-buttonPrimary/10 px-2 py-1 text-[11px] font-black text-buttonPrimary">{{ $t('Abholung') }}</span>
+                                </div>
+                                <p v-if="location.opening_hours" class="mt-3 text-xs text-secondary">{{ location.opening_hours }}</p>
+                                <p v-if="location.note" class="mt-2 text-xs text-secondary">{{ location.note }}</p>
+                            </article>
+                        </div>
+                    </div>
                 </div>
             </section>
 

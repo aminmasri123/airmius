@@ -25,6 +25,12 @@ class AirmiusAiService
         $providers = $this->availableProviders();
         $feature = config('airmius_ai.features.nutrition_image_analysis', []);
         $trainingFeature = config('airmius_ai.features.training_plan_generation', []);
+        $nutritionImageEntitlement = $user ? $this->nutritionImageEntitlement($user) : [
+            'allowed' => false,
+            'reason' => 'KI-Bildanalyse ist eine Pro-Funktion.',
+            'tier' => 'unknown',
+            'label' => 'Unbekannt',
+        ];
         $trainingEntitlement = $user ? $this->trainingPlanEntitlement($user) : [
             'allowed' => true,
             'reason' => null,
@@ -51,9 +57,14 @@ class AirmiusAiService
                 'enabled' => (bool) ($feature['enabled'] ?? true),
                 'available' => (bool) config('airmius_ai.enabled', true)
                     && (bool) ($feature['enabled'] ?? true)
-                    && $providers !== [],
+                    && $providers !== []
+                    && (bool) $nutritionImageEntitlement['allowed'],
                 'primary_provider' => $feature['primary_provider'] ?? config('airmius_ai.primary_provider', 'google'),
                 'fallback_provider' => $feature['fallback_provider'] ?? config('airmius_ai.fallback_provider', 'openai'),
+                'tier' => $nutritionImageEntitlement['tier'],
+                'tier_label' => $nutritionImageEntitlement['label'],
+                'requires_premium' => ! (bool) $nutritionImageEntitlement['allowed'],
+                'access_reason' => $nutritionImageEntitlement['reason'],
             ],
             'training_plan_generation' => [
                 'enabled' => (bool) ($trainingFeature['enabled'] ?? true),
@@ -86,6 +97,12 @@ class AirmiusAiService
 
         if (! (bool) ($feature['enabled'] ?? true)) {
             throw new RuntimeException('KI-Bildanalyse ist aktuell deaktiviert.');
+        }
+
+        $entitlement = $this->nutritionImageEntitlement($user);
+
+        if (! $entitlement['allowed']) {
+            throw new RuntimeException($entitlement['reason'] ?: 'KI-Bildanalyse ist für dein Konto nicht freigeschaltet.');
         }
 
         $preparedImage = $this->images->prepareForVision($image);
@@ -741,6 +758,36 @@ PROMPT;
             'monthly_used' => $used,
             'monthly_remaining' => $remaining,
             'max_weeks' => $tier['max_weeks'],
+        ];
+    }
+
+    private function nutritionImageEntitlement(User $user): array
+    {
+        if ($user->hasAnyRole(Roles::FULL_ACCESS)) {
+            return [
+                'allowed' => true,
+                'reason' => null,
+                'tier' => 'admin',
+                'label' => 'Admin',
+            ];
+        }
+
+        $slugs = $this->activeSubscriptionSlugs($user);
+
+        if ($slugs->intersect(['sportler-pro', 'trainer-pro', 'club', 'pro', 'elite'])->isNotEmpty()) {
+            return [
+                'allowed' => true,
+                'reason' => null,
+                'tier' => 'pro',
+                'label' => 'Pro',
+            ];
+        }
+
+        return [
+            'allowed' => false,
+            'reason' => 'KI-Bildanalyse für Mahlzeiten ist in Sportler Pro, Trainer Pro oder einem Vereins-Pro-Plan enthalten.',
+            'tier' => 'free',
+            'label' => 'Free',
         ];
     }
 

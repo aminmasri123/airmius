@@ -17,6 +17,8 @@ use App\Models\LearningEnrollment;
 use App\Models\MarketplacePayout;
 use App\Models\MarketplaceProduct;
 use App\Models\MarketplaceProductInventory;
+use App\Models\MarketplaceProviderLocation;
+use App\Models\MarketplaceProviderProfile;
 use App\Models\MarketplaceSellerApplication;
 use App\Models\PayoutProfile;
 use App\Models\Setting;
@@ -47,8 +49,12 @@ class AdminCommerceController extends Controller
         private CommerceDocumentService $documents,
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
+        $providerProfile = MarketplaceProviderProfile::query()
+            ->where('user_id', $request->user()->id)
+            ->first();
+
         return Inertia::render('Auth/Dashboard/Admin/Commerce/Index', [
             'summary' => [
                 'revenue_cents' => SubscriptionInvoice::query()->where('status', 'paid')->sum('amount_cents'),
@@ -148,6 +154,8 @@ class AdminCommerceController extends Controller
                 ->get(),
             'ossReport' => $this->ossReport(),
             'sellerReports' => $this->sellerReports(),
+            'providerProfile' => $this->marketplaceProviderProfileResource($providerProfile, $request->user()),
+            'providerLocations' => $this->providerLocationsForProfile($providerProfile),
             'commerceSettings' => [
                 'company_country' => Setting::valueFor('commerce_company_country', 'DE'),
                 'company_currency' => Setting::valueFor('commerce_company_currency', 'EUR'),
@@ -1904,5 +1912,66 @@ class AdminCommerceController extends Controller
                 'default' => '',
             ],
         ];
+    }
+
+    private function marketplaceProviderProfileResource(?MarketplaceProviderProfile $profile, User $user): array
+    {
+        return [
+            'id' => $profile?->id,
+            'display_name' => $profile?->display_name ?: $user->name,
+            'legal_name' => $profile?->legal_name,
+            'provider_type' => $profile?->provider_type ?: 'business',
+            'support_email' => $profile?->support_email ?: $user->email,
+            'phone' => $profile?->phone,
+            'website' => $profile?->website,
+            'logo_url' => $profile?->logo_url,
+            'public_description' => $profile?->public_description,
+            'legal_country' => $profile?->legal_country ?: 'DE',
+            'legal_state' => $profile?->legal_state,
+            'legal_postal_code' => $profile?->legal_postal_code,
+            'legal_city' => $profile?->legal_city,
+            'legal_street' => $profile?->legal_street,
+            'legal_house_number' => $profile?->legal_house_number,
+            'show_public_address' => (bool) ($profile?->show_public_address ?? false),
+            'show_support_email' => (bool) ($profile?->show_support_email ?? true),
+            'show_phone' => (bool) ($profile?->show_phone ?? false),
+            'status' => $profile?->status ?: 'draft',
+        ];
+    }
+
+    private function providerLocationsForProfile(?MarketplaceProviderProfile $profile): array
+    {
+        if (! $profile) {
+            return [];
+        }
+
+        return $profile->locations()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (MarketplaceProviderLocation $location) => [
+                'id' => $location->id,
+                'name' => $location->name,
+                'type' => $location->type,
+                'country' => $location->country,
+                'state' => $location->state,
+                'postal_code' => $location->postal_code,
+                'city' => $location->city,
+                'street' => $location->street,
+                'house_number' => $location->house_number,
+                'opening_hours' => $location->opening_hours,
+                'note' => $location->note,
+                'phone' => $location->phone,
+                'email' => $location->email,
+                'image_url' => $location->image_url,
+                'latitude' => $location->latitude,
+                'longitude' => $location->longitude,
+                'pickup_enabled' => (bool) $location->pickup_enabled,
+                'returns_enabled' => (bool) $location->returns_enabled,
+                'is_public' => (bool) $location->is_public,
+                'address' => $location->addressSummary(),
+            ])
+            ->values()
+            ->all();
     }
 }

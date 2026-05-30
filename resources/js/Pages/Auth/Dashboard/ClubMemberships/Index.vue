@@ -1380,7 +1380,7 @@ const inviteExternalMember = (member) => {
                     v-if="capabilities.member_invitation_daily_limit"
                     class="mt-2 rounded-lg border border-border bg-bg px-3 py-2 text-xs font-semibold text-secondary"
                 >
-                    Free-Limit: {{ capabilities.member_invitation_remaining_today }} von {{ capabilities.member_invitation_daily_limit }} Einladungen heute ?brig.
+                    Free-Limit: {{ capabilities.member_invitation_remaining_today }} von {{ capabilities.member_invitation_daily_limit }} Einladungen heute übrig.
                 </p>
 
                 <form class="mt-5 space-y-4" @submit.prevent="addEmailMember">
