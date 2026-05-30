@@ -165,7 +165,7 @@ class ExternalProviderUsageService
     {
         return [
             $this->limitCard('Kartenaufrufe', $metrics['map_loads'], 50000, 'Map Loads', 'Kosten steigen, wenn sehr viele Nutzer die Sportkarte laden.'),
-            $this->limitCard('Routenplanung', $metrics['routing_requests'], 100000, 'Requests', 'Jede neu berechnete Route zaehlt. Gespeicherte Routen sparen Geld.'),
+            $this->limitCard('Routenplanung', $metrics['routing_requests'], (int) config('provider_costs.routing_monthly_alert_limit', 15000), 'Credits/Requests', 'GraphHopper Free ist nur fuer Entwicklung gedacht. Gespeicherte Routen sparen Credits und Geld.'),
             $this->limitCard('Navigation', $metrics['navigation_trips'], 1000, 'Trips', 'Echte Live-Navigation kostet pro Nutzer und pro Trip.'),
             [
                 'label' => 'KI-Nutzung',
@@ -204,7 +204,7 @@ class ExternalProviderUsageService
                 'graphhopper_standard',
                 'openrouteservice_standard',
                 'self_hosted_routing',
-            ], 'mapbox_directions'),
+            ], 'graphhopper_basic'),
             $this->navigationComparison($metrics),
             $this->aiTextComparison($metrics),
             $this->comparison('KI-Bildanalyse', 'ai', $metrics['ai_image_requests'], ['google_vision_image', 'ionos_vision_image', 'openai_vision_image', 'ai_image'], 'google_vision_image'),
@@ -423,11 +423,11 @@ class ExternalProviderUsageService
     {
         $items = [];
 
-        if ($metrics['routing_requests'] >= 80000) {
+        if ($metrics['routing_requests'] >= 12000) {
             $items[] = [
                 'level' => 'warning',
-                'title' => 'Mapbox Directions Free-Tier wird eng',
-                'body' => 'Ab 80.000 Routen-Requests pro Monat solltest du Caching, Pro-Limits und GraphHopper/eigene Infrastruktur prüfen.',
+                'title' => 'GraphHopper Free/Dev wird eng',
+                'body' => 'Ab etwa 12.000 Routing-Credits pro Monat solltest du auf GraphHopper Basic/Standard wechseln oder eigene Infrastruktur pruefen.',
             ];
         }
 

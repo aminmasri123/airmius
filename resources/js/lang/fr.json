@@ -375,7 +375,356 @@
       "team_performance_hint": "Optionnel : charge de match, sprint, endurance et détente aident à gérer la charge et l'athlétisme."
     },
     "header_subtitle": "Gérer le profil, la sécurité, le design et l’adresse.",
-    "language_description": "Choisis la langue de la navigation, des pages et des commandes."
+    "language_description": "Choisis la langue de la navigation, des pages et des commandes.",
+    "actions": {
+      "save": "Enregistrer",
+      "saved": "Enregistré.",
+      "cancel": "Annuler",
+      "back": "Retour",
+      "delete": "Supprimer",
+      "remove": "Retirer",
+      "close": "Fermer",
+      "rename": "Renommer"
+    },
+    "profile": {
+      "title": "Informations du profil",
+      "description": "Mets à jour les informations de ton profil et ton adresse e-mail.",
+      "saved": "Les informations du profil ont été enregistrées.",
+      "save_failed": "Les informations du profil n’ont pas pu être enregistrées. Vérifie tes saisies.",
+      "photo": "Photo",
+      "select_new_photo": "Choisir une nouvelle photo",
+      "remove_photo": "Supprimer la photo",
+      "first_name": "Prénom",
+      "last_name": "Nom",
+      "email": "E-mail",
+      "email_unverified": "Ton adresse e-mail n’est pas encore vérifiée.",
+      "resend_verification": "Renvoyer l’e-mail de vérification.",
+      "verification_sent": "Un nouveau lien de vérification a été envoyé à ton adresse e-mail.",
+      "profile_visibility": "Visibilité du profil",
+      "visibility_public": "Public",
+      "visibility_private": "Privé",
+      "license_number": "Numéro de licence",
+      "license_placeholder": "p. ex. numéro de fédération ou de joueur",
+      "license_help": "Tu peux gérer ce numéro toi-même. Les clubs peuvent le voir pour t’identifier si ton profil leur est visible.",
+      "bio": "Bio"
+    },
+    "security": {
+      "update_password": "Mettre à jour le mot de passe",
+      "update_password_description": "Utilise un mot de passe long et aléatoire pour sécuriser ton compte.",
+      "current_password": "Mot de passe actuel",
+      "new_password": "Nouveau mot de passe",
+      "confirm_password": "Confirmer le mot de passe",
+      "two_factor_title": "Authentification à deux facteurs",
+      "two_factor_description": "Ajoute une sécurité supplémentaire à ton compte.",
+      "two_factor_enabled": "Tu as activé l’authentification à deux facteurs.",
+      "two_factor_finish": "Termine l’activation de l’authentification à deux facteurs.",
+      "two_factor_not_enabled": "Tu n’as pas encore activé l’authentification à deux facteurs.",
+      "two_factor_body": "Quand l’authentification à deux facteurs est active, un jeton sécurisé et aléatoire te sera demandé à la connexion. Tu peux l’obtenir avec une application d’authentification.",
+      "two_factor_qr_confirm": "Pour terminer l’activation, scanne le QR code avec ton application d’authentification ou saisis la clé de configuration, puis confirme le code généré.",
+      "two_factor_qr_enabled": "L’authentification à deux facteurs est maintenant active. Scanne le QR code ou conserve la clé de configuration.",
+      "setup_key": "Clé de configuration",
+      "code": "Code",
+      "recovery_codes_help": "Conserve ces codes de récupération dans un endroit sûr. Ils permettent d’accéder au compte si ton appareil est perdu.",
+      "enable": "Activer",
+      "confirm": "Confirmer",
+      "regenerate_recovery_codes": "Regénérer les codes de récupération",
+      "show_recovery_codes": "Afficher les codes de récupération",
+      "disable": "Désactiver"
+    },
+    "sessions": {
+      "title": "Sessions de navigateur",
+      "description": "Gère les sessions actives sur d’autres navigateurs et appareils.",
+      "body": "Si nécessaire, tu peux te déconnecter de tous les autres appareils. Certaines sessions récentes sont listées ci-dessous, mais la liste peut être incomplète. Si tu penses que ton compte a été compromis, change aussi ton mot de passe.",
+      "unknown": "Inconnu",
+      "this_device": "Cet appareil",
+      "last_active": "Dernière activité {time}",
+      "logout_button": "Déconnecter les autres sessions",
+      "done": "Terminé.",
+      "modal_title": "Déconnecter les autres sessions",
+      "modal_content": "Saisis ton mot de passe pour confirmer la déconnexion sur tous les autres appareils.",
+      "password_placeholder": "Mot de passe"
+    },
+    "delete_account": {
+      "title": "Supprimer le compte",
+      "description": "Supprimer définitivement ton compte.",
+      "body": "Après la suppression de ton compte, toutes les ressources et données seront supprimées définitivement. Télécharge auparavant les données que tu souhaites conserver.",
+      "modal_title": "Supprimer le compte",
+      "identity_email": "Es-tu sûr de vouloir supprimer ton compte ? Après la suppression, toutes les ressources et données seront supprimées définitivement. Saisis ton adresse e-mail. Nous t’enverrons ensuite un code de confirmation.",
+      "identity_password": "Es-tu sûr de vouloir supprimer ton compte ? Après la suppression, toutes les ressources et données seront supprimées définitivement. Saisis ton mot de passe. Nous t’enverrons ensuite un code de confirmation par e-mail.",
+      "code_sent": "Nous avons envoyé un code de confirmation à ton adresse e-mail. Saisis-le pour supprimer définitivement ton compte.",
+      "password_placeholder": "Mot de passe",
+      "code_placeholder": "Code de confirmation",
+      "send_code": "Envoyer le code"
+    },
+    "design": {
+      "title": "Design",
+      "themes": {
+        "air": "Clair, léger et concentré.",
+        "dark": "Concentré pour les sessions tardives.",
+        "womanly": "Chaleureux, fort et élégant.",
+        "champion": "Énergie dorée pour les gagnants.",
+        "sprint": "Frais, rapide et actif.",
+        "arena": "Calme, robuste et professionnel.",
+        "pulse": "Dynamique et motivant.",
+        "trail": "Naturel, endurant et ancré.",
+        "bazaar": "Vivant, commercial et frais pour les parcours marketplace."
+      }
+    },
+    "address": {
+      "title": "Adresse",
+      "saved": "Adresse enregistrée avec succès.",
+      "save_failed": "L’adresse n’a pas pu être enregistrée. Vérifie tes saisies.",
+      "country": "Pays",
+      "countries": {
+        "DE": "Allemagne",
+        "AT": "Autriche",
+        "CH": "Suisse",
+        "FR": "France",
+        "NL": "Pays-Bas",
+        "BE": "Belgique",
+        "TR": "Turquie"
+      },
+      "city": "Ville",
+      "postal_code": "Code postal",
+      "state": "Région",
+      "street": "Rue",
+      "house_number": "Numéro",
+      "event_defaults": "Valeurs par défaut des événements",
+      "event_defaults_description": "Ces valeurs sont utilisées automatiquement pour ta liste d’événements tant que tu n’y définis pas de filtres spécifiques.",
+      "event_zone": "Zone d’événements",
+      "event_zone_help": "Actuellement basée sur l’adresse, le code postal, la ville ou l’adresse du club.",
+      "event_sports": "Sports pour les suggestions d’événements",
+      "sport_fallback": "Sport",
+      "save_button": "Enregistrer l’adresse et les valeurs par défaut"
+    },
+    "privacy": {
+      "title": "Confidentialité",
+      "description": "Définis qui peut voir ton profil, te contacter directement ou t’envoyer des demandes d’ami.",
+      "profile_visibility": "Visibilité du profil",
+      "profile_visibility_help": "Ce réglage contrôle si d’autres personnes peuvent voir ton profil et son contenu.",
+      "direct_messages": "Recevoir des messages",
+      "friend_requests": "Recevoir des demandes d’ami",
+      "ads_title": "Publicités et mesure",
+      "ads_description": "Sans consentement, nous affichons uniquement des publicités contextuelles et ne stockons aucun signal de reciblage personnalisé.",
+      "ads_personalization": "Autoriser les publicités personnalisées",
+      "ads_personalization_help": "Utilise par exemple les intérêts précédents du marketplace pour afficher des publicités plus pertinentes.",
+      "ads_measurement": "Autoriser la mesure des conversions",
+      "ads_measurement_help": "Associe les clics à des événements de campagne anonymisés comme le paiement ou l’achat.",
+      "save_button": "Enregistrer la confidentialité",
+      "options": {
+        "public": "Toutes les personnes connectées",
+        "private": "Seulement moi, mes amis et mes abonnés",
+        "everyone": "Toutes les personnes connectées",
+        "friends": "Amis uniquement"
+      }
+    },
+    "roles": {
+      "title": "Mes rôles",
+      "description": "Tu vois ici les rôles de plateforme actuellement attribués à ton compte.",
+      "count": "{count} rôles",
+      "no_description": "Aucune description disponible.",
+      "empty": "Aucun rôle n’est encore attribué à ton compte.",
+      "names": {
+        "player": "Sportif",
+        "club_owner": "Propriétaire de club",
+        "super_admin": "Super admin"
+      },
+      "descriptions": {
+        "player": "Joueur",
+        "club_owner": "Propriétaire d’un club",
+        "super_admin": "Administrateur système global avec accès complet"
+      }
+    },
+    "activities": {
+      "title": "Mes activités",
+      "description": "Seules les actions créées par ton propre compte apparaissent ici.",
+      "count": "{count} entrées",
+      "empty": "Aucune activité personnelle pour le moment.",
+      "personal": "Personnel",
+      "types": {
+        "post": {
+          "created": "Publication créée",
+          "updated": "Publication mise à jour",
+          "deleted": "Publication supprimée",
+          "commented": "Publication commentée"
+        },
+        "user": {
+          "followed": "Personne suivie"
+        },
+        "friend": {
+          "requested": "Demande d’ami envoyée",
+          "accepted": "Ami accepté"
+        },
+        "comment": {
+          "created": "Commentaire écrit",
+          "updated": "Commentaire modifié",
+          "deleted": "Commentaire supprimé"
+        }
+      }
+    },
+    "billing": {
+      "invoice_reference": "Facture {id}",
+      "this_subscription": "cet abonnement",
+      "subscriptions_title": "Mes abonnements Airmius",
+      "subscriptions_description": "Plans Airmius personnels et périodes en cours.",
+      "airmius_subscription": "Abonnement Airmius",
+      "payment_portal": "Portail de paiement",
+      "payment_portal_inactive": "Le portail de paiement n’est pas actif pour cet abonnement pour le moment.",
+      "cancel": "Résilier",
+      "payment_method": "Moyen de paiement",
+      "runs_until": "Valable jusqu’au",
+      "cancelled_at": "Résilié le",
+      "no_subscription": "Tu n’as pas encore d’abonnement Airmius personnel.",
+      "subscription_invoices_title": "Factures d’abonnement Airmius",
+      "subscription_invoices_description": "Factures des plans Airmius et abonnements plateforme.",
+      "bank_details": "Coordonnées bancaires",
+      "bank_details_missing": "Coordonnées bancaires manquantes",
+      "no_subscription_invoices": "Aucune facture d’abonnement Airmius pour le moment.",
+      "my_invoices_title": "Mes factures",
+      "my_invoices_description": "Tu vois ici les cotisations de club ouvertes et payées.",
+      "no_invoices": "Aucune facture pour le moment.",
+      "payment_history_title": "Historique des paiements",
+      "no_payments": "Aucun paiement marqué pour le moment.",
+      "bank_transfer_title": "Payer par virement",
+      "bank_transfer_description": "Utilise ces informations pour ton virement bancaire.",
+      "statuses": {
+        "open": "Ouvert",
+        "awaiting_transfer": "En attente de virement",
+        "paid": "Payé",
+        "overdue": "En retard",
+        "cancelled": "Annulé",
+        "active": "Actif",
+        "trialing": "Essai",
+        "past_due": "Paiement dû",
+        "cancels_at_period_end": "Résilié en fin de période"
+      },
+      "bank": {
+        "recipient": "Bénéficiaire",
+        "account_holder": "Titulaire du compte",
+        "bank": "Banque",
+        "amount": "Montant",
+        "reference": "Référence"
+      },
+      "open_payment": {
+        "delete_title": "Supprimer le paiement ouvert",
+        "cancel_title": "Annuler le paiement ouvert",
+        "delete_message": "Le paiement ouvert{number} sera supprimé définitivement. Cela n’est possible que pour les paiements impayés et non activés.",
+        "cancel_message": "Le paiement ouvert{number} sera annulé et marqué comme annulé."
+      },
+      "cancel_subscription": {
+        "title": "Résilier l’abonnement",
+        "message": "Veux-tu résilier ton {plan} à la fin de la période en cours ? {end}",
+        "ends_at": "Il se termine le {date}.",
+        "confirm": "résilier"
+      },
+      "table": {
+        "number": "N°",
+        "plan": "Plan",
+        "club": "Club",
+        "amount": "Montant",
+        "due": "Échéance",
+        "status": "Statut",
+        "pay": "Payer",
+        "action": "Action",
+        "title": "Titre",
+        "date": "Date",
+        "invoice": "Facture"
+      }
+    },
+    "integrations": {
+      "login_title": "Connexions de login",
+      "login_description": "Utilise Google ou Outlook pour une connexion rapide.",
+      "not_connected": "Pas encore connecté",
+      "connected": "Connecté",
+      "connect": "Connecter",
+      "sport_apps_title": "Synchroniser les applications sportives",
+      "sport_apps_description": "Connecte des applications sportives pour que les données d’entraînement puissent ensuite alimenter ton profil Airmius.",
+      "last_synced": "Dernière synchronisation : {date}",
+      "google_status": "Statut Google :",
+      "google_error": "Erreur Google :",
+      "day_ranges": "Plages journalières :",
+      "request": "Demander",
+      "check_sync": "Vérifier la synchro",
+      "statuses": {
+        "connected": "Connecté",
+        "requested": "Demandé",
+        "disconnected": "Déconnecté",
+        "error": "Erreur"
+      },
+      "providers": {
+        "manual": "Manuel",
+        "google_fit": "Google Fit",
+        "strava": "Strava",
+        "garmin": "Garmin",
+        "mi_fitness": "Mi Fitness",
+        "fitbit": "Fitbit",
+        "polar": "Polar"
+      },
+      "provider_descriptions": {
+        "strava": "Strava connecte les données de course, vélo, natation et entraînement via l’API OAuth officielle.",
+        "garmin": "L’API Garmin Health nécessite une validation fournisseur. Les utilisateurs peuvent marquer leur intérêt jusqu’à l’activation du partenariat.",
+        "google_fit": "Connexion via Google OAuth. L’import d’activités sera construit ensuite sur les jetons enregistrés.",
+        "mi_fitness": "Mi Fitness n’a pas d’intégration OAuth standard simple dans le projet. La connexion est marquée comme souhaitée.",
+        "polar": "Polar AccessLink fournit des données d’entraînement et d’activité via OAuth/API. L’intégration est marquée comme souhaitée.",
+        "fitbit": "L’API Web Fitbit peut fournir activités, pas, distance, calories et données de santé via OAuth. L’intégration est marquée comme souhaitée."
+      },
+      "disconnect": {
+        "title": "Retirer l’application sportive",
+        "message": "Es-tu sûr de vouloir retirer cette connexion d’application sportive ? Les jetons enregistrés seront supprimés et l’application devra être reconnectée."
+      },
+      "manual_activity": {
+        "title": "Ajouter manuellement",
+        "description": "Ajoute tes propres séances même si aucune application sportive n’est connectée.",
+        "save": "Enregistrer l’entraînement",
+        "name": "Nom",
+        "name_placeholder": "p. ex. séance de course",
+        "sport_type": "Sport",
+        "date_time": "Date et heure",
+        "image": "Image",
+        "duration_minutes": "Durée en minutes",
+        "distance_km": "Distance en km",
+        "calories": "Calories",
+        "types": {
+          "Training": "Entraînement",
+          "Laufen": "Course",
+          "Radfahren": "Cyclisme",
+          "Schwimmen": "Natation",
+          "Fußball": "Football",
+          "Fitness": "Fitness",
+          "Krafttraining": "Musculation",
+          "Yoga": "Yoga",
+          "Gehen": "Marche",
+          "Sonstiges": "Autre"
+        }
+      },
+      "activities": {
+        "title": "Activités importées",
+        "delete_all": "Tout supprimer",
+        "empty": "Aucune activité importée pour le moment.",
+        "daily_activity": "Activité quotidienne",
+        "manual_entry": "Saisi manuellement",
+        "daily_summary": "Résumé quotidien",
+        "active_minutes": "{minutes} minutes actives",
+        "start_about": "Début vers {time}",
+        "delete_all_title": "Supprimer toutes les activités importées",
+        "delete_title": "Supprimer l’activité importée",
+        "delete_all_message": "Toutes les activités sportives importées seront supprimées définitivement de ton compte Airmius. La connexion à Google Fit ou à d’autres applications reste active.",
+        "delete_message": "Cette activité sportive importée sera supprimée définitivement de ton compte Airmius.",
+        "rename_title": "Renommer l’activité",
+        "rename_description": "Le nouveau nom est enregistré uniquement dans Airmius.",
+        "table": {
+          "image": "Image",
+          "date": "Date",
+          "time": "Heure",
+          "source": "Source",
+          "sport_type": "Sport",
+          "duration": "Durée",
+          "distance": "Distance",
+          "calories": "Calories",
+          "action": "Action"
+        }
+      }
+    }
   },
   "common": {
     "all": "Tout",
@@ -2891,6 +3240,21 @@
   "Kategorie:": "Catégorie :",
   "Bereich:": "Section :",
   "Alle Bereiche": "Toutes les sections",
+  "Analyse": "Analyse",
+  "Pläne & Kurse": "Plans et cours",
+  "Running": "Course",
+  "Teamsport": "Sport collectif",
+  "Neueste": "Plus récents",
+  "Preis aufsteigend": "Prix croissant",
+  "Preis absteigend": "Prix décroissant",
+  "Alle Verfügbarkeiten": "Toutes les disponibilités",
+  "Sofort verfügbar": "Disponible immédiatement",
+  "Versandartikel": "Articles expédiés",
+  "Direkt bestellen, Konto optional.": "Commander directement, compte facultatif.",
+  "Brutto, netto, Steuer und Versand werden ausgewiesen.": "Brut, net, taxes et livraison sont affichés clairement.",
+  "Verein, Trainer oder Shop bleiben klar erkennbar.": "Le club, le coach ou la boutique restent clairement identifiables.",
+  "Bestellstatus": "Statut de commande",
+  "Updates und Belege werden per E-Mail zugestellt.": "Les mises à jour et justificatifs sont envoyés par e-mail.",
   "Status:": "Statut :",
   "Aktiv:": "Actif :",
   "brutto": "TTC",

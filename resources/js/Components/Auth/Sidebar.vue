@@ -50,6 +50,7 @@ const canAdmin = computed(() => hasAny([
     'blog.manage',
     'payments.view',
     'invoices.view',
+    'operating-contracts.view',
     'subscriptions.view',
     'outfit-subscriptions.manage',
     'sponsors.view',
@@ -199,6 +200,7 @@ const closeSidebar = () => {
                 <NavItem v-if="can('blog.view')" @navigate="closeSidebar" :href="route('admin.media-guidelines.index')" label="Bildmasse" icon="las la-ruler-combined" />
                 <NavItem v-if="can('payments.view')" @navigate="closeSidebar" :href="route('payments.index')" label="Payments" icon="las la-credit-card" />
                 <NavItem v-if="can('invoices.view')" @navigate="closeSidebar" :href="route('invoices.index')" label="Invoices" icon="las la-file-invoice" />
+                <NavItem v-if="can('operating-contracts.view')" @navigate="closeSidebar" :href="route('admin.operating-contracts.index')" label="Betriebskosten" icon="las la-file-contract" />
                 <NavItem v-if="can('subscriptions.view')" @navigate="closeSidebar" :href="route('admin.subscriptions.index')" label="Abos" icon="las la-tags" />
                 <NavItem v-if="can('subscriptions.view')" @navigate="closeSidebar" :href="route('admin.subscription-invoices.index')" label="Abo-Rechnungen" icon="las la-receipt" />
                 <NavItem v-if="can('subscriptions.view')" @navigate="closeSidebar" :href="route('admin.commerce.index')" label="Commerce" icon="las la-chart-line" />

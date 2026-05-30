@@ -374,7 +374,356 @@
       }
     },
     "header_subtitle": "Profil, Sicherheit, Design und Adresse verwalten.",
-    "language_description": "Wähle die Sprache für Navigation, Seiten und Bedienelemente."
+    "language_description": "Wähle die Sprache für Navigation, Seiten und Bedienelemente.",
+    "actions": {
+      "save": "Speichern",
+      "saved": "Gespeichert.",
+      "cancel": "Abbrechen",
+      "back": "Zurück",
+      "delete": "Löschen",
+      "remove": "Entfernen",
+      "close": "Schließen",
+      "rename": "Umbenennen"
+    },
+    "profile": {
+      "title": "Profilinformationen",
+      "description": "Aktualisiere die Profilinformationen und E-Mail-Adresse deines Kontos.",
+      "saved": "Profilinformationen wurden gespeichert.",
+      "save_failed": "Profilinformationen konnten nicht gespeichert werden. Bitte prüfe die Eingaben.",
+      "photo": "Foto",
+      "select_new_photo": "Neues Foto auswählen",
+      "remove_photo": "Foto entfernen",
+      "first_name": "Vorname",
+      "last_name": "Nachname",
+      "email": "E-Mail",
+      "email_unverified": "Deine E-Mail-Adresse ist noch nicht bestätigt.",
+      "resend_verification": "Bestätigungs-E-Mail erneut senden.",
+      "verification_sent": "Ein neuer Bestätigungslink wurde an deine E-Mail-Adresse gesendet.",
+      "profile_visibility": "Profil-Sichtbarkeit",
+      "visibility_public": "Öffentlich",
+      "visibility_private": "Privat",
+      "license_number": "Lizenznummer",
+      "license_placeholder": "z. B. Verbands- oder Spielerpassnummer",
+      "license_help": "Diese Nummer kannst du selbst pflegen. Vereine können sie zur Zuordnung sehen, wenn dein Profil für sie sichtbar ist.",
+      "bio": "Bio"
+    },
+    "security": {
+      "update_password": "Passwort aktualisieren",
+      "update_password_description": "Verwende ein langes, zufälliges Passwort, damit dein Konto sicher bleibt.",
+      "current_password": "Aktuelles Passwort",
+      "new_password": "Neues Passwort",
+      "confirm_password": "Passwort bestätigen",
+      "two_factor_title": "Zwei-Faktor-Authentifizierung",
+      "two_factor_description": "Füge deinem Konto eine zusätzliche Sicherheitsebene hinzu.",
+      "two_factor_enabled": "Du hast die Zwei-Faktor-Authentifizierung aktiviert.",
+      "two_factor_finish": "Schließe die Aktivierung der Zwei-Faktor-Authentifizierung ab.",
+      "two_factor_not_enabled": "Du hast die Zwei-Faktor-Authentifizierung noch nicht aktiviert.",
+      "two_factor_body": "Wenn die Zwei-Faktor-Authentifizierung aktiv ist, wirst du bei der Anmeldung nach einem sicheren, zufälligen Token gefragt. Du kannst diesen Token über eine Authenticator-App abrufen.",
+      "two_factor_qr_confirm": "Scanne zum Abschluss den folgenden QR-Code mit deiner Authenticator-App oder gib den Einrichtungsschlüssel ein und bestätige den erzeugten Code.",
+      "two_factor_qr_enabled": "Die Zwei-Faktor-Authentifizierung ist jetzt aktiv. Scanne den QR-Code oder speichere den Einrichtungsschlüssel.",
+      "setup_key": "Einrichtungsschlüssel",
+      "code": "Code",
+      "recovery_codes_help": "Speichere diese Wiederherstellungscodes an einem sicheren Ort. Sie ermöglichen Zugriff, falls dein Gerät verloren geht.",
+      "enable": "Aktivieren",
+      "confirm": "Bestätigen",
+      "regenerate_recovery_codes": "Wiederherstellungscodes neu erstellen",
+      "show_recovery_codes": "Wiederherstellungscodes anzeigen",
+      "disable": "Deaktivieren"
+    },
+    "sessions": {
+      "title": "Browser-Sitzungen",
+      "description": "Verwalte aktive Sitzungen auf anderen Browsern und Geräten.",
+      "body": "Falls nötig, kannst du dich auf allen anderen Geräten abmelden. Einige deiner letzten Sitzungen sind unten aufgeführt, die Liste kann jedoch unvollständig sein. Wenn du vermutest, dass dein Konto kompromittiert wurde, solltest du auch dein Passwort ändern.",
+      "unknown": "Unbekannt",
+      "this_device": "Dieses Gerät",
+      "last_active": "Zuletzt aktiv {time}",
+      "logout_button": "Andere Browser-Sitzungen abmelden",
+      "done": "Erledigt.",
+      "modal_title": "Andere Browser-Sitzungen abmelden",
+      "modal_content": "Bitte gib dein Passwort ein, um zu bestätigen, dass du dich auf allen anderen Geräten abmelden möchtest.",
+      "password_placeholder": "Passwort"
+    },
+    "delete_account": {
+      "title": "Konto löschen",
+      "description": "Lösche dein Konto dauerhaft.",
+      "body": "Nachdem dein Konto gelöscht wurde, werden alle Ressourcen und Daten dauerhaft entfernt. Lade vorher alle Daten herunter, die du behalten möchtest.",
+      "modal_title": "Konto löschen",
+      "identity_email": "Bist du sicher, dass du dein Konto löschen möchtest? Nach dem Löschen werden alle Ressourcen und Daten dauerhaft entfernt. Bitte gib deine E-Mail-Adresse ein. Danach senden wir dir einen Bestätigungscode.",
+      "identity_password": "Bist du sicher, dass du dein Konto löschen möchtest? Nach dem Löschen werden alle Ressourcen und Daten dauerhaft entfernt. Bitte gib dein Passwort ein. Danach senden wir dir einen Bestätigungscode per E-Mail.",
+      "code_sent": "Wir haben einen Bestätigungscode an deine E-Mail-Adresse gesendet. Gib den Code ein, um dein Konto dauerhaft zu löschen.",
+      "password_placeholder": "Passwort",
+      "code_placeholder": "Bestätigungscode",
+      "send_code": "Code senden"
+    },
+    "design": {
+      "title": "Design",
+      "themes": {
+        "air": "Klar, leicht und fokussiert.",
+        "dark": "Konzentriert für späte Sessions.",
+        "womanly": "Warm, stark und elegant.",
+        "champion": "Goldene Energie für Gewinner.",
+        "sprint": "Frisch, schnell und aktiv.",
+        "arena": "Ruhig, robust und professionell.",
+        "pulse": "Dynamisch und motivierend.",
+        "trail": "Natürlich, ausdauernd und bodenständig.",
+        "bazaar": "Lebendig, verkaufsstark und frisch für Marketplace-Flows."
+      }
+    },
+    "address": {
+      "title": "Adresse",
+      "saved": "Adresse wurde erfolgreich gespeichert.",
+      "save_failed": "Adresse konnte nicht gespeichert werden. Bitte prüfe die Eingaben.",
+      "country": "Land",
+      "countries": {
+        "DE": "Deutschland",
+        "AT": "Österreich",
+        "CH": "Schweiz",
+        "FR": "Frankreich",
+        "NL": "Niederlande",
+        "BE": "Belgien",
+        "TR": "Türkei"
+      },
+      "city": "Stadt",
+      "postal_code": "PLZ",
+      "state": "Bundesland",
+      "street": "Straße",
+      "house_number": "Hausnummer",
+      "event_defaults": "Event-Defaults",
+      "event_defaults_description": "Diese Werte werden automatisch für deine Eventliste genutzt, solange du dort keine eigenen Filter setzt.",
+      "event_zone": "Eventzone",
+      "event_zone_help": "Aktuell adressbasiert über PLZ, Stadt oder Vereinsadresse.",
+      "event_sports": "Sportarten für Eventvorschläge",
+      "sport_fallback": "Sport",
+      "save_button": "Adresse & Event-Defaults speichern"
+    },
+    "privacy": {
+      "title": "Privatsphäre",
+      "description": "Lege fest, wer dein Profil sehen, dich direkt kontaktieren oder dir Freundschaftsanfragen senden darf.",
+      "profile_visibility": "Profil-Sichtbarkeit",
+      "profile_visibility_help": "Diese Einstellung steuert, ob andere dein Profil und deine Profilinhalte sehen können.",
+      "direct_messages": "Nachrichten erhalten",
+      "friend_requests": "Freundschaftsanfragen erhalten",
+      "ads_title": "Werbung & Messung",
+      "ads_description": "Ohne Einwilligung zeigen wir nur kontextuelle Anzeigen und speichern keine personalisierten Retargeting-Signale.",
+      "ads_personalization": "Personalisierte Anzeigen erlauben",
+      "ads_personalization_help": "Nutzt z. B. vorherige Marketplace-Interessen, um passendere Anzeigen zu zeigen.",
+      "ads_measurement": "Conversion-Messung erlauben",
+      "ads_measurement_help": "Ordnet Klicks anonymisierten Kampagnenereignissen wie Checkout oder Kauf zu.",
+      "save_button": "Privatsphäre speichern",
+      "options": {
+        "public": "Alle angemeldeten Personen",
+        "private": "Nur ich, Freunde und Follower",
+        "everyone": "Alle angemeldeten Personen",
+        "friends": "Nur Freunde"
+      }
+    },
+    "roles": {
+      "title": "Meine Rollen",
+      "description": "Hier siehst du, welche Plattform-Rollen deinem Konto aktuell zugeordnet sind.",
+      "count": "{count} Rollen",
+      "no_description": "Keine Beschreibung vorhanden.",
+      "empty": "Deinem Konto ist noch keine Rolle zugewiesen.",
+      "names": {
+        "player": "Sportler",
+        "club_owner": "Club-Besitzer",
+        "super_admin": "Super-Admin"
+      },
+      "descriptions": {
+        "player": "Spieler",
+        "club_owner": "Besitzer eines Clubs",
+        "super_admin": "Globaler Systemadministrator mit Vollzugriff"
+      }
+    },
+    "activities": {
+      "title": "Meine Aktivitäten",
+      "description": "Hier erscheinen nur Aktionen, die von deinem eigenen Konto erstellt wurden.",
+      "count": "{count} Einträge",
+      "empty": "Noch keine eigenen Aktivitäten vorhanden.",
+      "personal": "Persönlich",
+      "types": {
+        "post": {
+          "created": "Beitrag erstellt",
+          "updated": "Beitrag aktualisiert",
+          "deleted": "Beitrag gelöscht",
+          "commented": "Beitrag kommentiert"
+        },
+        "user": {
+          "followed": "Person gefolgt"
+        },
+        "friend": {
+          "requested": "Freundschaftsanfrage gesendet",
+          "accepted": "Freundschaft akzeptiert"
+        },
+        "comment": {
+          "created": "Kommentar geschrieben",
+          "updated": "Kommentar bearbeitet",
+          "deleted": "Kommentar gelöscht"
+        }
+      }
+    },
+    "billing": {
+      "invoice_reference": "Rechnung {id}",
+      "this_subscription": "dieses Abo",
+      "subscriptions_title": "Meine Airmius Abos",
+      "subscriptions_description": "Aktuelle persönliche Airmius Pläne und Laufzeiten.",
+      "airmius_subscription": "Airmius Abo",
+      "payment_portal": "Zahlungsportal",
+      "payment_portal_inactive": "Zahlungsportal ist für dieses Abo momentan nicht aktiv.",
+      "cancel": "Kündigen",
+      "payment_method": "Zahlungsart",
+      "runs_until": "Läuft bis",
+      "cancelled_at": "Gekündigt zum",
+      "no_subscription": "Du hast noch kein persönliches Airmius Abo.",
+      "subscription_invoices_title": "Airmius Abo-Rechnungen",
+      "subscription_invoices_description": "Rechnungen für Airmius Pläne und Plattform-Abos.",
+      "bank_details": "Bankdaten",
+      "bank_details_missing": "Bankdaten fehlen",
+      "no_subscription_invoices": "Noch keine Airmius Abo-Rechnungen vorhanden.",
+      "my_invoices_title": "Meine Rechnungen",
+      "my_invoices_description": "Hier siehst du offene und bezahlte Vereinsbeiträge.",
+      "no_invoices": "Noch keine Rechnungen vorhanden.",
+      "payment_history_title": "Zahlungshistorie",
+      "no_payments": "Noch keine Zahlungen markiert.",
+      "bank_transfer_title": "Per Überweisung zahlen",
+      "bank_transfer_description": "Nutze diese Daten für deine Banküberweisung.",
+      "statuses": {
+        "open": "Offen",
+        "awaiting_transfer": "Warte auf Überweisung",
+        "paid": "Bezahlt",
+        "overdue": "Überfällig",
+        "cancelled": "Storniert",
+        "active": "Aktiv",
+        "trialing": "Testphase",
+        "past_due": "Zahlung offen",
+        "cancels_at_period_end": "Gekündigt zum Periodenende"
+      },
+      "bank": {
+        "recipient": "Empfänger",
+        "account_holder": "Kontoinhaber",
+        "bank": "Bank",
+        "amount": "Betrag",
+        "reference": "Verwendungszweck"
+      },
+      "open_payment": {
+        "delete_title": "Offene Zahlung löschen",
+        "cancel_title": "Offene Zahlung abbrechen",
+        "delete_message": "Die offene Zahlung{number} wird dauerhaft gelöscht. Das ist nur für unbezahlte, nicht aktivierte Zahlungen möglich.",
+        "cancel_message": "Die offene Zahlung{number} wird abgebrochen und als storniert markiert."
+      },
+      "cancel_subscription": {
+        "title": "Abo kündigen",
+        "message": "Möchtest du dein {plan} zum Ende der aktuellen Laufzeit kündigen? {end}",
+        "ends_at": "Es endet am {date}.",
+        "confirm": "kündigen"
+      },
+      "table": {
+        "number": "Nr.",
+        "plan": "Plan",
+        "club": "Verein",
+        "amount": "Betrag",
+        "due": "Fällig",
+        "status": "Status",
+        "pay": "Zahlen",
+        "action": "Aktion",
+        "title": "Titel",
+        "date": "Datum",
+        "invoice": "Rechnung"
+      }
+    },
+    "integrations": {
+      "login_title": "Login-Verknüpfungen",
+      "login_description": "Nutze Google oder Outlook für eine schnelle Anmeldung.",
+      "not_connected": "Noch nicht verbunden",
+      "connected": "Verbunden",
+      "connect": "Verbinden",
+      "sport_apps_title": "Sportprogramme synchronisieren",
+      "sport_apps_description": "Verknüpfe Sport-Apps, damit Trainingsdaten später automatisch in dein Airmius Profil fließen können.",
+      "last_synced": "Zuletzt synchronisiert: {date}",
+      "google_status": "Google Status:",
+      "google_error": "Google Fehler:",
+      "day_ranges": "Tagesbereiche:",
+      "request": "Vormerken",
+      "check_sync": "Sync prüfen",
+      "statuses": {
+        "connected": "Verbunden",
+        "requested": "Vorgemerkt",
+        "disconnected": "Getrennt",
+        "error": "Fehler"
+      },
+      "providers": {
+        "manual": "Manuell",
+        "google_fit": "Google Fit",
+        "strava": "Strava",
+        "garmin": "Garmin",
+        "mi_fitness": "Mi Fitness",
+        "fitbit": "Fitbit",
+        "polar": "Polar"
+      },
+      "provider_descriptions": {
+        "strava": "Strava verbindet Lauf-, Rad-, Schwimm- und Workout-Daten über die offizielle OAuth-API.",
+        "garmin": "Garmin Health API benötigt eine Anbieterfreigabe. Nutzer können Interesse markieren, bis die Partnerfreigabe aktiv ist.",
+        "google_fit": "Verknüpfung über Google OAuth. Aktivitätsimport wird als nächster Schritt auf den gespeicherten Tokens aufgebaut.",
+        "mi_fitness": "Mi Fitness hat keine einfache Standard-OAuth-Anbindung im Projekt. Die Verknüpfung wird als gewünscht vorgemerkt.",
+        "polar": "Polar AccessLink stellt Trainings- und Aktivitätsdaten per OAuth/API bereit. Integration ist vorgemerkt.",
+        "fitbit": "Fitbit Web API kann Aktivitäten, Schritte, Distanz, Kalorien und Gesundheitsdaten per OAuth bereitstellen. Integration ist vorgemerkt."
+      },
+      "disconnect": {
+        "title": "Sport-App entfernen",
+        "message": "Bist du sicher, dass du diese Sport-App-Verknüpfung entfernen möchtest? Gespeicherte Tokens werden gelöscht und die App muss danach neu verbunden werden."
+      },
+      "manual_activity": {
+        "title": "Manuell eintragen",
+        "description": "Füge eigene Trainingseinheiten hinzu, auch wenn keine Sport-App verbunden ist.",
+        "save": "Training speichern",
+        "name": "Name",
+        "name_placeholder": "z. B. Lauftraining",
+        "sport_type": "Sportart",
+        "date_time": "Datum und Zeit",
+        "image": "Bild",
+        "duration_minutes": "Dauer in Minuten",
+        "distance_km": "Distanz in km",
+        "calories": "Kalorien",
+        "types": {
+          "Training": "Training",
+          "Laufen": "Laufen",
+          "Radfahren": "Radfahren",
+          "Schwimmen": "Schwimmen",
+          "Fußball": "Fußball",
+          "Fitness": "Fitness",
+          "Krafttraining": "Krafttraining",
+          "Yoga": "Yoga",
+          "Gehen": "Gehen",
+          "Sonstiges": "Sonstiges"
+        }
+      },
+      "activities": {
+        "title": "Importierte Aktivitäten",
+        "delete_all": "Alle löschen",
+        "empty": "Noch keine Aktivitäten importiert.",
+        "daily_activity": "Tagesaktivität",
+        "manual_entry": "Manuell eingetragen",
+        "daily_summary": "Tageszusammenfassung",
+        "active_minutes": "{minutes} aktive Minuten",
+        "start_about": "Start ca. {time}",
+        "delete_all_title": "Alle importierten Aktivitäten löschen",
+        "delete_title": "Importierte Aktivität löschen",
+        "delete_all_message": "Alle importierten Sportaktivitäten werden dauerhaft aus deinem Airmius Konto gelöscht. Die Verbindung zu Google Fit oder anderen Apps bleibt bestehen.",
+        "delete_message": "Diese importierte Sportaktivität wird dauerhaft aus deinem Airmius Konto gelöscht.",
+        "rename_title": "Aktivität umbenennen",
+        "rename_description": "Der neue Name wird nur in Airmius gespeichert.",
+        "table": {
+          "image": "Bild",
+          "date": "Datum",
+          "time": "Zeit",
+          "source": "Quelle",
+          "sport_type": "Sportart",
+          "duration": "Dauer",
+          "distance": "Distanz",
+          "calories": "Kalorien",
+          "action": "Aktion"
+        }
+      }
+    }
   },
   "common": {
     "all": "Alle",
@@ -2891,6 +3240,21 @@
   "Kategorie:": "Kategorie:",
   "Bereich:": "Bereich:",
   "Alle Bereiche": "Alle Bereiche",
+  "Analyse": "Analyse",
+  "Pläne & Kurse": "Pläne & Kurse",
+  "Running": "Laufen",
+  "Teamsport": "Teamsport",
+  "Neueste": "Neueste",
+  "Preis aufsteigend": "Preis aufsteigend",
+  "Preis absteigend": "Preis absteigend",
+  "Alle Verfügbarkeiten": "Alle Verfügbarkeiten",
+  "Sofort verfügbar": "Sofort verfügbar",
+  "Versandartikel": "Versandartikel",
+  "Direkt bestellen, Konto optional.": "Direkt bestellen, Konto optional.",
+  "Brutto, netto, Steuer und Versand werden ausgewiesen.": "Brutto, netto, Steuer und Versand werden ausgewiesen.",
+  "Verein, Trainer oder Shop bleiben klar erkennbar.": "Verein, Trainer oder Shop bleiben klar erkennbar.",
+  "Bestellstatus": "Bestellstatus",
+  "Updates und Belege werden per E-Mail zugestellt.": "Updates und Belege werden per E-Mail zugestellt.",
   "Status:": "Status:",
   "Aktiv:": "Aktiv:",
   "brutto": "brutto",

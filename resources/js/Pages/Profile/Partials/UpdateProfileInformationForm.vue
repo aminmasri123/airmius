@@ -8,9 +8,13 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import { useI18n } from 'vue-i18n';
+
 const props = defineProps({
     user: Object,
 });
+
+const { t } = useI18n();
 
 const initials = (name) => (name || '?')
     .split(' ')
@@ -48,13 +52,13 @@ const updateProfileInformation = () => {
             clearPhotoFileInput();
             notice.value = {
                 type: 'success',
-                message: 'Profilinformationen wurden gespeichert.',
+                message: t('settings.profile.saved'),
             };
         },
         onError: () => {
             notice.value = {
                 type: 'error',
-                message: 'Profilinformationen konnten nicht gespeichert werden. Bitte prüfe die Eingaben.',
+                message: t('settings.profile.save_failed'),
             };
         },
     });
@@ -102,11 +106,11 @@ const clearPhotoFileInput = () => {
 <template>
     <FormSection @submitted="updateProfileInformation">
         <template #title>
-            {{ $t('Profile Information') }}
+            {{ t('settings.profile.title') }}
         </template>
 
         <template #description>
-            Update your account's profile information and email address.
+            {{ t('settings.profile.description') }}
         </template>
 
         <template #form>
@@ -125,7 +129,7 @@ const clearPhotoFileInput = () => {
                 <!-- Profile Photo File Input -->
                 <input id="photo" ref="photoInput" type="file" class="hidden" @change="updatePhotoPreview">
 
-                <InputLabel for="photo" value="Photo" />
+                <InputLabel for="photo" :value="t('settings.profile.photo')" />
 
                 <!-- Current Profile Photo -->
                 <div v-show="!photoPreview" class="mt-2">
@@ -144,11 +148,11 @@ const clearPhotoFileInput = () => {
                 </div>
 
                 <SecondaryButton class="mt-2 me-2" type="button" @click.prevent="selectNewPhoto">
-                    Select A New Photo
+                    {{ t('settings.profile.select_new_photo') }}
                 </SecondaryButton>
 
                 <SecondaryButton v-if="user.profile_photo_path" type="button" class="mt-2" @click.prevent="deletePhoto">
-                    Remove Photo
+                    {{ t('settings.profile.remove_photo') }}
                 </SecondaryButton>
 
                 <InputError :message="form.errors.photo" class="mt-2" />
@@ -156,14 +160,14 @@ const clearPhotoFileInput = () => {
 
             <!-- Name -->
             <div class="col-span-6 sm:col-span-3">
-                <InputLabel for="first_name" value="Vorname" />
+                <InputLabel for="first_name" :value="t('settings.profile.first_name')" />
                 <TextInput id="first_name" v-model="form.first_name" type="text" class="mt-1 block w-full" required
                     autocomplete="given-name" />
                 <InputError :message="form.errors.first_name" class="mt-2" />
             </div>
 
             <div class="col-span-6 sm:col-span-3">
-                <InputLabel for="last_name" value="Nachname" />
+                <InputLabel for="last_name" :value="t('settings.profile.last_name')" />
                 <TextInput id="last_name" v-model="form.last_name" type="text" class="mt-1 block w-full" required
                     autocomplete="family-name" />
                 <InputError :message="form.errors.last_name" class="mt-2" />
@@ -171,56 +175,56 @@ const clearPhotoFileInput = () => {
 
             <!-- Email -->
             <div class="col-span-6">
-                <InputLabel for="email" value="Email" />
+                <InputLabel for="email" :value="t('settings.profile.email')" />
                 <TextInput id="email" v-model="form.email" type="email" class="mt-1 block w-full" required
                     autocomplete="username" />
                 <InputError :message="form.errors.email" class="mt-2" />
 
                 <div v-if="$page.props.jetstream.hasEmailVerification && user.email_verified_at === null">
                     <p class="text-sm mt-2">
-                        Your email address is unverified.
+                        {{ t('settings.profile.email_unverified') }}
 
                         <Link :href="route('verification.send')" method="post" as="button"
                             class="underline text-sm text-secondary hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                             @click.prevent="sendEmailVerification">
-                            Click here to re-send the verification email.
+                            {{ t('settings.profile.resend_verification') }}
                         </Link>
                     </p>
 
                     <div v-show="verificationLinkSent" class="mt-2 font-medium text-sm text-green-600">
-                        A new verification link has been sent to your email address.
+                        {{ t('settings.profile.verification_sent') }}
                     </div>
                 </div>
             </div>
 
             <div class="col-span-6">
-                <InputLabel for="profile_visibility" value="Profile visibility" />
+                <InputLabel for="profile_visibility" :value="t('settings.profile.profile_visibility')" />
                 <select id="profile_visibility" v-model="form.profile_visibility"
                     class="mt-1 block w-full rounded-md border-border bg-inputBg text-primary shadow-sm focus:border-borderHover focus:ring-borderHover">
-                    <option value="public">Public</option>
-                    <option value="private">Private</option>
+                    <option value="public">{{ t('settings.profile.visibility_public') }}</option>
+                    <option value="private">{{ t('settings.profile.visibility_private') }}</option>
                 </select>
                 <InputError :message="form.errors.profile_visibility" class="mt-2" />
             </div>
 
             <div class="col-span-6">
-                <InputLabel for="athlete_license_number" value="Lizenznummer" />
+                <InputLabel for="athlete_license_number" :value="t('settings.profile.license_number')" />
                 <TextInput
                     id="athlete_license_number"
                     v-model="form.athlete_license_number"
                     type="text"
                     class="mt-1 block w-full"
                     autocomplete="off"
-                    placeholder="z. B. Verbands- oder Spielerpassnummer"
+                    :placeholder="t('settings.profile.license_placeholder')"
                 />
                 <p class="mt-2 text-sm text-secondary">
-                    Diese Nummer kannst du selbst pflegen. Vereine können sie zur Zuordnung sehen, wenn dein Profil für sie sichtbar ist.
+                    {{ t('settings.profile.license_help') }}
                 </p>
                 <InputError :message="form.errors.athlete_license_number" class="mt-2" />
             </div>
 
             <div class="col-span-6">
-                <InputLabel for="bio" value="Bio" />
+                <InputLabel for="bio" :value="t('settings.profile.bio')" />
                 <textarea id="bio" v-model="form.bio" rows="4"
                     class="mt-1 block w-full rounded-md border-border bg-inputBg text-primary shadow-sm focus:border-borderHover focus:ring-borderHover" />
                 <InputError :message="form.errors.bio" class="mt-2" />
@@ -229,11 +233,11 @@ const clearPhotoFileInput = () => {
 
         <template #actions>
             <ActionMessage :on="form.recentlySuccessful" class="me-3">
-                Gespeichert.
+                {{ t('settings.actions.saved') }}
             </ActionMessage>
 
             <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
-                Speichern
+                {{ t('settings.actions.save') }}
             </PrimaryButton>
         </template>
     </FormSection>

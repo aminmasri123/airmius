@@ -13,6 +13,7 @@ use App\Http\Controllers\MailCenterController;
 use App\Http\Controllers\MediaGuidelineController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\ModerationController;
+use App\Http\Controllers\OperatingContractController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProviderCostController;
 use App\Http\Controllers\RolePermissionController;
@@ -180,6 +181,12 @@ Route::middleware([
     Route::post('/admin/sponsors', [SponsorController::class, 'store'])->middleware('can:finance.edit')->name('sponsors.store');
     Route::put('/admin/sponsors/{sponsor}', [SponsorController::class, 'update'])->middleware('can:finance.edit')->name('sponsors.update');
     Route::delete('/admin/sponsors/{sponsor}', [SponsorController::class, 'destroy'])->middleware('can:finance.edit')->name('sponsors.destroy');
+
+    // OPERATING CONTRACTS
+    Route::get('/admin/operating-contracts', [OperatingContractController::class, 'index'])->name('admin.operating-contracts.index');
+    Route::post('/admin/operating-contracts', [OperatingContractController::class, 'store'])->name('admin.operating-contracts.store');
+    Route::put('/admin/operating-contracts/{operatingContract}', [OperatingContractController::class, 'update'])->name('admin.operating-contracts.update');
+    Route::delete('/admin/operating-contracts/{operatingContract}', [OperatingContractController::class, 'destroy'])->name('admin.operating-contracts.destroy');
 
     // SETTINGS
     Route::get('/admin/mail-center', [MailCenterController::class, 'index'])->middleware('can:system.manage')->name('admin.mail-center.index');

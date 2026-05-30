@@ -14,6 +14,7 @@ return [
 
     'usd_to_eur' => (float) env('PROVIDER_COST_USD_TO_EUR', 0.92),
     'self_hosted_monthly_eur' => (float) env('PROVIDER_COST_SELF_HOSTED_ROUTING_EUR', 180),
+    'routing_monthly_alert_limit' => (int) env('PROVIDER_COST_ROUTING_MONTHLY_ALERT_LIMIT', 15000),
 
     'plans' => [
         'mapbox_map_loads' => [
@@ -55,7 +56,7 @@ return [
             'label' => 'GraphHopper Basic',
             'provider' => 'graphhopper',
             'kind' => 'fixed',
-            'monthly_eur' => 69,
+            'monthly_eur' => (float) env('PROVIDER_COST_GRAPHHOPPER_BASIC_EUR', 56),
             'included_units' => 150000,
             'unit_label' => 'Credit-Schätzung/Monat',
         ],
@@ -63,7 +64,7 @@ return [
             'label' => 'GraphHopper Standard',
             'provider' => 'graphhopper',
             'kind' => 'fixed',
-            'monthly_eur' => 199,
+            'monthly_eur' => (float) env('PROVIDER_COST_GRAPHHOPPER_STANDARD_EUR', 160),
             'included_units' => 450000,
             'unit_label' => 'Credit-Schätzung/Monat',
         ],

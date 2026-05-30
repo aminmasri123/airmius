@@ -55,6 +55,7 @@ const componentTitles = {
     'Auth/Dashboard/Admin/Settings/Index': 'Systemeinstellungen',
     'Auth/Dashboard/Admin/Payments/Index': 'Zahlungen',
     'Auth/Dashboard/Admin/Invoices/Index': 'Rechnungen',
+    'Auth/Dashboard/Admin/OperatingContracts/Index': 'Betriebskosten & Vertraege',
     'Auth/Dashboard/Admin/Commerce/Index': 'Admin Commerce',
     'Auth/Dashboard/Admin/OutfitSubscriptions/Index': 'Admin Outfit-Abos',
     'Auth/Dashboard/Admin/Moderation/Index': 'Moderation',

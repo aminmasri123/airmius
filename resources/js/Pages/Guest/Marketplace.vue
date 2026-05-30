@@ -53,6 +53,14 @@ const form = ref({
 })
 const mobileFilterOpen = ref(false)
 
+const translated = (value) => value ? t(String(value)) : value
+const translatedOption = (option) => ({
+    ...option,
+    label: translated(option.label),
+    description: translated(option.description),
+    discount: translated(option.discount),
+})
+
 const categoryLabels = {
     product: t('Produkt'),
     course: t('Kurs'),
@@ -110,7 +118,17 @@ const mobilePromoSlides = computed(() => {
 const activeSegment = computed(() => props.segments.find((segment) => segment.value === form.value.segment) || props.segments[0] || null)
 const activeCategory = computed(() => props.categories.find((category) => category.value === form.value.category) || props.categories[0] || null)
 const activeAvailability = computed(() => props.availabilityOptions.find((option) => option.value === form.value.availability) || props.availabilityOptions[0] || null)
-const segmentLookup = computed(() => Object.fromEntries(props.segments.map((segment) => [segment.value || 'all', segment])))
+const localizedCategories = computed(() => props.categories.map(translatedOption))
+const localizedSegments = computed(() => props.segments.map(translatedOption))
+const localizedSortOptions = computed(() => props.sortOptions.map(translatedOption))
+const localizedAvailabilityOptions = computed(() => props.availabilityOptions.map(translatedOption))
+const localizedSportCategories = computed(() => props.sportCategories.map(translatedOption))
+const localizedOfficialStores = computed(() => props.officialStores.map(translatedOption))
+const localizedTrustBenefits = computed(() => props.trustBenefits.map(translatedOption))
+const activeSegmentLabel = computed(() => translated(activeSegment.value?.label) || t('Alle Bereiche'))
+const activeCategoryLabel = computed(() => translated(activeCategory.value?.label) || t('Alle'))
+const activeAvailabilityLabel = computed(() => translated(activeAvailability.value?.label) || t('Alle'))
+const segmentLookup = computed(() => Object.fromEntries(props.segments.map((segment) => [segment.value || 'all', translatedOption(segment)])))
 const productGroups = computed(() => {
     const groups = allOfferItems.value.reduce((carry, product) => {
         const key = product.segment || 'equipment'
@@ -126,7 +144,7 @@ const productGroups = computed(() => {
 
     return Object.entries(groups).map(([key, items]) => ({
         key,
-        label: segmentLookup.value[key]?.label || categoryLabels[items[0]?.category] || t('Angebote'),
+        label: translated(segmentLookup.value[key]?.label) || categoryLabels[items[0]?.category] || t('Angebote'),
         icon: segmentLookup.value[key]?.icon || 'las la-shopping-bag',
         items,
     }))
@@ -349,7 +367,7 @@ const selectSegment = (segment) => {
                         <label class="relative block">
                             <span class="sr-only">{{ $t("Kategorie") }}</span>
                             <select v-model="form.category" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
-                                <option v-for="category in categories" :key="category.value" :value="category.value">
+                                <option v-for="category in localizedCategories" :key="category.value" :value="category.value">
                                     {{ category.label }}
                                 </option>
                             </select>
@@ -357,7 +375,7 @@ const selectSegment = (segment) => {
                         <label class="relative block">
                             <span class="sr-only">{{ $t("Bereich") }}</span>
                             <select v-model="form.segment" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
-                                <option v-for="segment in segments" :key="segment.value || 'all'" :value="segment.value">
+                                <option v-for="segment in localizedSegments" :key="segment.value || 'all'" :value="segment.value">
                                     {{ segment.label }}
                                 </option>
                             </select>
@@ -365,7 +383,7 @@ const selectSegment = (segment) => {
                         <label class="relative block">
                             <span class="sr-only">{{ $t("Verfügbarkeit") }}</span>
                             <select v-model="form.availability" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
-                                <option v-for="option in availabilityOptions" :key="option.value || 'all'" :value="option.value">
+                                <option v-for="option in localizedAvailabilityOptions" :key="option.value || 'all'" :value="option.value">
                                     {{ option.label }}
                                 </option>
                             </select>
@@ -373,7 +391,7 @@ const selectSegment = (segment) => {
                         <label class="relative block">
                             <span class="sr-only">{{ $t("Sortierung") }}</span>
                             <select v-model="form.sort" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
-                                <option v-for="option in sortOptions" :key="option.value" :value="option.value">
+                                <option v-for="option in localizedSortOptions" :key="option.value" :value="option.value">
                                     {{ option.label }}
                                 </option>
                             </select>
@@ -413,7 +431,7 @@ const selectSegment = (segment) => {
                             <label class="relative block">
                                 <span class="sr-only">{{ $t("Kategorie") }}</span>
                                 <select v-model="form.category" class="h-11 w-full rounded-xl border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
-                                    <option v-for="category in categories" :key="category.value" :value="category.value">
+                                    <option v-for="category in localizedCategories" :key="category.value" :value="category.value">
                                         {{ category.label }}
                                     </option>
                                 </select>
@@ -421,7 +439,7 @@ const selectSegment = (segment) => {
                             <label class="relative block">
                                 <span class="sr-only">{{ $t("Bereich") }}</span>
                                 <select v-model="form.segment" class="h-11 w-full rounded-xl border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
-                                    <option v-for="segment in segments" :key="segment.value || 'all'" :value="segment.value">
+                                    <option v-for="segment in localizedSegments" :key="segment.value || 'all'" :value="segment.value">
                                         {{ segment.label }}
                                     </option>
                                 </select>
@@ -453,7 +471,7 @@ const selectSegment = (segment) => {
                             <p class="mb-2 text-xs font-black uppercase text-secondary">{{ $t("Sportarten") }}</p>
                             <div class="flex flex-wrap gap-2">
                                 <button
-                                    v-for="category in sportCategories"
+                                    v-for="category in localizedSportCategories"
                                     :key="`mobile-filter-sport-${category.label}`"
                                     type="button"
                                     class="inline-flex items-center gap-2 rounded-full border border-border bg-inputBg px-3 py-2 text-xs font-black text-primary"
@@ -469,7 +487,7 @@ const selectSegment = (segment) => {
                             <p class="mb-2 text-xs font-black uppercase text-secondary">{{ $t("Produktbereiche") }}</p>
                             <div class="flex flex-wrap gap-2">
                                 <button
-                                    v-for="segment in segments"
+                                    v-for="segment in localizedSegments"
                                     :key="`mobile-filter-segment-${segment.value || 'all'}`"
                                     type="button"
                                     class="inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-black transition"
@@ -494,9 +512,9 @@ const selectSegment = (segment) => {
                 </form>
 
                 <div class="mx-auto mt-2 flex max-w-7xl gap-2 overflow-x-auto pb-1 text-xs font-semibold text-secondary sm:mt-3 sm:flex-wrap">
-                    <span class="rounded bg-muted px-2 py-1">{{ $t('Kategorie:') }} {{ activeCategory?.label || $t('Alle') }}</span>
-                    <span class="rounded bg-muted px-2 py-1">{{ $t('Bereich:') }} {{ activeSegment?.label || $t('Alle Bereiche') }}</span>
-                    <span class="hidden rounded bg-muted px-2 py-1 sm:inline">{{ $t('Status:') }} {{ activeAvailability?.label || $t('Alle') }}</span>
+                    <span class="rounded bg-muted px-2 py-1">{{ $t('Kategorie:') }} {{ activeCategoryLabel }}</span>
+                    <span class="rounded bg-muted px-2 py-1">{{ $t('Bereich:') }} {{ activeSegmentLabel }}</span>
+                    <span class="hidden rounded bg-muted px-2 py-1 sm:inline">{{ $t('Status:') }} {{ activeAvailabilityLabel }}</span>
                     <span class="shrink-0 rounded bg-buttonPrimary/15 px-2 py-1 text-buttonPrimary">{{ $t('{count} Treffer', { count: totalProducts }) }}</span>
                 </div>
             </section>
@@ -552,13 +570,17 @@ const selectSegment = (segment) => {
                 </div>
             </section>
 
-            <section class="mx-auto grid max-w-7xl gap-3 px-3 py-3 sm:px-4 sm:py-4 xl:grid-cols-[13rem_minmax(0,1fr)]">
+            <section
+                class="mx-auto grid max-w-7xl gap-3 px-3 py-3 sm:px-4 sm:py-4 xl:grid-cols-[minmax(0,1fr)_15rem]"
+                :class="isRtlLocale ? '' : 'xl:grid-cols-[15rem_minmax(0,1fr)]'"
+            >
                 <div class="hidden md:block xl:hidden">
-                    <div class="flex gap-2 overflow-x-auto pb-1">
+                    <div class="flex gap-2 overflow-x-auto pb-1" :class="isRtlLocale ? 'justify-end' : ''">
                         <button
-                            v-for="category in sportCategories"
+                            v-for="category in localizedSportCategories"
                             :key="category.label"
-                            class="inline-flex shrink-0 items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-xs font-black text-primary shadow-sm transition hover:border-buttonPrimary hover:text-buttonPrimary"
+                            class="inline-flex shrink-0 items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-black text-primary shadow-sm transition hover:border-buttonPrimary hover:text-buttonPrimary"
+                            :class="isRtlLocale ? 'flex-row-reverse text-right' : ''"
                             @click="searchCategory(category)"
                         >
                             <i :class="[category.icon, 'text-base text-buttonPrimary']"></i>
@@ -567,19 +589,23 @@ const selectSegment = (segment) => {
                     </div>
                 </div>
 
-                <aside class="hidden rounded border border-border bg-card p-2 shadow-sm xl:block">
+                <aside
+                    class="hidden rounded border border-border bg-card p-3 shadow-sm xl:block"
+                    :class="isRtlLocale ? 'order-2' : 'order-1'"
+                >
                     <button
-                        v-for="category in sportCategories"
+                        v-for="category in localizedSportCategories"
                         :key="category.label"
-                        class="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-xs font-semibold text-primary transition hover:bg-muted hover:text-buttonPrimary"
+                        class="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-sm font-bold leading-5 text-primary transition hover:bg-muted hover:text-buttonPrimary"
+                        :class="isRtlLocale ? 'flex-row-reverse text-right' : 'text-left'"
                         @click="searchCategory(category)"
                     >
-                        <i :class="[category.icon, 'text-lg text-buttonPrimary']"></i>
-                        <span class="truncate">{{ category.label }}</span>
+                        <i :class="[category.icon, 'shrink-0 text-2xl text-buttonPrimary']"></i>
+                        <span class="min-w-0 flex-1 whitespace-normal">{{ category.label }}</span>
                     </button>
                 </aside>
 
-                <section class="hidden gap-4 md:grid lg:grid-cols-[minmax(0,1fr)_18rem]">
+                <section class="hidden gap-4 md:grid lg:grid-cols-[minmax(0,1fr)_18rem]" :class="isRtlLocale ? 'order-1' : 'order-2'">
                     <Link
                         :href="heroProduct?.show_url || route('guest.marketplace')"
                             class="relative min-h-[15rem] overflow-hidden rounded-xl border border-border bg-buttonPrimary shadow-sm md:min-h-[22rem]"
@@ -656,7 +682,7 @@ const selectSegment = (segment) => {
             <section class="mx-auto mt-4 hidden max-w-7xl px-4 md:block">
                 <div class="grid gap-3 rounded border border-border bg-card p-4 shadow-sm md:grid-cols-4">
                     <div
-                        v-for="benefit in trustBenefits"
+                        v-for="benefit in localizedTrustBenefits"
                         :key="benefit.label"
                         class="flex gap-3 rounded bg-bg p-3"
                     >
@@ -676,13 +702,13 @@ const selectSegment = (segment) => {
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <h2 class="text-sm font-black text-primary">{{ $t("Produktbereiche") }}</h2>
-                            <p class="text-xs text-secondary">{{ $t('Aktiv:') }} {{ activeSegment?.label || $t('Alle Bereiche') }}</p>
+                            <p class="text-xs text-secondary">{{ $t('Aktiv:') }} {{ activeSegmentLabel }}</p>
                         </div>
                         <button class="text-xs font-bold text-buttonPrimary" @click="selectSegment({ value: '' })">{{ $t("Alle anzeigen") }}</button>
                     </div>
                     <div class="mt-3 flex gap-2 overflow-x-auto overscroll-x-contain rounded-lg pb-2 [scrollbar-color:theme(colors.border)_transparent] [scrollbar-width:thin]">
                         <button
-                            v-for="segment in segments"
+                            v-for="segment in localizedSegments"
                             :key="segment.value || 'all'"
                             type="button"
                             class="flex shrink-0 items-center gap-2 rounded border px-3 py-2 text-xs font-bold transition"
@@ -756,7 +782,7 @@ const selectSegment = (segment) => {
                     <h2 class="text-lg font-black text-primary">{{ $t("Offizielle Stores") }}</h2>
                     <div class="mt-3 grid grid-cols-2 gap-2">
                         <div
-                            v-for="store in officialStores"
+                            v-for="store in localizedOfficialStores"
                             :key="store.name"
                             class="rounded border border-border bg-muted p-3 text-center"
                         >

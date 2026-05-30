@@ -58,6 +58,18 @@ trait ManagesSportMapPayloads
             'waypoints.*.latitude' => ['required_with:waypoints', 'numeric', 'between:-90,90'],
             'waypoints.*.longitude' => ['required_with:waypoints', 'numeric', 'between:-180,180'],
             'waypoints.*.elevation_m' => ['nullable', 'numeric', 'between:-500,9000'],
+            'route_geometry' => [$nullable, 'array'],
+            'route_geometry.type' => [$nullable, 'string', Rule::in(['LineString'])],
+            'route_geometry.coordinates' => [$nullable, 'array', 'min:2', 'max:5000'],
+            'route_geometry.coordinates.*' => ['required_with:route_geometry.coordinates', 'array', 'size:2'],
+            'route_geometry.coordinates.*.0' => ['required_with:route_geometry.coordinates', 'numeric', 'between:-180,180'],
+            'route_geometry.coordinates.*.1' => ['required_with:route_geometry.coordinates', 'numeric', 'between:-90,90'],
+            'navigation_cues' => [$nullable, 'array', 'max:1000'],
+            'distance_meters' => [$nullable, 'integer', 'min:1', 'max:500000'],
+            'estimated_duration_seconds' => [$nullable, 'integer', 'min:1', 'max:259200'],
+            'elevation_gain_meters' => [$nullable, 'integer', 'min:0', 'max:50000'],
+            'elevation_loss_meters' => [$nullable, 'integer', 'min:0', 'max:50000'],
+            'metrics' => [$nullable, 'array'],
         ]);
     }
 
@@ -71,7 +83,7 @@ trait ManagesSportMapPayloads
             'distance_km' => ['nullable', 'numeric', 'min:1', 'max:80'],
             'duration_minutes' => ['nullable', 'numeric', 'min:10', 'max:600'],
             'surface' => ['nullable', Rule::in(['any', 'asphalt', 'firm', 'forest', 'gravel', 'trail'])],
-            'environment' => ['nullable', Rule::in(['nature', 'forest', 'park', 'water'])],
+            'environment' => ['nullable', Rule::in(['any', 'nature', 'forest', 'park', 'water'])],
             'elevation' => ['nullable', Rule::in(['flat', 'mixed', 'hilly'])],
             'difficulty' => ['nullable', Rule::in(['easy', 'moderate', 'hard'])],
             'low_traffic' => ['nullable', 'boolean'],
@@ -163,7 +175,8 @@ trait ManagesSportMapPayloads
         $waypoints = array_key_exists('waypoints', $data)
             ? $metrics->normalizePoints($data['waypoints'])
             : ($route?->waypoints ?? []);
-        $summary = app(SportRouteRoutingService::class)->summarizeRoute($waypoints, $data['sport_type'] ?? $route?->sport_type);
+        $summary = $this->routeSummaryFromPayload($data, $waypoints)
+            ?? app(SportRouteRoutingService::class)->summarizeRoute($waypoints, $data['sport_type'] ?? $route?->sport_type);
         $first = $waypoints[0] ?? null;
         $last = $waypoints[count($waypoints) - 1] ?? null;
         $visibility = $data['visibility'] ?? $route?->visibility ?? 'private';
@@ -201,8 +214,63 @@ trait ManagesSportMapPayloads
                 'routing_status' => $summary['routing_status'] ?? 'estimated',
                 'routing_error' => $summary['routing_error'] ?? null,
                 'supports_offline_navigation' => true,
+                ...(is_array($data['metrics'] ?? null) ? $data['metrics'] : []),
             ], fn ($value) => $value !== null && $value !== ''),
             'completed_at' => ($data['status'] ?? $route?->status) === 'completed' ? ($route?->completed_at ?? now()) : $route?->completed_at,
+        ];
+    }
+
+    private function routeSummaryFromPayload(array $data, array $waypoints): ?array
+    {
+        $geometry = $data['route_geometry'] ?? null;
+        $coordinates = data_get($geometry, 'coordinates', []);
+
+        if (! is_array($geometry) || ! is_array($coordinates) || count($coordinates) < 2 || empty($data['distance_meters'])) {
+            return null;
+        }
+
+        $normalizedCoordinates = collect($coordinates)
+            ->filter(fn ($coordinate) => is_array($coordinate) && count($coordinate) >= 2)
+            ->map(fn (array $coordinate) => [
+                round((float) $coordinate[0], 7),
+                round((float) $coordinate[1], 7),
+            ])
+            ->values()
+            ->all();
+
+        if (count($normalizedCoordinates) < 2) {
+            return null;
+        }
+
+        return [
+            'distance_meters' => (int) $data['distance_meters'],
+            'estimated_duration_seconds' => (int) ($data['estimated_duration_seconds'] ?? 0),
+            'elevation_gain_meters' => (int) ($data['elevation_gain_meters'] ?? 0),
+            'elevation_loss_meters' => (int) ($data['elevation_loss_meters'] ?? 0),
+            'bounds' => $this->boundsFromRouteCoordinates($normalizedCoordinates),
+            'geometry' => [
+                'type' => 'LineString',
+                'coordinates' => $normalizedCoordinates,
+            ],
+            'navigation_cues' => is_array($data['navigation_cues'] ?? null) ? $data['navigation_cues'] : [],
+            'calculation' => data_get($data, 'metrics.calculation', 'stored_routed_geometry'),
+            'routing_provider' => data_get($data, 'metrics.routing_provider', 'stored'),
+            'routing_profile' => data_get($data, 'metrics.routing_profile'),
+            'routing_status' => data_get($data, 'metrics.routing_status', 'routed'),
+            'routing_error' => data_get($data, 'metrics.routing_error'),
+        ];
+    }
+
+    private function boundsFromRouteCoordinates(array $coordinates): array
+    {
+        $latitudes = array_map(fn (array $coordinate) => (float) $coordinate[1], $coordinates);
+        $longitudes = array_map(fn (array $coordinate) => (float) $coordinate[0], $coordinates);
+
+        return [
+            'north' => max($latitudes),
+            'south' => min($latitudes),
+            'east' => max($longitudes),
+            'west' => min($longitudes),
         ];
     }
 

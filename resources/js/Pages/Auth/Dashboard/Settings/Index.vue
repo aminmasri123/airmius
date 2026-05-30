@@ -137,6 +137,7 @@ const manualActivityForm = useForm({
     calories: '',
     image: null,
 })
+const manualActivityTypeOptions = ['Training', 'Laufen', 'Radfahren', 'Schwimmen', 'Fußball', 'Fitness', 'Krafttraining', 'Yoga', 'Gehen', 'Sonstiges']
 const bankTransferModal = ref({
     show: false,
     type: null,
@@ -177,15 +178,15 @@ const tabClass = (tab) =>
 const { setTheme } = useTheme()
 const addressNotice = ref(null)
 const themeOptions = [
-    { key: 'air', label: 'Air', description: 'Klar, leicht und fokussiert.', colors: ['#0ea5e9', '#10b981', '#f7fbff'] },
-    { key: 'dark', label: 'Dark', description: 'Konzentriert für späte Sessions.', colors: ['#0c1016', '#60a5fa', '#34d399'] },
-    { key: 'womanly', label: 'Womanly', description: 'Warm, stark und elegant.', colors: ['#be185d', '#fde8f2', '#0f9f6e'] },
-    { key: 'champion', label: 'Champion', description: 'Goldene Energie für Gewinner.', colors: ['#b45309', '#f59e0b', '#fffaf0'] },
-    { key: 'sprint', label: 'Sprint', description: 'Frisch, schnell und aktiv.', colors: ['#059669', '#10b981', '#f5fff9'] },
-    { key: 'arena', label: 'Arena', description: 'Ruhig, robust und professionell.', colors: ['#334155', '#64748b', '#f8fafc'] },
-    { key: 'pulse', label: 'Pulse', description: 'Dynamisch und motivierend.', colors: ['#ea580c', '#f97316', '#fff7ed'] },
-    { key: 'trail', label: 'Trail', description: 'Natuerlich, ausdauernd und bodenstaendig.', colors: ['#4d7c0f', '#65a30d', '#f6f8f2'] },
-    { key: 'bazaar', label: 'Bazaar Rush', description: 'Lebendig, verkaufsstark und frisch für Marketplace-Flows.', colors: ['#00a8c6', '#ff8a00', '#ffffff'] },
+    { key: 'air', label: 'Air', descriptionKey: 'air', description: 'Klar, leicht und fokussiert.', colors: ['#0ea5e9', '#10b981', '#f7fbff'] },
+    { key: 'dark', label: 'Dark', descriptionKey: 'dark', description: 'Konzentriert für späte Sessions.', colors: ['#0c1016', '#60a5fa', '#34d399'] },
+    { key: 'womanly', label: 'Womanly', descriptionKey: 'womanly', description: 'Warm, stark und elegant.', colors: ['#be185d', '#fde8f2', '#0f9f6e'] },
+    { key: 'champion', label: 'Champion', descriptionKey: 'champion', description: 'Goldene Energie für Gewinner.', colors: ['#b45309', '#f59e0b', '#fffaf0'] },
+    { key: 'sprint', label: 'Sprint', descriptionKey: 'sprint', description: 'Frisch, schnell und aktiv.', colors: ['#059669', '#10b981', '#f5fff9'] },
+    { key: 'arena', label: 'Arena', descriptionKey: 'arena', description: 'Ruhig, robust und professionell.', colors: ['#334155', '#64748b', '#f8fafc'] },
+    { key: 'pulse', label: 'Pulse', descriptionKey: 'pulse', description: 'Dynamisch und motivierend.', colors: ['#ea580c', '#f97316', '#fff7ed'] },
+    { key: 'trail', label: 'Trail', descriptionKey: 'trail', description: 'Natuerlich, ausdauernd und bodenstaendig.', colors: ['#4d7c0f', '#65a30d', '#f6f8f2'] },
+    { key: 'bazaar', label: 'Bazaar Rush', descriptionKey: 'bazaar', description: 'Lebendig, verkaufsstark und frisch für Marketplace-Flows.', colors: ['#00a8c6', '#ff8a00', '#ffffff'] },
 ]
 
 // Form
@@ -218,7 +219,7 @@ const saveAddress = (showFeedback = true) => {
             if (showFeedback) {
                 addressNotice.value = {
                     type: 'success',
-                    message: 'Adresse wurde erfolgreich gespeichert.',
+                    message: settingsText('address.saved', 'Adresse wurde erfolgreich gespeichert.'),
                 }
             }
         },
@@ -226,7 +227,7 @@ const saveAddress = (showFeedback = true) => {
             if (showFeedback) {
                 addressNotice.value = {
                     type: 'error',
-                    message: 'Adresse konnte nicht gespeichert werden. Bitte prüfe die Eingaben.',
+                    message: settingsText('address.save_failed', 'Adresse konnte nicht gespeichert werden. Bitte prüfe die Eingaben.'),
                 }
             }
         },
@@ -249,7 +250,14 @@ const toggleDefaultSport = (sportId) => {
 }
 
 const i18nText = (key, fallback, params = {}) => (te(key) ? t(key, params) : fallback)
+const settingsText = (key, fallback, params = {}) => i18nText(`settings.${key}`, fallback, params)
 const sportProfileText = (key, fallback, params = {}) => i18nText(`settings.sport_profile.${key}`, fallback, params)
+const themeDescription = (themeOption) => settingsText(`design.themes.${themeOption.descriptionKey}`, themeOption.description)
+const roleName = (role) => settingsText(`roles.names.${role.name}`, role.name)
+const roleDescription = (role) => settingsText(
+    `roles.descriptions.${role.name}`,
+    role.description || settingsText('roles.no_description', 'Keine Beschreibung vorhanden.'),
+)
 const sportStatusLabel = (value) => sportProfileText(`statuses.${value}`, value)
 const sportExperienceLabel = (value) => sportProfileText(`levels.${value}`, value)
 const metricVisibilityLabel = (value) => sportProfileText(`visibility.${value}`, value)
@@ -666,7 +674,7 @@ const formatTime = (value) => {
     return new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' }).format(new Date(value))
 }
 
-const invoiceStatusLabel = (status) => ({
+const invoiceStatusLabel = (status) => settingsText(`billing.statuses.${status}`, ({
     open: 'Offen',
     awaiting_transfer: 'Warte auf Überweisung',
     paid: 'Bezahlt',
@@ -676,7 +684,7 @@ const invoiceStatusLabel = (status) => ({
     trialing: 'Testphase',
     past_due: 'Zahlung offen',
     cancels_at_period_end: 'Gekündigt zum Periodenende',
-}[status] || status)
+}[status] || status))
 
 const isPayableClubInvoice = (invoice) => ['open', 'overdue', 'awaiting_transfer'].includes(invoice.status)
 const isOpenSubscriptionPayment = (invoice) => Boolean(invoice.payment_checkout_id)
@@ -692,7 +700,7 @@ const formatIban = (value) => String(value || '')
     .replace(/(.{4})/g, '$1 ')
     .trim()
 
-const paymentReference = (invoice) => invoice.payment_reference || invoice.number || `Rechnung ${invoice.id}`
+const paymentReference = (invoice) => invoice.payment_reference || invoice.number || settingsText('billing.invoice_reference', 'Rechnung {id}', { id: invoice.id })
 
 const openBankTransferModal = (type, invoice) => {
     bankTransferModal.value = {
@@ -721,25 +729,25 @@ const bankTransferRows = () => {
         const bank = props.billingHistory.airmius_bank || {}
 
         return [
-            ['Empfaenger', 'Airmius'],
-            ['Kontoinhaber', bank.bank_account_holder || 'Airmius'],
-            ...(bank.bank_name ? [['Bank', bank.bank_name]] : []),
+            [settingsText('billing.bank.recipient', 'Empfänger'), 'Airmius'],
+            [settingsText('billing.bank.account_holder', 'Kontoinhaber'), bank.bank_account_holder || 'Airmius'],
+            ...(bank.bank_name ? [[settingsText('billing.bank.bank', 'Bank'), bank.bank_name]] : []),
             ['IBAN', formatIban(bank.iban)],
             ...(bank.bic ? [['BIC', bank.bic]] : []),
-            ['Betrag', formatMoney(Number(invoice.amount_cents || 0) / 100)],
-            ['Verwendungszweck', paymentReference(invoice)],
+            [settingsText('billing.bank.amount', 'Betrag'), formatMoney(Number(invoice.amount_cents || 0) / 100)],
+            [settingsText('billing.bank.reference', 'Verwendungszweck'), paymentReference(invoice)],
         ]
     }
 
     const club = invoice.club || {}
 
     return [
-        ['Empfaenger', club.name || '-'],
-        ['Kontoinhaber', club.sepa_account_holder || club.name || '-'],
+        [settingsText('billing.bank.recipient', 'Empfänger'), club.name || '-'],
+        [settingsText('billing.bank.account_holder', 'Kontoinhaber'), club.sepa_account_holder || club.name || '-'],
         ['IBAN', formatIban(club.sepa_iban)],
         ...(club.sepa_bic ? [['BIC', club.sepa_bic]] : []),
-        ['Betrag', formatMoney(invoice.amount)],
-        ['Verwendungszweck', paymentReference(invoice)],
+        [settingsText('billing.bank.amount', 'Betrag'), formatMoney(invoice.amount)],
+        [settingsText('billing.bank.reference', 'Verwendungszweck'), paymentReference(invoice)],
     ]
 }
 
@@ -760,23 +768,23 @@ const closeOpenPaymentModal = () => {
 }
 
 const openPaymentModalTitle = () => openPaymentModal.value.action === 'delete'
-    ? 'Offene Zahlung löschen'
-    : 'Offene Zahlung abbrechen'
+    ? settingsText('billing.open_payment.delete_title', 'Offene Zahlung löschen')
+    : settingsText('billing.open_payment.cancel_title', 'Offene Zahlung abbrechen')
 
 const openPaymentModalMessage = () => {
     const invoice = openPaymentModal.value.invoice
     const number = invoice?.number ? ` ${invoice.number}` : ''
 
     if (openPaymentModal.value.action === 'delete') {
-        return `Die offene Zahlung${number} wird dauerhaft gelöscht. Das ist nur für unbezahlte, nicht aktivierte Zahlungen möglich.`
+        return settingsText('billing.open_payment.delete_message', 'Die offene Zahlung{number} wird dauerhaft gelöscht. Das ist nur für unbezahlte, nicht aktivierte Zahlungen möglich.', { number })
     }
 
-    return `Die offene Zahlung${number} wird abgebrochen und als storniert markiert.`
+    return settingsText('billing.open_payment.cancel_message', 'Die offene Zahlung{number} wird abgebrochen und als storniert markiert.', { number })
 }
 
 const openPaymentModalConfirmText = () => openPaymentModal.value.action === 'delete'
-    ? 'delete'
-    : 'abbrechen'
+    ? settingsText('actions.delete', 'Löschen')
+    : settingsText('actions.cancel', 'Abbrechen')
 
 const confirmOpenPaymentAction = () => {
     const invoice = openPaymentModal.value.invoice
@@ -822,10 +830,17 @@ const canOpenStripePortal = (subscription) => subscription.payment_provider === 
 
 const subscriptionCancelModalMessage = () => {
     const subscription = subscriptionCancelModal.value.subscription
-    const plan = subscription?.plan?.name || 'dieses Abo'
+    const plan = subscription?.plan?.name || settingsText('billing.this_subscription', 'dieses Abo')
     const endsAt = subscription?.current_period_ends_at || subscription?.trial_ends_at
 
-    return `Möchtest du dein ${plan} zum Ende der aktuellen Laufzeit kündigen? ${endsAt ? `Es endet am ${formatDate(endsAt)}.` : ''}`
+    return settingsText(
+        'billing.cancel_subscription.message',
+        'Möchtest du dein {plan} zum Ende der aktuellen Laufzeit kündigen? {end}',
+        {
+            plan,
+            end: endsAt ? settingsText('billing.cancel_subscription.ends_at', 'Es endet am {date}.', { date: formatDate(endsAt) }) : '',
+        },
+    )
 }
 
 const openSubscriptionCancelModal = (subscription) => {
@@ -864,12 +879,15 @@ const socialAccountFor = (provider) =>
 const connectedAccountFor = (provider) =>
     props.sportIntegrations.accounts.find((account) => account.provider === provider)
 
-const integrationStatusLabel = (status) => ({
+const integrationStatusLabel = (status) => settingsText(`integrations.statuses.${status}`, ({
     connected: 'Verbunden',
     requested: 'Vorgemerkt',
     disconnected: 'Getrennt',
     error: 'Fehler',
-}[status] || status)
+}[status] || status))
+
+const sportIntegrationProviderDescription = (key, provider) =>
+    settingsText(`integrations.provider_descriptions.${key}`, provider.description)
 
 const syncIntegration = (account) => {
     router.post(route('auth.sport-integrations.sync', account.id), {}, { preserveScroll: true })
@@ -913,12 +931,12 @@ const closeSportActivityDeleteModal = () => {
 }
 
 const sportActivityDeleteTitle = () => sportActivityDeleteModal.value.mode === 'all'
-    ? 'Alle importierten Aktivitäten löschen'
-    : 'Importierte Aktivität löschen'
+    ? settingsText('integrations.activities.delete_all_title', 'Alle importierten Aktivitäten löschen')
+    : settingsText('integrations.activities.delete_title', 'Importierte Aktivität löschen')
 
 const sportActivityDeleteMessage = () => sportActivityDeleteModal.value.mode === 'all'
-    ? 'Alle importierten Sportaktivitaeten werden dauerhaft aus deinem Airmius Konto gelöscht. Die Verbindung zu Google Fit oder anderen Apps bleibt bestehen.'
-    : 'Diese importierte Sportaktivitaet wird dauerhaft aus deinem Airmius Konto gelöscht.'
+    ? settingsText('integrations.activities.delete_all_message', 'Alle importierten Sportaktivitäten werden dauerhaft aus deinem Airmius Konto gelöscht. Die Verbindung zu Google Fit oder anderen Apps bleibt bestehen.')
+    : settingsText('integrations.activities.delete_message', 'Diese importierte Sportaktivität wird dauerhaft aus deinem Airmius Konto gelöscht.')
 
 const confirmSportActivityDelete = () => {
     if (sportActivityDeleteModal.value.mode === 'all') {
@@ -1001,7 +1019,7 @@ const formatDistance = (meters) => {
     return `${(meters / 1000).toFixed(2).replace('.', ',')} km`
 }
 
-const formatProvider = (provider) => ({
+const formatProvider = (provider) => settingsText(`integrations.providers.${provider}`, ({
     manual: 'Manuell',
     google_fit: 'Google Fit',
     strava: 'Strava',
@@ -1009,32 +1027,34 @@ const formatProvider = (provider) => ({
     mi_fitness: 'Mi Fitness',
     fitbit: 'Fitbit',
     polar: 'Polar',
-}[provider] || provider)
+}[provider] || provider))
+
+const manualActivityTypeLabel = (type) => settingsText(`integrations.manual_activity.types.${type}`, type)
 
 const sportActivityTitle = (activity) => {
     if (activity.title && activity.title !== 'Google Fit Tagesaktivitaet') {
         return activity.title
     }
 
-    return activity.activity_type || 'Tagesaktivitaet'
+    return activity.activity_type || settingsText('integrations.activities.daily_activity', 'Tagesaktivität')
 }
 
 const sportActivitySubtitle = (activity) => {
     if (activity.metrics?.source_kind === 'manual_entry') {
-        return 'Manuell eingetragen'
+        return settingsText('integrations.activities.manual_entry', 'Manuell eingetragen')
     }
 
     if (activity.metrics?.source_kind === 'daily_summary') {
-        const parts = ['Tageszusammenfassung']
+        const parts = [settingsText('integrations.activities.daily_summary', 'Tageszusammenfassung')]
         if (activity.metrics?.active_minutes) {
-            parts.push(`${activity.metrics.active_minutes} aktive Minuten`)
+            parts.push(settingsText('integrations.activities.active_minutes', '{minutes} aktive Minuten', { minutes: activity.metrics.active_minutes }))
         }
 
         return parts.join(' · ')
     }
 
     return activity.metrics?.earliest_start_time
-        ? `Start ca. ${activity.metrics.earliest_start_time}`
+        ? settingsText('integrations.activities.start_about', 'Start ca. {time}', { time: activity.metrics.earliest_start_time })
         : ''
 }
 
@@ -1046,19 +1066,20 @@ const sportActivityTime = (activity) => {
     return activity.metrics?.source_kind === 'daily_summary' ? '-' : formatTime(activity.started_at)
 }
 
-const activityLabel = (type) => ({
+const activityLabel = (type) => settingsText(`activities.types.${type}`, ({
     'post.created': 'Beitrag erstellt',
     'post.updated': 'Beitrag aktualisiert',
     'post.deleted': 'Beitrag gelöscht',
+    'post.commented': 'Beitrag kommentiert',
     'user.followed': 'Person gefolgt',
     'friend.requested': 'Freundschaftsanfrage gesendet',
     'friend.accepted': 'Freundschaft akzeptiert',
     'comment.created': 'Kommentar geschrieben',
     'comment.updated': 'Kommentar bearbeitet',
     'comment.deleted': 'Kommentar gelöscht',
-}[type] || type)
+}[type] || type))
 
-const activityScope = (activity) => activity.team?.name || activity.club?.name || 'Persönlich'
+const activityScope = (activity) => activity.team?.name || activity.club?.name || settingsText('activities.personal', 'Persönlich')
 
 const activityDescription = (activity) => activity.data?.title || activity.data?.content || activity.data?.message || ''
 </script>
@@ -1476,12 +1497,12 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
         <div v-if="activeTab === 'roles'" class="surface-card p-5">
             <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <h2 class="text-lg font-semibold text-primary">Meine Rollen</h2>
+                    <h2 class="text-lg font-semibold text-primary">{{ settingsText('roles.title', 'Meine Rollen') }}</h2>
                     <p class="mt-1 text-sm text-secondary">
-                        Hier siehst du, welche Plattform-Rollen deinem Konto aktuell zugeordnet sind.
+                        {{ settingsText('roles.description', 'Hier siehst du, welche Plattform-Rollen deinem Konto aktuell zugeordnet sind.') }}
                     </p>
                 </div>
-                <span class="text-sm font-semibold text-secondary">{{ userRoles.length }} Rollen</span>
+                <span class="text-sm font-semibold text-secondary">{{ settingsText('roles.count', '{count} Rollen', { count: userRoles.length }) }}</span>
             </div>
 
             <div v-if="userRoles.length" class="mt-5 grid gap-3 md:grid-cols-2">
@@ -1492,15 +1513,15 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                 >
                     <div>
                         <div class="min-w-0">
-                            <p class="break-words font-semibold text-primary">{{ role.name }}</p>
-                            <p class="mt-1 text-sm text-secondary">{{ role.description || 'Keine Beschreibung vorhanden.' }}</p>
+                            <p class="break-words font-semibold text-primary">{{ roleName(role) }}</p>
+                            <p class="mt-1 text-sm text-secondary">{{ roleDescription(role) }}</p>
                         </div>
                     </div>
                 </article>
             </div>
 
             <div v-else class="mt-5 rounded-lg border border-dashed border-border bg-bg p-6 text-sm text-secondary">
-                Deinem Konto ist noch keine Rolle zugewiesen.
+                {{ settingsText('roles.empty', 'Deinem Konto ist noch keine Rolle zugewiesen.') }}
             </div>
         </div>
 
@@ -1508,12 +1529,12 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
         <div v-if="activeTab === 'activities'" class="surface-card p-5">
             <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <h2 class="text-lg font-semibold text-primary">Meine Aktivitäten</h2>
+                    <h2 class="text-lg font-semibold text-primary">{{ settingsText('activities.title', 'Meine Aktivitäten') }}</h2>
                     <p class="mt-1 text-sm text-secondary">
-                        Hier erscheinen nur Aktionen, die von deinem eigenen Konto erstellt wurden.
+                        {{ settingsText('activities.description', 'Hier erscheinen nur Aktionen, die von deinem eigenen Konto erstellt wurden.') }}
                     </p>
                 </div>
-                <span class="text-sm font-semibold text-secondary">{{ activities.length }} Einträge</span>
+                <span class="text-sm font-semibold text-secondary">{{ settingsText('activities.count', '{count} Einträge', { count: activities.length }) }}</span>
             </div>
 
             <div v-if="activities.length" class="mt-5 divide-y divide-border rounded-lg border border-border bg-bg">
@@ -1539,7 +1560,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             </div>
 
             <div v-else class="mt-5 rounded-lg border border-dashed border-border bg-bg p-6 text-sm text-secondary">
-                Noch keine eigenen Aktivitäten vorhanden.
+                {{ settingsText('activities.empty', 'Noch keine eigenen Aktivitäten vorhanden.') }}
             </div>
         </div>
 
@@ -1566,7 +1587,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
 
         <!-- DESIGN -->
         <div v-if="activeTab === 'design'" class="surface-card p-5">
-            <h2 class="text-sm font-semibold text-secondary mb-3">Design</h2>
+            <h2 class="text-sm font-semibold text-secondary mb-3">{{ settingsText('design.title', 'Design') }}</h2>
 
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <button
@@ -1585,7 +1606,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         ></span>
                     </span>
                     <span class="mt-3 block font-semibold text-primary">{{ themeOption.label }}</span>
-                    <span class="mt-1 block text-xs text-secondary">{{ themeOption.description }}</span>
+                    <span class="mt-1 block text-xs text-secondary">{{ themeDescription(themeOption) }}</span>
                 </button>
             </div>
 
@@ -1607,7 +1628,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
 
                 <div class="md:col-span-2">
                     <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">
-                        Adresse
+                        {{ settingsText('address.title', 'Adresse') }}
                     </h2>
                 </div>
 
@@ -1623,62 +1644,62 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
 
                 <div>
                     <label class="text-sm font-semibold text-primary">
-                        Land <span class="text-error">*</span>
+                        {{ settingsText('address.country', 'Land') }} <span class="text-error">*</span>
                     </label>
                     <select v-model="form.country" required class="input">
-                        <option value="DE">Deutschland</option>
-                        <option value="AT">Österreich</option>
-                        <option value="CH">Schweiz</option>
-                        <option value="FR">Frankreich</option>
-                        <option value="NL">Niederlande</option>
-                        <option value="BE">Belgien</option>
-                        <option value="TR">Türkei</option>
+                        <option value="DE">{{ settingsText('address.countries.DE', 'Deutschland') }}</option>
+                        <option value="AT">{{ settingsText('address.countries.AT', 'Österreich') }}</option>
+                        <option value="CH">{{ settingsText('address.countries.CH', 'Schweiz') }}</option>
+                        <option value="FR">{{ settingsText('address.countries.FR', 'Frankreich') }}</option>
+                        <option value="NL">{{ settingsText('address.countries.NL', 'Niederlande') }}</option>
+                        <option value="BE">{{ settingsText('address.countries.BE', 'Belgien') }}</option>
+                        <option value="TR">{{ settingsText('address.countries.TR', 'Türkei') }}</option>
                         <option value="US">USA</option>
                     </select>
                     <p v-if="form.errors.country" class="mt-1 text-sm text-error">{{ form.errors.country }}</p>
                 </div>
 
                 <div>
-                    <label class="text-sm font-semibold text-primary">Stadt</label>
+                    <label class="text-sm font-semibold text-primary">{{ settingsText('address.city', 'Stadt') }}</label>
                     <input v-model="form.city" class="input" />
                     <p v-if="form.errors.city" class="mt-1 text-sm text-error">{{ form.errors.city }}</p>
                 </div>
 
                 <div>
-                    <label class="text-sm font-semibold text-primary">PLZ</label>
+                    <label class="text-sm font-semibold text-primary">{{ settingsText('address.postal_code', 'PLZ') }}</label>
                     <input v-model="form.postal_code" class="input" />
                     <p v-if="form.errors.postal_code" class="mt-1 text-sm text-error">{{ form.errors.postal_code }}</p>
                 </div>
 
                 <div>
-                    <label class="text-sm font-semibold text-primary">Bundesland</label>
+                    <label class="text-sm font-semibold text-primary">{{ settingsText('address.state', 'Bundesland') }}</label>
                     <input v-model="form.state" class="input" />
                     <p v-if="form.errors.state" class="mt-1 text-sm text-error">{{ form.errors.state }}</p>
                 </div>
 
                 <div>
-                    <label class="text-sm font-semibold text-primary">Straße</label>
+                    <label class="text-sm font-semibold text-primary">{{ settingsText('address.street', 'Straße') }}</label>
                     <input v-model="form.street" class="input" />
                     <p v-if="form.errors.street" class="mt-1 text-sm text-error">{{ form.errors.street }}</p>
                 </div>
 
                 <div>
-                    <label class="text-sm font-semibold text-primary">Hausnummer</label>
+                    <label class="text-sm font-semibold text-primary">{{ settingsText('address.house_number', 'Hausnummer') }}</label>
                     <input v-model="form.house_number" class="input" />
                     <p v-if="form.errors.house_number" class="mt-1 text-sm text-error">{{ form.errors.house_number }}</p>
                 </div>
 
                 <div class="md:col-span-2 mt-4 border-t border-border pt-5">
                     <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">
-                        Event-Defaults
+                        {{ settingsText('address.event_defaults', 'Event-Defaults') }}
                     </h2>
                     <p class="mt-1 text-sm text-secondary">
-                        Diese Werte werden automatisch für deine Eventliste genutzt, solange du dort keine eigenen Filter setzt.
+                        {{ settingsText('address.event_defaults_description', 'Diese Werte werden automatisch für deine Eventliste genutzt, solange du dort keine eigenen Filter setzt.') }}
                     </p>
                 </div>
 
                 <div>
-                    <label class="text-sm font-semibold text-primary">Eventzone</label>
+                    <label class="text-sm font-semibold text-primary">{{ settingsText('address.event_zone', 'Eventzone') }}</label>
                     <div class="mt-1 flex items-center gap-2">
                         <input
                             v-model="form.event_radius_km"
@@ -1690,13 +1711,13 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         <span class="text-sm font-semibold text-secondary">km</span>
                     </div>
                     <p class="mt-1 text-xs text-secondary">
-                        Aktuell adressbasiert über PLZ/Stadt/Vereinsadresse.
+                        {{ settingsText('address.event_zone_help', 'Aktuell adressbasiert über PLZ/Stadt/Vereinsadresse.') }}
                     </p>
                     <p v-if="form.errors.event_radius_km" class="mt-1 text-sm text-error">{{ form.errors.event_radius_km }}</p>
                 </div>
 
                 <div class="md:col-span-2">
-                    <label class="text-sm font-semibold text-primary">Sportarten für Eventvorschlaege</label>
+                    <label class="text-sm font-semibold text-primary">{{ settingsText('address.event_sports', 'Sportarten für Eventvorschläge') }}</label>
                     <div class="mt-2 grid max-h-64 gap-2 overflow-y-auto rounded-lg border border-border bg-bg p-3 sm:grid-cols-2 lg:grid-cols-3">
                         <button
                             v-for="sport in sports"
@@ -1709,7 +1730,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                             @click="toggleDefaultSport(sport.id)"
                         >
                             <span class="block font-semibold">{{ sport.name }}</span>
-                            <span class="text-xs">{{ sport.category || 'Sport' }}</span>
+                            <span class="text-xs">{{ sport.category || settingsText('address.sport_fallback', 'Sport') }}</span>
                         </button>
                     </div>
                     <p v-if="form.errors.event_default_sport_ids" class="mt-1 text-sm text-error">{{ form.errors.event_default_sport_ids }}</p>
@@ -1717,7 +1738,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
 
                 <div class="md:col-span-2">
                     <button class="btn-primary" :disabled="form.processing">
-                        Adresse & Event-Defaults speichern
+                        {{ settingsText('address.save_button', 'Adresse & Event-Defaults speichern') }}
                     </button>
                 </div>
 
@@ -1728,81 +1749,81 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
         <div v-if="activeTab === 'privacy'" class="surface-card p-5">
             <form class="space-y-5" @submit.prevent="saveAddress">
                 <div>
-                    <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Privatsphäre</h2>
+                    <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ settingsText('privacy.title', 'Privatsphäre') }}</h2>
                     <p class="mt-1 text-sm text-secondary">
-                        Lege fest, wer dein Profil sehen, dich direkt kontaktieren oder dir Freundschaftsanfragen senden darf.
+                        {{ settingsText('privacy.description', 'Lege fest, wer dein Profil sehen, dich direkt kontaktieren oder dir Freundschaftsanfragen senden darf.') }}
                     </p>
                 </div>
 
                 <label class="block">
-                    <span class="text-sm font-semibold text-primary">Profil-Sichtbarkeit</span>
+                    <span class="text-sm font-semibold text-primary">{{ settingsText('privacy.profile_visibility', 'Profil-Sichtbarkeit') }}</span>
                     <select v-model="form.profile_visibility" class="input">
-                        <option value="public">Alle angemeldeten Personen</option>
-                        <option value="private">Nur ich, Freunde und Follower</option>
+                        <option value="public">{{ settingsText('privacy.options.public', 'Alle angemeldeten Personen') }}</option>
+                        <option value="private">{{ settingsText('privacy.options.private', 'Nur ich, Freunde und Follower') }}</option>
                     </select>
                     <p class="mt-1 text-xs text-secondary">
-                        Diese Einstellung steuert, ob andere dein Profil und deine Profilinhalte sehen können.
+                        {{ settingsText('privacy.profile_visibility_help', 'Diese Einstellung steuert, ob andere dein Profil und deine Profilinhalte sehen können.') }}
                     </p>
                     <p v-if="form.errors.profile_visibility" class="mt-1 text-sm text-error">{{ form.errors.profile_visibility }}</p>
                 </label>
 
                 <label class="block">
-                    <span class="text-sm font-semibold text-primary">Nachrichten erhalten</span>
+                    <span class="text-sm font-semibold text-primary">{{ settingsText('privacy.direct_messages', 'Nachrichten erhalten') }}</span>
                     <select v-model="form.direct_message_privacy" class="input">
-                        <option value="everyone">Alle angemeldeten Personen</option>
-                        <option value="friends">Nur Freunde</option>
+                        <option value="everyone">{{ settingsText('privacy.options.everyone', 'Alle angemeldeten Personen') }}</option>
+                        <option value="friends">{{ settingsText('privacy.options.friends', 'Nur Freunde') }}</option>
                     </select>
                     <p v-if="form.errors.direct_message_privacy" class="mt-1 text-sm text-error">{{ form.errors.direct_message_privacy }}</p>
                 </label>
 
                 <label class="block">
-                    <span class="text-sm font-semibold text-primary">Freundschaftsanfragen erhalten</span>
+                    <span class="text-sm font-semibold text-primary">{{ settingsText('privacy.friend_requests', 'Freundschaftsanfragen erhalten') }}</span>
                     <select v-model="form.friend_request_privacy" class="input">
-                        <option value="everyone">Alle angemeldeten Personen</option>
-                        <option value="friends">Nur Freunde</option>
+                        <option value="everyone">{{ settingsText('privacy.options.everyone', 'Alle angemeldeten Personen') }}</option>
+                        <option value="friends">{{ settingsText('privacy.options.friends', 'Nur Freunde') }}</option>
                     </select>
                     <p v-if="form.errors.friend_request_privacy" class="mt-1 text-sm text-error">{{ form.errors.friend_request_privacy }}</p>
                 </label>
 
                 <div class="rounded-lg border border-border bg-bg p-4">
-                    <h3 class="text-sm font-semibold text-primary">Werbung & Messung</h3>
+                    <h3 class="text-sm font-semibold text-primary">{{ settingsText('privacy.ads_title', 'Werbung & Messung') }}</h3>
                     <p class="mt-1 text-sm text-secondary">
-                        Ohne Einwilligung zeigen wir nur kontextuelle Anzeigen und speichern keine personalisierten Retargeting-Signale.
+                        {{ settingsText('privacy.ads_description', 'Ohne Einwilligung zeigen wir nur kontextuelle Anzeigen und speichern keine personalisierten Retargeting-Signale.') }}
                     </p>
                     <label class="mt-4 flex items-start gap-3 text-sm text-primary">
                         <input v-model="form.ads_personalization_consent" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                         <span>
-                            <span class="block font-semibold">Personalisierte Anzeigen erlauben</span>
-                            <span class="text-xs text-secondary">Nutzt z. B. vorherige Marketplace-Interessen, um passendere Anzeigen zu zeigen.</span>
+                            <span class="block font-semibold">{{ settingsText('privacy.ads_personalization', 'Personalisierte Anzeigen erlauben') }}</span>
+                            <span class="text-xs text-secondary">{{ settingsText('privacy.ads_personalization_help', 'Nutzt z. B. vorherige Marketplace-Interessen, um passendere Anzeigen zu zeigen.') }}</span>
                         </span>
                     </label>
                     <label class="mt-4 flex items-start gap-3 text-sm text-primary">
                         <input v-model="form.ads_measurement_consent" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
                         <span>
-                            <span class="block font-semibold">Conversion-Messung erlauben</span>
-                            <span class="text-xs text-secondary">Ordnet Klicks anonymisierten Kampagnenereignissen wie Checkout oder Kauf zu.</span>
+                            <span class="block font-semibold">{{ settingsText('privacy.ads_measurement', 'Conversion-Messung erlauben') }}</span>
+                            <span class="text-xs text-secondary">{{ settingsText('privacy.ads_measurement_help', 'Ordnet Klicks anonymisierten Kampagnenereignissen wie Checkout oder Kauf zu.') }}</span>
                         </span>
                     </label>
                 </div>
 
                 <button class="btn-primary" :disabled="form.processing">
-                    Privatsphaere speichern
+                    {{ settingsText('privacy.save_button', 'Privatsphäre speichern') }}
                 </button>
             </form>
         </div>
 
         <div v-if="activeTab === 'billing'" class="space-y-5">
             <section class="surface-card p-5">
-                <h2 class="text-lg font-semibold text-primary">Meine Airmius Abos</h2>
+                <h2 class="text-lg font-semibold text-primary">{{ settingsText('billing.subscriptions_title', 'Meine Airmius Abos') }}</h2>
                 <p class="mt-1 text-sm text-secondary">
-                    Aktuelle persönliche Airmius Pläne und Laufzeiten.
+                    {{ settingsText('billing.subscriptions_description', 'Aktuelle persönliche Airmius Pläne und Laufzeiten.') }}
                 </p>
 
                 <div class="mt-4 grid gap-3 md:grid-cols-2">
                     <div v-for="subscription in currentUserSubscriptions" :key="subscription.id" class="rounded-lg border border-border bg-bg p-4">
                         <div class="flex items-start justify-between gap-3">
                             <div>
-                                <p class="font-semibold text-primary">{{ subscription.plan?.name || 'Airmius Abo' }}</p>
+                                <p class="font-semibold text-primary">{{ subscription.plan?.name || settingsText('billing.airmius_subscription', 'Airmius Abo') }}</p>
                                 <p class="mt-1 text-sm text-secondary">{{ invoiceStatusLabel(subscription.status) }}</p>
                             </div>
                             <div class="flex shrink-0 flex-wrap justify-end gap-2">
@@ -1812,13 +1833,13 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                     class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-muted"
                                     @click="openProviderPortal(subscription)"
                                 >
-                                    Zahlungsportal
+                                    {{ settingsText('billing.payment_portal', 'Zahlungsportal') }}
                                 </button>
                                 <p
                                     v-else-if="subscription.payment_provider === 'stripe'"
                                     class="text-xs text-secondary"
                                 >
-                                    Zahlungsportal ist für dieses Abo momentan nicht aktiv.
+                                    {{ settingsText('billing.payment_portal_inactive', 'Zahlungsportal ist für dieses Abo momentan nicht aktiv.') }}
                                 </p>
 
                                 <button
@@ -1827,21 +1848,21 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                     class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-muted"
                                     @click="cancelSubscription(subscription)"
                                 >
-                                    Kündigen
+                                    {{ settingsText('billing.cancel', 'Kündigen') }}
                                 </button>
                             </div>
                         </div>
                         <dl class="mt-3 space-y-2 text-sm">
                             <div class="flex justify-between gap-3">
-                                <dt class="text-secondary">Zahlungsart</dt>
+                                <dt class="text-secondary">{{ settingsText('billing.payment_method', 'Zahlungsart') }}</dt>
                                 <dd class="text-primary">{{ subscription.payment_provider || '-' }}</dd>
                             </div>
                             <div class="flex justify-between gap-3">
-                                <dt class="text-secondary">Läuft bis</dt>
+                                <dt class="text-secondary">{{ settingsText('billing.runs_until', 'Läuft bis') }}</dt>
                                 <dd class="text-primary">{{ formatDate(subscription.current_period_ends_at || subscription.trial_ends_at) }}</dd>
                             </div>
                             <div v-if="subscription.cancels_at" class="flex justify-between gap-3">
-                                <dt class="text-secondary">Gekündigt zum</dt>
+                                <dt class="text-secondary">{{ settingsText('billing.cancelled_at', 'Gekündigt zum') }}</dt>
                                 <dd class="text-primary">{{ formatDate(subscription.cancels_at) }}</dd>
                             </div>
                         </dl>
@@ -1849,29 +1870,29 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                 </div>
 
                 <p v-if="!currentUserSubscriptions.length" class="mt-4 text-sm text-secondary">
-                    Du hast noch kein persönliches Airmius Abo.
+                    {{ settingsText('billing.no_subscription', 'Du hast noch kein persönliches Airmius Abo.') }}
                 </p>
             </section>
 
             <section class="surface-card p-5">
-                <h2 class="text-lg font-semibold text-primary">Airmius Abo-Rechnungen</h2>
+                <h2 class="text-lg font-semibold text-primary">{{ settingsText('billing.subscription_invoices_title', 'Airmius Abo-Rechnungen') }}</h2>
                 <p class="mt-1 text-sm text-secondary">
-                    Rechnungen für Airmius Pläne und Plattform-Abos.
+                    {{ settingsText('billing.subscription_invoices_description', 'Rechnungen für Airmius Pläne und Plattform-Abos.') }}
                 </p>
 
                 <div class="mt-4 overflow-x-auto">
                     <table class="min-w-full text-left text-sm">
                         <thead class="text-xs uppercase text-secondary">
                             <tr>
-                                <th class="py-2 pr-4">Nr.</th>
-                                <th class="py-2 pr-4">Plan</th>
-                                <th class="py-2 pr-4">Verein</th>
-                                <th class="py-2 pr-4">Betrag</th>
-                                <th class="py-2 pr-4">Fällig</th>
-                                <th class="py-2 pr-4">Status</th>
-                                <th class="py-2 pr-4">Zahlen</th>
+                                <th class="py-2 pr-4">{{ settingsText('billing.table.number', 'Nr.') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('billing.table.plan', 'Plan') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('billing.table.club', 'Verein') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('billing.table.amount', 'Betrag') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('billing.table.due', 'Fällig') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('billing.table.status', 'Status') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('billing.table.pay', 'Zahlen') }}</th>
                                 <th class="py-2 pr-4 text-right">PDF</th>
-                                <th class="py-2 pr-4 text-right">Aktion</th>
+                                <th class="py-2 pr-4 text-right">{{ settingsText('billing.table.action', 'Aktion') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border">
@@ -1889,9 +1910,9 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                         class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-muted"
                                         @click="openBankTransferModal('airmius', invoice)"
                                     >
-                                        Bankdaten
+                                        {{ settingsText('billing.bank_details', 'Bankdaten') }}
                                     </button>
-                                    <span v-else-if="isPayableClubInvoice(invoice)" class="text-xs text-warning">Bankdaten fehlen</span>
+                                    <span v-else-if="isPayableClubInvoice(invoice)" class="text-xs text-warning">{{ settingsText('billing.bank_details_missing', 'Bankdaten fehlen') }}</span>
                                     <span v-else class="text-xs text-secondary">-</span>
                                 </td>
                                 <td class="py-3 pr-4 text-right">
@@ -1907,7 +1928,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                             class="rounded-lg border border-warning px-3 py-1 text-xs font-semibold text-warning hover:bg-warning/10"
                                             @click="openPaymentActionModal('cancel', invoice)"
                                         >
-                                            Abbrechen
+                                            {{ settingsText('actions.cancel', 'Abbrechen') }}
                                         </button>
                                         <button
                                             v-if="canDeleteOpenSubscriptionPayment(invoice)"
@@ -1915,7 +1936,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                             class="rounded-lg border border-error px-3 py-1 text-xs font-semibold text-error hover:bg-error/10"
                                             @click="openPaymentActionModal('delete', invoice)"
                                         >
-                                            Löschen
+                                            {{ settingsText('actions.delete', 'Löschen') }}
                                         </button>
                                     </div>
                                     <span v-else class="text-xs text-secondary">-</span>
@@ -1925,28 +1946,28 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                     </table>
 
                     <p v-if="!billingHistory.subscription_invoices.length" class="py-6 text-sm text-secondary">
-                        Noch keine Airmius Abo-Rechnungen vorhanden.
+                        {{ settingsText('billing.no_subscription_invoices', 'Noch keine Airmius Abo-Rechnungen vorhanden.') }}
                     </p>
                 </div>
             </section>
 
             <section class="surface-card p-5">
-                <h2 class="text-lg font-semibold text-primary">Meine Rechnungen</h2>
+                <h2 class="text-lg font-semibold text-primary">{{ settingsText('billing.my_invoices_title', 'Meine Rechnungen') }}</h2>
                 <p class="mt-1 text-sm text-secondary">
-                    Hier siehst du offene und bezahlte Vereinsbeiträge.
+                    {{ settingsText('billing.my_invoices_description', 'Hier siehst du offene und bezahlte Vereinsbeiträge.') }}
                 </p>
 
                 <div class="mt-4 overflow-x-auto">
                     <table class="min-w-full text-left text-sm">
                         <thead class="text-xs uppercase text-secondary">
                             <tr>
-                                <th class="py-2 pr-4">Nr.</th>
-                                <th class="py-2 pr-4">Verein</th>
-                                <th class="py-2 pr-4">Titel</th>
-                                <th class="py-2 pr-4">Betrag</th>
-                                <th class="py-2 pr-4">Fällig</th>
-                                <th class="py-2 pr-4">Status</th>
-                                <th class="py-2 pr-4">Zahlen</th>
+                                <th class="py-2 pr-4">{{ settingsText('billing.table.number', 'Nr.') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('billing.table.club', 'Verein') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('billing.table.title', 'Titel') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('billing.table.amount', 'Betrag') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('billing.table.due', 'Fällig') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('billing.table.status', 'Status') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('billing.table.pay', 'Zahlen') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border">
@@ -1964,9 +1985,9 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                         class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-muted"
                                         @click="openBankTransferModal('club', invoice)"
                                     >
-                                        Bankdaten
+                                        {{ settingsText('billing.bank_details', 'Bankdaten') }}
                                     </button>
-                                    <span v-else-if="isPayableClubInvoice(invoice)" class="text-xs text-warning">Bankdaten fehlen</span>
+                                    <span v-else-if="isPayableClubInvoice(invoice)" class="text-xs text-warning">{{ settingsText('billing.bank_details_missing', 'Bankdaten fehlen') }}</span>
                                     <span v-else class="text-xs text-secondary">-</span>
                                 </td>
                             </tr>
@@ -1974,23 +1995,23 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                     </table>
 
                     <p v-if="!billingHistory.invoices.length" class="py-6 text-sm text-secondary">
-                        Noch keine Rechnungen vorhanden.
+                        {{ settingsText('billing.no_invoices', 'Noch keine Rechnungen vorhanden.') }}
                     </p>
                 </div>
             </section>
 
             <section class="surface-card p-5">
-                <h2 class="text-lg font-semibold text-primary">Zahlungshistorie</h2>
+                <h2 class="text-lg font-semibold text-primary">{{ settingsText('billing.payment_history_title', 'Zahlungshistorie') }}</h2>
 
                 <div class="mt-4 overflow-x-auto">
                     <table class="min-w-full text-left text-sm">
                         <thead class="text-xs uppercase text-secondary">
                             <tr>
-                                <th class="py-2 pr-4">Datum</th>
-                                <th class="py-2 pr-4">Verein</th>
-                                <th class="py-2 pr-4">Rechnung</th>
-                                <th class="py-2 pr-4">Betrag</th>
-                                <th class="py-2 pr-4">Status</th>
+                                <th class="py-2 pr-4">{{ settingsText('billing.table.date', 'Datum') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('billing.table.club', 'Verein') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('billing.table.invoice', 'Rechnung') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('billing.table.amount', 'Betrag') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('billing.table.status', 'Status') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border">
@@ -1999,13 +2020,13 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                 <td class="py-3 pr-4 text-secondary">{{ payment.club?.name || '-' }}</td>
                                 <td class="py-3 pr-4 text-primary">{{ payment.invoice?.number || '-' }}</td>
                                 <td class="py-3 pr-4 text-primary">{{ formatMoney(payment.amount) }}</td>
-                                <td class="py-3 pr-4 text-secondary">{{ payment.status === 'paid' ? 'Bezahlt' : payment.status }}</td>
+                                <td class="py-3 pr-4 text-secondary">{{ payment.status === 'paid' ? invoiceStatusLabel('paid') : invoiceStatusLabel(payment.status) }}</td>
                             </tr>
                         </tbody>
                     </table>
 
                     <p v-if="!billingHistory.payments.length" class="py-6 text-sm text-secondary">
-                        Noch keine Zahlungen markiert.
+                        {{ settingsText('billing.no_payments', 'Noch keine Zahlungen markiert.') }}
                     </p>
                 </div>
             </section>
@@ -2013,9 +2034,9 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
 
         <div v-if="activeTab === 'integrations'" class="space-y-5">
             <section class="surface-card p-5">
-                <h2 class="text-lg font-semibold text-primary">Login-Verknüpfungen</h2>
+                <h2 class="text-lg font-semibold text-primary">{{ settingsText('integrations.login_title', 'Login-Verknüpfungen') }}</h2>
                 <p class="mt-1 text-sm text-secondary">
-                    Nutze Google oder Outlook für eine schnelle Anmeldung.
+                    {{ settingsText('integrations.login_description', 'Nutze Google oder Outlook für eine schnelle Anmeldung.') }}
                 </p>
 
                 <div class="mt-4 grid gap-3 md:grid-cols-2">
@@ -2027,17 +2048,17 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                             <div>
                                 <p class="font-semibold text-primary">Google</p>
                                 <p class="text-sm text-secondary">
-                                    {{ socialAccountFor('google')?.email || 'Noch nicht verbunden' }}
+                                    {{ socialAccountFor('google')?.email || settingsText('integrations.not_connected', 'Noch nicht verbunden') }}
                                 </p>
                             </div>
                             <span
                                 v-if="socialAccountFor('google')"
                                 class="rounded-lg bg-success px-3 py-2 text-sm font-semibold text-white"
                             >
-                                Verbunden
+                                {{ settingsText('integrations.connected', 'Verbunden') }}
                             </span>
                             <a v-else :href="route('social-auth.redirect', 'google')" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary">
-                                Verbinden
+                                {{ settingsText('integrations.connect', 'Verbinden') }}
                             </a>
                         </div>
                     </div>
@@ -2050,17 +2071,17 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                             <div>
                                 <p class="font-semibold text-primary">Outlook / Microsoft</p>
                                 <p class="text-sm text-secondary">
-                                    {{ socialAccountFor('microsoft')?.email || 'Noch nicht verbunden' }}
+                                    {{ socialAccountFor('microsoft')?.email || settingsText('integrations.not_connected', 'Noch nicht verbunden') }}
                                 </p>
                             </div>
                             <span
                                 v-if="socialAccountFor('microsoft')"
                                 class="rounded-lg bg-success px-3 py-2 text-sm font-semibold text-white"
                             >
-                                Verbunden
+                                {{ settingsText('integrations.connected', 'Verbunden') }}
                             </span>
                             <a v-else :href="route('social-auth.redirect', 'microsoft')" class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary">
-                                Verbinden
+                                {{ settingsText('integrations.connect', 'Verbinden') }}
                             </a>
                         </div>
                     </div>
@@ -2068,9 +2089,9 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             </section>
 
             <section class="surface-card p-5">
-                <h2 class="text-lg font-semibold text-primary">Sportprogramme synchronisieren</h2>
+                <h2 class="text-lg font-semibold text-primary">{{ settingsText('integrations.sport_apps_title', 'Sportprogramme synchronisieren') }}</h2>
                 <p class="mt-1 text-sm text-secondary">
-                    Verknüpfe Sport-Apps, damit Trainingsdaten später automatisch in dein Airmius Profil fließen können.
+                    {{ settingsText('integrations.sport_apps_description', 'Verknüpfe Sport-Apps, damit Trainingsdaten später automatisch in dein Airmius Profil fließen können.') }}
                 </p>
 
                 <div class="mt-4 grid gap-3 lg:grid-cols-3">
@@ -2083,7 +2104,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
                                 <p class="font-semibold text-primary">{{ provider.label }}</p>
-                                <p class="mt-1 text-sm text-secondary">{{ provider.description }}</p>
+                                <p class="mt-1 text-sm text-secondary">{{ sportIntegrationProviderDescription(key, provider) }}</p>
                             </div>
                             <span
                                 v-if="connectedAccountFor(key)"
@@ -2094,22 +2115,22 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         </div>
 
                         <p v-if="connectedAccountFor(key)?.last_synced_at" class="mt-3 text-xs text-secondary">
-                            Zuletzt synchronisiert: {{ formatDate(connectedAccountFor(key).last_synced_at) }}
+                            {{ settingsText('integrations.last_synced', 'Zuletzt synchronisiert: {date}', { date: formatDate(connectedAccountFor(key).last_synced_at) }) }}
                         </p>
                         <p v-if="connectedAccountFor(key)?.sync_summary?.message" class="mt-2 text-xs text-secondary">
                             {{ connectedAccountFor(key).sync_summary.message }}
                         </p>
                         <dl v-if="connectedAccountFor(key)?.sync_summary?.google_status || connectedAccountFor(key)?.sync_summary?.bucket_count !== undefined" class="mt-2 space-y-1 text-xs text-secondary">
                             <div v-if="connectedAccountFor(key)?.sync_summary?.google_status" class="flex gap-2">
-                                <dt>Google Status:</dt>
+                                <dt>{{ settingsText('integrations.google_status', 'Google Status:') }}</dt>
                                 <dd class="font-semibold text-primary">{{ connectedAccountFor(key).sync_summary.google_status }}</dd>
                             </div>
                             <div v-if="connectedAccountFor(key)?.sync_summary?.google_error" class="flex gap-2">
-                                <dt>Google Fehler:</dt>
+                                <dt>{{ settingsText('integrations.google_error', 'Google Fehler:') }}</dt>
                                 <dd class="font-semibold text-primary">{{ connectedAccountFor(key).sync_summary.google_error }}</dd>
                             </div>
                             <div v-if="connectedAccountFor(key)?.sync_summary?.bucket_count !== undefined" class="flex gap-2">
-                                <dt>Tagesbereiche:</dt>
+                                <dt>{{ settingsText('integrations.day_ranges', 'Tagesbereiche:') }}</dt>
                                 <dd class="font-semibold text-primary">{{ connectedAccountFor(key).sync_summary.bucket_count }}</dd>
                             </div>
                         </dl>
@@ -2120,7 +2141,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                 :href="route('auth.sport-integrations.connect', provider.route_key || key)"
                                 class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary"
                             >
-                                {{ provider.status === 'live_oauth' ? 'Verbinden' : 'Vormerken' }}
+                                {{ provider.status === 'live_oauth' ? settingsText('integrations.connect', 'Verbinden') : settingsText('integrations.request', 'Vormerken') }}
                             </a>
                             <button
                                 v-if="connectedAccountFor(key)"
@@ -2128,7 +2149,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                 class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary"
                                 @click="syncIntegration(connectedAccountFor(key))"
                             >
-                                Sync prüfen
+                                {{ settingsText('integrations.check_sync', 'Sync prüfen') }}
                             </button>
                             <button
                                 v-if="connectedAccountFor(key)"
@@ -2136,7 +2157,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                 class="rounded-lg border border-danger/40 px-3 py-2 text-sm font-semibold text-danger"
                                 @click="openDisconnectIntegrationModal(connectedAccountFor(key))"
                             >
-                                Entfernen
+                                {{ settingsText('actions.remove', 'Entfernen') }}
                             </button>
                         </div>
                     </article>
@@ -2145,22 +2166,22 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
 
             <section class="surface-card p-5">
                 <div class="flex flex-wrap items-center justify-between gap-3">
-                    <h2 class="text-lg font-semibold text-primary">Importierte Aktivitäten</h2>
+                    <h2 class="text-lg font-semibold text-primary">{{ settingsText('integrations.activities.title', 'Importierte Aktivitäten') }}</h2>
                     <button
                         v-if="sportIntegrations.activities.length"
                         type="button"
                         class="rounded-lg border border-danger/40 px-3 py-2 text-sm font-semibold text-danger"
                         @click="openSportActivityDeleteModal()"
                     >
-                        Alle löschen
+                        {{ settingsText('integrations.activities.delete_all', 'Alle löschen') }}
                     </button>
                 </div>
                 <form class="mt-5 rounded-xl border border-border bg-muted/30 p-4" @submit.prevent="storeManualActivity">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                            <h3 class="text-sm font-semibold uppercase tracking-wide text-secondary">Manuell eintragen</h3>
+                            <h3 class="text-sm font-semibold uppercase tracking-wide text-secondary">{{ settingsText('integrations.manual_activity.title', 'Manuell eintragen') }}</h3>
                             <p class="mt-1 text-sm text-secondary">
-                                Füge eigene Trainingseinheiten hinzu, auch wenn keine Sport-App verbunden ist.
+                                {{ settingsText('integrations.manual_activity.description', 'Füge eigene Trainingseinheiten hinzu, auch wenn keine Sport-App verbunden ist.') }}
                             </p>
                         </div>
                         <button
@@ -2168,19 +2189,19 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                             class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60"
                             :disabled="manualActivityForm.processing"
                         >
-                            Training speichern
+                            {{ settingsText('integrations.manual_activity.save', 'Training speichern') }}
                         </button>
                     </div>
 
                     <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                         <label class="block text-sm font-semibold text-primary">
-                            Name
+                            {{ settingsText('integrations.manual_activity.name', 'Name') }}
                             <input
                                 v-model="manualActivityForm.title"
                                 type="text"
                                 maxlength="120"
                                 class="mt-2 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
-                                placeholder="z. B. Lauftraining"
+                                :placeholder="settingsText('integrations.manual_activity.name_placeholder', 'z. B. Lauftraining')"
                                 required
                             />
                             <span v-if="manualActivityForm.errors.title" class="mt-1 block text-xs text-danger">
@@ -2189,26 +2210,19 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         </label>
 
                         <label class="block text-sm font-semibold text-primary">
-                            Sportart
+                            {{ settingsText('integrations.manual_activity.sport_type', 'Sportart') }}
                             <select
                                 v-model="manualActivityForm.activity_type"
                                 class="mt-2 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-primary"
                             >
-                                <option>Training</option>
-                                <option>Laufen</option>
-                                <option>Radfahren</option>
-                                <option>Schwimmen</option>
-                                <option>Fußball</option>
-                                <option>Fitness</option>
-                                <option>Krafttraining</option>
-                                <option>Yoga</option>
-                                <option>Gehen</option>
-                                <option>Sonstiges</option>
+                                <option v-for="type in manualActivityTypeOptions" :key="type" :value="type">
+                                    {{ manualActivityTypeLabel(type) }}
+                                </option>
                             </select>
                         </label>
 
                         <label class="block text-sm font-semibold text-primary">
-                            Datum und Zeit
+                            {{ settingsText('integrations.manual_activity.date_time', 'Datum und Zeit') }}
                             <input
                                 v-model="manualActivityForm.started_at"
                                 type="datetime-local"
@@ -2221,7 +2235,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         </label>
 
                         <label class="block text-sm font-semibold text-primary">
-                            Bild
+                            {{ settingsText('integrations.manual_activity.image', 'Bild') }}
                             <input
                                 ref="manualActivityImageInput"
                                 type="file"
@@ -2235,7 +2249,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         </label>
 
                         <label class="block text-sm font-semibold text-primary">
-                            Dauer in Minuten
+                            {{ settingsText('integrations.manual_activity.duration_minutes', 'Dauer in Minuten') }}
                             <input
                                 v-model="manualActivityForm.duration_minutes"
                                 type="number"
@@ -2247,7 +2261,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         </label>
 
                         <label class="block text-sm font-semibold text-primary">
-                            Distanz in km
+                            {{ settingsText('integrations.manual_activity.distance_km', 'Distanz in km') }}
                             <input
                                 v-model="manualActivityForm.distance_km"
                                 type="number"
@@ -2260,7 +2274,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         </label>
 
                         <label class="block text-sm font-semibold text-primary">
-                            Kalorien
+                            {{ settingsText('integrations.manual_activity.calories', 'Kalorien') }}
                             <input
                                 v-model="manualActivityForm.calories"
                                 type="number"
@@ -2276,15 +2290,15 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                     <table class="min-w-full text-left text-sm">
                         <thead class="text-xs uppercase text-secondary">
                             <tr>
-                                <th class="py-2 pr-4">Bild</th>
-                                <th class="py-2 pr-4">Datum</th>
-                                <th class="py-2 pr-4">Zeit</th>
-                                <th class="py-2 pr-4">Quelle</th>
-                                <th class="py-2 pr-4">Sportart</th>
-                                <th class="py-2 pr-4">Dauer</th>
-                                <th class="py-2 pr-4">Distanz</th>
-                                <th class="py-2 pr-4">Kalorien</th>
-                                <th class="py-2 pr-4 text-right">Aktion</th>
+                                <th class="py-2 pr-4">{{ settingsText('integrations.activities.table.image', 'Bild') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('integrations.activities.table.date', 'Datum') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('integrations.activities.table.time', 'Zeit') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('integrations.activities.table.source', 'Quelle') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('integrations.activities.table.sport_type', 'Sportart') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('integrations.activities.table.duration', 'Dauer') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('integrations.activities.table.distance', 'Distanz') }}</th>
+                                <th class="py-2 pr-4">{{ settingsText('integrations.activities.table.calories', 'Kalorien') }}</th>
+                                <th class="py-2 pr-4 text-right">{{ settingsText('integrations.activities.table.action', 'Aktion') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border">
@@ -2321,14 +2335,14 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                                             class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary"
                                             @click="openSportActivityEditModal(activity)"
                                         >
-                                            Umbenennen
+                                            {{ settingsText('actions.rename', 'Umbenennen') }}
                                         </button>
                                         <button
                                             type="button"
                                             class="rounded-lg border border-danger/40 px-3 py-2 text-xs font-semibold text-danger"
                                             @click="openSportActivityDeleteModal(activity)"
                                         >
-                                            Löschen
+                                            {{ settingsText('actions.delete', 'Löschen') }}
                                         </button>
                                     </div>
                                 </td>
@@ -2337,7 +2351,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                     </table>
 
                     <p v-if="!sportIntegrations.activities.length" class="py-6 text-sm text-secondary">
-                        Noch keine Aktivitäten importiert.
+                        {{ settingsText('integrations.activities.empty', 'Noch keine Aktivitäten importiert.') }}
                     </p>
                 </div>
             </section>
@@ -2358,27 +2372,27 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             :title="openPaymentModalTitle()"
             :message="openPaymentModalMessage()"
             :confirm-text="openPaymentModalConfirmText()"
-            cancel-text="Zurück"
+            :cancel-text="settingsText('actions.back', 'Zurück')"
             @confirm="confirmOpenPaymentAction"
             @cancel="closeOpenPaymentModal"
         />
 
         <DeleteConfirmModal
             :show="subscriptionCancelModal.show"
-            title="Abo kündigen"
+            :title="settingsText('billing.cancel_subscription.title', 'Abo kündigen')"
             :message="subscriptionCancelModalMessage()"
-            confirm-text="kündigen"
-            cancel-text="Zurück"
+            :confirm-text="settingsText('billing.cancel_subscription.confirm', 'kündigen')"
+            :cancel-text="settingsText('actions.back', 'Zurück')"
             @confirm="confirmSubscriptionCancel"
             @cancel="closeSubscriptionCancelModal"
         />
 
         <DeleteConfirmModal
             :show="disconnectIntegrationModal.show"
-            title="Sport-App entfernen"
-            message="Bist du sicher, dass du diese Sport-App-Verknüpfung entfernen möchtest? Gespeicherte Tokens werden gelöscht und die App muss danach neu verbunden werden."
-            confirm-text="entfernen"
-            cancel-text="Abbrechen"
+            :title="settingsText('integrations.disconnect.title', 'Sport-App entfernen')"
+            :message="settingsText('integrations.disconnect.message', 'Bist du sicher, dass du diese Sport-App-Verknüpfung entfernen möchtest? Gespeicherte Tokens werden gelöscht und die App muss danach neu verbunden werden.')"
+            :confirm-text="settingsText('actions.remove', 'Entfernen')"
+            :cancel-text="settingsText('actions.cancel', 'Abbrechen')"
             @confirm="disconnectIntegration(disconnectIntegrationModal.account)"
             @cancel="closeDisconnectIntegrationModal"
         />
@@ -2387,8 +2401,8 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             :show="sportActivityDeleteModal.show"
             :title="sportActivityDeleteTitle()"
             :message="sportActivityDeleteMessage()"
-            confirm-text="delete"
-            cancel-text="Zurück"
+            :confirm-text="settingsText('actions.delete', 'Löschen')"
+            :cancel-text="settingsText('actions.back', 'Zurück')"
             @confirm="confirmSportActivityDelete"
             @cancel="closeSportActivityDeleteModal"
         />
@@ -2404,9 +2418,9 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             >
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <h2 class="text-lg font-semibold text-primary">Aktivität umbenennen</h2>
+                        <h2 class="text-lg font-semibold text-primary">{{ settingsText('integrations.activities.rename_title', 'Aktivität umbenennen') }}</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            Der neue Name wird nur in Airmius gespeichert.
+                            {{ settingsText('integrations.activities.rename_description', 'Der neue Name wird nur in Airmius gespeichert.') }}
                         </p>
                     </div>
                     <button
@@ -2414,12 +2428,12 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         class="rounded-lg border border-border px-3 py-1 text-sm font-semibold text-primary hover:bg-muted"
                         @click="closeSportActivityEditModal"
                     >
-                        Schließen
+                        {{ settingsText('actions.close', 'Schließen') }}
                     </button>
                 </div>
 
                 <label class="mt-5 block text-sm font-semibold text-primary" for="sport-activity-title">
-                    Name
+                    {{ settingsText('integrations.manual_activity.name', 'Name') }}
                 </label>
                 <input
                     id="sport-activity-title"
@@ -2439,14 +2453,14 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary"
                         @click="closeSportActivityEditModal"
                     >
-                        Abbrechen
+                        {{ settingsText('actions.cancel', 'Abbrechen') }}
                     </button>
                     <button
                         type="submit"
                         class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-60"
                         :disabled="sportActivityEditForm.processing"
                     >
-                        Speichern
+                        {{ settingsText('actions.save', 'Speichern') }}
                     </button>
                 </div>
             </form>
@@ -2460,9 +2474,9 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
             <div class="w-full max-w-lg rounded-xl border border-border bg-bg p-5 shadow-2xl">
                 <div class="flex items-start justify-between gap-4">
                     <div>
-                        <h2 class="text-lg font-semibold text-primary">Per Überweisung zahlen</h2>
+                        <h2 class="text-lg font-semibold text-primary">{{ settingsText('billing.bank_transfer_title', 'Per Überweisung zahlen') }}</h2>
                         <p class="mt-1 text-sm text-secondary">
-                            Nutze diese Daten für deine Banküberweisung.
+                            {{ settingsText('billing.bank_transfer_description', 'Nutze diese Daten für deine Banküberweisung.') }}
                         </p>
                     </div>
                     <button
@@ -2470,7 +2484,7 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                         class="rounded-lg border border-border px-3 py-1 text-sm font-semibold text-primary hover:bg-muted"
                         @click="closeBankTransferModal"
                     >
-                        Schließen
+                        {{ settingsText('actions.close', 'Schließen') }}
                     </button>
                 </div>
 

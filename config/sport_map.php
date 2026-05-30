@@ -37,11 +37,13 @@ return [
     ],
 
     'routing' => [
-        'provider' => env('SPORT_MAP_ROUTING_PROVIDER', 'osrm'),
-        'route_generator_provider' => env('SPORT_MAP_ROUTE_GENERATOR_PROVIDER', 'osrm'),
+        'provider' => env('SPORT_MAP_ROUTING_PROVIDER', 'graphhopper'),
+        'route_generator_provider' => env('SPORT_MAP_ROUTE_GENERATOR_PROVIDER', 'graphhopper'),
         'osrm_base_url' => env('SPORT_MAP_OSRM_BASE_URL', 'https://router.project-osrm.org'),
         'mapbox_base_url' => env('SPORT_MAP_MAPBOX_BASE_URL', 'https://api.mapbox.com'),
         'mapbox_access_token' => env('MAPBOX_ACCESS_TOKEN'),
+        'graphhopper_base_url' => env('SPORT_MAP_GRAPHHOPPER_BASE_URL', 'https://graphhopper.com/api/1'),
+        'graphhopper_api_key' => env('GRAPHHOPPER_API_KEY'),
         'timeout_seconds' => (int) env('SPORT_MAP_ROUTING_TIMEOUT', 4),
         'profiles' => [
             'running' => 'foot',
@@ -66,6 +68,18 @@ return [
             'fitness' => 'walking',
             'football' => 'walking',
             'other' => 'walking',
+        ],
+        'graphhopper_profiles' => [
+            'running' => 'foot',
+            'trail_running' => 'hike',
+            'walking' => 'foot',
+            'wandern' => 'hike',
+            'cycling' => 'bike',
+            'mountainbike' => 'mtb',
+            'skateboard' => 'foot',
+            'fitness' => 'foot',
+            'football' => 'foot',
+            'other' => 'foot',
         ],
     ],
 ];

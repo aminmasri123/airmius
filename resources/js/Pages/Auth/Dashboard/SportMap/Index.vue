@@ -45,6 +45,8 @@ const selectedRouteId = ref(props.routes[0]?.id || null)
 const trackingPoints = ref([])
 const trackingStartedAt = ref(null)
 const trackingError = ref('')
+const activeTrackingSlide = ref(0)
+const trackingFullscreen = ref(false)
 const placeLocationError = ref('')
 const placeLocationStatus = ref('')
 const draftRouteGeometryPoints = ref([])
@@ -66,16 +68,20 @@ const activeTileSourceIndex = ref(0)
 const visibleMapTileCount = ref(0)
 const failedMapTileCount = ref(0)
 const isTracking = ref(false)
+const trackingNow = ref(Date.now())
 const routePlaybackState = ref('idle')
 const routePlaybackProgressMeters = ref(0)
 const routePlaybackSpeed = ref(16)
 const routePlaybackStatus = ref('')
 let watchId = null
+let trackingTimer = null
 let mapDragStart = null
 let mapDragFrame = null
 let mapPendingDragEvent = null
 let routePlaybackFrame = null
 let routePlaybackLastTimestamp = null
+let trackingTouchStartX = null
+let trackingPointerStartX = null
 
 const TILE_SIZE = 256
 const MAP_WIDTH = 1000
@@ -104,6 +110,13 @@ const routeForm = useForm({
     difficulty: 'moderate',
     surface: '',
     waypoints: [],
+    route_geometry: null,
+    navigation_cues: [],
+    distance_meters: null,
+    estimated_duration_seconds: null,
+    elevation_gain_meters: null,
+    elevation_loss_meters: null,
+    metrics: null,
 })
 
 const waypointRows = ref(createDefaultWaypoints())
@@ -120,8 +133,11 @@ const routeGeneratorForm = reactive({
     target_mode: 'distance',
     distance_km: 5,
     duration_minutes: 45,
+    pace_mode: 'pace',
+    pace_min_per_km: 6,
+    speed_kmh: 10,
     surface: 'firm',
-    environment: 'forest',
+    environment: 'any',
     elevation: 'mixed',
     difficulty: 'easy',
     low_traffic: true,
@@ -199,6 +215,7 @@ const routeGeneratorSurfaceOptions = [
 ]
 
 const routeGeneratorEnvironmentOptions = [
+    { key: 'any', label: 'Egal' },
     { key: 'nature', label: 'Natur' },
     { key: 'forest', label: 'Wald' },
     { key: 'park', label: 'Park/Stadt' },
@@ -410,6 +427,37 @@ const bounds = computed(() => {
 const routePolyline = computed(() => polylinePoints(routeLinePoints.value))
 const trackPolyline = computed(() => polylinePoints(activeTrackPoints.value))
 const trackingDistance = computed(() => distanceMeters(trackingPoints.value))
+const trackingElapsedSeconds = computed(() => {
+    if (!trackingStartedAt.value) return 0
+
+    const start = new Date(trackingStartedAt.value).getTime()
+    const lastPointTime = trackingPoints.value.length
+        ? new Date(trackingPoints.value[trackingPoints.value.length - 1].recorded_at || trackingStartedAt.value).getTime()
+        : start
+    const end = isTracking.value ? trackingNow.value : lastPointTime
+
+    return Math.max(0, Math.round((end - start) / 1000))
+})
+const trackingAverageSpeedKmh = computed(() => {
+    if (!trackingElapsedSeconds.value || !trackingDistance.value) return 0
+
+    return (trackingDistance.value / 1000) / (trackingElapsedSeconds.value / 3600)
+})
+const trackingAveragePaceSeconds = computed(() => {
+    if (!trackingDistance.value) return 0
+
+    return trackingElapsedSeconds.value / (trackingDistance.value / 1000)
+})
+const trackingAverageSpeedLabel = computed(() => trackingAverageSpeedKmh.value > 0 ? `${trackingAverageSpeedKmh.value.toFixed(1)} km/h` : '-')
+const trackingAveragePaceLabel = computed(() => formatPace(trackingAveragePaceSeconds.value))
+const trackingElapsedLabel = computed(() => formatClockDuration(trackingElapsedSeconds.value))
+const trackingLiveStatusLabel = computed(() => isTracking.value ? 'Live' : (trackingPoints.value.length ? 'Pausiert' : 'Bereit'))
+const trackingLastAccuracyLabel = computed(() => {
+    const lastPoint = trackingPoints.value[trackingPoints.value.length - 1]
+    const accuracy = Number(lastPoint?.accuracy_m || 0)
+
+    return accuracy > 0 ? `GPS +/- ${Math.round(accuracy)} m` : 'GPS bereit'
+})
 const routePlaybackPath = computed(() => routeLinePoints.value.filter(isValidMapCoordinate))
 const routePlaybackTotalDistance = computed(() => distanceMeters(routePlaybackPath.value))
 const routePlaybackCanStart = computed(() => routePlaybackPath.value.length >= 2 && routePlaybackTotalDistance.value > 10)
@@ -665,6 +713,125 @@ const formatDuration = (seconds) => {
     return `${hours} h ${String(minutes).padStart(2, '0')} min`
 }
 
+const formatClockDuration = (seconds) => {
+    const value = Math.max(0, Math.floor(Number(seconds || 0)))
+    const hours = Math.floor(value / 3600)
+    const minutes = Math.floor((value % 3600) / 60)
+    const secs = value % 60
+
+    return hours > 0
+        ? `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+        : `${minutes}:${String(secs).padStart(2, '0')}`
+}
+
+const formatPace = (secondsPerKm) => {
+    const value = Number(secondsPerKm || 0)
+
+    if (!Number.isFinite(value) || value <= 0) return '-'
+
+    const minutes = Math.floor(value / 60)
+    const seconds = Math.round(value % 60)
+
+    return `${minutes}:${String(seconds).padStart(2, '0')} /km`
+}
+
+const trackAverageSpeedLabel = (track) => {
+    const distance = Number(track?.distance_meters || 0)
+    const duration = Number(track?.duration_seconds || 0)
+
+    if (distance <= 0 || duration <= 0) return '-'
+
+    return `${((distance / 1000) / (duration / 3600)).toFixed(1)} km/h`
+}
+
+const trackAveragePaceLabel = (track) => {
+    const distance = Number(track?.distance_meters || 0)
+    const duration = Number(track?.duration_seconds || 0)
+
+    if (distance <= 0 || duration <= 0) return '-'
+
+    return formatPace(duration / (distance / 1000))
+}
+
+const defaultTrackTitle = () => {
+    const now = new Date()
+
+    return `Training ${now.toLocaleDateString('de-DE')} ${now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`
+}
+
+const setTrackingSlide = (index) => {
+    activeTrackingSlide.value = clamp(index, 0, 2)
+}
+
+const nextTrackingSlide = () => {
+    setTrackingSlide(activeTrackingSlide.value + 1)
+}
+
+const previousTrackingSlide = () => {
+    setTrackingSlide(activeTrackingSlide.value - 1)
+}
+
+const openTrackingFullscreen = () => {
+    trackingFullscreen.value = true
+}
+
+const closeTrackingFullscreen = () => {
+    trackingFullscreen.value = false
+}
+
+const startTrackingFromMobile = () => {
+    openTrackingFullscreen()
+    setTrackingSlide(0)
+    startTracking()
+}
+
+const startTrackingSwipe = (event) => {
+    trackingTouchStartX = event.touches?.[0]?.clientX ?? null
+}
+
+const endTrackingSwipe = (event) => {
+    if (trackingTouchStartX === null) return
+
+    const endX = event.changedTouches?.[0]?.clientX ?? trackingTouchStartX
+    const delta = endX - trackingTouchStartX
+    trackingTouchStartX = null
+
+    if (Math.abs(delta) < 45) return
+
+    if (delta < 0) {
+        nextTrackingSlide()
+        return
+    }
+
+    previousTrackingSlide()
+}
+
+const startTrackingPointerSwipe = (event) => {
+    if (event.pointerType === 'mouse' && event.buttons !== 1) return
+
+    trackingPointerStartX = event.clientX
+}
+
+const endTrackingPointerSwipe = (event) => {
+    if (trackingPointerStartX === null) return
+
+    const delta = event.clientX - trackingPointerStartX
+    trackingPointerStartX = null
+
+    if (Math.abs(delta) < 45) return
+
+    if (delta < 0) {
+        nextTrackingSlide()
+        return
+    }
+
+    previousTrackingSlide()
+}
+
+const cancelTrackingPointerSwipe = () => {
+    trackingPointerStartX = null
+}
+
 const formatPercent = (value) => `${Number(value || 0).toFixed(1)} %`
 
 const cueText = (cue, index) => {
@@ -704,7 +871,7 @@ const optionLabel = (options, key, fallback = '-') => options.find((option) => o
 
 const routeGeneratorTargetDistanceKm = computed(() => {
     if (routeGeneratorForm.target_mode === 'duration') {
-        const speed = routeGeneratorSpeedsKmh[routeGeneratorForm.sport_type] || 7
+        const speed = routeGeneratorTargetSpeedKmh.value
         return clamp((Number(routeGeneratorForm.duration_minutes) || 45) / 60 * speed, 1, 80)
     }
 
@@ -712,9 +879,29 @@ const routeGeneratorTargetDistanceKm = computed(() => {
 })
 
 const routeGeneratorEstimatedMinutes = computed(() => {
-    const speed = routeGeneratorSpeedsKmh[routeGeneratorForm.sport_type] || 7
+    const speed = routeGeneratorTargetSpeedKmh.value
 
     return Math.max(10, Math.round((routeGeneratorTargetDistanceKm.value / speed) * 60))
+})
+
+const routeGeneratorDefaultSpeedKmh = computed(() => routeGeneratorSpeedsKmh[routeGeneratorForm.sport_type] || routeGeneratorSpeedsKmh.other)
+
+const routeGeneratorTargetSpeedKmh = computed(() => {
+    if (routeGeneratorForm.pace_mode === 'pace' && Number(routeGeneratorForm.pace_min_per_km) > 0) {
+        return clamp(60 / Number(routeGeneratorForm.pace_min_per_km), 1, 60)
+    }
+
+    if (Number(routeGeneratorForm.speed_kmh) > 0) {
+        return clamp(Number(routeGeneratorForm.speed_kmh), 1, 80)
+    }
+
+    return routeGeneratorDefaultSpeedKmh.value
+})
+
+const routeGeneratorPaceLabel = computed(() => {
+    const pace = 60 / routeGeneratorTargetSpeedKmh.value
+
+    return `${pace.toFixed(pace < 10 ? 1 : 0)} min/km`
 })
 
 const routeGeneratorStartPoint = computed(() => {
@@ -753,9 +940,15 @@ const routeGeneratorDestinationPoint = computed(() => {
 
 const routeGeneratorSummary = computed(() => ({
     distance: `${routeGeneratorTargetDistanceKm.value.toFixed(routeGeneratorTargetDistanceKm.value < 10 ? 1 : 0)} km`,
-    duration: `${routeGeneratorEstimatedMinutes.value} min`,
+    duration: routeGeneratorForm.target_mode === 'duration'
+        ? `${Number(routeGeneratorForm.duration_minutes) || 45} min`
+        : `ca. ${routeGeneratorEstimatedMinutes.value} min`,
+    durationLabel: routeGeneratorForm.target_mode === 'duration' ? 'Ziel-Dauer' : 'Geschätzte Dauer',
+    distanceLabel: routeGeneratorForm.target_mode === 'duration' ? 'Geschätzte Distanz' : 'Ziel-Distanz',
+    speed: `${routeGeneratorTargetSpeedKmh.value.toFixed(1)} km/h`,
+    pace: routeGeneratorPaceLabel.value,
     surface: optionLabel(routeGeneratorSurfaceOptions, routeGeneratorForm.surface, 'Egal'),
-    environment: optionLabel(routeGeneratorEnvironmentOptions, routeGeneratorForm.environment, 'Natur'),
+    environment: optionLabel(routeGeneratorEnvironmentOptions, routeGeneratorForm.environment, 'Egal'),
     elevation: optionLabel(routeGeneratorElevationOptions, routeGeneratorForm.elevation, 'Gemischt'),
     difficulty: optionLabel(routeGeneratorDifficultyOptions, routeGeneratorForm.difficulty, 'Leicht'),
 }))
@@ -1079,6 +1272,8 @@ const requestRouteProposal = async (waypoints = null) => {
 }
 
 const generateRouteProposal = () => {
+    if (isGeneratingRoute.value) return
+
     if (!isValidMapCoordinate(routeGeneratorStartPoint.value)) {
         routeGeneratorStatus.value = 'Bitte zuerst einen gültigen Startpunkt wählen.'
         return
@@ -1153,12 +1348,46 @@ const applyGeneratedRouteToPlanner = () => {
         elevation_m: point.elevation_m ?? '',
     }))
     draftRouteGeometryPoints.value = generatedRouteGeometryPoints.value
+    routeForm.route_geometry = generatedRouteGeometryPoints.value.length >= 2
+        ? {
+            type: 'LineString',
+            coordinates: generatedRouteGeometryPoints.value.map((point) => [
+                Number(point.longitude),
+                Number(point.latitude),
+            ]),
+        }
+        : null
+    routeForm.navigation_cues = generatedRouteNavigationCues.value
+    routeForm.distance_meters = generatedRouteMetrics.value?.distance_meters || null
+    routeForm.estimated_duration_seconds = generatedRouteMetrics.value?.estimated_duration_seconds || null
+    routeForm.elevation_gain_meters = generatedRouteMetrics.value?.elevation_gain_meters || 0
+    routeForm.elevation_loss_meters = generatedRouteMetrics.value?.elevation_loss_meters || 0
+    routeForm.metrics = generatedRouteMetrics.value
     activeTab.value = 'routes'
     manualMapPointStatus.value = 'Routenvorschlag wurde in die Routenplanung übernommen.'
 }
 
 const saveRoute = () => {
     routeForm.waypoints = cleanedWaypoints()
+
+    if (draftRouteGeometryPoints.value.length < 2) {
+        routeForm.route_geometry = null
+        routeForm.navigation_cues = []
+        routeForm.distance_meters = null
+        routeForm.estimated_duration_seconds = null
+        routeForm.elevation_gain_meters = null
+        routeForm.elevation_loss_meters = null
+        routeForm.metrics = null
+    } else if (!routeForm.route_geometry) {
+        routeForm.route_geometry = {
+            type: 'LineString',
+            coordinates: draftRouteGeometryPoints.value.map((point) => [
+                Number(point.longitude),
+                Number(point.latitude),
+            ]),
+        }
+    }
+
     routeForm.post(route('auth.sport-routes.store'), {
         preserveScroll: true,
         onSuccess: () => {
@@ -1166,23 +1395,48 @@ const saveRoute = () => {
             routeForm.sport_type = 'running'
             routeForm.visibility = 'private'
             routeForm.difficulty = 'moderate'
+            routeForm.route_geometry = null
+            routeForm.navigation_cues = []
+            routeForm.distance_meters = null
+            routeForm.estimated_duration_seconds = null
+            routeForm.elevation_gain_meters = null
+            routeForm.elevation_loss_meters = null
+            routeForm.metrics = null
             waypointRows.value = createDefaultWaypoints()
             draftRouteGeometryPoints.value = []
         },
     })
 }
 
+const clearTrackingTimer = () => {
+    if (trackingTimer !== null) {
+        window.clearInterval(trackingTimer)
+        trackingTimer = null
+    }
+}
+
+const startTrackingTimer = () => {
+    clearTrackingTimer()
+    trackingNow.value = Date.now()
+    trackingTimer = window.setInterval(() => {
+        trackingNow.value = Date.now()
+    }, 1000)
+}
+
 const startTracking = () => {
     trackingError.value = ''
+
+    if (isTracking.value) return
 
     if (!navigator.geolocation) {
         trackingError.value = t('sport_map.tracks.location_unsupported')
         return
     }
 
-    trackingPoints.value = []
-    trackingStartedAt.value = new Date().toISOString()
+    trackForm.title = trackForm.title || defaultTrackTitle()
+    trackingStartedAt.value = trackingStartedAt.value || new Date().toISOString()
     isTracking.value = true
+    startTrackingTimer()
 
     watchId = navigator.geolocation.watchPosition((position) => {
         trackingPoints.value.push({
@@ -1209,6 +1463,7 @@ const stopTracking = () => {
     }
 
     isTracking.value = false
+    clearTrackingTimer()
 }
 
 const addManualTrackPoint = (coordinate) => {
@@ -1235,14 +1490,22 @@ const removeTrackPointFromMap = (index) => {
 }
 
 const resetTrackPoints = () => {
+    stopTracking()
     trackingPoints.value = []
     trackingStartedAt.value = null
+    trackingError.value = ''
     manualMapPointStatus.value = 'Trackpunkte wurden zurückgesetzt.'
+}
+
+const deleteCurrentTrackDraft = () => {
+    resetTrackPoints()
+    closeTrackingFullscreen()
 }
 
 const saveTrack = () => {
     stopTracking()
 
+    trackForm.title = trackForm.title || defaultTrackTitle()
     trackForm.track_points = trackingPoints.value
     trackForm.started_at = trackingStartedAt.value
     trackForm.ended_at = new Date().toISOString()
@@ -1255,6 +1518,7 @@ const saveTrack = () => {
             trackForm.status = 'completed'
             trackingPoints.value = []
             trackingStartedAt.value = null
+            trackingFullscreen.value = false
         },
     })
 }
@@ -1978,9 +2242,16 @@ watch([activeMapLayer, activeTileSourceIndex], () => {
     failedMapTileCount.value = 0
 })
 
+watch(trackingFullscreen, (isOpen) => {
+    if (typeof document === 'undefined') return
+
+    document.body.style.overflow = isOpen ? 'hidden' : ''
+})
+
 onUnmounted(() => {
     stopTracking()
     cancelRoutePlaybackFrame()
+    document.body.style.overflow = ''
 
     if (mapDragFrame !== null) {
         cancelAnimationFrame(mapDragFrame)
@@ -1989,6 +2260,241 @@ onUnmounted(() => {
 </script>
 
 <template>
+    <Teleport to="body">
+        <div
+            v-if="trackingFullscreen"
+            class="fixed inset-0 z-[2147483647] flex flex-col overflow-hidden bg-[#07101c] px-4 pb-4 text-primary sm:hidden"
+            style="padding-top: max(1rem, env(safe-area-inset-top));"
+        >
+            <header class="flex shrink-0 items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-[11px] font-black uppercase tracking-[0.2em] text-air-blue">Airmius Track</p>
+                    <h2 class="truncate text-xl font-black text-primary">Live-Tracking</h2>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span
+                        class="rounded-full border px-3 py-1 text-xs font-bold"
+                        :class="isTracking ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-300' : 'border-border bg-card text-secondary'"
+                    >
+                        {{ trackingLiveStatusLabel }}
+                    </span>
+                    <button
+                        type="button"
+                        class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/10 text-primary shadow-lg"
+                        aria-label="Tracking schliessen"
+                        @click="closeTrackingFullscreen"
+                    >
+                        <i class="las la-times text-2xl"></i>
+                    </button>
+                </div>
+            </header>
+
+            <main
+                class="mt-4 min-h-0 flex-1 overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 shadow-2xl"
+                @touchstart.passive="startTrackingSwipe"
+                @touchend="endTrackingSwipe"
+                @pointerdown="startTrackingPointerSwipe"
+                @pointerup="endTrackingPointerSwipe"
+                @pointercancel="cancelTrackingPointerSwipe"
+            >
+                <div
+                    class="flex h-full transition-transform duration-300 ease-out"
+                    :style="{ transform: `translateX(-${activeTrackingSlide * 100}%)` }"
+                >
+                    <section class="flex min-w-full flex-col justify-between p-5">
+                        <div class="space-y-5">
+                            <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+                                <p class="text-xs font-black uppercase tracking-wide text-air-blue">Aktueller Lauf</p>
+                                <p class="mt-2 truncate text-base font-black text-primary">{{ trackForm.title || defaultTrackTitle() }}</p>
+                                <p class="mt-1 text-sm text-secondary">{{ sportLabel(trackForm.sport_type) }} - {{ trackingElapsedLabel }}</p>
+                            </div>
+
+                            <div class="py-4 text-center">
+                                <p class="text-xs font-black uppercase tracking-[0.24em] text-secondary">{{ $t('sport_map.tracks.distance') }}</p>
+                                <p class="mt-5 text-7xl font-black leading-none text-primary">{{ formatDistance(trackingDistance) }}</p>
+                                <p class="mt-4 text-lg font-black text-secondary">{{ trackingElapsedLabel }}</p>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+                                    <p class="text-xs font-bold uppercase text-secondary">Pace</p>
+                                    <p class="mt-1 text-2xl font-black text-primary">{{ trackingAveragePaceLabel }}</p>
+                                </div>
+                                <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+                                    <p class="text-xs font-bold uppercase text-secondary">km/h</p>
+                                    <p class="mt-1 text-2xl font-black text-primary">{{ trackingAverageSpeedLabel }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid gap-3">
+                            <button
+                                v-if="!isTracking"
+                                type="button"
+                                class="inline-flex min-h-16 w-full items-center justify-center gap-3 rounded-full bg-buttonPrimary px-5 text-base font-black text-buttonTextPrimary shadow-lg"
+                                @click="startTracking"
+                            >
+                                <i class="las la-play text-2xl"></i>
+                                {{ trackingPoints.length ? 'Weiter' : 'Starten' }}
+                            </button>
+                            <button
+                                v-else
+                                type="button"
+                                class="inline-flex min-h-16 w-full items-center justify-center gap-3 rounded-full border border-amber-300/40 bg-amber-400/10 px-5 text-base font-black text-amber-200"
+                                @click="stopTracking"
+                            >
+                                <i class="las la-pause text-2xl"></i>
+                                Pause
+                            </button>
+                            <div v-if="trackingPoints.length" class="grid grid-cols-2 gap-3">
+                                <button
+                                    type="button"
+                                    class="inline-flex min-h-13 items-center justify-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-4 text-sm font-black text-emerald-200 disabled:opacity-50"
+                                    :disabled="trackForm.processing"
+                                    @click="saveTrack"
+                                >
+                                    <i class="las la-save"></i>
+                                    Speichern
+                                </button>
+                                <button
+                                    type="button"
+                                    class="inline-flex min-h-13 items-center justify-center gap-2 rounded-full border border-red-400/40 bg-red-500/10 px-4 text-sm font-black text-red-300"
+                                    @click="deleteCurrentTrackDraft"
+                                >
+                                    <i class="las la-trash"></i>
+                                    Löschen
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="flex min-w-full flex-col overflow-hidden bg-card">
+                        <div class="flex shrink-0 items-center justify-between gap-3 px-5 py-4">
+                            <div>
+                                <p class="text-xs font-black uppercase tracking-wide text-air-blue">Karte</p>
+                                <h3 class="text-lg font-black text-primary">Live-Position</h3>
+                            </div>
+                            <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-secondary">{{ mapPoints.length }} Punkte</span>
+                        </div>
+                        <div
+                            class="relative min-h-0 flex-1 select-none overflow-hidden"
+                            style="background-color: #efe6d1; user-select: none; -webkit-user-select: none;"
+                            @click="handleMapClick"
+                            @selectstart.prevent
+                            @dragstart.prevent
+                        >
+                            <div class="absolute inset-0 z-0" style="background-color: #efe6d1;"></div>
+                            <div class="pointer-events-none absolute inset-0 z-0 opacity-80" style="background-image: linear-gradient(90deg, rgba(120,113,108,.16) 1px, transparent 1px), linear-gradient(0deg, rgba(120,113,108,.14) 1px, transparent 1px); background-size: 56px 56px;"></div>
+                            <img
+                                v-for="tile in mapTiles"
+                                :key="`fullscreen-track-${tile.key}`"
+                                :src="tile.url"
+                                :style="tile.style"
+                                class="pointer-events-none absolute z-[6] max-w-none select-none"
+                                alt=""
+                                aria-hidden="true"
+                                decoding="async"
+                                loading="eager"
+                                draggable="false"
+                                @dragstart.prevent
+                            >
+                            <img
+                                v-for="tile in mapOverlayTiles"
+                                :key="`fullscreen-track-overlay-${tile.key}`"
+                                :src="tile.url"
+                                :style="tile.style"
+                                class="pointer-events-none absolute z-[7] max-w-none select-none"
+                                alt=""
+                                aria-hidden="true"
+                                decoding="async"
+                                loading="eager"
+                                draggable="false"
+                                @dragstart.prevent
+                            >
+                            <svg class="absolute inset-0 z-20 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                <polyline v-if="routePolyline" :points="routePolyline" fill="none" stroke="rgba(255,255,255,.92)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+                                <polyline v-if="routePolyline" :points="routePolyline" fill="none" stroke="rgb(59,130,246)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
+                                <polyline v-if="trackPolyline" :points="trackPolyline" fill="none" stroke="rgb(34,197,94)" stroke-width="1.1" stroke-dasharray="2 1" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <div
+                                v-if="currentLocationPoint"
+                                class="absolute z-40 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-air-blue text-white shadow-lg"
+                                :style="markerStyle(currentLocationPoint)"
+                            >
+                                <span class="absolute h-11 w-11 rounded-full bg-air-blue/25"></span>
+                                <i class="las la-location-arrow relative text-base"></i>
+                            </div>
+                            <button
+                                type="button"
+                                class="absolute left-4 top-4 z-[80] inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/70 bg-white/95 text-blue-600 shadow-lg"
+                                aria-label="Mein Standort anzeigen"
+                                @click.stop.prevent="showCurrentLocationOnMap"
+                            >
+                                <i class="las la-location-arrow text-xl"></i>
+                            </button>
+                        </div>
+                    </section>
+
+                    <section class="flex min-w-full flex-col p-5">
+                        <p class="text-xs font-black uppercase tracking-wide text-air-blue">Analyse</p>
+                        <h3 class="mt-1 text-2xl font-black text-primary">Live-Werte</h3>
+                        <div class="mt-5 grid flex-1 grid-cols-2 content-start gap-3">
+                            <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+                                <p class="text-xs font-bold uppercase text-secondary">Distanz</p>
+                                <p class="mt-2 text-3xl font-black text-primary">{{ formatDistance(trackingDistance) }}</p>
+                            </div>
+                            <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+                                <p class="text-xs font-bold uppercase text-secondary">Zeit</p>
+                                <p class="mt-2 text-3xl font-black text-primary">{{ trackingElapsedLabel }}</p>
+                            </div>
+                            <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+                                <p class="text-xs font-bold uppercase text-secondary">Pace</p>
+                                <p class="mt-2 text-3xl font-black text-primary">{{ trackingAveragePaceLabel }}</p>
+                            </div>
+                            <div class="rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+                                <p class="text-xs font-bold uppercase text-secondary">km/h</p>
+                                <p class="mt-2 text-3xl font-black text-primary">{{ trackingAverageSpeedLabel }}</p>
+                            </div>
+                            <div class="col-span-2 rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+                                <p class="text-xs font-bold uppercase text-secondary">GPS</p>
+                                <p class="mt-2 text-xl font-black text-primary">{{ trackingLastAccuracyLabel }}</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </main>
+
+            <footer class="mt-4 flex shrink-0 items-center justify-between gap-3">
+                <button
+                    type="button"
+                    class="inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/10 text-primary disabled:opacity-35"
+                    :disabled="activeTrackingSlide === 0"
+                    @click="previousTrackingSlide"
+                >
+                    <i class="las la-arrow-left"></i>
+                </button>
+                <div class="flex items-center gap-2">
+                    <button
+                        v-for="index in 3"
+                        :key="index"
+                        type="button"
+                        class="h-2.5 rounded-full transition-all"
+                        :class="activeTrackingSlide === index - 1 ? 'w-9 bg-air-blue' : 'w-2.5 bg-white/30'"
+                        @click="setTrackingSlide(index - 1)"
+                    ></button>
+                </div>
+                <button
+                    type="button"
+                    class="inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/10 text-primary disabled:opacity-35"
+                    :disabled="activeTrackingSlide === 2"
+                    @click="nextTrackingSlide"
+                >
+                    <i class="las la-arrow-right"></i>
+                </button>
+            </footer>
+        </div>
+    </Teleport>
+
     <AppLayout :title="$t('sport_map.title')">
         <div class="mx-auto flex w-full max-w-7xl flex-col gap-5">
             <section class="rounded-lg border border-border bg-card p-4 shadow-sm sm:p-5">
@@ -2044,7 +2550,10 @@ onUnmounted(() => {
             </section>
 
             <section v-if="activeTab !== 'landing'" class="grid gap-5 xl:grid-cols-[minmax(0,1.25fr),minmax(320px,0.75fr)]">
-                <div class="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+                <div
+                    class="overflow-hidden rounded-lg border border-border bg-card shadow-sm"
+                    :class="activeTab === 'tracks' ? 'hidden lg:block' : ''"
+                >
                     <div class="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                             <p class="text-sm font-semibold text-primary">{{ $t('sport_map.map_preview') }}</p>
@@ -2545,14 +3054,29 @@ onUnmounted(() => {
                                     </button>
                                 </div>
 
-                                <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                                    <label class="space-y-1">
+                                <div class="mt-3 grid gap-3" :class="routeGeneratorForm.target_mode === 'duration' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'">
+                                    <label v-if="routeGeneratorForm.target_mode === 'distance'" class="space-y-1">
                                         <span class="text-xs font-semibold text-secondary">Distanz in km</span>
                                         <input v-model="routeGeneratorForm.distance_km" type="number" min="1" max="80" step="0.5" class="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm">
                                     </label>
-                                    <label class="space-y-1">
+                                    <label v-if="routeGeneratorForm.target_mode === 'duration'" class="space-y-1">
                                         <span class="text-xs font-semibold text-secondary">Dauer in Minuten</span>
                                         <input v-model="routeGeneratorForm.duration_minutes" type="number" min="10" max="360" step="5" class="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm">
+                                    </label>
+                                    <label v-if="routeGeneratorForm.target_mode === 'duration'" class="space-y-1">
+                                        <span class="text-xs font-semibold text-secondary">Tempo</span>
+                                        <select v-model="routeGeneratorForm.pace_mode" class="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm">
+                                            <option value="pace">Pace min/km</option>
+                                            <option value="speed">km/h</option>
+                                        </select>
+                                    </label>
+                                    <label v-if="routeGeneratorForm.target_mode === 'duration' && routeGeneratorForm.pace_mode === 'pace'" class="space-y-1">
+                                        <span class="text-xs font-semibold text-secondary">Pace min/km</span>
+                                        <input v-model="routeGeneratorForm.pace_min_per_km" type="number" min="2.5" max="30" step="0.1" class="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm">
+                                    </label>
+                                    <label v-if="routeGeneratorForm.target_mode === 'duration' && routeGeneratorForm.pace_mode === 'speed'" class="space-y-1">
+                                        <span class="text-xs font-semibold text-secondary">Geschwindigkeit km/h</span>
+                                        <input v-model="routeGeneratorForm.speed_kmh" type="number" min="1" max="80" step="0.5" class="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm">
                                     </label>
                                 </div>
                             </div>
@@ -2562,7 +3086,7 @@ onUnmounted(() => {
                                 <div class="mt-3 grid grid-cols-2 gap-2 text-sm text-secondary sm:grid-cols-4">
                                     <span>{{ routeGeneratorSummary.distance }}</span>
                                     <span>{{ routeGeneratorSummary.duration }}</span>
-                                    <span>{{ routeGeneratorSummary.difficulty }}</span>
+                                    <span>{{ routeGeneratorSummary.pace }}</span>
                                     <span>{{ routeGeneratorForm.route_type === 'roundtrip' ? 'Rundroute' : 'Einmal zum Ziel' }}</span>
                                 </div>
                             </div>
@@ -2671,18 +3195,22 @@ onUnmounted(() => {
                                 <p class="mt-1 text-sm leading-6 text-secondary">Der Vorschlag erscheint auf der Karte. Danach kannst du ihn in die normale Routenplanung übernehmen.</p>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+                            <div class="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
                                 <div class="rounded-xl border border-border bg-inputBg p-3">
-                                    <p class="text-xs font-semibold text-secondary">Ziel-Distanz</p>
+                                    <p class="text-xs font-semibold text-secondary">{{ routeGeneratorSummary.distanceLabel }}</p>
                                     <p class="mt-1 font-bold text-primary">{{ routeGeneratorSummary.distance }}</p>
                                 </div>
                                 <div class="rounded-xl border border-border bg-inputBg p-3">
-                                    <p class="text-xs font-semibold text-secondary">Ziel-Dauer</p>
+                                    <p class="text-xs font-semibold text-secondary">{{ routeGeneratorSummary.durationLabel }}</p>
                                     <p class="mt-1 font-bold text-primary">{{ routeGeneratorSummary.duration }}</p>
                                 </div>
                                 <div class="rounded-xl border border-border bg-inputBg p-3">
                                     <p class="text-xs font-semibold text-secondary">Untergrund</p>
                                     <p class="mt-1 font-bold text-primary">{{ routeGeneratorSummary.surface }}</p>
+                                </div>
+                                <div class="rounded-xl border border-border bg-inputBg p-3">
+                                    <p class="text-xs font-semibold text-secondary">Tempo</p>
+                                    <p class="mt-1 font-bold text-primary">{{ routeGeneratorSummary.pace }}</p>
                                 </div>
                             </div>
 
@@ -2900,87 +3428,421 @@ onUnmounted(() => {
                     </div>
                 </div>
 
-                <div v-else-if="activeTab === 'tracks'" class="grid gap-5 p-4 lg:grid-cols-[minmax(0,0.9fr),minmax(0,1.1fr)]">
+                <div v-else-if="activeTab === 'tracks'" class="grid gap-4 p-3 sm:p-4 lg:grid-cols-[minmax(0,0.95fr),minmax(0,1.05fr)]">
                     <div class="space-y-4">
-                        <div>
-                            <h3 class="text-lg font-bold text-primary">{{ $t('sport_map.tracks.title') }}</h3>
-                            <p class="mt-1 text-sm text-secondary">{{ $t('sport_map.tracks.hint') }}</p>
-                        </div>
-
-                        <div class="grid gap-3 sm:grid-cols-2">
-                            <label class="space-y-1">
-                                <span class="text-xs font-semibold text-secondary">{{ $t('sport_map.form.title') }}</span>
-                                <input v-model="trackForm.title" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm">
-                            </label>
-                            <label class="space-y-1">
-                                <span class="text-xs font-semibold text-secondary">{{ $t('sport_map.form.sport') }}</span>
-                                <select v-model="trackForm.sport_type" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm">
-                                    <option v-for="sport in sportTypes" :key="sport.key" :value="sport.key">{{ catalogLabel(sport, sport.key) }}</option>
-                                </select>
-                            </label>
-                            <label class="space-y-1 sm:col-span-2">
-                                <span class="text-xs font-semibold text-secondary">{{ $t('sport_map.tracks.route_optional') }}</span>
-                                <select v-model="trackForm.sport_route_id" class="w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm">
-                                    <option :value="null">{{ $t('sport_map.tracks.free_track') }}</option>
-                                    <option v-for="routeItem in routes" :key="routeItem.id" :value="routeItem.id">{{ routeItem.title }}</option>
-                                </select>
-                            </label>
-                        </div>
-
-                        <div class="rounded-lg border border-border bg-inputBg p-4">
-                            <div class="grid grid-cols-3 gap-2 text-center">
+                        <div v-if="false" class="fixed inset-0 z-[9999] flex flex-col bg-[#07101c] px-4 py-5 text-primary sm:hidden">
+                            <div class="flex items-center justify-between gap-3">
                                 <div>
-                                    <p class="text-lg font-bold text-primary">{{ trackingPoints.length }}</p>
-                                    <p class="text-xs text-secondary">{{ $t('sport_map.points') }}</p>
+                                    <p class="text-xs font-black uppercase tracking-wide text-air-blue">Airmius Track</p>
+                                    <h2 class="text-xl font-black text-primary">Live-Tracking</h2>
                                 </div>
-                                <div>
-                                    <p class="text-lg font-bold text-primary">{{ formatDistance(trackingDistance) }}</p>
-                                    <p class="text-xs text-secondary">{{ $t('sport_map.tracks.distance') }}</p>
-                                </div>
-                                <div>
-                                    <p class="text-lg font-bold text-primary">{{ isTracking ? $t('sport_map.tracks.live') : '-' }}</p>
-                                    <p class="text-xs text-secondary">{{ $t('sport_map.tracks.status') }}</p>
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="rounded-full border px-3 py-1 text-xs font-bold"
+                                        :class="isTracking ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-300' : 'border-border bg-card text-secondary'"
+                                    >
+                                        {{ trackingLiveStatusLabel }}
+                                    </span>
+                                    <button type="button" class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-primary" aria-label="Tracking schliessen" @click="closeTrackingFullscreen">
+                                        <i class="las la-times text-xl"></i>
+                                    </button>
                                 </div>
                             </div>
 
-                            <p v-if="trackingError" class="mt-3 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600">
+                            <div class="mt-5 flex-1 overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950 shadow-2xl">
+                                <div
+                                    class="flex h-full touch-pan-y transition-transform duration-300 ease-out"
+                                    :style="{ transform: `translateX(-${activeTrackingSlide * 100}%)` }"
+                                    @touchstart.passive="startTrackingSwipe"
+                                    @touchend="endTrackingSwipe"
+                                    @pointerdown="startTrackingPointerSwipe"
+                                    @pointerup="endTrackingPointerSwipe"
+                                    @pointercancel="cancelTrackingPointerSwipe"
+                                >
+                                    <article class="flex min-w-full flex-col justify-between p-5">
+                                        <div class="text-center">
+                                            <p class="text-xs font-black uppercase tracking-[0.22em] text-secondary">{{ $t('sport_map.tracks.distance') }}</p>
+                                            <p class="mt-5 text-7xl font-black leading-none text-primary">{{ formatDistance(trackingDistance) }}</p>
+                                            <p class="mt-4 text-lg font-black text-secondary">{{ trackingElapsedLabel }}</p>
+                                        </div>
+                                        <div class="grid gap-3">
+                                            <button v-if="!isTracking" type="button" class="inline-flex min-h-16 w-full items-center justify-center gap-3 rounded-full bg-buttonPrimary px-5 text-base font-black text-buttonTextPrimary shadow-lg" @click="startTracking">
+                                                <i class="las la-play text-2xl"></i>
+                                                {{ trackingPoints.length ? 'Weiter' : 'Starten' }}
+                                            </button>
+                                            <button v-else type="button" class="inline-flex min-h-16 w-full items-center justify-center gap-3 rounded-full border border-amber-300/40 bg-amber-400/10 px-5 text-base font-black text-amber-200" @click="stopTracking">
+                                                <i class="las la-pause text-2xl"></i>
+                                                Pause
+                                            </button>
+                                            <div v-if="trackingPoints.length" class="grid grid-cols-2 gap-3">
+                                                <button type="button" class="inline-flex min-h-13 items-center justify-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-4 text-sm font-black text-emerald-200" :disabled="trackForm.processing" @click="saveTrack">
+                                                    <i class="las la-save"></i>
+                                                    Speichern
+                                                </button>
+                                                <button type="button" class="inline-flex min-h-13 items-center justify-center gap-2 rounded-full border border-red-400/40 bg-red-500/10 px-4 text-sm font-black text-red-300" @click="deleteCurrentTrackDraft">
+                                                    <i class="las la-trash"></i>
+                                                    Loeschen
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </article>
+
+                                    <article class="min-w-full overflow-hidden bg-card">
+                                        <div class="flex items-center justify-between gap-3 px-5 py-4">
+                                            <div>
+                                                <p class="text-xs font-black uppercase tracking-wide text-air-blue">Karte</p>
+                                                <h3 class="text-lg font-black text-primary">Position</h3>
+                                            </div>
+                                            <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-secondary">{{ mapPoints.length }} Punkte</span>
+                                        </div>
+                                        <div class="relative h-[calc(100%-76px)] select-none overflow-hidden" style="background-color: #efe6d1; user-select: none; -webkit-user-select: none;" @click="handleMapClick" @selectstart.prevent @dragstart.prevent>
+                                            <div class="absolute inset-0 z-0" style="background-color: #efe6d1;"></div>
+                                            <div class="pointer-events-none absolute inset-0 z-0 opacity-80" style="background-image: linear-gradient(90deg, rgba(120,113,108,.16) 1px, transparent 1px), linear-gradient(0deg, rgba(120,113,108,.14) 1px, transparent 1px); background-size: 56px 56px;"></div>
+                                            <img v-for="tile in mapTiles" :key="`fullscreen-track-${tile.key}`" :src="tile.url" :style="tile.style" class="pointer-events-none absolute z-[6] max-w-none select-none" alt="" aria-hidden="true" decoding="async" loading="eager" draggable="false" @dragstart.prevent>
+                                            <img v-for="tile in mapOverlayTiles" :key="`fullscreen-track-overlay-${tile.key}`" :src="tile.url" :style="tile.style" class="pointer-events-none absolute z-[7] max-w-none select-none" alt="" aria-hidden="true" decoding="async" loading="eager" draggable="false" @dragstart.prevent>
+                                            <svg class="absolute inset-0 z-20 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                                <polyline v-if="routePolyline" :points="routePolyline" fill="none" stroke="rgba(255,255,255,.92)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+                                                <polyline v-if="routePolyline" :points="routePolyline" fill="none" stroke="rgb(59,130,246)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
+                                                <polyline v-if="trackPolyline" :points="trackPolyline" fill="none" stroke="rgb(34,197,94)" stroke-width="1.1" stroke-dasharray="2 1" stroke-linecap="round" stroke-linejoin="round" />
+                                            </svg>
+                                            <button type="button" class="absolute left-4 top-4 z-[80] inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/70 bg-white/95 text-blue-600 shadow-lg" aria-label="Mein Standort anzeigen" @click.stop.prevent="showCurrentLocationOnMap">
+                                                <i class="las la-location-arrow text-xl"></i>
+                                            </button>
+                                        </div>
+                                    </article>
+
+                                    <article class="flex min-w-full flex-col p-5">
+                                        <p class="text-xs font-black uppercase tracking-wide text-air-blue">Analyse</p>
+                                        <h3 class="mt-1 text-2xl font-black text-primary">Live-Werte</h3>
+                                        <div class="mt-5 grid flex-1 grid-cols-2 gap-3">
+                                            <div class="rounded-3xl border border-border bg-inputBg p-4">
+                                                <p class="text-xs font-bold uppercase text-secondary">Pace</p>
+                                                <p class="mt-2 text-3xl font-black text-primary">{{ trackingAveragePaceLabel }}</p>
+                                            </div>
+                                            <div class="rounded-3xl border border-border bg-inputBg p-4">
+                                                <p class="text-xs font-bold uppercase text-secondary">km/h</p>
+                                                <p class="mt-2 text-3xl font-black text-primary">{{ trackingAverageSpeedLabel }}</p>
+                                            </div>
+                                            <div class="rounded-3xl border border-border bg-inputBg p-4">
+                                                <p class="text-xs font-bold uppercase text-secondary">Zeit</p>
+                                                <p class="mt-2 text-3xl font-black text-primary">{{ trackingElapsedLabel }}</p>
+                                            </div>
+                                            <div class="rounded-3xl border border-border bg-inputBg p-4">
+                                                <p class="text-xs font-bold uppercase text-secondary">GPS</p>
+                                                <p class="mt-2 text-lg font-black text-primary">{{ trackingLastAccuracyLabel }}</p>
+                                            </div>
+                                        </div>
+                                    </article>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 flex items-center justify-between gap-3">
+                                <button type="button" class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-primary disabled:opacity-40" :disabled="activeTrackingSlide === 0" @click="previousTrackingSlide">
+                                    <i class="las la-arrow-left"></i>
+                                </button>
+                                <div class="flex items-center gap-2">
+                                    <button v-for="index in 3" :key="index" type="button" class="h-2.5 rounded-full transition-all" :class="activeTrackingSlide === index - 1 ? 'w-8 bg-air-blue' : 'w-2.5 bg-secondary/40'" @click="setTrackingSlide(index - 1)"></button>
+                                </div>
+                                <button type="button" class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-primary disabled:opacity-40" :disabled="activeTrackingSlide === 2" @click="nextTrackingSlide">
+                                    <i class="las la-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <section
+                            class="overflow-hidden rounded-2xl border border-air-blue/30 bg-gradient-to-br from-air-blue/20 via-inputBg to-emerald-500/10 p-3 shadow-sm sm:p-4"
+                        >
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-xs font-bold uppercase tracking-wide text-air-blue">Live-Tracking</p>
+                                    <h3 class="mt-1 text-lg font-bold text-primary sm:text-xl">Strecke aufzeichnen</h3>
+                                    <p class="mt-1 hidden text-sm leading-5 text-secondary sm:block">Starten, Handy einstecken und nach dem Training speichern.</p>
+                                </div>
+                                <span
+                                    class="shrink-0 rounded-full border px-3 py-1 text-xs font-bold"
+                                    :class="isTracking ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-300' : 'border-border bg-card text-secondary'"
+                                >
+                                    {{ trackingLiveStatusLabel }}
+                                </span>
+                                <button
+                                    v-if="trackingFullscreen"
+                                    type="button"
+                                    class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-card text-primary sm:hidden"
+                                    aria-label="Tracking Vollbild schließen"
+                                    @click="closeTrackingFullscreen"
+                                >
+                                    <i class="las la-times text-lg"></i>
+                                </button>
+                            </div>
+
+                            <div class="mt-4 lg:hidden">
+                                <div class="overflow-hidden rounded-[1.75rem] border border-white/10 bg-slate-950/60 shadow-2xl">
+                                    <div
+                                        class="flex touch-pan-y transition-transform duration-300 ease-out"
+                                        :style="{ transform: `translateX(-${activeTrackingSlide * 100}%)` }"
+                                        @touchstart.passive="startTrackingSwipe"
+                                        @touchend="endTrackingSwipe"
+                                        @pointerdown="startTrackingPointerSwipe"
+                                        @pointerup="endTrackingPointerSwipe"
+                                        @pointercancel="cancelTrackingPointerSwipe"
+                                    >
+                                <article class="flex min-h-[380px] min-w-full flex-col justify-between p-5">
+                                    <div>
+                                        <div class="flex items-center justify-between gap-3">
+                                            <span class="rounded-full bg-air-blue/15 px-3 py-1 text-xs font-black uppercase tracking-wide text-air-blue">Airmius Track</span>
+                                            <span class="rounded-full border border-border bg-card px-3 py-1 text-xs font-bold text-secondary">{{ trackingLiveStatusLabel }}</span>
+                                        </div>
+                                    <div class="mt-8 text-center">
+                                        <p class="text-xs font-bold uppercase text-secondary">{{ $t('sport_map.tracks.distance') }}</p>
+                                        <p class="mt-3 text-6xl font-black leading-none text-primary">{{ formatDistance(trackingDistance) }}</p>
+                                        <p class="mt-2 text-sm font-bold text-secondary">{{ trackingElapsedLabel }} · {{ trackingLiveStatusLabel }}</p>
+                                    </div>
+                                    </div>
+                                    <div class="mt-5 grid gap-2" :class="trackingPoints.length ? 'grid-cols-2' : 'grid-cols-1'">
+                                        <button v-if="!isTracking" type="button" class="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-buttonPrimary px-4 py-3 text-sm font-black text-buttonTextPrimary shadow-sm" @click="startTrackingFromMobile">
+                                            <i class="las la-play text-xl"></i>
+                                            {{ trackingPoints.length ? 'Weiter' : 'Starten' }}
+                                        </button>
+                                        <button v-else type="button" class="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-amber-300/40 bg-amber-400/10 px-4 py-3 text-sm font-black text-amber-200" @click="stopTracking">
+                                            <i class="las la-pause text-xl"></i>
+                                            Pause
+                                        </button>
+                                        <button v-if="trackingPoints.length" type="button" class="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-emerald-400/40 bg-emerald-500/15 px-4 py-3 text-sm font-black text-emerald-200 disabled:opacity-50" :disabled="trackForm.processing || trackingPoints.length < 1" @click="saveTrack">
+                                            <i class="las la-save text-xl"></i>
+                                            Speichern
+                                        </button>
+                                        <button v-if="trackingPoints.length" type="button" class="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-2 text-sm font-black text-red-300" @click="deleteCurrentTrackDraft">
+                                            <i class="las la-trash"></i>
+                                            Lauf lÃ¶schen
+                                        </button>
+                                    </div>
+                                    <p class="mt-4 text-center text-xs font-semibold text-secondary">Nach links swipen für Karte</p>
+                                </article>
+
+                                <article class="min-h-[380px] min-w-full overflow-hidden bg-card">
+                                    <div class="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+                                        <div>
+                                            <p class="text-xs font-bold uppercase tracking-wide text-air-blue">Slide 2</p>
+                                            <h4 class="text-base font-black text-primary">Karte</h4>
+                                        </div>
+                                        <span class="rounded-full bg-inputBg px-3 py-1 text-xs font-bold text-secondary">{{ mapPoints.length }} Punkte</span>
+                                    </div>
+                                    <div
+                                        class="relative h-72 touch-pan-x select-none overflow-hidden"
+                                        style="background-color: #efe6d1; user-select: none; -webkit-user-select: none;"
+                                        @click="handleMapClick"
+                                        @selectstart.prevent
+                                        @dragstart.prevent
+                                    >
+                                        <div class="absolute inset-0 z-0" style="background-color: #efe6d1;"></div>
+                                        <div class="pointer-events-none absolute inset-0 z-0 opacity-80" style="background-image: linear-gradient(90deg, rgba(120,113,108,.16) 1px, transparent 1px), linear-gradient(0deg, rgba(120,113,108,.14) 1px, transparent 1px); background-size: 56px 56px;"></div>
+                                        <img
+                                            v-for="tile in mapTiles"
+                                            :key="`mobile-track-${tile.key}`"
+                                            :src="tile.url"
+                                            :style="tile.style"
+                                            class="pointer-events-none absolute z-[6] max-w-none select-none"
+                                            alt=""
+                                            aria-hidden="true"
+                                            decoding="async"
+                                            loading="eager"
+                                            draggable="false"
+                                            @dragstart.prevent
+                                        >
+                                        <img
+                                            v-for="tile in mapOverlayTiles"
+                                            :key="`mobile-track-overlay-${tile.key}`"
+                                            :src="tile.url"
+                                            :style="tile.style"
+                                            class="pointer-events-none absolute z-[7] max-w-none select-none"
+                                            alt=""
+                                            aria-hidden="true"
+                                            decoding="async"
+                                            loading="eager"
+                                            draggable="false"
+                                            @dragstart.prevent
+                                        >
+                                        <svg class="absolute inset-0 z-20 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                            <polyline v-if="routePolyline" :points="routePolyline" fill="none" stroke="rgba(255,255,255,.92)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+                                            <polyline v-if="routePolyline" :points="routePolyline" fill="none" stroke="rgb(59,130,246)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
+                                            <polyline v-if="trackPolyline" :points="trackPolyline" fill="none" stroke="rgb(34,197,94)" stroke-width="1.1" stroke-dasharray="2 1" stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                        <div
+                                            v-if="currentLocationPoint"
+                                            class="absolute z-40 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-air-blue text-white shadow-lg"
+                                            :style="markerStyle(currentLocationPoint)"
+                                        >
+                                            <span class="absolute h-11 w-11 rounded-full bg-air-blue/25"></span>
+                                            <i class="las la-location-arrow relative text-base"></i>
+                                        </div>
+                                        <button type="button" class="absolute left-3 top-3 z-[80] inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/70 bg-white/95 text-blue-600 shadow-lg" aria-label="Mein Standort anzeigen" @click.stop.prevent="showCurrentLocationOnMap">
+                                            <i class="las la-location-arrow text-lg"></i>
+                                        </button>
+                                    </div>
+                                    <p class="px-4 py-3 text-center text-xs font-semibold text-secondary">Nochmals swipen für Pace und km/h</p>
+                                </article>
+
+                                <article class="flex min-h-[380px] min-w-full flex-col p-5">
+                                    <p class="text-xs font-bold uppercase tracking-wide text-air-blue">Slide 3</p>
+                                    <h4 class="mt-1 text-lg font-black text-primary">Live-Werte</h4>
+                                    <div class="mt-4 grid grid-cols-2 gap-3">
+                                        <div class="rounded-2xl border border-border bg-inputBg p-4">
+                                            <p class="text-xs font-bold uppercase text-secondary">Pace</p>
+                                            <p class="mt-1 text-2xl font-black text-primary">{{ trackingAveragePaceLabel }}</p>
+                                        </div>
+                                        <div class="rounded-2xl border border-border bg-inputBg p-4">
+                                            <p class="text-xs font-bold uppercase text-secondary">km/h</p>
+                                            <p class="mt-1 text-2xl font-black text-primary">{{ trackingAverageSpeedLabel }}</p>
+                                        </div>
+                                        <div class="rounded-2xl border border-border bg-inputBg p-4">
+                                            <p class="text-xs font-bold uppercase text-secondary">Zeit</p>
+                                            <p class="mt-1 text-2xl font-black text-primary">{{ trackingElapsedLabel }}</p>
+                                        </div>
+                                        <div class="rounded-2xl border border-border bg-inputBg p-4">
+                                            <p class="text-xs font-bold uppercase text-secondary">GPS</p>
+                                            <p class="mt-1 text-sm font-black text-primary">{{ trackingLastAccuracyLabel }}</p>
+                                        </div>
+                                    </div>
+                                </article>
+                            </div>
+
+                                    </div>
+
+                                <div class="mt-4 flex items-center justify-between gap-3">
+                                    <button type="button" class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-primary disabled:opacity-40" :disabled="activeTrackingSlide === 0" @click="previousTrackingSlide">
+                                        <i class="las la-arrow-left"></i>
+                                    </button>
+                                    <div class="flex items-center gap-2">
+                                        <button
+                                            v-for="index in 3"
+                                            :key="index"
+                                            type="button"
+                                            class="h-2.5 rounded-full transition-all"
+                                            :class="activeTrackingSlide === index - 1 ? 'w-8 bg-air-blue' : 'w-2.5 bg-secondary/40'"
+                                            @click="setTrackingSlide(index - 1)"
+                                        ></button>
+                                    </div>
+                                    <button type="button" class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-primary disabled:opacity-40" :disabled="activeTrackingSlide === 2" @click="nextTrackingSlide">
+                                        <i class="las la-arrow-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 hidden rounded-2xl border border-white/10 bg-card/80 p-4 lg:block">
+                                <div class="flex items-end justify-between gap-3">
+                                    <div>
+                                        <p class="text-xs font-bold uppercase tracking-wide text-secondary">{{ $t('sport_map.tracks.distance') }}</p>
+                                        <p class="mt-2 text-4xl font-black leading-none text-primary">{{ formatDistance(trackingDistance) }}</p>
+                                    </div>
+                                    <p class="pb-1 text-sm font-bold text-secondary">{{ trackingElapsedLabel }}</p>
+                                </div>
+                            </div>
+
+                            <div class="-mx-3 mt-3 hidden snap-x gap-3 overflow-x-auto px-3 pb-1 sm:mx-0 lg:grid lg:grid-cols-4 lg:overflow-visible lg:px-0">
+                                <div class="min-w-[128px] snap-start rounded-2xl border border-border bg-card/80 p-3">
+                                    <p class="text-xs font-bold uppercase text-secondary">Pace</p>
+                                    <p class="mt-1 text-xl font-bold text-primary">{{ trackingAveragePaceLabel }}</p>
+                                </div>
+                                <div class="min-w-[128px] snap-start rounded-2xl border border-border bg-card/80 p-3">
+                                    <p class="text-xs font-bold uppercase text-secondary">km/h</p>
+                                    <p class="mt-1 text-xl font-bold text-primary">{{ trackingAverageSpeedLabel }}</p>
+                                </div>
+                                <div class="min-w-[128px] snap-start rounded-2xl border border-border bg-card/80 p-3">
+                                    <p class="text-xs font-bold uppercase text-secondary">{{ $t('sport_map.points') }}</p>
+                                    <p class="mt-1 text-xl font-bold text-primary">{{ trackingPoints.length }}</p>
+                                </div>
+                                <div class="min-w-[128px] snap-start rounded-2xl border border-border bg-card/80 p-3">
+                                    <p class="text-xs font-bold uppercase text-secondary">GPS</p>
+                                    <p class="mt-1 truncate text-sm font-bold text-primary">{{ trackingLastAccuracyLabel }}</p>
+                                </div>
+                            </div>
+
+                            <p v-if="trackingError" class="mt-3 rounded-xl bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-500">
                                 {{ trackingError }}
                             </p>
 
-                            <div class="mt-4 flex flex-wrap gap-2">
-                                <button v-if="!isTracking" type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:bg-muted" @click="startTracking">
-                                    <i class="las la-play"></i>
-                                    {{ $t('sport_map.tracks.start') }}
+                            <div class="mt-4 hidden gap-2 lg:grid" :class="trackingPoints.length ? 'grid-cols-2' : 'grid-cols-1'">
+                                <button v-if="!isTracking" type="button" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-buttonPrimary px-4 py-3 text-sm font-bold text-buttonTextPrimary shadow-sm" @click="startTracking">
+                                    <i class="las la-play text-lg"></i>
+                                    {{ trackingPoints.length ? 'Weiter tracken' : 'Tracking starten' }}
                                 </button>
-                                <button v-else type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:bg-muted" @click="stopTracking">
-                                    <i class="las la-pause"></i>
-                                    {{ $t('sport_map.tracks.stop') }}
+                                <button v-else type="button" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-amber-300/40 bg-amber-400/10 px-4 py-3 text-sm font-bold text-amber-200" @click="stopTracking">
+                                    <i class="las la-pause text-lg"></i>
+                                    Pause
                                 </button>
-                                <button type="button" class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50" :disabled="trackForm.processing || trackingPoints.length < 1 || !trackForm.title" @click="saveTrack">
-                                    <i class="las la-save"></i>
-                                    {{ $t('sport_map.tracks.save') }}
+                                <button v-if="trackingPoints.length" type="button" class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-emerald-400/40 bg-emerald-500/15 px-4 py-3 text-sm font-bold text-emerald-200 disabled:opacity-50" :disabled="trackForm.processing || trackingPoints.length < 1" @click="saveTrack">
+                                    <i class="las la-save text-lg"></i>
+                                    Speichern
+                                </button>
+                                <button v-if="trackingPoints.length && !isTracking" type="button" class="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-bold text-secondary hover:bg-muted" @click="resetTrackPoints">
+                                    <i class="las la-trash"></i>
+                                    Verwerfen
                                 </button>
                             </div>
-                        </div>
+                        </section>
+
+                        <details class="rounded-2xl border border-border bg-inputBg p-4">
+                            <summary class="flex cursor-pointer list-none items-center justify-between gap-3">
+                                <span>
+                                    <span class="block text-xs font-bold uppercase tracking-wide text-secondary">Details</span>
+                                    <span class="block text-base font-bold text-primary">Optional vorbereiten</span>
+                                </span>
+                                <span class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-secondary">
+                                    <i class="las la-sliders-h"></i>
+                                </span>
+                            </summary>
+
+                            <div class="mt-4 grid gap-3 border-t border-border pt-4">
+                                <label class="space-y-1">
+                                    <span class="text-xs font-semibold text-secondary">{{ $t('sport_map.form.title') }}</span>
+                                    <input v-model="trackForm.title" class="w-full rounded-xl border border-border bg-card px-3 py-3 text-sm" placeholder="Wird beim Start automatisch gesetzt">
+                                </label>
+                                <label class="space-y-1">
+                                    <span class="text-xs font-semibold text-secondary">{{ $t('sport_map.form.sport') }}</span>
+                                    <select v-model="trackForm.sport_type" class="w-full rounded-xl border border-border bg-card px-3 py-3 text-sm">
+                                        <option v-for="sport in sportTypes" :key="sport.key" :value="sport.key">{{ catalogLabel(sport, sport.key) }}</option>
+                                    </select>
+                                </label>
+                                <label class="space-y-1">
+                                    <span class="text-xs font-semibold text-secondary">{{ $t('sport_map.tracks.route_optional') }}</span>
+                                    <select v-model="trackForm.sport_route_id" class="w-full rounded-xl border border-border bg-card px-3 py-3 text-sm">
+                                        <option :value="null">{{ $t('sport_map.tracks.free_track') }}</option>
+                                        <option v-for="routeItem in routes" :key="routeItem.id" :value="routeItem.id">{{ routeItem.title }}</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </details>
                     </div>
 
-                    <div>
-                        <h3 class="text-lg font-bold text-primary">{{ $t('sport_map.tracks.saved_title') }}</h3>
+                    <div class="rounded-2xl border border-border bg-inputBg p-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-xs font-bold uppercase tracking-wide text-secondary">Historie</p>
+                                <h3 class="text-lg font-bold text-primary">{{ $t('sport_map.tracks.saved_title') }}</h3>
+                            </div>
+                            <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-secondary">{{ tracks.length }} Tracks</span>
+                        </div>
+
                         <div class="mt-3 grid gap-3">
-                            <article v-for="track in tracks" :key="track.id" class="rounded-lg border border-border bg-inputBg p-4">
+                            <article v-for="track in tracks" :key="track.id" class="rounded-xl border border-border bg-card p-4">
                                 <div class="flex items-start justify-between gap-3">
-                                    <div>
-                                        <p class="text-sm font-bold text-primary">{{ track.title }}</p>
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-bold text-primary">{{ track.title }}</p>
                                         <p class="mt-1 text-xs text-secondary">{{ sportLabel(track.sport_type) }} - {{ trackStatusLabel(track.status) }}</p>
                                     </div>
-                                    <span class="rounded-full bg-card px-3 py-1 text-xs font-semibold text-primary">{{ formatDistance(track.distance_meters) }}</span>
+                                    <span class="shrink-0 rounded-full bg-inputBg px-3 py-1 text-xs font-semibold text-primary">{{ formatDistance(track.distance_meters) }}</span>
                                 </div>
-                                <div class="mt-3 grid grid-cols-3 gap-2 text-xs text-secondary">
-                                    <span>{{ formatDuration(track.duration_seconds) }}</span>
-                                    <span>{{ $t('sport_map.elevation_gain_meters', { meters: track.elevation_gain_meters || 0 }) }}</span>
-                                    <span>{{ $t('sport_map.tracks.points_count', { count: track.track_points?.length || 0 }) }}</span>
+                                <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-secondary sm:grid-cols-4">
+                                    <span class="rounded-lg bg-inputBg px-3 py-2">{{ formatDuration(track.duration_seconds) }}</span>
+                                    <span class="rounded-lg bg-inputBg px-3 py-2">{{ trackAveragePaceLabel(track) }}</span>
+                                    <span class="rounded-lg bg-inputBg px-3 py-2">{{ trackAverageSpeedLabel(track) }}</span>
+                                    <span class="rounded-lg bg-inputBg px-3 py-2">{{ $t('sport_map.tracks.points_count', { count: track.track_points?.length || 0 }) }}</span>
                                 </div>
                             </article>
+                            <div v-if="!tracks.length" class="rounded-xl border border-dashed border-border bg-card/60 p-5 text-center">
+                                <p class="text-sm font-bold text-primary">Noch kein Track gespeichert.</p>
+                                <p class="mt-1 text-sm text-secondary">Starte dein erstes Tracking direkt links.</p>
+                            </div>
                         </div>
                     </div>
                 </div>

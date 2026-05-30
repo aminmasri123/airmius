@@ -364,7 +364,356 @@
       "team_performance_hint": "اختياري: حمل المباريات والسرعة والتحمل والقفز تساعد في ضبط الحمل والتدريب البدني."
     },
     "header_subtitle": "إدارة الملف الشخصي والأمان والتصميم والعنوان.",
-    "language_description": "اختر لغة التنقل والصفحات وعناصر التحكم."
+    "language_description": "اختر لغة التنقل والصفحات وعناصر التحكم.",
+    "actions": {
+      "save": "حفظ",
+      "saved": "تم الحفظ.",
+      "cancel": "إلغاء",
+      "back": "رجوع",
+      "delete": "حذف",
+      "remove": "إزالة",
+      "close": "إغلاق",
+      "rename": "إعادة التسمية"
+    },
+    "profile": {
+      "title": "معلومات الملف الشخصي",
+      "description": "حدّث معلومات ملفك الشخصي وعنوان بريدك الإلكتروني.",
+      "saved": "تم حفظ معلومات الملف الشخصي.",
+      "save_failed": "تعذر حفظ معلومات الملف الشخصي. يرجى التحقق من البيانات.",
+      "photo": "الصورة",
+      "select_new_photo": "اختيار صورة جديدة",
+      "remove_photo": "إزالة الصورة",
+      "first_name": "الاسم الأول",
+      "last_name": "اسم العائلة",
+      "email": "البريد الإلكتروني",
+      "email_unverified": "لم يتم تأكيد بريدك الإلكتروني بعد.",
+      "resend_verification": "إرسال رسالة التأكيد مرة أخرى.",
+      "verification_sent": "تم إرسال رابط تأكيد جديد إلى بريدك الإلكتروني.",
+      "profile_visibility": "ظهور الملف الشخصي",
+      "visibility_public": "عام",
+      "visibility_private": "خاص",
+      "license_number": "رقم الترخيص",
+      "license_placeholder": "مثلاً رقم الاتحاد أو رقم بطاقة اللاعب",
+      "license_help": "يمكنك إدارة هذا الرقم بنفسك. يمكن للأندية رؤيته للتطابق إذا كان ملفك مرئياً لها.",
+      "bio": "نبذة"
+    },
+    "security": {
+      "update_password": "تحديث كلمة المرور",
+      "update_password_description": "استخدم كلمة مرور طويلة وعشوائية للحفاظ على أمان حسابك.",
+      "current_password": "كلمة المرور الحالية",
+      "new_password": "كلمة المرور الجديدة",
+      "confirm_password": "تأكيد كلمة المرور",
+      "two_factor_title": "المصادقة الثنائية",
+      "two_factor_description": "أضف طبقة أمان إضافية إلى حسابك.",
+      "two_factor_enabled": "لقد فعّلت المصادقة الثنائية.",
+      "two_factor_finish": "أكمل تفعيل المصادقة الثنائية.",
+      "two_factor_not_enabled": "لم تقم بتفعيل المصادقة الثنائية بعد.",
+      "two_factor_body": "عند تفعيل المصادقة الثنائية سيُطلب منك رمز آمن وعشوائي عند تسجيل الدخول. يمكنك الحصول على هذا الرمز من تطبيق مصادقة.",
+      "two_factor_qr_confirm": "لإكمال التفعيل امسح رمز QR بتطبيق المصادقة أو أدخل مفتاح الإعداد ثم أكد الرمز الناتج.",
+      "two_factor_qr_enabled": "المصادقة الثنائية مفعّلة الآن. امسح رمز QR أو احتفظ بمفتاح الإعداد.",
+      "setup_key": "مفتاح الإعداد",
+      "code": "الرمز",
+      "recovery_codes_help": "احتفظ برموز الاسترداد هذه في مكان آمن. تتيح لك الدخول إذا فقدت جهازك.",
+      "enable": "تفعيل",
+      "confirm": "تأكيد",
+      "regenerate_recovery_codes": "إنشاء رموز استرداد جديدة",
+      "show_recovery_codes": "عرض رموز الاسترداد",
+      "disable": "تعطيل"
+    },
+    "sessions": {
+      "title": "جلسات المتصفح",
+      "description": "إدارة الجلسات النشطة على المتصفحات والأجهزة الأخرى.",
+      "body": "إذا لزم الأمر يمكنك تسجيل الخروج من جميع الأجهزة الأخرى. بعض جلساتك الأخيرة معروضة أدناه، لكن القائمة قد لا تكون كاملة. إذا كنت تعتقد أن حسابك تعرض للاختراق، فيجب أيضاً تغيير كلمة المرور.",
+      "unknown": "غير معروف",
+      "this_device": "هذا الجهاز",
+      "last_active": "آخر نشاط {time}",
+      "logout_button": "تسجيل الخروج من الجلسات الأخرى",
+      "done": "تم.",
+      "modal_title": "تسجيل الخروج من الجلسات الأخرى",
+      "modal_content": "يرجى إدخال كلمة المرور لتأكيد تسجيل الخروج من جميع الأجهزة الأخرى.",
+      "password_placeholder": "كلمة المرور"
+    },
+    "delete_account": {
+      "title": "حذف الحساب",
+      "description": "حذف حسابك نهائياً.",
+      "body": "بعد حذف حسابك ستتم إزالة جميع الموارد والبيانات نهائياً. يرجى تنزيل أي بيانات تريد الاحتفاظ بها قبل حذف الحساب.",
+      "modal_title": "حذف الحساب",
+      "identity_email": "هل أنت متأكد من أنك تريد حذف حسابك؟ بعد الحذف ستتم إزالة جميع الموارد والبيانات نهائياً. يرجى إدخال بريدك الإلكتروني، وسنرسل لك بعدها رمز تأكيد.",
+      "identity_password": "هل أنت متأكد من أنك تريد حذف حسابك؟ بعد الحذف ستتم إزالة جميع الموارد والبيانات نهائياً. يرجى إدخال كلمة المرور، وسنرسل لك بعدها رمز تأكيد عبر البريد الإلكتروني.",
+      "code_sent": "أرسلنا رمز تأكيد إلى بريدك الإلكتروني. أدخل الرمز لحذف حسابك نهائياً.",
+      "password_placeholder": "كلمة المرور",
+      "code_placeholder": "رمز التأكيد",
+      "send_code": "إرسال الرمز"
+    },
+    "design": {
+      "title": "التصميم",
+      "themes": {
+        "air": "واضح وخفيف ومركّز.",
+        "dark": "مركّز للجلسات المتأخرة.",
+        "womanly": "دافئ وقوي وأنيق.",
+        "champion": "طاقة ذهبية للفائزين.",
+        "sprint": "منعش وسريع ونشط.",
+        "arena": "هادئ ومتين واحترافي.",
+        "pulse": "ديناميكي ومحفّز.",
+        "trail": "طبيعي ومناسب للتحمل وراسخ.",
+        "bazaar": "حيوي ومناسب للبيع ومنعش لتجارب السوق."
+      }
+    },
+    "address": {
+      "title": "العنوان",
+      "saved": "تم حفظ العنوان بنجاح.",
+      "save_failed": "تعذر حفظ العنوان. يرجى التحقق من البيانات.",
+      "country": "البلد",
+      "countries": {
+        "DE": "ألمانيا",
+        "AT": "النمسا",
+        "CH": "سويسرا",
+        "FR": "فرنسا",
+        "NL": "هولندا",
+        "BE": "بلجيكا",
+        "TR": "تركيا"
+      },
+      "city": "المدينة",
+      "postal_code": "الرمز البريدي",
+      "state": "الولاية",
+      "street": "الشارع",
+      "house_number": "رقم المنزل",
+      "event_defaults": "الإعدادات الافتراضية للفعاليات",
+      "event_defaults_description": "تُستخدم هذه القيم تلقائياً لقائمة الفعاليات ما لم تضبط فلاتر خاصة هناك.",
+      "event_zone": "منطقة الفعاليات",
+      "event_zone_help": "حالياً تعتمد على العنوان أو الرمز البريدي أو المدينة أو عنوان النادي.",
+      "event_sports": "الرياضات المقترحة للفعاليات",
+      "sport_fallback": "رياضة",
+      "save_button": "حفظ العنوان وإعدادات الفعاليات"
+    },
+    "privacy": {
+      "title": "الخصوصية",
+      "description": "حدد من يمكنه رؤية ملفك الشخصي أو مراسلتك مباشرة أو إرسال طلبات صداقة.",
+      "profile_visibility": "ظهور الملف الشخصي",
+      "profile_visibility_help": "يتحكم هذا الإعداد فيما إذا كان الآخرون يستطيعون رؤية ملفك ومحتواه.",
+      "direct_messages": "استقبال الرسائل",
+      "friend_requests": "استقبال طلبات الصداقة",
+      "ads_title": "الإعلانات والقياس",
+      "ads_description": "بدون موافقة نعرض فقط إعلانات سياقية ولا نخزن إشارات إعادة استهداف مخصصة.",
+      "ads_personalization": "السماح بالإعلانات المخصصة",
+      "ads_personalization_help": "يستخدم مثلاً اهتمامات السوق السابقة لعرض إعلانات أنسب.",
+      "ads_measurement": "السماح بقياس التحويلات",
+      "ads_measurement_help": "يربط النقرات بأحداث حملات مجهولة مثل الدفع أو الشراء.",
+      "save_button": "حفظ الخصوصية",
+      "options": {
+        "public": "كل الأشخاص المسجلين",
+        "private": "أنا فقط والأصدقاء والمتابعون",
+        "everyone": "كل الأشخاص المسجلين",
+        "friends": "الأصدقاء فقط"
+      }
+    },
+    "roles": {
+      "title": "أدواري",
+      "description": "هنا ترى أدوار المنصة المرتبطة حالياً بحسابك.",
+      "count": "{count} أدوار",
+      "no_description": "لا يوجد وصف.",
+      "empty": "لم يتم تعيين أي دور لحسابك بعد.",
+      "names": {
+        "player": "رياضي",
+        "club_owner": "مالك نادي",
+        "super_admin": "مدير عام"
+      },
+      "descriptions": {
+        "player": "لاعب",
+        "club_owner": "مالك نادي",
+        "super_admin": "مدير نظام عام بصلاحيات كاملة"
+      }
+    },
+    "activities": {
+      "title": "أنشطتي",
+      "description": "تظهر هنا فقط الإجراءات التي أنشأها حسابك.",
+      "count": "{count} إدخالات",
+      "empty": "لا توجد أنشطة شخصية بعد.",
+      "personal": "شخصي",
+      "types": {
+        "post": {
+          "created": "تم إنشاء منشور",
+          "updated": "تم تحديث منشور",
+          "deleted": "تم حذف منشور",
+          "commented": "تم التعليق على منشور"
+        },
+        "user": {
+          "followed": "تمت متابعة شخص"
+        },
+        "friend": {
+          "requested": "تم إرسال طلب صداقة",
+          "accepted": "تم قبول الصداقة"
+        },
+        "comment": {
+          "created": "تمت كتابة تعليق",
+          "updated": "تم تعديل تعليق",
+          "deleted": "تم حذف تعليق"
+        }
+      }
+    },
+    "billing": {
+      "invoice_reference": "فاتورة {id}",
+      "this_subscription": "هذا الاشتراك",
+      "subscriptions_title": "اشتراكاتي في Airmius",
+      "subscriptions_description": "الخطط الشخصية الحالية في Airmius وفترات الاشتراك.",
+      "airmius_subscription": "اشتراك Airmius",
+      "payment_portal": "بوابة الدفع",
+      "payment_portal_inactive": "بوابة الدفع غير مفعلة حالياً لهذا الاشتراك.",
+      "cancel": "إلغاء الاشتراك",
+      "payment_method": "طريقة الدفع",
+      "runs_until": "ساري حتى",
+      "cancelled_at": "تم الإلغاء في",
+      "no_subscription": "ليس لديك اشتراك شخصي في Airmius بعد.",
+      "subscription_invoices_title": "فواتير اشتراك Airmius",
+      "subscription_invoices_description": "فواتير خطط Airmius واشتراكات المنصة.",
+      "bank_details": "بيانات البنك",
+      "bank_details_missing": "بيانات البنك غير موجودة",
+      "no_subscription_invoices": "لا توجد فواتير اشتراك Airmius بعد.",
+      "my_invoices_title": "فواتيري",
+      "my_invoices_description": "هنا ترى رسوم النادي المفتوحة والمدفوعة.",
+      "no_invoices": "لا توجد فواتير بعد.",
+      "payment_history_title": "سجل المدفوعات",
+      "no_payments": "لم يتم تسجيل أي مدفوعات بعد.",
+      "bank_transfer_title": "الدفع عبر التحويل البنكي",
+      "bank_transfer_description": "استخدم هذه البيانات لإجراء التحويل البنكي.",
+      "statuses": {
+        "open": "مفتوح",
+        "awaiting_transfer": "بانتظار التحويل",
+        "paid": "مدفوع",
+        "overdue": "متأخر",
+        "cancelled": "ملغى",
+        "active": "نشط",
+        "trialing": "فترة تجريبية",
+        "past_due": "دفع مستحق",
+        "cancels_at_period_end": "ملغى في نهاية الفترة"
+      },
+      "bank": {
+        "recipient": "المستلم",
+        "account_holder": "صاحب الحساب",
+        "bank": "البنك",
+        "amount": "المبلغ",
+        "reference": "الغرض من التحويل"
+      },
+      "open_payment": {
+        "delete_title": "حذف دفعة مفتوحة",
+        "cancel_title": "إلغاء دفعة مفتوحة",
+        "delete_message": "سيتم حذف الدفعة المفتوحة{number} نهائياً. هذا ممكن فقط للمدفوعات غير المدفوعة وغير المفعلة.",
+        "cancel_message": "سيتم إلغاء الدفعة المفتوحة{number} ووضعها كملغاة."
+      },
+      "cancel_subscription": {
+        "title": "إلغاء الاشتراك",
+        "message": "هل تريد إلغاء {plan} في نهاية الفترة الحالية؟ {end}",
+        "ends_at": "ينتهي في {date}.",
+        "confirm": "إلغاء الاشتراك"
+      },
+      "table": {
+        "number": "رقم",
+        "plan": "الخطة",
+        "club": "النادي",
+        "amount": "المبلغ",
+        "due": "مستحق",
+        "status": "الحالة",
+        "pay": "الدفع",
+        "action": "إجراء",
+        "title": "العنوان",
+        "date": "التاريخ",
+        "invoice": "الفاتورة"
+      }
+    },
+    "integrations": {
+      "login_title": "روابط تسجيل الدخول",
+      "login_description": "استخدم Google أو Outlook لتسجيل دخول سريع.",
+      "not_connected": "غير متصل بعد",
+      "connected": "متصل",
+      "connect": "ربط",
+      "sport_apps_title": "مزامنة تطبيقات الرياضة",
+      "sport_apps_description": "اربط تطبيقات الرياضة حتى تنتقل بيانات التدريب لاحقاً إلى ملفك في Airmius.",
+      "last_synced": "آخر مزامنة: {date}",
+      "google_status": "حالة Google:",
+      "google_error": "خطأ Google:",
+      "day_ranges": "نطاقات الأيام:",
+      "request": "تسجيل اهتمام",
+      "check_sync": "فحص المزامنة",
+      "statuses": {
+        "connected": "متصل",
+        "requested": "تم تسجيل الاهتمام",
+        "disconnected": "غير متصل",
+        "error": "خطأ"
+      },
+      "providers": {
+        "manual": "يدوي",
+        "google_fit": "Google Fit",
+        "strava": "Strava",
+        "garmin": "Garmin",
+        "mi_fitness": "Mi Fitness",
+        "fitbit": "Fitbit",
+        "polar": "Polar"
+      },
+      "provider_descriptions": {
+        "strava": "يربط Strava بيانات الجري وركوب الدراجة والسباحة والتمارين عبر واجهة OAuth الرسمية.",
+        "garmin": "تحتاج Garmin Health API إلى موافقة مزود. يمكن للمستخدمين تسجيل الاهتمام حتى تصبح موافقة الشريك فعالة.",
+        "google_fit": "الربط عبر Google OAuth. سيتم بناء استيراد الأنشطة لاحقاً على الرموز المحفوظة.",
+        "mi_fitness": "لا يملك Mi Fitness ربط OAuth قياسياً بسيطاً في المشروع. يتم تسجيل الربط كرغبة.",
+        "polar": "يوفر Polar AccessLink بيانات التدريب والنشاط عبر OAuth/API. تم تسجيل التكامل كرغبة.",
+        "fitbit": "يمكن لـ Fitbit Web API توفير الأنشطة والخطوات والمسافة والسعرات وبيانات الصحة عبر OAuth. تم تسجيل التكامل كرغبة."
+      },
+      "disconnect": {
+        "title": "إزالة تطبيق رياضي",
+        "message": "هل أنت متأكد من إزالة ربط هذا التطبيق الرياضي؟ سيتم حذف الرموز المحفوظة ويجب ربط التطبيق مرة أخرى."
+      },
+      "manual_activity": {
+        "title": "إدخال يدوي",
+        "description": "أضف وحدات تدريبك الخاصة حتى إذا لم يكن هناك تطبيق رياضي متصل.",
+        "save": "حفظ التدريب",
+        "name": "الاسم",
+        "name_placeholder": "مثلاً تدريب جري",
+        "sport_type": "الرياضة",
+        "date_time": "التاريخ والوقت",
+        "image": "الصورة",
+        "duration_minutes": "المدة بالدقائق",
+        "distance_km": "المسافة بالكيلومتر",
+        "calories": "السعرات",
+        "types": {
+          "Training": "تدريب",
+          "Laufen": "جري",
+          "Radfahren": "ركوب الدراجة",
+          "Schwimmen": "سباحة",
+          "Fußball": "كرة القدم",
+          "Fitness": "لياقة",
+          "Krafttraining": "تدريب القوة",
+          "Yoga": "يوغا",
+          "Gehen": "مشي",
+          "Sonstiges": "أخرى"
+        }
+      },
+      "activities": {
+        "title": "الأنشطة المستوردة",
+        "delete_all": "حذف الكل",
+        "empty": "لم يتم استيراد أي أنشطة بعد.",
+        "daily_activity": "نشاط يومي",
+        "manual_entry": "تم إدخاله يدوياً",
+        "daily_summary": "ملخص يومي",
+        "active_minutes": "{minutes} دقائق نشطة",
+        "start_about": "البداية تقريباً {time}",
+        "delete_all_title": "حذف كل الأنشطة المستوردة",
+        "delete_title": "حذف نشاط مستورد",
+        "delete_all_message": "سيتم حذف كل الأنشطة الرياضية المستوردة نهائياً من حسابك في Airmius. يبقى الربط مع Google Fit أو التطبيقات الأخرى قائماً.",
+        "delete_message": "سيتم حذف هذا النشاط الرياضي المستورد نهائياً من حسابك في Airmius.",
+        "rename_title": "إعادة تسمية النشاط",
+        "rename_description": "يتم حفظ الاسم الجديد داخل Airmius فقط.",
+        "table": {
+          "image": "الصورة",
+          "date": "التاريخ",
+          "time": "الوقت",
+          "source": "المصدر",
+          "sport_type": "الرياضة",
+          "duration": "المدة",
+          "distance": "المسافة",
+          "calories": "السعرات",
+          "action": "إجراء"
+        }
+      }
+    }
   },
   "common": {
     "all": "الكل",
@@ -2891,6 +3240,21 @@
   "Kategorie:": "التصنيف:",
   "Bereich:": "القسم:",
   "Alle Bereiche": "كل الأقسام",
+  "Analyse": "التحليل",
+  "Pläne & Kurse": "الخطط والدورات",
+  "Running": "الجري",
+  "Teamsport": "رياضة جماعية",
+  "Neueste": "الأحدث",
+  "Preis aufsteigend": "السعر تصاعدياً",
+  "Preis absteigend": "السعر تنازلياً",
+  "Alle Verfügbarkeiten": "كل حالات التوفر",
+  "Sofort verfügbar": "متاح فوراً",
+  "Versandartikel": "منتجات قابلة للشحن",
+  "Direkt bestellen, Konto optional.": "اطلب مباشرة، الحساب اختياري.",
+  "Brutto, netto, Steuer und Versand werden ausgewiesen.": "يتم عرض الإجمالي والصافي والضريبة والشحن بوضوح.",
+  "Verein, Trainer oder Shop bleiben klar erkennbar.": "يبقى النادي أو المدرب أو المتجر واضحاً.",
+  "Bestellstatus": "حالة الطلب",
+  "Updates und Belege werden per E-Mail zugestellt.": "تصلك التحديثات والإيصالات عبر البريد الإلكتروني.",
   "Status:": "الحالة:",
   "Aktiv:": "نشط:",
   "brutto": "الإجمالي",

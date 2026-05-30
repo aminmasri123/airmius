@@ -115,7 +115,53 @@ class SportRouteRoutingService
             ]];
         }
 
+        if ($this->proposalProvider() === 'graphhopper') {
+            $roundTrip = $this->graphHopperRoundTripCandidate($data, $sportType);
+
+            if ($roundTrip !== null) {
+                return $roundTrip;
+            }
+        }
+
         return $this->calibratedRoundtripProposal($data, $sportType);
+    }
+
+    private function graphHopperRoundTripCandidate(array $data, string $sportType): ?array
+    {
+        $start = [
+            'name' => 'Start',
+            'latitude' => (float) data_get($data, 'start.latitude'),
+            'longitude' => (float) data_get($data, 'start.longitude'),
+        ];
+        $targetDistance = $this->targetDistanceMeters($data);
+        $profile = $this->profileFor('graphhopper', $sportType);
+        $variantSeed = $this->variantSeed($data);
+
+        try {
+            $route = $this->fetchGraphHopperRoundTripRoute($start, $profile, $targetDistance, $variantSeed, $this->proposalBearing($data, $variantSeed));
+
+            if (! $route) {
+                return null;
+            }
+
+            $summary = $this->summaryFromExternalRoute($route, $this->localSummary([$start, $start], $sportType), 'graphhopper', $profile);
+            $waypoints = $this->waypointsFromRouteGeometry($summary, $start);
+
+            return [$waypoints, $summary, [
+                'target_distance_meters' => $targetDistance,
+                'attempts' => 1,
+                'radius_scale' => 1.0,
+                'shape' => $this->routeShapeMetrics($summary, true),
+                'routing_algorithm' => 'graphhopper_round_trip',
+            ]];
+        } catch (Throwable $exception) {
+            $this->recordRoutingUsage('graphhopper', $profile, 'roundtrip_exception', [
+                'error' => class_basename($exception),
+                'waypoints' => 1,
+            ]);
+
+            return null;
+        }
     }
 
     private function calibratedRoundtripProposal(array $data, string $sportType): array
@@ -171,16 +217,18 @@ class SportRouteRoutingService
         $fallback = $this->localSummary($points, $sportType);
         $provider = $forceRouting ? $this->proposalProvider() : $this->provider();
 
-        if (count($points) < 2 || ! in_array($provider, ['osrm', 'mapbox'], true)) {
+        if (count($points) < 2 || ! in_array($provider, ['osrm', 'mapbox', 'graphhopper'], true)) {
             return $fallback;
         }
 
         $profile = $this->profileFor($provider, $sportType);
 
         try {
-            $route = $provider === 'mapbox'
-                ? $this->fetchMapboxRoute($points, $profile)
-                : $this->fetchOsrmRoute($points, $profile);
+            $route = match ($provider) {
+                'mapbox' => $this->fetchMapboxRoute($points, $profile),
+                'graphhopper' => $this->fetchGraphHopperRoute($points, $profile),
+                default => $this->fetchOsrmRoute($points, $profile),
+            };
 
             if (! $route) {
                 return $this->externalRoutingFallback($fallback, $provider, $profile, 'empty_route');
@@ -293,7 +341,9 @@ class SportRouteRoutingService
     {
         $environment = (string) ($data['environment'] ?? 'nature');
         $surface = (string) ($data['surface'] ?? 'any');
-        $bearing = self::ENVIRONMENT_BEARINGS[$environment] ?? self::ENVIRONMENT_BEARINGS['nature'];
+        $bearing = $environment === 'any'
+            ? $this->seededUnit($variantSeed, 30) * 360
+            : (self::ENVIRONMENT_BEARINGS[$environment] ?? self::ENVIRONMENT_BEARINGS['nature']);
         $bearing += self::SURFACE_BEARING_OFFSETS[$surface] ?? 0;
         $bearing += ($this->seededUnit($variantSeed, 1) - 0.5) * 140;
 
@@ -460,6 +510,37 @@ class SportRouteRoutingService
             ])
             ->values()
             ->all();
+    }
+
+    private function waypointsFromRouteGeometry(array $summary, array $start): array
+    {
+        $points = $this->geometryPointsFromSummary($summary);
+
+        if (count($points) < 8) {
+            return $this->metrics->normalizePoints([$start, $start]);
+        }
+
+        $sampleIndexes = [
+            0,
+            (int) floor((count($points) - 1) * 0.25),
+            (int) floor((count($points) - 1) * 0.5),
+            (int) floor((count($points) - 1) * 0.75),
+            count($points) - 1,
+        ];
+
+        return $this->metrics->normalizePoints(collect($sampleIndexes)
+            ->map(function (int $pointIndex, int $waypointIndex) use ($points, $start, $sampleIndexes) {
+                $isFirst = $waypointIndex === 0;
+                $isLast = $waypointIndex === count($sampleIndexes) - 1;
+                $point = $points[$pointIndex] ?? $start;
+
+                return [
+                    'name' => $isFirst ? 'Start' : ($isLast ? 'Zurueck zum Start' : 'Rundenpunkt '.$waypointIndex),
+                    'latitude' => $isFirst || $isLast ? $start['latitude'] : $point['latitude'],
+                    'longitude' => $isFirst || $isLast ? $start['longitude'] : $point['longitude'],
+                ];
+            })
+            ->all());
     }
 
     private function backtrackMeters(array $points): float
@@ -634,6 +715,144 @@ class SportRouteRoutingService
         return is_array($route) ? $route : null;
     }
 
+    private function fetchGraphHopperRoute(array $points, string $profile): ?array
+    {
+        $apiKey = (string) config('sport_map.routing.graphhopper_api_key', '');
+
+        if ($apiKey === '') {
+            $this->recordRoutingUsage('graphhopper', $profile, 'missing_token', [
+                'waypoints' => count($points),
+            ]);
+
+            return null;
+        }
+
+        $query = [
+            'profile' => $profile,
+            'locale' => 'de',
+            'points_encoded' => 'false',
+            'instructions' => 'true',
+            'calc_points' => 'true',
+            'key' => $apiKey,
+        ];
+
+        $pointQuery = collect($points)
+            ->map(fn (array $point) => 'point='.rawurlencode((float) $point['latitude'].','.(float) $point['longitude']))
+            ->implode('&');
+        $queryString = http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+        $baseUrl = rtrim((string) config('sport_map.routing.graphhopper_base_url', 'https://graphhopper.com/api/1'), '/');
+
+        $response = Http::timeout(max(1, (int) config('sport_map.routing.timeout_seconds', 4)))
+            ->acceptJson()
+            ->get("{$baseUrl}/route?{$pointQuery}&{$queryString}");
+        $this->recordRoutingUsage('graphhopper', $profile, $response->successful() ? 'ok' : 'failed', [
+            'http_status' => $response->status(),
+            'waypoints' => count($points),
+        ]);
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $path = data_get($response->json(), 'paths.0');
+
+        if (! is_array($path)) {
+            return null;
+        }
+
+        return [
+            'distance' => data_get($path, 'distance'),
+            'duration' => ((float) data_get($path, 'time', 0)) / 1000,
+            'geometry' => [
+                'type' => 'LineString',
+                'coordinates' => data_get($path, 'points.coordinates', []),
+            ],
+            'legs' => [[
+                'steps' => collect((array) data_get($path, 'instructions', []))
+                    ->map(fn (array $instruction) => [
+                        'distance' => data_get($instruction, 'distance'),
+                        'duration' => ((float) data_get($instruction, 'time', 0)) / 1000,
+                        'name' => data_get($instruction, 'street_name'),
+                        'maneuver' => [
+                            'type' => $this->graphHopperSignToManeuver((int) data_get($instruction, 'sign', 0)),
+                        ],
+                    ])
+                    ->values()
+                    ->all(),
+            ]],
+        ];
+    }
+
+    private function fetchGraphHopperRoundTripRoute(array $start, string $profile, int $targetDistanceMeters, int $seed, float $heading): ?array
+    {
+        $apiKey = (string) config('sport_map.routing.graphhopper_api_key', '');
+
+        if ($apiKey === '') {
+            $this->recordRoutingUsage('graphhopper', $profile, 'missing_token', [
+                'waypoints' => 1,
+                'algorithm' => 'round_trip',
+            ]);
+
+            return null;
+        }
+
+        $query = [
+            'point' => (float) $start['latitude'].','.(float) $start['longitude'],
+            'profile' => $profile,
+            'locale' => 'de',
+            'points_encoded' => 'false',
+            'instructions' => 'true',
+            'calc_points' => 'true',
+            'algorithm' => 'round_trip',
+            'round_trip.distance' => max(1000, $targetDistanceMeters),
+            'round_trip.seed' => $seed,
+            'heading' => (int) round($heading),
+            'key' => $apiKey,
+        ];
+        $baseUrl = rtrim((string) config('sport_map.routing.graphhopper_base_url', 'https://graphhopper.com/api/1'), '/');
+
+        $response = Http::timeout(max(1, (int) config('sport_map.routing.timeout_seconds', 4)))
+            ->acceptJson()
+            ->get("{$baseUrl}/route", $query);
+        $this->recordRoutingUsage('graphhopper', $profile, $response->successful() ? 'ok' : 'failed', [
+            'http_status' => $response->status(),
+            'waypoints' => 1,
+            'algorithm' => 'round_trip',
+        ]);
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $path = data_get($response->json(), 'paths.0');
+
+        if (! is_array($path)) {
+            return null;
+        }
+
+        return [
+            'distance' => data_get($path, 'distance'),
+            'duration' => ((float) data_get($path, 'time', 0)) / 1000,
+            'geometry' => [
+                'type' => 'LineString',
+                'coordinates' => data_get($path, 'points.coordinates', []),
+            ],
+            'legs' => [[
+                'steps' => collect((array) data_get($path, 'instructions', []))
+                    ->map(fn (array $instruction) => [
+                        'distance' => data_get($instruction, 'distance'),
+                        'duration' => ((float) data_get($instruction, 'time', 0)) / 1000,
+                        'name' => data_get($instruction, 'street_name'),
+                        'maneuver' => [
+                            'type' => $this->graphHopperSignToManeuver((int) data_get($instruction, 'sign', 0)),
+                        ],
+                    ])
+                    ->values()
+                    ->all(),
+            ]],
+        ];
+    }
+
     private function summaryFromExternalRoute(array $route, array $fallback, string $provider, string $profile): array
     {
         $coordinates = collect(data_get($route, 'geometry.coordinates', []))
@@ -711,6 +930,17 @@ class SportRouteRoutingService
         };
     }
 
+    private function graphHopperSignToManeuver(int $sign): string
+    {
+        return match ($sign) {
+            4 => 'arrive',
+            5 => 'via',
+            -3, -2, -1 => 'turn',
+            1, 2, 3 => 'turn',
+            default => 'continue',
+        };
+    }
+
     private function boundsFromCoordinates(array $coordinates): ?array
     {
         if ($coordinates === []) {
@@ -750,9 +980,11 @@ class SportRouteRoutingService
 
     private function profileFor(string $provider, ?string $sportType): string
     {
-        $profiles = $provider === 'mapbox'
-            ? config('sport_map.routing.mapbox_profiles', [])
-            : config('sport_map.routing.profiles', []);
+        $profiles = match ($provider) {
+            'mapbox' => config('sport_map.routing.mapbox_profiles', []),
+            'graphhopper' => config('sport_map.routing.graphhopper_profiles', []),
+            default => config('sport_map.routing.profiles', []),
+        };
         $key = strtolower((string) $sportType);
 
         return (string) ($profiles[$key] ?? $profiles['other'] ?? ($provider === 'mapbox' ? 'walking' : 'foot'));
