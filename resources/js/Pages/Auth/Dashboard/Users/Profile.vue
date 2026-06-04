@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, ref, watch } from 'vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
@@ -210,7 +210,7 @@ const sportLabel = (sport) => {
 
 const statusLabel = (status) => ({
     active: 'Betreibe ich',
-    wants_to_learn: 'Moechte ich lernen',
+    wants_to_learn: 'Möchte ich lernen',
     coach: 'Trainiere ich',
     interested: 'Interessiert mich',
 }[status] || status)
@@ -689,7 +689,7 @@ const rejectRecommendation = (recommendation) => {
                                 />
                                 <select v-model="sportForm.status" class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                                     <option value="active">Betreibe ich</option>
-                                    <option value="wants_to_learn">Moechte ich lernen</option>
+                                    <option value="wants_to_learn">Möchte ich lernen</option>
                                     <option value="coach">Trainiere ich</option>
                                     <option value="interested">Interessiert mich</option>
                                 </select>
@@ -998,3 +998,4 @@ const rejectRecommendation = (recommendation) => {
         </div>
     </AppLayout>
 </template>
+

@@ -1,4 +1,4 @@
-export const centsToMajor = (cents) => {
+﻿export const centsToMajor = (cents) => {
     if (cents === null || cents === undefined || cents === '') {
         return ''
     }

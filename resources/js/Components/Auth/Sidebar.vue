@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import ApplicationMark from '../ApplicationMark.vue'

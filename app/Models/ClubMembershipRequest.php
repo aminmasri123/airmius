@@ -13,6 +13,11 @@ class ClubMembershipRequest extends Model
         'type',
         'status',
         'message',
+        'application_data',
+        'accepted_documents',
+        'preferred_payment_method',
+        'requested_billing_interval',
+        'applicant_confirmed_at',
         'requested_pause_from',
         'requested_pause_until',
         'preview_amount',
@@ -27,7 +32,10 @@ class ClubMembershipRequest extends Model
         return [
             'requested_pause_from' => 'date',
             'requested_pause_until' => 'date',
+            'application_data' => 'array',
+            'accepted_documents' => 'array',
             'preview_amount' => 'decimal:2',
+            'applicant_confirmed_at' => 'datetime',
             'reviewed_at' => 'datetime',
         ];
     }

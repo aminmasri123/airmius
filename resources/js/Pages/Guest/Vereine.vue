@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import Nav from '@/Components/Guest/Nav.vue'
@@ -70,6 +70,9 @@ const openMembershipRequest = (club) => {
         router.visit(route('login'))
         return
     }
+
+    router.visit(route('auth.clubs.show', club.id))
+    return
 
     selectedClub.value = club
     requestForm.club_membership_type_id = club.membership_types?.[0]?.id || ''
@@ -147,7 +150,7 @@ const submitMembershipRequest = () => {
                             >
                                 Mitgliedschaft anfragen
                             </button>
-                            <Link :href="route('login')" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted">
+                            <Link :href="page.props.auth?.user ? route('auth.clubs.show', club.id) : route('login')" class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted">
                                 Ansehen
                             </Link>
                         </div>
@@ -209,3 +212,5 @@ const submitMembershipRequest = () => {
         <Footer />
     </div>
 </template>
+
+

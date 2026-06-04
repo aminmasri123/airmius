@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { Link, useForm } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import Nav from '@/Components/Guest/Nav.vue'
@@ -546,3 +546,4 @@ const closeRequestModal = () => {
         <Footer />
     </div>
 </template>
+

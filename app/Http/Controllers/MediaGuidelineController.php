@@ -200,7 +200,7 @@ class MediaGuidelineController extends Controller
                     'name' => 'Sponsorenlogo',
                     'dimensions' => '1000 x 500 px',
                     'ratio' => '2:1',
-                    'formats' => 'PNG, WebP, SVG falls unterstuetzt',
+                    'formats' => 'PNG, WebP, SVG falls unterstützt',
                     'max_size' => 'bis 4 MB',
                     'note' => 'Logo mit ausreichend Rand exportieren, damit es in Listen nicht abgeschnitten wirkt.',
                     'edit_hint' => 'Bearbeitung beim jeweiligen Sponsor.',
@@ -324,3 +324,4 @@ class MediaGuidelineController extends Controller
         ];
     }
 }
+

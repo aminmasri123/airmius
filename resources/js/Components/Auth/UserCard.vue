@@ -1,4 +1,4 @@
-<!-- Components/UserCard.vue -->
+﻿<!-- Components/UserCard.vue -->
 <script setup>
 import { Link, router, usePage } from '@inertiajs/vue3'
 import { onBeforeUnmount, onMounted, ref } from 'vue'

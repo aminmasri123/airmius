@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed } from 'vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import AuthenticationCard from '@/Components/AuthenticationCard.vue';
@@ -60,3 +60,4 @@ const verificationLinkSent = computed(() => props.status === 'verification-link-
         </form>
     </AuthenticationCard>
 </template>
+

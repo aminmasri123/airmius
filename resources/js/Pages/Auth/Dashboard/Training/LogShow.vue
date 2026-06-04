@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import { computed } from 'vue'
@@ -132,7 +132,7 @@ const metrics = computed(() => [
     { label: 'Dauer', value: props.log.duration_minutes ? `${props.log.duration_minutes} min` : '-' },
     { label: 'Distanz', value: formatDistance(props.log.distance_meters) },
     { label: 'Kalorien', value: props.log.calories ? formatNumber(props.log.calories) : '-' },
-    { label: 'Intensitaet', value: props.log.intensity || '-' },
+    { label: 'Intensität', value: props.log.intensity || '-' },
 ])
 
 const comparisonRows = computed(() => {
@@ -162,7 +162,7 @@ const comparisonRows = computed(() => {
             deltaValue: comparison.delta?.calories,
         },
         {
-            label: 'Intensitaet',
+            label: 'Intensität',
             planned: comparison.planned?.intensity || '-',
             actual: comparison.actual?.intensity || '-',
             delta: comparison.planned?.intensity && comparison.actual?.intensity && comparison.planned.intensity === comparison.actual.intensity ? 'gleich' : '-',
@@ -275,7 +275,7 @@ const comparisonRows = computed(() => {
                             <p class="text-sm text-secondary">Gewicht: <span class="font-semibold text-primary">{{ entry.weight_kg ? `${formatNumber(entry.weight_kg, 2)} kg` : '-' }}</span></p>
                             <p class="text-sm text-secondary">Zeit: <span class="font-semibold text-primary">{{ formatDuration(entry.duration_seconds) }}</span></p>
                             <p class="text-sm text-secondary">Distanz: <span class="font-semibold text-primary">{{ formatDistance(entry.distance_meters) }}</span></p>
-                            <p class="text-sm text-secondary">Intensitaet: <span class="font-semibold text-primary">{{ entry.intensity || '-' }}</span></p>
+                            <p class="text-sm text-secondary">Intensität: <span class="font-semibold text-primary">{{ entry.intensity || '-' }}</span></p>
                             <p v-if="entry.notes" class="text-sm text-secondary sm:col-span-2 lg:col-span-6">{{ entry.notes }}</p>
                             <a v-if="entry.metrics?.media_url" :href="entry.metrics.media_url" target="_blank" class="text-sm font-semibold text-air-blue underline sm:col-span-2 lg:col-span-6">
                                 Medien ansehen
@@ -361,3 +361,5 @@ const comparisonRows = computed(() => {
         </section>
     </div>
 </template>
+
+

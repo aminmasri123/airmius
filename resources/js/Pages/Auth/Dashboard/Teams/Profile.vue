@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
@@ -173,3 +173,4 @@ const uploadImage = (field, event) => {
         </div>
     </AppLayout>
 </template>
+

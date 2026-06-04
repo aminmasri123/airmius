@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, router, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
@@ -36,7 +36,7 @@ const badgeClass = (severity) => ({
 }[severity] || 'bg-muted text-secondary border-border')
 
 const contentLabel = (content) => {
-    if (!content) return 'Gelöschter Inhalt'
+    if (!content) return 'Gel�schter Inhalt'
     return `${content.type} #${content.id}`
 }
 
@@ -311,3 +311,5 @@ const updateFlag = (flag, status, removeContent = false) => {
         </section>
     </div>
 </template>
+
+

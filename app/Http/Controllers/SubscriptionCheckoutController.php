@@ -230,7 +230,7 @@ class SubscriptionCheckoutController extends Controller
                 'user_agent' => $request->userAgent(),
             ]);
 
-            abort(403, 'Checkout konnte aus Sicherheitsgruenden nicht gestartet werden.');
+            abort(403, 'Checkout konnte aus SicherheitsGründen nicht gestartet werden.');
         }
 
         $sourceHost = parse_url($source, PHP_URL_HOST);
@@ -246,7 +246,7 @@ class SubscriptionCheckoutController extends Controller
                 'user_agent' => $request->userAgent(),
             ]);
 
-            abort(403, 'Checkout konnte aus Sicherheitsgruenden nicht gestartet werden.');
+            abort(403, 'Checkout konnte aus SicherheitsGründen nicht gestartet werden.');
         }
     }
 

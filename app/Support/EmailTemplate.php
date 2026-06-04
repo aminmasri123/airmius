@@ -113,7 +113,7 @@ class EmailTemplate
                 'template' => [
                     'subject' => 'Dein Airmius-Konto wurde gelöscht',
                     'greeting' => 'Hallo {{ name }},',
-                    'body' => "dein Airmius-Konto wurde erfolgreich gelöscht.\nDiese E-Mail bestätigt, dass die Kontolöschung abgeschlossen wurde.\nFalls du diese Löschung nicht selbst ausgeloest hast, kontaktiere bitte den Airmius-Support.",
+                    'body' => "dein Airmius-Konto wurde erfolgreich gelöscht.\nDiese E-Mail bestätigt, dass die Kontolöschung abgeschlossen wurde.\nFalls du diese Löschung nicht selbst ausgelöst hast, kontaktiere bitte den Airmius-Support.",
                     'action_label' => '',
                 ],
             ],
@@ -130,7 +130,7 @@ class EmailTemplate
             ],
             'guardian_consent_requested' => [
                 'label' => 'Elternzustimmung',
-                'description' => 'Bitte um Zustimmung für ein minderjaehriges Konto.',
+                'description' => 'Bitte um Zustimmung für ein minderjähriges Konto.',
                 'variables' => ['minor_name'],
                 'template' => [
                     'subject' => 'Zustimmung zur Registrierung bei Airmius',
@@ -168,7 +168,7 @@ class EmailTemplate
                 'template' => [
                     'subject' => 'Neue Anmeldung bei Airmius',
                     'greeting' => 'Hallo,',
-                    'body' => "in deinem Airmius-Konto gab es gerade eine erfolgreiche Anmeldung.\nZeitpunkt: {{ logged_in_at }}\nIP-Adresse: {{ ip_address }}\nGerät/Browser: {{ user_agent }}\nWenn du das warst, musst du nichts weiter tun.\nWenn du das nicht warst, ?ndere bitte sofort dein Passwort und informiere den Airmius-Support.",
+                    'body' => "in deinem Airmius-Konto gab es gerade eine erfolgreiche Anmeldung.\nZeitpunkt: {{ logged_in_at }}\nIP-Adresse: {{ ip_address }}\nGerät/Browser: {{ user_agent }}\nWenn du das warst, musst du nichts weiter tun.\nWenn du das nicht warst, ändere bitte sofort dein Passwort und informiere den Airmius-Support.",
                     'action_label' => '',
                 ],
             ],
@@ -179,7 +179,7 @@ class EmailTemplate
                 'template' => [
                     'subject' => 'Mehrere fehlgeschlagene Anmeldeversuche bei Airmius',
                     'greeting' => 'Hallo,',
-                    'body' => "für dein Airmius-Konto wurden mehrere falsche Login-Versuche erkannt.\nDer Login wurde vorübergehend blockiert, um dein Konto zu schützen.\nZeitpunkt: {{ locked_at }}\nIP-Adresse: {{ ip_address }}\nGerät/Browser: {{ user_agent }}\nWenn du das warst, warte bitte kurz und versuche es danach erneut.\nWenn du das nicht warst, ?ndere bitte dein Passwort und prüfe deine Kontosicherheit.",
+                    'body' => "für dein Airmius-Konto wurden mehrere falsche Login-Versuche erkannt.\nDer Login wurde vorübergehend blockiert, um dein Konto zu schützen.\nZeitpunkt: {{ locked_at }}\nIP-Adresse: {{ ip_address }}\nGerät/Browser: {{ user_agent }}\nWenn du das warst, warte bitte kurz und versuche es danach erneut.\nWenn du das nicht warst, ändere bitte dein Passwort und prüfe deine Kontosicherheit.",
                     'action_label' => '',
                 ],
             ],
@@ -399,3 +399,5 @@ class EmailTemplate
         };
     }
 }
+
+

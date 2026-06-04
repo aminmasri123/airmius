@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import Nav from '@/Components/Guest/Nav.vue'
@@ -594,3 +594,4 @@ const formatMoney = (cents, currency = 'EUR') => new Intl.NumberFormat('de-DE', 
         <Footer />
     </div>
 </template>
+

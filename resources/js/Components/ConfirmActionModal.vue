@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import Modal from '@/Components/Modal.vue'
 
 defineProps({
@@ -70,3 +70,4 @@ const emit = defineEmits(['cancel', 'confirm'])
         </div>
     </Modal>
 </template>
+

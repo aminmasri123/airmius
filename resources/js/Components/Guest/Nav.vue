@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, watch } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import LanguageDropdown from '@/Components/LanguageDropdown.vue'
@@ -48,7 +48,7 @@ const navItems = [
     { id: 'funktionen', label: 'guest.nav.features' },
     { id: 'sportarten', label: 'guest.nav.sports' },
     { id: 'shop', label: 'guest.nav.shop', href: route('guest.marketplace') },
-    { id: 'ueber', label: 'guest.nav.about' },
+    { id: 'über', label: 'guest.nav.about' },
     { id: 'kontakt', label: 'guest.nav.contact' },
 ]
 </script>
@@ -235,3 +235,4 @@ const navItems = [
         </Transition>
     </Teleport>
 </template>
+

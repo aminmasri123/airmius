@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Club;
 use App\Models\Team;
 use App\Models\User;
+use App\Support\Roles;
 use Illuminate\Http\Request;
 
 class GlobalSearchController extends Controller
@@ -39,11 +40,19 @@ class GlobalSearchController extends Controller
             ]);
 
         $clubs = Club::query()
-            ->visibleTo($user)
-            ->where(function ($query) use ($user) {
-                $query->verified()
-                    ->orWhereHas('users', fn ($memberQuery) => $memberQuery->where('users.id', $user->id));
-            })
+            ->when(
+                ! (
+                    $user->hasAnyRole(Roles::FULL_ACCESS)
+                    || $user->can('clubs.view')
+                    || $user->can('teams.view')
+                ),
+                function ($query) use ($user) {
+                    $query->where(function ($innerQuery) use ($user) {
+                        $innerQuery->where(fn ($publicClubQuery) => $publicClubQuery->verified()->where('is_listed', true))
+                            ->orWhereHas('users', fn ($memberQuery) => $memberQuery->where('users.id', $user->id));
+                    });
+                }
+            )
             ->where('name', 'like', $like)
             ->orderBy('name')
             ->limit(5)

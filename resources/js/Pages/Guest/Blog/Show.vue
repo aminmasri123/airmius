@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { Link } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import Nav from '@/Components/Guest/Nav.vue'
@@ -286,3 +286,4 @@ const categoryHref = computed(() => props.post.blog_category?.slug
     padding: 0.05rem 0.25rem;
 }
 </style>
+

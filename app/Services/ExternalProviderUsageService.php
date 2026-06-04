@@ -165,7 +165,7 @@ class ExternalProviderUsageService
     {
         return [
             $this->limitCard('Kartenaufrufe', $metrics['map_loads'], 50000, 'Map Loads', 'Kosten steigen, wenn sehr viele Nutzer die Sportkarte laden.'),
-            $this->limitCard('Routenplanung', $metrics['routing_requests'], (int) config('provider_costs.routing_monthly_alert_limit', 15000), 'Credits/Requests', 'GraphHopper Free ist nur fuer Entwicklung gedacht. Gespeicherte Routen sparen Credits und Geld.'),
+            $this->limitCard('Routenplanung', $metrics['routing_requests'], (int) config('provider_costs.routing_monthly_alert_limit', 15000), 'Credits/Requests', 'GraphHopper Free ist nur für Entwicklung gedacht. Gespeicherte Routen sparen Credits und Geld.'),
             $this->limitCard('Navigation', $metrics['navigation_trips'], 1000, 'Trips', 'Echte Live-Navigation kostet pro Nutzer und pro Trip.'),
             [
                 'label' => 'KI-Nutzung',
@@ -427,7 +427,7 @@ class ExternalProviderUsageService
             $items[] = [
                 'level' => 'warning',
                 'title' => 'GraphHopper Free/Dev wird eng',
-                'body' => 'Ab etwa 12.000 Routing-Credits pro Monat solltest du auf GraphHopper Basic/Standard wechseln oder eigene Infrastruktur pruefen.',
+                'body' => 'Ab etwa 12.000 Routing-Credits pro Monat solltest du auf GraphHopper Basic/Standard wechseln oder eigene Infrastruktur prüfen.',
             ];
         }
 

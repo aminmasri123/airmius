@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { computed, reactive } from 'vue'
@@ -298,7 +298,7 @@ const readyLabel = (sender) => {
                                     v-model="senderForms[sender.category].new_password"
                                     type="password"
                                     autocomplete="new-password"
-                                    placeholder="Leer lassen, um Passwort nicht zu ?ndern"
+                                    placeholder="Leer lassen, um Passwort nicht zu ändern"
                                     class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary"
                                 >
                             </label>
@@ -431,7 +431,7 @@ const readyLabel = (sender) => {
                         <tr class="text-left text-xs uppercase tracking-wide text-secondary">
                             <th class="px-5 py-3">Status</th>
                             <th class="px-5 py-3">Typ</th>
-                            <th class="px-5 py-3">Empfaenger</th>
+                            <th class="px-5 py-3">Empfänger</th>
                             <th class="px-5 py-3">Absender</th>
                             <th class="px-5 py-3">Zeit</th>
                             <th class="px-5 py-3">Fehler</th>
@@ -499,3 +499,4 @@ const readyLabel = (sender) => {
         </section>
     </div>
 </template>
+

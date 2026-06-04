@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -129,3 +129,4 @@ const localizedMessage = computed(() => translatedOrCustom(props.message, [defau
         </div>
     </main>
 </template>
+

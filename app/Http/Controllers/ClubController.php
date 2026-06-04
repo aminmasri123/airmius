@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Club;
+use App\Models\ClubContributionRule;
+use App\Models\ClubMembershipRequest;
+use App\Models\ClubMembershipType;
 use App\Models\Post;
 use App\Models\Sponsor;
 use App\Models\Sport;
@@ -13,6 +16,7 @@ use App\Services\GamificationService;
 use App\Services\MediaOptimizer;
 use App\Services\PlanFeatureService;
 use App\Support\ClubRoles;
+use App\Support\ClubMembershipApplication;
 use App\Support\UploadStorage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
@@ -102,17 +106,32 @@ class ClubController extends Controller
         $viewer = $request->user();
         $isMember = $club->users()->where('users.id', $viewer->id)->exists();
         $canManage = $viewer->can('update', $club);
+        $hasPendingMembershipRequest = ! $isMember && ClubMembershipRequest::query()
+            ->where('club_id', $club->id)
+            ->where('user_id', $viewer->id)
+            ->where('type', 'membership')
+            ->where('status', 'pending')
+            ->exists();
 
         $club->loadCount(['users', 'teams', 'posts']);
         $club->load([
-            'admins:id,name,email,profile_photo_path',
+            'admins:id,name,profile_photo_path',
             'users' => fn ($query) => $query
-                ->select('users.id', 'name', 'email', 'profile_photo_path')
+                ->select('users.id', 'name', 'profile_photo_path')
                 ->orderBy('name'),
             'teams' => fn ($query) => $query
                 ->withCount('users')
                 ->orderBy('name')
                 ->limit(12),
+            'membershipTypes' => fn ($query) => $query
+                ->where('is_active', true)
+                ->where('is_public', true)
+                ->orderBy('sort_order')
+                ->orderBy('name'),
+            'contributionRules' => fn ($query) => $query
+                ->effectiveOn(now()->toDateString())
+                ->where('is_active', true)
+                ->orderByDesc('valid_from'),
         ]);
 
         $posts = Post::query()
@@ -153,14 +172,34 @@ class ClubController extends Controller
                 'users_count' => $club->users_count,
                 'teams_count' => $club->teams_count,
                 'posts_count' => $club->posts_count,
+                'membership_requests_enabled' => $club->membership_requests_enabled,
                 'member_pause_requests_enabled' => $club->member_pause_requests_enabled,
+                'membership_application_fields' => ClubMembershipApplication::fieldsForClub($club->membership_application_fields),
+                'membership_payment_methods' => ClubMembershipApplication::normalizePaymentMethods($club->membership_payment_methods),
+                'membership_payment_method_options' => ClubMembershipApplication::paymentMethods(),
+                'membership_application_documents' => collect(ClubMembershipApplication::normalizeDocuments($club->membership_application_documents))
+                    ->where('is_visible', true)
+                    ->values(),
                 'is_listed' => (bool) $club->is_listed,
                 'teams_are_listed' => (bool) $club->teams_are_listed,
                 'members_can_post_to_club' => (bool) $club->members_can_post_to_club,
                 'members_can_post_to_teams' => (bool) $club->members_can_post_to_teams,
                 'admins' => $club->admins,
-                'members' => $club->users,
-                'teams' => $club->teams,
+                'members' => ($isMember || $canManage) ? $club->users : collect(),
+                'teams' => ($isMember || $canManage || $club->teams_are_listed) ? $club->teams : collect(),
+                'membership_types' => $club->membershipTypes->map(function (ClubMembershipType $type) use ($club) {
+                    $rule = $club->contributionRules
+                        ->first(fn (ClubContributionRule $rule) => $rule->club_membership_type_id === $type->id)
+                        ?: $club->contributionRules->first(fn (ClubContributionRule $rule) => $rule->club_membership_type_id === null);
+
+                    return [
+                        'id' => $type->id,
+                        'name' => $type->name,
+                        'description' => $type->description,
+                        'amount' => $rule?->amount,
+                        'billing_interval' => $rule?->billing_interval,
+                    ];
+                })->values(),
                 'gamification' => $this->gamification->summaryFor($club, 'verein'),
                 'badges' => UserBadge::query()
                     ->where('awardable_type', Club::class)
@@ -177,6 +216,8 @@ class ClubController extends Controller
             'viewer' => [
                 'is_member' => $isMember,
                 'can_manage' => $canManage,
+                'has_pending_membership_request' => $hasPendingMembershipRequest,
+                'application_prefill' => ClubMembershipApplication::prefillFor($viewer),
             ],
         ]);
     }

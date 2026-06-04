@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
@@ -23,9 +23,9 @@ const courseCategories = [
     ['nutrition', 'Ernährung'],
     ['mindset', 'Mindset'],
     ['tactics', 'Taktik'],
-    ['rehab', 'Reha & Praevention'],
+    ['rehab', 'Reha & Prävention'],
     ['coaching', 'Coaching'],
-    ['club_management', 'Vereinsfuehrung'],
+    ['club_management', 'Vereinsführung'],
 ]
 
 const levels = [
@@ -506,7 +506,7 @@ const submitQuestionReply = (question) => {
                     <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Airmius Sportschule</p>
                     <h1 class="mt-1 text-2xl font-bold text-primary">Kurs-Studio für Trainer und Tutoren</h1>
                     <p class="mt-2 max-w-3xl text-sm text-secondary">
-                        Plane echte Online-Kurse mit Kapiteln, Lektionen, Aufgaben, Anhaengen, Quiz, Notizen und Kurskommunikation.
+                        Plane echte Online-Kurse mit Kapiteln, Lektionen, Aufgaben, Anhängen, Quiz, Notizen und Kurskommunikation.
                     </p>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
@@ -1095,3 +1095,4 @@ const submitQuestionReply = (question) => {
         </section>
     </div>
 </template>
+

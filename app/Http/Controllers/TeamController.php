@@ -752,7 +752,7 @@ class TeamController extends Controller
             $this->notifyClubManagers($team->club, 'team.member_left', [
                 'title' => 'Mitglied hat Team verlassen',
                 'body' => $user->name.' hat '.$team->name.' verlassen.'
-                    .(filled($data['reason'] ?? null) ? "\n\nBegruendung: ".$data['reason'] : ''),
+                    .(filled($data['reason'] ?? null) ? "\n\nBeGründung: ".$data['reason'] : ''),
                 'url' => route('auth.teams.index'),
                 'club_id' => $team->club_id,
                 'team_id' => $team->id,

@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { Link, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 
@@ -25,7 +25,7 @@ const items = computed(() => [
     ...(isAuthenticated.value ? [['las la-newspaper', 'guest.subnav.feed', safeRoute('auth.feed.index', '/feed')]] : []),
     ['las la-bullhorn', 'guest.subnav.top_content', safeRoute('guest.top-inhalte', '/top-inhalte')],
     ['las la-briefcase', 'guest.subnav.jobs', safeRoute('guest.jobs', '/jobs')],
-    ['las la-laptop-code', 'guest.subnav.advertising', safeRoute('guest.werbeagentur', '/werbeagentur-fuer-vereine')],
+    ['las la-laptop-code', 'guest.subnav.advertising', safeRoute('guest.werbeagentur', '/werbeagentur-für-vereine')],
     ['las la-chalkboard-teacher', 'guest.subnav.e_learning', safeRoute('guest.e-learning', '/e-learning')],
     ['las la-trophy', 'guest.subnav.levels', safeRoute('guest.gamification', '/gamification'), { hideOnMobile: true }],
     ['las la-warehouse', 'guest.subnav.clubs', safeRoute('guest.vereine', '/vereine')],
@@ -126,3 +126,4 @@ const items = computed(() => [
         </div>
     </div>
 </template>
+

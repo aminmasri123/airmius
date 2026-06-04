@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, watch } from 'vue'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
@@ -360,3 +360,4 @@ const initials = (name) => (name || '?')
         </div>
     </div>
 </template>
+

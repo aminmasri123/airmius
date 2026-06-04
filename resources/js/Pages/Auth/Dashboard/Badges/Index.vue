@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { reactive } from 'vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
@@ -144,4 +144,5 @@ const deleteBadge = async (badge) => {
         </section>
     </div>
 </template>
+
 

@@ -8,7 +8,6 @@ use App\Models\AdEvent;
 use App\Models\AdGroup;
 use App\Models\AdCampaignStat;
 use App\Models\Club;
-use App\Models\CommerceCart;
 use App\Models\CommerceCartItem;
 use App\Models\CommerceOrder;
 use App\Models\CommerceOrderItem;
@@ -17,8 +16,6 @@ use App\Models\CommerceShippingAddress;
 use App\Models\CommerceStockMovement;
 use App\Models\CommerceWarehouse;
 use App\Models\LearningCourse;
-use App\Models\LearningCoupon;
-use App\Models\LearningEnrollment;
 use App\Models\MarketplacePayout;
 use App\Models\MarketplaceProviderLocation;
 use App\Models\MarketplaceProviderProfile;
@@ -39,20 +36,26 @@ use App\Models\User;
 use App\Models\WebsiteRequest;
 use App\Notifications\CommerceOrderCompleted;
 use App\Services\CommerceAuditService;
+use App\Services\CommerceCartService;
 use App\Services\CommerceDocumentService;
+use App\Services\CommerceLearningOrderService;
+use App\Services\CommercePaymentGatewayService;
+use App\Services\MarketplaceProductImportService;
 use App\Services\MediaOptimizer;
 use App\Services\MarketplacePricingService;
 use App\Services\ModerationService;
 use App\Support\AppNotification;
 use App\Support\ClubRoles;
+use App\Support\CommerceOrderSupport;
 use App\Support\CommerceOrderNotifier;
 use App\Support\EuVatId;
+use App\Support\MarketplaceProductInput;
+use App\Support\MarketplaceProductQualityGate;
+use App\Support\MarketplaceSellerReadiness;
 use App\Support\Roles;
 use App\Support\UploadStorage;
 use App\Support\VisitorCountry;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -69,10 +72,20 @@ class CommerceCheckoutController extends Controller
         private CommerceAuditService $audit,
         private CommerceDocumentService $documents,
         private MediaOptimizer $mediaOptimizer,
+        private CommerceOrderSupport $orderSupport,
+        private CommerceCartService $cartService,
+        private CommerceLearningOrderService $learningOrders,
+        private MarketplaceProductImportService $productImport,
+        private CommercePaymentGatewayService $payments,
     ) {}
 
     public function index(Request $request)
     {
+        $sellerApplication = MarketplaceSellerApplication::query()
+            ->where('user_id', $request->user()->id)
+            ->latest('id')
+            ->first();
+
         return inertia('Auth/Dashboard/Commerce/Index', [
             'clubs' => $this->commerceClubsFor($request->user())
                 ->orderBy('name')
@@ -132,6 +145,7 @@ class CommerceCheckoutController extends Controller
                 ->get()
                 ->map(function (CommerceOrder $order) {
                     $order->setAttribute('learning_course', $this->learningCourseLinkForOrder($order));
+                    $order->setAttribute('support_summary', $this->orderSupport->summary($order));
 
                     return $order;
                 }),
@@ -146,7 +160,10 @@ class CommerceCheckoutController extends Controller
             'sellerApplication' => MarketplaceSellerApplication::query()
                 ->where('user_id', $request->user()->id)
                 ->latest('id')
+                ->get()
+                ->map(fn (MarketplaceSellerApplication $application) => MarketplaceSellerReadiness::attach($application))
                 ->first(),
+            'sellerReadiness' => $sellerApplication ? MarketplaceSellerReadiness::forApplication($sellerApplication) : null,
             'sellerCanSell' => $this->userCanSellInMarketplace($request->user()),
             'marketplaceCategoryCommissions' => $this->marketplaceCategoryCommissionsForSeller(),
             'returnRequests' => CommerceReturnRequest::query()
@@ -607,20 +624,20 @@ class CommerceCheckoutController extends Controller
         ]);
         $quantity = (int) ($data['quantity'] ?? 1);
         $shippingAddress = $this->shippingAddressForAuthenticatedUser($request, $data);
-        if (! $this->hasSellableStock($product, $shippingAddress['country'], $quantity)) {
+        if (! $this->cartService->hasSellableStock($product, $shippingAddress['country'], $quantity)) {
             throw ValidationException::withMessages([
                 'quantity' => 'So viele Artikel sind aktuell nicht auf Lager.',
             ]);
         }
-        $fulfillmentInventory = $this->fulfillmentInventoryFor($product, $shippingAddress['country'], $quantity);
+        $fulfillmentInventory = $this->cartService->fulfillmentInventoryFor($product, $shippingAddress['country'], $quantity);
 
         $this->saveShippingAddressIfRequested($request, $data, $shippingAddress);
         $quote = $this->pricing->quoteForRequest($product, $request, $shippingAddress['country'], [
             ...$shippingAddress,
             'origin_country' => $fulfillmentInventory?->warehouse?->country_code,
         ]);
-        $quote = $this->quoteWithQuantity($quote, $quantity);
-        $quote = $this->applyLearningCoupon($product, $quote, $data['coupon_code'] ?? null);
+        $quote = $this->cartService->quoteWithQuantity($quote, $quantity);
+        $quote = $this->learningOrders->applyCoupon($product, $quote, $data['coupon_code'] ?? null);
         $quote['fulfillment_inventory'] = $fulfillmentInventory ? [
             'id' => $fulfillmentInventory->id,
             'commerce_warehouse_id' => $fulfillmentInventory->commerce_warehouse_id,
@@ -665,18 +682,18 @@ class CommerceCheckoutController extends Controller
     {
         abort_unless($product->status === 'published', 404);
         $country = strtoupper((string) ($request->user()?->country ?: 'DE'));
-        abort_unless($this->hasSellableStock($product, $country), 404);
+        abort_unless($this->cartService->hasSellableStock($product, $country), 404);
 
         $data = $request->validate([
             'quantity' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $cart = $this->cartFor($request);
+        $cart = $this->cartService->cartFor($request->user());
         $quantity = (int) ($data['quantity'] ?? 1);
         $item = $cart->items()->firstOrNew(['marketplace_product_id' => $product->id]);
         $item->quantity = (int) $item->quantity + $quantity;
 
-        if (! $this->hasSellableStock($product, $country, (int) $item->quantity)) {
+        if (! $this->cartService->hasSellableStock($product, $country, (int) $item->quantity)) {
             throw ValidationException::withMessages([
                 'quantity' => 'So viele Artikel sind aktuell nicht auf Lager.',
             ]);
@@ -703,8 +720,8 @@ class CommerceCheckoutController extends Controller
 
         $product = $item->product;
         $country = strtoupper((string) ($request->user()?->country ?: 'DE'));
-        abort_unless($product && $this->hasSellableStock($product, $country), 404);
-        if (! $this->hasSellableStock($product, $country, (int) $data['quantity'])) {
+        abort_unless($product && $this->cartService->hasSellableStock($product, $country), 404);
+        if (! $this->cartService->hasSellableStock($product, $country, (int) $data['quantity'])) {
             throw ValidationException::withMessages([
                 'quantity' => 'So viele Artikel sind aktuell nicht auf Lager.',
             ]);
@@ -739,18 +756,18 @@ class CommerceCheckoutController extends Controller
             'customer_vat_id' => ['nullable', 'string', 'max:40'],
         ]);
 
-        $cart = $this->cartFor($request)->load('items.product');
+        $cart = $this->cartService->cartFor($request->user())->load('items.product');
         abort_if($cart->items->isEmpty(), 422, 'Dein Einkaufswagen ist leer.');
 
         $shippingAddress = $this->shippingAddressForAuthenticatedUser($request, $data);
         $this->saveShippingAddressIfRequested($request, $data, $shippingAddress);
         $customer = $this->customerFromData($data);
-        $summary = $this->cartQuote($cart, $request, $shippingAddress, $customer);
+        $summary = $this->cartService->quote($cart, $shippingAddress, $customer);
 
         DB::transaction(function () use ($cart, $shippingAddress) {
             foreach ($cart->items as $item) {
                 $product = MarketplaceProduct::query()->lockForUpdate()->findOrFail($item->marketplace_product_id);
-                abort_unless($product->status === 'published' && $this->hasSellableStock($product, $shippingAddress['country'], (int) $item->quantity), 422, $product->title.' ist nicht mehr verfügbar.');
+                abort_unless($product->status === 'published' && $this->cartService->hasSellableStock($product, $shippingAddress['country'], (int) $item->quantity), 422, $product->title.' ist nicht mehr verfügbar.');
             }
         });
 
@@ -916,8 +933,8 @@ class CommerceCheckoutController extends Controller
             }
         }
 
-        $attributeOptions = $this->normalizeAttributeOptions($data['attribute_options'] ?? []);
-        $variants = $this->normalizeVariants($data['variants'] ?? [], $attributeOptions, (int) $data['price_cents']);
+        $attributeOptions = MarketplaceProductInput::normalizeAttributeOptions($data['attribute_options'] ?? []);
+        $variants = MarketplaceProductInput::normalizeVariants($data['variants'] ?? [], $attributeOptions, (int) $data['price_cents']);
         unset($data['attributes_text']);
         unset($data['course_outline_text']);
         unset($data['learning_goals_text']);
@@ -961,13 +978,13 @@ class CommerceCheckoutController extends Controller
         $product = DB::transaction(function () use ($request, $data, $attributesText, $attributeOptions, $variants, $offerType, $courseOutlineText, $learningGoalsText, $inventories) {
             $product = MarketplaceProduct::create([
                 ...$data,
-                'product_attributes' => $this->productAttributesFromText($attributesText),
+                'product_attributes' => MarketplaceProductInput::attributesFromText($attributesText),
                 'attribute_options' => $attributeOptions,
                 'variants' => ($data['product_type'] ?? 'single') === 'variable' ? $variants : [],
                 'product_type' => $data['product_type'] ?? 'single',
                 'offer_type' => $offerType,
-                'course_outline' => $this->linesFromText($courseOutlineText, 20),
-                'learning_goals' => $this->linesFromText($learningGoalsText, 12),
+                'course_outline' => MarketplaceProductInput::linesFromText($courseOutlineText, 20),
+                'learning_goals' => MarketplaceProductInput::linesFromText($learningGoalsText, 12),
                 'coaching_enabled' => $offerType === 'training_plan' ? (bool) ($data['coaching_enabled'] ?? true) : (bool) ($data['coaching_enabled'] ?? false),
                 'coach_feedback_instructions' => $data['coach_feedback_instructions'] ?? null,
                 'user_id' => $request->user()->id,
@@ -985,7 +1002,7 @@ class CommerceCheckoutController extends Controller
 
             $this->syncSellerInventories($product, $inventories);
 
-            return $product;
+            return MarketplaceProductQualityGate::applyPublicationGate($product);
         });
 
         $this->moderation->flagIfNeeded(
@@ -1088,7 +1105,7 @@ class CommerceCheckoutController extends Controller
     {
         abort_unless($this->userCanSellInMarketplace($request->user()), 403);
 
-        $path = $this->buildProductImportTemplate();
+        $path = $this->productImport->buildTemplate($this->marketplaceCategoryCommissionsForSeller());
 
         return response()
             ->download($path, 'airmius-marketplace-produkte-import.xlsx', [
@@ -1110,7 +1127,7 @@ class CommerceCheckoutController extends Controller
         ]);
 
         $file = $data['import_file'];
-        $rows = $this->readProductImportRows($file->getRealPath(), $file->getClientOriginalExtension());
+        $rows = $this->productImport->readRows($file->getRealPath(), $file->getClientOriginalExtension());
 
         if ($rows === []) {
             throw ValidationException::withMessages([
@@ -1124,7 +1141,13 @@ class CommerceCheckoutController extends Controller
         DB::transaction(function () use ($rows, $request, &$errors, &$created) {
             foreach ($rows as $index => $row) {
                 $line = $index + 2;
-                $prepared = $this->productImportDataFromRow($row, $request, $line, $errors);
+                $prepared = $this->productImport->productDataFromRow(
+                    $row,
+                    $request->user(),
+                    fn (mixed $clubId) => $this->authorizedCommerceClub($request, $clubId),
+                    $line,
+                    $errors,
+                );
 
                 if (! $prepared) {
                     continue;
@@ -1285,6 +1308,9 @@ class CommerceCheckoutController extends Controller
         abort_unless($order->user_id === $request->user()->id, 403);
         abort_unless($order->status === 'completed', 422, 'Nur bezahlte Bestellungen können gemeldet werden.');
 
+        $support = $this->orderSupport->summary($order->loadMissing(['items.orderable', 'returnRequests']));
+        abort_unless($support['can_report_issue'], 422, 'Zu dieser Bestellung läuft bereits ein Problemfall.');
+
         $data = $request->validate([
             'issue_note' => ['required', 'string', 'max:2000'],
         ]);
@@ -1309,7 +1335,7 @@ class CommerceCheckoutController extends Controller
 
         $order->loadMissing(['items.orderable', 'orderable', 'user']);
         $hasShippableItems = $order->items->contains(fn (CommerceOrderItem $item) => (bool) $item->is_shippable);
-        $hasLearningProduct = $this->learningProductsForOrder($order)->isNotEmpty();
+        $hasLearningProduct = $this->learningOrders->productsForOrder($order)->isNotEmpty();
         abort_unless($hasShippableItems || $hasLearningProduct, 422, 'Diese Bestellung kann nicht Über diesen Storno storniert werden.');
 
         DB::transaction(function () use ($order) {
@@ -1320,13 +1346,13 @@ class CommerceCheckoutController extends Controller
             $order->forceFill([
                 'status' => 'cancelled',
                 'issue_status' => 'cancelled',
-                'issue_note' => $order->issue_note ?: 'Vom Kaeufer vor Versand storniert.',
+                'issue_note' => $order->issue_note ?: 'Vom Käufer vor Versand storniert.',
                 'issue_reported_at' => $order->issue_reported_at ?: now(),
                 'credit_note_number' => $order->credit_note_number ?: $this->nextDocumentNumber('commerce_credit_note_number_next', 'AIR-GS'),
                 'payout_status' => 'cancelled',
             ])->save();
 
-            $this->revokeLearningAccessForOrder($order, 'cancelled');
+            $this->learningOrders->revokeAccessForOrder($order, 'cancelled');
         });
 
         AppNotification::send($order->user_id, 'commerce.order.cancelled', [
@@ -1346,8 +1372,8 @@ class CommerceCheckoutController extends Controller
         abort_unless($order->user_id === $request->user()->id, 403);
         abort_unless($order->status === 'completed', 422, 'Rücksendungen sind nur für bezahlte Bestellungen möglich.');
 
-        $hasShippableItems = $order->items()->where('is_shippable', true)->exists();
-        abort_if($hasShippableItems && $order->shipping_status !== 'delivered', 422, 'Rücksendungen sind erst möglich, nachdem die Bestellung zugestellt wurde.');
+        $support = $this->orderSupport->summary($order->loadMissing(['items.orderable', 'returnRequests']));
+        abort_unless($support['can_request_return'], 422, $this->orderSupport->returnBlockedReasonMessage($support['return_blocked_reason'] ?? null));
 
         $data = $request->validate([
             'reason' => ['required', 'string', 'max:2000'],
@@ -1357,7 +1383,7 @@ class CommerceCheckoutController extends Controller
 
         $item = $order->items()->when($data['commerce_order_item_id'] ?? null, fn ($query, $id) => $query->whereKey($id))->first();
         abort_if($item && ! $item->is_shippable, 422, 'Dieses Angebot ist nicht ruecksendepflichtig.');
-        abort_if($item && ! $this->itemStillReturnable($item), 422, 'Die Rücksendefrist für diesen Artikel ist abgelaufen oder ausgeschlossen.');
+        abort_if($item && ! $this->orderSupport->itemStillReturnable($item), 422, 'Die Rücksendefrist für diesen Artikel ist abgelaufen oder ausgeschlossen.');
 
         CommerceReturnRequest::create([
             'commerce_order_id' => $order->id,
@@ -1823,11 +1849,11 @@ class CommerceCheckoutController extends Controller
         abort_unless($order->user_id === $request->user()->id, 403);
 
         if ($order->provider === 'stripe' && $order->status === 'pending') {
-            $this->syncStripeOrder($order);
+            $this->payments->syncStripeOrder($order, $request->query('session_id'), fn (CommerceOrder $paidOrder) => $this->activate($paidOrder));
         }
 
         if ($order->provider === 'paypal' && $order->status === 'pending') {
-            $this->capturePayPalOrder($order);
+            $this->payments->capturePayPalOrder($order, fn (CommerceOrder $paidOrder) => $this->activate($paidOrder));
         }
 
         return redirect()->route('auth.commerce.index')->with('success', 'Bestellung wurde verarbeitet.');
@@ -1854,7 +1880,7 @@ class CommerceCheckoutController extends Controller
 
         return inertia('Auth/Dashboard/Commerce/BankTransfer', [
             'order' => $this->orderResource($order->load(['orderable', 'items', 'returnRequests'])),
-            'bank' => $this->bankTransferSettings(),
+            'bank' => $this->payments->bankTransferSettings(),
         ]);
     }
 
@@ -1863,11 +1889,11 @@ class CommerceCheckoutController extends Controller
         $this->authorizeGuestOrder($order, $token);
 
         if ($order->provider === 'stripe' && $order->status === 'pending') {
-            $this->syncStripeOrder($order);
+            $this->payments->syncStripeOrder($order, $request->query('session_id'), fn (CommerceOrder $paidOrder) => $this->activate($paidOrder));
         }
 
         if ($order->provider === 'paypal' && $order->status === 'pending') {
-            $this->capturePayPalOrder($order);
+            $this->payments->capturePayPalOrder($order, fn (CommerceOrder $paidOrder) => $this->activate($paidOrder));
         }
 
         return inertia('Guest/MarketplaceOrderStatus', [
@@ -1894,7 +1920,7 @@ class CommerceCheckoutController extends Controller
 
         return inertia('Guest/MarketplaceBankTransfer', [
             'order' => $this->orderResource($order->load(['orderable', 'items', 'returnRequests'])),
-            'bank' => $this->bankTransferSettings(),
+            'bank' => $this->payments->bankTransferSettings(),
         ]);
     }
 
@@ -1903,13 +1929,13 @@ class CommerceCheckoutController extends Controller
         $this->authorizeGuestOrder($order, $token);
         abort_unless($order->status === 'completed', 422, 'Rücksendungen sind nur für bezahlte Bestellungen möglich.');
 
-        $hasShippableItems = $order->items()->where('is_shippable', true)->exists();
-        abort_if($hasShippableItems && $order->shipping_status !== 'delivered', 422, 'Rücksendungen sind erst möglich, nachdem die Bestellung zugestellt wurde.');
+        $support = $this->orderSupport->summary($order->loadMissing(['items.orderable', 'returnRequests']));
+        abort_unless($support['can_request_return'], 422, $this->orderSupport->returnBlockedReasonMessage($support['return_blocked_reason'] ?? null));
 
         $data = $request->validate([
             'reason' => ['required', 'string', 'max:2000'],
         ]);
-        $item = $order->items()->first();
+        $item = $order->items->first(fn (CommerceOrderItem $item) => $item->is_shippable && $this->orderSupport->itemStillReturnable($item));
 
         CommerceReturnRequest::create([
             'commerce_order_id' => $order->id,
@@ -2934,7 +2960,7 @@ class CommerceCheckoutController extends Controller
         $payload = $request->getContent();
         $signature = $request->header('Stripe-Signature');
 
-        if (! $this->isValidStripeSignature($payload, $signature)) {
+        if (! $this->payments->isValidStripeSignature($payload, $signature)) {
             return response('Invalid signature', 400);
         }
 
@@ -2958,7 +2984,7 @@ class CommerceCheckoutController extends Controller
 
     public function paypalWebhook(Request $request)
     {
-        if (! $this->isValidPayPalWebhook($request)) {
+        if (! $this->payments->isValidPayPalWebhook($request)) {
             return response('Invalid signature', 400);
         }
 
@@ -3020,7 +3046,7 @@ class CommerceCheckoutController extends Controller
                         continue;
                     }
 
-                    abort_unless($this->hasSellableStock($product), 422, $product->title.' ist nicht mehr verfügbar.');
+                    abort_unless($this->cartService->hasSellableStock($product), 422, $product->title.' ist nicht mehr verfügbar.');
 
                     if (! (bool) $product->manages_stock) {
                         continue;
@@ -3057,7 +3083,7 @@ class CommerceCheckoutController extends Controller
                 }
             });
 
-            $this->grantLearningAccessForOrder($order);
+            $this->learningOrders->grantAccessForOrder($order);
         }
 
         if ($order->type === 'ads_campaign' && $order->orderable instanceof AdCampaign) {
@@ -3379,16 +3405,12 @@ class CommerceCheckoutController extends Controller
         abort_if($order->amount_cents <= 0, 422, 'Kostenlose Bestellungen können aktuell nicht per Checkout verarbeitet werden.');
 
         if ($order->provider === 'bank_transfer') {
-            $this->prepareBankTransfer($order);
+            $this->payments->prepareBankTransfer($order);
 
-            return redirect()->to($this->orderRoute($order, 'bank-transfer'));
+            return redirect()->to($this->payments->orderRoute($order, 'bank-transfer'));
         }
 
-        $url = $order->provider === 'stripe'
-            ? $this->createStripeCheckout($order)
-            : $this->createPayPalCheckout($order);
-
-        $order->update(['checkout_url' => $url]);
+        $url = $this->payments->createProviderCheckout($order);
 
         if (request()->header('X-Inertia')) {
             return Inertia::location($url);
@@ -3397,150 +3419,9 @@ class CommerceCheckoutController extends Controller
         return redirect()->away($url);
     }
 
-    private function createStripeCheckout(CommerceOrder $order): string
-    {
-        abort_if(blank(config('services.stripe.secret')), 422, 'Stripe ist noch nicht konfiguriert.');
-
-        $response = Http::asForm()
-            ->withToken(config('services.stripe.secret'))
-            ->post('https://api.stripe.com/v1/checkout/sessions', [
-                'mode' => 'payment',
-                'success_url' => $this->orderRoute($order, 'success').'?session_id={CHECKOUT_SESSION_ID}',
-                'cancel_url' => $this->orderRoute($order, 'cancel'),
-                'client_reference_id' => (string) $order->id,
-                'customer_email' => $this->buyerEmail($order),
-                'line_items[0][price_data][currency]' => strtolower($order->currency),
-                'line_items[0][price_data][product_data][name]' => 'Airmius '.($order->orderable?->name ?? $order->orderable?->title ?? 'Bestellung'),
-                'line_items[0][price_data][unit_amount]' => $order->amount_cents,
-                'line_items[0][quantity]' => 1,
-                'metadata[commerce_order_id]' => (string) $order->id,
-            ]);
-
-        if ($response->failed()) {
-            Log::warning('Commerce Stripe checkout failed', ['body' => $response->json()]);
-            abort(422, 'Stripe Checkout konnte nicht gestartet werden.');
-        }
-
-        $order->update([
-            'provider_checkout_id' => $response->json('id'),
-            'payload' => $response->json(),
-        ]);
-
-        return $response->json('url');
-    }
-
-    private function createPayPalCheckout(CommerceOrder $order): string
-    {
-        $response = Http::withToken($this->paypalAccessToken())->post($this->paypalBaseUrl().'/v2/checkout/orders', [
-            'intent' => 'CAPTURE',
-            'purchase_units' => [[
-                'reference_id' => 'airmius-commerce-'.$order->id,
-                'description' => 'Airmius Commerce '.$order->id,
-                'amount' => [
-                    'currency_code' => $order->currency,
-                    'value' => number_format($order->amount_cents / 100, 2, '.', ''),
-                ],
-            ]],
-            'application_context' => [
-                'brand_name' => 'Airmius',
-                'user_action' => 'PAY_NOW',
-                'return_url' => $this->orderRoute($order, 'success'),
-                'cancel_url' => $this->orderRoute($order, 'cancel'),
-            ],
-        ]);
-
-        if ($response->failed()) {
-            abort(422, 'PayPal Checkout konnte nicht gestartet werden.');
-        }
-
-        $order->update([
-            'provider_checkout_id' => $response->json('id'),
-            'payload' => $response->json(),
-        ]);
-
-        $approveLink = collect($response->json('links') ?? [])->firstWhere('rel', 'approve');
-        abort_if(blank($approveLink['href'] ?? null), 422, 'PayPal Genehmigungslink fehlt.');
-
-        return $approveLink['href'];
-    }
-
-    private function syncStripeOrder(CommerceOrder $order): void
-    {
-        $sessionId = request('session_id') ?: $order->provider_checkout_id;
-
-        if (! $sessionId || blank(config('services.stripe.secret'))) {
-            return;
-        }
-
-        $response = Http::withToken(config('services.stripe.secret'))
-            ->get('https://api.stripe.com/v1/checkout/sessions/'.$sessionId);
-
-        if ($response->ok() && $response->json('payment_status') === 'paid') {
-            $order->update(['payload' => $response->json()]);
-            $this->activate($order);
-        }
-    }
-
-    private function capturePayPalOrder(CommerceOrder $order): void
-    {
-        $response = Http::withToken($this->paypalAccessToken())
-            ->withHeaders(['PayPal-Request-Id' => (string) Str::uuid()])
-            ->withBody('{}', 'application/json')
-            ->post($this->paypalBaseUrl().'/v2/checkout/orders/'.$order->provider_checkout_id.'/capture');
-
-        if ($response->ok() && in_array($response->json('status'), ['COMPLETED', 'APPROVED'], true)) {
-            $order->update(['payload' => $response->json()]);
-            $this->activate($order);
-        }
-    }
-
-    private function prepareBankTransfer(CommerceOrder $order): void
-    {
-        $bank = $this->bankTransferSettings();
-        abort_if(blank($bank['iban']), 422, 'Bankverbindung für Überweisung ist noch nicht konfiguriert.');
-
-        $order->update([
-            'status' => 'awaiting_transfer',
-            'payment_reference' => 'AIR-COM-'.$order->created_at->format('Y').'-'.str_pad((string) $order->id, 6, '0', STR_PAD_LEFT),
-            'due_at' => now()->addDays((int) $bank['payment_terms_days'])->endOfDay(),
-            'payload' => [...($order->payload ?: []), 'bank_transfer' => $bank],
-        ]);
-    }
-
-    private function bankTransferSettings(): array
-    {
-        return [
-            'bank_account_holder' => Setting::valueFor('billing_bank_account_holder', 'Airmius'),
-            'bank_name' => Setting::valueFor('billing_bank_name', ''),
-            'iban' => Setting::valueFor('billing_iban', ''),
-            'bic' => Setting::valueFor('billing_bic', ''),
-            'payment_terms_days' => (int) Setting::valueFor('billing_payment_terms_days', 14),
-        ];
-    }
-
-    private function paypalAccessToken(): string
-    {
-        $response = Http::asForm()
-            ->withBasicAuth(config('services.paypal.client_id'), config('services.paypal.client_secret'))
-            ->post($this->paypalBaseUrl().'/v1/oauth2/token', ['grant_type' => 'client_credentials']);
-
-        if ($response->failed()) {
-            abort(422, 'PayPal Token konnte nicht erzeugt werden.');
-        }
-
-        return $response->json('access_token');
-    }
-
-    private function paypalBaseUrl(): string
-    {
-        return config('services.paypal.mode') === 'live'
-            ? 'https://api-m.paypal.com'
-            : 'https://api-m.sandbox.paypal.com';
-    }
-
     private function sendConfirmationEmail(CommerceOrder $order): void
     {
-        if ($order->confirmation_email_sent_at || ! $this->buyerEmail($order)) {
+        if ($order->confirmation_email_sent_at || ! $this->payments->buyerEmail($order)) {
             return;
         }
 
@@ -3576,84 +3457,18 @@ class CommerceCheckoutController extends Controller
         abort_unless($order->access_token && hash_equals($order->access_token, $token), 403);
     }
 
-    private function buyerEmail(CommerceOrder $order): ?string
-    {
-        return $order->user?->email ?: $order->guest_email;
-    }
-
-    private function orderRoute(CommerceOrder $order, string $type): string
-    {
-        if ($order->access_token) {
-            return match ($type) {
-                'success' => route('commerce-checkout.guest.success', [$order, $order->access_token]),
-                'cancel' => route('commerce-checkout.guest.cancel', [$order, $order->access_token]),
-                'bank-transfer' => route('commerce-checkout.guest.bank-transfer.show', [$order, $order->access_token]),
-            };
-        }
-
-        return match ($type) {
-            'success' => route('commerce-checkout.success', $order),
-            'cancel' => route('commerce-checkout.cancel', $order),
-            'bank-transfer' => route('commerce-checkout.bank-transfer.show', $order),
-        };
-    }
-
-    private function isValidStripeSignature(string $payload, ?string $signature): bool
-    {
-        $secret = config('services.stripe.webhook_secret');
-
-        if (blank($secret)) {
-            return true;
-        }
-
-        if (! $signature) {
-            return false;
-        }
-
-        $parts = collect(explode(',', $signature))->mapWithKeys(function ($part) {
-            [$key, $value] = array_pad(explode('=', $part, 2), 2, null);
-
-            return [$key => $value];
-        });
-
-        return hash_equals(hash_hmac('sha256', $parts->get('t').'.'.$payload, $secret), (string) $parts->get('v1'));
-    }
-
-    private function isValidPayPalWebhook(Request $request): bool
-    {
-        $webhookId = config('services.paypal.commerce_webhook_id') ?: config('services.paypal.webhook_id');
-
-        if (blank($webhookId)) {
-            return true;
-        }
-
-        try {
-            $response = Http::withToken($this->paypalAccessToken())
-                ->post($this->paypalBaseUrl().'/v1/notifications/verify-webhook-signature', [
-                    'auth_algo' => $request->header('PAYPAL-AUTH-ALGO'),
-                    'cert_url' => $request->header('PAYPAL-CERT-URL'),
-                    'transmission_id' => $request->header('PAYPAL-TRANSMISSION-ID'),
-                    'transmission_sig' => $request->header('PAYPAL-TRANSMISSION-SIG'),
-                    'transmission_time' => $request->header('PAYPAL-TRANSMISSION-TIME'),
-                    'webhook_id' => $webhookId,
-                    'webhook_event' => $request->all(),
-                ]);
-
-            return $response->ok() && $response->json('verification_status') === 'SUCCESS';
-        } catch (\Throwable) {
-            return false;
-        }
-    }
-
     private function orderResource(CommerceOrder $order): array
     {
         $pricing = $order->payload['pricing'] ?? null;
+        $support = $this->orderSupport->summary($order);
 
         return [
             'id' => $order->id,
             'type' => $order->type,
             'status' => $order->status,
             'title' => $order->orderable?->name ?? $order->orderable?->title ?? 'Airmius Bestellung',
+            'amount_cents' => $order->amount_cents,
+            'currency' => $order->currency,
             'amount' => number_format($order->amount_cents / 100, 2, ',', '.').' '.$order->currency,
             'pricing' => $pricing,
             'items' => $order->items->map(fn (CommerceOrderItem $item) => [
@@ -3663,13 +3478,18 @@ class CommerceCheckoutController extends Controller
                 'quantity' => $item->quantity,
                 'is_shippable' => $item->is_shippable,
                 'total_cents' => $item->total_cents,
+                'returnable' => $item->is_shippable && $this->orderSupport->itemStillReturnable($item),
+                'return_deadline' => $this->orderSupport->itemReturnDeadline($item)?->toDateString(),
             ])->values(),
             'return_requests' => $order->returnRequests->map(fn (CommerceReturnRequest $return) => [
                 'id' => $return->id,
                 'status' => $return->status,
                 'reason' => $return->reason,
             ])->values(),
-            'return_url' => $order->access_token ? route('commerce-checkout.guest.returns.store', [$order, $order->access_token]) : null,
+            'return_url' => $support['can_request_return'] && $order->access_token
+                ? route('commerce-checkout.guest.returns.store', [$order, $order->access_token])
+                : null,
+            'support_summary' => $support,
             'payment_reference' => $order->payment_reference,
             'due_at' => $order->due_at?->toDateString(),
             'invoice_number' => $order->invoice_number,
@@ -3788,114 +3608,6 @@ class CommerceCheckoutController extends Controller
             'tax_class' => $product->tax_class ?: 'standard',
             'is_shippable' => (bool) $product->is_shippable,
         ]);
-    }
-
-    private function applyLearningCoupon(MarketplaceProduct $product, array $quote, ?string $code): array
-    {
-        if (! $product->learning_course_id || blank($code)) {
-            return $quote;
-        }
-
-        $coupon = LearningCoupon::query()
-            ->where('learning_course_id', $product->learning_course_id)
-            ->where('code', strtoupper(trim($code)))
-            ->first();
-
-        if (! $coupon || ! $coupon->isRedeemable()) {
-            throw ValidationException::withMessages(['coupon_code' => 'Dieser Gutschein ist ungültig oder abgelaufen.']);
-        }
-
-        $oldItemGross = max(0, (int) ($quote['item_gross_cents'] ?? $quote['gross_cents'] ?? 0));
-        $discount = $coupon->discountFor($oldItemGross);
-        $newItemGross = max(0, $oldItemGross - $discount);
-        $ratio = $oldItemGross > 0 ? $newItemGross / $oldItemGross : 1;
-
-        $quote['item_gross_cents'] = $newItemGross;
-        $quote['item_net_cents'] = (int) round((int) ($quote['item_net_cents'] ?? $quote['net_cents'] ?? 0) * $ratio);
-        $quote['item_tax_cents'] = max(0, $newItemGross - $quote['item_net_cents']);
-        $quote['gross_cents'] = $newItemGross + (int) ($quote['shipping_gross_cents'] ?? 0);
-        $quote['net_cents'] = $quote['item_net_cents'] + (int) ($quote['shipping_net_cents'] ?? 0);
-        $quote['tax_cents'] = $quote['item_tax_cents'] + (int) ($quote['shipping_tax_cents'] ?? 0);
-        $quote['learning_coupon'] = [
-            'id' => $coupon->id,
-            'code' => $coupon->code,
-            'discount_cents' => $discount,
-        ];
-
-        return $quote;
-    }
-
-    private function grantLearningAccessForOrder(CommerceOrder $order): void
-    {
-        $userId = $order->user_id ?: User::query()
-            ->where('email', strtolower((string) $order->guest_email))
-            ->value('id');
-
-        if (! $userId) {
-            return;
-        }
-
-        $order->loadMissing('items.orderable');
-
-        foreach ($order->items as $item) {
-            if (! $item->orderable instanceof MarketplaceProduct || ! $item->orderable->learning_course_id) {
-                continue;
-            }
-
-            $enrollment = LearningEnrollment::query()->firstOrNew([
-                'learning_course_id' => $item->orderable->learning_course_id,
-                'user_id' => $userId,
-            ]);
-
-            $enrollment->forceFill([
-                'status' => 'active',
-                'started_at' => $enrollment->started_at ?: now(),
-            ])->save();
-        }
-
-        $couponId = data_get($order->payload, 'pricing.learning_coupon.id');
-        if ($couponId) {
-            LearningCoupon::query()->whereKey($couponId)->increment('redeemed_count');
-        }
-    }
-
-    private function revokeLearningAccessForOrder(CommerceOrder $order, string $status = 'refunded'): void
-    {
-        $userId = $order->user_id ?: User::query()
-            ->where('email', strtolower((string) $order->guest_email))
-            ->value('id');
-
-        if (! $userId) {
-            return;
-        }
-
-        $courseIds = $this->learningProductsForOrder($order)
-            ->pluck('learning_course_id')
-            ->filter()
-            ->unique()
-            ->values();
-
-        if ($courseIds->isEmpty()) {
-            return;
-        }
-
-        LearningEnrollment::query()
-            ->where('user_id', $userId)
-            ->whereIn('learning_course_id', $courseIds)
-            ->update([
-                'status' => $status,
-                'completed_at' => null,
-            ]);
-    }
-
-    private function learningProductsForOrder(CommerceOrder $order)
-    {
-        $order->loadMissing('items.orderable');
-
-        return collect([$order->orderable])
-            ->concat($order->items->pluck('orderable'))
-            ->filter(fn ($item) => $item instanceof MarketplaceProduct && $item->learning_course_id)
-            ->values();
     }
 
     private function shippingAddressForAuthenticatedUser(Request $request, array $data): array
@@ -4165,755 +3877,12 @@ class CommerceCheckoutController extends Controller
         ];
     }
 
-    private function productAttributesFromText(string $text): array
-    {
-        return collect(preg_split('/\r\n|\r|\n/', $text))
-            ->map(fn (string $line) => trim($line))
-            ->filter()
-            ->map(function (string $line) {
-                [$name, $value] = array_pad(preg_split('/[:=]/', $line, 2), 2, '');
-
-                return [
-                    'name' => trim($name),
-                    'value' => trim($value),
-                ];
-            })
-            ->filter(fn (array $attribute) => filled($attribute['name']) && filled($attribute['value']))
-            ->take(20)
-            ->values()
-            ->all();
-    }
-
-    private function productImportDataFromRow(array $row, Request $request, int $line, array &$errors): ?array
-    {
-        $title = trim((string) ($row['titel'] ?? $row['title'] ?? ''));
-        $priceCents = $this->moneyToCents($row['preis_eur'] ?? $row['preis'] ?? $row['price_eur'] ?? null);
-        $offerType = $this->normalizeImportedOfferType($row['angebotstyp'] ?? $row['offer_type'] ?? 'physical_product');
-        $productType = $this->normalizeImportedProductType($row['produkt_typ'] ?? $row['product_type'] ?? 'single');
-        $category = $this->categoryForImportedOffer($offerType, $row['kategorie'] ?? $row['category'] ?? null);
-        $stockQuantity = trim((string) ($row['lagerbestand'] ?? $row['bestand'] ?? $row['stock_quantity'] ?? ''));
-        $imageUrl = trim((string) ($row['hauptbild_url'] ?? $row['image_url'] ?? ''));
-
-        if ($title === '') {
-            $errors[] = "Zeile {$line}: Titel fehlt.";
-        }
-
-        if ($priceCents === null) {
-            $errors[] = "Zeile {$line}: Preis fehlt oder ist ungültig.";
-        }
-
-        if ($imageUrl !== '' && ! filter_var($imageUrl, FILTER_VALIDATE_URL)) {
-            $errors[] = "Zeile {$line}: Hauptbild-URL ist ungültig.";
-        }
-
-        if ($offerType === 'physical_product' && $productType !== 'digital' && ((int) $stockQuantity) < 1) {
-            $errors[] = "Zeile {$line}: Lagerbestand muss mindestens 1 sein.";
-        }
-
-        if ($offerType === 'service') {
-            $errors[] = "Zeile {$line}: Dienstleistungen werden aktuell nur intern von Airmius angelegt.";
-        }
-
-        if ($title === '' || $priceCents === null || $offerType === 'service' || ($imageUrl !== '' && ! filter_var($imageUrl, FILTER_VALIDATE_URL))) {
-            return null;
-        }
-
-        $club = $this->authorizedCommerceClub($request, $row['verein_id'] ?? $row['club_id'] ?? null);
-        $galleryImages = collect(preg_split('/\r\n|\r|\n|;|\|/', (string) ($row['galerie_bild_urls'] ?? $row['gallery_image_urls'] ?? '')))
-            ->map(fn (string $url) => trim($url))
-            ->filter(fn (string $url) => $url !== '' && filter_var($url, FILTER_VALIDATE_URL))
-            ->prepend($imageUrl ?: null)
-            ->filter()
-            ->unique()
-            ->take(12)
-            ->values()
-            ->all();
-
-        $isDigital = $productType === 'digital' || in_array($offerType, ['online_course', 'training_plan', 'service'], true);
-        $managesStock = ! $isDigital && $offerType === 'physical_product';
-        $taxClass = trim((string) ($row['steuerklasse'] ?? $row['tax_class'] ?? 'standard')) ?: 'standard';
-
-        if (! in_array($taxClass, ['standard', 'reduced', 'zero'], true)) {
-            $taxClass = 'standard';
-        }
-
-        return [
-            'user_id' => $request->user()->id,
-            'club_id' => $club?->id,
-            'title' => $title,
-            'description' => trim((string) ($row['beschreibung'] ?? $row['description'] ?? '')),
-            'product_attributes' => $this->productAttributesFromText((string) ($row['merkmale'] ?? $row['attributes_text'] ?? '')),
-            'attribute_options' => [],
-            'variants' => [],
-            'image_url' => $imageUrl ?: ($galleryImages[0] ?? null),
-            'gallery_images' => $galleryImages,
-            'category' => $category,
-            'offer_type' => $offerType,
-            'product_type' => $isDigital ? 'digital' : $productType,
-            'sku' => trim((string) ($row['artikelnummer'] ?? $row['sku'] ?? '')) ?: null,
-            'is_shippable' => $isDigital ? false : $this->boolFromImport($row['versandpflichtig'] ?? $row['is_shippable'] ?? true),
-            'manages_stock' => $managesStock,
-            'stock_quantity' => $managesStock ? max(1, (int) $stockQuantity) : null,
-            'tax_class' => $taxClass,
-            'return_policy_type' => $isDigital ? 'digital' : 'standard',
-            'return_window_days' => $isDigital ? 0 : 14,
-            'digital_delivery_note' => trim((string) ($row['lieferinfo_digital'] ?? $row['digital_delivery_note'] ?? '')) ?: null,
-            'course_outline' => $this->linesFromText((string) ($row['kursinhalt'] ?? $row['course_outline_text'] ?? ''), 20),
-            'learning_goals' => $this->linesFromText((string) ($row['lernziele'] ?? $row['learning_goals_text'] ?? ''), 12),
-            'coaching_enabled' => $offerType === 'training_plan' ? $this->boolFromImport($row['feedback_aktiv'] ?? true) : $this->boolFromImport($row['feedback_aktiv'] ?? false),
-            'coach_feedback_instructions' => trim((string) ($row['feedback_hinweise'] ?? $row['coach_feedback_instructions'] ?? '')) ?: null,
-            'price_cents' => $priceCents,
-            'currency' => 'EUR',
-            'status' => 'published',
-            'moderation_status' => 'approved',
-            'commission_percent' => $this->pricing->commissionPercentFor((new MarketplaceProduct)->forceFill(['category' => $category])),
-            'payout_status' => 'pending_sales',
-        ];
-    }
-
-    private function readProductImportRows(string $path, ?string $extension): array
-    {
-        return strtolower((string) $extension) === 'xlsx'
-            ? $this->readProductXlsxRows($path)
-            : $this->readProductCsvRows($path);
-    }
-
-    private function readProductCsvRows(string $path): array
-    {
-        $handle = fopen($path, 'r');
-        if (! $handle) {
-            return [];
-        }
-
-        $firstLine = fgets($handle) ?: '';
-        rewind($handle);
-        $delimiter = str_contains($firstLine, ';') ? ';' : (str_contains($firstLine, "\t") ? "\t" : ',');
-        $tableRows = [];
-
-        while (($values = fgetcsv($handle, 0, $delimiter)) !== false) {
-            if ($values !== [null] && $values !== false) {
-                $tableRows[] = $values;
-            }
-        }
-
-        fclose($handle);
-
-        return $this->normalizeProductImportTableRows($tableRows);
-    }
-
-    private function readProductXlsxRows(string $path): array
-    {
-        $zip = new \ZipArchive();
-        if ($zip->open($path) !== true) {
-            return [];
-        }
-
-        $sharedStrings = [];
-        $sharedStringsXml = $zip->getFromName('xl/sharedStrings.xml');
-        if ($sharedStringsXml !== false) {
-            $xml = simplexml_load_string($sharedStringsXml);
-            foreach ($xml->si ?? [] as $string) {
-                $text = isset($string->t) ? (string) $string->t : '';
-                foreach ($string->r ?? [] as $run) {
-                    $text .= (string) $run->t;
-                }
-                $sharedStrings[] = $text;
-            }
-        }
-
-        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
-        $zip->close();
-
-        if ($sheetXml === false) {
-            return [];
-        }
-
-        $xml = simplexml_load_string($sheetXml);
-        $tableRows = [];
-
-        foreach ($xml->sheetData->row ?? [] as $row) {
-            $values = [];
-            foreach ($row->c ?? [] as $cell) {
-                $reference = (string) $cell['r'];
-                $column = preg_replace('/\d+/', '', $reference);
-                $index = $this->excelColumnIndex($column);
-                $type = (string) $cell['t'];
-                $value = (string) ($cell->v ?? '');
-
-                if ($type === 's') {
-                    $value = $sharedStrings[(int) $value] ?? '';
-                } elseif ($type === 'inlineStr') {
-                    $value = (string) ($cell->is->t ?? '');
-                }
-
-                $values[$index] = $value;
-            }
-
-            if ($values !== []) {
-                ksort($values);
-                $tableRows[] = $values;
-            }
-        }
-
-        return $this->normalizeProductImportTableRows($tableRows);
-    }
-
-    private function normalizeProductImportTableRows(array $tableRows): array
-    {
-        $headerIndex = null;
-        $headers = [];
-
-        foreach ($tableRows as $index => $values) {
-            $candidate = array_map(fn ($value) => $this->normalizeImportKey($value), $values);
-            if (in_array('titel', $candidate, true) || in_array('title', $candidate, true)) {
-                $headerIndex = $index;
-                $headers = $candidate;
-                break;
-            }
-        }
-
-        if ($headerIndex === null) {
-            return [];
-        }
-
-        $rows = [];
-        foreach (array_slice($tableRows, $headerIndex + 1) as $values) {
-            $row = [];
-            foreach ($headers as $index => $header) {
-                if ($header !== '') {
-                    $row[$header] = $values[$index] ?? null;
-                }
-            }
-
-            if (array_filter($row, fn ($value) => filled($value))) {
-                $rows[] = $row;
-            }
-        }
-
-        return array_slice($rows, 0, 100);
-    }
-
-    private function buildProductImportTemplate(): string
-    {
-        $path = tempnam(sys_get_temp_dir(), 'airmius-products-').'.xlsx';
-        $zip = new \ZipArchive();
-        $zip->open($path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
-
-        $zip->addFromString('[Content_Types].xml', <<<'XML'
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="xml" ContentType="application/xml"/>
-  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-  <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
-  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
-  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
-  <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
-</Types>
-XML);
-        $zip->addFromString('_rels/.rels', <<<'XML'
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
-  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
-  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
-</Relationships>
-XML);
-        $zip->addFromString('docProps/core.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>Airmius Produktimport</dc:title></cp:coreProperties>');
-        $zip->addFromString('docProps/app.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Airmius</Application></Properties>');
-        $zip->addFromString('xl/workbook.xml', <<<'XML'
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <sheets><sheet name="Produkte" sheetId="1" r:id="rId1"/></sheets>
-  <calcPr calcId="191029" fullCalcOnLoad="1"/>
-</workbook>
-XML);
-        $zip->addFromString('xl/_rels/workbook.xml.rels', <<<'XML'
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-</Relationships>
-XML);
-        $zip->addFromString('xl/styles.xml', <<<'XML'
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="16"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts>
-  <fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF111827"/><bgColor indexed="64"/></patternFill></fill></fills>
-  <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
-  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-  <cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs>
-</styleSheet>
-XML);
-
-        $zip->addFromString('xl/worksheets/sheet1.xml', $this->buildProductImportSheetXml());
-        $zip->close();
-
-        return $path;
-    }
-
-    private function buildProductImportSheetXml(): string
-    {
-        $headers = [
-            'Titel', 'Angebotstyp', 'Kategorie', 'Produkttyp', 'Preis_EUR',
-            'Airmius_Provision_%', 'Airmius_Provision_EUR', 'Auszahlung_EUR',
-            'Lagerbestand', 'Artikelnummer', 'Hauptbild_URL', 'Galerie_Bild_URLs',
-            'Steuerklasse', 'Versandpflichtig', 'Beschreibung', 'Merkmale',
-            'Kursinhalt', 'Lernziele', 'Feedback_Aktiv', 'Feedback_Hinweise',
-        ];
-        $rows = [
-            ['Airmius Marketplace Produktimport'],
-            ['Pflichtfelder: Titel, Angebotstyp, Preis_EUR und bei physischen Produkten Lagerbestand min. 1. Bilder bitte als öffentliche URLs eintragen.'],
-            ['Provision: Die Spalten F-H sind Formeln. Wenn Preis oder Kategorie geändert werden, aktualisieren sich Provision und Auszahlung in Excel. Beim Import rechnet Airmius die Provision serverseitig erneut mit den aktuellen Admin-Einstellungen.'],
-            $headers,
-            [
-                'Beispiel Trainingsball', 'physical_product', 'product', 'single', '29,99',
-                ['formula' => $this->productImportCommissionFormula(5)],
-                ['formula' => 'IF(E5="","",E5*F5/100)'],
-                ['formula' => 'IF(E5="","",E5-G5)'],
-                '10', 'BALL-1001', 'https://example.com/ball.jpg', 'https://example.com/ball-side.jpg; https://example.com/ball-box.jpg',
-                'standard', 'ja', 'Robuster Trainingsball für Vereinstraining.', 'Farbe: Weiß | Größe: 5',
-                '', '', 'nein', '',
-            ],
-        ];
-
-        for ($row = 6; $row <= 104; $row++) {
-            $rows[] = array_replace(array_fill(0, count($headers), ''), [
-                5 => ['formula' => $this->productImportCommissionFormula($row)],
-                6 => ['formula' => 'IF(E'.$row.'="","",E'.$row.'*F'.$row.'/100)'],
-                7 => ['formula' => 'IF(E'.$row.'="","",E'.$row.'-G'.$row.')'],
-            ]);
-        }
-
-        $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
-        $xml .= '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
-        $xml .= '<cols>';
-        foreach ([28, 20, 16, 16, 14, 18, 22, 18, 16, 18, 34, 42, 16, 18, 42, 32, 36, 36, 16, 34] as $index => $width) {
-            $col = $index + 1;
-            $xml .= '<col min="'.$col.'" max="'.$col.'" width="'.$width.'" customWidth="1"/>';
-        }
-        $xml .= '</cols><sheetData>';
-
-        foreach ($rows as $rowIndex => $row) {
-            $number = $rowIndex + 1;
-            $height = $number === 1 ? ' ht="28" customHeight="1"' : '';
-            $xml .= '<row r="'.$number.'"'.$height.'>';
-
-            foreach ($row as $columnIndex => $value) {
-                $style = $number === 1 ? 1 : ($number === 4 ? 2 : 0);
-                $xml .= $this->productImportCellXml($columnIndex, $number, $value, $style);
-            }
-
-            $xml .= '</row>';
-        }
-
-        $xml .= '</sheetData>';
-        $xml .= '<mergeCells count="3"><mergeCell ref="A1:T1"/><mergeCell ref="A2:T2"/><mergeCell ref="A3:T3"/></mergeCells>';
-        $xml .= '<dataValidations count="6">';
-        $xml .= '<dataValidation type="list" allowBlank="1" showDropDown="0" sqref="B5:B104"><formula1>"physical_product,online_course,training_plan,camp,service"</formula1></dataValidation>';
-        $xml .= '<dataValidation type="list" allowBlank="1" showDropDown="0" sqref="C5:C104"><formula1>"product,course,camp,service"</formula1></dataValidation>';
-        $xml .= '<dataValidation type="list" allowBlank="1" showDropDown="0" sqref="D5:D104"><formula1>"single,variable,digital"</formula1></dataValidation>';
-        $xml .= '<dataValidation type="list" allowBlank="1" showDropDown="0" sqref="M5:M104"><formula1>"standard,reduced,zero"</formula1></dataValidation>';
-        $xml .= '<dataValidation type="list" allowBlank="1" showDropDown="0" sqref="N5:N104"><formula1>"ja,nein"</formula1></dataValidation>';
-        $xml .= '<dataValidation type="list" allowBlank="1" showDropDown="0" sqref="S5:S104"><formula1>"ja,nein"</formula1></dataValidation>';
-        $xml .= '</dataValidations></worksheet>';
-
-        return $xml;
-    }
-
-    private function productImportCommissionFormula(int $row): string
-    {
-        $commissions = collect($this->marketplaceCategoryCommissionsForSeller())
-            ->mapWithKeys(fn (array $commission) => [$commission['category'] => (int) $commission['commission_percent']])
-            ->all();
-        $default = (int) ($commissions['product'] ?? 10);
-        $formula = (string) $default;
-
-        foreach (array_reverse($commissions) as $category => $percent) {
-            $formula = 'IF(C'.$row.'="'.$category.'",'.$percent.','.$formula.')';
-        }
-
-        return $formula;
-    }
-
-    private function productImportCellXml(int $columnIndex, int $rowNumber, mixed $value, int $style = 0): string
-    {
-        $cell = $this->excelColumnName($columnIndex).$rowNumber;
-
-        if (is_array($value) && isset($value['formula'])) {
-            return '<c r="'.$cell.'" s="'.$style.'"><f>'.htmlspecialchars((string) $value['formula'], ENT_XML1).'</f><v></v></c>';
-        }
-
-        return '<c r="'.$cell.'" t="inlineStr" s="'.$style.'"><is><t>'.htmlspecialchars((string) $value, ENT_XML1).'</t></is></c>';
-    }
-
-    private function normalizeImportKey(mixed $value): string
-    {
-        $key = strtolower(trim((string) $value));
-        $key = strtr($key, [
-            'ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'ß' => 'ss',
-            'Ä' => 'ae', 'Ö' => 'oe', 'Ü' => 'ue',
-            ' ' => '_', '-' => '_', '/' => '_',
-        ]);
-
-        return preg_replace('/[^a-z0-9_]/', '', $key) ?: '';
-    }
-
-    private function moneyToCents(mixed $value): ?int
-    {
-        $value = trim((string) $value);
-
-        if ($value === '') {
-            return null;
-        }
-
-        $value = preg_replace('/[^0-9,.\-]/', '', $value);
-        if ($value === '' || $value === '-') {
-            return null;
-        }
-
-        $lastComma = strrpos($value, ',');
-        $lastDot = strrpos($value, '.');
-        if ($lastComma !== false && ($lastDot === false || $lastComma > $lastDot)) {
-            $value = str_replace('.', '', $value);
-            $value = str_replace(',', '.', $value);
-        } else {
-            $value = str_replace(',', '', $value);
-        }
-
-        return is_numeric($value) ? (int) round(((float) $value) * 100) : null;
-    }
-
-    private function normalizeImportedOfferType(mixed $value): string
-    {
-        $value = $this->normalizeImportKey($value);
-        $aliases = [
-            'produkt' => 'physical_product',
-            'product' => 'physical_product',
-            'equipment' => 'physical_product',
-            'kurs' => 'online_course',
-            'course' => 'online_course',
-            'elearning' => 'online_course',
-            'onlinekurs' => 'online_course',
-            'trainingsplan' => 'training_plan',
-            'trainingplan' => 'training_plan',
-            'workshop' => 'camp',
-            'beratung' => 'service',
-            'analyse' => 'service',
-        ];
-
-        return in_array($value, ['physical_product', 'online_course', 'training_plan', 'camp', 'service'], true)
-            ? $value
-            : ($aliases[$value] ?? 'physical_product');
-    }
-
-    private function normalizeImportedProductType(mixed $value): string
-    {
-        $value = $this->normalizeImportKey($value);
-        $aliases = [
-            'einfach' => 'single',
-            'einfaches_produkt' => 'single',
-            'variabel' => 'variable',
-            'variables_produkt' => 'variable',
-            'digitales_produkt' => 'digital',
-        ];
-
-        return in_array($value, ['single', 'variable', 'digital'], true) ? $value : ($aliases[$value] ?? 'single');
-    }
-
-    private function categoryForImportedOffer(string $offerType, mixed $category): string
-    {
-        $category = $this->normalizeImportKey($category);
-        $aliases = [
-            'produkt' => 'product',
-            'produkte' => 'product',
-            'kurs' => 'course',
-            'kurse' => 'course',
-            'elearning' => 'course',
-            'camp' => 'camp',
-            'camps' => 'camp',
-            'service' => 'service',
-            'services' => 'service',
-        ];
-        $category = in_array($category, ['product', 'course', 'camp', 'service'], true) ? $category : ($aliases[$category] ?? '');
-
-        if ($category !== '') {
-            return $category;
-        }
-
-        return match ($offerType) {
-            'online_course', 'training_plan' => 'course',
-            'camp' => 'camp',
-            'service' => 'service',
-            default => 'product',
-        };
-    }
-
-    private function boolFromImport(mixed $value): bool
-    {
-        if (is_bool($value)) {
-            return $value;
-        }
-
-        return in_array(strtolower(trim((string) $value)), ['1', 'ja', 'yes', 'true', 'aktiv', 'active'], true);
-    }
-
-    private function excelColumnIndex(string $column): int
-    {
-        $index = 0;
-        foreach (str_split($column) as $char) {
-            $index = ($index * 26) + (ord(strtoupper($char)) - 64);
-        }
-
-        return max(0, $index - 1);
-    }
-
-    private function excelColumnName(int $index): string
-    {
-        $name = '';
-        $index++;
-
-        while ($index > 0) {
-            $modulo = ($index - 1) % 26;
-            $name = chr(65 + $modulo).$name;
-            $index = intdiv($index - $modulo, 26);
-        }
-
-        return $name;
-    }
-
-    private function linesFromText(string $text, int $limit): array
-    {
-        return collect(preg_split('/\r\n|\r|\n/', $text))
-            ->map(fn (string $line) => trim($line))
-            ->filter()
-            ->take($limit)
-            ->values()
-            ->all();
-    }
-
-    private function normalizeAttributeOptions(array $options): array
-    {
-        return collect($options)
-            ->map(function (array $option) {
-                $values = collect($option['values'] ?? [])
-                    ->map(fn ($value) => trim((string) $value))
-                    ->filter()
-                    ->unique()
-                    ->take(30)
-                    ->values()
-                    ->all();
-
-                return [
-                    'name' => trim((string) ($option['name'] ?? '')),
-                    'values' => $values,
-                ];
-            })
-            ->filter(fn (array $option) => filled($option['name']) && $option['values'] !== [])
-            ->take(20)
-            ->values()
-            ->all();
-    }
-
-    private function normalizeVariants(array $variants, array $attributeOptions, int $fallbackPriceCents): array
-    {
-        $allowed = collect($attributeOptions)
-            ->mapWithKeys(fn (array $option) => [$option['name'] => $option['values']])
-            ->all();
-
-        return collect($variants)
-            ->map(function (array $variant) use ($allowed, $fallbackPriceCents) {
-                $attributes = collect($variant['attributes'] ?? [])
-                    ->map(fn (array $attribute) => [
-                        'name' => trim((string) ($attribute['name'] ?? '')),
-                        'value' => trim((string) ($attribute['value'] ?? '')),
-                    ])
-                    ->filter(fn (array $attribute) => filled($attribute['name'])
-                        && filled($attribute['value'])
-                        && in_array($attribute['value'], $allowed[$attribute['name']] ?? [], true))
-                    ->values()
-                    ->all();
-
-                return [
-                    'sku' => filled($variant['sku'] ?? null) ? trim((string) $variant['sku']) : null,
-                    'price_cents' => (int) ($variant['price_cents'] ?? $fallbackPriceCents),
-                    'stock_quantity' => ($variant['stock_quantity'] ?? null) === null || ($variant['stock_quantity'] ?? '') === ''
-                        ? null
-                        : max(0, (int) $variant['stock_quantity']),
-                    'image_url' => filled($variant['image_url'] ?? null) ? trim((string) $variant['image_url']) : null,
-                    'attributes' => $attributes,
-                ];
-            })
-            ->filter(fn (array $variant) => $variant['attributes'] !== [])
-            ->take(80)
-            ->values()
-            ->all();
-    }
-
-    private function quoteWithQuantity(array $quote, int $quantity): array
-    {
-        $quantity = max(1, $quantity);
-
-        $quote['item_gross_cents'] = (int) ($quote['item_gross_cents'] ?? $quote['gross_cents'] ?? 0) * $quantity;
-        $quote['item_net_cents'] = (int) ($quote['item_net_cents'] ?? $quote['net_cents'] ?? 0) * $quantity;
-        $quote['item_tax_cents'] = (int) ($quote['item_tax_cents'] ?? $quote['tax_cents'] ?? 0) * $quantity;
-        $quote['gross_cents'] = $quote['item_gross_cents'] + (int) ($quote['shipping_gross_cents'] ?? 0);
-        $quote['net_cents'] = $quote['item_net_cents'] + (int) ($quote['shipping_net_cents'] ?? 0);
-        $quote['tax_cents'] = $quote['item_tax_cents'] + (int) ($quote['shipping_tax_cents'] ?? 0);
-
-        return $quote;
-    }
-
-    private function cartFor(Request $request): CommerceCart
-    {
-        return CommerceCart::query()->firstOrCreate(
-            ['user_id' => $request->user()->id],
-            ['currency' => 'EUR'],
-        );
-    }
-
     private function cartResource(Request $request): array
     {
-        $cart = $this->cartFor($request)->load('items.product');
-        $address = $this->shippingAddressForAuthenticatedUser($request, []);
-        $summary = $cart->items->isNotEmpty()
-            ? $this->cartQuote($cart, $request, $address, [])
-            : [
-                'item_gross_cents' => 0,
-                'shipping_cents' => 0,
-                'net_cents' => 0,
-                'tax_cents' => 0,
-                'amount_cents' => 0,
-                'currency' => 'EUR',
-                'items' => [],
-            ];
-        $summaryForClient = $summary;
-        unset($summaryForClient['items']);
-
-        return [
-            'id' => $cart->id,
-            'items_count' => $cart->items->count(),
-            'items' => collect($summary['items'] ?? [])->map(function (array $summaryItem) {
-                /** @var CommerceCartItem $item */
-                $item = $summaryItem['cart_item'];
-                /** @var MarketplaceProduct $product */
-                $product = $summaryItem['product'];
-                $quote = $summaryItem['quote'];
-
-                return [
-                    'id' => $item->id,
-                    'quantity' => (int) $summaryItem['quantity'],
-                    'line_total_cents' => (int) ($quote['item_gross_cents'] ?? ((int) $product->price_cents * (int) $summaryItem['quantity'])),
-                    'product' => [
-                        'id' => $product->id,
-                        'title' => $product->title,
-                        'description' => $product->description,
-                        'category' => $product->category,
-                        'sku' => $product->sku,
-                        'image_url' => $product->image_url,
-                        'price_cents' => $product->price_cents,
-                        'currency' => $product->currency,
-                        'stock_quantity' => $product->stock_quantity,
-                        'show_url' => route('auth.commerce.products.show', $product),
-                    ],
-                ];
-            })->values(),
-            'summary' => $summaryForClient,
-        ];
-    }
-
-    private function cartQuote(CommerceCart $cart, Request $request, array $shippingAddress, array $customer): array
-    {
-        $items = [];
-        $currency = 'EUR';
-        $itemGross = 0;
-        $shipping = 0;
-        $net = 0;
-        $tax = 0;
-        $commission = 0;
-        $country = strtoupper((string) ($shippingAddress['country'] ?? 'DE'));
-        $taxRate = 0.0;
-
-        foreach ($cart->items as $cartItem) {
-            $product = $cartItem->product;
-            $quantity = max(1, (int) $cartItem->quantity);
-            if (! $product || $product->status !== 'published' || ! $this->hasSellableStock($product, $country, $quantity)) {
-                continue;
-            }
-
-            $fulfillmentInventory = $this->fulfillmentInventoryFor($product, $country, $quantity);
-            $quote = $this->pricing->quote($product, $country, 'cart', [
-                ...$shippingAddress,
-                'origin_country' => $fulfillmentInventory?->warehouse?->country_code,
-            ], $customer);
-            $quote['item_gross_cents'] *= $quantity;
-            $quote['item_net_cents'] *= $quantity;
-            $quote['item_tax_cents'] *= $quantity;
-            $quote['gross_cents'] = ($quote['item_gross_cents'] ?? 0) + ($quote['shipping_gross_cents'] ?? 0);
-            $quote['net_cents'] = ($quote['item_net_cents'] ?? 0) + ($quote['shipping_net_cents'] ?? 0);
-            $quote['tax_cents'] = ($quote['item_tax_cents'] ?? 0) + ($quote['shipping_tax_cents'] ?? 0);
-            $quote['fulfillment_inventory'] = $fulfillmentInventory ? [
-                'id' => $fulfillmentInventory->id,
-                'commerce_warehouse_id' => $fulfillmentInventory->commerce_warehouse_id,
-                'country_code' => $fulfillmentInventory->country_code,
-            ] : null;
-            $currency = $quote['currency'] ?? $currency;
-            $taxRate = max($taxRate, (float) ($quote['tax_rate'] ?? 0));
-
-            $itemGross += (int) $quote['item_gross_cents'];
-            $shipping += (int) ($quote['shipping_gross_cents'] ?? 0);
-            $net += (int) ($quote['net_cents'] ?? 0);
-            $tax += (int) ($quote['tax_cents'] ?? 0);
-            $commission += $this->pricing->commissionCents($product, (int) $quote['item_gross_cents']);
-            $items[] = ['cart_item' => $cartItem, 'product' => $product, 'quantity' => $quantity, 'quote' => $quote];
-        }
-
-        return [
-            'items' => $items,
-            'currency' => $currency,
-            'tax_country' => $country,
-            'tax_rate_percent' => $taxRate,
-            'item_gross_cents' => $itemGross,
-            'shipping_cents' => $shipping,
-            'shipping_gross_cents' => $shipping,
-            'net_cents' => $net,
-            'tax_cents' => $tax,
-            'amount_cents' => $itemGross + $shipping,
-            'gross_cents' => $itemGross + $shipping,
-            'commission_cents' => $commission,
-        ];
-    }
-
-    private function hasSellableStock(MarketplaceProduct $product, ?string $country = null, int $quantity = 1): bool
-    {
-        if (in_array($product->offer_type, ['online_course', 'training_plan', 'service'], true) || $product->product_type === 'digital') {
-            return true;
-        }
-
-        if (! $product->isAvailableForCountry($country)) {
-            return false;
-        }
-
-        if (! (bool) $product->manages_stock) {
-            return true;
-        }
-
-        return $product->sellableStockForCountry($country) >= max(1, $quantity);
-    }
-
-    private function fulfillmentInventoryFor(MarketplaceProduct $product, ?string $country, int $quantity): ?MarketplaceProductInventory
-    {
-        if (! (bool) $product->manages_stock || $product->isDigitalDelivery()) {
-            return null;
-        }
-
-        return $product->inventories()
-            ->with('warehouse:id,name,country_code,city,postal_code')
-            ->availableForCountry(strtoupper((string) ($country ?: 'DE')))
-            ->orderBy('lead_time_days')
-            ->orderBy('id')
-            ->get()
-            ->first(fn (MarketplaceProductInventory $inventory) => $inventory->availableQuantity() >= max(1, $quantity));
+        return $this->cartService->resourceFor(
+            $request->user(),
+            $this->shippingAddressForAuthenticatedUser($request, []),
+        );
     }
 
     private function marketplaceVisuals(): array
@@ -4938,22 +3907,6 @@ XML);
         ];
 
         return $visuals;
-    }
-
-    private function itemStillReturnable(CommerceOrderItem $item): bool
-    {
-        $item->loadMissing(['order', 'orderable']);
-        $product = $item->orderable instanceof MarketplaceProduct ? $item->orderable : null;
-        $policy = $product?->return_policy_type ?: 'standard';
-        $window = (int) ($product?->return_window_days ?? 14);
-
-        if (in_array($policy, ['digital', 'service', 'hygiene'], true) || $window <= 0) {
-            return false;
-        }
-
-        $completedAt = $item->order?->delivered_at ?: $item->order?->completed_at ?: $item->order?->created_at;
-
-        return $completedAt ? $completedAt->copy()->addDays($window)->endOfDay()->isFuture() : true;
     }
 
     private function looksLikeEuVatId(?string $vatId): bool
@@ -4984,3 +3937,4 @@ XML);
             ->all();
     }
 }
+

@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue'
 import ConfirmActionModal from '@/Components/ConfirmActionModal.vue'
@@ -261,3 +261,4 @@ const logout = () => {
         />
     </main>
 </template>
+

@@ -213,12 +213,12 @@ class UploadController extends Controller
 
         foreach ($dispositionParts as $part) {
             if (in_array($part, self::DISALLOWED_FILE_EXTENSIONS, true)) {
-                throw ValidationException::withMessages(['file' => 'Dieser Dateityp ist aus Sicherheitsgruenden nicht erlaubt.']);
+                throw ValidationException::withMessages(['file' => 'Dieser Dateityp ist aus SicherheitsGründen nicht erlaubt.']);
             }
         }
 
         if ($extension !== '' && in_array($extension, self::DISALLOWED_FILE_EXTENSIONS, true)) {
-            throw ValidationException::withMessages(['file' => 'Dieser Dateityp ist aus Sicherheitsgruenden nicht erlaubt.']);
+            throw ValidationException::withMessages(['file' => 'Dieser Dateityp ist aus SicherheitsGründen nicht erlaubt.']);
         }
 
         $mimes = array_filter([
@@ -228,7 +228,7 @@ class UploadController extends Controller
 
         foreach ($mimes as $mime) {
             if (in_array($mime, self::DISALLOWED_MIME_TYPES, true)) {
-                throw ValidationException::withMessages(['file' => 'Dieser Dateityp ist aus Sicherheitsgruenden nicht erlaubt.']);
+                throw ValidationException::withMessages(['file' => 'Dieser Dateityp ist aus SicherheitsGründen nicht erlaubt.']);
             }
         }
 

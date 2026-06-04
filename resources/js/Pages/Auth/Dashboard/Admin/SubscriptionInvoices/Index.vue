@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 
@@ -161,3 +161,4 @@ const markPaid = (invoice) => {
         </section>
     </div>
 </template>
+

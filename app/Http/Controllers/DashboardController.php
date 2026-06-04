@@ -209,6 +209,11 @@ class DashboardController extends Controller
         return response()->noContent();
     }
 
+    public function maturity()
+    {
+        return Inertia::render('Auth/Dashboard/Maturity/Index');
+    }
+
     private function visibleTrainingPlansQuery(User $user, Collection $teamIds): Builder
     {
         return TrainingPlan::query()

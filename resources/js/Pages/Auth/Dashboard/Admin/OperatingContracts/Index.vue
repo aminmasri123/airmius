@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
@@ -145,9 +145,9 @@ const deleteContract = async (contract) => {
     if (!contract.delete_url) return
 
     const confirmed = await confirmDialog({
-        title: 'Vertrag loeschen',
-        message: `Soll "${contract.name}" wirklich geloescht werden?`,
-        confirmLabel: 'Loeschen',
+        title: 'Vertrag löschen',
+        message: `Soll "${contract.name}" wirklich gelöscht werden?`,
+        confirmLabel: 'Löschen',
         danger: true,
     })
 
@@ -191,16 +191,16 @@ const optionLabel = (items, value, fallback = '-') => items.find((item) => item.
 </script>
 
 <template>
-    <Head title="Betriebskosten & Vertraege" />
+                    <Head title="Betriebskosten & Verträge" />
 
     <div class="space-y-6">
         <section class="overflow-hidden rounded-2xl border-l-4 border-l-air-blue border-border bg-card">
             <div class="grid gap-5 p-5 lg:grid-cols-[1fr_auto] lg:items-center lg:p-6">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-air-blue">Interne Kontrolle</p>
-                    <h1 class="mt-2 text-3xl font-black text-primary">Betriebskosten & Vertraege</h1>
+                    <h1 class="mt-2 text-3xl font-black text-primary">Betriebskosten & Verträge</h1>
                     <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
-                        WLAN, Handy, Leasing, Hosting, Software und Dienstleister mit Kosten, Fristen und naechsten Zahlungen im Blick.
+                        WLAN, Handy, Leasing, Hosting, Software und Dienstleister mit Kosten, Fristen und nächsten Zahlungen im Blick.
                     </p>
                 </div>
                 <button
@@ -217,7 +217,7 @@ const optionLabel = (items, value, fallback = '-') => items.find((item) => item.
 
         <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div class="rounded-2xl border border-border bg-card p-5">
-                <p class="text-xs font-bold uppercase tracking-wide text-secondary">Aktive Vertraege</p>
+                    <p class="text-xs font-bold uppercase tracking-wide text-secondary">Aktive Verträge</p>
                 <p class="mt-3 text-3xl font-black text-primary">{{ summary.active_count || 0 }}</p>
             </div>
             <div class="rounded-2xl border border-border bg-card p-5">
@@ -319,7 +319,7 @@ const optionLabel = (items, value, fallback = '-') => items.find((item) => item.
                                         <p class="text-xs" :class="deadlineClass(contract.days_until_next_due)">
                                             {{ deadlineLabel(contract.days_until_next_due) }}
                                         </p>
-                                        <p class="mt-2 font-bold text-primary">Kuendigung: {{ contract.notice_until_on || '-' }}</p>
+                                        <p class="mt-2 font-bold text-primary">Kündigung: {{ contract.notice_until_on || '-' }}</p>
                                         <p class="text-xs" :class="deadlineClass(contract.days_until_notice)">
                                             {{ deadlineLabel(contract.days_until_notice) }}
                                         </p>
@@ -365,7 +365,7 @@ const optionLabel = (items, value, fallback = '-') => items.find((item) => item.
                                                 class="rounded-lg bg-error px-3 py-2 text-xs font-bold text-white hover:bg-error/90"
                                                 @click="deleteContract(contract)"
                                             >
-                                                Loeschen
+                                                Löschen
                                             </button>
                                         </div>
                                     </td>
@@ -392,7 +392,7 @@ const optionLabel = (items, value, fallback = '-') => items.find((item) => item.
                                     <p class="text-xs text-secondary">{{ contract.billing_interval_label }}</p>
                                 </div>
                                 <div>
-                                    <p class="text-xs uppercase text-secondary">Naechste Zahlung</p>
+                                    <p class="text-xs uppercase text-secondary">Nächste Zahlung</p>
                                     <p class="mt-1 font-bold text-primary">{{ contract.next_due_on || '-' }}</p>
                                     <p class="text-xs" :class="deadlineClass(contract.days_until_next_due)">
                                         {{ deadlineLabel(contract.days_until_next_due) }}
@@ -401,13 +401,13 @@ const optionLabel = (items, value, fallback = '-') => items.find((item) => item.
                             </div>
                             <div class="mt-4 flex flex-wrap gap-2">
                                 <button v-if="contract.update_url" type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-bold text-primary" @click="openEditModal(contract)">Bearbeiten</button>
-                                <button v-if="contract.delete_url" type="button" class="rounded-lg bg-error px-3 py-2 text-xs font-bold text-white" @click="deleteContract(contract)">Loeschen</button>
+                                <button v-if="contract.delete_url" type="button" class="rounded-lg bg-error px-3 py-2 text-xs font-bold text-white" @click="deleteContract(contract)">Löschen</button>
                             </div>
                         </article>
                     </div>
 
                     <p v-if="!rows.length" class="px-5 py-10 text-center text-sm text-secondary">
-                        Noch keine passenden Vertraege vorhanden.
+                        Noch keine passenden Verträge vorhanden.
                     </p>
 
                     <div v-if="contracts.links?.length > 3" class="flex flex-wrap gap-2 border-t border-border px-5 py-4">
@@ -426,7 +426,7 @@ const optionLabel = (items, value, fallback = '-') => items.find((item) => item.
 
             <aside class="space-y-5">
                 <section class="rounded-2xl border border-border bg-card p-5">
-                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-air-blue">Naechste Termine</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-air-blue">Nächste Termine</p>
                     <div class="mt-4 space-y-3">
                         <article v-for="item in upcoming" :key="`${item.id}-${item.type}`" class="rounded-xl border border-border bg-inputBg p-3">
                             <div class="flex items-start justify-between gap-3">
@@ -479,13 +479,13 @@ const optionLabel = (items, value, fallback = '-') => items.find((item) => item.
                             <h2 class="mt-1 text-xl font-black text-primary sm:text-2xl">
                                 {{ editingContract ? 'Vertrag bearbeiten' : 'Vertrag anlegen' }}
                             </h2>
-                            <p class="mt-1 text-sm text-secondary">Kosten, Zahlungsrhythmus, Laufzeit und Kuendigungsfrist zentral erfassen.</p>
+                            <p class="mt-1 text-sm text-secondary">Kosten, Zahlungsrhythmus, Laufzeit und Kündigungsfrist zentral erfassen.</p>
                         </div>
                         <button
                             type="button"
                             class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border text-secondary hover:bg-muted hover:text-primary"
                             :disabled="form.processing"
-                            aria-label="Modal schliessen"
+                            aria-label="Modal schließen"
                             @click="closeModal"
                         >
                             <i class="las la-times text-xl"></i>
@@ -537,7 +537,7 @@ const optionLabel = (items, value, fallback = '-') => items.find((item) => item.
                                         <p v-if="form.errors.amount" class="mt-1 text-xs text-error">{{ form.errors.amount }}</p>
                                     </label>
                                     <label class="block">
-                                        <span class="text-sm font-semibold text-primary">Waehrung</span>
+                                        <span class="text-sm font-semibold text-primary">Währung</span>
                                         <input v-model="form.currency" class="mt-1 w-full rounded-xl border-border bg-card text-primary uppercase" maxlength="3" placeholder="EUR">
                                         <p v-if="form.errors.currency" class="mt-1 text-xs text-error">{{ form.errors.currency }}</p>
                                     </label>
@@ -570,17 +570,17 @@ const optionLabel = (items, value, fallback = '-') => items.find((item) => item.
                                         <p v-if="form.errors.ends_on" class="mt-1 text-xs text-error">{{ form.errors.ends_on }}</p>
                                     </label>
                                     <label class="block">
-                                        <span class="text-sm font-semibold text-primary">Naechste Zahlung</span>
+                                        <span class="text-sm font-semibold text-primary">Nächste Zahlung</span>
                                         <input v-model="form.next_due_on" class="mt-1 w-full rounded-xl border-border bg-card text-primary" type="date">
                                         <p v-if="form.errors.next_due_on" class="mt-1 text-xs text-error">{{ form.errors.next_due_on }}</p>
                                     </label>
                                     <label class="block">
-                                        <span class="text-sm font-semibold text-primary">Kuendigungsfrist Tage</span>
+                                        <span class="text-sm font-semibold text-primary">Kündigungsfrist Tage</span>
                                         <input v-model="form.cancellation_period_days" class="mt-1 w-full rounded-xl border-border bg-card text-primary" min="0" step="1" type="number">
                                         <p v-if="form.errors.cancellation_period_days" class="mt-1 text-xs text-error">{{ form.errors.cancellation_period_days }}</p>
                                     </label>
                                     <label class="block">
-                                        <span class="text-sm font-semibold text-primary">Kuendigen bis</span>
+                                        <span class="text-sm font-semibold text-primary">Kündigen bis</span>
                                         <input v-model="form.notice_until_on" class="mt-1 w-full rounded-xl border-border bg-card text-primary" type="date">
                                         <p v-if="form.errors.notice_until_on" class="mt-1 text-xs text-error">{{ form.errors.notice_until_on }}</p>
                                     </label>
@@ -646,11 +646,11 @@ const optionLabel = (items, value, fallback = '-') => items.find((item) => item.
                                         </div>
                                     </div>
                                     <div class="rounded-xl bg-card p-3">
-                                        <p class="text-xs uppercase text-secondary">Naechste Zahlung</p>
+                                        <p class="text-xs uppercase text-secondary">Nächste Zahlung</p>
                                         <p class="mt-1 font-bold text-primary">{{ form.next_due_on || '-' }}</p>
                                     </div>
                                     <div class="rounded-xl bg-card p-3">
-                                        <p class="text-xs uppercase text-secondary">Kuendigen bis</p>
+                                        <p class="text-xs uppercase text-secondary">Kündigen bis</p>
                                         <p class="mt-1 font-bold text-primary">{{ form.notice_until_on || 'Automatisch aus Ende minus Frist' }}</p>
                                     </div>
                                 </div>
@@ -676,3 +676,5 @@ const optionLabel = (items, value, fallback = '-') => items.find((item) => item.
         </Teleport>
     </div>
 </template>
+
+

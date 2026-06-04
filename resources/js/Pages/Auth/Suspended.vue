@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { Head, Link, router } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue'
@@ -78,3 +78,4 @@ const logout = () => router.post(route('logout'))
         </div>
     </main>
 </template>
+

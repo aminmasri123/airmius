@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { usePermissions } from '@/composables/usePermissions'
 import { Link, useForm } from '@inertiajs/vue3'
 import { nextTick, reactive } from 'vue'
@@ -248,3 +248,4 @@ defineExpose({ focusComment })
         </form>
     </div>
 </template>
+

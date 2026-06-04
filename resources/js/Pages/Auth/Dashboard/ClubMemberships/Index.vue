@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
 import Modal from '@/Components/Modal.vue'
@@ -83,6 +83,25 @@ const contributionRuleForm = useForm({
     factor_value: '',
     is_active: true,
     notes: '',
+})
+
+const fieldModeOptions = [
+    { value: 'off', label: 'Aus' },
+    { value: 'optional', label: 'Optional' },
+    { value: 'required', label: 'Pflicht' },
+]
+
+const createMembershipDocumentRow = () => ({
+    id: `doc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    type: 'privacy',
+    title: '',
+    url: '',
+    file: null,
+    file_id: null,
+    file_name: '',
+    description: '',
+    is_visible: true,
+    is_required: false,
 })
 
 const selectedClub = computed(() => props.clubs.find((club) => club.id === selectedClubId.value) || props.clubs[0] || null)
@@ -239,9 +258,47 @@ const intervalLabel = (interval) => ({
     none: 'Kein Beitrag',
     monthly: 'Monatlich',
     quarterly: 'Quartal',
+    four_monthly: 'Alle 4 Monate',
+    semi_yearly: 'Halbjährlich',
     yearly: 'Jährlich',
     once: 'Einmalig',
 }[interval] || interval)
+
+const paymentMethodLabel = (method) => selectedClub.value?.membership_payment_method_options?.find((option) => option.value === method)?.label || method
+
+const requestDataLabel = (key) => {
+    const field = selectedClub.value?.membership_application_fields?.find((candidate) => candidate.key === key)
+
+    return field?.label || key
+}
+
+const requestDataValue = (key, value) => {
+    const field = selectedClub.value?.membership_application_fields?.find((candidate) => candidate.key === key)
+
+    if ((field?.type || '') === 'checkbox') return value ? 'Ja' : 'Nein'
+    if (field?.options) return field.options.find((option) => option.value === value)?.label || value
+
+    return value
+}
+
+const documentTypeLabel = (type) => selectedClub.value?.membership_application_document_types?.find((option) => option.value === type)?.label || type
+
+const membershipFieldSections = computed(() => {
+    const sections = []
+
+    ;(selectedClub.value?.membership_application_fields || []).forEach((field) => {
+        let section = sections.find((candidate) => candidate.name === field.section)
+
+        if (!section) {
+            section = { name: field.section, fields: [] }
+            sections.push(section)
+        }
+
+        section.fields.push(field)
+    })
+
+    return sections
+})
 
 const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
     style: 'currency',
@@ -265,6 +322,7 @@ const formFor = (member) => {
         athlete_license_number: member.athlete_license_number || '',
         contribution_amount: member.pivot.contribution_amount || '',
         contribution_interval: member.pivot.contribution_interval || 'none',
+        payment_method: member.pivot.payment_method || '',
         contribution_next_invoice_on: member.pivot.contribution_next_invoice_on || '',
         sepa_iban: member.pivot.sepa_iban || '',
         sepa_bic: member.pivot.sepa_bic || '',
@@ -330,15 +388,40 @@ const membershipSettingsFor = (club) => {
     membershipSettingsForms.value[club.id] ??= {
         membership_requests_enabled: Boolean(club.membership_requests_enabled),
         member_pause_requests_enabled: Boolean(club.member_pause_requests_enabled),
+        membership_application_fields: Object.fromEntries((club.membership_application_fields || []).map((field) => [field.key, field.mode || 'off'])),
+        membership_payment_methods: [...(club.membership_payment_methods || [])],
+        membership_application_documents: (club.membership_application_documents || []).map((document) => ({ ...document, file: null })),
     }
 
     return membershipSettingsForms.value[club.id]
 }
 
+const addMembershipDocument = () => {
+    membershipSettingsFor(selectedClub.value).membership_application_documents.push(createMembershipDocumentRow())
+}
+
+const removeMembershipDocument = (index) => {
+    membershipSettingsFor(selectedClub.value).membership_application_documents.splice(index, 1)
+}
+
 const saveMembershipSettings = () => {
-    router.put(route('auth.club-memberships.settings.update', selectedClub.value.id), membershipSettingsFor(selectedClub.value), {
+    router.post(route('auth.club-memberships.settings.update', selectedClub.value.id), {
+        ...membershipSettingsFor(selectedClub.value),
+        _method: 'put',
+    }, {
+        forceFormData: true,
         preserveScroll: true,
     })
+}
+
+const attachMembershipDocumentFile = (document, event) => {
+    const file = event.target.files?.[0] || null
+
+    document.file = file
+
+    if (file && !document.title) {
+        document.title = file.name
+    }
 }
 
 const datevExportUrl = computed(() => {
@@ -709,7 +792,7 @@ const inviteExternalMember = (member) => {
 
                 <form class="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_1fr_1fr_auto]" @submit.prevent="saveSepaSettings">
                     <div>
-                        <label class="text-xs font-semibold uppercase text-secondary">Glaeubiger-ID</label>
+                        <label class="text-xs font-semibold uppercase text-secondary">Gläubiger-ID</label>
                         <input v-model="sepaSettingsFor(selectedClub).sepa_creditor_id" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary" placeholder="DE98ZZZ09999999999">
                     </div>
                     <div>
@@ -800,6 +883,35 @@ const inviteExternalMember = (member) => {
                                     Pause: {{ formatDate(request.requested_pause_from) }} bis {{ formatDate(request.requested_pause_until) }}
                                 </p>
                                 <p v-if="request.message" class="mt-2 text-sm text-secondary">{{ request.message }}</p>
+                                <div v-if="request.application_data && Object.keys(request.application_data).length" class="mt-3 grid gap-2 rounded-lg border border-border bg-bg p-3 text-xs text-secondary md:grid-cols-2">
+                                    <p v-for="(value, key) in request.application_data" :key="key">
+                                        <span class="font-semibold text-primary">{{ requestDataLabel(key) }}:</span>
+                                        {{ requestDataValue(key, value) }}
+                                    </p>
+                                </div>
+                                <div v-if="request.accepted_documents?.length" class="mt-3 rounded-lg border border-border bg-bg p-3 text-xs text-secondary">
+                                    <p class="font-semibold text-primary">Bestätigte Dokumente</p>
+                                    <div class="mt-2 flex flex-wrap gap-2">
+                                        <a
+                                            v-for="document in request.accepted_documents"
+                                            :key="document.id"
+                                            :href="document.url || '#'"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            class="rounded-full bg-muted px-2 py-1 text-secondary hover:text-primary"
+                                        >
+                                            {{ document.title }}
+                                        </a>
+                                    </div>
+                                </div>
+                                <div v-if="request.preferred_payment_method || request.requested_billing_interval" class="mt-2 flex flex-wrap gap-2 text-xs">
+                                    <span v-if="request.preferred_payment_method" class="rounded-full bg-muted px-2 py-1 text-secondary">
+                                        Zahlmethode: {{ paymentMethodLabel(request.preferred_payment_method) }}
+                                    </span>
+                                    <span v-if="request.requested_billing_interval" class="rounded-full bg-muted px-2 py-1 text-secondary">
+                                        Intervall: {{ intervalLabel(request.requested_billing_interval) }}
+                                    </span>
+                                </div>
                             </div>
 
                             <div class="flex gap-2">
@@ -868,7 +980,121 @@ const inviteExternalMember = (member) => {
                                     <span class="block text-secondary">Mitglieder können eine Pause beantragen; der Verein entscheidet.</span>
                                 </span>
                             </label>
-                            <div class="flex items-end">
+                            <div class="rounded-lg border border-border bg-bg p-3 md:col-span-3">
+                                <p class="text-sm font-semibold text-primary">Erlaubte Zahlmethoden</p>
+                                <div class="mt-3 flex flex-wrap gap-3">
+                                    <label
+                                        v-for="method in selectedClub.membership_payment_method_options"
+                                        :key="method.value"
+                                        class="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary"
+                                    >
+                                        <input v-model="membershipSettingsFor(selectedClub).membership_payment_methods" :value="method.value" type="checkbox" class="rounded border-border bg-inputBg">
+                                        {{ method.label }}
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="rounded-lg border border-border bg-bg p-3 md:col-span-3">
+                                <p class="text-sm font-semibold text-primary">Mitgliedsantrag-Felder</p>
+                                <div class="mt-4 space-y-4">
+                                    <section v-for="section in membershipFieldSections" :key="section.name">
+                                        <h3 class="text-xs font-semibold uppercase tracking-wide text-secondary">{{ section.name }}</h3>
+                                        <div class="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                                            <label v-for="field in section.fields" :key="field.key" class="rounded-lg border border-border bg-card p-3 text-sm">
+                                                <span class="font-semibold text-primary">{{ field.label }}</span>
+                                                <select v-model="membershipSettingsFor(selectedClub).membership_application_fields[field.key]" class="mt-2 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                                                    <option v-for="mode in fieldModeOptions" :key="mode.value" :value="mode.value">{{ mode.label }}</option>
+                                                </select>
+                                            </label>
+                                        </div>
+                                    </section>
+                                </div>
+                            </div>
+                            <div class="rounded-lg border border-border bg-bg p-3 md:col-span-3">
+                                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <p class="text-sm font-semibold text-primary">Dokumente & Bestätigungen</p>
+                                        <p class="mt-1 text-xs text-secondary">Verknüpfe Datenschutz, Satzung, Regeln oder Beitragsordnung. Pflichtdokumente müssen Interessenten vor dem Absenden bestätigen.</p>
+                                    </div>
+                                    <button type="button" class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary hover:bg-inputBg" @click="addMembershipDocument">
+                                        Dokument hinzufügen
+                                    </button>
+                                </div>
+                                <div class="mt-4 space-y-3">
+                                    <article
+                                        v-for="(document, index) in membershipSettingsFor(selectedClub).membership_application_documents"
+                                        :key="document.id || index"
+                                        class="rounded-lg border border-border bg-card p-3"
+                                    >
+                                        <div class="grid gap-3 md:grid-cols-2">
+                                            <label class="block text-sm">
+                                                <span class="font-semibold text-primary">Typ</span>
+                                                <select v-model="document.type" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary">
+                                                    <option v-for="type in selectedClub.membership_application_document_types" :key="type.value" :value="type.value">{{ type.label }}</option>
+                                                </select>
+                                            </label>
+                                            <label class="block text-sm">
+                                                <span class="font-semibold text-primary">Titel</span>
+                                                <input v-model="document.title" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="z. B. Datenschutzinformation">
+                                            </label>
+                                            <label class="block text-sm md:col-span-2">
+                                                <span class="font-semibold text-primary">Link zur Datei oder Seite</span>
+                                                <input v-model="document.url" type="url" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="https://...">
+                                            </label>
+                                            <label class="block text-sm md:col-span-2">
+                                                <span class="font-semibold text-primary">Oder Datei hochladen</span>
+                                                <input
+                                                    type="file"
+                                                    class="mt-1 block w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                                                    @change="attachMembershipDocumentFile(document, $event)"
+                                                >
+                                                <span v-if="document.file" class="mt-1 block text-xs text-air-blue">
+                                                    Neue Datei: {{ document.file.name }}
+                                                </span>
+                                                <a
+                                                    v-else-if="document.file_id"
+                                                    :href="document.url || '#'"
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    class="mt-1 inline-flex text-xs font-semibold text-air-blue hover:underline"
+                                                >
+                                                    Gespeicherte Datei öffnen: {{ document.file_name || document.title }}
+                                                </a>
+                                                <span class="mt-1 block text-xs text-secondary">
+                                                    Hochgeladene Dateien landen im Vereins-Dateimanager im Ordner „Mitgliedsantrag“.
+                                                </span>
+                                            </label>
+                                            <label class="block text-sm md:col-span-2">
+                                                <span class="font-semibold text-primary">Hinweistext</span>
+                                                <textarea v-model="document.description" rows="2" class="mt-1 w-full rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Optionaler Hinweis für Interessenten"></textarea>
+                                            </label>
+                                            <label class="flex items-start gap-2 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
+                                                <input v-model="document.is_visible" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                                                <span>
+                                                    <span class="block font-semibold">Im Antrag anzeigen</span>
+                                                    <span class="block text-xs text-secondary">User sehen dieses Dokument vor dem Absenden.</span>
+                                                </span>
+                                            </label>
+                                            <label class="flex items-start gap-2 rounded-lg border border-border bg-bg p-3 text-sm text-primary">
+                                                <input v-model="document.is_required" type="checkbox" class="mt-1 rounded border-border bg-inputBg">
+                                                <span>
+                                                    <span class="block font-semibold">Bestätigung erforderlich</span>
+                                                    <span class="block text-xs text-secondary">Ohne Häkchen kann der Antrag nicht gesendet werden.</span>
+                                                </span>
+                                            </label>
+                                        </div>
+                                        <div class="mt-3 flex items-center justify-between gap-3">
+                                            <span class="text-xs text-secondary">{{ documentTypeLabel(document.type) }}</span>
+                                            <button type="button" class="rounded-lg border border-error/40 px-3 py-1.5 text-xs font-semibold text-error hover:bg-error/10" @click="removeMembershipDocument(index)">
+                                                Entfernen
+                                            </button>
+                                        </div>
+                                    </article>
+                                    <p v-if="!membershipSettingsFor(selectedClub).membership_application_documents.length" class="rounded-lg border border-dashed border-border p-4 text-sm text-secondary">
+                                        Noch keine Dokumente verknüpft.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex items-end md:col-span-3">
                                 <button class="w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary">Speichern</button>
                             </div>
                         </form>
@@ -999,7 +1225,7 @@ const inviteExternalMember = (member) => {
                                 </div>
                                 <p class="mt-1 text-sm text-secondary">{{ member.email }}</p>
                                 <p class="mt-2 text-xs text-secondary">
-                                    Nr. {{ formFor(member).member_number || '-' }} · Beitrag {{ formatMoney(formFor(member).contribution_amount) }} · {{ intervalLabel(formFor(member).contribution_interval) }}
+                                    Nr. {{ formFor(member).member_number || '-' }} · Beitrag {{ formatMoney(formFor(member).contribution_amount) }} · {{ intervalLabel(formFor(member).contribution_interval) }} · {{ paymentMethodLabel(formFor(member).payment_method) || 'Zahlmethode offen' }}
                                 </p>
                                 <p class="mt-1 text-xs text-secondary">
                                     Lizenznummer: {{ formFor(member).athlete_license_number || '-' }} - Ende {{ formatDate(formFor(member).membership_ends_on) }}
@@ -1089,6 +1315,14 @@ const inviteExternalMember = (member) => {
                                 <label class="text-xs font-semibold uppercase text-secondary">Intervall</label>
                                 <select v-model="formFor(member).contribution_interval" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
                                     <option v-for="interval in contributionIntervals" :key="interval" :value="interval">{{ intervalLabel(interval) }}</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-semibold uppercase text-secondary">Zahlmethode</label>
+                                <select v-model="formFor(member).payment_method" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                    <option value="">Offen</option>
+                                    <option v-for="method in selectedClub.membership_payment_method_options" :key="method.value" :value="method.value">{{ method.label }}</option>
                                 </select>
                             </div>
 
@@ -1629,7 +1863,7 @@ const inviteExternalMember = (member) => {
                     </div>
 
                     <p class="rounded-lg border border-border bg-bg p-3 text-xs text-secondary">
-                        Sichere Treffer mit Rechnungsnummer und Betrag werden automatisch als bezahlt markiert. Vorschlaege kannst du danach bestätigen.
+                        Sichere Treffer mit Rechnungsnummer und Betrag werden automatisch als bezahlt markiert. Vorschläge kannst du danach bestätigen.
                     </p>
 
                     <div class="flex justify-end gap-2">

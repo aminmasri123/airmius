@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { useForm, Link, router, usePage } from '@inertiajs/vue3'
 import Subnav from '@/Components/Guest/Subnav.vue'
 import Footer from '@/Components/Guest/Footer.vue'

@@ -381,6 +381,30 @@ class FeedTest extends TestCase
             );
     }
 
+    public function test_feed_sidebar_lists_clubs_reached_through_team_membership(): void
+    {
+        $user = User::factory()->create();
+        $club = Club::factory()->create([
+            'owner_id' => User::factory(),
+            'is_listed' => false,
+            'teams_are_listed' => false,
+            'members_can_post_to_club' => false,
+            'members_can_post_to_teams' => true,
+            'name' => 'Economos',
+        ]);
+        $team = Team::factory()->create(['club_id' => $club->id]);
+        $team->users()->syncWithoutDetaching([$user->id => ['role' => 'player']]);
+
+        $this->actingAs($user)
+            ->get(route('auth.feed.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/Dashboard/Feed/Index')
+                ->where('clubs.0.name', 'Economos')
+                ->where('clubs.0.can_publish_as', false)
+            );
+    }
+
     public function test_prune_expired_stories_command_removes_expired_media_and_keeps_active_stories(): void
     {
         config(['filesystems.uploads_disk' => 'public']);

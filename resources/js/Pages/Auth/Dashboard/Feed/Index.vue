@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import FeedComments from '@/Components/Auth/Feed/FeedComments.vue'
 import FeedComposer from '@/Components/Auth/Feed/FeedComposer.vue'

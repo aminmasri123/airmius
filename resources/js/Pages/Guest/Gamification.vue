@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { Link } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import Nav from '@/Components/Guest/Nav.vue'
@@ -112,7 +112,7 @@ const lifecycle = [
 const penalties = [
     ['No-Show', '-5 XP', 'Unentschuldigtes Fernbleiben trotz Anmeldung.'],
     ['Falsche Bestätigung', '-50 XP', 'Manipulierte oder unwahre Bestätigung.'],
-    ['Spam oder Missbrauch', '-30 XP', 'Minderwertige Wiederholung oder missbraeuchliches Verhalten.'],
+    ['Spam oder Missbrauch', '-30 XP', 'Minderwertige Wiederholung oder missbräuchliches Verhalten.'],
     ['Abgelehnte Empfehlung', '-5 XP', 'Qualitätssicherung bei Profil-Empfehlungen.'],
     ['Übermäßige Nutzung', '-5 XP', 'XP kann bei exzessiver Nutzung reduziert oder pausiert werden.'],
 ]
@@ -539,4 +539,5 @@ const badges = [
         <Footer />
     </div>
 </template>
+
 

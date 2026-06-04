@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import { computed } from 'vue'
@@ -139,3 +139,5 @@ const documentItem = () => {
         </section>
     </div>
 </template>
+
+

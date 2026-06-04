@@ -1,4 +1,4 @@
-import './bootstrap';
+﻿import './bootstrap';
 import '../css/app.css';
 
 import { createApp, h, watch } from 'vue';
@@ -108,7 +108,7 @@ const translateAutoText = (i18n, locale, text) => {
         return autoTranslation;
     }
 
-    const trailingPunctuation = source.match(/([.!?؟])$/)?.[1];
+    const trailingPunctuation = source.match(/([.!?])$/)?.[1];
     if (trailingPunctuation) {
         const withoutTrailingPunctuation = source.slice(0, -trailingPunctuation.length).trim();
         const normalizedTranslation = dictionary[withoutTrailingPunctuation];
@@ -118,7 +118,7 @@ const translateAutoText = (i18n, locale, text) => {
         }
     }
 
-    const leadingPunctuation = source.match(/^([.!?؟])/)?.[1];
+    const leadingPunctuation = source.match(/^([.!?])/)?.[1];
     if (leadingPunctuation) {
         const withoutLeadingPunctuation = source.slice(leadingPunctuation.length).trim();
         const normalizedTranslation = dictionary[withoutLeadingPunctuation];
@@ -335,3 +335,4 @@ createInertiaApp({
         color: 'var(--progress)',
     },
 });
+

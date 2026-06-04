@@ -1,4 +1,4 @@
-<!-- Components/Layouts/AppLayout.vue -->
+﻿<!-- Components/Layouts/AppLayout.vue -->
 <script setup>
 import Sidebar from '@/Components/Auth/Sidebar.vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
@@ -56,7 +56,7 @@ const componentTitles = {
     'Auth/Dashboard/Admin/Settings/Index': 'Systemeinstellungen',
     'Auth/Dashboard/Admin/Payments/Index': 'Zahlungen',
     'Auth/Dashboard/Admin/Invoices/Index': 'Rechnungen',
-    'Auth/Dashboard/Admin/OperatingContracts/Index': 'Betriebskosten & Vertraege',
+    'Auth/Dashboard/Admin/OperatingContracts/Index': 'Betriebskosten & Verträge',
     'Auth/Dashboard/Admin/Commerce/Index': 'Admin Commerce',
     'Auth/Dashboard/Admin/OutfitSubscriptions/Index': 'Admin Outfit-Abos',
     'Auth/Dashboard/Admin/Moderation/Index': 'Moderation',
@@ -153,6 +153,8 @@ const iconFor = (type) => ({
     'club.member_removed': 'las la-user-times',
     'club.member_left': 'las la-door-open',
     'team.member_left': 'las la-door-open',
+    'club.membership_request_created': 'las la-user-plus',
+    'club.membership_request_withdrawn': 'las la-user-minus',
     'club.member_removal_objection': 'las la-exclamation-circle',
     'guardian.consent_requested': 'las la-user-shield',
     'profile.recommendation_received': 'las la-star',
@@ -910,3 +912,4 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
     transform: translateY(12px);
 }
 </style>
+

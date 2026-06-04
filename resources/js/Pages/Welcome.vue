@@ -264,7 +264,7 @@ const sportChips = [
     ['swimming', '🏊', 'guest.welcome.sports.items.swimming'],
     ['gymnastics', '🤸', 'guest.welcome.sports.items.gymnastics'],
     ['cycling', '🚴', 'guest.welcome.sports.items.cycling'],
-    ['martial', '🥊', 'guest.welcome.sports.items.martial'],
+    ['martial', '🥋', 'guest.welcome.sports.items.martial'],
     ['more', '+', 'guest.welcome.sports.items.more'],
 ]
 
@@ -617,7 +617,7 @@ const onBannerSecondaryCtaClick = () => {
                 </div>
             </div>
         </section>
-        <!-- PROBLEM → LÖSUNG -->
+        <!-- PROBLEM LÖSUNG -->
         <section class="py-16 sm:py-24 px-4 border-t border-white/5 min-h-screen sm:h-dvh flex items-center">
             <div class="max-w-6xl mx-auto">
                 <div class="text-center mb-14">
@@ -778,7 +778,7 @@ const onBannerSecondaryCtaClick = () => {
             </div>
         </section>
 
-        <!-- ?BER UNS -->
+        <!-- ÜBER UNS -->
         <section id="ueber" class="py-16 sm:py-24 px-4 border-t border-white/5"
             style="background: radial-gradient(ellipse 50% 40% at 20% 50%, rgba(0,200,83,.06) 0%, transparent 50%);">
             <div class="max-w-5xl mx-auto">
@@ -1078,6 +1078,14 @@ details summary {
     }
 }
 </style>
+
+
+
+
+
+
+
+
 
 
 

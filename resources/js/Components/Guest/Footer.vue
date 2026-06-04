@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { Link, router } from '@inertiajs/vue3'
 import ApplicationLogo from '@/Components/ApplicationLogo.vue'
 
@@ -51,7 +51,7 @@ const safeRoute = (name, fallback, params) => {
                         <button @click="scrollTo('funktionen')" class="flex min-h-10 items-center rounded-xl bg-card px-3 text-left transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.features') }}</button>
                         <button @click="scrollTo('vorteile')" class="flex min-h-10 items-center rounded-xl bg-card px-3 text-left transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.benefits') }}</button>
                         <button @click="scrollTo('sportarten')" class="flex min-h-10 items-center rounded-xl bg-card px-3 text-left transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.sports') }}</button>
-                        <Link :href="safeRoute('guest.werbeagentur', '/werbeagentur-fuer-vereine')" class="flex min-h-10 items-center rounded-xl bg-card px-3 transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.footer.agency_for_clubs') }}</Link>
+                        <Link :href="safeRoute('guest.werbeagentur', '/werbeagentur-für-vereine')" class="flex min-h-10 items-center rounded-xl bg-card px-3 transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.footer.agency_for_clubs') }}</Link>
                         <Link :href="safeRoute('guest.marketplace', '/marketplace')" class="col-span-2 flex min-h-10 items-center rounded-xl bg-card px-3 transition hover:text-primary sm:col-span-1 sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.shop') }}</Link>
                     </div>
                 </div>
@@ -62,7 +62,7 @@ const safeRoute = (name, fallback, params) => {
                         {{ $t('guest.footer.company') }}
                     </h4>
                     <div class="grid grid-cols-2 gap-2 text-sm text-secondary sm:grid-cols-1 sm:gap-1">
-                        <button @click="scrollTo('ueber')" class="flex min-h-10 items-center rounded-xl bg-card px-3 text-left transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.about') }}</button>
+                        <button @click="scrollTo('über')" class="flex min-h-10 items-center rounded-xl bg-card px-3 text-left transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.about') }}</button>
                         <Link :href="safeRoute('guest.blog.index', '/blog')" class="flex min-h-10 items-center rounded-xl bg-card px-3 transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.blog') }}</Link>
                         <Link :href="safeRoute('guest.sponsors', '/sponsoren')" class="flex min-h-10 items-center rounded-xl bg-card px-3 transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.footer.sponsors') }}</Link>
                         <button @click="scrollTo('kontakt')" class="flex min-h-10 items-center rounded-xl bg-card px-3 text-left transition hover:text-primary sm:min-h-9 sm:rounded-none sm:bg-transparent sm:px-0">{{ $t('guest.nav.contact') }}</button>
@@ -96,3 +96,4 @@ const safeRoute = (name, fallback, params) => {
         </div>
     </footer>
 </template>
+

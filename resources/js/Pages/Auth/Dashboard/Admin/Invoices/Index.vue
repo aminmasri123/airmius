@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
@@ -133,7 +133,7 @@ const recipientLabel = (invoice) => {
     if (invoice.club?.name && invoice.user?.name) return `${invoice.user.name} / ${invoice.club.name}`
     if (invoice.user?.name) return invoice.user.name
     if (invoice.club?.name) return invoice.club.name
-    return 'Ohne Empfaenger'
+    return 'Ohne Empfänger'
 }
 
 const statusLabel = (status) => ({
@@ -194,7 +194,7 @@ const deleteInvoice = async (invoice) => {
                         <p class="text-xs font-semibold uppercase tracking-[0.18em] text-air-blue">Finanzen</p>
                         <h1 class="mt-2 text-3xl font-black text-primary">Rechnungszentrale</h1>
                         <p class="mt-2 max-w-3xl text-sm leading-6 text-secondary">
-                        Erstelle und prüfe Rechnungen für Konto-Abos, Outfit-Abos, Marketplace-Kaeufe, Kurse,
+                        Erstelle und prüfe Rechnungen für Konto-Abos, Outfit-Abos, Marketplace-Käufe, Kurse,
                         ADS, Sponsoring und Werbeagentur-Leistungen wie Website, Logo oder Branding.
                     </p>
                 </div>
@@ -254,7 +254,7 @@ const deleteInvoice = async (invoice) => {
                     <thead class="bg-bg text-xs uppercase tracking-[0.12em] text-secondary">
                         <tr>
                             <th class="px-5 py-3">Rechnung</th>
-                            <th class="px-5 py-3">Empfaenger</th>
+                            <th class="px-5 py-3">Empfänger</th>
                             <th class="px-5 py-3">Grund</th>
                             <th class="px-5 py-3">Betrag</th>
                             <th class="px-5 py-3">Bezahlt</th>
@@ -330,7 +330,7 @@ const deleteInvoice = async (invoice) => {
                     </div>
                     <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
                         <div>
-                            <p class="text-xs uppercase text-secondary">Empfaenger</p>
+                            <p class="text-xs uppercase text-secondary">Empfänger</p>
                             <p class="mt-1 font-bold text-primary">{{ recipientLabel(invoice) }}</p>
                         </div>
                         <div>
@@ -455,7 +455,7 @@ const deleteInvoice = async (invoice) => {
                             <p class="text-xs font-semibold uppercase tracking-[0.16em] text-air-blue">Neue Rechnung</p>
                             <h2 class="mt-1 text-xl font-black text-primary sm:text-2xl">Rechnung erstellen</h2>
                             <p class="mt-1 text-sm text-secondary">
-                                Grund, Empfaenger und Leistungsdetails erfassen. Danach wird die Person automatisch informiert.
+                                Grund, Empfänger und Leistungsdetails erfassen. Danach wird die Person automatisch informiert.
                             </p>
                         </div>
                         <button
@@ -493,7 +493,7 @@ const deleteInvoice = async (invoice) => {
                                 <section class="rounded-2xl border border-border bg-inputBg p-4">
                                     <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                                         <div>
-                                            <p class="text-sm font-bold text-primary">Empfaenger</p>
+                                            <p class="text-sm font-bold text-primary">Empfänger</p>
                                             <p class="mt-1 text-xs text-secondary">Sportler, Trainer, Sponsor, Kursanbieter oder Verein.</p>
                                         </div>
                                         <div class="grid grid-cols-2 overflow-hidden rounded-xl border border-border bg-card p-1">
@@ -587,7 +587,7 @@ const deleteInvoice = async (invoice) => {
                                         <p class="mt-1 font-bold text-primary">{{ selectedType?.label || '-' }}</p>
                                     </div>
                                     <div class="rounded-xl bg-card p-3">
-                                        <p class="text-xs uppercase text-secondary">Empfaenger</p>
+                                        <p class="text-xs uppercase text-secondary">Empfänger</p>
                                         <p class="mt-1 font-bold text-primary">{{ selectedRecipientLabel }}</p>
                                     </div>
                                     <div class="grid grid-cols-2 gap-3">
@@ -623,3 +623,4 @@ const deleteInvoice = async (invoice) => {
         </Teleport>
     </div>
 </template>
+

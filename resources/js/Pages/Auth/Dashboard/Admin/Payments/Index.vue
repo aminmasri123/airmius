@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { confirmDialog } from '@/services/dialogService'
@@ -299,3 +299,4 @@ const methodLabel = (method) => ({
         </section>
     </div>
 </template>
+

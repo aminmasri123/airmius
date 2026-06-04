@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { Head, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 
@@ -29,7 +29,7 @@ const form = useForm({
 })
 
 const suspensionOptions = [
-    { value: '', label: 'Nicht ?ndern' },
+    { value: '', label: 'Nicht ändern' },
     { value: 'lift', label: 'Sperre aufheben' },
     { value: '1', label: '1 Tag sperren' },
     { value: '3', label: '3 Tage sperren' },
@@ -190,7 +190,7 @@ const submit = () => {
                     <div v-if="canManageRoles" class="space-y-3 border-t border-border pt-4">
                         <div>
                             <h2 class="text-sm font-semibold text-primary">Rollen</h2>
-                            <p class="text-xs text-secondary">Nur Administratoren können Rollen ?ndern.</p>
+                            <p class="text-xs text-secondary">Nur Administratoren können Rollen ändern.</p>
                         </div>
 
                         <div class="grid gap-2 sm:grid-cols-2">
@@ -235,3 +235,9 @@ const submit = () => {
         </div>
     </AppLayout>
 </template>
+
+
+
+
+
+

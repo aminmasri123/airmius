@@ -1,0 +1,20 @@
+{
+  "version": "2026-06-03",
+  "supported_locales": ["de", "en", "fr", "ar"],
+  "rtl_locales": ["ar"],
+  "quality_gates": {
+    "hardcoded_text_total_candidates": 3779
+  },
+  "vue": {
+    "visible_text_candidates": 2337,
+    "attribute_text_candidates": 1066
+  },
+  "php": {
+    "response_string_candidates": 376
+  },
+  "policy": {
+    "mode": "no_regression",
+    "command": "php artisan airmius:i18n-audit --json --fail-on-regression",
+    "note": "Lower these numbers as hardcoded text is moved into translation keys. New work should not raise them."
+  }
+}

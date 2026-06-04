@@ -1,4 +1,4 @@
-import { router, usePage } from '@inertiajs/vue3'
+﻿import { router, usePage } from '@inertiajs/vue3'
 import { useI18n } from 'vue-i18n'
 import { watch } from 'vue'
 
@@ -14,7 +14,7 @@ export function useLanguage() {
         { code: 'de', label: 'Deutsch', native: 'Deutsch' },
         { code: 'en', label: 'English', native: 'English' },
         { code: 'fr', label: 'French', native: 'Français' },
-        { code: 'ar', label: 'Arabic', native: 'العربية' },
+        { code: 'ar', label: 'Arabic', native: 'ا�"عرب�Sة' },
     ]
 
     watch(() => page.props.locale, (newLocale) => {
@@ -40,3 +40,4 @@ export function useLanguage() {
         changeLang
     }
 }
+

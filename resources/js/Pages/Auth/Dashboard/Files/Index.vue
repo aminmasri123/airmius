@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import Modal from '@/Components/Modal.vue'
 import { Head, router, useForm, usePage } from '@inertiajs/vue3'
@@ -10,6 +10,7 @@ const props = defineProps({
     currentFolder: { type: Object, default: null },
     scope: { type: Object, default: () => ({ type: 'user' }) },
     search: { type: String, default: '' },
+    sort: { type: String, default: 'name-asc' },
     file_sort: { type: String, default: 'name-asc' },
     folder_sort: { type: String, default: 'name-asc' },
     per_page: { type: Number, default: 24 },
@@ -38,10 +39,8 @@ const normalizePageSize = (value) => {
     return pageSizeOptions.includes(normalized) ? normalized : 24
 }
 const fileSearch = ref(props.search || '')
-const filesPerPage = ref(normalizePageSize(props.per_page))
-const foldersPerPage = ref(normalizePageSize(props.folders_per_page))
-const folderSort = ref(props.folder_sort || 'name-asc')
-const fileSort = ref(props.file_sort || 'name-asc')
+const itemsPerPage = ref(normalizePageSize(props.per_page || props.folders_per_page))
+const itemSort = ref(props.sort || props.file_sort || props.folder_sort || 'name-asc')
 const renameTarget = ref(null)
 const renameType = ref('file')
 const page = usePage()
@@ -99,20 +98,11 @@ const scopeOptions = [
     { value: 'event', label: 'Event' },
 ]
 
-const fileSortOptions = [
+const itemSortOptions = [
     { value: 'name-asc', label: 'Name (A-Z)' },
     { value: 'name-desc', label: 'Name (Z-A)' },
     { value: 'newest', label: 'Neueste zuerst' },
-    { value: 'oldest', label: 'Aelteste zuerst' },
-    { value: 'size-asc', label: 'Grüße aufsteigend' },
-    { value: 'size-desc', label: 'Grüße absteigend' },
-]
-
-const folderSortOptions = [
-    { value: 'name-asc', label: 'Name (A-Z)' },
-    { value: 'name-desc', label: 'Name (Z-A)' },
-    { value: 'newest', label: 'Neueste zuerst' },
-    { value: 'oldest', label: 'Aelteste zuerst' },
+    { value: 'oldest', label: 'Älteste zuerst' },
 ]
 
 const activeFolders = computed(() => {
@@ -164,22 +154,22 @@ const lastFoldersPage = computed(() => Number(foldersPagination.value?.last_page
 const fileRangeStart = computed(() => {
     if (!activeFiles.value.length) return 0
 
-    return (currentFilesPage.value - 1) * filesPerPage.value + 1
+    return (currentFilesPage.value - 1) * itemsPerPage.value + 1
 })
 const fileRangeEnd = computed(() => {
     if (!activeFiles.value.length) return 0
 
-    return Math.min(currentFilesPage.value * filesPerPage.value, totalFiles.value)
+    return Math.min(currentFilesPage.value * itemsPerPage.value, totalFiles.value)
 })
 const folderRangeStart = computed(() => {
     if (!activeFolders.value.length) return 0
 
-    return (currentFoldersPage.value - 1) * foldersPerPage.value + 1
+    return (currentFoldersPage.value - 1) * itemsPerPage.value + 1
 })
 const folderRangeEnd = computed(() => {
     if (!activeFolders.value.length) return 0
 
-    return Math.min(currentFoldersPage.value * foldersPerPage.value, totalFolders.value)
+    return Math.min(currentFoldersPage.value * itemsPerPage.value, totalFolders.value)
 })
 const hasActiveSearch = computed(() => fileSearch.value.trim() !== '')
 const emptyStateText = computed(() => {
@@ -195,10 +185,10 @@ const filterStatusText = computed(() => {
     }
 
     if (lastFilesPage.value > 1 || lastFoldersPage.value > 1) {
-        return `Dateiseite ${currentFilesPage.value} / ${lastFilesPage.value}, Ordnerseite ${currentFoldersPage.value} / ${lastFoldersPage.value}`
+        return `Ordnerseite ${currentFoldersPage.value} / ${lastFoldersPage.value}, Dateiseite ${currentFilesPage.value} / ${lastFilesPage.value}`
     }
 
-    return hasActiveSearch.value ? `Ergebnis: ${totalFiles.value} Dateien, ${totalFolders.value} Ordner` : 'Aktuelle Ansicht'
+    return hasActiveSearch.value ? `Ergebnis: ${totalFolders.value} Ordner, ${totalFiles.value} Dateien` : ''
 })
 
 const syncForms = () => {
@@ -217,10 +207,11 @@ const scopePayload = (folderId = null) => ({
     event_id: scopeForm.event_id,
     folder_id: folderId || undefined,
     search: fileSearch.value,
-    folder_sort: folderSort.value,
-    file_sort: fileSort.value,
-    per_page: filesPerPage.value,
-    folders_per_page: foldersPerPage.value,
+    sort: itemSort.value,
+    folder_sort: itemSort.value,
+    file_sort: itemSort.value,
+    per_page: itemsPerPage.value,
+    folders_per_page: itemsPerPage.value,
     files_page: currentFilesPage.value,
     folders_page: currentFoldersPage.value,
 })
@@ -250,10 +241,8 @@ const syncFromServer = () => {
     scopeForm.event_id = props.scope?.event_id || null
     scopeForm.folder_id = props.scope?.folder_id || null
     fileSearch.value = props.search || ''
-    fileSort.value = props.file_sort || 'name-asc'
-    folderSort.value = props.folder_sort || 'name-asc'
-    filesPerPage.value = normalizePageSize(props.per_page)
-    foldersPerPage.value = normalizePageSize(props.folders_per_page)
+    itemSort.value = props.sort || props.file_sort || props.folder_sort || 'name-asc'
+    itemsPerPage.value = normalizePageSize(props.per_page || props.folders_per_page)
     syncForms()
 }
 
@@ -483,26 +472,16 @@ watch(() => props.search, (value) => {
 })
 
 watch(() => props.scope, syncFromServer, { deep: true })
-watch(() => props.file_sort, (value) => {
-    if (value !== fileSort.value) {
-        fileSort.value = value || 'name-asc'
+watch(() => [props.sort, props.file_sort, props.folder_sort], ([sort, fileSort, folderSort]) => {
+    const next = sort || fileSort || folderSort || 'name-asc'
+    if (next !== itemSort.value) {
+        itemSort.value = next
     }
 })
-watch(() => props.folder_sort, (value) => {
-    if (value !== folderSort.value) {
-        folderSort.value = value || 'name-asc'
-    }
-})
-watch(() => props.per_page, (value) => {
-    const next = normalizePageSize(value)
-    if (next !== filesPerPage.value) {
-        filesPerPage.value = next
-    }
-})
-watch(() => props.folders_per_page, (value) => {
-    const next = normalizePageSize(value)
-    if (next !== foldersPerPage.value) {
-        foldersPerPage.value = next
+watch(() => [props.per_page, props.folders_per_page], ([perPage, foldersPerPage]) => {
+    const next = normalizePageSize(perPage || foldersPerPage)
+    if (next !== itemsPerPage.value) {
+        itemsPerPage.value = next
     }
 })
 
@@ -620,47 +599,25 @@ watch(showShareModal, async (show) => {
                                 <button v-if="fileSearch" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-secondary hover:text-primary" type="button" @click="clearSearch" aria-label="Suche löschen">x</button>
                             </div>
                             <select
-                                v-model="filesPerPage"
+                                v-model="itemsPerPage"
                                 class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:h-9 xl:w-36"
-                                aria-label="Dateien pro Seite"
+                                aria-label="Einträge pro Seite"
                                 :disabled="isFiltering"
                                 @change="applyFilters"
                             >
                                 <option v-for="pageSize in pageSizeOptions" :key="`page-size-${pageSize}`" :value="pageSize">
-                                    Dateien: {{ pageSize }} / Seite
+                                    Pro Seite: {{ pageSize }}
                                 </option>
                             </select>
                             <select
-                                v-model="foldersPerPage"
-                                class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:h-9 xl:w-36"
-                                aria-label="Ordner pro Seite"
-                                :disabled="isFiltering"
-                                @change="applyFilters"
-                            >
-                                <option v-for="pageSize in pageSizeOptions" :key="`folder-page-size-${pageSize}`" :value="pageSize">
-                                    Ordner: {{ pageSize }} / Seite
-                                </option>
-                            </select>
-                            <select
-                                v-model="folderSort"
+                                v-model="itemSort"
                                 class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:h-9 xl:w-44"
-                                aria-label="Ordner sortieren"
+                                aria-label="Ordner und Dateien sortieren"
                                 :disabled="isFiltering"
                                 @change="applyFilters"
                             >
-                                <option v-for="option in folderSortOptions" :key="`folder-${option.value}`" :value="option.value">
-                                    Ordner: {{ option.label }}
-                                </option>
-                            </select>
-                            <select
-                                v-model="fileSort"
-                                class="h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary xl:h-9 xl:w-44"
-                                aria-label="Dateien sortieren"
-                                :disabled="isFiltering"
-                                @change="applyFilters"
-                            >
-                                <option v-for="option in fileSortOptions" :key="`file-${option.value}`" :value="option.value">
-                                    Dateien: {{ option.label }}
+                                <option v-for="option in itemSortOptions" :key="`sort-${option.value}`" :value="option.value">
+                                    Sortierung: {{ option.label }}
                                 </option>
                             </select>
                         </div>
@@ -772,7 +729,7 @@ watch(showShareModal, async (show) => {
                         <p v-if="activeFolders.length" class="col-span-full text-xs text-secondary">
                             Ordner {{ folderRangeStart }} - {{ folderRangeEnd }} von {{ totalFolders }}
                         </p>
-                        <p class="col-span-full text-xs text-secondary" role="status" aria-live="polite">{{ filterStatusText }}</p>
+                        <p v-if="filterStatusText" class="col-span-full text-xs text-secondary" role="status" aria-live="polite">{{ filterStatusText }}</p>
 
                         <div v-if="lastFoldersPage > 1" class="col-span-full flex items-center justify-between gap-3 border-t border-border pt-2">
                             <span class="text-xs text-secondary">Ordnerseite {{ currentFoldersPage }} / {{ lastFoldersPage }}</span>
@@ -993,3 +950,4 @@ watch(showShareModal, async (show) => {
         </div>
     </Modal>
 </template>
+

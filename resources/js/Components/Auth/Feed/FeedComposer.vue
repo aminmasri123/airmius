@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import SearchableSelect from '@/Components/SearchableSelect.vue'
 import { useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'

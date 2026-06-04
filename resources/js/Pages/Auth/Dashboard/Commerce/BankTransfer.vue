@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link } from '@inertiajs/vue3'
 
@@ -58,3 +58,4 @@ defineProps({
         </Link>
     </div>
 </template>
+

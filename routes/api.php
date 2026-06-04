@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\CommerceController;
 use App\Http\Controllers\Api\V1\AdminCommerceController as MobileAdminCommerceController;
 use App\Http\Controllers\Api\V1\EventController;
 use App\Http\Controllers\Api\V1\FeedController;
+use App\Http\Controllers\Api\V1\MaturityController;
 use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\MobileMetaController;
 use App\Http\Controllers\Api\V1\NutritionController;
@@ -47,6 +48,17 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
         Route::get('/feed', [FeedController::class, 'index'])->name('feed.index');
         Route::post('/feed', [FeedController::class, 'store'])->name('feed.store');
+        Route::get('/maturity/feed-discovery', [MaturityController::class, 'feedDiscovery'])->name('maturity.feed-discovery');
+        Route::get('/maturity/feed-trending', [MaturityController::class, 'feedTrending'])->name('maturity.feed-trending');
+        Route::get('/maturity/overview', [MaturityController::class, 'overview'])->name('maturity.overview');
+        Route::get('/maturity/motivation', [MaturityController::class, 'motivation'])->name('maturity.motivation');
+        Route::get('/maturity/search', [MaturityController::class, 'search'])->name('maturity.search');
+        Route::get('/maturity/challenges', [MaturityController::class, 'challenges'])->name('maturity.challenges');
+        Route::get('/maturity/routes/{sportRoute}/analytics', [MaturityController::class, 'routeAnalytics'])->name('maturity.route-analytics');
+        Route::get('/maturity/coach-weekly', [MaturityController::class, 'coachWeekly'])->name('maturity.coach-weekly');
+        Route::get('/maturity/onboarding', [MaturityController::class, 'onboarding'])->name('maturity.onboarding');
+        Route::get('/maturity/viral', [MaturityController::class, 'viral'])->name('maturity.viral');
+        Route::get('/maturity/safety', [MaturityController::class, 'safety'])->name('maturity.safety');
         Route::get('/stories', [MobileStoryController::class, 'index'])->name('stories.index');
         Route::post('/stories', [MobileStoryController::class, 'store'])->name('stories.store');
         Route::post('/stories/{story}/viewed', [MobileStoryController::class, 'viewed'])->name('stories.viewed');

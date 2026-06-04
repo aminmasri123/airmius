@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, ref } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import axios from 'axios'
@@ -762,3 +762,4 @@ const startCheckout = async () => {
         <Footer />
     </div>
 </template>
+

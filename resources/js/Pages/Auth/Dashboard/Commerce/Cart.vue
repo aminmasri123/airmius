@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, ref, watch } from 'vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import Subnav from '@/Components/Guest/Subnav.vue'
@@ -345,3 +345,4 @@ const checkoutCart = () => {
         <Footer />
     </div>
 </template>
+

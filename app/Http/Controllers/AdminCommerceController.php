@@ -31,6 +31,9 @@ use App\Services\MediaOptimizer;
 use App\Services\CommerceAuditService;
 use App\Services\CommerceDocumentService;
 use App\Support\CarrierTracking;
+use App\Support\MarketplaceProductInput;
+use App\Support\MarketplaceProductQualityGate;
+use App\Support\MarketplaceSellerReadiness;
 use App\Support\UploadStorage;
 use App\Support\AppNotification;
 use Illuminate\Http\Request;
@@ -93,7 +96,9 @@ class AdminCommerceController extends Controller
                 ->with(['user:id,name,email', 'reviewer:id,name,email'])
                 ->latest('id')
                 ->limit(100)
-                ->get(),
+                ->get()
+                ->map(fn (MarketplaceSellerApplication $application) => MarketplaceSellerReadiness::attach($application))
+                ->values(),
             'campaigns' => AdCampaign::query()
                 ->with(['creatives', 'stats' => fn ($query) => $query->latest('date')->limit(30)])
                 ->withExists([
@@ -207,11 +212,15 @@ class AdminCommerceController extends Controller
 
     public function storeProduct(Request $request)
     {
-        MarketplaceProduct::create([
+        $product = MarketplaceProduct::create([
             ...$this->productData($request),
             'commission_percent' => 0,
             'payout_status' => 'not_applicable',
         ]);
+
+        if ($product->status === 'published') {
+            MarketplaceProductQualityGate::applyPublicationGate($product->fresh(['user.approvedSellerApplications', 'club', 'inventories']));
+        }
 
         return back()->with('success', 'Marketplace-Produkt erstellt.');
     }
@@ -226,6 +235,9 @@ class AdminCommerceController extends Controller
         }
 
         $product->update($data);
+        if (($data['status'] ?? null) === 'published') {
+            MarketplaceProductQualityGate::applyPublicationGate($product->fresh(['user.approvedSellerApplications', 'club', 'inventories']));
+        }
         $this->audit->log('product.updated', $product, $before, $product->fresh()->only(['title', 'price_cents', 'status', 'stock_quantity', 'tax_class']));
 
         return back()->with('success', 'Marketplace-Produkt aktualisiert.');
@@ -250,10 +262,10 @@ class AdminCommerceController extends Controller
             return back()->with('success', 'Produkt hat bereits Bestellungen und wurde deshalb archiviert.');
         }
 
-        $this->audit->log('product.deleted', $product, $before, [], 'Admin hat das Marketplace-Produkt geloescht.');
+        $this->audit->log('product.deleted', $product, $before, [], 'Admin hat das Marketplace-Produkt gelöscht.');
         $product->delete();
 
-        return back()->with('success', 'Marketplace-Produkt wurde geloescht.');
+        return back()->with('success', 'Marketplace-Produkt wurde gelöscht.');
     }
 
     public function updateSellerApplication(Request $request, MarketplaceSellerApplication $sellerApplication)
@@ -526,7 +538,7 @@ class AdminCommerceController extends Controller
         ]);
 
         $remainingCents = max(0, (int) $order->amount_cents - (int) $order->refunded_cents);
-        abort_if((int) $data['amount_cents'] > $remainingCents, 422, 'Die Erstattung darf den offenen Restbetrag nicht Übersteigen.');
+        abort_if((int) $data['amount_cents'] > $remainingCents, 422, 'Die Erstattung darf den offenen Restbetrag nicht überschreiten.');
 
         $providerRefundId = $this->refundViaProvider($order, (int) $data['amount_cents']);
         $before = $order->only(['status', 'refunded_cents', 'refund_provider_id']);
@@ -735,7 +747,7 @@ class AdminCommerceController extends Controller
                 }
 
                 if ($campaign->is_internal && $campaign->force_priority) {
-                    $reasons[] = 'Interne Prioritaet aktiv, Frequency Cap gilt trotzdem';
+                    $reasons[] = 'Interne Priorität aktiv, Frequency Cap gilt trotzdem';
                 }
 
                 if ($reasons === []) {
@@ -1180,8 +1192,8 @@ class AdminCommerceController extends Controller
         $imageUrlsText = (string) ($data['image_urls_text'] ?? '');
         unset($data['features_text']);
         unset($data['attributes_text']);
-        $attributeOptions = $this->normalizeAttributeOptions($data['attribute_options'] ?? []);
-        $variants = $this->normalizeVariants($data['variants'] ?? [], $attributeOptions, (int) $data['price_cents']);
+        $attributeOptions = MarketplaceProductInput::normalizeAttributeOptions($data['attribute_options'] ?? []);
+        $variants = MarketplaceProductInput::normalizeVariants($data['variants'] ?? [], $attributeOptions, (int) $data['price_cents']);
         unset($data['attribute_options']);
         unset($data['variants']);
         unset($data['image_urls_text']);
@@ -1224,7 +1236,7 @@ class AdminCommerceController extends Controller
             ->take(12)
             ->values()
             ->all();
-        $data['product_attributes'] = $this->productAttributesFromText($attributesText);
+        $data['product_attributes'] = MarketplaceProductInput::attributesFromText($attributesText);
         $data['product_type'] = $data['product_type'] ?? 'single';
         $data['attribute_options'] = $attributeOptions;
         $data['variants'] = $data['product_type'] === 'variable' ? $variants : [];
@@ -1237,83 +1249,6 @@ class AdminCommerceController extends Controller
         $data['sku'] = filled($data['sku'] ?? null) ? trim((string) $data['sku']) : null;
 
         return $data;
-    }
-
-    private function normalizeAttributeOptions(array $options): array
-    {
-        return collect($options)
-            ->map(function (array $option) {
-                $values = collect($option['values'] ?? [])
-                    ->map(fn ($value) => trim((string) $value))
-                    ->filter()
-                    ->unique()
-                    ->take(30)
-                    ->values()
-                    ->all();
-
-                return [
-                    'name' => trim((string) ($option['name'] ?? '')),
-                    'values' => $values,
-                ];
-            })
-            ->filter(fn (array $option) => filled($option['name']) && $option['values'] !== [])
-            ->take(20)
-            ->values()
-            ->all();
-    }
-
-    private function normalizeVariants(array $variants, array $attributeOptions, int $fallbackPriceCents): array
-    {
-        $allowed = collect($attributeOptions)
-            ->mapWithKeys(fn (array $option) => [$option['name'] => $option['values']])
-            ->all();
-
-        return collect($variants)
-            ->map(function (array $variant) use ($allowed, $fallbackPriceCents) {
-                $attributes = collect($variant['attributes'] ?? [])
-                    ->map(fn (array $attribute) => [
-                        'name' => trim((string) ($attribute['name'] ?? '')),
-                        'value' => trim((string) ($attribute['value'] ?? '')),
-                    ])
-                    ->filter(fn (array $attribute) => filled($attribute['name'])
-                        && filled($attribute['value'])
-                        && in_array($attribute['value'], $allowed[$attribute['name']] ?? [], true))
-                    ->values()
-                    ->all();
-
-                return [
-                    'sku' => filled($variant['sku'] ?? null) ? trim((string) $variant['sku']) : null,
-                    'price_cents' => (int) ($variant['price_cents'] ?? $fallbackPriceCents),
-                    'stock_quantity' => ($variant['stock_quantity'] ?? null) === null || ($variant['stock_quantity'] ?? '') === ''
-                        ? null
-                        : max(0, (int) $variant['stock_quantity']),
-                    'image_url' => filled($variant['image_url'] ?? null) ? trim((string) $variant['image_url']) : null,
-                    'attributes' => $attributes,
-                ];
-            })
-            ->filter(fn (array $variant) => $variant['attributes'] !== [])
-            ->take(80)
-            ->values()
-            ->all();
-    }
-
-    private function productAttributesFromText(string $text): array
-    {
-        return collect(preg_split('/\r\n|\r|\n/', $text))
-            ->map(fn (string $line) => trim($line))
-            ->filter()
-            ->map(function (string $line) {
-                [$name, $value] = array_pad(preg_split('/[:=]/', $line, 2), 2, '');
-
-                return [
-                    'name' => trim($name),
-                    'value' => trim($value),
-                ];
-            })
-            ->filter(fn (array $attribute) => filled($attribute['name']) && filled($attribute['value']))
-            ->take(20)
-            ->values()
-            ->all();
     }
 
     private function campaignData(Request $request): array
@@ -1674,8 +1609,7 @@ class AdminCommerceController extends Controller
     private function adminProductResource(MarketplaceProduct $product): array
     {
         $resource = $product->toArray();
-        $issues = $this->productQualityIssues($product);
-        $score = max(0, 100 - (count($issues) * 14));
+        $qualityGate = MarketplaceProductQualityGate::evaluate($product);
 
         return [
             ...$resource,
@@ -1695,9 +1629,10 @@ class AdminCommerceController extends Controller
                 ])
                 ->values()
                 ->all(),
-            'quality_score' => $score,
-            'quality_issues' => $issues,
-            'is_market_ready' => $score >= 72 && $issues === [],
+            'quality_score' => $qualityGate['score'],
+            'quality_issues' => $qualityGate['issues'],
+            'quality_gate' => $qualityGate,
+            'is_market_ready' => (bool) $qualityGate['can_publish'],
         ];
     }
 
@@ -1975,3 +1910,5 @@ class AdminCommerceController extends Controller
             ->all();
     }
 }
+
+

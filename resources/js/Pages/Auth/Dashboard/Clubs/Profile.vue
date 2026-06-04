@@ -1,8 +1,8 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { confirmDialog } from '@/services/dialogService'
 
 const props = defineProps({
@@ -37,9 +37,18 @@ const toggleMemberRole = (member, role) => {
 }
 const logoInput = ref(null)
 const coverInput = ref(null)
+const membershipRequestOpen = ref(false)
 const imageForm = useForm({
     logo: null,
     cover_image: null,
+})
+const membershipRequestForm = useForm({
+    club_membership_type_id: props.clubProfile.membership_types?.[0]?.id || '',
+    application_data: {},
+    accepted_documents: {},
+    preferred_payment_method: props.clubProfile.membership_payment_methods?.[0] || '',
+    requested_billing_interval: '',
+    message: '',
 })
 const pauseForm = useForm({
     requested_pause_from: '',
@@ -98,6 +107,48 @@ const updateClubProfile = () => {
     })
 }
 
+const openMembershipRequest = () => {
+    membershipRequestForm.club_membership_type_id = props.clubProfile.membership_types?.[0]?.id || ''
+    membershipRequestForm.application_data = Object.fromEntries(
+        (props.clubProfile.membership_application_fields || [])
+            .filter((field) => field.mode !== 'off')
+            .map((field) => [field.key, props.viewer.application_prefill?.[field.key] || (field.type === 'checkbox' ? false : '')])
+    )
+    membershipRequestForm.accepted_documents = Object.fromEntries(
+        (props.clubProfile.membership_application_documents || [])
+            .map((document) => [document.id, false])
+    )
+    membershipRequestForm.preferred_payment_method = props.clubProfile.membership_payment_methods?.[0] || ''
+    membershipRequestForm.requested_billing_interval = props.clubProfile.membership_types?.[0]?.billing_interval || ''
+    membershipRequestForm.message = ''
+    membershipRequestOpen.value = true
+}
+
+const submitMembershipRequest = () => {
+    membershipRequestForm.post(route('auth.club-membership-requests.store', props.clubProfile.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            membershipRequestOpen.value = false
+            membershipRequestForm.reset()
+        },
+    })
+}
+
+const withdrawMembershipRequest = async () => {
+    const confirmed = await confirmDialog({
+        title: 'Anfrage zurückziehen',
+        message: `Möchtest du deine Mitgliedschaftsanfrage bei "${props.clubProfile.name}" wirklich zurückziehen?`,
+        confirmLabel: 'Zurückziehen',
+        danger: true,
+    })
+
+    if (!confirmed) return
+
+    router.delete(route('auth.club-membership-requests.destroy', props.clubProfile.id), {
+        preserveScroll: true,
+    })
+}
+
 const requestPause = () => {
     pauseForm.post(route('auth.club-membership-pause-requests.store', props.clubProfile.id), {
         preserveScroll: true,
@@ -119,6 +170,44 @@ const leaveClub = async () => {
         preserveScroll: true,
     })
 }
+
+const intervalLabel = (interval) => ({
+    monthly: 'Monat',
+    quarterly: 'Quartal',
+    four_monthly: '4 Monate',
+    semi_yearly: '6 Monate',
+    yearly: 'Jahr',
+    once: 'einmalig',
+    none: 'kein Beitrag',
+}[interval] || interval)
+
+const paymentMethodLabel = (value) => props.clubProfile.membership_payment_method_options?.find((method) => method.value === value)?.label || value
+
+const visibleMembershipDocuments = computed(() => props.clubProfile.membership_application_documents || [])
+
+const applicationFieldSections = computed(() => {
+    const sections = []
+
+    ;(props.clubProfile.membership_application_fields || [])
+        .filter((field) => field.mode !== 'off')
+        .forEach((field) => {
+            let section = sections.find((candidate) => candidate.name === field.section)
+
+            if (!section) {
+                section = { name: field.section, fields: [] }
+                sections.push(section)
+            }
+
+            section.fields.push(field)
+        })
+
+    return sections
+})
+
+const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: 'EUR',
+}).format(Number(value || 0))
 </script>
 
 <template>
@@ -167,18 +256,42 @@ const leaveClub = async () => {
                             </div>
                         </div>
 
-                        <Link :href="route('auth.teams.index')"
-                            class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:bg-inputBg">
-                            Teams ansehen
-                        </Link>
-                        <button
-                            v-if="viewer.is_member && !viewer.can_manage"
-                            type="button"
-                            class="rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
-                            @click="leaveClub"
-                        >
-                            Verein verlassen
-                        </button>
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                v-if="!viewer.is_member && !viewer.can_manage && clubProfile.membership_requests_enabled && !viewer.has_pending_membership_request"
+                                type="button"
+                                class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
+                                @click="openMembershipRequest"
+                            >
+                                Mitgliedschaft anfragen
+                            </button>
+                            <span
+                                v-if="!viewer.is_member && viewer.has_pending_membership_request"
+                                class="rounded-lg border border-success/40 px-4 py-2 text-sm font-semibold text-success"
+                            >
+                                Anfrage gesendet
+                            </span>
+                            <button
+                                v-if="!viewer.is_member && viewer.has_pending_membership_request"
+                                type="button"
+                                class="rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
+                                @click="withdrawMembershipRequest"
+                            >
+                                Anfrage zurückziehen
+                            </button>
+                            <Link :href="route('auth.teams.index')"
+                                class="rounded-lg border border-border px-4 py-2 text-sm text-primary hover:bg-inputBg">
+                                Teams ansehen
+                            </Link>
+                            <button
+                                v-if="viewer.is_member && !viewer.can_manage"
+                                type="button"
+                                class="rounded-lg border border-error/40 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
+                                @click="leaveClub"
+                            >
+                                Verein verlassen
+                            </button>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -369,7 +482,7 @@ const leaveClub = async () => {
                 </section>
 
                 <aside class="space-y-4">
-                    <section class="rounded-lg border border-border bg-card p-4">
+                    <section v-if="clubProfile.teams.length" class="rounded-lg border border-border bg-card p-4">
                         <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Teams</h2>
                         <div class="mt-4 space-y-2">
                             <Link v-for="team in clubProfile.teams" :key="team.id"
@@ -403,7 +516,7 @@ const leaveClub = async () => {
                         </div>
                     </section>
 
-                    <section class="rounded-lg border border-border bg-card p-4">
+                    <section v-if="viewer.is_member || viewer.can_manage" class="rounded-lg border border-border bg-card p-4">
                         <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Mitglieder</h2>
                         <div class="mt-4 space-y-2">
                             <div v-for="member in clubProfile.members" :key="member.id"
@@ -448,6 +561,181 @@ const leaveClub = async () => {
                     </section>
                 </aside>
             </div>
+
+            <Teleport to="body">
+                <div v-if="membershipRequestOpen" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 px-4 py-6">
+                    <form class="airmius-modal-scroll max-h-[calc(100vh-3rem)] w-full max-w-lg overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-2xl lg:max-w-3xl xl:max-w-4xl" @submit.prevent="submitMembershipRequest">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Mitgliedsantrag</p>
+                            <h2 class="mt-1 text-xl font-bold text-primary">{{ clubProfile.name }}</h2>
+                        </div>
+                        <button type="button" class="rounded-lg p-2 text-secondary hover:bg-muted" @click="membershipRequestOpen = false">
+                            <i class="las la-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="mt-4 space-y-3">
+                        <label class="block">
+                            <span class="text-sm font-semibold text-primary">Mitgliedschaftstyp</span>
+                            <select v-model="membershipRequestForm.club_membership_type_id" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                                <option value="">Allgemeine Anfrage</option>
+                                <option v-for="type in clubProfile.membership_types" :key="type.id" :value="type.id">
+                                    {{ type.name }}
+                                    <template v-if="type.amount !== null && type.amount !== undefined">
+                                        - {{ formatMoney(type.amount) }} / {{ intervalLabel(type.billing_interval) }}
+                                    </template>
+                                </option>
+                            </select>
+                        </label>
+
+                        <div v-if="clubProfile.membership_types?.length" class="rounded-lg border border-border bg-bg p-3 text-sm text-secondary">
+                            <p v-for="type in clubProfile.membership_types" :key="type.id" class="py-1">
+                                <span class="font-semibold text-primary">{{ type.name }}:</span>
+                                <span v-if="type.amount !== null && type.amount !== undefined">{{ formatMoney(type.amount) }} / {{ intervalLabel(type.billing_interval) }}</span>
+                                <span v-else>Beitrag nach Rücksprache</span>
+                            </p>
+                        </div>
+
+                        <div v-for="section in applicationFieldSections" :key="section.name" class="rounded-lg border border-border bg-bg p-3">
+                            <h3 class="text-sm font-semibold text-primary">{{ section.name }}</h3>
+                            <div class="mt-3 grid gap-3 md:grid-cols-2">
+                                <label v-for="field in section.fields" :key="field.key" class="block text-sm">
+                                    <span class="font-semibold text-primary">
+                                        {{ field.label }}
+                                        <span v-if="field.mode === 'required'" class="text-error">*</span>
+                                    </span>
+                                    <select
+                                        v-if="field.type === 'select'"
+                                        v-model="membershipRequestForm.application_data[field.key]"
+                                        class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"
+                                        :required="field.mode === 'required'"
+                                    >
+                                        <option value="">Bitte wählen</option>
+                                        <option v-for="option in field.options" :key="option.value" :value="option.value">{{ option.label }}</option>
+                                    </select>
+                                    <label v-else-if="field.type === 'checkbox'" class="mt-2 flex items-start gap-2 rounded-lg border border-border bg-card p-3 text-secondary">
+                                        <input v-model="membershipRequestForm.application_data[field.key]" type="checkbox" class="mt-1 rounded border-border bg-inputBg" :required="field.mode === 'required'">
+                                        <span>{{ field.label }}</span>
+                                    </label>
+                                    <input
+                                        v-else
+                                        v-model="membershipRequestForm.application_data[field.key]"
+                                        :type="field.type || 'text'"
+                                        :maxlength="field.max || undefined"
+                                        class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary"
+                                        :required="field.mode === 'required'"
+                                    >
+                                    <p v-if="membershipRequestForm.errors[`application_data.${field.key}`]" class="mt-1 text-xs text-error">
+                                        {{ membershipRequestForm.errors[`application_data.${field.key}`] }}
+                                    </p>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="grid gap-3 md:grid-cols-2">
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">Gewünschte Zahlmethode</span>
+                                <select v-model="membershipRequestForm.preferred_payment_method" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                                    <option value="">Nach Rücksprache</option>
+                                    <option v-for="method in clubProfile.membership_payment_methods" :key="method" :value="method">
+                                        {{ paymentMethodLabel(method) }}
+                                    </option>
+                                </select>
+                            </label>
+                            <label class="block">
+                                <span class="text-sm font-semibold text-primary">Beitragsintervall</span>
+                                <select v-model="membershipRequestForm.requested_billing_interval" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary">
+                                    <option value="">Wie vom Verein festgelegt</option>
+                                    <option value="monthly">Monatlich</option>
+                                    <option value="quarterly">Quartal</option>
+                                    <option value="four_monthly">Alle 4 Monate</option>
+                                    <option value="semi_yearly">Alle 6 Monate</option>
+                                    <option value="yearly">Jährlich</option>
+                                    <option value="once">Einmalig</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <div v-if="visibleMembershipDocuments.length" class="rounded-lg border border-border bg-bg p-3">
+                            <h3 class="text-sm font-semibold text-primary">Dokumente des Vereins</h3>
+                            <p class="mt-1 text-xs text-secondary">
+                                Bitte lies die verknüpften Dokumente. Pflichtdokumente müssen vor dem Absenden bestätigt werden.
+                            </p>
+                            <div class="mt-3 space-y-3">
+                                <label
+                                    v-for="document in visibleMembershipDocuments"
+                                    :key="document.id"
+                                    class="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm text-secondary"
+                                >
+                                    <input
+                                        v-model="membershipRequestForm.accepted_documents[document.id]"
+                                        type="checkbox"
+                                        class="mt-1 rounded border-border bg-inputBg"
+                                        :required="document.is_required"
+                                    >
+                                    <span class="min-w-0">
+                                        <span class="block font-semibold text-primary">
+                                            {{ document.title }}
+                                            <span v-if="document.is_required" class="text-error">*</span>
+                                        </span>
+                                        <span v-if="document.description" class="mt-1 block text-xs">{{ document.description }}</span>
+                                        <a
+                                            v-if="document.url"
+                                            :href="document.url"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            class="mt-2 inline-flex text-xs font-semibold text-air-blue hover:underline"
+                                        >
+                                            Dokument öffnen
+                                        </a>
+                                        <span v-else class="mt-2 block text-xs text-error">Kein Link hinterlegt</span>
+                                        <span v-if="membershipRequestForm.errors[`accepted_documents.${document.id}`]" class="mt-1 block text-xs text-error">
+                                            {{ membershipRequestForm.errors[`accepted_documents.${document.id}`] }}
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <label class="block">
+                            <span class="text-sm font-semibold text-primary">Nachricht</span>
+                            <textarea v-model="membershipRequestForm.message" rows="4" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" placeholder="Warum möchtest du Mitglied werden?"></textarea>
+                        </label>
+                    </div>
+
+                    <button class="mt-5 w-full rounded-lg bg-buttonPrimary px-4 py-3 text-sm font-semibold text-buttonTextPrimary" :disabled="membershipRequestForm.processing">
+                        Anfrage senden
+                    </button>
+                    </form>
+                </div>
+            </Teleport>
         </div>
     </AppLayout>
 </template>
+
+<style scoped>
+.airmius-modal-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--air-blue, #60a5fa) rgba(15, 23, 42, 0.75);
+}
+
+.airmius-modal-scroll::-webkit-scrollbar {
+    width: 10px;
+}
+
+.airmius-modal-scroll::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.75);
+    border-radius: 999px;
+}
+
+.airmius-modal-scroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--button-primary, #60a5fa), var(--air-blue, #38bdf8));
+    border: 2px solid rgba(15, 23, 42, 0.75);
+    border-radius: 999px;
+}
+
+.airmius-modal-scroll::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--button-primary-hover, #3b82f6), var(--air-blue, #38bdf8));
+}
+</style>

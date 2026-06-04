@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link } from '@inertiajs/vue3'
 
@@ -79,3 +79,4 @@ const formatDate = (value) => value
         </section>
     </div>
 </template>
+

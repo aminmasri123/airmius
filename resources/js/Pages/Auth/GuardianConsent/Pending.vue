@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import AuthenticationCard from '@/Components/AuthenticationCard.vue'
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue'
@@ -163,3 +163,4 @@ onUnmounted(() => {
         </div>
     </AuthenticationCard>
 </template>
+

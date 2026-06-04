@@ -23,6 +23,7 @@ class ClubPolicy extends BasePolicy
         return $this->hasFullAccess($user)
             || $user->can('clubs.view')
             || $user->can('teams.view')
+            || ($club->verification_status === 'verified' && $club->is_listed)
             || $this->inClub($user, $club);
     }
 

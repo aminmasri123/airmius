@@ -37,6 +37,7 @@ class FileController extends Controller
     private const MAX_FILE_SIZE_KB = 51200;
     private const FILE_NAME_MAX_LENGTH = 180;
     private const SEARCH_QUERY_MAX_LENGTH = 200;
+    private const VALID_ITEM_SORT_OPTIONS = ['name-asc', 'name-desc', 'newest', 'oldest'];
     private const VALID_FILE_SORT_OPTIONS = ['name-asc', 'name-desc', 'newest', 'oldest', 'size-asc', 'size-desc'];
     private const VALID_FOLDER_SORT_OPTIONS = ['name-asc', 'name-desc', 'newest', 'oldest'];
 
@@ -96,8 +97,16 @@ class FileController extends Controller
         $scope = $this->scopeData($request);
         $currentFolder = null;
         $search = $this->normalizeSearchQuery((string) $request->input('search', ''));
-        $fileSort = $this->sanitizeFileSort((string) $request->input('file_sort', 'name-asc'));
-        $folderSort = $this->sanitizeFolderSort((string) $request->input('folder_sort', 'name-asc'));
+        $itemSort = $this->sanitizeItemSort((string) $request->input(
+            'sort',
+            $request->input('file_sort', $request->input('folder_sort', 'name-asc'))
+        ));
+        $fileSort = $request->filled('sort')
+            ? $itemSort
+            : $this->sanitizeFileSort((string) $request->input('file_sort', $itemSort));
+        $folderSort = $request->filled('sort')
+            ? $itemSort
+            : $this->sanitizeFolderSort((string) $request->input('folder_sort', $itemSort));
         $filesPerPage = $this->sanitizePerPage(
             (int) $request->integer('per_page', self::DEFAULT_FILES_PER_PAGE),
             self::DEFAULT_FILES_PER_PAGE,
@@ -107,8 +116,8 @@ class FileController extends Controller
         $filesPage = max(1, (int) $request->integer('files_page', 1));
         $foldersPage = max(1, (int) $request->integer('folders_page', 1));
         $foldersPerPage = $this->sanitizePerPage(
-            (int) $request->integer('folders_per_page', self::DEFAULT_FOLDERS_PER_PAGE),
-            self::DEFAULT_FOLDERS_PER_PAGE,
+            (int) $request->integer('folders_per_page', $filesPerPage),
+            $filesPerPage,
             self::MAX_FOLDERS_PER_PAGE,
             self::PAGE_SIZE_OPTIONS,
         );
@@ -165,6 +174,7 @@ class FileController extends Controller
             ],
             'file_sort' => $fileSort,
             'folder_sort' => $folderSort,
+            'sort' => $itemSort,
             'search' => $search,
             'per_page' => $filesPerPage,
             'folders_per_page' => $foldersPerPage,
@@ -428,6 +438,11 @@ class FileController extends Controller
     private function sanitizeFileSort(string $sort): string
     {
         return in_array($sort, self::VALID_FILE_SORT_OPTIONS, true) ? $sort : 'name-asc';
+    }
+
+    private function sanitizeItemSort(string $sort): string
+    {
+        return in_array($sort, self::VALID_ITEM_SORT_OPTIONS, true) ? $sort : 'name-asc';
     }
 
     private function sanitizeFolderSort(string $sort): string

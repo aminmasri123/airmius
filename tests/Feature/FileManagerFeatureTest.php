@@ -80,6 +80,49 @@ class FileManagerFeatureTest extends TestCase
             );
     }
 
+    public function test_unified_sort_and_page_size_control_files_and_folders(): void
+    {
+        $user = User::factory()->create();
+        $this->grantUserPermissions($user, ['file.view']);
+
+        Folder::create([
+            'user_id' => $user->id,
+            'name' => 'Alpha Folder',
+            'parent_id' => null,
+        ]);
+        Folder::create([
+            'user_id' => $user->id,
+            'name' => 'Zulu Folder',
+            'parent_id' => null,
+        ]);
+
+        File::create([
+            'user_id' => $user->id,
+            'path' => 'private/alpha.txt',
+            'display_name' => 'alpha.txt',
+            'type' => 'text/plain',
+            'size' => 12,
+        ]);
+        File::create([
+            'user_id' => $user->id,
+            'path' => 'private/zeta.txt',
+            'display_name' => 'zeta.txt',
+            'type' => 'text/plain',
+            'size' => 12,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('auth.files.index', ['sort' => 'name-desc', 'per_page' => 12]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('sort', 'name-desc')
+                ->where('files.per_page', 12)
+                ->where('folders.per_page', 12)
+                ->where('files.data.0.display_name', 'zeta.txt')
+                ->where('folders.data.0.name', 'Zulu Folder')
+            );
+    }
+
     public function test_file_sort_fallbacks_to_whitelisted_default_for_invalid_sort_parameter(): void
     {
         $user = User::factory()->create();

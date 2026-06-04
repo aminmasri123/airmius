@@ -100,7 +100,7 @@ class OperatingContractController extends Controller
 
         $operatingContract->delete();
 
-        return back()->with('success', 'Vertrag wurde geloescht.');
+        return back()->with('success', 'Vertrag wurde gelöscht.');
     }
 
     private function authorizeView(Request $request): void
@@ -266,7 +266,7 @@ class OperatingContractController extends Controller
                     'name' => $contract->name,
                     'vendor' => $contract->vendor,
                     'type' => $isNotice ? 'notice' : 'payment',
-                    'label' => $isNotice ? 'Kuendigungsfrist' : 'Naechste Zahlung',
+                    'label' => $isNotice ? 'Kündigungsfrist' : 'Nächste Zahlung',
                     'date' => $isNotice ? $contract->notice_until_on?->toDateString() : $contract->next_due_on?->toDateString(),
                     'days' => $isNotice ? $noticeDays : $nextDueDays,
                     'sort' => min($nextValue, $noticeValue),
@@ -393,7 +393,7 @@ class OperatingContractController extends Controller
     {
         return [
             'direct_debit' => 'Lastschrift',
-            'bank_transfer' => 'Ueberweisung',
+            'bank_transfer' => 'Überweisung',
             'card' => 'Karte',
             'paypal' => 'PayPal',
             'invoice' => 'Rechnung',
@@ -402,3 +402,5 @@ class OperatingContractController extends Controller
         ][$method] ?? ($method ?: '-');
     }
 }
+
+

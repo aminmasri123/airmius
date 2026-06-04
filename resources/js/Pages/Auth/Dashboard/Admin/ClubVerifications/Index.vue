@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import { computed, reactive, ref } from 'vue'
@@ -189,3 +189,4 @@ const submit = (club, action) => {
         </section>
     </div>
 </template>
+

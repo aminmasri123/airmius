@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import DeleteConfirmModal from '@/Components/Auth/DeleteConfirmModal.vue'
 import { Head, router, useForm } from '@inertiajs/vue3'

@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import SearchableSelect from '@/Components/SearchableSelect.vue'
 import { Head, router, useForm, usePage } from '@inertiajs/vue3'

@@ -26,6 +26,7 @@ class FilePolicy extends BasePolicy
     {
         return $this->ownsPersonalFile($user, $file)
             || $this->canViewViaVisibleChatMessage($user, $file)
+            || $this->isVisibleMembershipApplicationDocument($file)
             || $this->canAccessScope($user, $file);
     }
 
@@ -55,6 +56,17 @@ class FilePolicy extends BasePolicy
             && ! $file->club_id
             && ! $file->team_id
             && ! $file->event_id;
+    }
+
+    private function isVisibleMembershipApplicationDocument(File $file): bool
+    {
+        if (! $file->club) {
+            return false;
+        }
+
+        return collect($file->club->membership_application_documents ?: [])
+            ->contains(fn (array $document) => (bool) ($document['is_visible'] ?? false)
+                && (int) ($document['file_id'] ?? 0) === (int) $file->id);
     }
 
     private function canAccessScope(User $user, File $file): bool

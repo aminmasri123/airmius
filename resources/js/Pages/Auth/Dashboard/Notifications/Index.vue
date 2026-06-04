@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import { onMounted, onUnmounted } from 'vue'
@@ -34,6 +34,8 @@ const iconFor = (type) => ({
     'club.member_removed': 'las la-user-times',
     'club.member_left': 'las la-door-open',
     'team.member_left': 'las la-door-open',
+    'club.membership_request_created': 'las la-user-plus',
+    'club.membership_request_withdrawn': 'las la-user-minus',
     'club.member_removal_objection': 'las la-exclamation-circle',
     'guardian.consent_requested': 'las la-user-shield',
     'profile.recommendation_received': 'las la-star',
@@ -235,3 +237,4 @@ onUnmounted(() => {
         </div>
     </div>
 </template>
+

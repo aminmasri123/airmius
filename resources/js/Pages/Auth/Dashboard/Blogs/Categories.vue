@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { ref } from 'vue'
@@ -199,3 +199,4 @@ const destroyCategory = async (category) => {
         </div>
     </div>
 </template>
+

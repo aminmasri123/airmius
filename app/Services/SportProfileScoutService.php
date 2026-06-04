@@ -1,0 +1,313 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\ProfileRecommendation;
+use App\Models\User;
+use App\Models\UserSport;
+use App\Models\UserSportSkill;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
+
+class SportProfileScoutService
+{
+    public function sportCv(User $profileUser, ?User $viewer = null): array
+    {
+        $profileUser->loadMissing([
+            'sportProfiles.sport:id,name,slug,category',
+            'sportSkills.sport:id,name,slug,category',
+            'sportSkills.skill:id,sport_id,key,name',
+            'sportSkills.endorsements.endorser:id,name',
+        ]);
+
+        $visible = ($profileUser->profile_visibility ?? 'public') === 'public'
+            || ($viewer && (int) $viewer->id === (int) $profileUser->id);
+
+        if (! $visible) {
+            return [
+                'user_id' => $profileUser->id,
+                'visibility' => 'private',
+                'headline_key' => 'profile.sport_cv.private_headline',
+                'primary_sports' => [],
+                'best_metrics' => [],
+                'verified_skills' => [],
+                'recommendation_summary' => ['approved_count' => 0],
+                'scout_card' => ['ready' => false],
+            ];
+        }
+
+        $sportProfiles = $profileUser->sportProfiles->where('visibility', 'public')->values();
+        $bestMetrics = $this->bestMetrics($sportProfiles);
+        $skills = $this->verifiedSkills($profileUser->sportSkills->where('is_visible', true)->values());
+        $recommendationsCount = ProfileRecommendation::query()
+            ->where('profile_user_id', $profileUser->id)
+            ->where('status', 'approved')
+            ->count();
+        $score = $this->profileScore($sportProfiles, $bestMetrics, $skills, $recommendationsCount);
+
+        return [
+            'user_id' => $profileUser->id,
+            'visibility' => 'public',
+            'headline' => $this->headline($sportProfiles),
+            'summary' => [
+                'sports_count' => $sportProfiles->count(),
+                'public_best_metrics' => count($bestMetrics),
+                'verified_skills' => collect($skills)->where('verification.status', 'verified')->count(),
+                'endorsed_skills' => collect($skills)->where('endorsements_count', '>', 0)->count(),
+                'approved_recommendations' => $recommendationsCount,
+            ],
+            'primary_sports' => $sportProfiles
+                ->take(5)
+                ->map(fn (UserSport $profile) => [
+                    'id' => $profile->id,
+                    'status' => $profile->status,
+                    'experience_level' => $profile->experience_level,
+                    'sport' => $this->sportPayload($profile->sport),
+                ])
+                ->all(),
+            'best_metrics' => $bestMetrics,
+            'verified_skills' => $skills,
+            'recommendation_summary' => [
+                'approved_count' => $recommendationsCount,
+                'has_trainer_recommendation' => ProfileRecommendation::query()
+                    ->where('profile_user_id', $profileUser->id)
+                    ->where('status', 'approved')
+                    ->where('relationship', 'trainer')
+                    ->exists(),
+            ],
+            'scout_card' => [
+                'version' => '2026-06-03.linkedin_sport_profile.v1',
+                'ready' => $score >= 80,
+                'score' => $score,
+                'level' => $score >= 85 ? 'scout_ready' : ($score >= 60 ? 'strong' : 'building'),
+                'contact_policy' => [
+                    'profile_visibility' => $profileUser->profile_visibility ?? 'public',
+                    'direct_message_privacy' => $profileUser->direct_message_privacy ?? 'everyone',
+                ],
+                'signals' => [
+                    'public_best_metrics' => count($bestMetrics),
+                    'verified_skills' => collect($skills)->where('verification.status', 'verified')->count(),
+                    'recommendations' => $recommendationsCount,
+                    'trust_score' => $profileUser->trust_score ?? 100,
+                ],
+            ],
+            'privacy' => [
+                'metric_visibility' => 'field_level',
+                'recommendations' => 'approved_only',
+                'skills' => 'visible_only',
+            ],
+        ];
+    }
+
+    public function scoutSearch(User $viewer, array $filters): array
+    {
+        $limit = max(1, min(30, (int) ($filters['limit'] ?? 15)));
+        $query = trim((string) ($filters['q'] ?? ''));
+        $sport = trim((string) ($filters['sport'] ?? ''));
+        $skill = trim((string) ($filters['skill'] ?? ''));
+        $minScore = (int) ($filters['min_score'] ?? 0);
+
+        $users = User::query()
+            ->where('profile_visibility', 'public')
+            ->whereKeyNot($viewer->id)
+            ->when($query !== '', function (Builder $builder) use ($query) {
+                $like = '%'.$query.'%';
+
+                $builder->where(function (Builder $nested) use ($like) {
+                    $nested
+                        ->where('name', 'like', $like)
+                        ->orWhere('bio', 'like', $like)
+                        ->orWhereHas('sportProfiles.sport', fn (Builder $sports) => $sports->where('name', 'like', $like)->orWhere('slug', 'like', $like))
+                        ->orWhereHas('sportSkills.skill', fn (Builder $skills) => $skills->where('name', 'like', $like)->orWhere('key', 'like', $like));
+                });
+            })
+            ->when($sport !== '', fn (Builder $builder) => $builder->whereHas('sportProfiles.sport', fn (Builder $sports) => $sports
+                ->where('slug', $sport)
+                ->orWhere('name', 'like', '%'.$sport.'%')))
+            ->when($skill !== '', fn (Builder $builder) => $builder->whereHas('sportSkills.skill', fn (Builder $skills) => $skills
+                ->where('key', $skill)
+                ->orWhere('name', 'like', '%'.$skill.'%')))
+            ->with([
+                'sportProfiles.sport:id,name,slug,category',
+                'sportSkills.sport:id,name,slug,category',
+                'sportSkills.skill:id,sport_id,key,name',
+                'sportSkills.endorsements.endorser:id,name',
+            ])
+            ->withCount([
+                'recommendationsReceived as approved_recommendations_count' => fn (Builder $recommendations) => $recommendations->where('status', 'approved'),
+            ])
+            ->limit($limit * 3)
+            ->get()
+            ->map(function (User $user) use ($viewer) {
+                $cv = $this->sportCv($user, $viewer);
+
+                return [
+                    'user' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'bio' => $user->bio,
+                        'profile_photo_url' => $user->profile_photo_url,
+                    ],
+                    'sport_cv' => $cv,
+                    'match' => [
+                        'score' => $cv['scout_card']['score'] ?? 0,
+                        'ready' => $cv['scout_card']['ready'] ?? false,
+                        'reason_keys' => $this->matchReasons($cv),
+                    ],
+                ];
+            })
+            ->filter(fn (array $result) => (int) $result['match']['score'] >= $minScore)
+            ->sortByDesc('match.score')
+            ->take($limit)
+            ->values()
+            ->all();
+
+        return [
+            'version' => '2026-06-03.linkedin_sport_profile.v1',
+            'filters' => [
+                'q' => $query,
+                'sport' => $sport,
+                'skill' => $skill,
+                'min_score' => $minScore,
+                'limit' => $limit,
+            ],
+            'results' => $users,
+            'facets' => $this->facets($users),
+            'privacy_note_key' => 'profile.scout_search.privacy_note',
+        ];
+    }
+
+    private function verifiedSkills(Collection $skills): array
+    {
+        return $skills
+            ->map(function (UserSportSkill $userSkill) {
+                $endorsements = $userSkill->endorsements;
+                $trusted = $endorsements->whereIn('relationship', ['trainer', 'coach', 'club', 'teammate']);
+                $verified = $trusted->whereIn('relationship', ['trainer', 'coach', 'club'])->isNotEmpty() || $endorsements->count() >= 3;
+
+                return [
+                    'id' => $userSkill->id,
+                    'name' => $userSkill->skill?->name ?: 'Skill',
+                    'key' => $userSkill->skill?->key,
+                    'self_level' => $userSkill->self_level,
+                    'endorsements_count' => $endorsements->count(),
+                    'trusted_endorsements_count' => $trusted->count(),
+                    'sport' => $this->sportPayload($userSkill->sport),
+                    'verification' => [
+                        'status' => $verified ? 'verified' : ($endorsements->isNotEmpty() ? 'endorsed' : 'self_reported'),
+                        'source' => $verified ? 'trusted_endorsement' : ($endorsements->isNotEmpty() ? 'community_endorsement' : 'self_assessment'),
+                        'badge_key' => $verified ? 'profile.skills.verified' : ($endorsements->isNotEmpty() ? 'profile.skills.endorsed' : 'profile.skills.self_reported'),
+                    ],
+                ];
+            })
+            ->sortByDesc(fn (array $skill) => ($skill['verification']['status'] === 'verified' ? 100 : 0) + ($skill['endorsements_count'] * 10) + (int) $skill['self_level'])
+            ->take(10)
+            ->values()
+            ->all();
+    }
+
+    private function bestMetrics(Collection $sportProfiles): array
+    {
+        return $sportProfiles
+            ->flatMap(function (UserSport $profile) {
+                return collect($profile->performance_metrics ?? [])
+                    ->filter(fn ($value, string $key) => (($profile->performance_visibility ?? [])[$key] ?? 'private') === 'public')
+                    ->filter(fn ($value, string $key) => $this->isScoutMetric($key))
+                    ->map(fn ($value, string $key) => [
+                        'key' => $key,
+                        'value' => $value,
+                        'visibility' => 'public',
+                        'sport' => $this->sportPayload($profile->sport),
+                    ]);
+            })
+            ->values()
+            ->take(10)
+            ->all();
+    }
+
+    private function profileScore(Collection $sportProfiles, array $bestMetrics, array $skills, int $recommendationsCount): int
+    {
+        $verifiedSkills = collect($skills)->where('verification.status', 'verified')->count();
+
+        return min(100,
+            ($sportProfiles->isNotEmpty() ? 20 : 0)
+            + (count($bestMetrics) > 0 ? 20 : 0)
+            + (count($skills) >= 2 ? 15 : 0)
+            + ($verifiedSkills > 0 ? 20 : 0)
+            + ($recommendationsCount > 0 ? 15 : 0)
+            + 10
+        );
+    }
+
+    private function matchReasons(array $cv): array
+    {
+        $reasons = [];
+
+        if (($cv['scout_card']['ready'] ?? false) === true) {
+            $reasons[] = 'scout_ready';
+        }
+        if (($cv['summary']['verified_skills'] ?? 0) > 0) {
+            $reasons[] = 'verified_skills';
+        }
+        if (($cv['summary']['approved_recommendations'] ?? 0) > 0) {
+            $reasons[] = 'recommendations';
+        }
+        if (($cv['summary']['public_best_metrics'] ?? 0) > 0) {
+            $reasons[] = 'public_metrics';
+        }
+
+        return $reasons;
+    }
+
+    private function facets(array $results): array
+    {
+        return [
+            'sports' => collect($results)
+                ->flatMap(fn (array $result) => $result['sport_cv']['primary_sports'] ?? [])
+                ->pluck('sport.slug')
+                ->filter()
+                ->countBy()
+                ->sortDesc()
+                ->all(),
+            'skills' => collect($results)
+                ->flatMap(fn (array $result) => $result['sport_cv']['verified_skills'] ?? [])
+                ->pluck('key')
+                ->filter()
+                ->countBy()
+                ->sortDesc()
+                ->all(),
+        ];
+    }
+
+    private function headline(Collection $sportProfiles): string
+    {
+        $sports = $sportProfiles->pluck('sport.name')->filter()->take(2)->values();
+
+        return $sports->isEmpty() ? 'Sport-CV' : $sports->join(' · ');
+    }
+
+    private function sportPayload($sport): ?array
+    {
+        if (! $sport) {
+            return null;
+        }
+
+        return [
+            'id' => $sport->id,
+            'name' => $sport->name,
+            'slug' => $sport->slug,
+            'category' => $sport->category,
+        ];
+    }
+
+    private function isScoutMetric(string $key): bool
+    {
+        return str_contains($key, 'best')
+            || str_contains($key, '1rm')
+            || str_contains($key, 'ftp')
+            || str_contains($key, 'vma')
+            || str_contains($key, 'sprint')
+            || str_contains($key, 'cooper')
+            || str_contains($key, 'vertical_jump');
+    }
+}

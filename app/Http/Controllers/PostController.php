@@ -137,20 +137,12 @@ class PostController extends Controller
             'stories' => $this->visibleStoriesFor($user, $feedUserIds),
             'feedFilter' => $activeFilter,
             'clubs' => Club::query()
-                ->where('is_listed', true)
                 ->when(
-                    ! $user->hasAnyRole(Roles::FULL_ACCESS),
+                    $user->hasAnyRole(Roles::FULL_ACCESS),
+                    fn ($query) => $query->where('is_listed', true),
                     fn ($query) => $query->where(function ($query) use ($user) {
-                        $query->where(function ($query) use ($user) {
-                            $query->where('members_can_post_to_club', true)
-                                ->where(function ($query) use ($user) {
-                                    $query->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id))
-                                        ->orWhereHas('teams.users', fn ($userQuery) => $userQuery->where('users.id', $user->id));
-                                });
-                        })->orWhereHas('users', function ($userQuery) use ($user) {
-                            $userQuery->where('users.id', $user->id);
-                            ClubRoles::whereAny($userQuery, ClubRoles::ELEVATED);
-                        });
+                        $query->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id))
+                            ->orWhereHas('teams.users', fn ($userQuery) => $userQuery->where('users.id', $user->id));
                     }),
                 )
                 ->select(['id', 'name', 'is_listed', 'teams_are_listed', 'members_can_post_to_club', 'members_can_post_to_teams'])

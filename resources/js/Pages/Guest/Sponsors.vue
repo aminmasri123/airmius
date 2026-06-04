@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Nav from '@/Components/Guest/Nav.vue'
@@ -49,16 +49,16 @@ const scopeLabel = (sponsor) => ({
 }[sponsor.scope] || 'Airmius Plattform')
 
 const scopeDescription = (sponsor) => ({
-    platform: 'Unterstuetzt Airmius-Angebote und Plattform-Vorteile.',
-    outfit_subscription: 'Unterstuetzt Outfit-Abos und Sponsor-Deals für Sportler.',
-    club: 'Unterstuetzt Vereinsangebote und lokale Sportprojekte.',
-}[sponsor.scope] || 'Unterstuetzt Airmius-Angebote und Plattform-Vorteile.')
+    platform: 'Unterstütz Airmius-Angebote und Plattform-Vorteile.',
+    outfit_subscription: 'Unterstütz Outfit-Abos und Sponsor-Deals für Sportler.',
+    club: 'Unterstütz Vereinsangebote und lokale Sportprojekte.',
+}[sponsor.scope] || 'Unterstütz Airmius-Angebote und Plattform-Vorteile.')
 </script>
 
 <template>
     <SeoHead
         title="Airmius Sponsoren"
-        description="Entdecke die Sponsoren und Partner, die Airmius, Vereine und Sportangebote unterstuetzen."
+        description="Entdecke die Sponsoren und Partner, die Airmius, Vereine und Sportangebote unterstütz."
     />
 
     <div class="min-h-screen bg-bg text-primary">
@@ -256,3 +256,9 @@ const scopeDescription = (sponsor) => ({
         <Footer />
     </div>
 </template>
+
+
+
+
+
+

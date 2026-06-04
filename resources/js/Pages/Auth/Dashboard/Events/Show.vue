@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import ConfirmActionModal from '@/Components/ConfirmActionModal.vue'
 import Modal from '@/Components/Modal.vue'

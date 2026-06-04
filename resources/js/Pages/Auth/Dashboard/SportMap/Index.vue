@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { useForm } from '@inertiajs/vue3'
 import { computed, onUnmounted, reactive, ref, watch } from 'vue'
@@ -235,7 +235,7 @@ const routeGeneratorEnvironmentOptions = [
 const routeGeneratorElevationOptions = [
     { key: 'flat', label: 'Flach' },
     { key: 'mixed', label: 'Gemischt' },
-    { key: 'hilly', label: 'Huegelig' },
+    { key: 'hilly', label: 'Hügelig' },
 ]
 
 const routeGeneratorDifficultyOptions = [
@@ -622,12 +622,12 @@ const fallbackMapLabels = [
     { name: 'Berlin', latitude: 52.52, longitude: 13.405 },
     { name: 'Hannover', latitude: 52.3759, longitude: 9.732 },
     { name: 'Dortmund', latitude: 51.5136, longitude: 7.4653 },
-    { name: 'Koeln', latitude: 50.9375, longitude: 6.9603 },
+    { name: 'Köln', latitude: 50.9375, longitude: 6.9603 },
     { name: 'Frankfurt', latitude: 50.1109, longitude: 8.6821 },
     { name: 'Leipzig', latitude: 51.3397, longitude: 12.3731 },
-    { name: 'Nuernberg', latitude: 49.4521, longitude: 11.0767 },
+    { name: 'Nürnberg', latitude: 49.4521, longitude: 11.0767 },
     { name: 'Stuttgart', latitude: 48.7758, longitude: 9.1829 },
-    { name: 'Muenchen', latitude: 48.1351, longitude: 11.582 },
+    { name: 'München', latitude: 48.1351, longitude: 11.582 },
 ]
 
 const tabs = [
@@ -847,7 +847,7 @@ const formatPercent = (value) => `${Number(value || 0).toFixed(1)} %`
 const cueText = (cue, index) => {
     const type = String(cue?.type || cue?.maneuver_type || 'continue')
     const road = cue?.road_name ? ` auf ${cue.road_name}` : ''
-    const distance = cue?.distance_meters ? ` · ${formatDistance(cue.distance_meters)}` : ''
+    const distance = cue?.distance_meters ? ` • ${formatDistance(cue.distance_meters)}` : ''
     const label = {
         start: 'Start',
         finish: 'Ziel erreicht',
@@ -910,7 +910,7 @@ const routeGenerationLimitLabel = computed(() => {
         return `${access.label || 'Routing'}: unbegrenzt`
     }
 
-    return `${access.label || 'Routing'}: ${access.monthly_remaining ?? 0}/${access.monthly_limit} Vorschlaege diesen Monat offen`
+    return `${access.label || 'Routing'}: ${access.monthly_remaining ?? 0}/${access.monthly_limit} Vorschläge diesen Monat offen`
 })
 
 const routeGeneratorTargetSpeedKmh = computed(() => {
@@ -1277,7 +1277,7 @@ const applyRouteProposal = (proposal) => {
     if (metrics.routing_status === 'routed' && geometryPoints.length > 2) {
         routeGeneratorStatus.value = `Route wurde auf echten Wegen berechnet: ${formatDistance(proposal.distance_meters)}, ${formatDuration(proposal.estimated_duration_seconds)}.`
     } else {
-        routeGeneratorStatus.value = 'Routingdienst konnte keine echte Wegstrecke liefern. Bitte Startpunkt/Distanz ?ndern oder Routing-Konfiguration prüfen.'
+        routeGeneratorStatus.value = 'Routingdienst konnte keine echte Wegstrecke liefern. Bitte Startpunkt/Distanz ändern oder Routing-Konfiguration prüfen.'
     }
 
     manualMapPointStatus.value = routeGeneratorStatus.value
@@ -1303,7 +1303,7 @@ const generateRouteProposal = () => {
     if (isGeneratingRoute.value) return
 
     if (!routeGenerationAccess.value.available) {
-        routeGeneratorStatus.value = routeGenerationAccess.value.reason || 'Automatische Routengenerierung ist in deinem aktuellen Plan nicht verfuegbar.'
+        routeGeneratorStatus.value = routeGenerationAccess.value.reason || 'Automatische Routengenerierung ist in deinem aktuellen Plan nicht verfügbar.'
         return
     }
 
@@ -2337,7 +2337,7 @@ onUnmounted(() => {
                     <button
                         type="button"
                         class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/10 text-primary shadow-lg"
-                        aria-label="Tracking schliessen"
+                        aria-label="Tracking schließen"
                         @click="closeTrackingFullscreen"
                     >
                         <i class="las la-times text-2xl"></i>
@@ -2569,7 +2569,7 @@ onUnmounted(() => {
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div class="max-w-3xl">
                         <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">
-                            Schritt 1 · Sportkarte starten
+                            Schritt 1: Sportkarte starten
                         </p>
                         <h2 class="mt-2 text-2xl font-bold text-primary sm:text-3xl">
                             {{ $t('sport_map.title') }}
@@ -2897,8 +2897,8 @@ onUnmounted(() => {
                                         <div class="h-full rounded-full bg-orange-400 transition-[width]" :style="{ width: `${routePlaybackProgressPercent}%` }"></div>
                                     </div>
                                     <p class="mt-1 text-xs text-secondary">
-                                        {{ formatDuration(routePlaybackElapsedSeconds) }} gelaufen · {{ formatDuration(routePlaybackRemainingSeconds) }} Rest
-                                        <span v-if="routePlaybackStatus"> · {{ routePlaybackStatus }}</span>
+                                        {{ formatDuration(routePlaybackElapsedSeconds) }} gelaufen • {{ formatDuration(routePlaybackRemainingSeconds) }} Rest
+                                        <span v-if="routePlaybackStatus"> • {{ routePlaybackStatus }}</span>
                                     </p>
                                 </div>
 
@@ -3514,7 +3514,7 @@ onUnmounted(() => {
                                     >
                                         {{ trackingLiveStatusLabel }}
                                     </span>
-                                    <button type="button" class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-primary" aria-label="Tracking schliessen" @click="closeTrackingFullscreen">
+                                    <button type="button" class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-border bg-card text-primary" aria-label="Tracking schließen" @click="closeTrackingFullscreen">
                                         <i class="las la-times text-xl"></i>
                                     </button>
                                 </div>
@@ -3552,7 +3552,7 @@ onUnmounted(() => {
                                                 </button>
                                                 <button type="button" class="inline-flex min-h-13 items-center justify-center gap-2 rounded-full border border-red-400/40 bg-red-500/10 px-4 text-sm font-black text-red-300" @click="deleteCurrentTrackDraft">
                                                     <i class="las la-trash"></i>
-                                                    Loeschen
+                                                    Löschen
                                                 </button>
                                             </div>
                                         </div>
@@ -3666,7 +3666,7 @@ onUnmounted(() => {
                                     <div class="mt-8 text-center">
                                         <p class="text-xs font-bold uppercase text-secondary">{{ $t('sport_map.tracks.distance') }}</p>
                                         <p class="mt-3 text-6xl font-black leading-none text-primary">{{ formatDistance(trackingDistance) }}</p>
-                                        <p class="mt-2 text-sm font-bold text-secondary">{{ trackingElapsedLabel }} · {{ trackingLiveStatusLabel }}</p>
+                                        <p class="mt-2 text-sm font-bold text-secondary">{{ trackingElapsedLabel }} • {{ trackingLiveStatusLabel }}</p>
                                     </div>
                                     </div>
                                     <div class="mt-5 grid gap-2" :class="trackingPoints.length ? 'grid-cols-2' : 'grid-cols-1'">
@@ -3684,7 +3684,7 @@ onUnmounted(() => {
                                         </button>
                                         <button v-if="trackingPoints.length" type="button" class="col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-red-400/40 bg-red-500/10 px-4 py-2 text-sm font-black text-red-300" @click="deleteCurrentTrackDraft">
                                             <i class="las la-trash"></i>
-                                            Lauf lÃ¶schen
+                                            Lauf löschen
                                         </button>
                                     </div>
                                     <p class="mt-4 text-center text-xs font-semibold text-secondary">Nach links swipen für Karte</p>
@@ -4077,3 +4077,6 @@ onUnmounted(() => {
         </div>
     </AppLayout>
 </template>
+
+
+

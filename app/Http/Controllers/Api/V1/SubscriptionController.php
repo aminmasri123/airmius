@@ -98,7 +98,7 @@ class SubscriptionController extends Controller
             'club_id' => ['nullable', Rule::exists('clubs', 'id')],
             'accepted_terms' => ['accepted'],
         ], [
-            'provider.in' => 'Dieser Zahlungsanbieter wird mobil nicht unterstuetzt.',
+            'provider.in' => 'Dieser Zahlungsanbieter wird mobil nicht unterstützt.',
             'accepted_terms.accepted' => 'Bitte bestätige AGB und Widerrufshinweise, bevor du das Abo kostenpflichtig bestellst.',
         ]);
 
@@ -811,3 +811,4 @@ class SubscriptionController extends Controller
             || $user->hasAnyRole(Roles::FULL_ACCESS);
     }
 }
+

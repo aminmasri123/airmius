@@ -51,6 +51,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::put('/profile-completion', [ProfileCompletionController::class, 'update'])->name('auth.profile-completion.update');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('auth.dashboard');
+    Route::get('/dashboard/maturity', [DashboardController::class, 'maturity'])->name('auth.maturity.index');
     Route::patch('/dashboard/preferences', [DashboardController::class, 'updatePreferences'])->name('auth.dashboard.preferences.update');
     Route::get('/workspaces', [RoleWorkspaceController::class, 'index'])->name('auth.workspaces.index');
     Route::get('/club-cockpit', [ClubCockpitController::class, 'index'])->name('auth.club-cockpit.index');
@@ -238,6 +239,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::post('/clubs/{club}/membership/types', [ClubMembershipController::class, 'storeMembershipType'])->name('auth.club-memberships.types.store');
     Route::post('/clubs/{club}/membership/contribution-rules', [ClubMembershipController::class, 'storeContributionRule'])->name('auth.club-memberships.contribution-rules.store');
     Route::post('/clubs/{club}/membership-requests', [ClubMembershipController::class, 'storeMembershipRequest'])->name('auth.club-membership-requests.store');
+    Route::delete('/clubs/{club}/membership-requests', [ClubMembershipController::class, 'withdrawMembershipRequest'])->name('auth.club-membership-requests.destroy');
     Route::post('/clubs/{club}/membership-pause-requests', [ClubMembershipController::class, 'storePauseRequest'])->name('auth.club-membership-pause-requests.store');
     Route::post('/clubs/{club}/membership/leave', [ClubMembershipController::class, 'leaveClub'])->name('auth.club-memberships.leave');
     Route::post('/clubs/{club}/membership/removal-objection', [ClubMembershipController::class, 'objectToRemoval'])->name('auth.club-memberships.removal-objection');

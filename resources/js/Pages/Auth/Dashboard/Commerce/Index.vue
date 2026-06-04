@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
@@ -1456,10 +1456,10 @@ onMounted(() => {
 
     <div class="space-y-6">
         <section class="surface-card p-5">
-            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Kaeufe & Abos</p>
+            <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Käufe & Abos</p>
             <h1 class="mt-1 text-2xl font-bold text-primary">Shop, Rechnungen und Angebote</h1>
             <p class="mt-2 max-w-3xl text-sm text-secondary">
-                Verwalte Marketplace-Kaeufe, Kurse, Ads, Outfit-Abos, Konto-Abos, Warenkorb und Rechnungen an einem Ort.
+                Verwalte Marketplace-Käufe, Kurse, Ads, Outfit-Abos, Konto-Abos, Warenkorb und Rechnungen an einem Ort.
             </p>
             <div v-if="page.props.flash?.success" class="mt-4 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
                 {{ page.props.flash.success }}
@@ -2196,7 +2196,7 @@ onMounted(() => {
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Marketplace Anbieter</p>
-                        <h2 class="mt-1 text-xl font-bold text-primary">Sitzadresse & öffentliches Profil</h2>
+                        <h2 class="mt-1 text-xl font-bold text-primary">Sitzadresse & Öffentliches Profil</h2>
                         <p class="mt-1 max-w-2xl text-sm text-secondary">
                             Die Sitzadresse bleibt intern, solange du sie nicht freigibst. Kunden sehen nur die Daten, die du bewusst öffentlich schaltest.
                         </p>
@@ -2346,7 +2346,7 @@ onMounted(() => {
                                 <span class="rounded-full bg-muted px-2 py-1 text-xs font-semibold text-secondary">{{ location.type }}</span>
                             </div>
                             <div class="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
-                                <span v-if="location.is_public" class="rounded-full bg-success/10 px-2 py-1 text-success">öffentlich</span>
+                                <span v-if="location.is_public" class="rounded-full bg-success/10 px-2 py-1 text-success">Öffentlich</span>
                                 <span v-if="location.pickup_enabled" class="rounded-full bg-air-blue/10 px-2 py-1 text-air-blue">Abholung</span>
                                 <span v-if="location.returns_enabled" class="rounded-full bg-warning/10 px-2 py-1 text-warning">Rückgabe</span>
                             </div>
@@ -2488,7 +2488,7 @@ onMounted(() => {
                         <p class="mt-2 text-sm font-semibold text-primary">{{ selectedAdFormat.size }} · {{ selectedAdFormat.ratio }}</p>
                         <p class="text-xs text-secondary">{{ selectedAdFormat.hint }}</p>
                         <p class="mt-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-secondary">
-                            Placement entscheidet den Ort. Creative Format entscheidet nur Grüße und Seitenverhaeltnis der Anzeige.
+                            Placement entscheidet den Ort. Creative Format entscheidet nur Größe und Seitenverhaeltnis der Anzeige.
                         </p>
                     </div>
                     <input v-model="campaignForm.creative_image_url" type="url" class="hidden rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL optional">
@@ -2783,7 +2783,7 @@ onMounted(() => {
         <section v-if="activeTab === 'invoices'" class="surface-card overflow-hidden">
             <div class="border-b border-border p-5">
                 <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Zentrale Übersicht</p>
-                <h2 class="mt-1 text-lg font-semibold text-primary">Rechnungen und Einkaeufe</h2>
+                <h2 class="mt-1 text-lg font-semibold text-primary">Rechnungen und EinKäufe</h2>
                 <p class="mt-1 text-sm text-secondary">Hier stehen Ads, Marketplace, Kurse, Outfit-Abos und Konto-Abos zusammen.</p>
             </div>
             <div class="overflow-x-auto">
@@ -2825,7 +2825,7 @@ onMounted(() => {
                         </tr>
                     </tbody>
                 </table>
-                <p v-if="!purchaseHistory.length" class="px-5 py-6 text-sm text-secondary">Noch keine Einkaeufe oder Rechnungen vorhanden.</p>
+                <p v-if="!purchaseHistory.length" class="px-5 py-6 text-sm text-secondary">Noch keine EinKäufe oder Rechnungen vorhanden.</p>
             </div>
         </section>
 
@@ -3235,7 +3235,7 @@ onMounted(() => {
                         <p class="mt-2 text-sm font-semibold text-primary">{{ selectedEditAdFormat.size }} - {{ selectedEditAdFormat.ratio }}</p>
                         <p class="text-xs text-secondary">{{ selectedEditAdFormat.hint }}</p>
                         <p class="mt-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-secondary">
-                            Placement entscheidet den Ort. Creative Format entscheidet nur Grüße und Seitenverhaeltnis der Anzeige.
+                            Placement entscheidet den Ort. Creative Format entscheidet nur Größe und Seitenverhaeltnis der Anzeige.
                         </p>
                     </div>
                     <input v-model="editCampaignForm.creative_image_url" type="url" class="rounded-lg border-border bg-inputBg text-sm text-primary" placeholder="Bild-URL optional">
@@ -3462,3 +3462,5 @@ onMounted(() => {
         </div>
     </div>
 </template>
+
+

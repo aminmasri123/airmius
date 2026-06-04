@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import { Head, router } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
@@ -215,3 +215,7 @@ const loadMonth = () => {
         </section>
     </div>
 </template>
+
+
+
+

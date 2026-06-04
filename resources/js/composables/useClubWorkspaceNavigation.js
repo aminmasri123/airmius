@@ -1,4 +1,4 @@
-import { computed } from 'vue'
+﻿import { computed } from 'vue'
 import { usePermissions } from '@/composables/usePermissions'
 
 export const useClubWorkspaceNavigation = () => {

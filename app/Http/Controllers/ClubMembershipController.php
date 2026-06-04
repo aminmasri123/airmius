@@ -8,6 +8,7 @@ use App\Models\ClubContributionRule;
 use App\Models\ClubExternalMember;
 use App\Models\ClubMembershipRequest;
 use App\Models\ClubMembershipType;
+use App\Models\Folder;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Team;
@@ -16,9 +17,11 @@ use App\Models\User;
 use App\Notifications\ClubInvoiceCreated;
 use App\Notifications\ExternalClubMembershipInvitation;
 use App\Services\ClubService;
+use App\Services\FileService;
 use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
 use App\Support\ClubRoles;
+use App\Support\ClubMembershipApplication;
 use App\Support\Roles;
 use App\Support\TransactionalMail;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -35,11 +38,12 @@ class ClubMembershipController extends Controller
     use AuthorizesRequests;
 
     public const MEMBERSHIP_STATUSES = ['active', 'non_member', 'pending', 'paused', 'former'];
-    public const CONTRIBUTION_INTERVALS = ['none', 'monthly', 'quarterly', 'yearly', 'once'];
+    public const CONTRIBUTION_INTERVALS = ['none', 'monthly', 'quarterly', 'four_monthly', 'semi_yearly', 'yearly', 'once'];
 
     public function __construct(
         private PlanFeatureService $planFeatures,
         private ClubService $clubService,
+        private FileService $fileService,
     ) {}
 
     public function index(Request $request)
@@ -124,6 +128,11 @@ class ClubMembershipController extends Controller
                     'datev_bank_account' => $club->datev_bank_account,
                     'membership_requests_enabled' => $club->membership_requests_enabled,
                     'member_pause_requests_enabled' => $club->member_pause_requests_enabled,
+                    'membership_application_fields' => ClubMembershipApplication::fieldsForClub($club->membership_application_fields),
+                    'membership_payment_methods' => ClubMembershipApplication::normalizePaymentMethods($club->membership_payment_methods),
+                    'membership_payment_method_options' => ClubMembershipApplication::paymentMethods(),
+                    'membership_application_documents' => ClubMembershipApplication::normalizeDocuments($club->membership_application_documents),
+                    'membership_application_document_types' => ClubMembershipApplication::documentTypes(),
                     'users_count' => $club->users_count,
                     'teams_count' => $club->teams_count,
                     'subscription' => [
@@ -177,6 +186,10 @@ class ClubMembershipController extends Controller
                         'type' => $request->type,
                         'status' => $request->status,
                         'message' => $request->message,
+                        'application_data' => $request->application_data ?: [],
+                        'accepted_documents' => $request->accepted_documents ?: [],
+                        'preferred_payment_method' => $request->preferred_payment_method,
+                        'requested_billing_interval' => $request->requested_billing_interval,
                         'requested_pause_from' => $request->requested_pause_from?->toDateString(),
                         'requested_pause_until' => $request->requested_pause_until?->toDateString(),
                         'preview_amount' => $request->preview_amount,
@@ -253,6 +266,7 @@ class ClubMembershipController extends Controller
             'athlete_license_number' => ['nullable', 'string', 'max:120'],
             'contribution_amount' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'contribution_interval' => ['nullable', Rule::in(self::CONTRIBUTION_INTERVALS)],
+            'payment_method' => ['nullable', Rule::in(collect(ClubMembershipApplication::paymentMethods())->pluck('value')->all())],
             'contribution_next_invoice_on' => ['nullable', 'date'],
             'sepa_iban' => ['nullable', 'string', 'max:40'],
             'sepa_bic' => ['nullable', 'string', 'max:20'],
@@ -306,6 +320,7 @@ class ClubMembershipController extends Controller
                 'member_number' => $data['member_number'] ?? null,
                 'contribution_amount' => $data['contribution_amount'] ?? null,
                 'contribution_interval' => $data['contribution_interval'] ?? 'none',
+                'payment_method' => $data['payment_method'] ?? null,
                 'contribution_next_invoice_on' => $this->normalizedNextInvoiceDate($data),
                 'contribution_last_invoice_at' => null,
                 'sepa_iban' => $this->normalizeIban($data['sepa_iban'] ?? null),
@@ -438,11 +453,35 @@ class ClubMembershipController extends Controller
         $data = $request->validate([
             'membership_requests_enabled' => ['boolean'],
             'member_pause_requests_enabled' => ['boolean'],
+            'membership_application_fields' => ['nullable', 'array'],
+            'membership_application_fields.*' => ['nullable', Rule::in(ClubMembershipApplication::FIELD_MODES)],
+            'membership_payment_methods' => ['nullable', 'array'],
+            'membership_payment_methods.*' => ['string', Rule::in(collect(ClubMembershipApplication::paymentMethods())->pluck('value')->all())],
+            'membership_application_documents' => ['nullable', 'array'],
+            'membership_application_documents.*.id' => ['nullable', 'string', 'max:80'],
+            'membership_application_documents.*.type' => ['nullable', Rule::in(ClubMembershipApplication::DOCUMENT_TYPES)],
+            'membership_application_documents.*.title' => ['nullable', 'string', 'max:255'],
+            'membership_application_documents.*.url' => ['nullable', 'string', 'max:1000'],
+            'membership_application_documents.*.file_id' => ['nullable', 'integer', 'exists:files,id'],
+            'membership_application_documents.*.file_name' => ['nullable', 'string', 'max:255'],
+            'membership_application_documents.*.file' => ['nullable', 'file', 'max:51200'],
+            'membership_application_documents.*.description' => ['nullable', 'string', 'max:1000'],
+            'membership_application_documents.*.is_visible' => ['boolean'],
+            'membership_application_documents.*.is_required' => ['boolean'],
         ]);
+
+        $documents = $this->storeMembershipApplicationDocumentUploads(
+            $request,
+            $club,
+            $data['membership_application_documents'] ?? []
+        );
 
         $club->update([
             'membership_requests_enabled' => (bool) ($data['membership_requests_enabled'] ?? false),
             'member_pause_requests_enabled' => (bool) ($data['member_pause_requests_enabled'] ?? false),
+            'membership_application_fields' => ClubMembershipApplication::normalizeFieldModes($data['membership_application_fields'] ?? null),
+            'membership_payment_methods' => ClubMembershipApplication::normalizePaymentMethods($data['membership_payment_methods'] ?? null),
+            'membership_application_documents' => ClubMembershipApplication::normalizeDocuments($documents),
         ]);
 
         return back()->with('success', 'Mitgliedschafts-Einstellungen aktualisiert.');
@@ -503,14 +542,82 @@ class ClubMembershipController extends Controller
     {
         abort_unless($club->membership_requests_enabled, 403, 'Dieser Verein nimmt aktuell keine Online-Mitgliedsanfragen an.');
 
+        $applicationFields = ClubMembershipApplication::fieldsForClub($club->membership_application_fields);
+        $enabledApplicationFields = collect($applicationFields)->where('mode', '!=', 'off')->values();
+        $paymentMethods = ClubMembershipApplication::normalizePaymentMethods($club->membership_payment_methods);
+        $visibleDocuments = collect(ClubMembershipApplication::normalizeDocuments($club->membership_application_documents))
+            ->where('is_visible', true)
+            ->values();
+
         $data = $request->validate([
             'club_membership_type_id' => ['nullable', Rule::exists('club_membership_types', 'id')->where('club_id', $club->id)],
+            'application_data' => ['nullable', 'array'],
+            'accepted_documents' => ['nullable', 'array'],
+            'accepted_documents.*' => ['boolean'],
+            'preferred_payment_method' => ['nullable', Rule::in($paymentMethods)],
+            'requested_billing_interval' => ['nullable', Rule::in(self::CONTRIBUTION_INTERVALS)],
             'message' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        $applicationData = [];
+        $missingFields = [];
+        $inputApplicationData = $data['application_data'] ?? [];
+
+        foreach ($enabledApplicationFields as $field) {
+            $key = $field['key'];
+            $value = $inputApplicationData[$key] ?? null;
+            $isCheckbox = ($field['type'] ?? null) === 'checkbox';
+            $isEmpty = $isCheckbox ? ! (bool) $value : blank($value);
+
+            if (($field['mode'] ?? 'off') === 'required' && $isEmpty) {
+                $missingFields['application_data.'.$key] = $field['label'].' ist erforderlich.';
+            }
+
+            if (! $isEmpty) {
+                $applicationData[$key] = $isCheckbox ? (bool) $value : trim((string) $value);
+            }
+        }
+
+        if ($missingFields) {
+            throw ValidationException::withMessages($missingFields);
+        }
+
+        $acceptedDocumentIds = collect($data['accepted_documents'] ?? [])
+            ->filter(fn ($accepted) => (bool) $accepted)
+            ->keys()
+            ->map(fn ($id) => (string) $id)
+            ->all();
+
+        $missingDocuments = [];
+        $acceptedDocuments = [];
+
+        foreach ($visibleDocuments as $document) {
+            $isAccepted = in_array((string) $document['id'], $acceptedDocumentIds, true);
+
+            if (($document['is_required'] ?? false) && ! $isAccepted) {
+                $missingDocuments['accepted_documents.'.$document['id']] = $document['title'].' muss bestaetigt werden.';
+            }
+
+            if ($isAccepted) {
+                $acceptedDocuments[] = [
+                    'id' => $document['id'],
+                    'type' => $document['type'],
+                    'title' => $document['title'],
+                    'url' => $document['url'],
+                    'file_id' => $document['file_id'] ?? null,
+                    'file_name' => $document['file_name'] ?? '',
+                    'accepted_at' => now()->toIso8601String(),
+                ];
+            }
+        }
+
+        if ($missingDocuments) {
+            throw ValidationException::withMessages($missingDocuments);
+        }
+
         $previewRule = $this->matchingContributionRule($club, $request->user(), $data['club_membership_type_id'] ?? null);
 
-        ClubMembershipRequest::query()->updateOrCreate(
+        $membershipRequest = ClubMembershipRequest::query()->updateOrCreate(
             [
                 'club_id' => $club->id,
                 'user_id' => $request->user()->id,
@@ -520,12 +627,51 @@ class ClubMembershipController extends Controller
             [
                 'club_membership_type_id' => $data['club_membership_type_id'] ?? null,
                 'message' => $data['message'] ?? null,
+                'application_data' => $applicationData,
+                'accepted_documents' => $acceptedDocuments,
+                'preferred_payment_method' => $data['preferred_payment_method'] ?? null,
+                'requested_billing_interval' => $data['requested_billing_interval'] ?? null,
+                'applicant_confirmed_at' => now(),
                 'preview_amount' => $previewRule?->amount,
-                'preview_interval' => $previewRule?->billing_interval,
+                'preview_interval' => $data['requested_billing_interval'] ?? $previewRule?->billing_interval,
             ],
         );
 
+        $this->notifyClubManagers($club, 'club.membership_request_created', [
+            'title' => 'Neue Mitgliedschaftsanfrage',
+            'body' => $request->user()->name.' möchte Mitglied bei '.$club->name.' werden.',
+            'url' => route('auth.club-memberships.index'),
+            'club_id' => $club->id,
+            'membership_request_id' => $membershipRequest->id,
+        ], $request->user()->id);
+
         return back()->with('success', 'Mitgliedschaftsanfrage wurde an den Verein gesendet.');
+    }
+
+    public function withdrawMembershipRequest(Request $request, Club $club)
+    {
+        $membershipRequest = ClubMembershipRequest::query()
+            ->where('club_id', $club->id)
+            ->where('user_id', $request->user()->id)
+            ->where('type', 'membership')
+            ->where('status', 'pending')
+            ->firstOrFail();
+
+        $membershipRequest->update([
+            'status' => 'withdrawn',
+            'reviewed_at' => now(),
+            'review_note' => 'Vom Nutzer zurueckgezogen.',
+        ]);
+
+        $this->notifyClubManagers($club, 'club.membership_request_withdrawn', [
+            'title' => 'Mitgliedschaftsanfrage zurückgezogen',
+            'body' => $request->user()->name.' hat die Anfrage bei '.$club->name.' zurückgezogen.',
+            'url' => route('auth.club-memberships.index'),
+            'club_id' => $club->id,
+            'membership_request_id' => $membershipRequest->id,
+        ], $request->user()->id);
+
+        return back()->with('success', 'Mitgliedschaftsanfrage wurde zurückgezogen.');
     }
 
     public function storePauseRequest(Request $request, Club $club)
@@ -589,6 +735,10 @@ class ClubMembershipController extends Controller
                         'club_membership_type_id' => $membershipRequest->club_membership_type_id,
                         'contribution_amount' => $membershipRequest->preview_amount,
                         'contribution_interval' => $membershipRequest->preview_interval ?: 'none',
+                        'payment_method' => $membershipRequest->preferred_payment_method,
+                        'sepa_iban' => $this->normalizeIban($membershipRequest->application_data['sepa_iban'] ?? null),
+                        'sepa_bic' => $this->normalizeBic($membershipRequest->application_data['sepa_bic'] ?? null),
+                        'sepa_mandate_active' => (bool) ($membershipRequest->application_data['sepa_mandate_consent'] ?? false),
                         'joined_on' => now()->toDateString(),
                     ],
                 ]);
@@ -1499,7 +1649,7 @@ class ClubMembershipController extends Controller
         ));
         $debtorIban = $this->normalizeIban($row['iban'] ?? $row['debtor_iban'] ?? $row['konto'] ?? null);
         $bookingDate = $this->normalizeImportDate($row['datum'] ?? $row['date'] ?? $row['buchungstag'] ?? $row['booking_date'] ?? null);
-        $currency = strtoupper(trim((string) ($row['waehrung'] ?? $row['currency'] ?? 'EUR'))) ?: 'EUR';
+        $currency = strtoupper(trim((string) ($row['Währung'] ?? $row['currency'] ?? 'EUR'))) ?: 'EUR';
 
         $hashPayload = implode('|', [
             $bookingDate,
@@ -2000,7 +2150,7 @@ XML);
             'kein_mitglied' => 'non_member',
             'nichtmitglied' => 'non_member',
             'Prüfung' => 'pending',
-            'in_pruefung' => 'pending',
+            'in_Prüfung' => 'pending',
             'ehemalig' => 'former',
         ];
 
@@ -2059,6 +2209,44 @@ XML);
         }
 
         return $data['contribution_next_invoice_on'] ?? null;
+    }
+
+    private function storeMembershipApplicationDocumentUploads(Request $request, Club $club, array $documents): array
+    {
+        foreach ($documents as $index => $document) {
+            $uploadedFile = $request->file("membership_application_documents.$index.file");
+
+            if (! $uploadedFile) {
+                continue;
+            }
+
+            $this->planFeatures->ensureCanStoreFile($club, $uploadedFile);
+
+            $folder = Folder::query()->firstOrCreate([
+                'user_id' => null,
+                'club_id' => $club->id,
+                'team_id' => null,
+                'event_id' => null,
+                'parent_id' => null,
+                'name' => 'Mitgliedsantrag',
+            ]);
+
+            $file = $this->fileService->upload($request->user(), $uploadedFile, [
+                'club_id' => $club->id,
+                'team_id' => null,
+                'event_id' => null,
+                'folder_id' => $folder->id,
+            ]);
+
+            $documents[$index]['file_id'] = $file->id;
+            $documents[$index]['file_name'] = $file->display_name;
+            $documents[$index]['url'] = route('auth.files.download', $file);
+            $documents[$index]['title'] = filled($document['title'] ?? null)
+                ? $document['title']
+                : $file->display_name;
+        }
+
+        return $documents;
     }
 
     private function matchingContributionRule(Club $club, User $user, ?int $membershipTypeId): ?ClubContributionRule
