@@ -26,7 +26,7 @@ defineProps({
                 class="shrink-0 rounded-lg border border-border px-3 py-1 text-secondary transition hover:border-borderHover hover:text-primary"
                 @click="closeCreateModal"
             >
-                �-
+                x
             </button>
         </div>
 

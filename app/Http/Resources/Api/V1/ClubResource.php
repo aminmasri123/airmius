@@ -28,6 +28,17 @@ class ClubResource extends JsonResource
             'is_official' => (bool) $this->is_official,
             'verification_status' => $this->verification_status,
             'membership_requests_enabled' => (bool) $this->membership_requests_enabled,
+            'accepts_membership_applications' => (bool) $this->membership_requests_enabled,
+            'has_pending_membership_request' => (bool) ($request->user()
+                ? $this->membershipRequests()
+                    ->where('user_id', $request->user()->id)
+                    ->where('type', 'membership')
+                    ->where('status', 'pending')
+                    ->exists()
+                : false),
+            'is_member' => (bool) ($request->user()
+                ? $this->users()->where('users.id', $request->user()->id)->exists()
+                : false),
             'member_pause_requests_enabled' => (bool) $this->member_pause_requests_enabled,
             'is_listed' => (bool) $this->is_listed,
             'teams_are_listed' => (bool) $this->teams_are_listed,

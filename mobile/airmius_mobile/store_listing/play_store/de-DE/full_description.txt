@@ -1,0 +1,17 @@
+Airmius ist die mobile Plattform fuer Sportvereine, Teams, Mitglieder und Trainer.
+
+Mit Airmius koennen Nutzer Vereine suchen, Vereinsprofile ansehen, Mitgliedschaftsanfragen starten, Nachrichten empfangen, Trainings- und Eventtermine verfolgen, Dokumente verwalten und wichtige Vereinsinformationen mobil nutzen.
+
+Vereine koennen ihre Kommunikation, Mitgliedschaftsanfragen, Beitragsinformationen, Dokumente, Rollen, Teams und Termine strukturiert vorbereiten. Die App ist darauf ausgelegt, die mobile Web-App von Airmius moeglichst nah in eine native Flutter-Erfahrung zu uebertragen.
+
+Wichtige Funktionen:
+- Vereine und Teams suchen
+- Mitgliedschaftsanfragen vorbereiten
+- Vereinsnachrichten und Benachrichtigungen anzeigen
+- Trainings- und Eventuebersicht nutzen
+- Rechnungen und Zahlungsstatus einsehen
+- Vereinsdokumente und Upload-Flows vorbereiten
+- Profil, Datenschutz und Sichtbarkeit verwalten
+- Mehrsprachige Nutzung mit Deutsch, Englisch, Franzoesisch und Arabisch
+
+Hinweis: Einige Funktionen koennen je nach Verein, Rolle und freigeschalteter Airmius-Konfiguration variieren.

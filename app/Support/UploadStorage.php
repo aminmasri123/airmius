@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 
 class UploadStorage
 {
@@ -17,8 +18,12 @@ class UploadStorage
             return null;
         }
 
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '/')) {
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
             return $path;
+        }
+
+        if (str_starts_with($path, '/')) {
+            return URL::to($path);
         }
 
         $baseUrl = rtrim((string) config('filesystems.uploads_url'), '/');
@@ -27,6 +32,8 @@ class UploadStorage
             return $baseUrl.'/'.ltrim($path, '/');
         }
 
-        return Storage::disk(static::disk())->url($path);
+        $url = Storage::disk(static::disk())->url($path);
+
+        return str_starts_with($url, '/') ? URL::to($url) : $url;
     }
 }

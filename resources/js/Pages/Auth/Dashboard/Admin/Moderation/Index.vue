@@ -36,7 +36,7 @@ const badgeClass = (severity) => ({
 }[severity] || 'bg-muted text-secondary border-border')
 
 const contentLabel = (content) => {
-    if (!content) return 'Gel�schter Inhalt'
+    if (!content) return 'Gelöschter Inhalt'
     return `${content.type} #${content.id}`
 }
 

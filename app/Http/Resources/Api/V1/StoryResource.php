@@ -43,6 +43,7 @@ class StoryResource extends JsonResource
     private function fallbackActor(Request $request): array
     {
         return [
+            'id' => $this->user_id,
             'key' => 'user:'.$this->user_id,
             'type' => 'user',
             'name' => $this->user?->name,

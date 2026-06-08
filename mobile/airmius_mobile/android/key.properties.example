@@ -1,0 +1,4 @@
+storePassword=change-me
+keyPassword=change-me
+keyAlias=airmius-release
+storeFile=../airmius-release-key.jks

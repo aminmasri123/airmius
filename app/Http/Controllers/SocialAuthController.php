@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SocialAccount;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -13,12 +14,17 @@ class SocialAuthController extends Controller
 {
     private const PROVIDERS = ['google', 'microsoft'];
 
-    public function redirect(string $provider)
+    public function redirect(Request $request, string $provider)
     {
         abort_unless(in_array($provider, self::PROVIDERS, true), 404);
 
+        if ($request->filled('redirect')) {
+            $request->session()->put('url.intended', url($request->string('redirect')->toString()));
+        }
+
         return Socialite::driver($provider)
             ->redirectUrl($this->redirectUrl($provider))
+            ->scopes($this->scopes($provider))
             ->redirect();
     }
 
@@ -28,6 +34,7 @@ class SocialAuthController extends Controller
 
         $socialUser = Socialite::driver($provider)
             ->redirectUrl($this->redirectUrl($provider))
+            ->scopes($this->scopes($provider))
             ->stateless()
             ->user();
 
@@ -68,7 +75,7 @@ class SocialAuthController extends Controller
 
     private function userForSocialAccount($socialUser, bool &$created = false): User
     {
-        $email = $socialUser->getEmail();
+        $email = $this->emailFor($socialUser);
 
         if ($email && ($user = User::where('email', $email)->first())) {
             return $user;
@@ -93,7 +100,7 @@ class SocialAuthController extends Controller
     private function updateAccount(SocialAccount $account, $socialUser): void
     {
         $account->update([
-            'email' => $socialUser->getEmail(),
+            'email' => $this->emailFor($socialUser),
             'name' => $socialUser->getName() ?: $socialUser->getNickname(),
             'avatar_url' => $socialUser->getAvatar(),
             'access_token' => $socialUser->token ?? null,
@@ -105,5 +112,22 @@ class SocialAuthController extends Controller
     private function redirectUrl(string $provider): string
     {
         return config("services.{$provider}.redirect") ?: route('social-auth.callback', $provider);
+    }
+
+    private function scopes(string $provider): array
+    {
+        return match ($provider) {
+            'google' => ['openid', 'profile', 'email'],
+            'microsoft' => ['openid', 'profile', 'email', 'User.Read'],
+            default => [],
+        };
+    }
+
+    private function emailFor($socialUser): ?string
+    {
+        return $socialUser->getEmail()
+            ?: data_get($socialUser->user, 'email')
+            ?: data_get($socialUser->user, 'mail')
+            ?: data_get($socialUser->user, 'userPrincipalName');
     }
 }

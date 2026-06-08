@@ -32,12 +32,6 @@ class StoryController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $feedUserIds = collect([$user->id])
-            ->merge($user->friendships()->pluck('friend_id'))
-            ->merge($user->following()->pluck('followed_id'))
-            ->unique()
-            ->values()
-            ->all();
         $clubIds = $user->clubs()->pluck('clubs.id')->all();
         $teamIds = $user->teams()->pluck('teams.id')->all();
 
@@ -50,12 +44,9 @@ class StoryController extends Controller
                             ->whereIn('moderation_status', ['flagged', 'reported']);
                     });
             })
-            ->where(function ($query) use ($user, $feedUserIds, $clubIds, $teamIds) {
+            ->where(function ($query) use ($user, $clubIds, $teamIds) {
                 $query->where('user_id', $user->id)
-                    ->orWhere(function ($query) use ($feedUserIds) {
-                        $query->where('visibility', 'public')
-                            ->whereIn('user_id', $feedUserIds);
-                    })
+                    ->orWhere('visibility', 'public')
                     ->orWhere(function ($query) use ($clubIds) {
                         $query->where('visibility', 'organization')
                             ->whereIn('club_id', $clubIds);
@@ -151,12 +142,10 @@ class StoryController extends Controller
     {
         $this->authorize('view', $story);
 
-        if ($story->user_id !== $request->user()->id) {
-            $story->views()->updateOrCreate(
-                ['user_id' => $request->user()->id],
-                ['viewed_at' => now()],
-            );
-        }
+        $story->views()->updateOrCreate(
+            ['user_id' => $request->user()->id],
+            ['viewed_at' => now()],
+        );
 
         return new StoryResource($this->freshDecoratedStory($story, $request));
     }
@@ -189,13 +178,7 @@ class StoryController extends Controller
         ]));
 
         $story->delete();
-
-        return response()->json([
-            'data' => [
-                'deleted' => true,
-            ],
-            'message' => 'Story gelöscht.',
-        ]);
+        return response()->noContent();
     }
 
     private function freshDecoratedStory(Story $story, Request $request): Story
@@ -229,6 +212,7 @@ class StoryController extends Controller
     {
         if ($story->publisher_type === 'club' && $story->club) {
             return [
+                'id' => $story->club_id,
                 'key' => 'club:'.$story->club_id,
                 'type' => 'club',
                 'name' => $story->club->name,
@@ -238,6 +222,7 @@ class StoryController extends Controller
 
         if ($story->publisher_type === 'team' && $story->team) {
             return [
+                'id' => $story->team_id,
                 'key' => 'team:'.$story->team_id,
                 'type' => 'team',
                 'name' => $story->team->name,
@@ -246,6 +231,7 @@ class StoryController extends Controller
         }
 
         return [
+            'id' => $story->user_id,
             'key' => 'user:'.$story->user_id,
             'type' => 'user',
             'name' => $story->user?->name,
@@ -373,3 +359,4 @@ class StoryController extends Controller
                 ->exists();
     }
 }
+

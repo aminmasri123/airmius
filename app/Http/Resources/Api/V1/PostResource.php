@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -19,14 +20,38 @@ class PostResource extends JsonResource
             'content_origin' => $this->content_origin,
             'content' => $this->content,
             'image' => $this->image,
+            'uploads_base_url' => config('filesystems.uploads_url'),
+            'image_url' => UploadStorage::url($this->image),
+            'image_proxy_url' => $this->image ? route('api.v1.posts.image', $this->resource) : null,
             'visibility' => $this->visibility,
             'moderation_status' => $this->moderation_status,
             'user' => new UserResource($this->whenLoaded('user')),
             'club' => new ClubResource($this->whenLoaded('club')),
             'team' => new TeamResource($this->whenLoaded('team')),
+            'sport' => $this->whenLoaded('sport', fn () => $this->sport ? [
+                'id' => $this->sport->id,
+                'name' => $this->sport->name,
+                'slug' => $this->sport->slug,
+            ] : null),
+            'sport_skills' => $this->whenLoaded('sportSkills', fn () => $this->sportSkills->map(fn ($skill) => [
+                'id' => $skill->id,
+                'name' => $skill->name,
+            ])->values()),
+            'attachments' => $this->whenLoaded('attachments', fn () => $this->attachments->map(fn ($attachment) => [
+                'id' => $attachment->id,
+                'file' => $attachment->file ? (new FileResource($attachment->file))->resolve($request) : null,
+            ])->values()),
+            'files' => $this->whenLoaded('attachments', fn () => $this->attachments
+                ->map(fn ($attachment) => $attachment->file ? (new FileResource($attachment->file))->resolve($request) : null)
+                ->filter()
+                ->values()),
             'comments_count' => $this->whenCounted('comments'),
             'likes_count' => $this->whenCounted('likes'),
             'helpfuls_count' => $this->whenCounted('helpfuls'),
+            'liked_by_me' => (bool) ($this->liked_by_me ?? false),
+            'helpful_by_me' => (bool) ($this->helpful_by_me ?? false),
+            'can_update' => (bool) ($this->user_id === $request->user()?->id || ($request->user()?->can('update', $this->resource) ?? false)),
+            'can_delete' => (bool) ($this->user_id === $request->user()?->id || ($request->user()?->can('delete', $this->resource) ?? false)),
             'created_at' => $this->created_at?->toJSON(),
             'updated_at' => $this->updated_at?->toJSON(),
         ];

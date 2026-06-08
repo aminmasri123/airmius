@@ -39,7 +39,12 @@ class EventResource extends JsonResource
             'team' => new TeamResource($this->whenLoaded('team')),
             'user' => new UserResource($this->whenLoaded('user')),
             'participants_count' => $this->whenCounted('participants'),
+            'yes_count' => (int) ($this->yes_count ?? 0),
+            'maybe_count' => (int) ($this->maybe_count ?? 0),
+            'no_count' => (int) ($this->no_count ?? 0),
             'comments_count' => $this->whenCounted('comments'),
+            'my_participation_status' => $this->my_participation_status,
+            'can_join' => (bool) ($request->user()?->can('join', $this->resource) ?? false),
             'created_at' => $this->created_at?->toJSON(),
             'updated_at' => $this->updated_at?->toJSON(),
         ];

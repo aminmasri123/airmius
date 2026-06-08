@@ -285,7 +285,7 @@ createInertiaApp({
         // Theme früh laden
         const theme = localStorage.getItem('theme')
         || props.initialPage.props.auth?.user?.theme
-        || 'dark';
+        || 'air';
 
         const { initTheme } = useTheme()
         initTheme(theme)

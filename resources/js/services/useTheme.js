@@ -4,7 +4,7 @@ const isDark = ref(false)
 const themes = ['air', 'dark', 'womanly', 'champion', 'sprint', 'arena', 'pulse', 'trail', 'bazaar']
 
 const setTheme = (theme) => {
-    const nextTheme = themes.includes(theme) ? theme : 'dark'
+    const nextTheme = themes.includes(theme) ? theme : 'air'
 
     document.documentElement.classList.remove(...themes.map((theme) => `theme-${theme}`))
     document.documentElement.classList.add(`theme-${nextTheme}`)

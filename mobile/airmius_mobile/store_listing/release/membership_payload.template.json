@@ -1,0 +1,45 @@
+{
+  "membership_type": "general_request",
+  "personal": {
+    "first_name": "Review",
+    "last_name": "Member",
+    "date_of_birth": "2000-01-01",
+    "gender": "not_specified"
+  },
+  "contact": {
+    "email": "review.member@example.com",
+    "phone": "+491701234567"
+  },
+  "address": {
+    "country": "DE",
+    "street": "Teststrasse",
+    "house_number": "1",
+    "postal_code": "10115",
+    "city": "Berlin",
+    "region": "Berlin"
+  },
+  "sport": {
+    "license_number": "TEST-LIC-001"
+  },
+  "guardian": {
+    "name": "",
+    "email": ""
+  },
+  "emergency_contact": {
+    "name": "Review Emergency",
+    "phone": "+491709876543"
+  },
+  "payment": {
+    "method": "bank_transfer",
+    "interval": "monthly",
+    "iban": "",
+    "bic": "",
+    "sepa_mandate": false
+  },
+  "consents": {
+    "privacy_policy": true,
+    "club_rules": true,
+    "data_accuracy": true
+  },
+  "notes": "Release smoke test payload with fake data only."
+}

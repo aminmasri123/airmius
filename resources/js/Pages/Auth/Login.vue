@@ -18,6 +18,7 @@ const props = defineProps({
 const page = usePage()
 const redirectTarget = new URLSearchParams(page.url.split('?')[1] || '').get('redirect')
 const authRouteParams = redirectTarget ? { redirect: redirectTarget } : {}
+const socialRouteParams = (provider) => ({ provider, ...authRouteParams })
 
 const form = useForm({
     email: '',
@@ -91,14 +92,14 @@ const goBack = () => {
 
                 <div class="mb-4 grid gap-2">
                     <a
-                        :href="route('social-auth.redirect', 'google')"
+                        :href="route('social-auth.redirect', socialRouteParams('google'))"
                         class="flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
                     >
                         <i class="lab la-google text-lg"></i>
                         {{ $t('Mit Google anmelden') }}
                     </a>
                     <a
-                        :href="route('social-auth.redirect', 'microsoft')"
+                        :href="route('social-auth.redirect', socialRouteParams('microsoft'))"
                         class="flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
                     >
                         <i class="lab la-microsoft text-lg"></i>

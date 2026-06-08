@@ -1,6 +1,6 @@
 ﻿<script setup>
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
-import { Head, Link, router, useForm } from '@inertiajs/vue3'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, reactive, ref, watch } from 'vue'
 import { useTheme } from '@/services/useTheme'
 import LanguageDropdown from '@/Components/LanguageDropdown.vue'
@@ -17,6 +17,7 @@ import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfile
 
 defineOptions({ layout: AppLayout })
 const { t, te } = useI18n()
+const page = usePage()
 
 // Props
 const props = defineProps({
@@ -177,6 +178,7 @@ const tabClass = (tab) =>
 // Theme
 const { setTheme } = useTheme()
 const addressNotice = ref(null)
+const currentTheme = ref(page.props.auth?.user?.theme || localStorage.getItem('theme') || 'air')
 const themeOptions = [
     { key: 'air', label: 'Air', descriptionKey: 'air', description: 'Klar, leicht und fokussiert.', colors: ['#0ea5e9', '#10b981', '#f7fbff'] },
     { key: 'dark', label: 'Dark', descriptionKey: 'dark', description: 'Konzentriert für späte Sessions.', colors: ['#0c1016', '#60a5fa', '#34d399'] },
@@ -191,7 +193,7 @@ const themeOptions = [
 
 // Form
 const form = useForm({
-    theme: '',
+    theme: currentTheme.value,
     country: props.profileAddress.country || 'DE',
     street: props.profileAddress.street || '',
     house_number: props.profileAddress.house_number || '',
@@ -236,6 +238,7 @@ const saveAddress = (showFeedback = true) => {
 
 const updateTheme = (theme) => {
     setTheme(theme)
+    currentTheme.value = theme
     form.theme = theme
     saveAddress(false)
 }
@@ -1594,7 +1597,8 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                     v-for="themeOption in themeOptions"
                     :key="themeOption.key"
                     type="button"
-                    class="rounded-lg border border-border bg-bg p-4 text-left transition hover:border-borderHover hover:bg-muted"
+                    class="rounded-lg border bg-bg p-4 text-left transition hover:border-borderHover hover:bg-muted"
+                    :class="currentTheme === themeOption.key ? 'border-buttonPrimary ring-2 ring-buttonPrimary/20' : 'border-border'"
                     @click="updateTheme(themeOption.key)"
                 >
                     <span class="flex items-center gap-2">
@@ -1607,6 +1611,9 @@ const activityDescription = (activity) => activity.data?.title || activity.data?
                     </span>
                     <span class="mt-3 block font-semibold text-primary">{{ themeOption.label }}</span>
                     <span class="mt-1 block text-xs text-secondary">{{ themeDescription(themeOption) }}</span>
+                    <span v-if="currentTheme === themeOption.key" class="mt-3 inline-flex text-xs font-semibold text-buttonPrimary">
+                        {{ settingsText('design.active', 'Aktiv') }}
+                    </span>
                 </button>
             </div>
 

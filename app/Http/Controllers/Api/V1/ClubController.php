@@ -15,6 +15,7 @@ use App\Models\ClubMembershipRequest;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Services\PlanFeatureService;
+use App\Support\AppNotification;
 use App\Support\ClubRoles;
 use App\Support\Roles;
 use Illuminate\Http\Request;
@@ -113,6 +114,88 @@ class ClubController extends Controller
         return ClubMembershipRequestResource::collection($requests);
     }
 
+    public function approveMembershipRequest(Request $request, Club $club, ClubMembershipRequest $membershipRequest)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageMembership($request, $club), 403);
+        abort_unless($membershipRequest->club_id === $club->id, 404);
+        abort_unless($membershipRequest->status === 'pending', 422, 'Diese Anfrage ist nicht mehr offen.');
+
+        DB::transaction(function () use ($request, $club, $membershipRequest) {
+            if ($membershipRequest->type === 'pause') {
+                $club->users()->updateExistingPivot($membershipRequest->user_id, [
+                    'membership_status' => 'paused',
+                    'paused_from' => $membershipRequest->requested_pause_from,
+                    'paused_until' => $membershipRequest->requested_pause_until,
+                    'pause_requested_at' => null,
+                ]);
+            } else {
+                $club->users()->syncWithoutDetaching([
+                    $membershipRequest->user_id => [
+                        'role' => 'member',
+                        'roles' => ['member'],
+                        'membership_status' => 'active',
+                        'club_membership_type_id' => $membershipRequest->club_membership_type_id,
+                        'contribution_amount' => $membershipRequest->preview_amount,
+                        'contribution_interval' => $membershipRequest->preview_interval ?: 'none',
+                        'payment_method' => $membershipRequest->preferred_payment_method,
+                        'joined_on' => now()->toDateString(),
+                    ],
+                ]);
+            }
+
+            $membershipRequest->update([
+                'status' => 'approved',
+                'reviewed_by' => $request->user()->id,
+                'reviewed_at' => now(),
+                'review_note' => $request->input('review_note'),
+            ]);
+        });
+
+        AppNotification::send($membershipRequest->user_id, 'club.membership_request_approved', [
+            'title' => 'Anfrage angenommen',
+            'body' => $club->name.' hat deine Anfrage angenommen.',
+            'url' => '/clubs/'.$club->id,
+            'club_id' => $club->id,
+            'request_id' => $membershipRequest->id,
+        ]);
+
+        return new ClubMembershipRequestResource(
+            $membershipRequest->fresh()->load(['club', 'user'])
+        );
+    }
+
+    public function declineMembershipRequest(Request $request, Club $club, ClubMembershipRequest $membershipRequest)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageMembership($request, $club), 403);
+        abort_unless($membershipRequest->club_id === $club->id, 404);
+        abort_unless($membershipRequest->status === 'pending', 422, 'Diese Anfrage ist nicht mehr offen.');
+
+        $data = $request->validate([
+            'review_note' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $membershipRequest->update([
+            'status' => 'declined',
+            'reviewed_by' => $request->user()->id,
+            'reviewed_at' => now(),
+            'review_note' => $data['review_note'] ?? null,
+        ]);
+
+        AppNotification::send($membershipRequest->user_id, 'club.membership_request_declined', [
+            'title' => 'Anfrage abgelehnt',
+            'body' => $club->name.' hat deine Anfrage abgelehnt.',
+            'url' => '/notifications',
+            'club_id' => $club->id,
+            'request_id' => $membershipRequest->id,
+        ]);
+
+        return new ClubMembershipRequestResource(
+            $membershipRequest->fresh()->load(['club', 'user'])
+        );
+    }
+
     public function storeMembershipRequest(Request $request, Club $club)
     {
         $data = $request->validate([
@@ -121,6 +204,10 @@ class ClubController extends Controller
             'requested_pause_from' => ['nullable', 'required_if:type,pause', 'date'],
             'requested_pause_until' => ['nullable', 'date', 'after_or_equal:requested_pause_from'],
             'message' => ['nullable', 'string', 'max:2000'],
+            'application_data' => ['nullable', 'array'],
+            'accepted_documents' => ['nullable', 'array'],
+            'preferred_payment_method' => ['nullable', 'string', 'max:100'],
+            'requested_billing_interval' => ['nullable', 'string', 'max:100'],
         ]);
 
         if ($data['type'] === 'pause') {
@@ -165,16 +252,44 @@ class ClubController extends Controller
                 'status' => 'pending',
             ],
             [
-                'club_membership_type_id' => $data['club_membership_type_id'] ?? null,
-                'message' => $data['message'] ?? null,
-                'preview_amount' => $previewRule?->amount,
-                'preview_interval' => $previewRule?->billing_interval,
-            ],
+                        'club_membership_type_id' => $data['club_membership_type_id'] ?? null,
+                        'message' => $data['message'] ?? null,
+                        'application_data' => $data['application_data'] ?? [],
+                        'accepted_documents' => $data['accepted_documents'] ?? [],
+                        'preferred_payment_method' => $data['preferred_payment_method'] ?? null,
+                        'requested_billing_interval' => $data['requested_billing_interval'] ?? null,
+                        'applicant_confirmed_at' => now(),
+                        'preview_amount' => $previewRule?->amount,
+                        'preview_interval' => $previewRule?->billing_interval,
+                    ],
         );
 
         return (new ClubMembershipRequestResource($membershipRequest->load(['club', 'user'])))
             ->response()
             ->setStatusCode(201);
+    }
+
+    public function withdrawMembershipRequest(Request $request, Club $club)
+    {
+        $this->authorizeVisible($request, $club);
+
+        $membershipRequest = ClubMembershipRequest::query()
+            ->where('club_id', $club->id)
+            ->where('user_id', $request->user()->id)
+            ->where('type', 'membership')
+            ->where('status', 'pending')
+            ->latest('id')
+            ->firstOrFail();
+
+        $membershipRequest->update([
+            'status' => 'withdrawn',
+            'reviewed_by' => $request->user()->id,
+            'reviewed_at' => now(),
+        ]);
+
+        return new ClubMembershipRequestResource(
+            $membershipRequest->fresh()->load(['club', 'user'])
+        );
     }
 
     private function authorizeVisible(Request $request, Club $club): void

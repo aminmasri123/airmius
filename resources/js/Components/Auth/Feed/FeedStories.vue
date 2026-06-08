@@ -29,6 +29,11 @@ const storyPaused = ref(false)
 const storyUploadNotice = ref(null)
 const storyUploading = ref(false)
 let storyUploadNoticeTimer = null
+const localStories = ref([])
+
+watch(() => props.stories, (value) => {
+    localStories.value = Array.isArray(value) ? value.slice() : []
+}, { immediate: true })
 
 const storyForm = useForm({
     visibility: props.visibilities.includes('public') ? 'public' : props.visibilities[0] || 'organization',
@@ -72,7 +77,7 @@ const hasMedia = computed(() => Boolean(storyForm.media))
 const storyGroups = computed(() => {
     const groups = new Map()
 
-    props.stories.forEach((story) => {
+    localStories.value.forEach((story) => {
         const key = story.actor?.key || `user:${story.user_id}`
 
         if (!groups.has(key)) {
@@ -241,27 +246,57 @@ const submitStory = () => {
 
     storyForm.clearErrors()
 
-    storyForm.post(route('auth.stories.store'), {
-        forceFormData: true,
-        preserveScroll: true,
-        only: ['stories', 'notificationCenter', 'auth', 'flash', 'errors'],
-        onStart: () => {
-            storyUploading.value = true
-            showCreateModal.value = false
-            showStoryUploadNotice('info', 'Story wird hochgeladen...')
-        },
-        onSuccess: () => {
+    if (!window.axios) {
+        showStoryUploadNotice('error', 'Netzwerk-Upload ist im Moment nicht verfügbar.')
+        return
+    }
+
+    const payload = new FormData()
+    payload.append('visibility', storyForm.visibility || '')
+    payload.append('publisher_type', storyForm.publisher_type || '')
+    payload.append('media', storyForm.media)
+    payload.append('caption', storyForm.caption || '')
+
+    if (storyForm.club_id) {
+        payload.append('club_id', storyForm.club_id)
+    }
+
+    if (storyForm.team_id) {
+        payload.append('team_id', storyForm.team_id)
+    }
+
+    storyUploading.value = true
+    showCreateModal.value = false
+    showStoryUploadNotice('info', 'Story wird hochgeladen...')
+
+    window.axios.post(route('api.v1.stories.store'), payload)
+        .then((response) => {
+            const created = response?.data?.data
+
+            if (!created) {
+                throw new Error('Ungültige Serverantwort.')
+            }
+
+            localStories.value = [created, ...localStories.value]
             resetForm()
             showStoryUploadNotice('success', 'Story wurde gepostet.')
-        },
-        onError: () => {
+        })
+        .catch((error) => {
             showCreateModal.value = true
+
+            const errors = error?.response?.data?.errors || {}
+
+            if (typeof errors === 'object' && errors !== null && Object.keys(errors).length > 0) {
+                Object.keys(errors).forEach((field) => storyForm.setError(field, errors[field]?.[0] || errors[field]))
+            } else {
+                storyForm.setError('media', error?.response?.data?.message || 'Story konnte nicht gepostet werden. Bitte prüfe die Felder.')
+            }
+
             showStoryUploadNotice('error', 'Story konnte nicht gepostet werden. Bitte prüfe die Felder.')
-        },
-        onFinish: () => {
+        })
+        .finally(() => {
             storyUploading.value = false
-        },
-    })
+        })
 }
 
 const openGroup = (group) => {
@@ -388,11 +423,26 @@ const nextStory = () => {
 const deleteStory = () => {
     if (!activeStory.value?.can_delete) return
 
-    router.delete(route('auth.stories.destroy', activeStory.value.id), {
-        preserveScroll: true,
-        only: ['stories', 'notificationCenter', 'auth', 'flash'],
-        onSuccess: closeStory,
-    })
+    if (!window.axios) {
+        showStoryUploadNotice('error', 'Netzwerk-Upload ist im Moment nicht verfügbar.')
+        return
+    }
+
+    const deletedStoryId = activeStory.value.id
+
+    window.axios.delete(route('api.v1.stories.destroy', deletedStoryId))
+        .then(() => {
+            localStories.value = localStories.value.filter((story) => story.id !== deletedStoryId)
+
+            if (!localStories.value.some((story) => story.id === deletedStoryId)) {
+                showStoryUploadNotice('success', 'Story wurde gelöscht.')
+            }
+
+            closeStory()
+        })
+        .catch(() => {
+            showStoryUploadNotice('error', 'Story konnte nicht gelöscht werden.')
+        })
 }
 
 const reportStory = () => {

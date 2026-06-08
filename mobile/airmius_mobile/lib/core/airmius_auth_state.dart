@@ -1,0 +1,343 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+
+import 'airmius_api_client.dart';
+import 'airmius_api_models.dart';
+import 'airmius_api_repositories.dart';
+
+class AirmiusSession {
+  const AirmiusSession({
+    required this.token,
+    required this.locale,
+    this.user,
+    this.expiresAt,
+  });
+
+  final String token;
+  final String locale;
+  final AirmiusUser? user;
+  final DateTime? expiresAt;
+
+  bool get isExpired => expiresAt != null && DateTime.now().isAfter(expiresAt!);
+  bool get isAuthenticated => token.isNotEmpty && !isExpired;
+
+  AirmiusSession copyWith({
+    String? token,
+    String? locale,
+    AirmiusUser? user,
+    DateTime? expiresAt,
+    bool clearUser = false,
+  }) {
+    return AirmiusSession(
+      token: token ?? this.token,
+      locale: locale ?? this.locale,
+      user: clearUser ? null : user ?? this.user,
+      expiresAt: expiresAt ?? this.expiresAt,
+    );
+  }
+}
+
+abstract class AirmiusTokenStore {
+  Future<AirmiusSession?> read();
+  Future<void> write(AirmiusSession session);
+  Future<void> clear();
+}
+
+class AirmiusMemoryTokenStore implements AirmiusTokenStore {
+  AirmiusSession? _session;
+
+  @override
+  Future<AirmiusSession?> read() async => _session;
+
+  @override
+  Future<void> write(AirmiusSession session) async {
+    _session = session;
+  }
+
+  @override
+  Future<void> clear() async {
+    _session = null;
+  }
+}
+
+enum AirmiusAuthPhase {
+  booting,
+  guest,
+  authenticated,
+  expired,
+  loading,
+  error,
+}
+
+class AirmiusAuthState extends ChangeNotifier {
+  AirmiusAuthState({
+    required this.tokenStore,
+    required this.clientFactory,
+  });
+
+  final AirmiusTokenStore tokenStore;
+  final AirmiusApiClient Function(AirmiusSession? session) clientFactory;
+
+  AirmiusSession? _session;
+  AirmiusAuthPhase _phase = AirmiusAuthPhase.booting;
+  String? _error;
+
+  AirmiusSession? get session => _session;
+  AirmiusAuthPhase get phase => _phase;
+  String? get error => _error;
+  bool get isAuthenticated => _session?.isAuthenticated == true && _phase == AirmiusAuthPhase.authenticated;
+  AirmiusUser? get user => _session?.user;
+
+  Future<void> restore() async {
+    _setPhase(AirmiusAuthPhase.loading);
+    final restored = await tokenStore.read();
+    if (restored == null) {
+      _session = null;
+      _setPhase(AirmiusAuthPhase.guest);
+      return;
+    }
+    if (restored.token.isEmpty) {
+      _session = null;
+      _setPhase(AirmiusAuthPhase.guest);
+      return;
+    }
+    if (restored.isExpired) {
+      _session = restored;
+      _setPhase(AirmiusAuthPhase.expired);
+      return;
+    }
+    final resolved = await _refreshUserProfileIfPossible(restored);
+    _session = resolved == null ? restored : restored.copyWith(user: resolved);
+    _setPhase(AirmiusAuthPhase.authenticated);
+  }
+
+  Future<void> signIn({required String email, required String password, String locale = 'de'}) async {
+    _error = null;
+    _setPhase(AirmiusAuthPhase.loading);
+    try {
+      final guestClient = clientFactory(null);
+      final json = await guestClient.login(email: email, password: password);
+      final token = _tokenFrom(json);
+      if (token.isEmpty) {
+        _error = 'Login fehlgeschlagen: Token vom Server fehlt.';
+        _setPhase(AirmiusAuthPhase.error);
+        return;
+      }
+
+      final loginUser = _extractUser(json);
+      final tokenSession = AirmiusSession(token: token, locale: locale, user: loginUser);
+      final user = await _refreshUserProfileIfPossible(tokenSession);
+      final session = tokenSession.copyWith(user: user, clearUser: user == null);
+      await tokenStore.write(session);
+      _session = session;
+      _setPhase(AirmiusAuthPhase.authenticated);
+    } catch (error) {
+      if (error is AirmiusApiException) {
+        _error = _readableAuthError(error);
+      } else {
+        _error = error.toString();
+      }
+      _setPhase(AirmiusAuthPhase.error);
+    }
+  }
+
+  Future<void> refreshUser() async {
+    final current = _session;
+    if (current == null || !current.isAuthenticated) return;
+    _setPhase(AirmiusAuthPhase.loading);
+    try {
+      final repos = AirmiusRepositoryBundle.api(clientFactory(current));
+      final user = await repos.auth.currentUser();
+      final next = current.copyWith(user: user);
+      await tokenStore.write(next);
+      _session = next;
+      _setPhase(AirmiusAuthPhase.authenticated);
+    } catch (error) {
+      _error = error.toString();
+      _setPhase(AirmiusAuthPhase.error);
+    }
+  }
+
+  Future<void> updateLocale(String locale) async {
+    final current = _session;
+    if (current == null) return;
+    final next = current.copyWith(locale: locale);
+    await tokenStore.write(next);
+    _session = next;
+    notifyListeners();
+  }
+
+  Future<void> signOut() async {
+    _error = null;
+    _setPhase(AirmiusAuthPhase.loading);
+    final current = _session;
+    if (current != null && current.token.isNotEmpty) {
+      try {
+        final sessionClient = clientFactory(current);
+        await sessionClient.logout();
+      } catch (_) {
+        // ignore backend errors on logout, local session is still removed to ensure the user can continue
+      }
+    }
+    await tokenStore.clear();
+    _session = null;
+    _setPhase(AirmiusAuthPhase.guest);
+  }
+
+  void _setPhase(AirmiusAuthPhase phase) {
+    _phase = phase;
+    notifyListeners();
+  }
+
+  String _tokenFrom(JsonMap json) {
+    final token = _pickFirstStringFrom([
+      json['token'],
+      json['access_token'],
+      json['plain_text_token'],
+      json['plainTextToken'],
+      if (json['data'] is JsonMap) ...[
+        if ((json['data'] as JsonMap)['token'] is Object) (json['data'] as JsonMap)['token'],
+        if ((json['data'] as JsonMap)['access_token'] is Object) (json['data'] as JsonMap)['access_token'],
+        if ((json['data'] as JsonMap)['plain_text_token'] is Object) (json['data'] as JsonMap)['plain_text_token'],
+        if ((json['data'] as JsonMap)['plainTextToken'] is Object) (json['data'] as JsonMap)['plainTextToken'],
+      ],
+    ]);
+    return token ?? '';
+  }
+
+  String _readableAuthError(AirmiusApiException error) {
+    if (error.path.contains('/auth/login') && _isLikelyInvalidCredentials(error)) {
+      return 'E-Mail oder Passwort ist falsch.';
+    }
+
+    final status = error.statusCode;
+    if (status == 401 || status == 403) {
+      return 'E-Mail oder Passwort ist falsch.';
+    }
+    if (status == 422) {
+      final parsed = _extractMessage(error.body);
+      if (parsed.isNotEmpty) return parsed;
+      return 'Bitte prüfe deine Eingaben und versuche es erneut.';
+    }
+    if (status == 0) {
+      if (error.path.contains('/auth/login')) {
+        return 'Login nicht bestätigt. Bitte prüfe E-Mail/Passwort oder lass die Server-Verbindung/CORS-Einstellungen prüfen.';
+      }
+      return 'Netzwerkfehler: Der Server ist nicht erreichbar. Bitte URL, Internetverbindung und CORS/Sicherheit prüfen.';
+    }
+    if (status == 599) {
+      if (error.path.contains('/auth/login')) {
+        return 'Login nicht bestätigt. Bitte prüfe E-Mail/Passwort oder lass die Server-Verbindung/CORS-Einstellungen prüfen.';
+      }
+      return 'Verbindung abgebrochen: Der Server konnte die Anfrage nicht korrekt beantworten (mögliche CORS-/Netzwerkproblematik).';
+    }
+    if (status >= 500) {
+      return 'Server-Fehler (HTTP $status). Bitte später erneut versuchen.';
+    }
+    if (status >= 400) {
+      return 'Anfrage abgelehnt (HTTP $status). Bitte Daten prüfen oder Support kontaktieren.';
+    }
+
+    final parsed = _extractMessage(error.body);
+    if (parsed.isNotEmpty) {
+      return '$parsed (HTTP ${error.statusCode})';
+    }
+    return 'Anmeldung fehlgeschlagen (HTTP ${error.statusCode}).';
+  }
+
+  bool _isLikelyInvalidCredentials(AirmiusApiException error) {
+    final message = _extractMessage(error.body).toLowerCase();
+    final body = error.body.toLowerCase();
+    final combined = '$message $body';
+    final hints = <String>[
+      'credentials',
+      'credential',
+      'password',
+      'passwort',
+      'unauthorized',
+      'unauthenticated',
+      'invalid',
+      'unguelt',
+      'incorrect',
+      'falsch',
+      'verifiziert',
+    ];
+    final hasHint = hints.any((hint) => combined.contains(hint));
+    final hasAuthLoginPath = error.path.contains('/auth/login');
+    if (!hasAuthLoginPath) return false;
+    if (hasHint) return true;
+    return false;
+  }
+
+  String _extractMessage(String body) {
+    final dataStart = body.indexOf('{');
+    if (dataStart < 0) return '';
+    try {
+      final parsed = body.substring(dataStart);
+      final decoded = parsed.trim();
+      final json = _safeJsonDecode(decoded);
+      if (json == null) return '';
+      final message = json['message'];
+      if (message is String && message.trim().isNotEmpty) return message.trim();
+      final errors = json['errors'];
+      if (errors is Map) {
+        for (final entry in errors.values) {
+          if (entry is List && entry.isNotEmpty && entry.first is String) {
+            final first = entry.first.toString().trim();
+            if (first.isNotEmpty) return first;
+          }
+        }
+      }
+    } catch (_) {
+      return '';
+    }
+    return '';
+  }
+
+  Map<String, dynamic>? _safeJsonDecode(String body) {
+    try {
+      final decoded = JsonDecoder().convert(body);
+      if (decoded is Map<String, dynamic>) return decoded;
+    } catch (_) {
+      return null;
+    }
+    return null;
+  }
+
+  Future<AirmiusUser?> _refreshUserProfileIfPossible(AirmiusSession session) async {
+    if (session.token.isEmpty) return session.user;
+    try {
+      final repos = AirmiusRepositoryBundle.api(clientFactory(session));
+      final currentUser = await repos.auth.currentUser();
+      return currentUser;
+    } catch (_) {
+      return session.user;
+    }
+  }
+
+  AirmiusUser? _extractUser(JsonMap json) {
+    if (json['user'] is JsonMap) {
+      return AirmiusUser.fromJson(json['user'] as JsonMap);
+    }
+    final data = json['data'];
+    if (data is JsonMap) {
+      if (data['user'] is JsonMap) {
+        return AirmiusUser.fromJson(data['user'] as JsonMap);
+      }
+      if (data.containsKey('id') || data.containsKey('name') || data.containsKey('email')) {
+        return AirmiusUser.fromJson(data);
+      }
+    }
+    return null;
+  }
+
+  String? _pickFirstStringFrom(Iterable<dynamic> values) {
+    for (final value in values) {
+      if (value == null) continue;
+      final text = value.toString().trim();
+      if (text.isNotEmpty) return text;
+    }
+    return null;
+  }
+}

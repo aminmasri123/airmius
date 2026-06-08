@@ -3,15 +3,18 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ChatController;
 use App\Http\Controllers\Api\V1\ClubController;
+use App\Http\Controllers\Api\V1\CommentController as MobileCommentController;
 use App\Http\Controllers\Api\V1\CommerceController;
 use App\Http\Controllers\Api\V1\AdminCommerceController as MobileAdminCommerceController;
 use App\Http\Controllers\Api\V1\EventController;
 use App\Http\Controllers\Api\V1\FeedController;
+use App\Http\Controllers\PostController;
 use App\Http\Controllers\Api\V1\MaturityController;
 use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\MobileMetaController;
 use App\Http\Controllers\Api\V1\NutritionController;
 use App\Http\Controllers\Api\V1\NotificationController as MobileNotificationController;
+use App\Http\Controllers\Api\V1\PostImageUploadController;
 use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Controllers\Api\V1\StoryController as MobileStoryController;
 use App\Http\Controllers\Api\V1\SubscriptionController;
@@ -19,8 +22,14 @@ use App\Http\Controllers\Api\V1\SportMapController as MobileSportMapController;
 use App\Http\Controllers\Api\V1\TeamController;
 use App\Http\Controllers\Api\V1\TrainingController;
 use App\Http\Controllers\Api\V1\UploadController;
+use App\Http\Controllers\ContentReportController;
+use App\Http\Controllers\GlobalSearchController;
+use App\Models\Post;
+use App\Models\Sport;
+use App\Support\UploadStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -28,6 +37,23 @@ Route::get('/user', function (Request $request) {
 
 Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::get('/meta', MobileMetaController::class)->name('meta');
+    Route::get('/posts/{post}/image', function (Post $post) {
+        abort_unless($post->image, 404);
+
+        if (str_starts_with($post->image, 'http://') || str_starts_with($post->image, 'https://')) {
+            return redirect()->away($post->image);
+        }
+
+        try {
+            return Storage::disk(UploadStorage::disk())->response($post->image);
+        } catch (\Throwable $error) {
+            $url = UploadStorage::url($post->image);
+            abort_unless($url, 404);
+
+            return redirect()->away($url);
+        }
+    })->name('posts.image');
+
     Route::post('/auth/login', [AuthController::class, 'login'])
         ->middleware('throttle:10,1')
         ->name('auth.login');
@@ -40,6 +66,19 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
         Route::get('/settings', [SettingsController::class, 'show'])->name('settings.show');
         Route::patch('/settings', [SettingsController::class, 'update'])->name('settings.update');
+        Route::get('/search', GlobalSearchController::class)->name('search');
+        Route::get('/sports', function () {
+            return response()->json([
+                'data' => Sport::query()
+                    ->where('is_active', true)
+                    ->with(['skills' => fn ($query) => $query
+                        ->select('id', 'sport_id', 'key', 'name')
+                        ->orderBy('sort_order')])
+                    ->select(['id', 'name', 'slug', 'category', 'sort_order'])
+                    ->orderBy('sort_order')
+                    ->get(),
+            ]);
+        })->name('sports.index');
 
         Route::get('/notifications', [MobileNotificationController::class, 'index'])->name('notifications.index');
         Route::post('/notifications/read-all', [MobileNotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
@@ -47,7 +86,19 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::delete('/notifications/{notification}', [MobileNotificationController::class, 'destroy'])->name('notifications.destroy');
 
         Route::get('/feed', [FeedController::class, 'index'])->name('feed.index');
+        Route::post('/post-images', PostImageUploadController::class)->name('post-images.store');
         Route::post('/feed', [FeedController::class, 'store'])->name('feed.store');
+        Route::put('/posts/{post}', [FeedController::class, 'update'])->name('posts.update');
+        Route::post('/posts/{post}', [FeedController::class, 'update'])->name('posts.update.multipart');
+        Route::get('/posts/{post}/comments', [MobileCommentController::class, 'index'])->name('posts.comments.index');
+        Route::post('/posts/{post}/comments', [MobileCommentController::class, 'store'])->name('posts.comments.store');
+        Route::post('/posts/{post}/like', [FeedController::class, 'toggleLike'])->name('posts.like');
+        Route::post('/posts/{post}/helpful', [FeedController::class, 'toggleHelpful'])->name('posts.helpful');
+        Route::post('/posts/{post}/delete', [PostController::class, 'destroy'])->name('posts.destroy.post');
+        Route::delete('/posts/{post}', [PostController::class, 'destroy'])->name('posts.destroy');
+        Route::put('/comments/{comment}', [MobileCommentController::class, 'update'])->name('comments.update');
+        Route::delete('/comments/{comment}', [MobileCommentController::class, 'destroy'])->name('comments.destroy');
+        Route::post('/reports', [ContentReportController::class, 'store'])->name('reports.store');
         Route::get('/maturity/feed-discovery', [MaturityController::class, 'feedDiscovery'])->name('maturity.feed-discovery');
         Route::get('/maturity/feed-trending', [MaturityController::class, 'feedTrending'])->name('maturity.feed-trending');
         Route::get('/maturity/overview', [MaturityController::class, 'overview'])->name('maturity.overview');
@@ -71,6 +122,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/clubs/{club}/billing', [ClubController::class, 'billing'])->name('clubs.billing');
         Route::get('/clubs/{club}/membership-requests', [ClubController::class, 'membershipRequests'])->name('clubs.membership-requests.index');
         Route::post('/clubs/{club}/membership-requests', [ClubController::class, 'storeMembershipRequest'])->name('clubs.membership-requests.store');
+        Route::delete('/clubs/{club}/membership-requests', [ClubController::class, 'withdrawMembershipRequest'])->name('clubs.membership-requests.withdraw');
+        Route::post('/clubs/{club}/membership-requests/{membershipRequest}/approve', [ClubController::class, 'approveMembershipRequest'])->name('clubs.membership-requests.approve');
+        Route::post('/clubs/{club}/membership-requests/{membershipRequest}/decline', [ClubController::class, 'declineMembershipRequest'])->name('clubs.membership-requests.decline');
         Route::post('/clubs/{club}/subscriptions/{subscription}/cancel', [SubscriptionController::class, 'cancelClubSubscription'])->name('clubs.subscriptions.cancel');
         Route::post('/clubs/{club}/subscriptions/{subscription}/renew', [SubscriptionController::class, 'renewClubSubscription'])->name('clubs.subscriptions.renew');
 
@@ -90,6 +144,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
         Route::get('/events', [EventController::class, 'index'])->name('events.index');
         Route::get('/events/{event}', [EventController::class, 'show'])->name('events.show');
+        Route::post('/events/{event}/participation', [EventController::class, 'respond'])->name('events.participation.respond');
+        Route::delete('/events/{event}/participation', [EventController::class, 'leave'])->name('events.participation.leave');
 
         Route::get('/training/plans', [TrainingController::class, 'plans'])->name('training.plans.index');
         Route::get('/training/plans/{trainingPlan}', [TrainingController::class, 'showPlan'])->name('training.plans.show');

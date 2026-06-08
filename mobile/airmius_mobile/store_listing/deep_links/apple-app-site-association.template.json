@@ -1,0 +1,38 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": [
+          "REPLACE_WITH_APPLE_TEAM_ID.com.airmius.app"
+        ],
+        "components": [
+          {
+            "/": "/clubs/*",
+            "comment": "Club profile deep links"
+          },
+          {
+            "/": "/membership-applications/*",
+            "comment": "Membership application status links"
+          },
+          {
+            "/": "/events/*",
+            "comment": "Event and training deep links"
+          },
+          {
+            "/": "/messages/*",
+            "comment": "Conversation deep links"
+          },
+          {
+            "/": "/notifications/*",
+            "comment": "Notification deep links"
+          },
+          {
+            "/": "/profile/*",
+            "comment": "Profile and account deep links"
+          }
+        ]
+      }
+    ]
+  }
+}

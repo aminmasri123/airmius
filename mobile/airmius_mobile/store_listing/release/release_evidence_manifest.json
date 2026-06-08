@@ -1,0 +1,233 @@
+﻿{
+    "product":  "Airmius Mobile",
+    "version":  "1.0.0+1",
+    "overall_preparation_percent":  99,
+    "remaining_percent_requires_evidence":  1,
+    "api_base_url":  "https://app.airmius.com",
+    "android_application_id":  "com.airmius.app",
+    "ios_bundle_id":  "com.airmius.app",
+    "gates":  [
+                  {
+                      "id":  "local_release_prerequisites",
+                      "title":  "Local Release Prerequisites",
+                      "owner":  "Release",
+                      "status":  "pending_execution",
+                      "required_evidence":  "Local prerequisite log confirms Flutter command, required scripts/files, Android SDK, adb, cmdline-tools, Android licenses and Java are available",
+                      "local_command":  "scripts/assert_local_release_prerequisites.ps1",
+                      "ci_artifacts":  [
+                                           "release_evidence/local-release-prerequisites.log"
+                                       ]
+                  },
+                  {
+                      "id":  "flutter_analyze",
+                      "title":  "Flutter Analyze",
+                      "owner":  "Mobile",
+                      "status":  "pending_execution",
+                      "required_evidence":  "Successful flutter analyze log",
+                      "local_command":  "flutter analyze",
+                      "ci_artifacts":  [
+                                           "airmius-mobile-release-evidence/flutter-analyze.log",
+                                           "airmius-mobile-ios-release-evidence/flutter-analyze-ios.log"
+                                       ]
+                  },
+                  {
+                      "id":  "flutter_dependency_lock",
+                      "title":  "Flutter Dependency Lock",
+                      "owner":  "Mobile",
+                      "status":  "pending_execution",
+                      "required_evidence":  "pubspec.lock contains resolved flutter_secure_storage dependency after flutter pub get",
+                      "local_command":  "scripts/assert_flutter_dependency_lock.ps1",
+                      "ci_artifacts":  [
+                                           "airmius-mobile-release-evidence/flutter-dependency-lock.log",
+                                           "airmius-mobile-ios-release-evidence/flutter-dependency-lock-ios.log"
+                                       ]
+                  },
+                  {
+                      "id":  "logo_theme_asset_mapping",
+                      "title":  "Logo Theme Asset Mapping",
+                      "owner":  "Design",
+                      "status":  "pending_execution",
+                      "required_evidence":  "Static check proves required Airmius logo assets exist and Normal/Dunkel/System mappings are correct",
+                      "local_command":  "scripts/assert_logo_theme_assets.ps1",
+                      "ci_artifacts":  [
+                                           "airmius-mobile-release-evidence/logo-theme-assets.log",
+                                           "airmius-mobile-ios-release-evidence/logo-theme-assets-ios.log"
+                                       ]
+                  },
+                  {
+                      "id":  "manual_evidence_pack",
+                      "title":  "Manual Evidence Pack",
+                      "owner":  "Release",
+                      "status":  "pending_execution",
+                      "required_evidence":  "Manual evidence folders contain required sign-offs, logo/theme screenshots, API QA notes and approval placeholders before final Go/No-Go",
+                      "local_command":  "scripts/assert_manual_release_evidence_pack.ps1",
+                      "ci_artifacts":  [
+                                           "release_evidence/manual-evidence-pack.log"
+                                       ]
+                  },
+                  {
+                      "id":  "android_release_build",
+                      "title":  "Android Release Build",
+                      "owner":  "Store",
+                      "status":  "pending_execution",
+                      "required_evidence":  "Release AAB/APK artifacts and build logs",
+                      "local_command":  "scripts/release_candidate_checks.ps1 -ApiBaseUrl https://app.airmius.com",
+                      "ci_artifacts":  [
+                                           "airmius-mobile-release-evidence/android-appbundle-build.log",
+                                           "airmius-mobile-release-evidence/android-apk-build.log",
+                                           "airmius-mobile-release-evidence/artifacts/app-release.aab",
+                                           "airmius-mobile-release-evidence/artifacts/app-release.apk"
+                                       ]
+                  },
+                  {
+                      "id":  "ios_release_build",
+                      "title":  "iOS Release Build",
+                      "owner":  "Store",
+                      "status":  "pending_execution",
+                      "required_evidence":  "No-codesign CI build plus signed IPA/TestFlight evidence",
+                      "local_command":  "flutter build ipa --release --dart-define=AIRMIUS_API_BASE_URL=https://app.airmius.com --dart-define=AIRMIUS_USE_HTTP=true",
+                      "ci_artifacts":  [
+                                           "airmius-mobile-ios-release-evidence/ios-release-build-no-codesign.log",
+                                           "airmius-mobile-ios-release-evidence/artifacts/Runner.app.zip"
+                                       ]
+                  },
+                  {
+                      "id":  "domain_verification",
+                      "title":  "Deep Link Domain Verification",
+                      "owner":  "DevOps",
+                      "status":  "pending_deployment",
+                      "required_evidence":  "Live assetlinks.json and apple-app-site-association responses without redirects",
+                      "local_command":  "scripts/check_deep_link_domain.ps1 -HostName app.airmius.com",
+                      "urls":  [
+                                   "https://app.airmius.com/.well-known/assetlinks.json",
+                                   "https://app.airmius.com/.well-known/apple-app-site-association"
+                               ]
+                  },
+                  {
+                      "id":  "screenshots",
+                      "title":  "Final Store Screenshots",
+                      "owner":  "Design",
+                      "status":  "pending_capture",
+                      "required_evidence":  "Android and iOS screenshot folders captured from release-equivalent app",
+                      "runbook":  "store_listing/screenshots/screenshot_capture_plan.md"
+                  },
+                  {
+                      "id":  "real_api_qa",
+                      "title":  "Real Laravel API QA",
+                      "owner":  "Backend",
+                      "status":  "pending_execution",
+                      "required_evidence":  "Smoke-test notes for login, clubs, membership, notifications, messages, events, files and billing",
+                      "runbook":  "store_listing/release/manual_tester_quickstart.md"
+                  },
+                  {
+                      "id":  "legal_privacy",
+                      "title":  "Legal and Privacy Approval",
+                      "owner":  "Legal",
+                      "status":  "pending_signoff",
+                      "required_evidence":  "Owner approval for Play Data Safety and App Store Privacy labels",
+                      "runbook":  "store_listing/privacy/privacy_submission_matrix.md"
+                  },
+                  {
+                      "id":  "localization_qa",
+                      "title":  "Localization Visual QA",
+                      "owner":  "Product",
+                      "status":  "pending_execution",
+                      "required_evidence":  "DE/EN/FR/AR visual QA notes including Arabic RTL",
+                      "runbook":  "store_listing/localization/localization_release_matrix.md"
+                  },
+                  {
+                      "id":  "secure_token_storage",
+                      "title":  "Secure Token Storage QA",
+                      "owner":  "Mobile",
+                      "status":  "pending_execution",
+                      "required_evidence":  "Session restore/sign-out QA on Android and iOS with flutter_secure_storage enabled",
+                      "local_command":  "flutter analyze \u0026\u0026 flutter run --dart-define=AIRMIUS_USE_HTTP=true --dart-define=AIRMIUS_API_BASE_URL=https://app.airmius.com",
+                      "runbook":  "store_listing/release/secure_token_storage_qa.md",
+                      "source_files":  [
+                                           "lib/core/airmius_secure_token_store.dart",
+                                           "lib/core/airmius_service_container.dart",
+                                           "android/app/build.gradle.kts",
+                                           "android/app/src/main/AndroidManifest.xml"
+                                       ]
+                  },
+                  {
+                      "id":  "release_evidence_bundle",
+                      "title":  "Release Evidence Bundle",
+                      "owner":  "Release",
+                      "status":  "pending_packaging",
+                      "required_evidence":  "ZIP package containing final runbooks, manifest, reports, screenshots, privacy files, deep-link files and generated build artifacts",
+                      "local_command":  "scripts/package_release_evidence_bundle.ps1",
+                      "artifact":  "store_listing/release/airmius_release_evidence_bundle.zip"
+                  },
+                  {
+                      "id":  "store_review_account",
+                      "title":  "Store Review Account",
+                      "owner":  "Product",
+                      "status":  "pending_setup",
+                      "required_evidence":  "Dedicated safe review account credentials entered in store consoles and QA notes proving login/core review path",
+                      "runbook":  "store_listing/release/store_review_account_runbook.md"
+                  },
+                  {
+                      "id":  "store_release_notes",
+                      "title":  "Store Release Notes",
+                      "owner":  "Product",
+                      "status":  "pending_setup",
+                      "required_evidence":  "Play Console, App Store Connect and TestFlight release notes prepared without secrets or unverified claims",
+                      "runbook":  "store_listing/release/store_release_notes.md"
+                  },
+                  {
+                      "id":  "store_submission_readiness",
+                      "title":  "Store Submission Readiness",
+                      "owner":  "Release",
+                      "status":  "pending_signoff",
+                      "required_evidence":  "Play Console, App Store Connect and TestFlight readiness checklist approved after final Go/No-Go, screenshots, privacy labels, review account and release notes",
+                      "runbook":  "store_listing/release/store_submission_readiness_runbook.md"
+                  },
+                  {
+                      "id":  "release_configuration",
+                      "title":  "Release Configuration Check",
+                      "owner":  "Mobile",
+                      "status":  "pending_execution",
+                      "required_evidence":  "Production API configuration uses HTTPS, HTTP transport is enabled, localhost is not used and secure-storage prerequisites are present",
+                      "local_command":  "scripts/assert_release_configuration.ps1 -ApiBaseUrl https://app.airmius.com -UseHttp",
+                      "ci_artifacts":  [
+                                           "airmius-mobile-release-evidence/release-configuration-check.log",
+                                           "airmius-mobile-ios-release-evidence/release-configuration-check-ios.log"
+                                       ]
+                  },
+                  {
+                      "id":  "release_secrets_hygiene",
+                      "title":  "Release Secrets Hygiene",
+                      "owner":  "Security",
+                      "status":  "pending_execution",
+                      "required_evidence":  "Repository release docs, scripts and blocker catalog contain no committed review passwords, tokens, API keys or bearer secrets",
+                      "local_command":  "scripts/assert_no_release_secrets.ps1",
+                      "ci_artifacts":  [
+                                           "airmius-mobile-release-evidence/release-secrets-hygiene.log",
+                                           "airmius-mobile-ios-release-evidence/release-secrets-hygiene-ios.log"
+                                       ]
+                  },
+                  {
+                      "id":  "release_go_no_go",
+                      "title":  "Release Go/No-Go Decision",
+                      "owner":  "Release",
+                      "status":  "pending_execution",
+                      "required_evidence":  "Manifest-based Go/No-Go check confirms no gate remains pending, failed or blocked",
+                      "local_command":  "scripts/assert_release_go_no_go.ps1"
+                  },
+                  {
+                      "id":  "logo_theme_parity_qa",
+                      "title":  "Logo and Theme Parity QA",
+                      "owner":  "Design",
+                      "status":  "pending_signoff",
+                      "required_evidence":  "Manual screenshots proving Normal uses the dark wordmark on light backgrounds, Dunkel uses the white wordmark on dark backgrounds, and System follows device brightness",
+                      "local_command":  "Manual QA: switch Design chooser through Normal, Dunkel and System, restart app, capture login and shell screenshots",
+                      "ci_artifacts":  [
+                                           "manual/logo-theme-normal.png",
+                                           "manual/logo-theme-dark.png",
+                                           "manual/logo-theme-system.png"
+                                       ]
+                  }
+              ],
+    "go_no_go_rule":  "Release-ready only when every gate has direct evidence and no gate remains pending, partial, failed or blocked."
+}

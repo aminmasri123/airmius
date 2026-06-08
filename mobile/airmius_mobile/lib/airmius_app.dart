@@ -1,0 +1,130 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
+import 'core/airmius_l10n.dart';
+import 'core/airmius_auth_state.dart';
+import 'core/airmius_deep_link_inbox.dart';
+import 'core/airmius_http_transport.dart';
+import 'core/airmius_preferences.dart';
+import 'core/airmius_service_container.dart';
+import 'core/airmius_services_scope.dart';
+import 'core/airmius_theme.dart';
+import 'core/airmius_theme_mode_scope.dart';
+import 'navigation/airmius_deep_link_navigator.dart';
+import 'screens/login_screen.dart';
+import 'screens/shell_screen.dart';
+
+class AirmiusApp extends StatefulWidget {
+  const AirmiusApp({super.key});
+
+  @override
+  State<AirmiusApp> createState() => _AirmiusAppState();
+}
+
+class _AirmiusAppState extends State<AirmiusApp> {
+  static const _apiBaseUrl = String.fromEnvironment(
+    'AIRMIUS_API_BASE_URL',
+    defaultValue: 'https://airmius.com',
+  );
+
+  AirmiusLanguage _language = AirmiusLanguage.de;
+  ThemeMode _themeMode = ThemeMode.dark;
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  final AirmiusPreferences _preferences = AirmiusPreferences();
+  final AirmiusDeepLinkInbox _deepLinkInbox = AirmiusDeepLinkInbox();
+  late final AirmiusServiceContainer _services = AirmiusServiceContainer(
+    environment: const AirmiusAppEnvironment(apiBaseUrl: _apiBaseUrl, locale: 'de'),
+    transport: const AirmiusHttpTransport(baseUrl: _apiBaseUrl),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_restorePreferences());
+    _services.authState.restore();
+    _deepLinkInbox.start(_openNativeDeepLink);
+    unawaited(_deepLinkInbox.restoreInitialLink(_openNativeDeepLink));
+  }
+
+  Future<void> _restorePreferences() async {
+    final language = await _preferences.readLanguage();
+    final themeMode = await _preferences.readThemeMode();
+    if (!mounted) return;
+    setState(() {
+      if (language != null) {
+        _language = language;
+      }
+      if (themeMode != null) {
+        _themeMode = themeMode;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AirmiusServicesScope(
+      container: _services,
+        child: AirmiusScope(
+        language: _language,
+        setLanguage: (language) {
+          setState(() => _language = language);
+          unawaited(_preferences.writeLanguage(language));
+          _services.authState.updateLocale(language.code.toLowerCase());
+        },
+        child: AnimatedBuilder(
+          animation: _services.authState,
+          builder: (context, _) => AirmiusThemeModeScope(
+            mode: _themeMode,
+            setMode: (mode) {
+              setState(() => _themeMode = mode);
+              unawaited(_preferences.writeThemeMode(mode));
+            },
+            child: MaterialApp(
+            navigatorKey: _navigatorKey,
+            title: 'Airmius',
+            debugShowCheckedModeBanner: false,
+            theme: AirmiusTheme.light(),
+            darkTheme: AirmiusTheme.dark(),
+            themeMode: _themeMode,
+            locale: _language.locale,
+            supportedLocales: AirmiusLanguage.values.map((language) => language.locale).toList(),
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            builder: (context, child) {
+              return Directionality(
+                textDirection: _language.isRtl ? TextDirection.rtl : TextDirection.ltr,
+                child: child ?? const SizedBox.shrink(),
+              );
+            },
+                    home: _services.authState.phase == AirmiusAuthPhase.authenticated
+                    ? const ShellScreen()
+                    : LoginScreen(
+                    authState: _services.authState,
+                    onLogin: (email, password) => _services.authState.signIn(
+                      email: email,
+                      password: password,
+                      locale: _language.code.toLowerCase(),
+                    ),
+                  ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openNativeDeepLink(String link) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = _navigatorKey.currentContext;
+      if (context == null) {
+        return;
+      }
+      AirmiusDeepLinkNavigator.open(context, link);
+    });
+  }
+}

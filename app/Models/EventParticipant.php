@@ -13,6 +13,13 @@ class EventParticipant extends Model
         'event_id',
         'user_id',
         'status',
+        'response_reason',
+        'response_mode',
+        'responded_at',
+    ];
+
+    protected $casts = [
+        'responded_at' => 'datetime',
     ];
 
     public function event()

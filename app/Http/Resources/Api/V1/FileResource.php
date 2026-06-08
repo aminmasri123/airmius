@@ -17,6 +17,8 @@ class FileResource extends JsonResource
             'event_id' => $this->event_id,
             'folder_id' => $this->folder_id,
             'display_name' => $this->display_name,
+            'path' => $this->path,
+            'thumbnail_path' => $this->thumbnail_path,
             'type' => $this->type,
             'size' => $this->size,
             'url' => $this->url,

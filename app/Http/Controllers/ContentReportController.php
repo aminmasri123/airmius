@@ -51,6 +51,19 @@ class ContentReportController extends Controller
             $model->forceFill(['moderation_status' => 'reported'])->save();
         }
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => [
+                    'id' => $report->id,
+                    'type' => $data['type'],
+                    'reportable_id' => $model->getKey(),
+                    'reason' => $report->reason,
+                    'status' => $report->status,
+                ],
+                'message' => 'Danke. Die Meldung wurde an die Moderation gesendet.',
+            ], 201);
+        }
+
         return back()->with('success', 'Danke. Die Meldung wurde an die Moderation gesendet.');
     }
 
