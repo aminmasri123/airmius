@@ -25,6 +25,8 @@ class FeedCommunitySocialSuiteScreen extends StatefulWidget {
 class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuiteScreen> {
   final TextEditingController _contentController = TextEditingController();
   final Map<int, AirmiusPost> _postOverrides = {};
+  final List<AirmiusPost> _localPosts = [];
+  final Set<int> _removedPostIds = {};
   late Future<AirmiusPage<AirmiusPost>> _feedFuture;
   late Future<List<AirmiusStory>> _storiesFuture;
   late Future<AirmiusPage<AirmiusClub>> _clubsFuture;
@@ -89,11 +91,36 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
   void _reload() {
     setState(() {
       _postOverrides.clear();
+      _localPosts.clear();
+      _removedPostIds.clear();
       _feedFuture = _loadFeed();
       _storiesFuture = _loadStories();
       _clubsFuture = _loadClubs();
       _teamsFuture = _loadTeams();
       _sportsFuture = _loadSports();
+    });
+  }
+
+  void _removePostLocally(int postId) {
+    setState(() {
+      _postOverrides.remove(postId);
+      _removedPostIds.add(postId);
+    });
+  }
+
+  void _restorePostLocally(AirmiusPost post) {
+    setState(() {
+      _removedPostIds.remove(post.id);
+      _postOverrides[post.id] = post;
+    });
+  }
+
+  void _prependPostLocally(AirmiusPost post) {
+    setState(() {
+      _removedPostIds.remove(post.id);
+      _postOverrides.remove(post.id);
+      _localPosts.removeWhere((item) => item.id == post.id);
+      _localPosts.insert(0, post);
     });
   }
 
@@ -161,7 +188,7 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
     try {
       final services = AirmiusServicesScope.of(context);
       final client = services.clientForSession(services.authState.session);
-      await AirmiusPostUploadService(client).upload(
+      final createdPost = await AirmiusPostUploadService(client).upload(
         content: content,
         visibility: _visibility,
         postType: _postType,
@@ -180,8 +207,8 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
       setState(() {
         _resetComposer();
         _sending = false;
-        _feedFuture = _loadFeed();
       });
+      _prependPostLocally(createdPost);
       return true;
     } catch (error) {
       if (!mounted) return false;
@@ -308,7 +335,15 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
               return _FeedListScaffold(composer: _ComposerTrigger(onTap: _openComposer), child: _ErrorFeed(onRetry: _reload));
             }
 
-            final posts = snapshot.data?.items ?? const <AirmiusPost>[];
+            final loadedPosts = snapshot.data?.items ?? const <AirmiusPost>[];
+            final localPostIds = _localPosts.map((post) => post.id).toSet();
+            final posts = [
+              ..._localPosts,
+              ...loadedPosts.where((post) => !localPostIds.contains(post.id)),
+            ]
+                .where((post) => !_removedPostIds.contains(post.id))
+                .map((post) => _postOverrides[post.id] ?? post)
+                .toList();
             return _FeedListScaffold(
               composer: _ComposerTrigger(onTap: _openComposer),
               child: posts.isEmpty
@@ -317,10 +352,12 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
                       children: [
                         _StoriesRail(storiesFuture: _storiesFuture, onChanged: _reload),
                         const SizedBox(height: 14),
-                        for (final post in posts.map((post) => _postOverrides[post.id] ?? post)) ...[
+                        for (final post in posts) ...[
                           _PostCard(
                             post: post,
                             onChanged: _reload,
+                            onDeleted: _removePostLocally,
+                            onDeleteFailed: _restorePostLocally,
                             onPostChanged: (nextPost) => setState(() => _postOverrides[nextPost.id] = nextPost),
                           ),
                           const SizedBox(height: 12),
@@ -1336,10 +1373,12 @@ class _SelectedFileCard extends StatelessWidget {
 }
 
 class _PostCard extends StatefulWidget {
-  const _PostCard({required this.post, required this.onChanged, required this.onPostChanged});
+  const _PostCard({required this.post, required this.onChanged, required this.onDeleted, required this.onDeleteFailed, required this.onPostChanged});
 
   final AirmiusPost post;
   final VoidCallback onChanged;
+  final ValueChanged<int> onDeleted;
+  final ValueChanged<AirmiusPost> onDeleteFailed;
   final ValueChanged<AirmiusPost> onPostChanged;
 
   @override
@@ -1402,12 +1441,13 @@ class _PostCardState extends State<_PostCard> {
   Future<void> _deletePost() async {
     final ok = await confirmDanger(context, 'Beitrag loeschen', 'Moechtest du diesen Beitrag wirklich loeschen?');
     if (!ok || !mounted) return;
+    final deletedPost = widget.post;
+    widget.onDeleted(deletedPost.id);
     try {
-      await AirmiusServicesScope.of(context).repositories.feed.deletePost(widget.post.id);
-      if (!mounted) return;
-      widget.onChanged();
+      await AirmiusServicesScope.of(context).repositories.feed.deletePost(deletedPost.id);
     } catch (_) {
       if (!mounted) return;
+      widget.onDeleteFailed(deletedPost);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AirmiusScope.of(context).t('feed.error'))));
     }
   }

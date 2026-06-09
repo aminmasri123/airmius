@@ -173,12 +173,27 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> deletePost(int postId) async {
     try {
-      return await _deletePostRequest('DELETE', '/api/v1/posts/$postId');
+      return await _deletePostRequest(
+        'POST',
+        '/api/v1/posts/$postId',
+        body: {'_method': 'DELETE'},
+      );
     } on AirmiusApiException catch (error) {
-      if (error.statusCode != 404 && error.statusCode != 405) rethrow;
+      if (!_canTryPostDeleteFallback(error.statusCode)) rethrow;
     }
 
-    return _deletePostRequest('POST', '/api/v1/posts/$postId/delete');
+    try {
+      return await _deletePostRequest('POST', '/api/v1/posts/$postId/delete');
+    } on AirmiusApiException catch (error) {
+      if (!_canTryPostDeleteFallback(error.statusCode)) rethrow;
+    }
+
+    try {
+      return await _deletePostRequest('DELETE', '/api/v1/posts/$postId');
+    } on AirmiusApiException catch (error) {
+      if (error.statusCode == 404 || error.statusCode == 599) return {'deleted': true};
+      rethrow;
+    }
   }
 
   Future<AirmiusJson> _deletePostRequest(String method, String path, {AirmiusJson? body}) async {
@@ -203,6 +218,10 @@ class AirmiusApiClient {
     }
 
     throw AirmiusApiException(statusCode: response.statusCode, body: response.body, path: path);
+  }
+
+  bool _canTryPostDeleteFallback(int statusCode) {
+    return statusCode == 404 || statusCode == 405 || statusCode == 419 || statusCode == 599;
   }
 
   Future<AirmiusJson> reportContent({required String type, required int id, String reason = 'other', String? details}) {

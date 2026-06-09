@@ -8,7 +8,6 @@ use App\Http\Controllers\Api\V1\CommerceController;
 use App\Http\Controllers\Api\V1\AdminCommerceController as MobileAdminCommerceController;
 use App\Http\Controllers\Api\V1\EventController;
 use App\Http\Controllers\Api\V1\FeedController;
-use App\Http\Controllers\PostController;
 use App\Http\Controllers\Api\V1\MaturityController;
 use App\Http\Controllers\Api\V1\MeController;
 use App\Http\Controllers\Api\V1\MobileMetaController;
@@ -94,8 +93,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/posts/{post}/comments', [MobileCommentController::class, 'store'])->name('posts.comments.store');
         Route::post('/posts/{post}/like', [FeedController::class, 'toggleLike'])->name('posts.like');
         Route::post('/posts/{post}/helpful', [FeedController::class, 'toggleHelpful'])->name('posts.helpful');
-        Route::post('/posts/{post}/delete', [PostController::class, 'destroy'])->name('posts.destroy.post');
-        Route::delete('/posts/{post}', [PostController::class, 'destroy'])->name('posts.destroy');
+        Route::post('/posts/{post}/delete', [FeedController::class, 'destroy'])->name('posts.destroy.post');
+        Route::delete('/posts/{post}', [FeedController::class, 'destroy'])->name('posts.destroy');
         Route::put('/comments/{comment}', [MobileCommentController::class, 'update'])->name('comments.update');
         Route::delete('/comments/{comment}', [MobileCommentController::class, 'destroy'])->name('comments.destroy');
         Route::post('/reports', [ContentReportController::class, 'store'])->name('reports.store');
