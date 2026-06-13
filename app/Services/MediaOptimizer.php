@@ -70,6 +70,10 @@ class MediaOptimizer
 
     private function storeVideo(UploadedFile $file, string $directory): array
     {
+        if (! $this->videoOptimizationEnabled()) {
+            return $this->storeOriginal($file, $directory);
+        }
+
         $ffmpeg = $this->findExecutable('ffmpeg');
 
         if (! $ffmpeg) {
@@ -206,11 +210,15 @@ class MediaOptimizer
 
     private function findExecutable(string $name): ?string
     {
+        if (! function_exists('exec')) {
+            return null;
+        }
+
         $command = PHP_OS_FAMILY === 'Windows' ? "where {$name}" : "command -v {$name}";
         $output = [];
         $exitCode = 1;
 
-        @exec($command, $output, $exitCode);
+        @\exec($command, $output, $exitCode);
 
         if ($exitCode !== 0 || empty($output[0])) {
             return null;
@@ -219,10 +227,19 @@ class MediaOptimizer
         return trim($output[0]);
     }
 
+    private function videoOptimizationEnabled(): bool
+    {
+        return filter_var(env('AIRMIUS_OPTIMIZE_VIDEOS', false), FILTER_VALIDATE_BOOLEAN);
+    }
+
     private function runProcess(array $command, int $timeout): bool
     {
+        if (! function_exists('proc_open') || ! function_exists('proc_get_status') || ! function_exists('proc_close')) {
+            return false;
+        }
+
         $pipes = [];
-        $process = @proc_open($command, [
+        $process = @\proc_open($command, [
             0 => ['pipe', 'r'],
             1 => ['pipe', 'w'],
             2 => ['pipe', 'w'],

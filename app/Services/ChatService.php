@@ -8,6 +8,7 @@ use App\Models\File;
 use App\Models\Message;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class ChatService
@@ -52,15 +53,29 @@ class ChatService
 
             $message->load(['sender', 'receipts', 'attachments.file', 'reactions.user']);
 
-            broadcast(new MessageSent($message))->toOthers();
-            broadcast(new ChatConversationUpdated(
-                $conversation,
-                'message.sent',
-                $message->receipts->pluck('user_id')->push($user->id)->all()
-            ))->toOthers();
+            $this->broadcastSafely(function () use ($message, $conversation, $user) {
+                broadcast(new MessageSent($message))->toOthers();
+                broadcast(new ChatConversationUpdated(
+                    $conversation,
+                    'message.sent',
+                    $message->receipts->pluck('user_id')->push($user->id)->all()
+                ))->toOthers();
+            });
 
             return $message;
         });
+    }
+
+    private function broadcastSafely(callable $callback): void
+    {
+        try {
+            $callback();
+        } catch (\Throwable $exception) {
+            Log::warning('Chat realtime broadcast failed; message was saved.', [
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function directoryFor(int $userId, $conversation, $event): string

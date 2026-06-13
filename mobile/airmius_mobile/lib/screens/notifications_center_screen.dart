@@ -20,11 +20,14 @@ class NotificationsCenterScreen extends StatefulWidget {
 class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
   String _filter = 'all';
   bool _busy = false;
+  bool _notificationsLoaded = false;
   late Future<AirmiusPage<AirmiusNotification>> _notificationsFuture;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_notificationsLoaded) return;
+    _notificationsLoaded = true;
     _notificationsFuture = _loadNotifications();
   }
 

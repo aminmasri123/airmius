@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import 'airmius_api_client.dart';
 import 'airmius_api_models.dart';
@@ -47,7 +48,7 @@ class AirmiusStoryUploadService {
       request.fields['publisher_type'] = 'team';
     }
 
-    request.files.add(http.MultipartFile.fromBytes('media', bytes, filename: file.name));
+    request.files.add(http.MultipartFile.fromBytes('media', bytes, filename: file.name, contentType: _contentTypeFor(file)));
 
     final streamed = await request.send();
     final body = await streamed.stream.bytesToString();
@@ -106,5 +107,20 @@ class AirmiusStoryUploadService {
     final cleanPath = trimmed.replaceFirst(RegExp(r'^/+'), '');
     final path = cleanPath.startsWith('storage/') || cleanPath.startsWith('build/') || cleanPath.startsWith('images/') ? '/$cleanPath' : '/storage/$cleanPath';
     return base.replace(path: path, query: null, fragment: null).toString();
+  }
+
+  MediaType _contentTypeFor(PlatformFile file) {
+    final extension = (file.extension ?? file.name.split('.').last).toLowerCase();
+    return switch (extension) {
+      'jpg' || 'jpeg' => MediaType('image', 'jpeg'),
+      'png' => MediaType('image', 'png'),
+      'webp' => MediaType('image', 'webp'),
+      'gif' => MediaType('image', 'gif'),
+      'mp4' => MediaType('video', 'mp4'),
+      'mov' => MediaType('video', 'quicktime'),
+      'webm' => MediaType('video', 'webm'),
+      'ogg' => MediaType('video', 'ogg'),
+      _ => MediaType('application', 'octet-stream'),
+    };
   }
 }

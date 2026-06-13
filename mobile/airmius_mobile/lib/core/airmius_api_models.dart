@@ -576,6 +576,7 @@ class AirmiusPost {
   final bool canDelete;
 
   AirmiusPost copyWith({
+    int? commentsCount,
     int? likesCount,
     int? helpfulsCount,
     bool? likedByMe,
@@ -594,7 +595,7 @@ class AirmiusPost {
       sportId: sportId,
       authorName: authorName,
       createdAt: createdAt,
-      commentsCount: commentsCount,
+      commentsCount: commentsCount ?? this.commentsCount,
       likesCount: likesCount ?? this.likesCount,
       helpfulsCount: helpfulsCount ?? this.helpfulsCount,
       likedByMe: likedByMe ?? this.likedByMe,
@@ -691,6 +692,7 @@ class AirmiusStory {
 
   factory AirmiusStory.fromJson(JsonMap json) {
     final actor = json['actor'];
+    final mediaUrl = _mediaUrl(json['media_url']) ?? _mediaUrl(json['media_path']) ?? _mediaUrl(json['url']) ?? _mediaUrl(json['path']) ?? '';
     return AirmiusStory(
       id: _int(json['id']),
       actorId: actor is JsonMap ? _int(actor['id']) : _int(json['user_id'] ?? json['actor_id']),
@@ -699,9 +701,9 @@ class AirmiusStory {
       actorAvatarUrl: actor is JsonMap ? _userAvatarUrl(actor) : null,
       visibility: _string(json['visibility'], fallback: 'public'),
       caption: _nullableString(json['caption']),
-      mediaUrl: _mediaUrl(json['media_url']) ?? _mediaUrl(json['media_path']) ?? _mediaUrl(json['url']) ?? _mediaUrl(json['path']) ?? '',
+      mediaUrl: mediaUrl,
       thumbnailUrl: _mediaUrl(json['media_thumbnail_url']) ?? _mediaUrl(json['media_thumbnail_path']) ?? _mediaUrl(json['thumbnail_url']) ?? _mediaUrl(json['thumbnail_path']),
-      mediaKind: _string(json['media_kind'], fallback: 'image'),
+      mediaKind: _storyMediaKind(json['media_kind'], json['media_type'], mediaUrl),
       viewedByMe: _bool(json['viewed_by_me']),
       canDelete: _bool(json['can_delete']),
       myReaction: _nullableString(json['my_reaction']),
@@ -902,6 +904,22 @@ String _string(Object? value, {String fallback = ''}) {
 String? _nullableString(Object? value) {
   final string = value?.toString().trim();
   return string == null || string.isEmpty ? null : string;
+}
+
+String _storyMediaKind(Object? kind, Object? mediaType, String mediaUrl) {
+  final explicit = (_nullableString(kind) ?? '').toLowerCase();
+  final type = (_nullableString(mediaType) ?? '').toLowerCase();
+  final path = Uri.tryParse(mediaUrl)?.path.toLowerCase() ?? mediaUrl.toLowerCase();
+
+  if (explicit.contains('video') || type.startsWith('video/') || path.endsWith('.mp4') || path.endsWith('.webm') || path.endsWith('.ogg') || path.endsWith('.mov')) {
+    return 'video';
+  }
+
+  if (explicit.contains('image') || type.startsWith('image/')) {
+    return 'image';
+  }
+
+  return explicit.isEmpty ? 'image' : explicit;
 }
 
 String? _firstImageAttachmentUrl(Object? attachments) {

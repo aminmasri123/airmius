@@ -101,6 +101,12 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
     });
   }
 
+  void _reloadStories() {
+    setState(() {
+      _storiesFuture = _loadStories();
+    });
+  }
+
   void _removePostLocally(int postId) {
     setState(() {
       _postOverrides.remove(postId);
@@ -314,10 +320,11 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
+    final isCompactFeedLayout = MediaQuery.sizeOf(context).width < 960;
     return PageFrame(
       title: scope.t('feed.title'),
       subtitle: scope.t('feed.subtitle'),
-      showHeader: true,
+      showHeader: !isCompactFeedLayout,
       child: RefreshIndicator(
         color: AirmiusColors.blue,
         backgroundColor: AirmiusColors.card,
@@ -350,7 +357,7 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
                   ? EmptyPanel(scope.t('feed.empty'))
                   : Column(
                       children: [
-                        _StoriesRail(storiesFuture: _storiesFuture, onChanged: _reload),
+                        _StoriesRail(storiesFuture: _storiesFuture, onChanged: _reloadStories),
                         const SizedBox(height: 14),
                         for (final post in posts) ...[
                           _PostCard(
@@ -737,10 +744,14 @@ class _StoryChip extends StatelessWidget {
 
   Future<void> _openStory(BuildContext context) async {
     final scope = AirmiusScope.of(context);
+    final rootContext = context;
+    var currentIndex = group.stories.indexWhere((story) => !story.viewedByMe);
+    if (currentIndex < 0) currentIndex = 0;
+    final stories = List<AirmiusStory>.from(group.stories);
+    final pageController = PageController(initialPage: currentIndex);
+    var storyMuted = true;
     try {
-      var currentIndex = group.stories.indexWhere((story) => !story.viewedByMe);
-      if (currentIndex < 0) currentIndex = 0;
-      var story = group.stories[currentIndex];
+      var story = stories[currentIndex];
       await AirmiusServicesScope.of(context).repositories.feed.markStoryViewed(story.id);
       if (!context.mounted) return;
       var storyChanged = false;
@@ -752,7 +763,7 @@ class _StoryChip extends StatelessWidget {
         builder: (sheetContext) {
           final mediaHeight = MediaQuery.sizeOf(sheetContext).height * .58;
           return StatefulBuilder(builder: (context, setSheetState) {
-            story = group.stories[currentIndex];
+            story = stories[currentIndex];
             return SafeArea(
               child: SingleChildScrollView(
                 padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(sheetContext).bottom),
@@ -766,7 +777,7 @@ class _StoryChip extends StatelessWidget {
                         AirmiusAvatar(story.actorName, imageUrl: story.actorAvatarUrl),
                         const SizedBox(width: 12),
                         Expanded(child: Text(story.actorName, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, fontSize: 18))),
-                        if (group.count > 1) StatusPill('${currentIndex + 1}/${group.count}'),
+                        if (stories.length > 1) StatusPill('${currentIndex + 1}/${stories.length}'),
                       ]),
                       if (story.caption != null) ...[
                         const SizedBox(height: 12),
@@ -775,18 +786,62 @@ class _StoryChip extends StatelessWidget {
                       const SizedBox(height: 14),
                       SizedBox(
                         height: mediaHeight,
-                        child: PageView.builder(
-                          controller: PageController(initialPage: currentIndex),
-                          itemCount: group.count,
-                          onPageChanged: (index) async {
-                            setSheetState(() => currentIndex = index);
-                            await AirmiusServicesScope.of(context).repositories.feed.markStoryViewed(group.stories[index].id);
-                            storyChanged = true;
-                          },
-                          itemBuilder: (context, index) {
-                            final pageStory = group.stories[index];
-                            return pageStory.mediaUrl.isNotEmpty ? _StoryMediaPreview(story: pageStory, height: mediaHeight) : const SizedBox.shrink();
-                          },
+                        child: Stack(
+                          children: [
+                            PageView.builder(
+                              controller: pageController,
+                              itemCount: stories.length,
+                              onPageChanged: (index) async {
+                                setSheetState(() => currentIndex = index);
+                                await AirmiusServicesScope.of(context).repositories.feed.markStoryViewed(stories[index].id);
+                                storyChanged = true;
+                              },
+                              itemBuilder: (context, index) {
+                                final pageStory = stories[index];
+                                return pageStory.mediaUrl.isNotEmpty
+                                    ? _StoryMediaPreview(
+                                        story: pageStory,
+                                        height: mediaHeight,
+                                        muted: storyMuted,
+                                        onMutedChanged: (muted) => setSheetState(() => storyMuted = muted),
+                                        onEnded: index < stories.length - 1
+                                            ? () {
+                                                if (pageController.hasClients) {
+                                                  pageController.nextPage(duration: const Duration(milliseconds: 260), curve: Curves.easeOutCubic);
+                                                }
+                                              }
+                                            : null,
+                                      )
+                                    : const SizedBox.shrink();
+                              },
+                            ),
+                            if (stories.length > 1 && currentIndex > 0)
+                              Positioned(
+                                left: 10,
+                                top: 0,
+                                bottom: 0,
+                                child: Center(
+                                  child: IconButton.filled(
+                                    onPressed: () => pageController.previousPage(duration: const Duration(milliseconds: 220), curve: Curves.easeOutCubic),
+                                    icon: const Icon(Icons.chevron_left),
+                                    style: IconButton.styleFrom(backgroundColor: Colors.black.withValues(alpha: 0.48), foregroundColor: Colors.white),
+                                  ),
+                                ),
+                              ),
+                            if (stories.length > 1 && currentIndex < stories.length - 1)
+                              Positioned(
+                                right: 10,
+                                top: 0,
+                                bottom: 0,
+                                child: Center(
+                                  child: IconButton.filled(
+                                    onPressed: () => pageController.nextPage(duration: const Duration(milliseconds: 220), curve: Curves.easeOutCubic),
+                                    icon: const Icon(Icons.chevron_right),
+                                    style: IconButton.styleFrom(backgroundColor: Colors.black.withValues(alpha: 0.48), foregroundColor: Colors.white),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 14),
@@ -806,9 +861,40 @@ class _StoryChip extends StatelessWidget {
                       if (story.canDelete) ...[
                         const SizedBox(height: 10),
                         AirmiusButton(label: scope.t('feed.storyDelete'), icon: Icons.delete_outline, danger: true, onPressed: () async {
-                          await AirmiusServicesScope.of(context).repositories.feed.deleteStory(story.id);
+                          final deletedStory = story;
+                          final deletedIndex = currentIndex;
+                          final closesViewer = stories.length <= 1;
                           storyChanged = true;
-                          if (context.mounted) Navigator.pop(context);
+                          if (closesViewer) {
+                            if (context.mounted) Navigator.pop(context);
+                          } else {
+                            setSheetState(() {
+                              stories.removeAt(deletedIndex);
+                              currentIndex = deletedIndex >= stories.length ? stories.length - 1 : deletedIndex;
+                            });
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (pageController.hasClients) pageController.jumpToPage(currentIndex);
+                            });
+                          }
+
+                          try {
+                            await AirmiusServicesScope.of(context).repositories.feed.deleteStory(deletedStory.id);
+                            if (!rootContext.mounted) return;
+                            ScaffoldMessenger.of(rootContext).showSnackBar(const SnackBar(content: Text('Story geloescht.')));
+                          } catch (_) {
+                            if (!rootContext.mounted) return;
+                            if (!closesViewer && stories.isNotEmpty) {
+                              setSheetState(() {
+                                final restoreIndex = deletedIndex > stories.length ? stories.length : deletedIndex;
+                                stories.insert(restoreIndex, deletedStory);
+                                currentIndex = restoreIndex;
+                              });
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (pageController.hasClients) pageController.jumpToPage(currentIndex);
+                              });
+                            }
+                            ScaffoldMessenger.of(rootContext).showSnackBar(SnackBar(content: Text(scope.t('feed.error'))));
+                          }
                         }),
                       ],
                     ],
@@ -823,26 +909,42 @@ class _StoryChip extends StatelessWidget {
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(scope.t('feed.error'))));
+    } finally {
+      pageController.dispose();
     }
   }
 }
 
 class _StoryMediaPreview extends StatelessWidget {
-  const _StoryMediaPreview({required this.story, required this.height});
+  const _StoryMediaPreview({
+    required this.story,
+    required this.height,
+    required this.muted,
+    required this.onMutedChanged,
+    this.onEnded,
+  });
 
   final AirmiusStory story;
   final double height;
+  final bool muted;
+  final ValueChanged<bool> onMutedChanged;
+  final VoidCallback? onEnded;
 
   @override
   Widget build(BuildContext context) {
     final isVideo = story.mediaKind.toLowerCase().contains('video');
     if (isVideo) {
       return AirmiusInlineVideo(
+        key: ValueKey(story.mediaUrl),
         url: story.mediaUrl,
         thumbnailUrl: story.thumbnailUrl,
         height: height,
         borderRadius: 18,
         title: story.caption ?? 'Story Video',
+        autoPlay: true,
+        muted: muted,
+        onMutedChanged: onMutedChanged,
+        onEnded: onEnded,
       );
     }
     final imageUrl = isVideo ? story.thumbnailUrl : story.mediaUrl;
@@ -1387,6 +1489,7 @@ class _PostCard extends StatefulWidget {
 
 class _PostCardState extends State<_PostCard> {
   final TextEditingController _commentController = TextEditingController();
+  final List<AirmiusComment> _localComments = [];
   Future<AirmiusPage<AirmiusComment>>? _commentsFuture;
   bool _commentsOpen = false;
   bool _sendingComment = false;
@@ -1421,19 +1524,47 @@ class _PostCardState extends State<_PostCard> {
     final content = _commentController.text.trim();
     if (content.isEmpty || _sendingComment) return;
 
-    setState(() => _sendingComment = true);
+    final user = AirmiusServicesScope.of(context).authState.user;
+    final previousPost = widget.post;
+    final optimisticPost = previousPost.copyWith(commentsCount: previousPost.commentsCount + 1);
+    final optimisticComment = AirmiusComment(
+      id: -DateTime.now().microsecondsSinceEpoch,
+      postId: widget.post.id,
+      content: content,
+      authorName: user?.name ?? 'Ich',
+      authorAvatarUrl: user?.avatarUrl,
+      likesCount: 0,
+      mine: true,
+      canDelete: true,
+      createdAt: DateTime.now(),
+    );
+
+    _commentController.clear();
+    widget.onPostChanged(optimisticPost);
+    setState(() {
+      _sendingComment = true;
+      _localComments.insert(0, optimisticComment);
+    });
+
     try {
-      await AirmiusServicesScope.of(context).repositories.feed.createComment(widget.post.id, content);
+      final savedComment = await AirmiusServicesScope.of(context).repositories.feed.createComment(widget.post.id, content);
       if (!mounted) return;
-      _commentController.clear();
       setState(() {
         _sendingComment = false;
-        _commentsFuture = _loadComments();
+        final index = _localComments.indexWhere((comment) => comment.id == optimisticComment.id);
+        if (index >= 0) {
+          _localComments[index] = savedComment;
+        } else {
+          _localComments.insert(0, savedComment);
+        }
       });
-      widget.onChanged();
     } catch (_) {
       if (!mounted) return;
-      setState(() => _sendingComment = false);
+      widget.onPostChanged(previousPost);
+      setState(() {
+        _sendingComment = false;
+        _localComments.removeWhere((comment) => comment.id == optimisticComment.id);
+      });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AirmiusScope.of(context).t('feed.commentsError'))));
     }
   }
@@ -1770,6 +1901,7 @@ class _PostCardState extends State<_PostCard> {
             _InlineComments(
               post: post,
               commentsFuture: _commentsFuture ??= _loadComments(),
+              localComments: _localComments,
               controller: _commentController,
               sending: _sendingComment,
               showAll: _commentsPerPage > 20,
@@ -1874,6 +2006,7 @@ class _InlineComments extends StatelessWidget {
   const _InlineComments({
     required this.post,
     required this.commentsFuture,
+    required this.localComments,
     required this.controller,
     required this.sending,
     required this.showAll,
@@ -1884,6 +2017,7 @@ class _InlineComments extends StatelessWidget {
 
   final AirmiusPost post;
   final Future<AirmiusPage<AirmiusComment>> commentsFuture;
+  final List<AirmiusComment> localComments;
   final TextEditingController controller;
   final bool sending;
   final bool showAll;
@@ -1907,10 +2041,10 @@ class _InlineComments extends StatelessWidget {
           FutureBuilder<AirmiusPage<AirmiusComment>>(
             future: commentsFuture,
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              if (snapshot.connectionState == ConnectionState.waiting && localComments.isEmpty) {
                 return Text(scope.t('status.loading'), style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800));
               }
-              if (snapshot.hasError) {
+              if (snapshot.hasError && localComments.isEmpty) {
                 return Row(
                   children: [
                     Expanded(child: Text(scope.t('feed.commentsError'), style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800))),
@@ -1919,7 +2053,12 @@ class _InlineComments extends StatelessWidget {
                 );
               }
 
-              final comments = snapshot.data?.items ?? const <AirmiusComment>[];
+              final loadedComments = snapshot.data?.items ?? const <AirmiusComment>[];
+              final localCommentIds = localComments.map((comment) => comment.id).toSet();
+              final comments = [
+                ...localComments,
+                ...loadedComments.where((comment) => !localCommentIds.contains(comment.id)),
+              ];
               if (comments.isEmpty) {
                 return Text(scope.t('feed.noComments'), style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700));
               }

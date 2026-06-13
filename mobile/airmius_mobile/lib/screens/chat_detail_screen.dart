@@ -25,11 +25,14 @@ class ChatDetailScreen extends StatefulWidget {
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final TextEditingController _messageController = TextEditingController();
   late Future<AirmiusPage<AirmiusMessage>> _messagesFuture;
+  bool _messagesLoaded = false;
   bool _sending = false;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_messagesLoaded) return;
+    _messagesLoaded = true;
     _messagesFuture = _loadMessages();
   }
 
