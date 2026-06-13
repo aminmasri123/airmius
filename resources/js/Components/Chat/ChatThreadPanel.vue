@@ -264,61 +264,75 @@ const chatSearch = computed({
                             </button>
                         </div>
 
-                        <div class="mt-2 flex flex-wrap items-center gap-1 text-xs">
-                            <button
-                                v-for="reaction in ['like', 'heart', 'ok']"
-                                :key="reaction"
-                                type="button"
-                                class="rounded border px-2 py-1"
-                                :class="userReaction(message) === reaction ? 'border-primary bg-card text-primary' : 'border-border/50 opacity-80'"
-                                @click="reactToMessage(message, reaction)"
+                        <details class="relative mt-2 flex justify-end text-xs">
+                            <summary
+                                class="ml-auto inline-flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-full border border-border/60 bg-card/80 text-secondary transition hover:border-primary/50 hover:text-primary [&::-webkit-details-marker]:hidden"
+                                title="Nachrichtenaktionen"
                             >
-                                {{ reaction }} {{ reactionCounts(message)[reaction] || '' }}
-                            </button>
-                            <button
-                                v-if="canDeleteMessage(message)"
-                                type="button"
-                                class="ml-auto rounded border border-border/50 px-2 py-1 opacity-80"
-                                title="Für alle löschen"
-                                @click="deleteMessage(message)"
-                            >
-                                <i class="las la-trash"></i>
-                            </button>
-                            <button
-                                v-if="!String(message.id).startsWith('local-')"
-                                type="button"
-                                class="rounded border border-border/50 px-2 py-1 opacity-80"
-                                title="Nur für mich ausblenden"
-                                @click="hideMessageForMe(message)"
-                            >
-                                <i class="las la-eye-slash"></i>
-                            </button>
-                            <button
-                                v-if="message.local_status === 'failed'"
-                                type="button"
-                                class="ml-auto rounded border border-error/50 px-2 py-1 text-error"
-                                :title="message.error_message || 'Erneut senden'"
-                                @click="retryMessage(message)"
-                            >
-                                Erneut senden
-                            </button>
-                            <span
-                                v-if="isOwnMessage(message) && !String(message.id).startsWith('local-') && !canDeleteMessage(message) && message.local_status !== 'failed'"
-                                class="ml-auto rounded border border-transparent px-2 py-1 text-secondary opacity-80"
-                                title="Bereits gelesen - nicht mehr löschbar"
-                            >
-                                <i class="las la-lock"></i>
-                            </span>
-                            <button
-                                v-if="!isOwnMessage(message) && !String(message.id).startsWith('local-')"
-                                type="button"
-                                class="ml-auto rounded border border-border/50 px-2 py-1 opacity-80"
-                                title="Nachricht melden"
-                                @click="openReport(message)"
-                            >
-                                <i class="las la-flag"></i>
-                            </button>
-                        </div>
+                                <i class="las la-ellipsis-h text-lg"></i>
+                            </summary>
+                            <div class="absolute right-0 top-9 z-20 w-56 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+                                <div class="grid grid-cols-3 gap-1 border-b border-border/60 p-2">
+                                    <button
+                                        v-for="reaction in ['like', 'heart', 'ok']"
+                                        :key="reaction"
+                                        type="button"
+                                        class="inline-flex h-9 items-center justify-center rounded-lg border text-xs font-semibold transition"
+                                        :class="userReaction(message) === reaction ? 'border-primary bg-primary/10 text-primary' : 'border-border/60 bg-input text-secondary hover:text-primary'"
+                                        :title="reaction"
+                                        @click="reactToMessage(message, reaction)"
+                                    >
+                                        <i :class="['las text-lg', reaction === 'heart' ? 'la-heart' : reaction === 'ok' ? 'la-check' : 'la-thumbs-up']"></i>
+                                        <span v-if="reactionCounts(message)[reaction]" class="ml-1 opacity-70">{{ reactionCounts(message)[reaction] }}</span>
+                                    </button>
+                                </div>
+                                <button
+                                    v-if="canDeleteMessage(message)"
+                                    type="button"
+                                    class="flex w-full items-center gap-2 px-3 py-2.5 text-left font-semibold text-secondary transition hover:bg-input hover:text-primary"
+                                    @click="deleteMessage(message)"
+                                >
+                                    <i class="las la-trash text-lg"></i>
+                                    Für alle löschen
+                                </button>
+                                <button
+                                    v-if="!String(message.id).startsWith('local-')"
+                                    type="button"
+                                    class="flex w-full items-center gap-2 px-3 py-2.5 text-left font-semibold text-secondary transition hover:bg-input hover:text-primary"
+                                    @click="hideMessageForMe(message)"
+                                >
+                                    <i class="las la-eye-slash text-lg"></i>
+                                    Nur für mich ausblenden
+                                </button>
+                                <button
+                                    v-if="message.local_status === 'failed'"
+                                    type="button"
+                                    class="flex w-full items-center gap-2 px-3 py-2.5 text-left font-semibold text-error transition hover:bg-input"
+                                    :title="message.error_message || 'Erneut senden'"
+                                    @click="retryMessage(message)"
+                                >
+                                    <i class="las la-redo-alt text-lg"></i>
+                                    Erneut senden
+                                </button>
+                                <div
+                                    v-if="isOwnMessage(message) && !String(message.id).startsWith('local-') && !canDeleteMessage(message) && message.local_status !== 'failed'"
+                                    class="flex items-center gap-2 px-3 py-2.5 font-semibold text-secondary/70"
+                                    title="Bereits gelesen - nicht mehr löschbar"
+                                >
+                                    <i class="las la-lock text-lg"></i>
+                                    Nicht mehr löschbar
+                                </div>
+                                <button
+                                    v-if="!isOwnMessage(message) && !String(message.id).startsWith('local-')"
+                                    type="button"
+                                    class="flex w-full items-center gap-2 px-3 py-2.5 text-left font-semibold text-secondary transition hover:bg-input hover:text-primary"
+                                    @click="openReport(message)"
+                                >
+                                    <i class="las la-flag text-lg"></i>
+                                    Nachricht melden
+                                </button>
+                            </div>
+                        </details>
 
                         <div v-if="isOwnMessage(message)" class="mt-1 flex justify-end">
                             <span class="inline-flex items-center gap-1 text-xs opacity-80" :title="deliverySummaryFor(message)">

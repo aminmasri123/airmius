@@ -158,6 +158,12 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> sendConversationMessage(int conversationId, String message) => _json('POST', '/api/v1/chat/conversations/$conversationId/messages', body: {'message': message});
 
+  Future<AirmiusJson> reactToMessage(int messageId, String reaction) => _json('POST', '/api/v1/chat/messages/$messageId/reactions', body: {'reaction': reaction});
+
+  Future<AirmiusJson> hideMessage(int messageId) => _json('DELETE', '/api/v1/chat/messages/$messageId/hide');
+
+  Future<AirmiusJson> deleteMessage(int messageId) => _json('DELETE', '/api/v1/chat/messages/$messageId');
+
   Future<AirmiusJson> feed({int page = 1, int perPage = 20}) => _json('GET', '/api/v1/feed', query: {
         'page': '$page',
         'per_page': '$perPage',

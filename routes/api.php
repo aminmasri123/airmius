@@ -139,6 +139,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/chat/conversations/{conversation}', [ChatController::class, 'show'])->name('chat.conversations.show');
         Route::get('/chat/conversations/{conversation}/messages', [ChatController::class, 'messages'])->name('chat.messages.index');
         Route::post('/chat/conversations/{conversation}/messages', [ChatController::class, 'sendMessage'])->name('chat.messages.store');
+        Route::post('/chat/messages/{message}/reactions', [ChatController::class, 'react'])->name('chat.messages.reactions.store');
+        Route::delete('/chat/messages/{message}/hide', [ChatController::class, 'hideForMe'])->name('chat.messages.hide');
+        Route::delete('/chat/messages/{message}', [ChatController::class, 'deleteMessage'])->name('chat.messages.destroy');
         Route::post('/chat/conversations/{conversation}/typing', [ChatController::class, 'typing'])->name('chat.typing');
 
         Route::get('/events', [EventController::class, 'index'])->name('events.index');
