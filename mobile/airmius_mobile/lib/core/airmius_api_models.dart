@@ -276,6 +276,7 @@ class AirmiusEvent {
     required this.id,
     required this.title,
     required this.startsAt,
+    this.endsAt,
     required this.type,
     required this.status,
     required this.visibility,
@@ -291,12 +292,14 @@ class AirmiusEvent {
     this.teamName,
     this.notes,
     this.location,
+    this.maxParticipants,
     this.myParticipationStatus,
   });
 
   final int id;
   final String title;
   final DateTime startsAt;
+  final DateTime? endsAt;
   final String type;
   final String status;
   final String visibility;
@@ -306,6 +309,7 @@ class AirmiusEvent {
   final String? teamName;
   final String? notes;
   final String? location;
+  final int? maxParticipants;
   final int participantsCount;
   final int commentsCount;
   final int yesCount;
@@ -327,6 +331,7 @@ class AirmiusEvent {
       id: _int(json['id']),
       title: _string(json['title']),
       startsAt: _date(json['starts_at'] ?? json['start_time']),
+      endsAt: json['ends_at'] == null && json['end_time'] == null ? null : _date(json['ends_at'] ?? json['end_time']),
       type: _string(json['type'], fallback: 'event'),
       status: _string(json['status'], fallback: 'open'),
       visibility: _string(json['visibility'], fallback: 'public'),
@@ -336,6 +341,7 @@ class AirmiusEvent {
       teamName: team is JsonMap ? _nullableString(team['name']) : null,
       notes: _nullableString(json['notes']),
       location: locationParts.isEmpty ? null : locationParts.join(' - '),
+      maxParticipants: json['max_participants'] == null ? null : _int(json['max_participants']),
       participantsCount: _int(json['participants_count']),
       commentsCount: _int(json['comments_count']),
       yesCount: _int(json['yes_count']),
@@ -461,6 +467,24 @@ class AirmiusMessage {
       reactions: reactions is List ? reactions.whereType<JsonMap>().map(AirmiusMessageReaction.fromJson).toList() : const [],
     );
   }
+
+  AirmiusMessage copyWith({
+    String? message,
+    String? senderName,
+    DateTime? createdAt,
+    bool? mine,
+    String? status,
+    List<AirmiusMessageReaction>? reactions,
+  }) => AirmiusMessage(
+    id: id,
+    conversationId: conversationId,
+    message: message ?? this.message,
+    senderName: senderName ?? this.senderName,
+    createdAt: createdAt ?? this.createdAt,
+    mine: mine ?? this.mine,
+    status: status ?? this.status,
+    reactions: reactions ?? this.reactions,
+  );
 
   final int id;
   final int conversationId;
@@ -848,7 +872,7 @@ abstract class AirmiusFileRepository {
 }
 
 abstract class AirmiusEventRepository {
-  Future<AirmiusPage<AirmiusEvent>> events({int page = 1});
+  Future<AirmiusPage<AirmiusEvent>> events({int page = 1, DateTime? from, DateTime? to});
   Future<AirmiusEvent> event(int eventId);
   Future<AirmiusEvent> respond(int eventId, String status);
   Future<AirmiusEvent> leave(int eventId);

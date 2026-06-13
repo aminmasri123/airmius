@@ -255,7 +255,11 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> deleteStory(int storyId) => _json('DELETE', '/api/v1/stories/$storyId');
 
-  Future<AirmiusJson> events({int page = 1}) => _json('GET', '/api/v1/events', query: {'page': '$page'});
+  Future<AirmiusJson> events({int page = 1, DateTime? from, DateTime? to}) => _json('GET', '/api/v1/events', query: {
+        'page': '$page',
+        if (from != null) 'from': from.toIso8601String(),
+        if (to != null) 'to': to.toIso8601String(),
+      });
 
   Future<AirmiusJson> event(int eventId) => _json('GET', '/api/v1/events/$eventId');
 

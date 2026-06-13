@@ -154,8 +154,8 @@ class AirmiusApiEventRepository implements AirmiusEventRepository {
   final AirmiusApiClient client;
 
   @override
-  Future<AirmiusPage<AirmiusEvent>> events({int page = 1}) async {
-    final json = await client.events(page: page);
+  Future<AirmiusPage<AirmiusEvent>> events({int page = 1, DateTime? from, DateTime? to}) async {
+    final json = await client.events(page: page, from: from, to: to);
     return AirmiusPage<AirmiusEvent>.fromJson(_paged(json, page), AirmiusEvent.fromJson);
   }
 

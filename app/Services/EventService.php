@@ -10,6 +10,7 @@ use App\Models\Team;
 use Carbon\Carbon;
 use DateTimeZone;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class EventService
 {
@@ -41,7 +42,7 @@ class EventService
 
                 $this->postEventNoticeToTeamChat($event, $teamId, $clubId, $participantIds);
 
-                broadcast(new EventUpdated($event->refresh(), 'created'));
+                $this->broadcastSafely(fn () => broadcast(new EventUpdated($event->refresh(), 'created')));
             }
 
             return $firstEvent ?: $event;
@@ -52,16 +53,28 @@ class EventService
     {
         $event->update($this->normalizeEventTimes($data, $data['event_timezone'] ?? null));
 
-        broadcast(new EventUpdated($event->refresh(), 'updated'));
+        $this->broadcastSafely(fn () => broadcast(new EventUpdated($event->refresh(), 'updated')));
 
         return true;
     }
 
     public function delete(Event $event): bool
     {
-        broadcast(new EventUpdated($event, 'deleted'));
+        $this->broadcastSafely(fn () => broadcast(new EventUpdated($event, 'deleted')));
 
         return $event->delete();
+    }
+
+    private function broadcastSafely(callable $callback): void
+    {
+        try {
+            $callback();
+        } catch (\Throwable $exception) {
+            Log::warning('Event realtime broadcast failed; event change was saved.', [
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function getParticipantIds(?int $clubId, ?int $teamId): array

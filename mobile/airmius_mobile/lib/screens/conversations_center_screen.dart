@@ -61,8 +61,8 @@ class _ConversationsCenterScreenState extends State<ConversationsCenterScreen> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          tooltip: 'Menue',
-          icon: const Icon(Icons.menu, color: AirmiusColors.text),
+          tooltip: 'Zurueck',
+          icon: const Icon(Icons.arrow_back, color: AirmiusColors.text),
           onPressed: () => Navigator.maybePop(context),
         ),
         titleSpacing: 0,
@@ -140,6 +140,7 @@ class _ConversationsCenterScreenState extends State<ConversationsCenterScreen> {
               onFilterChanged: (value) => setState(() => _filter = value),
               onSearchChanged: (value) => setState(() => _query = value),
               onNewConversation: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NewConversationScreen())),
+              onBack: () => Navigator.maybePop(context),
             ),
           );
         },
@@ -171,6 +172,7 @@ class _ChatListPanel extends StatelessWidget {
     required this.onFilterChanged,
     required this.onSearchChanged,
     required this.onNewConversation,
+    required this.onBack,
   });
 
   final List<AirmiusConversation> conversations;
@@ -180,6 +182,7 @@ class _ChatListPanel extends StatelessWidget {
   final ValueChanged<String> onFilterChanged;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onNewConversation;
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -199,6 +202,17 @@ class _ChatListPanel extends StatelessWidget {
               children: [
                 Row(
                   children: [
+                    SizedBox(
+                      width: 38,
+                      height: 38,
+                      child: IconButton(
+                        tooltip: 'Zurueck',
+                        onPressed: onBack,
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(Icons.arrow_back, color: AirmiusColors.text, size: 22),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     const Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

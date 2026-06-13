@@ -27,6 +27,7 @@ class ChatDetailScreen extends StatefulWidget {
 class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final TextEditingController _messageController = TextEditingController();
   late Future<AirmiusPage<AirmiusMessage>> _messagesFuture;
+  List<AirmiusMessage>? _messages;
   bool _messagesLoaded = false;
   bool _sending = false;
 
@@ -44,8 +45,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     super.dispose();
   }
 
-  Future<AirmiusPage<AirmiusMessage>> _loadMessages() {
-    return AirmiusServicesScope.of(context).repositories.conversations.messages(widget.conversationId);
+  Future<AirmiusPage<AirmiusMessage>> _loadMessages() async {
+    final page = await AirmiusServicesScope.of(context).repositories.conversations.messages(widget.conversationId);
+    _messages = page.items;
+    return page;
   }
 
   void _reload() {
@@ -79,15 +82,55 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   Future<void> _reactToMessage(AirmiusMessage message, String reaction) async {
+    final authState = AirmiusServicesScope.of(context).authState;
+    final userId = authState.user?.id;
+    if (userId == null) return;
+
+    final previousMessages = _messages == null ? null : List<AirmiusMessage>.from(_messages!);
+    _applyLocalReaction(message.id, userId, reaction);
+
     try {
-      await AirmiusServicesScope.of(context).clientForSession(AirmiusServicesScope.of(context).authState.session).reactToMessage(message.id, reaction);
+      final response = await AirmiusServicesScope.of(context).clientForSession(authState.session).reactToMessage(message.id, reaction);
       if (!mounted) return;
-      _showActionResult('Reaktion gespeichert.');
-      _reload();
+      final serverReactions = response['reactions'];
+      if (serverReactions is List) {
+        _replaceMessage(
+          message.id,
+          (current) => current.copyWith(
+            reactions: serverReactions.whereType<JsonMap>().map(AirmiusMessageReaction.fromJson).toList(),
+          ),
+        );
+      }
     } catch (_) {
       if (!mounted) return;
+      setState(() => _messages = previousMessages);
       _showActionResult('Reaktion konnte nicht gespeichert werden.');
     }
+  }
+
+  void _applyLocalReaction(int messageId, int userId, String reaction) {
+    _replaceMessage(messageId, (current) {
+      final reactions = List<AirmiusMessageReaction>.from(current.reactions);
+      final existingIndex = reactions.indexWhere((item) => item.userId == userId);
+      if (existingIndex >= 0 && reactions[existingIndex].reaction == reaction) {
+        reactions.removeAt(existingIndex);
+      } else if (existingIndex >= 0) {
+        reactions[existingIndex] = AirmiusMessageReaction(id: reactions[existingIndex].id, userId: userId, reaction: reaction);
+      } else {
+        reactions.add(AirmiusMessageReaction(id: -userId, userId: userId, reaction: reaction));
+      }
+      return current.copyWith(reactions: reactions);
+    });
+  }
+
+  void _replaceMessage(int messageId, AirmiusMessage Function(AirmiusMessage current) update) {
+    final messages = _messages;
+    if (messages == null) return;
+    final index = messages.indexWhere((item) => item.id == messageId);
+    if (index < 0) return;
+    final nextMessages = List<AirmiusMessage>.from(messages);
+    nextMessages[index] = update(nextMessages[index]);
+    setState(() => _messages = nextMessages);
   }
 
   Future<void> _hideMessage(AirmiusMessage message) async {
@@ -193,7 +236,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                         return Padding(padding: const EdgeInsets.all(12), child: _ErrorMessages(onRetry: _reload));
                       }
 
-                      final messages = (snapshot.data?.items ?? const <AirmiusMessage>[]).reversed.toList();
+                      final messages = (_messages ?? snapshot.data?.items ?? const <AirmiusMessage>[]).reversed.toList();
                       if (messages.isEmpty) {
                         return Center(
                           child: Padding(
@@ -395,7 +438,9 @@ class _ChatBubble extends StatelessWidget {
     final bubbleColor = isMine ? AirmiusColors.lightCard : AirmiusColors.input;
     final primaryText = isMine ? AirmiusColors.lightText : AirmiusColors.text;
     final secondaryText = isMine ? AirmiusColors.lightMuted : AirmiusColors.muted;
+    final currentUserId = AirmiusServicesScope.of(context).authState.user?.id;
     final reactionCounts = _reactionCounts();
+    final myReaction = _userReaction(currentUserId);
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
@@ -434,23 +479,29 @@ class _ChatBubble extends StatelessWidget {
                     runSpacing: 5,
                     children: [
                       for (final entry in reactionCounts.entries)
-                        Container(
-                          height: 26,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          decoration: BoxDecoration(
-                            color: isMine ? AirmiusColors.lightInput : AirmiusColors.card,
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(color: isMine ? AirmiusColors.lightBorder : AirmiusColors.border),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(_reactionIcon(entry.key), size: 14, color: secondaryText),
-                              const SizedBox(width: 4),
-                              Text('${entry.value}', style: TextStyle(color: secondaryText, fontSize: 12, fontWeight: FontWeight.w900)),
-                            ],
-                          ),
-                        ),
+                        Builder(builder: (context) {
+                          final selected = myReaction == entry.key;
+                          final badgeColor = selected ? AirmiusColors.blue : secondaryText;
+                          return Container(
+                            height: 26,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? AirmiusColors.blue.withValues(alpha: isMine ? 0.18 : 0.16)
+                                  : (isMine ? AirmiusColors.lightInput : AirmiusColors.card),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: selected ? AirmiusColors.blue : (isMine ? AirmiusColors.lightBorder : AirmiusColors.border)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(_reactionIcon(entry.key), size: 14, color: badgeColor),
+                                const SizedBox(width: 4),
+                                Text('${entry.value}', style: TextStyle(color: badgeColor, fontSize: 12, fontWeight: FontWeight.w900)),
+                              ],
+                            ),
+                          );
+                        }),
                     ],
                   ),
                 ],
@@ -475,6 +526,14 @@ class _ChatBubble extends StatelessWidget {
     return counts;
   }
 
+  String? _userReaction(int? userId) {
+    if (userId == null) return null;
+    for (final reaction in message.reactions) {
+      if (reaction.userId == userId) return reaction.reaction;
+    }
+    return null;
+  }
+
   IconData _reactionIcon(String reaction) {
     if (reaction == 'heart') return Icons.favorite_border;
     if (reaction == 'ok') return Icons.check_circle_outline;
@@ -482,6 +541,7 @@ class _ChatBubble extends StatelessWidget {
   }
 
   void _openReactionPicker(BuildContext context) {
+    final myReaction = _userReaction(AirmiusServicesScope.of(context).authState.user?.id);
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AirmiusColors.card,
@@ -500,15 +560,15 @@ class _ChatBubble extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _QuickReaction(icon: Icons.thumb_up_alt_outlined, label: 'Like', onTap: () {
+                    _QuickReaction(icon: Icons.thumb_up_alt_outlined, label: 'Like', selected: myReaction == 'like', onTap: () {
                       Navigator.pop(context);
                       onReact(message, 'like');
                     }),
-                    _QuickReaction(icon: Icons.favorite_border, label: 'Herz', onTap: () {
+                    _QuickReaction(icon: Icons.favorite_border, label: 'Herz', selected: myReaction == 'heart', onTap: () {
                       Navigator.pop(context);
                       onReact(message, 'heart');
                     }),
-                    _QuickReaction(icon: Icons.check_circle_outline, label: 'OK', onTap: () {
+                    _QuickReaction(icon: Icons.check_circle_outline, label: 'OK', selected: myReaction == 'ok', onTap: () {
                       Navigator.pop(context);
                       onReact(message, 'ok');
                     }),
@@ -578,11 +638,12 @@ class _ChatBubble extends StatelessWidget {
 }
 
 class _QuickReaction extends StatelessWidget {
-  const _QuickReaction({required this.icon, required this.label, required this.onTap});
+  const _QuickReaction({required this.icon, required this.label, required this.onTap, this.selected = false});
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -594,14 +655,18 @@ class _QuickReaction extends StatelessWidget {
         child: Container(
           height: 40,
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(color: AirmiusColors.input, borderRadius: BorderRadius.circular(999), border: Border.all(color: AirmiusColors.border)),
+          decoration: BoxDecoration(
+            color: selected ? AirmiusColors.blue.withValues(alpha: 0.16) : AirmiusColors.input,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: selected ? AirmiusColors.blue : AirmiusColors.border),
+          ),
           alignment: Alignment.center,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 17, color: AirmiusColors.text),
+              Icon(icon, size: 17, color: selected ? AirmiusColors.blue : AirmiusColors.text),
               const SizedBox(width: 6),
-              Text(label, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+              Text(label, style: TextStyle(color: selected ? AirmiusColors.blue : AirmiusColors.text, fontWeight: FontWeight.w900)),
             ],
           ),
         ),

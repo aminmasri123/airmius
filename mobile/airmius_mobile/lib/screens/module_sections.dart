@@ -308,15 +308,12 @@ class _TrainingSection extends StatelessWidget {
           children: [
             Icon(Icons.event_available_outlined, color: AirmiusColors.blue, size: 26),
             SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Training Center oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Events, Plaene, Logs, Teilnahme und Feedback verwalten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Events & Training oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Kalender, Liste, Filter, Eventdetails und Rueckmeldung wie in der Web-App.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
             Icon(Icons.chevron_right, color: AirmiusColors.muted),
           ],
         ),
       ),
       const _WideStatus(title: 'Naechstes Event', body: 'Intervalltraining - Morgen 18:30 - Sportplatz', icon: Icons.event_available_outlined),
-      const _ProgressPanel(title: 'Wochenplan', value: 0.62, label: '4 von 7 Einheiten geplant'),
-      const _ListLine(icon: Icons.fitness_center, title: 'Kraft & Stabilitaet', body: '45 Minuten - Trainerfeedback offen', trailing: 'Plan'),
-      const _ListLine(icon: Icons.directions_run, title: 'Langer Lauf', body: '12 km - Pulsbereich 2', trailing: 'Sonntag'),
     ]);
   }
 }
