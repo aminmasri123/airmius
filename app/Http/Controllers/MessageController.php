@@ -17,6 +17,7 @@ use App\Support\UploadStorage;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class MessageController extends Controller
@@ -187,7 +188,7 @@ class MessageController extends Controller
 
         $message->load('reactions.user');
 
-        broadcast(new MessageReactionUpdated($message))->toOthers();
+        $this->broadcastSafely(fn () => broadcast(new MessageReactionUpdated($message))->toOthers());
 
         return response()->json([
             'success' => true,
@@ -203,6 +204,17 @@ class MessageController extends Controller
             ->where('read', false)
             ->where('data->conversation_id', $conversationId)
             ->update(['read' => true]);
+    }
+
+    private function broadcastSafely(callable $callback): void
+    {
+        try {
+            $callback();
+        } catch (\Throwable $exception) {
+            Log::warning('Chat realtime broadcast failed.', [
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function recipientHasMutedConversation($recipient): bool

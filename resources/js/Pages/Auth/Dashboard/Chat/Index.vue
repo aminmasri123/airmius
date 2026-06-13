@@ -45,6 +45,7 @@ const attachmentInput = ref(null)
 const optimisticMessages = ref([])
 const realtimeMessages = ref([])
 const reportTarget = ref(null)
+const openMessageActionsId = ref(null)
 const reportForm = useForm({
     type: 'message',
     id: null,
@@ -860,7 +861,7 @@ const reactionCounts = (message) => {
 }
 
 const userReaction = (message) => {
-    return (message.reactions || []).find((reaction) => reaction.user_id === authUser?.id)?.reaction
+    return (message.reactions || []).find((reaction) => String(reaction.user_id) === String(authUser?.id))?.reaction
 }
 
 const updateMessageReactions = (messageId, reactions) => {
@@ -1303,12 +1304,14 @@ onUnmounted(() => {
                         :class="isSystemMessage(message) ? 'justify-center' : (isOwnMessage(message) ? 'justify-end' : 'justify-start')"
                     >
                         <div
-                            class="max-w-[92%] rounded-lg px-3 py-2.5 sm:max-w-[82%] sm:px-4 sm:py-3"
+                            class="relative max-w-[92%] rounded-lg px-3 py-2.5 transition sm:max-w-[82%] sm:px-4 sm:py-3"
                             :class="isSystemMessage(message)
                                 ? 'border border-border bg-card text-secondary'
                                 : isOwnMessage(message)
-                                ? 'bg-buttonPrimary text-buttonTextPrimary'
-                                : 'bg-inputBg text-primary'"
+                                ? 'cursor-pointer bg-buttonPrimary text-buttonTextPrimary'
+                                : 'cursor-pointer bg-inputBg text-primary'"
+                            :title="isSystemMessage(message) ? undefined : 'Nachricht anklicken fuer Reaktionen'"
+                            @click="!isSystemMessage(message) && (openMessageActionsId = openMessageActionsId === message.id ? null : message.id)"
                         >
                             <div v-if="isSystemMessage(message)" class="flex items-center justify-center gap-2 text-center text-xs">
                                 <i :class="[systemIconFor(message), 'text-base']"></i>
@@ -1389,14 +1392,8 @@ onUnmounted(() => {
                                 </button>
                             </div>
 
-                            <details class="relative mt-2 flex justify-end text-xs">
-                                <summary
-                                    class="ml-auto inline-flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-full border border-border/60 bg-card/80 text-secondary transition hover:border-primary/50 hover:text-primary [&::-webkit-details-marker]:hidden"
-                                    title="Nachrichtenaktionen"
-                                >
-                                    <i class="las la-ellipsis-h text-lg"></i>
-                                </summary>
-                                <div class="absolute right-0 top-9 z-20 w-56 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+                            <div v-if="openMessageActionsId === message.id" class="mt-2 flex justify-end text-xs">
+                                <div class="w-56 max-w-full overflow-hidden rounded-xl border border-border bg-card shadow-xl">
                                     <div class="grid grid-cols-3 gap-1 border-b border-border/60 p-2">
                                         <button
                                             v-for="reaction in ['like', 'heart', 'ok']"
@@ -1405,7 +1402,7 @@ onUnmounted(() => {
                                             class="inline-flex h-9 items-center justify-center rounded-lg border text-xs font-semibold transition"
                                             :class="userReaction(message) === reaction ? 'border-primary bg-primary/10 text-primary' : 'border-border/60 bg-input text-secondary hover:text-primary'"
                                             :title="reaction"
-                                            @click="reactToMessage(message, reaction)"
+                                            @click.stop="reactToMessage(message, reaction); openMessageActionsId = null"
                                         >
                                             <i :class="['las text-lg', reaction === 'heart' ? 'la-heart' : reaction === 'ok' ? 'la-check' : 'la-thumbs-up']"></i>
                                             <span v-if="reactionCounts(message)[reaction]" class="ml-1 opacity-70">{{ reactionCounts(message)[reaction] }}</span>
@@ -1415,7 +1412,7 @@ onUnmounted(() => {
                                         v-if="canDeleteMessage(message)"
                                         type="button"
                                         class="flex w-full items-center gap-2 px-3 py-2.5 text-left font-semibold text-secondary transition hover:bg-input hover:text-primary"
-                                        @click="deleteMessage(message)"
+                                        @click.stop="deleteMessage(message); openMessageActionsId = null"
                                     >
                                         <i class="las la-trash text-lg"></i>
                                         Für alle löschen
@@ -1424,7 +1421,7 @@ onUnmounted(() => {
                                         v-if="!String(message.id).startsWith('local-')"
                                         type="button"
                                         class="flex w-full items-center gap-2 px-3 py-2.5 text-left font-semibold text-secondary transition hover:bg-input hover:text-primary"
-                                        @click="hideMessageForMe(message)"
+                                        @click.stop="hideMessageForMe(message); openMessageActionsId = null"
                                     >
                                         <i class="las la-eye-slash text-lg"></i>
                                         Nur für mich ausblenden
@@ -1434,7 +1431,7 @@ onUnmounted(() => {
                                         type="button"
                                         class="flex w-full items-center gap-2 px-3 py-2.5 text-left font-semibold text-error transition hover:bg-input"
                                         :title="message.error_message || 'Erneut senden'"
-                                        @click="retryMessage(message)"
+                                        @click.stop="retryMessage(message); openMessageActionsId = null"
                                     >
                                         <i class="las la-redo-alt text-lg"></i>
                                         Erneut senden
@@ -1451,13 +1448,29 @@ onUnmounted(() => {
                                         v-if="!isOwnMessage(message) && !String(message.id).startsWith('local-')"
                                         type="button"
                                         class="flex w-full items-center gap-2 px-3 py-2.5 text-left font-semibold text-secondary transition hover:bg-input hover:text-primary"
-                                        @click="openReport(message)"
+                                        @click.stop="openReport(message); openMessageActionsId = null"
                                     >
                                         <i class="las la-flag text-lg"></i>
                                         Nachricht melden
                                     </button>
                                 </div>
-                            </details>
+                            </div>
+
+                            <div
+                                v-if="Object.keys(reactionCounts(message)).length"
+                                class="mt-2 flex flex-wrap gap-1"
+                                :class="isOwnMessage(message) ? 'justify-end' : 'justify-start'"
+                            >
+                                <span
+                                    v-for="(count, reaction) in reactionCounts(message)"
+                                    :key="reaction"
+                                    class="inline-flex h-7 items-center gap-1 rounded-full border border-border/60 bg-card px-2 text-xs font-semibold text-secondary shadow-sm"
+                                    :class="userReaction(message) === reaction ? 'border-primary/60 text-primary' : ''"
+                                >
+                                    <i :class="['las text-base', reaction === 'heart' ? 'la-heart' : reaction === 'ok' ? 'la-check' : 'la-thumbs-up']"></i>
+                                    <span>{{ count }}</span>
+                                </span>
+                            </div>
 
                             <div v-if="isOwnMessage(message)" class="mt-1 flex justify-end">
                                 <span class="inline-flex items-center gap-1 text-xs opacity-80" :title="deliverySummaryFor(message)">

@@ -442,12 +442,14 @@ class AirmiusMessage {
     required this.createdAt,
     required this.mine,
     required this.status,
+    this.reactions = const [],
   });
 
   factory AirmiusMessage.fromJson(JsonMap json) {
     final sender = json['sender'];
     final senderId = _int(json['sender_id']);
     final currentUserId = _int(json['current_user_id'], fallback: -1);
+    final reactions = json['reactions'];
     return AirmiusMessage(
       id: _int(json['id']),
       conversationId: _int(json['conversation_id']),
@@ -456,6 +458,7 @@ class AirmiusMessage {
       createdAt: _date(json['created_at']),
       mine: currentUserId >= 0 ? senderId == currentUserId : _bool(json['mine'] ?? json['is_mine']),
       status: _string(json['status'] ?? json['delivery_status'], fallback: 'sent'),
+      reactions: reactions is List ? reactions.whereType<JsonMap>().map(AirmiusMessageReaction.fromJson).toList() : const [],
     );
   }
 
@@ -466,6 +469,25 @@ class AirmiusMessage {
   final DateTime createdAt;
   final bool mine;
   final String status;
+  final List<AirmiusMessageReaction> reactions;
+}
+
+class AirmiusMessageReaction {
+  const AirmiusMessageReaction({
+    required this.id,
+    required this.userId,
+    required this.reaction,
+  });
+
+  factory AirmiusMessageReaction.fromJson(JsonMap json) => AirmiusMessageReaction(
+    id: _int(json['id']),
+    userId: _int(json['user_id']),
+    reaction: _string(json['reaction'] ?? json['emoji']),
+  );
+
+  final int id;
+  final int userId;
+  final String reaction;
 }
 
 class AirmiusPost {

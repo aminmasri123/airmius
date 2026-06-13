@@ -33,7 +33,8 @@ class MessageResource extends JsonResource
             ])->values()),
             'reactions' => $this->whenLoaded('reactions', fn () => $this->reactions->map(fn ($reaction) => [
                 'id' => $reaction->id,
-                'emoji' => $reaction->emoji,
+                'user_id' => $reaction->user_id,
+                'reaction' => $reaction->reaction,
                 'user' => new UserResource($reaction->user),
                 'created_at' => $reaction->created_at?->toJSON(),
             ])->values()),

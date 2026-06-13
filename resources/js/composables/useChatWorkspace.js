@@ -824,7 +824,7 @@ export function useChatWorkspace(props) {
     }
 
     const userReaction = (message) => {
-        return (message.reactions || []).find((reaction) => reaction.user_id === authUser?.id)?.reaction
+        return (message.reactions || []).find((reaction) => String(reaction.user_id) === String(authUser?.id))?.reaction
     }
 
     const updateMessageReactions = (messageId, reactions) => {

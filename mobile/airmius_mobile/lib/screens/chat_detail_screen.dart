@@ -395,6 +395,7 @@ class _ChatBubble extends StatelessWidget {
     final bubbleColor = isMine ? AirmiusColors.lightCard : AirmiusColors.input;
     final primaryText = isMine ? AirmiusColors.lightText : AirmiusColors.text;
     final secondaryText = isMine ? AirmiusColors.lightMuted : AirmiusColors.muted;
+    final reactionCounts = _reactionCounts();
     return Align(
       alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
@@ -426,6 +427,33 @@ class _ChatBubble extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(message.message, style: TextStyle(color: primaryText, height: 1.35, fontWeight: FontWeight.w900)),
+                if (reactionCounts.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 5,
+                    runSpacing: 5,
+                    children: [
+                      for (final entry in reactionCounts.entries)
+                        Container(
+                          height: 26,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: isMine ? AirmiusColors.lightInput : AirmiusColors.card,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: isMine ? AirmiusColors.lightBorder : AirmiusColors.border),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(_reactionIcon(entry.key), size: 14, color: secondaryText),
+                              const SizedBox(width: 4),
+                              Text('${entry.value}', style: TextStyle(color: secondaryText, fontSize: 12, fontWeight: FontWeight.w900)),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
                 if (isMine) ...[
                   const SizedBox(height: 4),
                   Align(alignment: Alignment.centerRight, child: Icon(Icons.done_all, size: 14, color: secondaryText)),
@@ -436,6 +464,21 @@ class _ChatBubble extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Map<String, int> _reactionCounts() {
+    final counts = <String, int>{};
+    for (final reaction in message.reactions) {
+      if (reaction.reaction.isEmpty) continue;
+      counts[reaction.reaction] = (counts[reaction.reaction] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  IconData _reactionIcon(String reaction) {
+    if (reaction == 'heart') return Icons.favorite_border;
+    if (reaction == 'ok') return Icons.check_circle_outline;
+    return Icons.thumb_up_alt_outlined;
   }
 
   void _openReactionPicker(BuildContext context) {
