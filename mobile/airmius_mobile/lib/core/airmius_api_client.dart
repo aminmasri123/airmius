@@ -255,11 +255,32 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> deleteStory(int storyId) => _json('DELETE', '/api/v1/stories/$storyId');
 
-  Future<AirmiusJson> events({int page = 1, DateTime? from, DateTime? to}) => _json('GET', '/api/v1/events', query: {
+  Future<AirmiusJson> events({
+    int page = 1,
+    DateTime? from,
+    DateTime? to,
+    String? search,
+    String? type,
+    String? visibility,
+    int? clubId,
+    int? teamId,
+    String? period,
+    String? calendarMonth,
+  }) =>
+      _json('GET', '/api/v1/events', query: {
         'page': '$page',
         if (from != null) 'from': from.toIso8601String(),
         if (to != null) 'to': to.toIso8601String(),
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+        if (type != null && type.isNotEmpty) 'type': type,
+        if (visibility != null && visibility.isNotEmpty) 'visibility': visibility,
+        if (clubId != null) 'club_id': '$clubId',
+        if (teamId != null) 'team_id': '$teamId',
+        if (period != null && period.isNotEmpty) 'period': period,
+        if (calendarMonth != null && calendarMonth.isNotEmpty) 'calendar_month': calendarMonth,
       });
+
+  Future<AirmiusJson> createEvent(AirmiusJson body) => _json('POST', '/api/v1/events', body: body);
 
   Future<AirmiusJson> event(int eventId) => _json('GET', '/api/v1/events/$eventId');
 
@@ -393,6 +414,32 @@ class AirmiusApiException implements Exception {
   final int statusCode;
   final String body;
   final String path;
+
+  String get userMessage {
+    final trimmed = body.trim();
+    if (trimmed.isEmpty) return 'Serverfehler ($statusCode).';
+
+    try {
+      final decoded = jsonDecode(trimmed);
+      if (decoded is Map<String, dynamic>) {
+        final errors = decoded['errors'];
+        if (errors is Map<String, dynamic>) {
+          for (final value in errors.values) {
+            if (value is List && value.isNotEmpty) return value.first.toString();
+            if (value is String && value.isNotEmpty) return value;
+          }
+        }
+
+        final message = decoded['message'];
+        if (message is String && message.trim().isNotEmpty) return message.trim();
+      }
+    } catch (_) {
+      // Keep the plain text fallback below for non-JSON server responses.
+    }
+
+    if (trimmed.length <= 180 && !trimmed.startsWith('<')) return trimmed;
+    return 'Serverfehler ($statusCode).';
+  }
 
   @override
   String toString() => 'AirmiusApiException($statusCode, $path): $body';

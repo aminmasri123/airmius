@@ -160,6 +160,37 @@ class AirmiusApiEventRepository implements AirmiusEventRepository {
   }
 
   @override
+  Future<AirmiusEventWorkspace> workspace({
+    int page = 1,
+    String? search,
+    String? type,
+    String? visibility,
+    int? clubId,
+    int? teamId,
+    String? period,
+    String? calendarMonth,
+  }) async {
+    final json = await client.events(
+      page: page,
+      search: search,
+      type: type,
+      visibility: visibility,
+      clubId: clubId,
+      teamId: teamId,
+      period: period,
+      calendarMonth: calendarMonth,
+    );
+    return AirmiusEventWorkspace.fromJson(json);
+  }
+
+  @override
+  Future<AirmiusEvent> create(JsonMap payload) async {
+    final json = await client.createEvent(payload);
+    final data = json['data'];
+    return AirmiusEvent.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
   Future<AirmiusEvent> event(int eventId) async {
     final json = await client.event(eventId);
     final data = json['data'];

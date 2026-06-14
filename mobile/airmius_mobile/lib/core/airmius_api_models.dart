@@ -841,6 +841,102 @@ class AirmiusPage<T> {
   }
 }
 
+class AirmiusEventStats {
+  const AirmiusEventStats({
+    required this.upcoming,
+    required this.today,
+    required this.cancelled,
+  });
+
+  final int upcoming;
+  final int today;
+  final int cancelled;
+
+  factory AirmiusEventStats.fromJson(Object? value) {
+    final json = value is JsonMap ? value : const <String, dynamic>{};
+    return AirmiusEventStats(
+      upcoming: _int(json['upcoming']),
+      today: _int(json['today']),
+      cancelled: _int(json['cancelled']),
+    );
+  }
+}
+
+class AirmiusEventWorkspace {
+  const AirmiusEventWorkspace({
+    required this.events,
+    required this.calendarEvents,
+    required this.stats,
+    required this.eventTypes,
+    required this.visibilities,
+    required this.clubs,
+    required this.teams,
+    required this.sports,
+    this.nextEvent,
+    this.currentPage = 1,
+    this.lastPage = 1,
+  });
+
+  final List<AirmiusEvent> events;
+  final List<AirmiusEvent> calendarEvents;
+  final AirmiusEventStats stats;
+  final AirmiusEvent? nextEvent;
+  final List<String> eventTypes;
+  final List<String> visibilities;
+  final List<AirmiusClub> clubs;
+  final List<AirmiusTeam> teams;
+  final List<AirmiusSport> sports;
+  final int currentPage;
+  final int lastPage;
+
+  factory AirmiusEventWorkspace.fromJson(JsonMap json) {
+    final meta = json['meta'];
+    return AirmiusEventWorkspace(
+      events: _eventList(json['data']),
+      calendarEvents: _eventList(json['calendar_events']),
+      stats: AirmiusEventStats.fromJson(json['event_stats']),
+      nextEvent: json['next_event'] is JsonMap ? AirmiusEvent.fromJson(json['next_event'] as JsonMap) : null,
+      eventTypes: _stringList(json['event_types']),
+      visibilities: _stringList(json['visibilities']),
+      clubs: _clubList(json['clubs']),
+      teams: _teamList(json['teams']),
+      sports: _sportList(json['sports']),
+      currentPage: meta is JsonMap ? _int(meta['current_page'], fallback: 1) : 1,
+      lastPage: meta is JsonMap ? _int(meta['last_page'], fallback: 1) : 1,
+    );
+  }
+
+  AirmiusEventWorkspace copyWith({
+    List<AirmiusEvent>? events,
+    List<AirmiusEvent>? calendarEvents,
+    AirmiusEventStats? stats,
+    AirmiusEvent? nextEvent,
+  }) =>
+      AirmiusEventWorkspace(
+        events: events ?? this.events,
+        calendarEvents: calendarEvents ?? this.calendarEvents,
+        stats: stats ?? this.stats,
+        nextEvent: nextEvent ?? this.nextEvent,
+        eventTypes: eventTypes,
+        visibilities: visibilities,
+        clubs: clubs,
+        teams: teams,
+        sports: sports,
+        currentPage: currentPage,
+        lastPage: lastPage,
+      );
+}
+
+List<AirmiusEvent> _eventList(Object? value) => value is List ? value.whereType<JsonMap>().map(AirmiusEvent.fromJson).toList() : const [];
+
+List<AirmiusClub> _clubList(Object? value) => value is List ? value.whereType<JsonMap>().map(AirmiusClub.fromJson).toList() : const [];
+
+List<AirmiusTeam> _teamList(Object? value) => value is List ? value.whereType<JsonMap>().map(AirmiusTeam.fromJson).toList() : const [];
+
+List<AirmiusSport> _sportList(Object? value) => value is List ? value.whereType<JsonMap>().map(AirmiusSport.fromJson).toList() : const [];
+
+List<String> _stringList(Object? value) => value is List ? value.map((item) => item.toString()).where((item) => item.isNotEmpty).toList() : const [];
+
 abstract class AirmiusAuthRepository {
   Future<AirmiusUser> currentUser();
   Future<AirmiusUser> login({required String email, required String password});
@@ -873,6 +969,17 @@ abstract class AirmiusFileRepository {
 
 abstract class AirmiusEventRepository {
   Future<AirmiusPage<AirmiusEvent>> events({int page = 1, DateTime? from, DateTime? to});
+  Future<AirmiusEventWorkspace> workspace({
+    int page = 1,
+    String? search,
+    String? type,
+    String? visibility,
+    int? clubId,
+    int? teamId,
+    String? period,
+    String? calendarMonth,
+  });
+  Future<AirmiusEvent> create(JsonMap payload);
   Future<AirmiusEvent> event(int eventId);
   Future<AirmiusEvent> respond(int eventId, String status);
   Future<AirmiusEvent> leave(int eventId);

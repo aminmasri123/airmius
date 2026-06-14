@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'airmius_api_client.dart';
 import 'airmius_api_repositories.dart';
@@ -79,7 +80,28 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
       }
     }
 
-    return AirmiusApiResponse(statusCode: 599, body: '{"error":"transport_failed","message":"$lastError"}');
+    return AirmiusApiResponse(
+      statusCode: 599,
+      body: jsonEncode({
+        'error': 'transport_failed',
+        'message': _transportErrorMessage(lastError),
+      }),
+    );
+  }
+
+  String _transportErrorMessage(Object? error) {
+    if (error is AirmiusApiException) return error.userMessage;
+
+    final text = error?.toString() ?? '';
+    if (text.contains('ProgressEvent') || text.contains('[object')) {
+      return 'Die API ist nicht erreichbar. Bitte pruefe AIRMIUS_API_BASE_URL, CORS und ob Laravel/XAMPP laeuft.';
+    }
+
+    if (text.isEmpty) {
+      return 'Die API ist nicht erreichbar. Bitte pruefe die Verbindung zum Server.';
+    }
+
+    return text;
   }
 
   Future<List<AirmiusApiResponse>> flush() async {

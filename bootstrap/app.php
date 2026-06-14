@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureAccountIsNotSuspended;
+use App\Http\Middleware\EnsureApiCorsHeaders;
 use App\Http\Middleware\EnsureApplicationIsNotInMaintenance;
 use App\Http\Middleware\EnsureGuardianConsentResolved;
 use App\Http\Middleware\EnsureProfileIsComplete;
@@ -34,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Mobile/API clients can send X-Locale, X-App-Locale, or Accept-Language.
         $middleware->api(prepend: [
+            EnsureApiCorsHeaders::class,
             SetLocale::class,
         ]);
 

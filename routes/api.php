@@ -145,6 +145,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/chat/conversations/{conversation}/typing', [ChatController::class, 'typing'])->name('chat.typing');
 
         Route::get('/events', [EventController::class, 'index'])->name('events.index');
+        Route::post('/events', [EventController::class, 'store'])->name('events.store');
         Route::get('/events/{event}', [EventController::class, 'show'])->name('events.show');
         Route::post('/events/{event}/participation', [EventController::class, 'respond'])->name('events.participation.respond');
         Route::delete('/events/{event}/participation', [EventController::class, 'leave'])->name('events.participation.leave');

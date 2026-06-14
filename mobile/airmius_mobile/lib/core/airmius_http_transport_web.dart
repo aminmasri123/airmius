@@ -10,12 +10,26 @@ class AirmiusHttpTransport implements AirmiusApiTransport {
 
   @override
   Future<AirmiusApiResponse> send(AirmiusApiRequest request) async {
-    final xhr = await HttpRequest.request(
-      _uri(request).toString(),
-      method: request.method,
-      requestHeaders: request.headers,
-      sendData: request.body == null ? null : jsonEncode(request.body),
-    );
+    final uri = _uri(request);
+    late final HttpRequest xhr;
+    try {
+      xhr = await HttpRequest.request(
+        uri.toString(),
+        method: request.method,
+        requestHeaders: request.headers,
+        sendData: request.body == null ? null : jsonEncode(request.body),
+      );
+    } catch (error) {
+      throw AirmiusApiException(
+        statusCode: 0,
+        path: request.path,
+        body: jsonEncode({
+          'error': 'browser_network_error',
+          'message': 'Die API-Anfrage wurde vom Browser blockiert oder der Server ist nicht erreichbar: $uri',
+          'details': error.toString(),
+        }),
+      );
+    }
     final headers = <String, String>{};
     for (final line in (xhr.getAllResponseHeaders() ?? '').split('\n')) {
       final separator = line.indexOf(':');
