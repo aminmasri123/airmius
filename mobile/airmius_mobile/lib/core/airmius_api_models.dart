@@ -43,6 +43,11 @@ class AirmiusClub {
     this.teams = const [],
     this.logoUrl,
     this.bannerUrl,
+    this.sportType,
+    this.postalCode,
+    this.country,
+    this.canManage = false,
+    this.canDelete = false,
   });
 
   final int id;
@@ -56,6 +61,11 @@ class AirmiusClub {
   final List<AirmiusTeam> teams;
   final String? logoUrl;
   final String? bannerUrl;
+  final String? sportType;
+  final String? postalCode;
+  final String? country;
+  final bool canManage;
+  final bool canDelete;
 
   factory AirmiusClub.fromJson(JsonMap json) => AirmiusClub(
         id: _int(json['id']),
@@ -69,6 +79,11 @@ class AirmiusClub {
         teams: _clubTeams(json['teams']),
         logoUrl: _mediaUrl(json['logo_url'] ?? json['logo']),
         bannerUrl: _mediaUrl(json['banner_url'] ?? json['cover_image_url'] ?? json['cover_image'] ?? json['cover']),
+        sportType: _nullableString(json['sport_type']),
+        postalCode: _nullableString(json['postal_code']),
+        country: _nullableString(json['country']),
+        canManage: _bool(json['can_manage']) || _bool(json['can_update']),
+        canDelete: _bool(json['can_delete']) || _bool(json['can_destroy']),
       );
 }
 

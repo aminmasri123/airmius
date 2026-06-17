@@ -79,22 +79,26 @@ const showMobileFiltersModel = computed({
 
 <template>
     <section class="min-w-0 rounded-lg border border-border bg-card">
-        <div class="flex flex-col gap-2 border-b border-border p-3">
-            <div class="flex items-start justify-between gap-3 sm:items-center">
+        <div class="flex flex-col gap-3 border-b border-border p-3">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="min-w-0">
                     <h1 class="truncate text-lg font-semibold text-primary">{{ currentFolder?.name || 'Dateimanager' }}</h1>
-                    <p class="text-sm text-secondary">{{ totalFolders }} Ordner · {{ totalFiles }} Dateien</p>
+                    <div class="mt-1 flex flex-wrap gap-2 text-xs text-secondary">
+                        <span class="rounded-full border border-border px-2 py-1">{{ totalFolders }} Ordner</span>
+                        <span class="rounded-full border border-border px-2 py-1">{{ totalFiles }} Dateien</span>
+                        <span v-if="currentFolder" class="max-w-full truncate rounded-full border border-border px-2 py-1">{{ currentFolder.name }}</span>
+                    </div>
                 </div>
 
-                <div class="flex shrink-0 items-center gap-2">
+                <div class="flex shrink-0 items-center gap-2 sm:justify-end">
                     <button
                         type="button"
-                        class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border px-3 text-sm font-semibold text-primary hover:bg-inputBg md:hidden"
+                        class="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border px-3 text-sm font-semibold text-primary hover:bg-inputBg sm:w-auto md:hidden"
                         :aria-expanded="showMobileFiltersModel"
                         @click="showMobileFiltersModel = !showMobileFiltersModel"
                     >
                         <i class="las la-sliders-h text-lg"></i>
-                        Suchfilter
+                        {{ showMobileFiltersModel ? 'Filter schließen' : 'Suchen & sortieren' }}
                     </button>
                 </div>
             </div>
@@ -161,35 +165,43 @@ const showMobileFiltersModel = computed({
                     </option>
                 </select>
             </div>
-            <button
-                v-if="currentFolder"
-                class="inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-sm text-primary hover:bg-inputBg"
-                type="button"
-                :disabled="isFiltering"
-                @click="openFolder(currentFolder.parent)"
-                aria-label="In das übergeordnete Verzeichnis gehen"
-            >
-                <i class="las la-arrow-left"></i>
-                Zurück
-            </button>
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <button
+                    v-if="currentFolder"
+                    class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border px-3 text-sm font-semibold text-primary hover:bg-inputBg sm:h-9 sm:justify-start"
+                    type="button"
+                    :disabled="isFiltering"
+                    @click="openFolder(currentFolder.parent)"
+                    aria-label="In das übergeordnete Verzeichnis gehen"
+                >
+                    <i class="las la-arrow-left"></i>
+                    Zurück
+                </button>
+                <p class="text-xs text-secondary" role="status" aria-live="polite">{{ filterStatusText }}</p>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 gap-2 p-3 lg:grid-cols-2 2xl:grid-cols-3">
-            <button
+            <div
                 v-for="folder in activeFolders"
                 :key="folder.id"
-                type="button"
-                class="group flex items-center gap-3 rounded-lg border border-transparent p-3 text-left hover:border-border hover:bg-inputBg"
-                @click="openFolder(folder)"
+                class="group flex items-center gap-2 rounded-lg border border-border bg-inputBg/30 p-2 sm:border-transparent sm:bg-transparent sm:hover:border-border sm:hover:bg-inputBg"
             >
-                <i class="las la-folder text-3xl text-yellow-500"></i>
-                <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-semibold text-primary">{{ folder.name }}</p>
-                    <p class="truncate whitespace-nowrap text-xs text-secondary">{{ folder.files_count || 0 }} Dateien</p>
-                </div>
                 <button
                     type="button"
-                    class="shrink-0 rounded-lg p-2 text-secondary opacity-0 group-hover:opacity-100"
+                    class="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 text-left"
+                    @click="openFolder(folder)"
+                    aria-label="Ordner öffnen"
+                >
+                    <i class="las la-folder text-3xl text-yellow-500"></i>
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-sm font-semibold text-primary">{{ folder.name }}</p>
+                        <p class="truncate whitespace-nowrap text-xs text-secondary">{{ folder.files_count || 0 }} Dateien</p>
+                    </div>
+                </button>
+                <button
+                    type="button"
+                    class="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-secondary hover:bg-card sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
                     :disabled="isFiltering"
                     @click.stop="openShare(folder, 'folder')"
                     title="Freigeben"
@@ -199,7 +211,7 @@ const showMobileFiltersModel = computed({
                 </button>
                 <button
                     type="button"
-                    class="shrink-0 rounded-lg p-2 text-secondary opacity-0 group-hover:opacity-100"
+                    class="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-secondary hover:bg-card sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
                     :disabled="isFiltering"
                     @click.stop="openRename(folder, 'folder')"
                     title="Umbenennen"
@@ -209,7 +221,7 @@ const showMobileFiltersModel = computed({
                 </button>
                 <button
                     type="button"
-                    class="rounded-lg p-2 text-secondary opacity-0 group-hover:opacity-100"
+                    class="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-secondary hover:bg-card sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
                     :disabled="isFiltering"
                     @click.stop="confirmDeleteFolder(folder)"
                     title="Löschen"
@@ -217,47 +229,51 @@ const showMobileFiltersModel = computed({
                 >
                     <i class="las la-trash"></i>
                 </button>
-            </button>
+            </div>
 
-            <div v-for="file in activeFiles" :key="file.id" class="flex items-center gap-3 rounded-lg border border-border p-3">
-                <i class="las la-file-alt text-3xl text-secondary"></i>
-                <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-semibold text-primary">{{ fileName(file) }}</p>
-                    <p class="truncate text-xs text-secondary">{{ contextLabel(file) }} · {{ file.type }} · {{ formatSize(file.size) }}</p>
+            <div v-for="file in activeFiles" :key="file.id" class="flex flex-wrap items-center gap-3 rounded-lg border border-border p-3">
+                <div class="flex min-w-0 flex-1 items-center gap-3">
+                    <i class="las la-file-alt shrink-0 text-3xl text-secondary"></i>
+                    <div class="min-w-0 flex-1">
+                        <p class="truncate text-sm font-semibold text-primary">{{ fileName(file) }}</p>
+                        <p class="truncate text-xs text-secondary">{{ contextLabel(file) }} · {{ file.type }} · {{ formatSize(file.size) }}</p>
+                    </div>
                 </div>
-                <button
-                    type="button"
-                    class="rounded-lg p-2 text-secondary hover:bg-inputBg"
-                    :disabled="isFiltering"
-                    @click="openShare(file)"
-                    title="Freigeben"
-                    aria-label="Datei freigeben"
-                >
-                    <i class="las la-share-alt"></i>
-                </button>
-                <button
-                    type="button"
-                    class="rounded-lg p-2 text-secondary hover:bg-inputBg"
-                    :disabled="isFiltering"
-                    @click="openRename(file)"
-                    title="Umbenennen"
-                    aria-label="Datei umbenennen"
-                >
-                    <i class="las la-pen"></i>
-                </button>
-                <a :href="route('auth.files.download', file.id)" class="rounded-lg p-2 text-secondary hover:bg-inputBg" title="Herunterladen" aria-label="Datei herunterladen">
-                    <i class="las la-download"></i>
-                </a>
-                <button
-                    type="button"
-                    class="rounded-lg p-2 text-secondary hover:bg-inputBg"
-                    :disabled="isFiltering"
-                    @click="deleteFile(file)"
-                    title="Löschen"
-                    aria-label="Datei löschen"
-                >
-                    <i class="las la-trash"></i>
-                </button>
+                <div class="flex w-full items-center justify-end gap-1 sm:w-auto">
+                    <button
+                        type="button"
+                        class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
+                        :disabled="isFiltering"
+                        @click="openShare(file)"
+                        title="Freigeben"
+                        aria-label="Datei freigeben"
+                    >
+                        <i class="las la-share-alt"></i>
+                    </button>
+                    <button
+                        type="button"
+                        class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
+                        :disabled="isFiltering"
+                        @click="openRename(file)"
+                        title="Umbenennen"
+                        aria-label="Datei umbenennen"
+                    >
+                        <i class="las la-pen"></i>
+                    </button>
+                    <a :href="route('auth.files.download', file.id)" class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9" title="Herunterladen" aria-label="Datei herunterladen">
+                        <i class="las la-download"></i>
+                    </a>
+                    <button
+                        type="button"
+                        class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
+                        :disabled="isFiltering"
+                        @click="deleteFile(file)"
+                        title="Löschen"
+                        aria-label="Datei löschen"
+                    >
+                        <i class="las la-trash"></i>
+                    </button>
+                </div>
             </div>
 
             <div v-if="!activeFiles.length && !activeFolders.length" class="col-span-full flex min-h-40 items-center justify-center p-4 text-center text-sm text-secondary">
@@ -269,11 +285,9 @@ const showMobileFiltersModel = computed({
             <p v-if="activeFolders.length" class="col-span-full text-xs text-secondary">
                 Ordner {{ folderRangeStart }} - {{ folderRangeEnd }} von {{ totalFolders }}
             </p>
-            <p class="col-span-full text-xs text-secondary" role="status" aria-live="polite">{{ filterStatusText }}</p>
-
-            <div v-if="lastFoldersPage > 1" class="col-span-full flex items-center justify-between gap-3 border-t border-border pt-2">
+            <div v-if="lastFoldersPage > 1" class="col-span-full flex flex-col gap-2 border-t border-border pt-2 sm:flex-row sm:items-center sm:justify-between">
                 <span class="text-xs text-secondary">Ordnerseite {{ currentFoldersPage }} / {{ lastFoldersPage }}</span>
-                <div class="flex items-center gap-2">
+                <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center">
                     <button
                         class="rounded-lg border border-border px-3 py-2 text-sm text-primary disabled:opacity-50"
                         :disabled="currentFoldersPage <= 1"
@@ -293,9 +307,9 @@ const showMobileFiltersModel = computed({
                 </div>
             </div>
 
-            <div v-if="lastFilesPage > 1" class="col-span-full flex items-center justify-between gap-3 border-t border-border pt-2">
+            <div v-if="lastFilesPage > 1" class="col-span-full flex flex-col gap-2 border-t border-border pt-2 sm:flex-row sm:items-center sm:justify-between">
                 <span class="text-xs text-secondary">Dateiseite {{ currentFilesPage }} / {{ lastFilesPage }}</span>
-                <div class="flex items-center gap-2">
+                <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center">
                     <button
                         class="rounded-lg border border-border px-3 py-2 text-sm text-primary disabled:opacity-50"
                         :disabled="currentFilesPage <= 1"

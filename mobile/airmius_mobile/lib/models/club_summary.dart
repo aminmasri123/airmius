@@ -15,6 +15,11 @@ class ClubSummary {
     this.teamList = const [],
     this.logoUrl,
     this.bannerUrl,
+    this.sportType,
+    this.postalCode,
+    this.country,
+    this.canManage = false,
+    this.canDelete = false,
   });
 
   final int id;
@@ -30,6 +35,11 @@ class ClubSummary {
   final List<TeamSummary> teamList;
   final String? logoUrl;
   final String? bannerUrl;
+  final String? sportType;
+  final String? postalCode;
+  final String? country;
+  final bool canManage;
+  final bool canDelete;
 
   factory ClubSummary.fromAirmiusClub(AirmiusClub club) => ClubSummary(
         id: club.id,
@@ -45,6 +55,11 @@ class ClubSummary {
         teamList: club.teams.map(TeamSummary.fromAirmiusTeam).toList(),
         logoUrl: club.logoUrl,
         bannerUrl: club.bannerUrl,
+        sportType: club.sportType,
+        postalCode: club.postalCode,
+        country: club.country,
+        canManage: club.canManage,
+        canDelete: club.canDelete,
       );
 }
 
@@ -70,7 +85,7 @@ class TeamSummary {
 }
 
 const demoClubs = [
-  ClubSummary(id: 26, name: 'ZBB', city: 'Kleinblittersdorf', members: 1, teams: 0, posts: 0, acceptsMemberships: true, hasPendingMembershipRequest: false, isMember: false, verified: false),
-  ClubSummary(id: 2, name: 'Airmius Running Club', city: 'Saarbruecken', members: 42, teams: 4, posts: 8, acceptsMemberships: true, hasPendingMembershipRequest: false, isMember: false, verified: true),
-  ClubSummary(id: 3, name: 'Tennis Zentrum West', city: 'Trier', members: 128, teams: 7, posts: 13, acceptsMemberships: false, hasPendingMembershipRequest: false, isMember: false, verified: true),
+  ClubSummary(id: 26, name: 'ZBB', city: 'Kleinblittersdorf', members: 1, teams: 0, posts: 0, acceptsMemberships: true, hasPendingMembershipRequest: false, isMember: false, verified: false, sportType: 'Fu\u00dfball', postalCode: '66271', country: 'DE', canManage: true),
+  ClubSummary(id: 2, name: 'Airmius Running Club', city: 'Saarbruecken', members: 42, teams: 4, posts: 8, acceptsMemberships: true, hasPendingMembershipRequest: false, isMember: false, verified: true, sportType: 'Running', country: 'DE', canManage: true),
+  ClubSummary(id: 3, name: 'Tennis Zentrum West', city: 'Trier', members: 128, teams: 7, posts: 13, acceptsMemberships: false, hasPendingMembershipRequest: false, isMember: false, verified: true, sportType: 'Tennis', country: 'DE'),
 ];

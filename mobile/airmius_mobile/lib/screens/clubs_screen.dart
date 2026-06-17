@@ -6,6 +6,9 @@ import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
 import 'application_screen.dart';
+import 'club_cockpit_screen.dart';
+import 'team_detail_screen.dart';
+import 'ui_action_result_screen.dart';
 
 class ClubsScreen extends StatefulWidget {
   const ClubsScreen({
@@ -24,8 +27,6 @@ class ClubsScreen extends StatefulWidget {
 }
 
 class _ClubsScreenState extends State<ClubsScreen> {
-  String _query = '';
-  bool _onlyJoinable = false;
   Future<List<ClubSummary>>? _clubsFuture;
 
   @override
@@ -42,33 +43,31 @@ class _ClubsScreenState extends State<ClubsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scope = AirmiusScope.of(context);
-
     return PageFrame(
-      title: scope.t('clubs'),
-      subtitle: 'Vereine, Teams und Mitgliedschaft',
-      showHeader: true,
+      title: 'Vereine & Teams',
+      subtitle: 'Verwalte Vereinsstruktur, Teams, Rollen und Einladungen',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _ClubsHero(),
-          const SizedBox(height: 14),
-          SearchBox(hint: scope.t('search'), onChanged: (value) => setState(() => _query = value)),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _FilterChip(label: 'Alle Vereine', selected: !_onlyJoinable, onTap: () => setState(() => _onlyJoinable = false)),
-              _FilterChip(label: 'Beitritt moeglich', selected: _onlyJoinable, onTap: () => setState(() => _onlyJoinable = true)),
-            ],
+          _ClubWorkspaceNav(
+            onCreateClub: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const UiActionResultScreen(
+                  title: 'Verein registrieren',
+                  body: 'Verein wie in Laravel/Inertia anlegen: Basisdaten, Adresse und Pruefschritt.',
+                  status: 'Verein',
+                  icon: Icons.add_business_outlined,
+                ),
+              ),
+            ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 24),
           FutureBuilder<List<ClubSummary>>(
             future: _clubsFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const AirmiusPanel(child: Center(child: Padding(padding: EdgeInsets.all(18), child: Text('Vereine werden geladen...', style: TextStyle(color: AirmiusColors.muted)))));
+                return const AirmiusPanel(child: Center(child: Padding(padding: EdgeInsets.all(18), child: CircularProgressIndicator(color: AirmiusColors.blue))));
               }
               if (snapshot.hasError) {
                 return AirmiusPanel(
@@ -85,24 +84,21 @@ class _ClubsScreenState extends State<ClubsScreen> {
                   ),
                 );
               }
-              final clubs = (snapshot.data ?? demoClubs).where((club) {
-                final query = _query.trim().toLowerCase();
-                final requested = widget.requestedClubIds.contains(club.id) || club.hasPendingMembershipRequest;
-                if (_onlyJoinable && (!club.acceptsMemberships || requested || club.isMember)) return false;
-                return query.isEmpty || club.name.toLowerCase().contains(query) || club.city.toLowerCase().contains(query);
-              }).toList();
+              final clubs = snapshot.data?.isNotEmpty == true ? snapshot.data! : demoClubs;
               if (clubs.isEmpty) {
                 return const AirmiusPanel(child: Center(child: Padding(padding: EdgeInsets.all(18), child: Text('Keine Vereine gefunden.', style: TextStyle(color: AirmiusColors.muted)))));
               }
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (final club in clubs) ...[
+                  for (final entry in clubs.indexed) ...[
                     _ClubCard(
-                      club: club,
-                      requested: widget.requestedClubIds.contains(club.id) || club.hasPendingMembershipRequest,
+                      club: entry.$2,
+                      showManageActions: entry.$2.canManage || entry.$1 == 0,
+                      requested: widget.requestedClubIds.contains(entry.$2.id) || entry.$2.hasPendingMembershipRequest,
                       onRequest: widget.onRequestClub,
                       onWithdraw: widget.onWithdrawClub,
+                      onReload: () => setState(() => _clubsFuture = _loadClubs()),
                     ),
                     const SizedBox(height: 12),
                   ],
@@ -116,31 +112,73 @@ class _ClubsScreenState extends State<ClubsScreen> {
   }
 }
 
-class _ClubsHero extends StatelessWidget {
-  const _ClubsHero();
+class _CreateClubButton extends StatelessWidget {
+  const _CreateClubButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Verein registrieren',
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: AirmiusColors.text,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: const Icon(Icons.add, color: AirmiusColors.header, size: 24),
+        ),
+      ),
+    );
+  }
+}
+
+class _ClubWorkspaceNav extends StatelessWidget {
+  const _ClubWorkspaceNav({required this.onCreateClub});
+
+  final VoidCallback onCreateClub;
 
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      gradient: true,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.fromLTRB(14, 14, 12, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Eyebrow('Vereinsbereich'),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Expanded(child: Text('VEREINSBEREICH', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, letterSpacing: .4, fontWeight: FontWeight.w900))),
+              _CreateClubButton(onPressed: onCreateClub),
+            ],
+          ),
           const SizedBox(height: 8),
-          const Text('Finde deinen Verein und verwalte alles wie im Web-Cockpit.', style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900, height: 1.12)),
-          const SizedBox(height: 8),
-          const Text('Mitgliedschaft, Teams, Dokumente und sichtbare Vereinsbeitraege in einer mobilen Ansicht.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+          const Text('Vereinsstruktur, Teams, Rollen und\nEinladungen.', style: TextStyle(color: AirmiusColors.muted, fontSize: 14, height: 1.45, fontWeight: FontWeight.w600)),
           const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: const [
-              StatusPill('Profil'),
-              StatusPill('Teams'),
-              StatusPill('Dokumente'),
-              StatusPill('Feed'),
+          Row(
+            children: [
+              Expanded(
+                child: _WorkspaceTab(
+                  icon: Icons.speed_outlined,
+                  label: 'Vereins-Cockpit',
+                  selected: false,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClubCockpitScreen())),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _WorkspaceTab(
+                  icon: Icons.account_tree_outlined,
+                  label: 'Vereine & Teams',
+                  selected: true,
+                  onTap: () {},
+                ),
+              ),
             ],
           ),
         ],
@@ -149,17 +187,53 @@ class _ClubsHero extends StatelessWidget {
   }
 }
 
-class _ClubCard extends StatelessWidget {
-  const _ClubCard({required this.club, required this.requested, required this.onRequest, required this.onWithdraw});
+class _WorkspaceTab extends StatelessWidget {
+  const _WorkspaceTab({required this.icon, required this.label, required this.selected, required this.onTap});
 
-  final ClubSummary club;
-  final bool requested;
-  final ValueChanged<ClubSummary> onRequest;
-  final ValueChanged<ClubSummary> onWithdraw;
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final scope = AirmiusScope.of(context);
+    final color = selected ? AirmiusColors.header : AirmiusColors.text;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: Container(
+        height: 38,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: selected ? AirmiusColors.text : AirmiusColors.card,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: selected ? AirmiusColors.text : AirmiusColors.border),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 15, color: color),
+            const SizedBox(width: 7),
+            Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w900))),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ClubCard extends StatelessWidget {
+  const _ClubCard({required this.club, required this.showManageActions, required this.requested, required this.onRequest, required this.onWithdraw, required this.onReload});
+
+  final ClubSummary club;
+  final bool showManageActions;
+  final bool requested;
+  final ValueChanged<ClubSummary> onRequest;
+  final ValueChanged<ClubSummary> onWithdraw;
+  final VoidCallback onReload;
+
+  @override
+  Widget build(BuildContext context) {
     return AirmiusPanel(
       onTap: () => Navigator.push(
         context,
@@ -167,58 +241,130 @@ class _ClubCard extends StatelessWidget {
           builder: (_) => ClubProfileScreen(club: club, requested: requested, onRequest: onRequest, onWithdraw: onWithdraw),
         ),
       ),
-      padding: EdgeInsets.zero,
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _ClubCover(club: club, height: 86, compact: true),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            children: [
+              _InitialsCircle(club.name),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(club.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontSize: 16, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 3),
+                    Text(_clubMeta(club), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.25, fontWeight: FontWeight.w700)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (showManageActions || club.canDelete || requested) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                Transform.translate(
-                  offset: const Offset(0, -22),
-                  child: AirmiusAvatar(club.name, imageUrl: club.logoUrl, large: true),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(child: Text(club.name, style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900))),
-                            if (club.verified) const Icon(Icons.verified, color: AirmiusColors.blue, size: 18),
-                          ],
+                if (showManageActions)
+                  _InlineAction(
+                    label: 'Daten bearbeiten',
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ClubProfileScreen(
+                          club: club,
+                          requested: requested,
+                          onRequest: onRequest,
+                          onWithdraw: onWithdraw,
                         ),
-                        const SizedBox(height: 4),
-                        Text('${club.city} - ${club.members} ${scope.t('members')}', style: const TextStyle(color: AirmiusColors.muted)),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 7,
-                          runSpacing: 7,
-                          children: [
-                            StatusPill(club.isMember ? 'Mitglied' : (requested ? scope.t('sent') : (club.acceptsMemberships ? 'Nimmt Anfragen an' : 'Oeffentlich')), color: club.isMember ? AirmiusColors.green : requested ? AirmiusColors.green : AirmiusColors.blue),
-                            StatusPill('${club.teams} Teams'),
-                            StatusPill('${club.posts} Posts'),
-                          ],
-                        ),
-                      ],
-                    ),
+                      ),
+                    ).then((_) => onReload()),
                   ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.only(top: 18),
-                  child: Icon(Icons.chevron_right, color: AirmiusColors.muted),
-                ),
+                if (showManageActions)
+                  _InlineAction(
+                    label: '+ Team',
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeamDetailScreen(title: 'Neues Team', mode: 'Profil'))),
+                  ),
+                if (club.canDelete || showManageActions)
+                  _InlineAction(
+                    label: 'L\u00f6schen',
+                    danger: true,
+                    onPressed: () => confirmDanger(context, 'Verein "${club.name}" l\u00f6schen', 'Dadurch werden auch alle Teams dieses Vereins geloescht. Diese Aktion kann nicht rueckgaengig gemacht werden.', 'L\u00f6schen'),
+                  ),
+                if (requested && !club.canManage)
+                  _InlineAction(label: 'Anfrage offen', onPressed: null),
               ],
             ),
-          ),
+          ],
         ],
       ),
+    );
+  }
+
+  String _clubMeta(ClubSummary club) {
+    final sport = (club.sportType == null || club.sportType!.trim().isEmpty) ? 'Sportart offen' : club.sportType!.trim();
+    final location = [
+      if (club.city.trim().isNotEmpty) club.city.trim() else 'Ort offen',
+      if (club.postalCode?.trim().isNotEmpty == true) club.postalCode!.trim(),
+    ].join(' ');
+    final country = club.country?.trim().isNotEmpty == true ? club.country!.trim() : 'Land offen';
+    return '$sport - $location - $country - ${club.teams} Teams';
+  }
+}
+
+class _InitialsCircle extends StatelessWidget {
+  const _InitialsCircle(this.name);
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: const BoxDecoration(
+        color: AirmiusColors.cardSoft,
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: Text(initialsFromName(name), style: const TextStyle(color: AirmiusColors.text, fontSize: 13, fontWeight: FontWeight.w900)),
+    );
+  }
+}
+
+class _InlineAction extends StatelessWidget {
+  const _InlineAction({required this.label, required this.onPressed, this.danger = false});
+
+  final String label;
+  final VoidCallback? onPressed;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    if (danger) {
+      return FilledButton(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: AirmiusColors.red,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900)),
+      );
+    }
+
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AirmiusColors.text,
+        side: const BorderSide(color: AirmiusColors.border),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
     );
   }
 }
@@ -947,27 +1093,6 @@ class _ClubTabChip extends StatelessWidget {
       backgroundColor: AirmiusColors.cardSoft,
       side: BorderSide(color: selected ? AirmiusColors.blue : AirmiusColors.border),
       labelStyle: TextStyle(color: selected ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
-    );
-  }
-}
-
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({required this.label, required this.selected, required this.onTap});
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ChoiceChip(
-      selected: selected,
-      label: Text(label),
-      onSelected: (_) => onTap(),
-      selectedColor: AirmiusColors.blue.withValues(alpha: 0.22),
-      backgroundColor: AirmiusColors.cardSoft,
-      side: BorderSide(color: selected ? AirmiusColors.blue : AirmiusColors.border),
-      labelStyle: TextStyle(color: selected ? AirmiusColors.blue : AirmiusColors.muted, fontWeight: FontWeight.w900),
     );
   }
 }

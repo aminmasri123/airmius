@@ -96,7 +96,7 @@ class _ShellScreenState extends State<ShellScreen> {
       'Teams' => const TeamsCenterScreen(),
       'Rollen & Rechte' => const RolesPermissionsScreen(),
       'Sportarten' => const SportsCenterScreen(),
-      'Events' || 'Events & Training' => const EventManagementScreen(),
+      'Events & Training' => const EventManagementScreen(),
       'Trainer-Cockpit' => const TrainerCockpitScreen(),
       'Ernaehrung' => const NutritionCenterScreen(),
       'Sportkarte' => const SportMapCenterScreen(),

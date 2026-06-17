@@ -86,8 +86,8 @@ export const useFilesWorkspace = (props) => {
         { value: 'name-desc', label: 'Name (Z-A)' },
         { value: 'newest', label: 'Neueste zuerst' },
         { value: 'oldest', label: 'Älteste zuerst' },
-        { value: 'size-asc', label: 'Grüße aufsteigend' },
-        { value: 'size-desc', label: 'Grüße absteigend' },
+        { value: 'size-asc', label: 'Größe aufsteigend' },
+        { value: 'size-desc', label: 'Größe absteigend' },
     ]
     
     const folderSortOptions = [

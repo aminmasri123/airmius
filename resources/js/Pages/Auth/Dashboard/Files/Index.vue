@@ -46,6 +46,7 @@ const renameType = ref('file')
 const page = usePage()
 const isFiltering = ref(false)
 const showMobileFilters = ref(false)
+const showMobileActions = ref(false)
 const SEARCH_DEBOUNCE_MS = 350
 let searchDebounceTimer = null
 
@@ -276,6 +277,7 @@ const submitUpload = () => {
         preserveScroll: true,
         onSuccess: () => {
             uploadForm.reset('file')
+            showMobileActions.value = false
             if (fileInput.value) {
                 fileInput.value.value = ''
             }
@@ -296,7 +298,10 @@ const createFolder = () => {
     folderForm.parent_id = props.currentFolder?.id || null
     folderForm.post(route('auth.folders.store'), {
         preserveScroll: true,
-        onSuccess: () => folderForm.reset('name'),
+        onSuccess: () => {
+            folderForm.reset('name')
+            showMobileActions.value = false
+        },
     })
 }
 
@@ -522,9 +527,10 @@ watch(showShareModal, async (show) => {
 <template>
     <AppLayout title="Dateien">
         <Head title="Dateien" />
+        <input ref="fileInput" class="hidden" type="file" @change="setUploadFile">
 
         <div class="space-y-3">
-            <div class="rounded-lg border border-border bg-card p-3">
+            <div class="rounded-lg border border-border bg-card p-2 sm:p-3">
                 <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                     <label class="text-sm">
                         <span class="mb-1 block text-secondary">Bereich</span>
@@ -560,25 +566,74 @@ watch(showShareModal, async (show) => {
             </div>
 
             <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_260px] 2xl:grid-cols-[minmax(0,1fr)_300px]">
-                <section class="min-w-0 rounded-lg border border-border bg-card">
-                    <div class="flex flex-col gap-2 border-b border-border p-3">
-                        <div class="flex items-start justify-between gap-3 sm:items-center">
+                <section class="order-2 min-w-0 rounded-lg border border-border bg-card md:order-1">
+                    <div class="flex flex-col gap-3 border-b border-border p-3">
+                        <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
-                            <h1 class="truncate text-lg font-semibold text-primary">{{ currentFolder?.name || 'Dateimanager' }}</h1>
-                            <p class="text-sm text-secondary">{{ totalFolders }} Ordner · {{ totalFiles }} Dateien</p>
+                                <h1 class="truncate text-lg font-semibold text-primary">{{ currentFolder?.name || 'Dateimanager' }}</h1>
+                                <div class="mt-1 flex flex-wrap gap-2 text-xs text-secondary">
+                                    <span class="rounded-full border border-border px-2 py-1">{{ totalFolders }} Ordner</span>
+                                    <span class="rounded-full border border-border px-2 py-1">{{ totalFiles }} Dateien</span>
+                                    <span v-if="currentFolder" class="max-w-full truncate rounded-full border border-border px-2 py-1">{{ currentFolder.name }}</span>
+                                </div>
                             </div>
 
-                            <div class="flex shrink-0 items-center gap-2">
+                            <div class="flex shrink-0 items-center gap-2 sm:justify-end">
                                 <button
                                     type="button"
-                                    class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border px-3 text-sm font-semibold text-primary hover:bg-inputBg md:hidden"
+                                    class="grid h-10 w-10 place-items-center rounded-lg border border-border text-lg text-primary hover:bg-inputBg md:hidden"
+                                    :class="{ 'bg-inputBg': showMobileFilters }"
                                     :aria-expanded="showMobileFilters"
-                                    @click="showMobileFilters = !showMobileFilters"
+                                    aria-label="Suchen und sortieren"
+                                    @click="showMobileFilters = !showMobileFilters; showMobileActions = false"
                                 >
-                                    <i class="las la-sliders-h text-lg"></i>
-                                    Suchfilter
+                                    <i class="las la-sliders-h"></i>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="grid h-10 w-10 place-items-center rounded-lg bg-buttonPrimary text-lg text-buttonTextPrimary shadow-sm disabled:opacity-50 md:hidden"
+                                    :aria-expanded="showMobileActions"
+                                    aria-label="Datei oder Ordner hinzufügen"
+                                    @click="showMobileActions = !showMobileActions; showMobileFilters = false"
+                                >
+                                    <i :class="showMobileActions ? 'las la-times' : 'las la-plus'"></i>
                                 </button>
                             </div>
+                        </div>
+
+                        <div v-if="showMobileActions" class="grid gap-2 rounded-lg border border-border bg-inputBg/40 p-2 md:hidden">
+                            <form class="rounded-lg border border-border bg-card p-3" @submit.prevent="submitUpload">
+                                <div class="flex items-center justify-between gap-2">
+                                    <h2 class="text-xs font-semibold uppercase tracking-wide text-secondary">Datei hochladen</h2>
+                                    <span class="truncate text-xs text-secondary">{{ currentFolder?.name || 'Hauptebene' }}</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="mt-3 flex h-11 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-border bg-inputBg px-3 text-left text-sm text-primary hover:bg-muted"
+                                    @click="selectUploadFile"
+                                    aria-label="Datei auswählen"
+                                >
+                                    <span class="truncate">{{ uploadFileName }}</span>
+                                    <i class="las la-paperclip text-lg text-secondary"></i>
+                                </button>
+                                <p v-if="isStorageFull" class="mt-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs font-semibold text-warning">
+                                    Dein Speicher ist voll. Bitte lösche Dateien oder upgrade.
+                                </p>
+                                <p v-if="uploadForm.errors.file || uploadForm.errors.general" class="mt-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs font-semibold text-error">
+                                    {{ uploadForm.errors.file || uploadForm.errors.general }}
+                                </p>
+                                <button :disabled="uploadForm.processing || !uploadForm.file || isStorageFull" class="mt-2 h-11 w-full rounded-lg bg-buttonPrimary px-4 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50">
+                                    Hochladen
+                                </button>
+                            </form>
+
+                            <form class="rounded-lg border border-border bg-card p-3" @submit.prevent="createFolder">
+                                <h2 class="text-xs font-semibold uppercase tracking-wide text-secondary">Ordner erstellen</h2>
+                                <input v-model="folderForm.name" class="mt-3 h-11 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary" placeholder="Ordnername">
+                                <button :disabled="folderForm.processing || !folderForm.name.trim()" class="mt-2 h-11 w-full rounded-lg bg-buttonPrimary px-4 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50">
+                                    Erstellen
+                                </button>
+                            </form>
                         </div>
 
                         <div
@@ -621,35 +676,43 @@ watch(showShareModal, async (show) => {
                                 </option>
                             </select>
                         </div>
-                        <button
-                            v-if="currentFolder"
-                            class="inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-sm text-primary hover:bg-inputBg"
-                            type="button"
-                            :disabled="isFiltering"
-                            @click="openFolder(currentFolder.parent)"
-                            aria-label="In das übergeordnete Verzeichnis gehen"
-                        >
-                            <i class="las la-arrow-left"></i>
-                            Zurück
-                        </button>
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <button
+                                v-if="currentFolder"
+                                class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border px-3 text-sm font-semibold text-primary hover:bg-inputBg sm:h-9 sm:justify-start"
+                                type="button"
+                                :disabled="isFiltering"
+                                @click="openFolder(currentFolder.parent)"
+                                aria-label="In das übergeordnete Verzeichnis gehen"
+                            >
+                                <i class="las la-arrow-left"></i>
+                                Zurück
+                            </button>
+                            <p v-if="filterStatusText" class="text-xs text-secondary" role="status" aria-live="polite">{{ filterStatusText }}</p>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 gap-2 p-3 lg:grid-cols-2 2xl:grid-cols-3">
-                        <button
-                            type="button"
+                        <div
                             v-for="folder in activeFolders"
                             :key="folder.id"
-                            class="group flex items-center gap-3 rounded-lg border border-transparent p-3 text-left hover:border-border hover:bg-inputBg"
-                            @click="openFolder(folder)"
+                            class="group flex items-center gap-2 rounded-lg border border-border bg-inputBg/30 p-2 sm:border-transparent sm:bg-transparent sm:hover:border-border sm:hover:bg-inputBg"
                         >
-                            <i class="las la-folder text-3xl text-yellow-500"></i>
-                            <div class="min-w-0 flex-1">
-                                <p class="truncate text-sm font-semibold text-primary">{{ folder.name }}</p>
-                                <p class="truncate whitespace-nowrap text-xs text-secondary">{{ folder.files_count || 0 }} Dateien</p>
-                            </div>
                             <button
                                 type="button"
-                                class="shrink-0 rounded-lg p-2 text-secondary opacity-0 group-hover:opacity-100"
+                                class="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 text-left"
+                                @click="openFolder(folder)"
+                                aria-label="Ordner öffnen"
+                            >
+                                <i class="las la-folder text-3xl text-yellow-500"></i>
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-semibold text-primary">{{ folder.name }}</p>
+                                    <p class="truncate whitespace-nowrap text-xs text-secondary">{{ folder.files_count || 0 }} Dateien</p>
+                                </div>
+                            </button>
+                            <button
+                                type="button"
+                                class="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-secondary hover:bg-card sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
                                 :disabled="isFiltering"
                                 @click.stop="openShare(folder, 'folder')"
                                 title="Freigeben"
@@ -659,7 +722,7 @@ watch(showShareModal, async (show) => {
                             </button>
                             <button
                                 type="button"
-                                class="shrink-0 rounded-lg p-2 text-secondary opacity-0 group-hover:opacity-100"
+                                class="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-secondary hover:bg-card sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
                                 :disabled="isFiltering"
                                 @click.stop="openRename(folder, 'folder')"
                                 title="Umbenennen"
@@ -669,7 +732,7 @@ watch(showShareModal, async (show) => {
                             </button>
                             <button
                                 type="button"
-                                class="rounded-lg p-2 text-secondary opacity-0 group-hover:opacity-100"
+                                class="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-secondary hover:bg-card sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
                                 :disabled="isFiltering"
                                 @click.stop="confirmDeleteFolder(folder)"
                                 title="Löschen"
@@ -677,47 +740,51 @@ watch(showShareModal, async (show) => {
                             >
                                 <i class="las la-trash"></i>
                             </button>
-                        </button>
+                        </div>
 
-                        <div v-for="file in activeFiles" :key="file.id" class="flex items-center gap-3 rounded-lg border border-border p-3">
-                            <i class="las la-file-alt text-3xl text-secondary"></i>
-                            <div class="min-w-0 flex-1">
-                                <p class="truncate text-sm font-semibold text-primary">{{ fileName(file) }}</p>
-                                <p class="truncate text-xs text-secondary">{{ contextLabel(file) }} · {{ file.type }} · {{ formatSize(file.size) }}</p>
+                        <div v-for="file in activeFiles" :key="file.id" class="flex flex-wrap items-center gap-3 rounded-lg border border-border p-3">
+                            <div class="flex min-w-0 flex-1 items-center gap-3">
+                                <i class="las la-file-alt shrink-0 text-3xl text-secondary"></i>
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-semibold text-primary">{{ fileName(file) }}</p>
+                                    <p class="truncate text-xs text-secondary">{{ contextLabel(file) }} · {{ file.type }} · {{ formatSize(file.size) }}</p>
+                                </div>
                             </div>
-                            <button
-                                type="button"
-                                class="rounded-lg p-2 text-secondary hover:bg-inputBg"
-                                :disabled="isFiltering"
-                                @click="openShare(file)"
-                                title="Freigeben"
-                                aria-label="Datei freigeben"
-                            >
-                                <i class="las la-share-alt"></i>
-                            </button>
-                            <button
-                                type="button"
-                                class="rounded-lg p-2 text-secondary hover:bg-inputBg"
-                                :disabled="isFiltering"
-                                @click="openRename(file)"
-                                title="Umbenennen"
-                                aria-label="Datei umbenennen"
-                            >
-                                <i class="las la-pen"></i>
-                            </button>
-                            <a :href="route('auth.files.download', file.id)" class="rounded-lg p-2 text-secondary hover:bg-inputBg" title="Herunterladen" aria-label="Datei herunterladen">
-                                <i class="las la-download"></i>
-                            </a>
-                            <button
-                                type="button"
-                                class="rounded-lg p-2 text-secondary hover:bg-inputBg"
-                                :disabled="isFiltering"
-                                @click="deleteFile(file)"
-                                title="Löschen"
-                                aria-label="Datei löschen"
-                            >
-                                <i class="las la-trash"></i>
-                            </button>
+                            <div class="flex w-full items-center justify-end gap-1 sm:w-auto">
+                                <button
+                                    type="button"
+                                    class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
+                                    :disabled="isFiltering"
+                                    @click="openShare(file)"
+                                    title="Freigeben"
+                                    aria-label="Datei freigeben"
+                                >
+                                    <i class="las la-share-alt"></i>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
+                                    :disabled="isFiltering"
+                                    @click="openRename(file)"
+                                    title="Umbenennen"
+                                    aria-label="Datei umbenennen"
+                                >
+                                    <i class="las la-pen"></i>
+                                </button>
+                                <a :href="route('auth.files.download', file.id)" class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9" title="Herunterladen" aria-label="Datei herunterladen">
+                                    <i class="las la-download"></i>
+                                </a>
+                                <button
+                                    type="button"
+                                    class="grid h-10 w-10 place-items-center rounded-lg text-secondary hover:bg-inputBg sm:h-9 sm:w-9"
+                                    :disabled="isFiltering"
+                                    @click="deleteFile(file)"
+                                    title="Löschen"
+                                    aria-label="Datei löschen"
+                                >
+                                    <i class="las la-trash"></i>
+                                </button>
+                            </div>
                         </div>
 
                         <div v-if="!activeFiles.length && !activeFolders.length" class="col-span-full flex min-h-40 items-center justify-center p-4 text-center text-sm text-secondary">
@@ -729,11 +796,10 @@ watch(showShareModal, async (show) => {
                         <p v-if="activeFolders.length" class="col-span-full text-xs text-secondary">
                             Ordner {{ folderRangeStart }} - {{ folderRangeEnd }} von {{ totalFolders }}
                         </p>
-                        <p v-if="filterStatusText" class="col-span-full text-xs text-secondary" role="status" aria-live="polite">{{ filterStatusText }}</p>
 
-                        <div v-if="lastFoldersPage > 1" class="col-span-full flex items-center justify-between gap-3 border-t border-border pt-2">
+                        <div v-if="lastFoldersPage > 1" class="col-span-full flex flex-col gap-2 border-t border-border pt-2 sm:flex-row sm:items-center sm:justify-between">
                             <span class="text-xs text-secondary">Ordnerseite {{ currentFoldersPage }} / {{ lastFoldersPage }}</span>
-                            <div class="flex items-center gap-2">
+                            <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center">
                                 <button
                                     class="rounded-lg border border-border px-3 py-2 text-sm text-primary disabled:opacity-50"
                                     :disabled="currentFoldersPage <= 1"
@@ -753,9 +819,9 @@ watch(showShareModal, async (show) => {
                             </div>
                         </div>
 
-                        <div v-if="lastFilesPage > 1" class="col-span-full flex items-center justify-between gap-3 border-t border-border pt-2">
+                        <div v-if="lastFilesPage > 1" class="col-span-full flex flex-col gap-2 border-t border-border pt-2 sm:flex-row sm:items-center sm:justify-between">
                             <span class="text-xs text-secondary">Dateiseite {{ currentFilesPage }} / {{ lastFilesPage }}</span>
-                            <div class="flex items-center gap-2">
+                            <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center">
                                 <button
                                     class="rounded-lg border border-border px-3 py-2 text-sm text-primary disabled:opacity-50"
                                     :disabled="currentFilesPage <= 1"
@@ -777,10 +843,10 @@ watch(showShareModal, async (show) => {
                     </div>
                 </section>
 
-                <aside class="min-w-0 space-y-3">
-                    <section v-if="storageUsage" class="rounded-lg border border-border bg-card p-3">
-                        <div class="flex items-center justify-between gap-3">
-                            <div>
+                <aside class="order-1 min-w-0 space-y-3 md:order-2">
+                    <section v-if="storageUsage" class="hidden rounded-lg border border-border bg-card p-3 md:block">
+                        <div class="flex items-start justify-between gap-3 md:items-center">
+                            <div class="min-w-0">
                                 <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Speicher</h2>
                                 <p class="mt-0.5 text-base font-bold text-primary">{{ formatStorage(storageUsage.remaining_bytes) }} frei</p>
                             </div>
@@ -794,18 +860,18 @@ watch(showShareModal, async (show) => {
                                 :style="{ width: `${storageUsage.used_percent}%` }"
                             ></div>
                         </div>
-                        <div class="mt-2 flex items-center justify-between text-xs text-secondary">
-                            <span>{{ formatStorage(storageUsage.used_bytes) }} genutzt</span>
-                            <span>{{ storageUsage.limit_gb }} GB gesamt</span>
+                        <div class="mt-2 text-xs text-secondary md:flex md:items-center md:justify-between">
+                            <span class="md:hidden">{{ formatStorage(storageUsage.used_bytes) }} genutzt von {{ storageUsage.limit_gb }} GB gesamt</span>
+                            <span class="hidden md:inline">{{ formatStorage(storageUsage.used_bytes) }} genutzt</span>
+                            <span class="hidden md:inline">{{ storageUsage.limit_gb }} GB gesamt</span>
                         </div>
                     </section>
 
-                    <form class="rounded-lg border border-border bg-card p-3" @submit.prevent="submitUpload">
+                    <form class="hidden rounded-lg border border-border bg-card p-3 md:block" @submit.prevent="submitUpload">
                         <div class="flex items-center justify-between gap-2">
                             <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Upload</h2>
                             <span class="truncate text-xs text-secondary">{{ currentFolder?.name || 'Hauptebene' }}</span>
                         </div>
-                        <input ref="fileInput" class="hidden" type="file" @change="setUploadFile">
                         <button
                             type="button"
                             class="mt-3 flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-border bg-inputBg px-3 text-left text-sm text-primary hover:bg-muted"
@@ -821,19 +887,39 @@ watch(showShareModal, async (show) => {
                         <p v-if="uploadForm.errors.file || uploadForm.errors.general" class="mt-2 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-xs font-semibold text-error">
                             {{ uploadForm.errors.file || uploadForm.errors.general }}
                         </p>
-                        <button :disabled="uploadForm.processing || !uploadForm.file || isStorageFull" class="mt-2 h-10 w-full rounded-lg bg-buttonPrimary px-4 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50">
+                        <button :disabled="uploadForm.processing || !uploadForm.file || isStorageFull" class="mt-2 h-11 w-full rounded-lg bg-buttonPrimary px-4 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50 md:h-10">
                             Hochladen
                         </button>
                     </form>
 
-                    <form class="rounded-lg border border-border bg-card p-3" @submit.prevent="createFolder">
+                    <form class="hidden rounded-lg border border-border bg-card p-3 md:block" @submit.prevent="createFolder">
                         <h2 class="text-sm font-semibold uppercase tracking-wide text-secondary">Neuer Ordner</h2>
-                        <input v-model="folderForm.name" class="mt-3 h-10 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary" placeholder="Ordnername">
-                        <button :disabled="folderForm.processing || !folderForm.name.trim()" class="mt-2 h-10 w-full rounded-lg bg-buttonPrimary px-4 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50">
+                        <input v-model="folderForm.name" class="mt-3 h-11 w-full rounded-lg border border-border bg-inputBg px-3 text-sm text-primary md:h-10" placeholder="Ordnername">
+                        <button :disabled="folderForm.processing || !folderForm.name.trim()" class="mt-2 h-11 w-full rounded-lg bg-buttonPrimary px-4 text-sm font-semibold text-buttonTextPrimary disabled:opacity-50 md:h-10">
                             Erstellen
                         </button>
                     </form>
                 </aside>
+            </div>
+        </div>
+
+        <div
+            v-if="storageUsage"
+            class="fixed inset-x-3 bottom-3 z-40 rounded-lg border border-border bg-card/95 p-2 shadow-[0_-10px_24px_rgba(0,0,0,0.18)] backdrop-blur md:hidden"
+        >
+            <div class="flex items-center justify-between gap-3 text-xs">
+                <span class="min-w-0 truncate font-semibold text-primary">
+                    Speicher: {{ formatStorage(storageUsage.used_bytes) }} von {{ storageUsage.limit_gb }} GB
+                </span>
+                <span class="shrink-0 rounded-full border border-border px-2 py-0.5 text-[11px] font-semibold text-secondary">
+                    {{ formatStorage(storageUsage.remaining_bytes) }} frei
+                </span>
+            </div>
+            <div class="mt-2 h-1.5 rounded-full bg-inputBg">
+                <div
+                    class="h-1.5 rounded-full bg-buttonPrimary"
+                    :style="{ width: `${storageUsage.used_percent}%` }"
+                ></div>
             </div>
         </div>
     </AppLayout>
