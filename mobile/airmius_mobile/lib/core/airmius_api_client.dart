@@ -140,6 +140,41 @@ class AirmiusApiClient {
     return _json('POST', '/api/v1/files/upload-intents', body: {'scope': scope, 'file_name': fileName, 'mime_type': mimeType});
   }
 
+  Future<AirmiusJson> fileWorkspace({
+    String scope = 'user',
+    int? folderId,
+    String? search,
+    String sort = 'name-asc',
+    int page = 1,
+    int perPage = 24,
+  }) {
+    return _json('GET', '/api/v1/files', query: {
+      'scope': scope,
+      'sort': sort,
+      'files_page': '$page',
+      'folders_page': '$page',
+      'per_page': '$perPage',
+      if (folderId != null) 'folder_id': '$folderId',
+      if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+    });
+  }
+
+  Future<AirmiusJson> createFolder({required String scope, required String name, int? parentId}) {
+    return _json('POST', '/api/v1/files/folders', body: {
+      'scope': scope,
+      'name': name,
+      if (parentId != null) 'parent_id': parentId,
+    });
+  }
+
+  Future<AirmiusJson> renameFolder(int folderId, String name) => _json('PATCH', '/api/v1/files/folders/$folderId', body: {'name': name});
+
+  Future<AirmiusJson> deleteFolder(int folderId) => _json('DELETE', '/api/v1/files/folders/$folderId');
+
+  Future<AirmiusJson> renameFile(int fileId, String name) => _json('PATCH', '/api/v1/uploads/$fileId', body: {'display_name': name});
+
+  Future<AirmiusJson> deleteFile(int fileId) => _json('DELETE', '/api/v1/uploads/$fileId');
+
   Future<AirmiusJson> notifications() => _json('GET', '/api/v1/notifications');
 
   Future<AirmiusJson> notification(int notificationId) => _json('GET', '/api/v1/notifications/$notificationId');

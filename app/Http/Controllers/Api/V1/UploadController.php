@@ -69,6 +69,69 @@ class UploadController extends Controller
         return FileResource::collection($files);
     }
 
+    public function workspace(Request $request)
+    {
+        $scope = $this->authorizeScope($request, [
+            'scope' => $request->input('scope', 'user'),
+            'club_id' => $request->input('club_id'),
+            'team_id' => $request->input('team_id'),
+            'event_id' => $request->input('event_id'),
+        ]);
+
+        $currentFolder = null;
+
+        if ($request->filled('folder_id')) {
+            $currentFolder = Folder::query()
+                ->with('parent:id,name,parent_id')
+                ->where($scope)
+                ->findOrFail($request->integer('folder_id'));
+        }
+
+        $search = trim((string) $request->input('search', ''));
+        $sort = $this->sort($request);
+        $perPage = $this->perPage($request);
+
+        $folders = Folder::query()
+            ->withCount('files')
+            ->where($scope)
+            ->where('parent_id', $currentFolder?->id)
+            ->when($search !== '', fn (Builder $query) => $query->where('name', 'like', '%'.$search.'%'));
+
+        $files = File::query()
+            ->with(['club', 'team', 'event', 'folder:id,name'])
+            ->where($scope)
+            ->where('folder_id', $currentFolder?->id)
+            ->whereDoesntHave('messages')
+            ->when($search !== '', fn (Builder $query) => $query->where('display_name', 'like', '%'.$search.'%'));
+
+        $this->applyFolderSort($folders, $sort);
+        $this->applyFileSort($files, $sort);
+
+        $folderPage = $folders->paginate($perPage, ['*'], 'folders_page', max(1, $request->integer('folders_page', 1)));
+        $filePage = $files->paginate($perPage, ['*'], 'files_page', max(1, $request->integer('files_page', 1)));
+
+        return response()->json([
+            'data' => [
+                'scope' => [
+                    'type' => $request->input('scope', 'user'),
+                    'club_id' => $scope['club_id'] ?? null,
+                    'team_id' => $scope['team_id'] ?? null,
+                    'event_id' => $scope['event_id'] ?? null,
+                    'folder_id' => $currentFolder?->id,
+                ],
+                'current_folder' => $currentFolder ? $this->folderPayload($currentFolder) : null,
+                'folders' => $folderPage->getCollection()->map(fn (Folder $folder) => $this->folderPayload($folder))->values(),
+                'files' => FileResource::collection($filePage->getCollection())->resolve(),
+                'folders_pagination' => $this->paginationPayload($folderPage),
+                'files_pagination' => $this->paginationPayload($filePage),
+                'storage_usage' => $this->planFeatures->userStorageSummary($request->user()),
+                'search' => $search,
+                'sort' => $sort,
+                'per_page' => $perPage,
+            ],
+        ]);
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -139,6 +202,55 @@ class UploadController extends Controller
         ]);
     }
 
+    public function storeFolder(Request $request)
+    {
+        $data = $request->validate([
+            'scope' => ['required', Rule::in(['user', 'team', 'club', 'event'])],
+            'club_id' => ['nullable', 'required_if:scope,club', 'exists:clubs,id'],
+            'team_id' => ['nullable', 'required_if:scope,team', 'exists:teams,id'],
+            'event_id' => ['nullable', 'required_if:scope,event', 'exists:events,id'],
+            'parent_id' => ['nullable', 'exists:folders,id'],
+            'name' => ['required', 'string', 'max:120', 'not_regex:/[\\\\\/]/', 'not_regex:/[\\x00-\\x1F\\x7F]/', 'not_regex:/^\\.{1,2}$/'],
+        ]);
+
+        $scope = $this->authorizeScope($request, $data);
+        $name = $this->normalizeFolderName($data['name']);
+
+        if (! empty($data['parent_id'])) {
+            $parent = Folder::findOrFail($data['parent_id']);
+            $this->authorizeFolderAccess($request, $parent);
+            $this->assertFolderScope($parent, $scope);
+        }
+
+        $folder = Folder::create(array_merge($scope, [
+            'name' => $name,
+            'parent_id' => $data['parent_id'] ?? null,
+        ]));
+
+        return response()->json(['data' => $this->folderPayload($folder)], 201);
+    }
+
+    public function updateFolder(Request $request, Folder $folder)
+    {
+        $this->authorizeFolderAccess($request, $folder);
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120', 'not_regex:/[\\\\\/]/', 'not_regex:/[\\x00-\\x1F\\x7F]/', 'not_regex:/^\\.{1,2}$/'],
+        ]);
+
+        $folder->update(['name' => $this->normalizeFolderName($data['name'])]);
+
+        return response()->json(['data' => $this->folderPayload($folder->refresh())]);
+    }
+
+    public function destroyFolder(Request $request, Folder $folder)
+    {
+        $this->authorizeFolderAccess($request, $folder);
+        $this->deleteFolderTree($folder);
+
+        return response()->json(['data' => ['deleted' => true]]);
+    }
+
     private function authorizeScope(Request $request, array $data): array
     {
         return match ($data['scope'] ?? 'user') {
@@ -196,6 +308,28 @@ class UploadController extends Controller
         );
     }
 
+    private function authorizeFolderAccess(Request $request, Folder $folder): void
+    {
+        abort_unless(
+            $folder->user_id === $request->user()->id
+            || ($folder->club_id && Club::query()->whereKey($folder->club_id)->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))->exists())
+            || ($folder->team_id && Team::query()->whereKey($folder->team_id)->whereHas('users', fn ($query) => $query->where('users.id', $request->user()->id))->exists())
+            || ($folder->event_id && Event::query()->whereKey($folder->event_id)->whereHas('participants', fn ($query) => $query->where('users.id', $request->user()->id))->exists()),
+            403
+        );
+    }
+
+    private function assertFolderScope(Folder $folder, array $scope): void
+    {
+        abort_unless(
+            $folder->user_id === ($scope['user_id'] ?? null)
+            && $folder->club_id === ($scope['club_id'] ?? null)
+            && $folder->team_id === ($scope['team_id'] ?? null)
+            && $folder->event_id === ($scope['event_id'] ?? null),
+            422
+        );
+    }
+
     private function assertSafeUpload(UploadedFile $file): void
     {
         if (! $file->isValid() || (int) $file->getSize() <= 0) {
@@ -248,6 +382,25 @@ class UploadController extends Controller
         return $trimmed;
     }
 
+    private function normalizeFolderName(string $name): string
+    {
+        $trimmed = trim($name);
+
+        if ($trimmed === '') {
+            throw ValidationException::withMessages([
+                'name' => 'Der Ordnername darf nicht leer sein.',
+            ]);
+        }
+
+        if (in_array(strtolower($trimmed), ['con', 'prn', 'aux', 'nul'], true)) {
+            throw ValidationException::withMessages([
+                'name' => 'Dieser Ordnername ist reserviert.',
+            ]);
+        }
+
+        return $trimmed;
+    }
+
     private function isSafeFileName(string $name): bool
     {
         $trimmed = trim($name);
@@ -263,5 +416,79 @@ class UploadController extends Controller
     private function perPage(Request $request): int
     {
         return min(max((int) $request->integer('per_page', 24), 1), 100);
+    }
+
+    private function deleteFolderTree(Folder $folder): void
+    {
+        $folder->loadMissing(['children', 'files']);
+
+        foreach ($folder->children as $child) {
+            $this->deleteFolderTree($child);
+        }
+
+        foreach ($folder->files as $file) {
+            $this->files->delete($file);
+        }
+
+        $folder->delete();
+    }
+
+    private function sort(Request $request): string
+    {
+        $sort = (string) $request->input('sort', 'name-asc');
+
+        return in_array($sort, ['name-asc', 'name-desc', 'newest', 'oldest', 'size-asc', 'size-desc'], true)
+            ? $sort
+            : 'name-asc';
+    }
+
+    private function applyFolderSort(Builder $query, string $sort): void
+    {
+        match ($sort) {
+            'name-desc' => $query->orderByDesc('name'),
+            'newest' => $query->latest(),
+            'oldest' => $query->oldest(),
+            default => $query->orderBy('name'),
+        };
+    }
+
+    private function applyFileSort(Builder $query, string $sort): void
+    {
+        match ($sort) {
+            'name-desc' => $query->orderByDesc('display_name')->orderByDesc('path'),
+            'newest' => $query->latest(),
+            'oldest' => $query->oldest(),
+            'size-asc' => $query->orderBy('size')->orderBy('display_name'),
+            'size-desc' => $query->orderByDesc('size')->orderBy('display_name'),
+            default => $query->orderBy('display_name')->orderBy('path'),
+        };
+    }
+
+    private function folderPayload(Folder $folder): array
+    {
+        return [
+            'id' => $folder->id,
+            'user_id' => $folder->user_id,
+            'club_id' => $folder->club_id,
+            'team_id' => $folder->team_id,
+            'event_id' => $folder->event_id,
+            'parent_id' => $folder->parent_id,
+            'name' => $folder->name,
+            'files_count' => $folder->files_count ?? $folder->files()->count(),
+            'created_at' => $folder->created_at?->toJSON(),
+            'updated_at' => $folder->updated_at?->toJSON(),
+        ];
+    }
+
+    private function paginationPayload($page): array
+    {
+        return [
+            'current_page' => $page->currentPage(),
+            'last_page' => $page->lastPage(),
+            'per_page' => $page->perPage(),
+            'total' => $page->total(),
+            'from' => $page->firstItem(),
+            'to' => $page->lastItem(),
+        ];
     }
 }

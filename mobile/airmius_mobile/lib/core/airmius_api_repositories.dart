@@ -146,6 +146,42 @@ class AirmiusApiFileRepository implements AirmiusFileRepository {
   Future<JsonMap> createUploadIntent({required String scope, required String fileName, required String mimeType}) {
     return client.uploadIntent(scope: scope, fileName: fileName, mimeType: mimeType);
   }
+
+  @override
+  Future<AirmiusFileWorkspace> workspace({String scope = 'user', int? folderId, String? search, String sort = 'name-asc', int page = 1}) async {
+    return AirmiusFileWorkspace.fromJson(await client.fileWorkspace(scope: scope, folderId: folderId, search: search, sort: sort, page: page));
+  }
+
+  @override
+  Future<AirmiusFolder> createFolder({required String scope, required String name, int? parentId}) async {
+    final json = await client.createFolder(scope: scope, name: name, parentId: parentId);
+    final data = json['data'];
+    return AirmiusFolder.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<AirmiusFolder> renameFolder(int folderId, String name) async {
+    final json = await client.renameFolder(folderId, name);
+    final data = json['data'];
+    return AirmiusFolder.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<void> deleteFolder(int folderId) async {
+    await client.deleteFolder(folderId);
+  }
+
+  @override
+  Future<AirmiusManagedFile> renameFile(int fileId, String name) async {
+    final json = await client.renameFile(fileId, name);
+    final data = json['data'];
+    return AirmiusManagedFile.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<void> deleteFile(int fileId) async {
+    await client.deleteFile(fileId);
+  }
 }
 
 class AirmiusApiEventRepository implements AirmiusEventRepository {

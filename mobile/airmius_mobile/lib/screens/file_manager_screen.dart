@@ -1,10 +1,15 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
+import '../core/airmius_api_client.dart';
+import '../core/airmius_api_models.dart';
+import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import 'file_operations_screen.dart';
 import 'file_preview_screen.dart';
 import 'shared_file_access_screen.dart';
-import 'ui_action_result_screen.dart';
 
 class FileManagerScreen extends StatefulWidget {
   const FileManagerScreen({super.key});
@@ -16,9 +21,17 @@ class FileManagerScreen extends StatefulWidget {
 class _FileManagerScreenState extends State<FileManagerScreen> {
   String _scope = 'Meine Dateien';
   String _folder = 'Hauptebene';
+  int? _folderId;
   bool _showFilters = false;
   bool _showActions = false;
+  bool _loading = true;
+  bool _runningAction = false;
+  bool _loadedOnce = false;
   String _fileName = 'Datei waehlen';
+  String? _error;
+  String? _success;
+  PlatformFile? _pickedFile;
+  AirmiusFileWorkspace? _workspace;
   final _folderNameController = TextEditingController();
 
   static const _scopes = ['Meine Dateien', 'Team', 'Verein', 'Event'];
@@ -33,6 +46,21 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     _ManagedFile(Icons.description_outlined, 'Beitragsordnung.docx', 'Verein - DOCX - 86 KB', 'Mit Beitragsregel verknuepft', 'Pflicht'),
     _ManagedFile(Icons.picture_as_pdf_outlined, 'Vereinsregeln.pdf', 'Club - PDF - 1.2 MB', 'Sichtbar auf Clubprofil', 'Optional'),
   ];
+
+  List<_FileFolder> get _activeFolders => _workspace?.folders.map(_FileFolder.fromApi).toList() ?? _folders;
+
+  List<_ManagedFile> get _activeFiles => _workspace?.files.map(_ManagedFile.fromApi).toList() ?? _files;
+
+  AirmiusStorageUsage get _storage => _workspace?.storage ?? const AirmiusStorageUsage(limitGb: 1, usedBytes: 0, remainingBytes: 1024 * 1024 * 1024, usedPercent: 0, isFull: false);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_loadedOnce) {
+      _loadedOnce = true;
+      _loadWorkspace();
+    }
+  }
 
   @override
   void dispose() {
@@ -63,103 +91,304 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
       ),
       body: Stack(
         children: [
-          ListView(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 86),
-            children: [
-              _ScopePanel(value: _scope, values: _scopes, onChanged: (value) => setState(() => _scope = value)),
-              const SizedBox(height: 12),
-              _FileBrowserCard(
-                folder: _folder,
-                totalFolders: _folders.length,
-                totalFiles: _files.length,
-                showFilters: _showFilters,
-                showActions: _showActions,
-                fileName: _fileName,
-                folderNameController: _folderNameController,
-                onToggleFilters: () => setState(() {
-                  _showFilters = !_showFilters;
-                  _showActions = false;
-                }),
-                onToggleActions: () => setState(() {
-                  _showActions = !_showActions;
-                  _showFilters = false;
-                }),
-                onPickFile: _openUploadIntent,
-                onUpload: _submitUpload,
-                onCreateFolder: _createFolder,
-                onSearchChanged: (_) {},
-                onBack: _folder == 'Hauptebene' ? null : () => setState(() => _folder = 'Hauptebene'),
-                folders: _folders,
-                files: _files,
-                onOpenFolder: (folder) => setState(() => _folder = folder.name),
-                onOpenFile: (file) => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => FilePreviewScreen(
-                      title: file.title,
-                      body: file.previewBody,
-                      status: file.status,
-                      icon: file.icon,
+          RefreshIndicator(
+            onRefresh: _loadWorkspace,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 86),
+              children: [
+                _ScopePanel(value: _scope, values: _scopes, onChanged: (value) => _changeScope(value)),
+                if (_loading || _runningAction || _error != null || _success != null) ...[
+                  const SizedBox(height: 12),
+                  _StateBanner(
+                    loading: _loading || _runningAction,
+                    error: _error,
+                    success: _success,
+                    onRetry: _loadWorkspace,
+                  ),
+                ],
+                const SizedBox(height: 12),
+                _FileBrowserCard(
+                  folder: _folder,
+                  totalFolders: _workspace?.foldersPagination.total ?? _activeFolders.length,
+                  totalFiles: _workspace?.filesPagination.total ?? _activeFiles.length,
+                  showFilters: _showFilters,
+                  showActions: _showActions,
+                  fileName: _fileName,
+                  folderNameController: _folderNameController,
+                  onToggleFilters: () => setState(() {
+                    _showFilters = !_showFilters;
+                    _showActions = false;
+                  }),
+                  onToggleActions: () => setState(() {
+                    _showActions = !_showActions;
+                    _showFilters = false;
+                  }),
+                  onPickFile: _openUploadIntent,
+                  onUpload: _submitUpload,
+                  onCreateFolder: _createFolder,
+                  onSearchChanged: _searchWorkspace,
+                  onBack: _folderId == null ? null : _goHome,
+                  folders: _activeFolders,
+                  files: _activeFiles,
+                  onOpenFolder: _openFolder,
+                  onOpenFile: (file) => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => FilePreviewScreen(
+                        title: file.title,
+                        body: file.previewBody,
+                        status: file.status,
+                        icon: file.icon,
+                      ),
                     ),
                   ),
+                  onShare: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SharedFileAccessScreen())),
+                  onRenameFolder: _renameFolder,
+                  onDeleteFolder: _deleteFolder,
+                  onRenameFile: _renameFile,
+                  onDeleteFile: _deleteFile,
                 ),
-                onShare: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SharedFileAccessScreen())),
-                onRename: () => _showPreparedAction('Umbenennen', 'Datei oder Ordner umbenennen, ohne bestehende Verknuepfungen zu verlieren.', Icons.edit_outlined),
-                onDelete: () => _showPreparedAction('Loeschen', 'Loeschbestaetigung wie in Laravel vorbereiten.', Icons.delete_outline),
-              ),
-            ],
+              ],
+            ),
           ),
-          const Positioned(
+          Positioned(
             left: 12,
             right: 12,
             bottom: 12,
-            child: _StorageFooter(),
+            child: _StorageFooter(storage: _storage),
           ),
         ],
       ),
     );
   }
 
-  void _openUploadIntent() {
-    setState(() => _fileName = 'upload-pruefung.pdf');
+  Future<void> _loadWorkspace({String? search}) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final workspace = await AirmiusServicesScope.of(context).repositories.files.workspace(
+            scope: _apiScope,
+            folderId: _folderId,
+            search: search,
+          );
+      if (!mounted) return;
+      setState(() {
+        _workspace = workspace;
+        _folder = workspace.currentFolder?.name ?? 'Hauptebene';
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = _messageFor(error);
+      });
+    }
+  }
+
+  String get _apiScope => 'user';
+
+  void _changeScope(String value) {
+    setState(() {
+      _scope = value;
+      _folder = 'Hauptebene';
+      _folderId = null;
+      _workspace = null;
+    });
+    _loadWorkspace();
+  }
+
+  void _goHome() {
+    setState(() {
+      _folder = 'Hauptebene';
+      _folderId = null;
+    });
+    _loadWorkspace();
+  }
+
+  void _openFolder(_FileFolder folder) {
+    if (folder.id == null) {
+      setState(() => _folder = folder.name);
+      return;
+    }
+    setState(() {
+      _folder = folder.name;
+      _folderId = folder.id;
+    });
+    _loadWorkspace();
+  }
+
+  void _searchWorkspace(String value) {
+    _loadWorkspace(search: value);
+  }
+
+  Future<void> _openUploadIntent() async {
+    final result = await FilePicker.platform.pickFiles(withData: true);
+    final file = result?.files.single;
+    if (file == null) return;
+    setState(() {
+      _pickedFile = file;
+      _fileName = file.name;
+      _error = null;
+    });
   }
 
   void _submitUpload() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const UiActionResultScreen(
-          title: 'Datei hochladen',
-          body: 'Datei auswaehlen, in den Dateimanager laden und optional mit Antraegen oder Regeln verknuepfen.',
-          status: 'Upload',
-          icon: Icons.upload_file_outlined,
-        ),
-      ),
-    );
+    final file = _pickedFile;
+    if (file == null) {
+      setState(() => _error = 'Bitte zuerst eine Datei waehlen.');
+      return;
+    }
+
+    _runAction(() async {
+      await _uploadFile(file);
+      _pickedFile = null;
+      _fileName = 'Datei waehlen';
+      _showActions = false;
+      _success = 'Datei hochgeladen.';
+      await _loadWorkspace();
+    });
+  }
+
+  Future<void> _uploadFile(PlatformFile file) async {
+    final services = AirmiusServicesScope.of(context);
+    final base = Uri.parse(services.environment.apiBaseUrl);
+    final path = '${base.path.endsWith('/') ? base.path : '${base.path}/'}api/v1/uploads';
+    final request = http.MultipartRequest('POST', base.replace(path: path, query: null, fragment: null));
+    request.headers.addAll({
+      'Accept': 'application/json',
+      'X-Airmius-Locale': services.environment.locale,
+      if (services.authState.session?.token.isNotEmpty == true) 'Authorization': 'Bearer ${services.authState.session!.token}',
+    });
+    request.fields['scope'] = _apiScope;
+    if (_folderId != null) request.fields['folder_id'] = '$_folderId';
+
+    if (file.bytes != null && file.bytes!.isNotEmpty) {
+      request.files.add(http.MultipartFile.fromBytes('file', file.bytes!, filename: file.name, contentType: _contentTypeFor(file)));
+    } else if (file.path != null && file.path!.trim().isNotEmpty) {
+      request.files.add(await http.MultipartFile.fromPath('file', file.path!, filename: file.name, contentType: _contentTypeFor(file)));
+    } else {
+      throw const AirmiusApiException(statusCode: 0, body: 'Die ausgewaehlte Datei konnte nicht gelesen werden.', path: '/api/v1/uploads');
+    }
+
+    final response = await http.Response.fromStream(await request.send());
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw AirmiusApiException(statusCode: response.statusCode, body: response.body, path: '/api/v1/uploads');
+    }
+  }
+
+  MediaType _contentTypeFor(PlatformFile file) {
+    final extension = (file.extension ?? file.name.split('.').last).toLowerCase();
+    return switch (extension) {
+      'jpg' || 'jpeg' => MediaType('image', 'jpeg'),
+      'png' => MediaType('image', 'png'),
+      'webp' => MediaType('image', 'webp'),
+      'gif' => MediaType('image', 'gif'),
+      'mp4' => MediaType('video', 'mp4'),
+      'mov' => MediaType('video', 'quicktime'),
+      'webm' => MediaType('video', 'webm'),
+      'pdf' => MediaType('application', 'pdf'),
+      'doc' => MediaType('application', 'msword'),
+      'docx' => MediaType('application', 'vnd.openxmlformats-officedocument.wordprocessingml.document'),
+      _ => MediaType('application', 'octet-stream'),
+    };
   }
 
   void _createFolder() {
     final name = _folderNameController.text.trim();
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => UiActionResultScreen(
-          title: 'Ordner erstellen',
-          body: name.isEmpty ? 'Neuen Ordner fuer Dateien vorbereiten.' : 'Ordner "$name" im Dateimanager vorbereiten.',
-          status: 'Ordner',
-          icon: Icons.create_new_folder_outlined,
-        ),
-      ),
-    );
+    if (name.isEmpty) {
+      setState(() => _error = 'Bitte Ordnername eingeben.');
+      return;
+    }
+    _runAction(() async {
+      await AirmiusServicesScope.of(context).repositories.files.createFolder(scope: _apiScope, name: name, parentId: _folderId);
+      _folderNameController.clear();
+      _showActions = false;
+      _success = 'Ordner erstellt.';
+      await _loadWorkspace();
+    });
   }
 
-  void _showPreparedAction(String title, String body, IconData icon) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => UiActionResultScreen(title: title, body: body, status: 'UI bereit', icon: icon),
+  Future<void> _renameFolder(_FileFolder folder) async {
+    if (folder.id == null) return;
+    final name = await _askName(title: 'Ordner umbenennen', initial: folder.name);
+    if (name == null) return;
+    _runAction(() async {
+      await AirmiusServicesScope.of(context).repositories.files.renameFolder(folder.id!, name);
+      _success = 'Ordner umbenannt.';
+      await _loadWorkspace();
+    });
+  }
+
+  Future<void> _deleteFolder(_FileFolder folder) async {
+    if (folder.id == null) return;
+    _runAction(() async {
+      await AirmiusServicesScope.of(context).repositories.files.deleteFolder(folder.id!);
+      _success = 'Ordner geloescht.';
+      await _loadWorkspace();
+    });
+  }
+
+  Future<void> _renameFile(_ManagedFile file) async {
+    if (file.id == null) return;
+    final name = await _askName(title: 'Datei umbenennen', initial: file.title);
+    if (name == null) return;
+    _runAction(() async {
+      await AirmiusServicesScope.of(context).repositories.files.renameFile(file.id!, name);
+      _success = 'Datei umbenannt.';
+      await _loadWorkspace();
+    });
+  }
+
+  Future<void> _deleteFile(_ManagedFile file) async {
+    if (file.id == null) return;
+    _runAction(() async {
+      await AirmiusServicesScope.of(context).repositories.files.deleteFile(file.id!);
+      _success = 'Datei geloescht.';
+      await _loadWorkspace();
+    });
+  }
+
+  Future<void> _runAction(Future<void> Function() action) async {
+    setState(() {
+      _runningAction = true;
+      _error = null;
+      _success = null;
+    });
+    try {
+      await action();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = _messageFor(error));
+    } finally {
+      if (mounted) setState(() => _runningAction = false);
+    }
+  }
+
+  Future<String?> _askName({required String title, required String initial}) async {
+    final controller = TextEditingController(text: initial);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AirmiusColors.card,
+        title: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+        content: _TextField(controller: controller, hintText: 'Name'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Abbrechen')),
+          TextButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Speichern')),
+        ],
       ),
     );
+    controller.dispose();
+    return result == null || result.isEmpty ? null : result;
+  }
+
+  String _messageFor(Object error) {
+    if (error is AirmiusApiException) return error.userMessage;
+    return 'Aktion konnte nicht abgeschlossen werden.';
   }
 }
 
@@ -228,8 +457,10 @@ class _FileBrowserCard extends StatelessWidget {
     required this.onOpenFolder,
     required this.onOpenFile,
     required this.onShare,
-    required this.onRename,
-    required this.onDelete,
+    required this.onRenameFolder,
+    required this.onDeleteFolder,
+    required this.onRenameFile,
+    required this.onDeleteFile,
   });
 
   final String folder;
@@ -251,8 +482,10 @@ class _FileBrowserCard extends StatelessWidget {
   final ValueChanged<_FileFolder> onOpenFolder;
   final ValueChanged<_ManagedFile> onOpenFile;
   final VoidCallback onShare;
-  final VoidCallback onRename;
-  final VoidCallback onDelete;
+  final ValueChanged<_FileFolder> onRenameFolder;
+  final ValueChanged<_FileFolder> onDeleteFolder;
+  final ValueChanged<_ManagedFile> onRenameFile;
+  final ValueChanged<_ManagedFile> onDeleteFile;
 
   @override
   Widget build(BuildContext context) {
@@ -344,11 +577,11 @@ class _FileBrowserCard extends StatelessWidget {
             child: Column(
               children: [
                 for (final item in folders) ...[
-                  _FolderRow(folder: item, onOpen: () => onOpenFolder(item), onShare: onShare, onRename: onRename, onDelete: onDelete),
+                  _FolderRow(folder: item, onOpen: () => onOpenFolder(item), onShare: onShare, onRename: () => onRenameFolder(item), onDelete: () => onDeleteFolder(item)),
                   const SizedBox(height: 8),
                 ],
                 for (final file in files) ...[
-                  _FileRow(file: file, onOpen: () => onOpenFile(file), onShare: onShare, onRename: onRename, onDelete: onDelete),
+                  _FileRow(file: file, onOpen: () => onOpenFile(file), onShare: onShare, onRename: () => onRenameFile(file), onDelete: () => onDeleteFile(file)),
                   const SizedBox(height: 8),
                 ],
                 const SizedBox(height: 2),
@@ -458,6 +691,42 @@ class _FilterPanel extends StatelessWidget {
   }
 }
 
+class _StateBanner extends StatelessWidget {
+  const _StateBanner({required this.loading, required this.error, required this.success, required this.onRetry});
+
+  final bool loading;
+  final String? error;
+  final String? success;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final isError = error != null;
+    final text = loading ? 'Backend wird geladen...' : (error ?? success ?? '');
+    final color = isError ? AirmiusColors.red : AirmiusColors.green;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: color.withValues(alpha: 0.45)),
+      ),
+      child: Row(
+        children: [
+          if (loading)
+            const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+          else
+            Icon(isError ? Icons.error_outline : Icons.check_circle_outline, color: color, size: 20),
+          const SizedBox(width: 10),
+          Expanded(child: Text(text, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800))),
+          if (isError) IconButton(onPressed: onRetry, icon: const Icon(Icons.refresh, color: AirmiusColors.text)),
+        ],
+      ),
+    );
+  }
+}
+
 class _FolderRow extends StatelessWidget {
   const _FolderRow({required this.folder, required this.onOpen, required this.onShare, required this.onRename, required this.onDelete});
 
@@ -554,10 +823,16 @@ class _FileRow extends StatelessWidget {
 }
 
 class _StorageFooter extends StatelessWidget {
-  const _StorageFooter();
+  const _StorageFooter({required this.storage});
+
+  final AirmiusStorageUsage storage;
 
   @override
   Widget build(BuildContext context) {
+    final used = _formatBytes(storage.usedBytes);
+    final remaining = _formatBytes(storage.remainingBytes);
+    final progress = storage.limitGb <= 0 ? 0.0 : (storage.usedPercent / 100).clamp(0.0, 1.0).toDouble();
+
     return Container(
       padding: const EdgeInsets.all(9),
       decoration: BoxDecoration(
@@ -571,11 +846,11 @@ class _StorageFooter extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Row(
+          Row(
             children: [
-              Expanded(child: Text('Speicher: 0 B von 1 GB', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AirmiusColors.text, fontSize: 12, fontWeight: FontWeight.w900))),
-              SizedBox(width: 8),
-              _FooterBadge('1.00 GB frei'),
+              Expanded(child: Text('Speicher: $used von ${storage.limitGb} GB', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontSize: 12, fontWeight: FontWeight.w900))),
+              const SizedBox(width: 8),
+              _FooterBadge('$remaining frei'),
             ],
           ),
           const SizedBox(height: 7),
@@ -583,7 +858,7 @@ class _StorageFooter extends StatelessWidget {
             borderRadius: BorderRadius.circular(99),
             child: LinearProgressIndicator(
               minHeight: 5,
-              value: 0.0,
+              value: progress,
               backgroundColor: AirmiusColors.input,
               valueColor: const AlwaysStoppedAnimation<Color>(AirmiusColors.blue),
             ),
@@ -591,6 +866,18 @@ class _StorageFooter extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  static String _formatBytes(int bytes) {
+    if (bytes <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    var value = bytes.toDouble();
+    var unit = 0;
+    while (value >= 1024 && unit < units.length - 1) {
+      value /= 1024;
+      unit += 1;
+    }
+    return '${value.toStringAsFixed(unit == 0 ? 0 : 2)} ${units[unit]}';
   }
 }
 
@@ -837,18 +1124,56 @@ class _SelectLike extends StatelessWidget {
 }
 
 class _FileFolder {
-  const _FileFolder(this.name, this.filesCount);
+  const _FileFolder(this.name, this.filesCount, {this.id});
+
+  factory _FileFolder.fromApi(AirmiusFolder folder) => _FileFolder(folder.name, folder.filesCount, id: folder.id);
 
   final String name;
   final int filesCount;
+  final int? id;
 }
 
 class _ManagedFile {
-  const _ManagedFile(this.icon, this.title, this.meta, this.previewBody, this.status);
+  const _ManagedFile(this.icon, this.title, this.meta, this.previewBody, this.status, {this.id, this.url});
+
+  factory _ManagedFile.fromApi(AirmiusManagedFile file) {
+    final type = file.type.isEmpty ? 'Datei' : file.type;
+    return _ManagedFile(
+      _iconFor(type),
+      file.name,
+      '$type - ${_formatSize(file.size)}',
+      file.url.isEmpty ? 'Backend-Datei ohne direkte Vorschau-URL.' : file.url,
+      'Backend',
+      id: file.id,
+      url: file.url,
+    );
+  }
 
   final IconData icon;
   final String title;
   final String meta;
   final String previewBody;
   final String status;
+  final int? id;
+  final String? url;
+
+  static IconData _iconFor(String type) {
+    final normalized = type.toLowerCase();
+    if (normalized.contains('pdf')) return Icons.picture_as_pdf_outlined;
+    if (normalized.contains('image')) return Icons.image_outlined;
+    if (normalized.contains('video')) return Icons.video_file_outlined;
+    return Icons.description_outlined;
+  }
+
+  static String _formatSize(int bytes) {
+    if (bytes <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    var value = bytes.toDouble();
+    var unit = 0;
+    while (value >= 1024 && unit < units.length - 1) {
+      value /= 1024;
+      unit += 1;
+    }
+    return '${value.toStringAsFixed(unit == 0 ? 0 : 2)} ${units[unit]}';
+  }
 }

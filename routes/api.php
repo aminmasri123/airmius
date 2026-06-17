@@ -134,6 +134,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/uploads', [UploadController::class, 'store'])->name('uploads.store');
         Route::patch('/uploads/{file}', [UploadController::class, 'update'])->name('uploads.update');
         Route::delete('/uploads/{file}', [UploadController::class, 'destroy'])->name('uploads.destroy');
+        Route::get('/files', [UploadController::class, 'workspace'])->name('files.workspace');
+        Route::post('/files/folders', [UploadController::class, 'storeFolder'])->name('files.folders.store');
+        Route::patch('/files/folders/{folder}', [UploadController::class, 'updateFolder'])->name('files.folders.update');
+        Route::delete('/files/folders/{folder}', [UploadController::class, 'destroyFolder'])->name('files.folders.destroy');
 
         Route::get('/chat/conversations', [ChatController::class, 'index'])->name('chat.conversations.index');
         Route::get('/chat/conversations/{conversation}', [ChatController::class, 'show'])->name('chat.conversations.show');

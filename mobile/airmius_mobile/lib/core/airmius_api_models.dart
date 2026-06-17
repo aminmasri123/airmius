@@ -978,8 +978,151 @@ abstract class AirmiusMembershipRepository {
   Future<AirmiusClubMembershipRequest> declineClubRequest(int clubId, int requestId, {String? reviewNote});
 }
 
+class AirmiusFileWorkspace {
+  const AirmiusFileWorkspace({
+    required this.scope,
+    required this.currentFolder,
+    required this.folders,
+    required this.files,
+    required this.storage,
+    required this.filesPagination,
+    required this.foldersPagination,
+    required this.search,
+    required this.sort,
+  });
+
+  final String scope;
+  final AirmiusFolder? currentFolder;
+  final List<AirmiusFolder> folders;
+  final List<AirmiusManagedFile> files;
+  final AirmiusStorageUsage storage;
+  final AirmiusPagination filesPagination;
+  final AirmiusPagination foldersPagination;
+  final String search;
+  final String sort;
+
+  factory AirmiusFileWorkspace.fromJson(JsonMap json) {
+    final data = json['data'] is JsonMap ? json['data'] as JsonMap : json;
+    final scope = data['scope'];
+    final currentFolder = data['current_folder'];
+    return AirmiusFileWorkspace(
+      scope: scope is JsonMap ? _string(scope['type'], fallback: 'user') : 'user',
+      currentFolder: currentFolder is JsonMap ? AirmiusFolder.fromJson(currentFolder) : null,
+      folders: _jsonList(data['folders']).map(AirmiusFolder.fromJson).toList(),
+      files: _jsonList(data['files']).map(AirmiusManagedFile.fromJson).toList(),
+      storage: AirmiusStorageUsage.fromJson(data['storage_usage'] is JsonMap ? data['storage_usage'] as JsonMap : const {}),
+      filesPagination: AirmiusPagination.fromJson(data['files_pagination'] is JsonMap ? data['files_pagination'] as JsonMap : const {}),
+      foldersPagination: AirmiusPagination.fromJson(data['folders_pagination'] is JsonMap ? data['folders_pagination'] as JsonMap : const {}),
+      search: _string(data['search']),
+      sort: _string(data['sort'], fallback: 'name-asc'),
+    );
+  }
+}
+
+class AirmiusFolder {
+  const AirmiusFolder({
+    required this.id,
+    required this.name,
+    required this.filesCount,
+    this.parentId,
+  });
+
+  final int id;
+  final String name;
+  final int filesCount;
+  final int? parentId;
+
+  factory AirmiusFolder.fromJson(JsonMap json) => AirmiusFolder(
+        id: _int(json['id']),
+        name: _string(json['name'], fallback: 'Ordner'),
+        filesCount: _int(json['files_count']),
+        parentId: _nullableInt(json['parent_id']),
+      );
+}
+
+class AirmiusManagedFile {
+  const AirmiusManagedFile({
+    required this.id,
+    required this.name,
+    required this.type,
+    required this.size,
+    required this.url,
+    this.folderId,
+  });
+
+  final int id;
+  final String name;
+  final String type;
+  final int size;
+  final String url;
+  final int? folderId;
+
+  factory AirmiusManagedFile.fromJson(JsonMap json) => AirmiusManagedFile(
+        id: _int(json['id']),
+        name: _string(json['display_name'] ?? json['name'], fallback: 'Datei'),
+        type: _string(json['type'], fallback: 'Datei'),
+        size: _int(json['size']),
+        url: _string(json['url'] ?? json['path']),
+        folderId: _nullableInt(json['folder_id']),
+      );
+}
+
+class AirmiusStorageUsage {
+  const AirmiusStorageUsage({
+    required this.limitGb,
+    required this.usedBytes,
+    required this.remainingBytes,
+    required this.usedPercent,
+    required this.isFull,
+  });
+
+  final int limitGb;
+  final int usedBytes;
+  final int remainingBytes;
+  final double usedPercent;
+  final bool isFull;
+
+  factory AirmiusStorageUsage.fromJson(JsonMap json) => AirmiusStorageUsage(
+        limitGb: _int(json['limit_gb'], fallback: 1),
+        usedBytes: _int(json['used_bytes']),
+        remainingBytes: _int(json['remaining_bytes'], fallback: 1024 * 1024 * 1024),
+        usedPercent: _double(json['used_percent']),
+        isFull: _bool(json['is_full']),
+      );
+}
+
+class AirmiusPagination {
+  const AirmiusPagination({
+    required this.currentPage,
+    required this.lastPage,
+    required this.total,
+    this.from,
+    this.to,
+  });
+
+  final int currentPage;
+  final int lastPage;
+  final int total;
+  final int? from;
+  final int? to;
+
+  factory AirmiusPagination.fromJson(JsonMap json) => AirmiusPagination(
+        currentPage: _int(json['current_page'], fallback: 1),
+        lastPage: _int(json['last_page'], fallback: 1),
+        total: _int(json['total']),
+        from: _nullableInt(json['from']),
+        to: _nullableInt(json['to']),
+      );
+}
+
 abstract class AirmiusFileRepository {
   Future<JsonMap> createUploadIntent({required String scope, required String fileName, required String mimeType});
+  Future<AirmiusFileWorkspace> workspace({String scope = 'user', int? folderId, String? search, String sort = 'name-asc', int page = 1});
+  Future<AirmiusFolder> createFolder({required String scope, required String name, int? parentId});
+  Future<AirmiusFolder> renameFolder(int folderId, String name);
+  Future<void> deleteFolder(int folderId);
+  Future<AirmiusManagedFile> renameFile(int fileId, String name);
+  Future<void> deleteFile(int fileId);
 }
 
 abstract class AirmiusEventRepository {
@@ -1062,6 +1205,18 @@ int _int(Object? value, {int fallback = 0}) {
 int? _nullableInt(Object? value) {
   final parsed = _int(value);
   return parsed == 0 ? null : parsed;
+}
+
+double _double(Object? value, {double fallback = 0}) {
+  if (value is double) return value;
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? fallback;
+  return fallback;
+}
+
+List<JsonMap> _jsonList(Object? value) {
+  if (value is List) return value.whereType<JsonMap>().toList();
+  return const [];
 }
 
 String _string(Object? value, {String fallback = ''}) {
