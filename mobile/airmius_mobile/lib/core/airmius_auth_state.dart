@@ -142,6 +142,29 @@ class AirmiusAuthState extends ChangeNotifier {
     }
   }
 
+  Future<void> signInWithToken({required String token, String locale = 'de'}) async {
+    final normalizedToken = token.trim();
+    if (normalizedToken.isEmpty) {
+      _error = 'Social Login fehlgeschlagen: Token vom Server fehlt.';
+      _setPhase(AirmiusAuthPhase.error);
+      return;
+    }
+
+    _error = null;
+    _setPhase(AirmiusAuthPhase.loading);
+    try {
+      final tokenSession = AirmiusSession(token: normalizedToken, locale: locale);
+      final user = await _refreshUserProfileIfPossible(tokenSession);
+      final session = tokenSession.copyWith(user: user, clearUser: user == null);
+      await tokenStore.write(session);
+      _session = session;
+      _setPhase(AirmiusAuthPhase.authenticated);
+    } catch (error) {
+      _error = error is AirmiusApiException ? _readableAuthError(error) : error.toString();
+      _setPhase(AirmiusAuthPhase.error);
+    }
+  }
+
   Future<void> refreshUser() async {
     final current = _session;
     if (current == null || !current.isAuthenticated) return;

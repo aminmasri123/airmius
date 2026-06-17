@@ -13,22 +13,37 @@ use Laravel\Socialite\Facades\Socialite;
 class SocialAuthController extends Controller
 {
     private const PROVIDERS = ['google', 'microsoft'];
+    private const MOBILE_STATE_PREFIX = 'airmius-mobile:';
 
     public function redirect(Request $request, string $provider)
     {
         abort_unless(in_array($provider, self::PROVIDERS, true), 404);
 
+        if ($request->boolean('mobile')) {
+            $request->session()->put('social_auth.mobile', true);
+            $request->session()->put('social_auth.mobile_locale', $request->string('locale')->toString() ?: 'de');
+        } else {
+            $request->session()->forget(['social_auth.mobile', 'social_auth.mobile_locale']);
+        }
+
         if ($request->filled('redirect')) {
             $request->session()->put('url.intended', url($request->string('redirect')->toString()));
         }
 
-        return Socialite::driver($provider)
+        $driver = Socialite::driver($provider)
             ->redirectUrl($this->redirectUrl($provider))
-            ->scopes($this->scopes($provider))
-            ->redirect();
+            ->scopes($this->scopes($provider));
+
+        if ($request->boolean('mobile')) {
+            $driver->with([
+                'state' => $this->mobileState($request->string('locale')->toString() ?: 'de'),
+            ]);
+        }
+
+        return $driver->redirect();
     }
 
-    public function callback(string $provider)
+    public function callback(Request $request, string $provider)
     {
         abort_unless(in_array($provider, self::PROVIDERS, true), 404);
 
@@ -37,6 +52,8 @@ class SocialAuthController extends Controller
             ->scopes($this->scopes($provider))
             ->stateless()
             ->user();
+        $isMobileCallback = $this->isMobileCallback($request);
+        $mobileLocale = $this->mobileLocale($request);
 
         $account = SocialAccount::query()
             ->where('provider', $provider)
@@ -46,6 +63,10 @@ class SocialAuthController extends Controller
         if ($account) {
             $this->updateAccount($account, $socialUser);
             Auth::login($account->user, remember: true);
+
+            if ($isMobileCallback) {
+                return $this->mobileCallbackRedirect($account->user, $provider, $mobileLocale);
+            }
 
             return redirect()->intended(route('auth.dashboard'));
         }
@@ -68,6 +89,10 @@ class SocialAuthController extends Controller
                 'provider' => $provider,
                 'country' => $user->country,
             ]);
+        }
+
+        if ($isMobileCallback) {
+            return $this->mobileCallbackRedirect($user, $provider, $mobileLocale);
         }
 
         return redirect()->intended(route('auth.dashboard'));
@@ -129,5 +154,53 @@ class SocialAuthController extends Controller
             ?: data_get($socialUser->user, 'email')
             ?: data_get($socialUser->user, 'mail')
             ?: data_get($socialUser->user, 'userPrincipalName');
+    }
+
+    private function mobileCallbackRedirect(User $user, string $provider, string $locale)
+    {
+        $token = $user->createToken('mobile-'.$provider)->plainTextToken;
+
+        return redirect()->away('airmius://auth/callback?'.http_build_query([
+            'token' => $token,
+            'token_type' => 'Bearer',
+            'provider' => $provider,
+            'locale' => $locale,
+        ]));
+    }
+
+    private function isMobileCallback(Request $request): bool
+    {
+        return $request->session()->pull('social_auth.mobile', false)
+            || str_starts_with((string) $request->query('state'), self::MOBILE_STATE_PREFIX);
+    }
+
+    private function mobileLocale(Request $request): string
+    {
+        $sessionLocale = $request->session()->pull('social_auth.mobile_locale', null);
+        if (is_string($sessionLocale) && $sessionLocale !== '') {
+            return $sessionLocale;
+        }
+
+        $state = (string) $request->query('state');
+        if (! str_starts_with($state, self::MOBILE_STATE_PREFIX)) {
+            return 'de';
+        }
+
+        $encoded = Str::after($state, self::MOBILE_STATE_PREFIX);
+        $json = base64_decode(strtr($encoded, '-_', '+/'), true);
+        $payload = is_string($json) ? json_decode($json, true) : null;
+        $locale = is_array($payload) ? ($payload['locale'] ?? null) : null;
+
+        return is_string($locale) && $locale !== '' ? $locale : 'de';
+    }
+
+    private function mobileState(string $locale): string
+    {
+        $payload = json_encode([
+            'mobile' => true,
+            'locale' => $locale ?: 'de',
+        ]);
+
+        return self::MOBILE_STATE_PREFIX.rtrim(strtr(base64_encode((string) $payload), '+/', '-_'), '=');
     }
 }

@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/airmius_l10n.dart';
 import 'core/airmius_auth_state.dart';
 import 'core/airmius_deep_link_inbox.dart';
+import 'core/airmius_external_auth_launcher.dart';
 import 'core/airmius_http_transport.dart';
 import 'core/airmius_preferences.dart';
 import 'core/airmius_service_container.dart';
@@ -34,6 +35,7 @@ class _AirmiusAppState extends State<AirmiusApp> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   final AirmiusPreferences _preferences = AirmiusPreferences();
   final AirmiusDeepLinkInbox _deepLinkInbox = AirmiusDeepLinkInbox();
+  final AirmiusExternalAuthLauncher _externalAuthLauncher = const AirmiusExternalAuthLauncher();
   late final AirmiusServiceContainer _services = AirmiusServiceContainer(
     environment: const AirmiusAppEnvironment(apiBaseUrl: _apiBaseUrl, locale: 'de'),
     transport: const AirmiusHttpTransport(baseUrl: _apiBaseUrl),
@@ -110,6 +112,7 @@ class _AirmiusAppState extends State<AirmiusApp> {
                       password: password,
                       locale: _language.code.toLowerCase(),
                     ),
+                    onSocialLogin: _openSocialLogin,
                   ),
             ),
           ),
@@ -119,6 +122,10 @@ class _AirmiusAppState extends State<AirmiusApp> {
   }
 
   void _openNativeDeepLink(String link) {
+    if (_completeSocialLogin(link)) {
+      return;
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final context = _navigatorKey.currentContext;
       if (context == null) {
@@ -126,5 +133,31 @@ class _AirmiusAppState extends State<AirmiusApp> {
       }
       AirmiusDeepLinkNavigator.open(context, link);
     });
+  }
+
+  void _openSocialLogin(String provider) {
+    final base = Uri.parse(_apiBaseUrl);
+    final path = '/auth/$provider/redirect';
+    final url = base.replace(
+      path: '${base.path.endsWith('/') ? base.path.substring(0, base.path.length - 1) : base.path}$path',
+      queryParameters: {
+        'mobile': '1',
+        'locale': _language.code.toLowerCase(),
+      },
+    );
+
+    unawaited(_externalAuthLauncher.open(url.toString()));
+  }
+
+  bool _completeSocialLogin(String link) {
+    final uri = Uri.tryParse(link);
+    if (uri == null || uri.scheme != 'airmius' || uri.host != 'auth' || uri.path != '/callback') {
+      return false;
+    }
+
+    final token = uri.queryParameters['token'] ?? '';
+    final locale = uri.queryParameters['locale'] ?? _language.code.toLowerCase();
+    unawaited(_services.authState.signInWithToken(token: token, locale: locale));
+    return true;
   }
 }

@@ -4,8 +4,10 @@ import UIKit
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private let deepLinkChannelName = "com.airmius.app/deep_links"
+  private let browserChannelName = "com.airmius.app/browser"
   private var initialLink: String?
   private var deepLinkChannel: FlutterMethodChannel?
+  private var browserChannel: FlutterMethodChannel?
 
   override func application(
     _ application: UIApplication,
@@ -65,6 +67,25 @@ import UIKit
       result(self?.initialLink)
     }
     deepLinkChannel = channel
+
+    let browser = FlutterMethodChannel(
+      name: browserChannelName,
+      binaryMessenger: controller.binaryMessenger
+    )
+    browser.setMethodCallHandler { call, result in
+      guard call.method == "open" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      guard let rawUrl = call.arguments as? String,
+            let url = URL(string: rawUrl) else {
+        result(FlutterError(code: "invalid_url", message: "No valid URL was provided.", details: nil))
+        return
+      }
+      UIApplication.shared.open(url)
+      result(nil)
+    }
+    browserChannel = browser
   }
 
   private func openDeepLink(_ link: String) {

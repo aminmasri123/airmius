@@ -12,10 +12,12 @@ class LoginScreen extends StatefulWidget {
     super.key,
     required this.authState,
     required this.onLogin,
+    required this.onSocialLogin,
   });
 
   final AirmiusAuthState authState;
   final void Function(String email, String password) onLogin;
+  final void Function(String provider) onSocialLogin;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -91,6 +93,20 @@ class _LoginScreenState extends State<LoginScreen> {
                           controller: _passwordController,
                         ),
                         const SizedBox(height: 16),
+                        AirmiusButton(
+                          label: 'Mit Google anmelden',
+                          icon: Icons.g_mobiledata,
+                          secondary: true,
+                          onPressed: isLoading ? null : () => widget.onSocialLogin('google'),
+                        ),
+                        const SizedBox(height: 10),
+                        AirmiusButton(
+                          label: 'Mit Outlook anmelden',
+                          icon: Icons.mail_outline,
+                          secondary: true,
+                          onPressed: isLoading ? null : () => widget.onSocialLogin('microsoft'),
+                        ),
+                        const SizedBox(height: 14),
                         if (error != null) ...[
                           Text(error, style: const TextStyle(color: AirmiusColors.red, fontWeight: FontWeight.w700)),
                           const SizedBox(height: 10),
