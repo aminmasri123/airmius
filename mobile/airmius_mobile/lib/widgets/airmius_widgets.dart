@@ -167,7 +167,10 @@ class AirmiusPanel extends StatelessWidget {
     );
 
     if (onTap == null) return box;
-    return InkWell(onTap: onTap, borderRadius: BorderRadius.circular(18), child: box);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(onTap: onTap, borderRadius: BorderRadius.circular(18), child: box),
+    );
   }
 }
 
@@ -641,10 +644,14 @@ class UserBubble extends StatelessWidget {
             ),
     );
     if (onTap == null) return bubble;
-    return InkWell(
-      onTap: onTap,
-      customBorder: const CircleBorder(),
-      child: bubble,
+    return Material(
+      color: Colors.transparent,
+      shape: const CircleBorder(),
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: bubble,
+      ),
     );
   }
 

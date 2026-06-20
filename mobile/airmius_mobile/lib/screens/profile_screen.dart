@@ -250,23 +250,26 @@ class _ProfileHero extends StatelessWidget {
                       ],
                     ),
                   ),
-                  InkWell(
-                    onTap: onOpenProfile,
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AirmiusColors.input,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AirmiusColors.border),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.visibility_outlined, color: AirmiusColors.blue),
-                          SizedBox(width: 10),
-                          Expanded(child: Text('Profilvorschau, Sichtbarkeit und oeffentliche Karte oeffnen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700, height: 1.35))),
-                          Icon(Icons.chevron_right, color: AirmiusColors.muted),
-                        ],
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: onOpenProfile,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AirmiusColors.input,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AirmiusColors.border),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.visibility_outlined, color: AirmiusColors.blue),
+                            SizedBox(width: 10),
+                            Expanded(child: Text('Profilvorschau, Sichtbarkeit und oeffentliche Karte oeffnen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700, height: 1.35))),
+                            Icon(Icons.chevron_right, color: AirmiusColors.muted),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -335,23 +338,26 @@ class _TabChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-        decoration: BoxDecoration(
-          color: active ? AirmiusColors.blue.withValues(alpha: 0.16) : AirmiusColors.cardSoft,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: active ? AirmiusColors.blue.withValues(alpha: 0.65) : AirmiusColors.border),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(tab.icon, size: 17, color: active ? AirmiusColors.blue : AirmiusColors.muted),
-            const SizedBox(width: 7),
-            Text(tab.label, style: TextStyle(color: active ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900, fontSize: 12)),
-          ],
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+          decoration: BoxDecoration(
+            color: active ? AirmiusColors.blue.withValues(alpha: 0.16) : AirmiusColors.cardSoft,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: active ? AirmiusColors.blue.withValues(alpha: 0.65) : AirmiusColors.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(tab.icon, size: 17, color: active ? AirmiusColors.blue : AirmiusColors.muted),
+              const SizedBox(width: 7),
+              Text(tab.label, style: TextStyle(color: active ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900, fontSize: 12)),
+            ],
+          ),
         ),
       ),
     );
