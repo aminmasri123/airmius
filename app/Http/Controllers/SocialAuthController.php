@@ -282,9 +282,16 @@ class SocialAuthController extends Controller
 
     private function appendQuery(string $url, array $query): string
     {
+        $fragment = '';
+        $fragmentPosition = strpos($url, '#');
+        if ($fragmentPosition !== false) {
+            $fragment = substr($url, $fragmentPosition);
+            $url = substr($url, 0, $fragmentPosition);
+        }
+
         $separator = str_contains($url, '?') ? '&' : '?';
 
-        return $url.$separator.http_build_query($query);
+        return $url.$separator.http_build_query($query).$fragment;
     }
 
     private function mobileCallbackHtml(string $deepLink, string $customSchemeLink, string $androidIntent, string $dashboardUrl): string

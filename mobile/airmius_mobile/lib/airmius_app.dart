@@ -163,8 +163,9 @@ class _AirmiusAppState extends State<AirmiusApp> {
       return false;
     }
 
-    final token = uri.queryParameters['token'] ?? '';
-    final locale = uri.queryParameters['locale'] ?? _language.code.toLowerCase();
+    final params = _socialLoginParameters(uri);
+    final token = params['token'] ?? '';
+    final locale = params['locale'] ?? _language.code.toLowerCase();
     unawaited(_services.authState.signInWithToken(token: token, locale: locale));
     return true;
   }
@@ -174,11 +175,24 @@ class _AirmiusAppState extends State<AirmiusApp> {
       return true;
     }
 
-    if (kIsWeb && uri.queryParameters['token']?.isNotEmpty == true && ['127.0.0.1', 'localhost'].contains(uri.host)) {
+    if (kIsWeb && _socialLoginParameters(uri)['token']?.isNotEmpty == true && ['127.0.0.1', 'localhost'].contains(uri.host)) {
       return true;
     }
 
     return (uri.scheme == 'https' || uri.scheme == 'http') && uri.host == 'app.airmius.com' && uri.path == '/auth/callback';
+  }
+
+  Map<String, String> _socialLoginParameters(Uri uri) {
+    final params = <String, String>{...uri.queryParameters};
+    var fragment = uri.fragment.trim();
+    if (fragment.startsWith('?') || fragment.startsWith('&')) {
+      fragment = fragment.substring(1);
+    }
+    if (fragment.isNotEmpty) {
+      params.addAll(Uri.splitQueryString(fragment));
+    }
+
+    return params;
   }
 
   Future<void> _completeInitialWebSocialLogin() async {
