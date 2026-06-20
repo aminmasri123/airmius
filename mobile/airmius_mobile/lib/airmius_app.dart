@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -13,6 +14,7 @@ import 'core/airmius_service_container.dart';
 import 'core/airmius_services_scope.dart';
 import 'core/airmius_theme.dart';
 import 'core/airmius_theme_mode_scope.dart';
+import 'core/airmius_web_location.dart';
 import 'navigation/airmius_deep_link_navigator.dart';
 import 'screens/login_screen.dart';
 import 'screens/shell_screen.dart';
@@ -45,9 +47,14 @@ class _AirmiusAppState extends State<AirmiusApp> {
   void initState() {
     super.initState();
     unawaited(_restorePreferences());
-    _services.authState.restore();
+    unawaited(_restoreAuth());
     _deepLinkInbox.start(_openNativeDeepLink);
     unawaited(_deepLinkInbox.restoreInitialLink(_openNativeDeepLink));
+  }
+
+  Future<void> _restoreAuth() async {
+    await _services.authState.restore();
+    await _completeInitialWebSocialLogin();
   }
 
   Future<void> _restorePreferences() async {
@@ -143,6 +150,7 @@ class _AirmiusAppState extends State<AirmiusApp> {
       queryParameters: {
         'mobile': '1',
         'locale': _language.code.toLowerCase(),
+        if (kIsWeb) 'return_url': _webReturnUrl(),
       },
     );
 
@@ -151,7 +159,7 @@ class _AirmiusAppState extends State<AirmiusApp> {
 
   bool _completeSocialLogin(String link) {
     final uri = Uri.tryParse(link);
-    if (uri == null || uri.scheme != 'airmius' || uri.host != 'auth' || uri.path != '/callback') {
+    if (uri == null || !_isSocialLoginCallback(uri)) {
       return false;
     }
 
@@ -159,5 +167,39 @@ class _AirmiusAppState extends State<AirmiusApp> {
     final locale = uri.queryParameters['locale'] ?? _language.code.toLowerCase();
     unawaited(_services.authState.signInWithToken(token: token, locale: locale));
     return true;
+  }
+
+  bool _isSocialLoginCallback(Uri uri) {
+    if (uri.scheme == 'airmius' && uri.host == 'auth' && uri.path == '/callback') {
+      return true;
+    }
+
+    if (kIsWeb && uri.queryParameters['token']?.isNotEmpty == true && ['127.0.0.1', 'localhost'].contains(uri.host)) {
+      return true;
+    }
+
+    return (uri.scheme == 'https' || uri.scheme == 'http') && uri.host == 'app.airmius.com' && uri.path == '/auth/callback';
+  }
+
+  Future<void> _completeInitialWebSocialLogin() async {
+    if (!kIsWeb) {
+      return;
+    }
+
+    await Future<void>.delayed(Duration.zero);
+    if (_completeSocialLogin(Uri.base.toString())) {
+      _clearWebAuthQuery();
+    }
+  }
+
+  String _webReturnUrl() {
+    final base = Uri.base;
+    return base.replace(queryParameters: const {}, fragment: '').toString();
+  }
+
+  void _clearWebAuthQuery() {
+    if (!kIsWeb) return;
+
+    replaceBrowserUrl(Uri.base.replace(queryParameters: const {}, fragment: '').toString());
   }
 }

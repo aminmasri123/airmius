@@ -22,8 +22,11 @@ class SocialAuthController extends Controller
         if ($request->boolean('mobile')) {
             $request->session()->put('social_auth.mobile', true);
             $request->session()->put('social_auth.mobile_locale', $request->string('locale')->toString() ?: 'de');
+            if ($this->isAllowedMobileReturnUrl($request->string('return_url')->toString())) {
+                $request->session()->put('social_auth.mobile_return_url', $request->string('return_url')->toString());
+            }
         } else {
-            $request->session()->forget(['social_auth.mobile', 'social_auth.mobile_locale']);
+            $request->session()->forget(['social_auth.mobile', 'social_auth.mobile_locale', 'social_auth.mobile_return_url']);
         }
 
         if ($request->filled('redirect')) {
@@ -36,7 +39,12 @@ class SocialAuthController extends Controller
 
         if ($request->boolean('mobile')) {
             $driver->with([
-                'state' => $this->mobileState($request->string('locale')->toString() ?: 'de'),
+                'state' => $this->mobileState(
+                    $request->string('locale')->toString() ?: 'de',
+                    $this->isAllowedMobileReturnUrl($request->string('return_url')->toString())
+                        ? $request->string('return_url')->toString()
+                        : null,
+                ),
             ]);
         }
 
@@ -54,6 +62,7 @@ class SocialAuthController extends Controller
             ->user();
         $isMobileCallback = $this->isMobileCallback($request);
         $mobileLocale = $this->mobileLocale($request);
+        $mobileReturnUrl = $this->mobileReturnUrl($request);
 
         $account = SocialAccount::query()
             ->where('provider', $provider)
@@ -65,7 +74,7 @@ class SocialAuthController extends Controller
             Auth::login($account->user, remember: true);
 
             if ($isMobileCallback) {
-                return $this->mobileCallbackRedirect($account->user, $provider, $mobileLocale);
+                return $this->mobileCallbackRedirect($account->user, $provider, $mobileLocale, $mobileReturnUrl);
             }
 
             return redirect()->intended(route('auth.dashboard'));
@@ -92,7 +101,7 @@ class SocialAuthController extends Controller
         }
 
         if ($isMobileCallback) {
-            return $this->mobileCallbackRedirect($user, $provider, $mobileLocale);
+            return $this->mobileCallbackRedirect($user, $provider, $mobileLocale, $mobileReturnUrl);
         }
 
         return redirect()->intended(route('auth.dashboard'));
@@ -156,20 +165,27 @@ class SocialAuthController extends Controller
             ?: data_get($socialUser->user, 'userPrincipalName');
     }
 
-    private function mobileCallbackRedirect(User $user, string $provider, string $locale)
+    private function mobileCallbackRedirect(User $user, string $provider, string $locale, ?string $returnUrl)
     {
         $token = $user->createToken('mobile-'.$provider)->plainTextToken;
-        $query = http_build_query([
+        $payload = [
             'token' => $token,
             'token_type' => 'Bearer',
             'provider' => $provider,
             'locale' => $locale,
-        ]);
-        $deepLink = 'airmius://auth/callback?'.$query;
-        $androidIntent = 'intent://auth/callback?'.$query.'#Intent;scheme=airmius;package=com.airmius.app;end';
+        ];
+        $query = http_build_query($payload);
+
+        if ($returnUrl && $this->isAllowedMobileReturnUrl($returnUrl)) {
+            return redirect()->away($this->appendQuery($returnUrl, $payload));
+        }
+
+        $deepLink = 'https://app.airmius.com/auth/callback?'.$query;
+        $customSchemeLink = 'airmius://auth/callback?'.$query;
+        $androidIntent = 'intent://app.airmius.com/auth/callback?'.$query.'#Intent;scheme=https;package=com.airmius.app;S.browser_fallback_url='.rawurlencode($customSchemeLink).';end';
         $dashboardUrl = route('auth.dashboard');
 
-        return response($this->mobileCallbackHtml($deepLink, $androidIntent, $dashboardUrl))
+        return response($this->mobileCallbackHtml($deepLink, $customSchemeLink, $androidIntent, $dashboardUrl))
             ->header('Content-Type', 'text/html; charset=UTF-8')
             ->header('Referrer-Policy', 'no-referrer')
             ->header('X-Robots-Tag', 'noindex, nofollow');
@@ -194,29 +210,91 @@ class SocialAuthController extends Controller
         }
 
         $encoded = Str::after($state, self::MOBILE_STATE_PREFIX);
-        $json = base64_decode(strtr($encoded, '-_', '+/'), true);
+        $json = base64_decode($this->base64UrlDecode($encoded), true);
         $payload = is_string($json) ? json_decode($json, true) : null;
         $locale = is_array($payload) ? ($payload['locale'] ?? null) : null;
 
         return is_string($locale) && $locale !== '' ? $locale : 'de';
     }
 
-    private function mobileState(string $locale): string
+    private function mobileReturnUrl(Request $request): ?string
+    {
+        $sessionReturnUrl = $request->session()->pull('social_auth.mobile_return_url', null);
+        if (is_string($sessionReturnUrl) && $this->isAllowedMobileReturnUrl($sessionReturnUrl)) {
+            return $sessionReturnUrl;
+        }
+
+        $payload = $this->mobileStatePayload($request);
+        $returnUrl = is_array($payload) ? ($payload['return_url'] ?? null) : null;
+
+        return is_string($returnUrl) && $this->isAllowedMobileReturnUrl($returnUrl) ? $returnUrl : null;
+    }
+
+    private function mobileState(string $locale, ?string $returnUrl = null): string
     {
         $payload = json_encode([
             'mobile' => true,
             'locale' => $locale ?: 'de',
+            'return_url' => $returnUrl,
         ]);
 
         return self::MOBILE_STATE_PREFIX.rtrim(strtr(base64_encode((string) $payload), '+/', '-_'), '=');
     }
 
-    private function mobileCallbackHtml(string $deepLink, string $androidIntent, string $dashboardUrl): string
+    private function mobileStatePayload(Request $request): ?array
+    {
+        $state = (string) $request->query('state');
+        if (! str_starts_with($state, self::MOBILE_STATE_PREFIX)) {
+            return null;
+        }
+
+        $encoded = Str::after($state, self::MOBILE_STATE_PREFIX);
+        $json = base64_decode($this->base64UrlDecode($encoded), true);
+        $payload = is_string($json) ? json_decode($json, true) : null;
+
+        return is_array($payload) ? $payload : null;
+    }
+
+    private function base64UrlDecode(string $encoded): string
+    {
+        $base64 = strtr($encoded, '-_', '+/');
+        $padding = strlen($base64) % 4;
+
+        return $padding ? $base64.str_repeat('=', 4 - $padding) : $base64;
+    }
+
+    private function isAllowedMobileReturnUrl(?string $url): bool
+    {
+        if (! is_string($url) || $url === '') {
+            return false;
+        }
+
+        $parts = parse_url($url);
+        $scheme = $parts['scheme'] ?? null;
+        $host = $parts['host'] ?? null;
+
+        if (! in_array($scheme, ['http', 'https'], true) || ! is_string($host)) {
+            return false;
+        }
+
+        return in_array($host, ['127.0.0.1', 'localhost', 'app.airmius.com'], true);
+    }
+
+    private function appendQuery(string $url, array $query): string
+    {
+        $separator = str_contains($url, '?') ? '&' : '?';
+
+        return $url.$separator.http_build_query($query);
+    }
+
+    private function mobileCallbackHtml(string $deepLink, string $customSchemeLink, string $androidIntent, string $dashboardUrl): string
     {
         $deepLinkAttribute = e($deepLink);
+        $customSchemeAttribute = e($customSchemeLink);
         $androidIntentAttribute = e($androidIntent);
         $dashboardUrl = e($dashboardUrl);
         $deepLinkJson = json_encode($deepLink, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES);
+        $customSchemeJson = json_encode($customSchemeLink, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES);
         $androidIntentJson = json_encode($androidIntent, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES);
 
         return <<<HTML
@@ -244,19 +322,26 @@ class SocialAuthController extends Controller
         <h1>Login bestaetigt</h1>
         <p>Google hat dich angemeldet. Oeffne jetzt die Airmius App, um den Login abzuschliessen.</p>
         <div class="actions">
-            <a class="primary" id="open-app" href="$androidIntentAttribute" data-deep-link="$deepLinkAttribute">Airmius App oeffnen</a>
+            <a class="primary" id="open-app" href="$deepLinkAttribute" data-intent-link="$androidIntentAttribute" data-custom-link="$customSchemeAttribute">Airmius App oeffnen</a>
             <a href="$dashboardUrl">Im Browser weiter</a>
         </div>
-        <small>Wenn nichts passiert, tippe auf "Airmius App oeffnen". Auf Android versucht Airmius zusaetzlich den App-Intent.</small>
+        <small>Wenn nichts passiert, tippe auf "Airmius App oeffnen". Airmius nutzt zuerst den HTTPS-App-Link und versucht auf Android zusaetzlich den App-Intent.</small>
     </main>
     <script>
         (function () {
             var deepLink = $deepLinkJson;
+            var customSchemeLink = $customSchemeJson;
             var androidIntent = $androidIntentJson;
             var isAndroid = /Android/i.test(navigator.userAgent);
             var openApp = document.getElementById("open-app");
-            if (openApp && !isAndroid) {
-                openApp.setAttribute("href", deepLink);
+            if (openApp && isAndroid) {
+                openApp.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    window.location.href = androidIntent;
+                    setTimeout(function () {
+                        window.location.href = customSchemeLink;
+                    }, 900);
+                });
             }
             setTimeout(function () {
                 window.location.href = isAndroid ? androidIntent : deepLink;

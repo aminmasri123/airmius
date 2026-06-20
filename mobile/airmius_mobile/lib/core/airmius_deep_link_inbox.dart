@@ -22,7 +22,12 @@ class AirmiusDeepLinkInbox {
   }
 
   Future<void> restoreInitialLink(void Function(String link) onLink) async {
-    final link = await _channel.invokeMethod<String>('getInitialLink');
+    String? link;
+    try {
+      link = await _channel.invokeMethod<String>('getInitialLink');
+    } on MissingPluginException {
+      return;
+    }
     final normalized = link?.trim();
     if (normalized == null || normalized.isEmpty) {
       return;
