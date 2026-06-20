@@ -69,9 +69,16 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> me() async {
     try {
-      return await _json('GET', '/api/v1/auth/me');
+      return await _json('GET', '/api/v1/me');
     } on AirmiusApiException catch (error) {
       if (error.statusCode == 404 || error.statusCode == 405 || error.statusCode == 422) {
+        try {
+          return await _json('GET', '/api/v1/auth/me');
+        } on AirmiusApiException catch (legacyError) {
+          if (legacyError.statusCode != 404 && legacyError.statusCode != 405 && legacyError.statusCode != 422) {
+            rethrow;
+          }
+        }
         return _json('GET', '/friends/me');
       }
       rethrow;
