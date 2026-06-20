@@ -159,13 +159,20 @@ class SocialAuthController extends Controller
     private function mobileCallbackRedirect(User $user, string $provider, string $locale)
     {
         $token = $user->createToken('mobile-'.$provider)->plainTextToken;
-
-        return redirect()->away('airmius://auth/callback?'.http_build_query([
+        $query = http_build_query([
             'token' => $token,
             'token_type' => 'Bearer',
             'provider' => $provider,
             'locale' => $locale,
-        ]));
+        ]);
+        $deepLink = 'airmius://auth/callback?'.$query;
+        $androidIntent = 'intent://auth/callback?'.$query.'#Intent;scheme=airmius;package=com.airmius.app;end';
+        $dashboardUrl = route('auth.dashboard');
+
+        return response($this->mobileCallbackHtml($deepLink, $androidIntent, $dashboardUrl))
+            ->header('Content-Type', 'text/html; charset=UTF-8')
+            ->header('Referrer-Policy', 'no-referrer')
+            ->header('X-Robots-Tag', 'noindex, nofollow');
     }
 
     private function isMobileCallback(Request $request): bool
@@ -202,5 +209,56 @@ class SocialAuthController extends Controller
         ]);
 
         return self::MOBILE_STATE_PREFIX.rtrim(strtr(base64_encode((string) $payload), '+/', '-_'), '=');
+    }
+
+    private function mobileCallbackHtml(string $deepLink, string $androidIntent, string $dashboardUrl): string
+    {
+        $deepLink = e($deepLink);
+        $androidIntent = e($androidIntent);
+        $dashboardUrl = e($dashboardUrl);
+
+        return <<<HTML
+<!doctype html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex,nofollow">
+    <title>Airmius App oeffnen</title>
+    <style>
+        :root { color-scheme: dark; }
+        body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0c1016; color: #f4f7fb; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+        main { width: min(92vw, 520px); border: 1px solid #263241; border-radius: 18px; background: #121821; padding: 28px; box-shadow: 0 18px 55px rgba(0,0,0,.28); }
+        h1 { margin: 0 0 10px; font-size: 28px; line-height: 1.1; }
+        p { margin: 0 0 18px; color: #aab6c5; line-height: 1.5; }
+        a, button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; border-radius: 12px; border: 1px solid #60a5fa; padding: 0 16px; color: #f4f7fb; background: #1d2633; font-weight: 800; text-decoration: none; cursor: pointer; }
+        .primary { background: #60a5fa; color: #0c1016; border-color: #60a5fa; }
+        .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+        small { display: block; margin-top: 18px; color: #7f8da3; line-height: 1.45; }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Login bestaetigt</h1>
+        <p>Google hat dich angemeldet. Oeffne jetzt die Airmius App, um den Login abzuschliessen.</p>
+        <div class="actions">
+            <a class="primary" id="open-app" href="$deepLink">Airmius App oeffnen</a>
+            <a href="$dashboardUrl">Im Browser weiter</a>
+        </div>
+        <small>Wenn nichts passiert, tippe auf "Airmius App oeffnen". Auf Android versucht Airmius zusaetzlich den App-Intent.</small>
+    </main>
+    <script>
+        (function () {
+            var deepLink = "$deepLink";
+            var androidIntent = "$androidIntent";
+            var isAndroid = /Android/i.test(navigator.userAgent);
+            setTimeout(function () {
+                window.location.href = isAndroid ? androidIntent : deepLink;
+            }, 250);
+        })();
+    </script>
+</body>
+</html>
+HTML;
     }
 }
