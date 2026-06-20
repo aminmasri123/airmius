@@ -9,6 +9,16 @@ class AirmiusUser {
     this.firstName,
     this.lastName,
     this.avatarUrl,
+    this.bio,
+    this.profileVisibility,
+    this.followersCount,
+    this.followingCount,
+    this.postsCount,
+    this.clubs = const [],
+    this.teams = const [],
+    this.sportProfiles = const [],
+    this.badges = const [],
+    this.gamification,
   });
 
   final int id;
@@ -18,6 +28,16 @@ class AirmiusUser {
   final String? firstName;
   final String? lastName;
   final String? avatarUrl;
+  final String? bio;
+  final String? profileVisibility;
+  final int? followersCount;
+  final int? followingCount;
+  final int? postsCount;
+  final List<AirmiusNamedItem> clubs;
+  final List<AirmiusNamedItem> teams;
+  final List<AirmiusUserSportProfile> sportProfiles;
+  final List<AirmiusUserBadge> badges;
+  final AirmiusGamification? gamification;
 
   factory AirmiusUser.fromJson(JsonMap json) => AirmiusUser(
         id: _int(json['id']),
@@ -27,6 +47,115 @@ class AirmiusUser {
         firstName: _nullableString(json['first_name']),
         lastName: _nullableString(json['last_name']),
         avatarUrl: _userAvatarUrl(json),
+        bio: _nullableString(json['bio']),
+        profileVisibility: _nullableString(json['profile_visibility']),
+        followersCount: json.containsKey('followers_count') ? _int(json['followers_count']) : null,
+        followingCount: json.containsKey('following_count') ? _int(json['following_count']) : null,
+        postsCount: json.containsKey('posts_count') ? _int(json['posts_count']) : null,
+        clubs: _jsonList(json['clubs']).map(AirmiusNamedItem.fromJson).toList(),
+        teams: _jsonList(json['teams']).map(AirmiusNamedItem.fromJson).toList(),
+        sportProfiles: _jsonList(json['sport_profiles']).map(AirmiusUserSportProfile.fromJson).toList(),
+        badges: _jsonList(json['badges']).map(AirmiusUserBadge.fromJson).toList(),
+        gamification: json['gamification'] is JsonMap ? AirmiusGamification.fromJson(json['gamification'] as JsonMap) : null,
+      );
+}
+
+class AirmiusNamedItem {
+  const AirmiusNamedItem({required this.id, required this.name, this.subtitle});
+
+  final int id;
+  final String name;
+  final String? subtitle;
+
+  factory AirmiusNamedItem.fromJson(JsonMap json) => AirmiusNamedItem(
+        id: _int(json['id']),
+        name: _string(json['name'] ?? json['title'], fallback: 'Eintrag'),
+        subtitle: _nullableString(json['sport_type'] ?? json['city'] ?? json['description']),
+      );
+}
+
+class AirmiusUserSportProfile {
+  const AirmiusUserSportProfile({
+    required this.id,
+    required this.sportName,
+    this.status,
+    this.experienceLevel,
+    this.metrics = const {},
+  });
+
+  final int id;
+  final String sportName;
+  final String? status;
+  final String? experienceLevel;
+  final JsonMap metrics;
+
+  factory AirmiusUserSportProfile.fromJson(JsonMap json) {
+    final sport = json['sport'];
+    return AirmiusUserSportProfile(
+      id: _int(json['id']),
+      sportName: sport is JsonMap ? _string(sport['name'] ?? sport['slug'], fallback: 'Sportart') : _string(json['sport'], fallback: 'Sportart'),
+      status: _nullableString(json['status']),
+      experienceLevel: _nullableString(json['experience_level']),
+      metrics: json['performance_metrics'] is JsonMap ? json['performance_metrics'] as JsonMap : const {},
+    );
+  }
+}
+
+class AirmiusUserBadge {
+  const AirmiusUserBadge({required this.id, required this.name, this.description, this.icon});
+
+  final int id;
+  final String name;
+  final String? description;
+  final String? icon;
+
+  factory AirmiusUserBadge.fromJson(JsonMap json) => AirmiusUserBadge(
+        id: _int(json['id']),
+        name: _string(json['name'] ?? json['key'], fallback: 'Badge'),
+        description: _nullableString(json['description']),
+        icon: _nullableString(json['icon']),
+      );
+}
+
+class AirmiusGamification {
+  const AirmiusGamification({
+    required this.xp,
+    required this.level,
+    required this.nextLevelXp,
+    required this.currentLevelXp,
+    required this.progress,
+    required this.xpToNextLevel,
+    required this.earnedToday,
+    this.trustScore,
+    this.streakDays = 0,
+    this.title,
+    this.healthLabel,
+  });
+
+  final int xp;
+  final int level;
+  final int nextLevelXp;
+  final int currentLevelXp;
+  final int progress;
+  final int xpToNextLevel;
+  final int earnedToday;
+  final int? trustScore;
+  final int streakDays;
+  final String? title;
+  final String? healthLabel;
+
+  factory AirmiusGamification.fromJson(JsonMap json) => AirmiusGamification(
+        xp: _int(json['xp']),
+        level: _int(json['level'], fallback: 1),
+        nextLevelXp: _int(json['next_level_xp']),
+        currentLevelXp: _int(json['current_level_xp']),
+        progress: _int(json['progress']),
+        xpToNextLevel: _int(json['xp_to_next_level']),
+        earnedToday: _int(json['earned_today']),
+        trustScore: json['trust_score'] == null ? null : _int(json['trust_score']),
+        streakDays: _int(json['streak_days']),
+        title: _nullableString(json['title'] ?? json['rank']),
+        healthLabel: _nullableString(json['health_label']),
       );
 }
 

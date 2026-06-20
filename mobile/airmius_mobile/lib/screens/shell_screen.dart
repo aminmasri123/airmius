@@ -153,6 +153,7 @@ class _ShellScreenState extends State<ShellScreen> {
           };
 
     return Scaffold(
+      backgroundColor: AirmiusColors.bg,
       appBar: AirmiusTopBar(
         title: _openedModule == null ? scope.t(_tab.i18nKey) : scope.copy(_openedModule!.title),
         onSearch: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GlobalSearchScreen())),

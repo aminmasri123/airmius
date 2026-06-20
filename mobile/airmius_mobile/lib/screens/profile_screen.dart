@@ -73,15 +73,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onMore: () => _openMoreActions(context, authState),
               ),
               const SizedBox(height: 14),
-              const Row(
-                children: [
-                  Expanded(child: MetricCard(value: '18', label: 'Follower')),
-                  SizedBox(width: 10),
-                  Expanded(child: MetricCard(value: '12', label: 'Folgt')),
-                  SizedBox(width: 10),
-                  Expanded(child: MetricCard(value: '9', label: 'Badges')),
-                ],
-              ),
+              _ProfileStatsGrid(user: user),
               if (authState.error != null) ...[
                 const SizedBox(height: 12),
                 AirmiusPanel(
@@ -170,7 +162,7 @@ class _ProfileHero extends StatelessWidget {
     return AirmiusPanel(
       padding: const EdgeInsets.all(0),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -189,55 +181,78 @@ class _ProfileHero extends StatelessWidget {
               ),
               child: Stack(
                 children: [
-                  Positioned(right: -30, top: -40, child: _Glow(size: 130, color: AirmiusColors.blue)),
-                  Positioned(left: -35, bottom: -45, child: _Glow(size: 120, color: AirmiusColors.green)),
+                  Positioned.fill(
+                    bottom: 0,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            AirmiusColors.card.withValues(alpha: 0.96),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(right: -28, top: -42, child: _Glow(size: 126, color: AirmiusColors.blue)),
+                  Positioned(left: -34, bottom: -48, child: _Glow(size: 118, color: AirmiusColors.green)),
                 ],
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Transform.translate(
-                    offset: const Offset(0, -34),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        AirmiusAvatar(user.name, imageUrl: user.avatarUrl, large: true),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 5),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(user.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900)),
-                                const SizedBox(height: 3),
-                                Text(user.email, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Transform.translate(
-                    offset: const Offset(0, -18),
+                    offset: const Offset(0, -54),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        _ProfilePhoto(name: user.name, imageUrl: user.avatarUrl),
+                        const SizedBox(height: 14),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            const StatusPill('Profil 82%'),
-                            const StatusPill('DE'),
+                            StatusPill(_visibilityLabel(user.profileVisibility), color: AirmiusColors.muted),
+                            if (user.gamification != null) StatusPill('Level ${user.gamification!.level}'),
                             StatusPill(role),
                             if (isLoading) const StatusPill('Synchronisiert'),
                           ],
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 12),
+                        Text(user.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontSize: 30, fontWeight: FontWeight.w900, height: 1.05)),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 14,
+                          runSpacing: 8,
+                          children: [
+                            if (user.email.isNotEmpty) _ProfileMeta(icon: Icons.mail_outline, label: user.email),
+                            if (user.clubs.isNotEmpty || user.teams.isNotEmpty) _ProfileMeta(icon: Icons.groups_outlined, label: '${user.clubs.length + user.teams.length} Bereiche'),
+                          ],
+                        ),
+                        if (user.sportProfiles.isNotEmpty) ...[
+                          const SizedBox(height: 14),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              for (final profile in user.sportProfiles)
+                                _ProfileTag('${profile.sportName}${profile.experienceLevel == null ? '' : ' - ${_levelLabel(profile.experienceLevel!)}'}'),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Transform.translate(
+                    offset: const Offset(0, -34),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                         Wrap(
                           spacing: 9,
                           runSpacing: 9,
@@ -250,25 +265,28 @@ class _ProfileHero extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: onOpenProfile,
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AirmiusColors.input,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AirmiusColors.border),
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.visibility_outlined, color: AirmiusColors.blue),
-                            SizedBox(width: 10),
-                            Expanded(child: Text('Profilvorschau, Sichtbarkeit und oeffentliche Karte oeffnen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700, height: 1.35))),
-                            Icon(Icons.chevron_right, color: AirmiusColors.muted),
-                          ],
+                  Transform.translate(
+                    offset: const Offset(0, -20),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: onOpenProfile,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AirmiusColors.input,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AirmiusColors.border),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.visibility_outlined, color: AirmiusColors.blue),
+                              SizedBox(width: 10),
+                              Expanded(child: Text('Profilvorschau, Sichtbarkeit und oeffentliche Karte oeffnen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700, height: 1.35))),
+                              Icon(Icons.chevron_right, color: AirmiusColors.muted),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -279,6 +297,122 @@ class _ProfileHero extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ProfilePhoto extends StatelessWidget {
+  const _ProfilePhoto({required this.name, this.imageUrl});
+
+  final String name;
+  final String? imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final resolvedImageUrl = resolveAirmiusImageUrl(imageUrl);
+    final initials = initialsFromName(name, fallback: '??');
+
+    return Container(
+      width: 112,
+      height: 112,
+      decoration: BoxDecoration(
+        color: AirmiusColors.blue,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AirmiusColors.card, width: 4),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: .28), blurRadius: 18, offset: const Offset(0, 8)),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: resolvedImageUrl == null
+          ? Center(child: Text(initials, style: const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.w900)))
+          : Image.network(
+              resolvedImageUrl,
+              fit: BoxFit.cover,
+              webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+              errorBuilder: (_, __, ___) => Center(child: Text(initials, style: const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.w900))),
+            ),
+    );
+  }
+}
+
+class _ProfileMeta extends StatelessWidget {
+  const _ProfileMeta({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 17, color: AirmiusColors.muted),
+        const SizedBox(width: 5),
+        Text(label, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700, fontSize: 13)),
+      ],
+    );
+  }
+}
+
+class _ProfileTag extends StatelessWidget {
+  const _ProfileTag(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(color: AirmiusColors.input, borderRadius: BorderRadius.circular(999), border: Border.all(color: AirmiusColors.border)),
+      child: Text(label, style: const TextStyle(color: AirmiusColors.text, fontSize: 12, fontWeight: FontWeight.w800)),
+    );
+  }
+}
+
+class _ProfileStatsGrid extends StatelessWidget {
+  const _ProfileStatsGrid({required this.user});
+
+  final AirmiusUser user;
+
+  @override
+  Widget build(BuildContext context) {
+    final stats = [
+      if (user.followersCount != null) ('${user.followersCount}', 'Follower'),
+      if (user.followingCount != null) ('${user.followingCount}', 'Folgt'),
+      if (user.postsCount != null) ('${user.postsCount}', 'Beitraege'),
+      if (user.gamification != null) ('${user.gamification!.level}', 'Level'),
+      if (user.gamification != null) ('${user.gamification!.earnedToday}', 'Heute XP'),
+    ];
+    if (stats.isEmpty) return const SizedBox.shrink();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 640 ? 5 : 2;
+        final width = (constraints.maxWidth - (columns - 1) * 8) / columns;
+
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final stat in stats)
+              SizedBox(
+                width: width,
+                child: AirmiusPanel(
+                  padding: const EdgeInsets.all(13),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(stat.$1, style: const TextStyle(color: AirmiusColors.text, fontSize: 23, fontWeight: FontWeight.w900)),
+                      const SizedBox(height: 3),
+                      Text(stat.$2.toUpperCase(), style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w900)),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -309,21 +443,27 @@ class _ProfileTabs extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       padding: const EdgeInsets.all(8),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (final tab in _tabs)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: _TabChip(
-                  tab: tab,
-                  active: activeTab == tab.key,
-                  onTap: () => onChanged(tab.key),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final columns = constraints.maxWidth >= 560 ? 5 : 2;
+          final width = (constraints.maxWidth - (columns - 1) * 8) / columns;
+
+          return Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final tab in _tabs)
+                SizedBox(
+                  width: width,
+                  child: _TabChip(
+                    tab: tab,
+                    active: activeTab == tab.key,
+                    onTap: () => onChanged(tab.key),
+                  ),
                 ),
-              ),
-          ],
-        ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -342,20 +482,21 @@ class _TabChip extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(10),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+          constraints: const BoxConstraints(minHeight: 40),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
           decoration: BoxDecoration(
-            color: active ? AirmiusColors.blue.withValues(alpha: 0.16) : AirmiusColors.cardSoft,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: active ? AirmiusColors.blue.withValues(alpha: 0.65) : AirmiusColors.border),
+            color: active ? AirmiusColors.blue : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(tab.icon, size: 17, color: active ? AirmiusColors.blue : AirmiusColors.muted),
+              Icon(tab.icon, size: 17, color: active ? Colors.white : AirmiusColors.muted),
               const SizedBox(width: 7),
-              Text(tab.label, style: TextStyle(color: active ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900, fontSize: 12)),
+              Flexible(child: Text(tab.label, overflow: TextOverflow.ellipsis, style: TextStyle(color: active ? Colors.white : AirmiusColors.muted, fontWeight: FontWeight.w900, fontSize: 12))),
             ],
           ),
         ),
@@ -384,10 +525,10 @@ class _ProfileTabBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (activeTab) {
-      'sports' => _SportsSection(),
-      'posts' => _PostsSection(),
-      'network' => _NetworkSection(),
-      'recommendations' => _RecommendationsSection(),
+      'sports' => _SportsSection(user: user),
+      'posts' => _PostsSection(user: user),
+      'network' => _NetworkSection(user: user),
+      'recommendations' => _RecommendationsSection(user: user),
       _ => _OverviewSection(user: user, role: role, isLoading: isLoading, onRefresh: onRefresh, onSignOut: onSignOut),
     };
   }
@@ -407,35 +548,173 @@ class _OverviewSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (user.gamification != null) ...[
+          _GamificationOverview(gamification: user.gamification!, badges: user.badges),
+          const SizedBox(height: 14),
+        ],
         AirmiusPanel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const _SectionHeader(title: 'Uebersicht', subtitle: 'Profilstatus, Bio, Rollen und Schnellzugriff.'),
-              const SizedBox(height: 12),
-              _InfoRow(icon: Icons.person_outline, title: 'Rolle', body: role),
-              _InfoRow(icon: Icons.email_outlined, title: 'E-Mail', body: user.email),
-              _InfoRow(icon: Icons.verified_user_outlined, title: 'Sichtbarkeit', body: 'Oeffentliches Profil mit Netzwerk- und Sportdaten.'),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  AirmiusButton(label: isLoading ? 'Lade...' : 'Daten aktualisieren', icon: Icons.refresh_outlined, secondary: true, onPressed: onRefresh),
-                  AirmiusButton(label: 'Abmelden', icon: Icons.logout_outlined, danger: true, onPressed: onSignOut),
-                ],
+              const _SectionHeader(title: 'Profil', subtitle: 'Bio, Sportarten und oeffentliche Einordnung.'),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(color: AirmiusColors.bg, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border, style: BorderStyle.solid)),
+                child: Text(user.bio?.trim().isNotEmpty == true ? user.bio!.trim() : 'Dieses Profil hat noch keine Bio.', style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
               ),
             ],
           ),
         ),
         const SizedBox(height: 14),
-        _PrivacyMatrix(),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            AirmiusButton(label: isLoading ? 'Lade...' : 'Daten aktualisieren', icon: Icons.refresh_outlined, secondary: true, onPressed: onRefresh),
+            AirmiusButton(label: 'Abmelden', icon: Icons.logout_outlined, danger: true, onPressed: onSignOut),
+          ],
+        ),
       ],
     );
   }
 }
 
+class _GamificationOverview extends StatelessWidget {
+  const _GamificationOverview({required this.gamification, required this.badges});
+
+  final AirmiusGamification gamification;
+  final List<AirmiusUserBadge> badges;
+
+  @override
+  Widget build(BuildContext context) {
+    return AirmiusPanel(
+      padding: const EdgeInsets.all(0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (gamification.title?.isNotEmpty == true) StatusPill(gamification.title!),
+                    if (gamification.streakDays > 0) StatusPill('${gamification.streakDays} Tage Streak', color: AirmiusColors.muted),
+                    if (gamification.healthLabel?.isNotEmpty == true) StatusPill(gamification.healthLabel!, color: AirmiusColors.muted),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('FORTSCHRITT', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w900)),
+                          const SizedBox(height: 5),
+                          Text('Level ${gamification.level}', style: const TextStyle(color: AirmiusColors.text, fontSize: 30, fontWeight: FontWeight.w900)),
+                          const SizedBox(height: 4),
+                          Text('${gamification.xp} XP von ${gamification.nextLevelXp} XP', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 3),
+                          Text('Noch ${gamification.xpToNextLevel} XP bis zum naechsten Level', style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w900)),
+                        ],
+                      ),
+                    ),
+                    if (gamification.trustScore != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(color: AirmiusColors.input, borderRadius: BorderRadius.circular(12), border: Border.all(color: AirmiusColors.border)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('${gamification.trustScore}', style: const TextStyle(color: AirmiusColors.green, fontSize: 24, fontWeight: FontWeight.w900)),
+                            const Text('TRUST SCORE', style: TextStyle(color: AirmiusColors.muted, fontSize: 10, fontWeight: FontWeight.w900)),
+                            const SizedBox(height: 3),
+                            Text('Heute ${gamification.earnedToday} XP', style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: (gamification.progress.clamp(0, 100)).toDouble() / 100,
+                    minHeight: 12,
+                    backgroundColor: AirmiusColors.input,
+                    color: AirmiusColors.blue,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: const BoxDecoration(
+              color: AirmiusColors.bg,
+              border: Border(top: BorderSide(color: AirmiusColors.border)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('BADGES', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 12),
+                if (badges.isEmpty)
+                  const Text('Noch keine Badges vorhanden.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700))
+                else
+                  GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 2.2,
+                    children: [
+                      for (final badge in badges) _BadgeTile(icon: _badgeIcon(badge.icon), label: badge.name),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BadgeTile extends StatelessWidget {
+  const _BadgeTile({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(color: AirmiusColors.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: AirmiusColors.border)),
+      child: Row(
+        children: [
+          Icon(icon, color: AirmiusColors.text, size: 23),
+          const SizedBox(width: 9),
+          Expanded(child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800, fontSize: 13))),
+        ],
+      ),
+    );
+  }
+}
+
 class _SportsSection extends StatelessWidget {
+  const _SportsSection({required this.user});
+
+  final AirmiusUser user;
+
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
@@ -444,9 +723,19 @@ class _SportsSection extends StatelessWidget {
         children: [
           const _SectionHeader(title: 'Sportliches Profil', subtitle: 'Sportarten, Ziele und Erfahrungslevel.'),
           const SizedBox(height: 12),
-          _SportCard(icon: Icons.directions_run, title: 'Laufen', status: 'Betreibe ich', level: 'Fortgeschritten', metrics: const [('3x', 'Training/Woche'), ('12 km', 'Bestdistanz')]),
-          const SizedBox(height: 10),
-          _SportCard(icon: Icons.fitness_center, title: 'Fitness', status: 'Kraft & Stabilitaet', level: 'Erfahren', metrics: const [('4', 'Skills'), ('82%', 'Profil')]),
+          if (user.sportProfiles.isEmpty)
+            const _EmptyProfileState(icon: Icons.sports_outlined, text: 'Noch keine Sportarten im Profil.')
+          else
+            for (final profile in user.sportProfiles) ...[
+              _SportCard(
+                icon: Icons.sports_outlined,
+                title: profile.sportName,
+                status: _statusLabel(profile.status),
+                level: _levelLabel(profile.experienceLevel),
+                metrics: _profileMetrics(profile.metrics),
+              ),
+              const SizedBox(height: 10),
+            ],
           const SizedBox(height: 12),
           AirmiusButton(label: 'Sportart hinzufuegen', icon: Icons.add, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SportProfileDetailScreen(title: 'Sportart hinzufuegen', status: 'Neu')))),
         ],
@@ -456,6 +745,10 @@ class _SportsSection extends StatelessWidget {
 }
 
 class _PostsSection extends StatelessWidget {
+  const _PostsSection({required this.user});
+
+  final AirmiusUser user;
+
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
@@ -464,8 +757,10 @@ class _PostsSection extends StatelessWidget {
         children: [
           const _SectionHeader(title: 'Beitraege', subtitle: 'Eigene Posts, Reaktionen und Community-Aktivitaet.'),
           const SizedBox(height: 12),
-          _InfoRow(icon: Icons.dynamic_feed_outlined, title: 'Feed-Beitraege', body: '9 sichtbare Beitraege mit Likes, Kommentaren und Hilfreich-Markierungen.'),
-          _InfoRow(icon: Icons.forum_outlined, title: 'Kommentare', body: 'Direkt im Feed wie in Inertia schreiben und lesen.'),
+          if (user.postsCount == null)
+            const _EmptyProfileState(icon: Icons.dynamic_feed_outlined, text: 'Beitragsdaten wurden noch nicht geladen.')
+          else
+            _InfoRow(icon: Icons.dynamic_feed_outlined, title: 'Feed-Beitraege', body: '${user.postsCount} sichtbare Beitraege.'),
           const SizedBox(height: 12),
           AirmiusButton(label: 'Feed oeffnen', icon: Icons.dynamic_feed_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FeedCenterScreen()))),
         ],
@@ -475,6 +770,10 @@ class _PostsSection extends StatelessWidget {
 }
 
 class _NetworkSection extends StatelessWidget {
+  const _NetworkSection({required this.user});
+
+  final AirmiusUser user;
+
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
@@ -483,9 +782,14 @@ class _NetworkSection extends StatelessWidget {
         children: [
           const _SectionHeader(title: 'Netzwerk', subtitle: 'Freunde, Follower, Vereine und Teams.'),
           const SizedBox(height: 12),
-          _InfoRow(icon: Icons.people_alt_outlined, title: 'Freunde', body: '18 Kontakte, 2 offene Anfragen.'),
-          _InfoRow(icon: Icons.groups_outlined, title: 'Mitgliedschaften', body: 'ZBB offen, Airmius Running Club sichtbar.'),
-          _InfoRow(icon: Icons.visibility_outlined, title: 'Sichtbarkeit', body: 'Netzwerkdaten koennen granular gesteuert werden.'),
+          if (user.followersCount != null) _InfoRow(icon: Icons.people_alt_outlined, title: 'Follower', body: '${user.followersCount} Follower.'),
+          if (user.followingCount != null) _InfoRow(icon: Icons.person_add_alt_1_outlined, title: 'Folgt', body: '${user.followingCount} gefolgte Profile.'),
+          if (user.clubs.isEmpty && user.teams.isEmpty)
+            const _EmptyProfileState(icon: Icons.groups_outlined, text: 'Keine Vereine oder Teams geladen.')
+          else ...[
+            for (final club in user.clubs) _InfoRow(icon: Icons.apartment_outlined, title: club.name, body: club.subtitle ?? 'Verein'),
+            for (final team in user.teams) _InfoRow(icon: Icons.groups_outlined, title: team.name, body: team.subtitle ?? 'Team'),
+          ],
         ],
       ),
     );
@@ -493,6 +797,10 @@ class _NetworkSection extends StatelessWidget {
 }
 
 class _RecommendationsSection extends StatelessWidget {
+  const _RecommendationsSection({required this.user});
+
+  final AirmiusUser user;
+
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
@@ -501,30 +809,12 @@ class _RecommendationsSection extends StatelessWidget {
         children: [
           const _SectionHeader(title: 'Empfehlungen', subtitle: 'Badges, Nachweise und Profilstaerken.'),
           const SizedBox(height: 12),
-          _InfoRow(icon: Icons.workspace_premium_outlined, title: 'Badges', body: '9 Badges sichtbar, 1 neue Auszeichnung.'),
-          _InfoRow(icon: Icons.recommend_outlined, title: 'Empfehlungen', body: '2 offene Empfehlungen zur Freigabe.'),
+          if (user.badges.isEmpty)
+            const _EmptyProfileState(icon: Icons.workspace_premium_outlined, text: 'Noch keine Badges vorhanden.')
+          else
+            for (final badge in user.badges) _InfoRow(icon: _badgeIcon(badge.icon), title: badge.name, body: badge.description ?? 'Badge'),
           const SizedBox(height: 12),
-          AirmiusButton(label: 'Badges ansehen', icon: Icons.workspace_premium_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BadgeDetailScreen(title: 'Badges', body: 'Freigaben, Badges und sichtbare Profilnachweise.', status: '9 aktiv')))),
-        ],
-      ),
-    );
-  }
-}
-
-class _PrivacyMatrix extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return AirmiusPanel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const _SectionHeader(title: 'Sichtbarkeit & Datenschutz', subtitle: 'Wer darf welche Profilbereiche sehen?'),
-          const SizedBox(height: 12),
-          _VisibilityLine(label: 'Profil', value: 'Oeffentlich', color: AirmiusColors.blue),
-          _VisibilityLine(label: 'Sportdaten', value: 'Netzwerk', color: AirmiusColors.green),
-          _VisibilityLine(label: 'Vereine', value: 'Mitglieder', color: AirmiusColors.amber),
-          const SizedBox(height: 12),
-          AirmiusButton(label: 'Datenschutz bearbeiten', icon: Icons.visibility_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditFormScreen(title: 'Sichtbarkeit & Datenschutz', subtitle: 'Wer darf Profil, Sportdaten und Vereine sehen?', mode: EditFormMode.privacy)))),
+          AirmiusButton(label: 'Badges ansehen', icon: Icons.workspace_premium_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BadgeDetailScreen(title: 'Badges', body: user.badges.isEmpty ? 'Noch keine Badges vorhanden.' : user.badges.map((badge) => badge.name).join(', '), status: '${user.badges.length} aktiv')))),
         ],
       ),
     );
@@ -582,6 +872,28 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
+class _EmptyProfileState extends StatelessWidget {
+  const _EmptyProfileState({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: AirmiusColors.input, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)),
+      child: Row(
+        children: [
+          Icon(icon, color: AirmiusColors.blue),
+          const SizedBox(width: 10),
+          Expanded(child: Text(text, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700, height: 1.35))),
+        ],
+      ),
+    );
+  }
+}
+
 class _SportCard extends StatelessWidget {
   const _SportCard({required this.icon, required this.title, required this.status, required this.level, required this.metrics});
 
@@ -614,45 +926,26 @@ class _SportCard extends StatelessWidget {
                   ],
                 ),
               ),
-              StatusPill(level),
+              if (level.isNotEmpty) StatusPill(level),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              for (final metric in metrics)
-                Expanded(
-                  child: Column(
-                    children: [
-                      Text(metric.$1, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, fontSize: 16)),
-                      const SizedBox(height: 2),
-                      Text(metric.$2, textAlign: TextAlign.center, style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w700)),
-                    ],
+          if (metrics.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                for (final metric in metrics)
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Text(metric.$1, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, fontSize: 16)),
+                        const SizedBox(height: 2),
+                        Text(metric.$2, textAlign: TextAlign.center, style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
                   ),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _VisibilityLine extends StatelessWidget {
-  const _VisibilityLine({required this.label, required this.value, required this.color});
-
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(
-        children: [
-          Expanded(child: Text(label, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900))),
-          StatusPill(value, color: color),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -682,4 +975,62 @@ String _roleLabel(String role) {
   if (normalized == 'club_admin') return 'Vereinsadmin';
   if (normalized == 'guest') return 'Gast';
   return role.isEmpty ? 'Mitglied' : role;
+}
+
+String _visibilityLabel(String? visibility) {
+  return switch ((visibility ?? 'public').toLowerCase()) {
+    'public' => 'Oeffentliches Profil',
+    'members' => 'Nur Mitglieder',
+    'friends' => 'Nur Kontakte',
+    'private' => 'Privates Profil',
+    final value when value.isNotEmpty => value,
+    _ => 'Profil',
+  };
+}
+
+String _statusLabel(String? status) {
+  return switch ((status ?? '').toLowerCase()) {
+    'active' => 'Aktiv',
+    'competing' => 'Wettkampf',
+    'training' => 'Training',
+    'paused' => 'Pausiert',
+    final value when value.isNotEmpty => value,
+    _ => 'Sportprofil',
+  };
+}
+
+String _levelLabel(String? level) {
+  return switch ((level ?? '').toLowerCase()) {
+    'beginner' => 'Anfaenger',
+    'intermediate' => 'Fortgeschritten',
+    'advanced' => 'Fortgeschritten',
+    'expert' => 'Erfahren',
+    'elite' => 'Elite',
+    final value when value.isNotEmpty => value,
+    _ => '',
+  };
+}
+
+List<(String, String)> _profileMetrics(JsonMap metrics) {
+  final result = <(String, String)>[];
+  for (final entry in metrics.entries) {
+    final value = entry.value;
+    if (value == null || '$value'.trim().isEmpty) continue;
+    result.add(('$value', _metricLabel(entry.key)));
+    if (result.length == 2) break;
+  }
+  return result;
+}
+
+String _metricLabel(String key) {
+  return key.replaceAll('_', ' ').trim();
+}
+
+IconData _badgeIcon(String? icon) {
+  final normalized = (icon ?? '').toLowerCase();
+  if (normalized.contains('team') || normalized.contains('group')) return Icons.groups_2_outlined;
+  if (normalized.contains('run') || normalized.contains('sport')) return Icons.directions_run_outlined;
+  if (normalized.contains('verify') || normalized.contains('check')) return Icons.verified_outlined;
+  if (normalized.contains('star')) return Icons.star_outline;
+  return Icons.workspace_premium_outlined;
 }

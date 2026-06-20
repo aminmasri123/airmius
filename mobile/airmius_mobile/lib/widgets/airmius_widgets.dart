@@ -205,59 +205,62 @@ class PageFrame extends StatelessWidget {
             .toList(),
     ];
 
-    return CustomScrollView(
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-          sliver: SliverToBoxAdapter(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 740),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (showHeader) ...[
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  title,
-                                  style: const TextStyle(
-                                    color: AirmiusColors.text,
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.w900,
-                                    height: 1.05,
+    return ColoredBox(
+      color: AirmiusColors.bg,
+      child: CustomScrollView(
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+            sliver: SliverToBoxAdapter(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 740),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (showHeader) ...[
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    title,
+                                    style: const TextStyle(
+                                      color: AirmiusColors.text,
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w900,
+                                      height: 1.05,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  subtitle,
-                                  style: const TextStyle(
-                                    color: AirmiusColors.muted,
-                                    fontWeight: FontWeight.w600,
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    subtitle,
+                                    style: const TextStyle(
+                                      color: AirmiusColors.muted,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          if (trailingWidgets.isNotEmpty)
-                            Row(mainAxisSize: MainAxisSize.min, children: trailingWidgets),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
+                            if (trailingWidgets.isNotEmpty)
+                              Row(mainAxisSize: MainAxisSize.min, children: trailingWidgets),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      child,
                     ],
-                    child,
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

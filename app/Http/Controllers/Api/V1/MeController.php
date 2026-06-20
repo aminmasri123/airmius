@@ -11,8 +11,16 @@ class MeController extends Controller
 {
     public function show(Request $request)
     {
+        $request->user()->loadCount(['followers', 'following', 'posts']);
+
         return new UserResource(
-            $request->user()->loadMissing(['roles', 'permissions', 'clubs', 'teams.club'])
+            $request->user()->loadMissing([
+                'roles',
+                'permissions',
+                'clubs',
+                'teams.club',
+                'sportProfiles.sport',
+            ])
         );
     }
 

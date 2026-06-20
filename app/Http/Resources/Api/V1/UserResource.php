@@ -2,6 +2,9 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Models\User;
+use App\Models\UserBadge;
+use App\Services\GamificationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -12,6 +15,7 @@ class UserResource extends JsonResource
         $roleLabel = $this->relationLoaded('roles')
             ? $this->roles->pluck('name')->first()
             : null;
+        $gamification = app(GamificationService::class)->summaryFor($this->resource);
 
         return [
             'id' => $this->id,
@@ -19,6 +23,7 @@ class UserResource extends JsonResource
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
             'email' => $this->email,
+            'role' => $roleLabel ?: 'Member',
             'language' => $this->language ?? 'de',
             'theme' => $this->theme,
             'country' => $this->country,
@@ -30,6 +35,53 @@ class UserResource extends JsonResource
             'bio' => $this->bio,
             'profile_photo_url' => $this->profile_photo_url,
             'profile_photo_thumb' => $this->profile_photo_thumb,
+            'followers_count' => $this->followers_count,
+            'following_count' => $this->following_count,
+            'posts_count' => $this->posts_count,
+            'sport_profiles' => $this->whenLoaded('sportProfiles', fn () => $this->sportProfiles->map(fn ($profile) => [
+                'id' => $profile->id,
+                'status' => $profile->status,
+                'experience_level' => $profile->experience_level,
+                'sport' => $profile->sport ? [
+                    'id' => $profile->sport->id,
+                    'name' => $profile->sport->name,
+                    'slug' => $profile->sport->slug,
+                    'category' => $profile->sport->category,
+                ] : null,
+                'performance_metrics' => $profile->performance_metrics ?? [],
+            ])->values()),
+            'gamification' => [
+                'xp' => $gamification['xp'],
+                'level' => $gamification['level'],
+                'rank' => $gamification['rank'],
+                'title' => $gamification['title'],
+                'next_level_xp' => $gamification['next_level_xp'],
+                'current_level_xp' => $gamification['current_level_xp'],
+                'progress' => $gamification['progress'],
+                'xp_to_next_level' => $gamification['xp_to_next_level'],
+                'earned_today' => $gamification['earned_today'],
+                'trust_score' => $gamification['trust_score'],
+                'trust_multiplier' => $gamification['trust_multiplier'],
+                'streak_days' => $gamification['streak_days'],
+                'health_label' => $gamification['health_label'],
+            ],
+            'badges' => UserBadge::query()
+                ->where('awardable_type', User::class)
+                ->where('awardable_id', $this->id)
+                ->with('badge:id,key,name,description,icon')
+                ->latest('id')
+                ->limit(12)
+                ->get()
+                ->pluck('badge')
+                ->filter()
+                ->map(fn ($badge) => [
+                    'id' => $badge->id,
+                    'key' => $badge->key,
+                    'name' => $badge->name,
+                    'description' => $badge->description,
+                    'icon' => $badge->icon,
+                ])
+                ->values(),
             'user_card' => [
                 'id' => $this->id,
                 'display_name' => $this->name,
