@@ -213,9 +213,11 @@ class SocialAuthController extends Controller
 
     private function mobileCallbackHtml(string $deepLink, string $androidIntent, string $dashboardUrl): string
     {
-        $deepLink = e($deepLink);
-        $androidIntent = e($androidIntent);
+        $deepLinkAttribute = e($deepLink);
+        $androidIntentAttribute = e($androidIntent);
         $dashboardUrl = e($dashboardUrl);
+        $deepLinkJson = json_encode($deepLink, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES);
+        $androidIntentJson = json_encode($androidIntent, JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES);
 
         return <<<HTML
 <!doctype html>
@@ -242,16 +244,20 @@ class SocialAuthController extends Controller
         <h1>Login bestaetigt</h1>
         <p>Google hat dich angemeldet. Oeffne jetzt die Airmius App, um den Login abzuschliessen.</p>
         <div class="actions">
-            <a class="primary" id="open-app" href="$deepLink">Airmius App oeffnen</a>
+            <a class="primary" id="open-app" href="$androidIntentAttribute" data-deep-link="$deepLinkAttribute">Airmius App oeffnen</a>
             <a href="$dashboardUrl">Im Browser weiter</a>
         </div>
         <small>Wenn nichts passiert, tippe auf "Airmius App oeffnen". Auf Android versucht Airmius zusaetzlich den App-Intent.</small>
     </main>
     <script>
         (function () {
-            var deepLink = "$deepLink";
-            var androidIntent = "$androidIntent";
+            var deepLink = $deepLinkJson;
+            var androidIntent = $androidIntentJson;
             var isAndroid = /Android/i.test(navigator.userAgent);
+            var openApp = document.getElementById("open-app");
+            if (openApp && !isAndroid) {
+                openApp.setAttribute("href", deepLink);
+            }
             setTimeout(function () {
                 window.location.href = isAndroid ? androidIntent : deepLink;
             }, 250);
