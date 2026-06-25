@@ -29,6 +29,7 @@ class TeamResource extends JsonResource
             'users' => UserResource::collection($this->whenLoaded('users')),
             'users_count' => $this->whenCounted('users'),
             'events_count' => $this->whenCounted('events'),
+            'attendance_stats' => $this->when($this->getAttribute('attendance_stats') !== null, $this->getAttribute('attendance_stats')),
             'created_at' => $this->created_at?->toJSON(),
             'updated_at' => $this->updated_at?->toJSON(),
         ];

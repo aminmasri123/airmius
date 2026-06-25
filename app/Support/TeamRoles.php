@@ -18,6 +18,15 @@ class TeamRoles
         self::CLUB_PRESIDENT,
     ];
 
+    public const TEAM_ASSIGNABLE_ROLES = [
+        self::COACH,
+        self::CAPTAIN,
+        self::PLAYER,
+        self::TREASURER,
+        self::CLUB_PRESIDENT,
+        self::PARENT_CONTACT,
+    ];
+
     public const PROFILE_DEFINITIONS = [
         self::COACH => [
             'label' => 'Trainer',
@@ -59,14 +68,7 @@ class TeamRoles
 
     public static function all(): array
     {
-        return [
-            self::COACH,
-            self::CAPTAIN,
-            self::PLAYER,
-            self::TREASURER,
-            self::CLUB_PRESIDENT,
-            self::PARENT_CONTACT,
-        ];
+        return self::TEAM_ASSIGNABLE_ROLES;
     }
 
     public static function leadRoles(): array

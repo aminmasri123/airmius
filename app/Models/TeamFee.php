@@ -11,8 +11,10 @@ class TeamFee extends Model
 
     protected $fillable = [
         'team_id',
+        'event_id',
         'user_id',
         'collector_id',
+        'penalty_rule_id',
         'category',
         'amount',
         'currency',
@@ -33,6 +35,11 @@ class TeamFee extends Model
         return $this->belongsTo(Team::class);
     }
 
+    public function event()
+    {
+        return $this->belongsTo(Event::class);
+    }
+
     public function member()
     {
         return $this->belongsTo(User::class, 'user_id');
@@ -42,5 +49,9 @@ class TeamFee extends Model
     {
         return $this->belongsTo(User::class, 'collector_id');
     }
-}
 
+    public function penaltyRule()
+    {
+        return $this->belongsTo(TeamPenaltyRule::class, 'penalty_rule_id');
+    }
+}

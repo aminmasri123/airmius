@@ -42,6 +42,13 @@ defineProps({
                 <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Teilnehmerlimit</p>
                 <p class="mt-2 text-sm font-semibold text-primary">{{ hasParticipantLimit ? `${event.max_participants} Personen` : 'Unbegrenzt' }}</p>
             </div>
+
+            <div class="rounded-lg bg-inputBg p-4">
+                <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Strafkatalog</p>
+                <p class="mt-2 text-sm font-semibold text-primary">
+                    {{ event.uses_penalty_catalog ? 'Aktiv für dieses Team-Event' : 'Nicht aktiv' }}
+                </p>
+            </div>
         </div>
 
         <div class="mt-5 rounded-lg border border-border p-4">

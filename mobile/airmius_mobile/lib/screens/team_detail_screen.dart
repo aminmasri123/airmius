@@ -102,7 +102,13 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
             )).toList()),
           ])),
           const SizedBox(height: 14),
-          Row(children: const [Expanded(child: MetricCard(value: '24', label: 'Kader')), SizedBox(width: 10), Expanded(child: MetricCard(value: '5', label: 'Events')), SizedBox(width: 10), Expanded(child: MetricCard(value: '3', label: 'Einlad.'))]),
+          Row(children: [
+            Expanded(child: MetricCard(value: '${team?.usersCount ?? '-'}', label: 'Kader')),
+            const SizedBox(width: 10),
+            Expanded(child: MetricCard(value: '${team?.eventsCount ?? '-'}', label: 'Events')),
+            const SizedBox(width: 10),
+            Expanded(child: MetricCard(value: '${team?.attendanceStats?.trainingsTotal ?? '-'}', label: 'Trainings')),
+          ]),
           const SizedBox(height: 14),
           if (_section == 'Profil') _ProfilePanel(team: team, fallbackTitle: title, joinRequests: _joinRequests, teamChat: _teamChat, guardianGate: _guardianGate, onJoin: (value) => setState(() => _joinRequests = value), onChat: (value) => setState(() => _teamChat = value), onGuardian: (value) => setState(() => _guardianGate = value)),
           if (_section == 'Kader') const _RosterPanel(),
@@ -157,12 +163,62 @@ class _ProfilePanel extends StatelessWidget {
       _TeamInfoRow(label: 'Sichtbarkeit', value: team?.visibility ?? 'Teamspace', icon: Icons.visibility_outlined),
       _TeamInfoRow(label: 'Beschreibung', value: team?.description ?? 'Keine Beschreibung vorhanden.', icon: Icons.notes_outlined),
       const SizedBox(height: 12),
+      if (team?.attendanceStats != null) ...[
+        _AttendanceStatsPanel(stats: team!.attendanceStats!),
+        const SizedBox(height: 12),
+      ],
       const Eyebrow('Mobile Teamfunktionen'),
       const SizedBox(height: 8),
       SwitchListTile(value: joinRequests, onChanged: onJoin, activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Beitrittsanfragen erlauben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Interessierte koennen sich direkt beim Team melden.', style: TextStyle(color: AirmiusColors.muted))),
       SwitchListTile(value: teamChat, onChanged: onChat, activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Teamchat aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Chat wird mit Kalender und Dateien verbunden.', style: TextStyle(color: AirmiusColors.muted))),
       SwitchListTile(value: guardianGate, onChanged: onGuardian, activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Jugendschutz pruefen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Minderjaehrige brauchen passende Freigaben.', style: TextStyle(color: AirmiusColors.muted))),
     ]));
+  }
+}
+
+class _AttendanceStatsPanel extends StatelessWidget {
+  const _AttendanceStatsPanel({required this.stats});
+
+  final AirmiusTeamAttendanceStats stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final members = stats.members.take(8).toList();
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          const Expanded(child: Eyebrow('Trainingsbeteiligung')),
+          StatusPill('${stats.trainingsTotal} Trainings', color: AirmiusColors.blue),
+        ]),
+        const SizedBox(height: 10),
+        if (members.isEmpty)
+          const Text('Noch keine Trainingsteilnahmen vorhanden.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700))
+        else
+          ...members.map((member) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  Row(children: [
+                    Expanded(child: Text(member.name, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900))),
+                    Text('${member.attendanceRate.toStringAsFixed(1)}%', style: const TextStyle(color: AirmiusColors.green, fontWeight: FontWeight.w900)),
+                  ]),
+                  const SizedBox(height: 5),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(99),
+                    child: LinearProgressIndicator(
+                      value: (member.attendanceRate / 100).clamp(0, 1).toDouble(),
+                      minHeight: 7,
+                      color: AirmiusColors.blue,
+                      backgroundColor: AirmiusColors.card,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text('Dabei ${member.yes} · Verspaetet ${member.late} · Absage ${member.no} · Keine Antwort ${member.noResponse}', style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
+                ]),
+              )),
+      ]),
+    );
   }
 }
 

@@ -7,6 +7,7 @@ use App\Models\Conversation;
 use App\Models\Event;
 use App\Models\Sport;
 use App\Models\Team;
+use App\Models\TeamPenaltyRule;
 use App\Models\User;
 use App\Services\EventService;
 use App\Services\GamificationService;
@@ -213,12 +214,15 @@ class EventController extends Controller
 
         $event->load([
             'user:id,name',
-            'team:id,name,club_id',
+            'team:id,name,club_id,sport_type',
             'club:id,name',
             'conversation:id',
             'cancelledBy:id,name',
-            'participants:id,name',
+            'participants:id,name,email,profile_photo_path',
             'comments' => fn ($query) => $query->with('user:id,name')->latest(),
+            'penaltyFees' => fn ($query) => $query
+                ->with(['member:id,name,email,profile_photo_path', 'collector:id,name,email', 'penaltyRule'])
+                ->latest('id'),
         ]);
         $event->loadCount([
             'participantRecords as accepted_participants_count' => fn ($query) => $query->where('status', 'yes'),
@@ -246,7 +250,57 @@ class EventController extends Controller
                 'update' => auth()->user()->can('update', $event),
                 'delete' => auth()->user()->can('delete', $event),
                 'cancel' => auth()->user()->can('cancel', $event),
+                'manage_penalties' => $event->team
+                    ? $this->canManageTeamCashbox(auth()->user(), $event->team)
+                    : false,
             ],
+            'penaltyCatalog' => $event->team ? [
+                'can_manage' => $this->canManageTeamCashbox(auth()->user(), $event->team),
+                'rules' => $event->team->penaltyRules()
+                    ->where('is_active', true)
+                    ->orderBy('sort_order')
+                    ->orderBy('title')
+                    ->get()
+                    ->map(fn (TeamPenaltyRule $rule) => [
+                        'id' => $rule->id,
+                        'team_id' => $rule->team_id,
+                        'title' => $rule->title,
+                        'trigger' => $rule->trigger,
+                        'calculation_type' => $rule->calculation_type,
+                        'amount' => $rule->amount,
+                        'currency' => $rule->currency,
+                        'threshold_minutes' => $rule->threshold_minutes,
+                        'max_amount' => $rule->max_amount,
+                        'unit_label' => $rule->unit_label,
+                    ])
+                    ->values(),
+                'fees' => $event->penaltyFees
+                    ->map(fn ($fee) => [
+                        'id' => $fee->id,
+                        'team_id' => $fee->team_id,
+                        'event_id' => $fee->event_id,
+                        'user_id' => $fee->user_id,
+                        'penalty_rule_id' => $fee->penalty_rule_id,
+                        'amount' => $fee->amount,
+                        'currency' => $fee->currency,
+                        'status' => $fee->status,
+                        'note' => $fee->note,
+                        'due_date' => $fee->due_date?->toDateString(),
+                        'paid_at' => $fee->paid_at?->toDateString(),
+                        'member' => $fee->member ? [
+                            'id' => $fee->member->id,
+                            'name' => $fee->member->name,
+                            'email' => $fee->member->email,
+                        ] : null,
+                        'rule' => $fee->penaltyRule ? [
+                            'id' => $fee->penaltyRule->id,
+                            'title' => $fee->penaltyRule->title,
+                            'calculation_type' => $fee->penaltyRule->calculation_type,
+                            'unit_label' => $fee->penaltyRule->unit_label,
+                        ] : null,
+                    ])
+                    ->values(),
+            ] : null,
         ]);
     }
 
@@ -414,6 +468,7 @@ class EventController extends Controller
             'location_latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'location_longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'max_participants' => ['nullable', 'integer', 'min:1', 'max:100000'],
+            'uses_penalty_catalog' => ['nullable', 'boolean'],
             'notes' => ['nullable', 'string'],
             'recurring' => ['nullable', Rule::in(['daily', 'weekly', 'biweekly', 'monthly'])],
             'recurrence_days' => ['nullable', 'array'],
@@ -457,10 +512,12 @@ class EventController extends Controller
         if (($data['visibility'] ?? null) === 'public') {
             $data['club_id'] = null;
             $data['team_id'] = null;
+            $data['uses_penalty_catalog'] = false;
         }
 
         if (($data['visibility'] ?? null) === 'organization') {
             $data['team_id'] = null;
+            $data['uses_penalty_catalog'] = false;
         }
 
         if (($data['visibility'] ?? null) === 'private') {
@@ -483,8 +540,20 @@ class EventController extends Controller
 
         abort_if($data['visibility'] === 'private' && empty($data['team_id']), 422, 'Private Events brauchen ein Team.');
         abort_if($data['visibility'] === 'organization' && empty($data['club_id']), 422, 'Organization Events brauchen eine Organization.');
+        abort_if(! empty($data['uses_penalty_catalog']) && empty($data['team_id']), 422, 'Der Strafkatalog ist nur für Team-Events verfügbar.');
+
+        $data['uses_penalty_catalog'] = (bool) ($data['uses_penalty_catalog'] ?? false);
 
         return $data;
+    }
+
+    private function canManageTeamCashbox(User $user, Team $team): bool
+    {
+        return $user->can('update', $team)
+            || $team->users()
+                ->where('users.id', $user->id)
+                ->wherePivotIn('role', \App\Support\TeamRoles::TEAM_STAFF_ROLES)
+                ->exists();
     }
 
     private function eventDefaultFiltersFor(User $user): array

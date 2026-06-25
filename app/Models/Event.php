@@ -11,7 +11,7 @@ class Event extends Model
 
     public const TYPES = ['training', 'match', 'meeting', 'public'];
     public const VISIBILITIES = ['private', 'organization', 'public'];
-    public const PARTICIPANT_STATUSES = ['yes', 'no', 'maybe'];
+    public const PARTICIPANT_STATUSES = ['yes', 'late', 'maybe', 'no'];
     public const STATUSES = ['scheduled', 'cancelled'];
 
     protected $fillable = [
@@ -35,6 +35,7 @@ class Event extends Model
         'location_latitude',
         'location_longitude',
         'max_participants',
+        'uses_penalty_catalog',
         'notes',
         'recurring',
         'recurrence_days',
@@ -57,6 +58,7 @@ class Event extends Model
         'location_latitude' => 'float',
         'location_longitude' => 'float',
         'max_participants' => 'integer',
+        'uses_penalty_catalog' => 'boolean',
     ];
 
     public function club()
@@ -104,6 +106,11 @@ class Event extends Model
     public function files()
     {
         return $this->hasMany(File::class);
+    }
+
+    public function penaltyFees()
+    {
+        return $this->hasMany(TeamFee::class);
     }
 
     public function resolvedClub(): ?Club

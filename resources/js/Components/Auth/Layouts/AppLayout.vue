@@ -552,7 +552,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
 
     <Head :title="translatedPageTitle" />
 
-    <div class="h-dvh w-full overflow-hidden bg-bg text-primary">
+    <div class="min-h-dvh w-full bg-bg text-primary">
         <Sidebar :open="sidebarOpen" @close="sidebarOpen = false" />
 
         <Teleport to="body">
@@ -606,7 +606,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
         </Teleport>
 
         <div
-            class="flex h-dvh min-w-0 flex-1 flex-col"
+            class="flex min-h-dvh min-w-0 flex-1 flex-col"
             :class="isRtl ? 'md:pr-[260px]' : 'md:pl-[260px]'"
         >
             <!-- Topbar -->
@@ -893,7 +893,7 @@ watch([sidebarOpen, searchOpen, isSmallScreen], ([isSidebarOpen, isSearchOpen, i
             </Teleport>
 
             <!-- Content -->
-            <main class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-3 pb-24 sm:p-4 lg:p-6">
+            <main class="min-w-0 flex-1 overflow-x-hidden p-3 pb-24 sm:p-4 lg:p-6">
                 <slot />
             </main>
         </div>

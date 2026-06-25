@@ -156,6 +156,16 @@ defineEmits(['close'])
                         <p v-if="editForm.errors.max_participants" class="mt-1 text-sm text-error">{{ editForm.errors.max_participants }}</p>
                     </div>
 
+                    <label class="flex items-start gap-3 rounded-lg border border-border bg-inputBg p-4 text-sm md:col-span-2" :class="editForm.visibility === 'private' && editForm.team_id ? 'text-primary' : 'opacity-60'">
+                        <input v-model="editForm.uses_penalty_catalog" type="checkbox" class="mt-1 rounded border-border bg-card" :disabled="editForm.visibility !== 'private' || !editForm.team_id">
+                        <span>
+                            <span class="block font-semibold">Mit Strafkatalog arbeiten</span>
+                            <span class="mt-1 block text-xs leading-relaxed text-secondary">
+                                Berechtigte Teamrollen können während dieses Events Strafen an anwesende oder verspätete Spieler vergeben.
+                            </span>
+                        </span>
+                    </label>
+
                     <div class="md:col-span-2">
                         <label class="text-sm font-semibold text-primary" for="edit-notes">Notizen</label>
                         <textarea id="edit-notes" v-model="editForm.notes" rows="5" class="mt-1 w-full rounded-lg border-border bg-inputBg text-primary" />

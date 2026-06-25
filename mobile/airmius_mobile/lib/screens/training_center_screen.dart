@@ -1002,6 +1002,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
   String _visibility = 'public';
   int? _clubId;
   int? _teamId;
+  bool _usesPenaltyCatalog = false;
   DateTime _start = DateTime.now().add(const Duration(hours: 1));
   DateTime? _end;
 
@@ -1103,6 +1104,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
       'event_timezone': 'UTC',
       if (_visibility == 'organization' && _clubId != null) 'club_id': _clubId,
       if (_visibility == 'private' && _teamId != null) 'team_id': _teamId,
+      if (_visibility == 'private' && _teamId != null) 'uses_penalty_catalog': _usesPenaltyCatalog,
       if (_end != null) 'end_time': _end!.toUtc().toIso8601String(),
       if (_locationController.text.trim().isNotEmpty) 'location': _locationController.text.trim(),
       if (_notesController.text.trim().isNotEmpty) 'notes': _notesController.text.trim(),
@@ -1179,8 +1181,12 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
             if (_visibility == 'public') {
               _clubId = null;
               _teamId = null;
+              _usesPenaltyCatalog = false;
             }
-            if (_visibility == 'organization') _teamId = null;
+            if (_visibility == 'organization') {
+              _teamId = null;
+              _usesPenaltyCatalog = false;
+            }
             if (_visibility == 'private') _clubId = null;
           }),
         ),
@@ -1207,7 +1213,10 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
               for (final team in widget.teams)
                 DropdownMenuItem(value: team.id, child: Text(team.clubName == null ? team.name : '${team.name} - ${team.clubName}')),
             ],
-            onChanged: (value) => setState(() => _teamId = value),
+            onChanged: (value) => setState(() {
+              _teamId = value;
+              if (value == null) _usesPenaltyCatalog = false;
+            }),
           ),
           const SizedBox(height: 6),
           const Text('Private Events brauchen ein Team.', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
@@ -1252,6 +1261,15 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
           decoration: const InputDecoration(labelText: 'Max. Teilnehmer optional'),
         ),
         const SizedBox(height: 12),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: _usesPenaltyCatalog,
+          onChanged: _visibility == 'private' && _teamId != null ? (value) => setState(() => _usesPenaltyCatalog = value) : null,
+          activeColor: AirmiusColors.blue,
+          title: const Text('Mit Strafkatalog arbeiten', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+          subtitle: const Text('Teamkasse: Strafen koennen im Event an anwesende Spieler vergeben werden.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+        ),
+        const SizedBox(height: 12),
         TextFormField(
           controller: _notesController,
           maxLines: 4,
@@ -1291,6 +1309,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
               _ReviewLine(label: 'Start', value: '${_dateLabel(_start)} ${_time(_start)}'),
               _ReviewLine(label: 'Ende', value: _end == null ? '-' : '${_dateLabel(_end!)} ${_time(_end!)}'),
               _ReviewLine(label: 'Teilnehmerlimit', value: maxParticipants),
+              _ReviewLine(label: 'Strafkatalog', value: _usesPenaltyCatalog ? 'Aktiv fuer dieses Team-Event' : 'Nicht aktiv'),
               _ReviewLine(label: 'Ort', value: _locationController.text.trim().isEmpty ? '-' : _locationController.text.trim()),
               _ReviewLine(label: 'Notizen', value: _notesController.text.trim().isEmpty ? '-' : _notesController.text.trim()),
             ],

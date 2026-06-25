@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\StoryController as MobileStoryController;
 use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\SportMapController as MobileSportMapController;
 use App\Http\Controllers\Api\V1\TeamController;
+use App\Http\Controllers\Api\V1\TeamPenaltyController;
 use App\Http\Controllers\Api\V1\TrainingController;
 use App\Http\Controllers\Api\V1\UploadController;
 use App\Http\Controllers\ContentReportController;
@@ -129,6 +130,14 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
         Route::get('/teams', [TeamController::class, 'index'])->name('teams.index');
         Route::get('/teams/{team}', [TeamController::class, 'show'])->name('teams.show');
+        Route::get('/teams/{team}/attendance-stats', [TeamController::class, 'attendanceStats'])->name('teams.attendance-stats');
+        Route::get('/teams/{team}/penalties', [TeamPenaltyController::class, 'index'])->name('teams.penalties.index');
+        Route::post('/teams/{team}/penalty-rules', [TeamPenaltyController::class, 'storeRule'])->name('teams.penalty-rules.store');
+        Route::put('/teams/{team}/penalty-rules/{penaltyRule}', [TeamPenaltyController::class, 'updateRule'])->name('teams.penalty-rules.update');
+        Route::delete('/teams/{team}/penalty-rules/{penaltyRule}', [TeamPenaltyController::class, 'destroyRule'])->name('teams.penalty-rules.destroy');
+        Route::post('/teams/{team}/penalty-fees', [TeamPenaltyController::class, 'storeFee'])->name('teams.penalty-fees.store');
+        Route::post('/teams/{team}/penalty-fees/{fee}/paid', [TeamPenaltyController::class, 'markFeePaid'])->name('teams.penalty-fees.paid');
+        Route::post('/teams/{team}/penalty-fees/{fee}/cancel', [TeamPenaltyController::class, 'cancelFee'])->name('teams.penalty-fees.cancel');
 
         Route::get('/uploads', [UploadController::class, 'index'])->name('uploads.index');
         Route::post('/uploads', [UploadController::class, 'store'])->name('uploads.store');

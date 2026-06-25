@@ -230,6 +230,9 @@ class AirmiusTeam {
     this.ageGroup,
     this.visibility,
     this.logoUrl,
+    this.attendanceStats,
+    this.usersCount,
+    this.eventsCount,
   });
 
   final int id;
@@ -241,6 +244,9 @@ class AirmiusTeam {
   final String? ageGroup;
   final String? visibility;
   final String? logoUrl;
+  final AirmiusTeamAttendanceStats? attendanceStats;
+  final int? usersCount;
+  final int? eventsCount;
 
   factory AirmiusTeam.fromJson(JsonMap json) {
     final club = json['club'];
@@ -254,8 +260,74 @@ class AirmiusTeam {
       ageGroup: _nullableString(json['age_group']),
       visibility: _nullableString(json['visibility']),
       logoUrl: _mediaUrl(json['logo_url'] ?? json['logo']),
+      attendanceStats: json['attendance_stats'] is JsonMap ? AirmiusTeamAttendanceStats.fromJson(json['attendance_stats'] as JsonMap) : null,
+      usersCount: json.containsKey('users_count') ? _int(json['users_count']) : null,
+      eventsCount: json.containsKey('events_count') ? _int(json['events_count']) : null,
     );
   }
+}
+
+class AirmiusTeamAttendanceStats {
+  const AirmiusTeamAttendanceStats({
+    required this.trainingsTotal,
+    required this.membersTotal,
+    required this.members,
+  });
+
+  final int trainingsTotal;
+  final int membersTotal;
+  final List<AirmiusTeamAttendanceMember> members;
+
+  factory AirmiusTeamAttendanceStats.fromJson(JsonMap json) => AirmiusTeamAttendanceStats(
+        trainingsTotal: _int(json['trainings_total']),
+        membersTotal: _int(json['members_total']),
+        members: _jsonList(json['members']).map(AirmiusTeamAttendanceMember.fromJson).toList(),
+      );
+}
+
+class AirmiusTeamAttendanceMember {
+  const AirmiusTeamAttendanceMember({
+    required this.userId,
+    required this.name,
+    required this.trainingsTotal,
+    required this.attended,
+    required this.yes,
+    required this.late,
+    required this.maybe,
+    required this.no,
+    required this.noResponse,
+    required this.attendanceRate,
+    this.email,
+    this.avatarUrl,
+  });
+
+  final int userId;
+  final String name;
+  final String? email;
+  final String? avatarUrl;
+  final int trainingsTotal;
+  final int attended;
+  final int yes;
+  final int late;
+  final int maybe;
+  final int no;
+  final int noResponse;
+  final double attendanceRate;
+
+  factory AirmiusTeamAttendanceMember.fromJson(JsonMap json) => AirmiusTeamAttendanceMember(
+        userId: _int(json['user_id'] ?? json['id']),
+        name: _string(json['name'], fallback: 'Mitglied'),
+        email: _nullableString(json['email']),
+        avatarUrl: _mediaUrl(json['profile_photo_url'] ?? json['avatar_url'] ?? json['profile_photo_path']),
+        trainingsTotal: _int(json['trainings_total']),
+        attended: _int(json['attended']),
+        yes: _int(json['yes']),
+        late: _int(json['late']),
+        maybe: _int(json['maybe']),
+        no: _int(json['no']),
+        noResponse: _int(json['no_response']),
+        attendanceRate: _double(json['attendance_rate']),
+      );
 }
 
 class AirmiusSport {
@@ -430,6 +502,8 @@ class AirmiusEvent {
     required this.maybeCount,
     required this.noCount,
     required this.canJoin,
+    this.usesPenaltyCatalog = false,
+    this.participants = const [],
     this.clubId,
     this.teamId,
     this.clubName,
@@ -461,6 +535,59 @@ class AirmiusEvent {
   final int noCount;
   final String? myParticipationStatus;
   final bool canJoin;
+  final bool usesPenaltyCatalog;
+  final List<AirmiusEventParticipant> participants;
+
+  AirmiusEvent copyWith({
+    int? id,
+    String? title,
+    DateTime? startsAt,
+    DateTime? endsAt,
+    String? type,
+    String? status,
+    String? visibility,
+    int? clubId,
+    int? teamId,
+    String? clubName,
+    String? teamName,
+    String? notes,
+    String? location,
+    int? maxParticipants,
+    int? participantsCount,
+    int? commentsCount,
+    int? yesCount,
+    int? maybeCount,
+    int? noCount,
+    String? myParticipationStatus,
+    bool? canJoin,
+    bool? usesPenaltyCatalog,
+    List<AirmiusEventParticipant>? participants,
+  }) =>
+      AirmiusEvent(
+        id: id ?? this.id,
+        title: title ?? this.title,
+        startsAt: startsAt ?? this.startsAt,
+        endsAt: endsAt ?? this.endsAt,
+        type: type ?? this.type,
+        status: status ?? this.status,
+        visibility: visibility ?? this.visibility,
+        clubId: clubId ?? this.clubId,
+        teamId: teamId ?? this.teamId,
+        clubName: clubName ?? this.clubName,
+        teamName: teamName ?? this.teamName,
+        notes: notes ?? this.notes,
+        location: location ?? this.location,
+        maxParticipants: maxParticipants ?? this.maxParticipants,
+        participantsCount: participantsCount ?? this.participantsCount,
+        commentsCount: commentsCount ?? this.commentsCount,
+        yesCount: yesCount ?? this.yesCount,
+        maybeCount: maybeCount ?? this.maybeCount,
+        noCount: noCount ?? this.noCount,
+        myParticipationStatus: myParticipationStatus ?? this.myParticipationStatus,
+        canJoin: canJoin ?? this.canJoin,
+        usesPenaltyCatalog: usesPenaltyCatalog ?? this.usesPenaltyCatalog,
+        participants: participants ?? this.participants,
+      );
 
   factory AirmiusEvent.fromJson(JsonMap json) {
     final club = json['club'];
@@ -493,9 +620,41 @@ class AirmiusEvent {
       noCount: _int(json['no_count']),
       myParticipationStatus: _nullableString(json['my_participation_status']),
       canJoin: _bool(json['can_join']),
+      usesPenaltyCatalog: _bool(json['uses_penalty_catalog']),
+      participants: _eventParticipants(json['participants']),
     );
   }
 }
+
+class AirmiusEventParticipant {
+  const AirmiusEventParticipant({
+    required this.id,
+    required this.name,
+    required this.status,
+    this.email,
+    this.avatarUrl,
+  });
+
+  final int id;
+  final String name;
+  final String status;
+  final String? email;
+  final String? avatarUrl;
+
+  factory AirmiusEventParticipant.fromJson(JsonMap json) {
+    final pivot = json['pivot'];
+    return AirmiusEventParticipant(
+      id: _int(json['id']),
+      name: _string(json['name'], fallback: 'Spieler'),
+      email: _nullableString(json['email']),
+      avatarUrl: _mediaUrl(json['profile_photo_url'] ?? json['avatar_url'] ?? json['profile_photo_path']),
+      status: pivot is JsonMap ? _string(pivot['status'], fallback: 'yes') : _string(json['status'], fallback: 'yes'),
+    );
+  }
+}
+
+List<AirmiusEventParticipant> _eventParticipants(Object? value) =>
+    value is List ? value.whereType<JsonMap>().map(AirmiusEventParticipant.fromJson).toList() : const [];
 
 class AirmiusInvoice {
   const AirmiusInvoice({

@@ -177,6 +177,24 @@ defineProps({
             </div>
         </div>
 
+        <label class="flex items-start gap-3 rounded-xl border border-border bg-inputBg p-4 transition"
+            :class="form.visibility === 'private' && form.team_id ? 'cursor-pointer hover:border-borderHover' : 'opacity-60'"
+        >
+            <input
+                v-model="form.uses_penalty_catalog"
+                type="checkbox"
+                class="mt-1 rounded border-border bg-card text-buttonPrimary focus:ring-buttonPrimary"
+                :disabled="form.visibility !== 'private' || !form.team_id"
+            />
+
+            <span>
+                <span class="block text-sm font-semibold text-primary">Mit Strafkatalog arbeiten</span>
+                <span class="mt-1 block text-xs leading-relaxed text-secondary">
+                    Berechtigte Teamrollen können während dieses Events Strafen an anwesende oder verspätete Spieler vergeben.
+                </span>
+            </span>
+        </label>
+
         <div>
             <label for="event-notes" class="block text-sm font-semibold text-primary">
                 {{ $t('events.fields.notes') }}

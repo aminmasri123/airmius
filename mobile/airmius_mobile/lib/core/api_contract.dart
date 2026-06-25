@@ -186,6 +186,12 @@
   static String teamEvents(int id) => '$teams/$id/events';
   static String teamFiles(int id) => '$teams/$id/files';
   static String teamChat(int id) => '$teams/$id/chat';
+  static String teamPenalties(int id) => '/api/v1/teams/$id/penalties';
+  static String teamPenaltyRules(int id) => '/api/v1/teams/$id/penalty-rules';
+  static String teamPenaltyRule(int teamId, int ruleId) => '/api/v1/teams/$teamId/penalty-rules/$ruleId';
+  static String teamPenaltyFees(int id) => '/api/v1/teams/$id/penalty-fees';
+  static String teamPenaltyFeePaid(int teamId, int feeId) => '/api/v1/teams/$teamId/penalty-fees/$feeId/paid';
+  static String teamPenaltyFeeCancel(int teamId, int feeId) => '/api/v1/teams/$teamId/penalty-fees/$feeId/cancel';
   static String role(int id) => '$roles/$id';
   static String sport(int id) => '$sports/$id';
   static String profileSport(int id) => '$profileSports/$id';

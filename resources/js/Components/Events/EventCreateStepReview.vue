@@ -122,6 +122,15 @@ defineProps({
 
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                        Strafkatalog
+                    </p>
+                    <p class="mt-1 text-primary">
+                        {{ form.uses_penalty_catalog ? 'Aktiv für dieses Team-Event' : 'Nicht aktiv' }}
+                    </p>
+                </div>
+
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
                         Ort
                     </p>
                     <p class="mt-1 text-primary">

@@ -2,7 +2,7 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps({
@@ -26,10 +26,251 @@ const sportLabel = (value) => {
 const requestJoin = () => router.post(route('auth.teams.join-requests.store', props.teamProfile.id), {}, { preserveScroll: true })
 const logoInput = ref(null)
 const coverInput = ref(null)
+const penaltiesLoading = ref(false)
+const penaltiesError = ref('')
+const penalties = ref({
+    can_manage: false,
+    rules: [],
+    fees: [],
+    summary: {
+        open_amount: 0,
+        paid_amount: 0,
+        open_count: 0,
+    },
+})
+const editingRuleId = ref(null)
+const ruleForm = ref({
+    title: '',
+    trigger: 'late',
+    calculation_type: 'per_minute',
+    amount: '',
+    threshold_minutes: '',
+    max_amount: '',
+    unit_label: '',
+    description: '',
+    is_active: true,
+})
+const feeForm = ref({
+    user_id: '',
+    penalty_rule_id: '',
+    amount: '',
+    minutes: '',
+    note: '',
+    due_date: '',
+})
 const imageForm = useForm({
     logo: null,
     cover_image: null,
 })
+
+const viewerCanManage = computed(() => Boolean(props.viewer?.can_manage))
+const activePenaltyRules = computed(() => penalties.value.rules.filter((rule) => rule.is_active !== false))
+const canManagePenalties = computed(() => penalties.value.can_manage || viewerCanManage.value)
+const selectedPenaltyRule = computed(() => activePenaltyRules.value.find((rule) => Number(rule.id) === Number(feeForm.value.penalty_rule_id)))
+const ruleNeedsMinuteThreshold = computed(() => ruleForm.value.calculation_type === 'threshold_fixed')
+const attendanceStats = computed(() => props.teamProfile.attendance_stats || null)
+
+const triggerLabels = {
+    late: 'Zu spät',
+    absence: 'Fehlt',
+    forgotten_equipment: 'Ausrüstung vergessen',
+    custom: 'Individuell',
+}
+
+const calculationLabels = {
+    fixed: 'Fester Betrag',
+    per_minute: 'Pro Minute',
+    threshold_fixed: 'Ab Minuten-Grenze',
+    item: 'Sachstrafe',
+}
+
+const formatMoney = (amount, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: currency || 'EUR',
+}).format(Number(amount || 0))
+
+const resetRuleForm = () => {
+    editingRuleId.value = null
+    ruleForm.value = {
+        title: '',
+        trigger: 'late',
+        calculation_type: 'per_minute',
+        amount: '',
+        threshold_minutes: '',
+        max_amount: '',
+        unit_label: '',
+        description: '',
+        is_active: true,
+    }
+}
+
+const resetFeeForm = () => {
+    feeForm.value = {
+        user_id: '',
+        penalty_rule_id: '',
+        amount: '',
+        minutes: '',
+        note: '',
+        due_date: '',
+    }
+}
+
+const penaltyRuleLabel = (rule) => {
+    if (!rule) return 'Manueller Betrag'
+    if (rule.calculation_type === 'item') return `${rule.title} (${rule.unit_label || 'Sachstrafe'})`
+    if (rule.calculation_type === 'per_minute') return `${rule.title} (${formatMoney(rule.amount, rule.currency)} / Min.)`
+    if (rule.calculation_type === 'threshold_fixed') return `${rule.title} (ab ${rule.threshold_minutes || 0} Min.)`
+    return `${rule.title} (${formatMoney(rule.amount, rule.currency)})`
+}
+
+const loadPenalties = async () => {
+    penaltiesLoading.value = true
+    penaltiesError.value = ''
+
+    try {
+        const response = await window.axios.get(route('auth.teams.penalties.index', props.teamProfile.id))
+        penalties.value = response.data.data
+    } catch (error) {
+        penaltiesError.value = error.response?.data?.message || 'Strafkatalog konnte nicht geladen werden.'
+    } finally {
+        penaltiesLoading.value = false
+    }
+}
+
+const optimisticRuleFromPayload = (payload, id) => ({
+    id,
+    team_id: props.teamProfile.id,
+    title: payload.title,
+    trigger: payload.trigger,
+    calculation_type: payload.calculation_type,
+    amount: payload.amount,
+    currency: 'EUR',
+    threshold_minutes: payload.threshold_minutes,
+    max_amount: payload.max_amount,
+    unit_label: payload.unit_label,
+    description: payload.description,
+    is_active: payload.is_active,
+    sort_order: 0,
+    is_saving: true,
+})
+
+const submitRule = async () => {
+    penaltiesError.value = ''
+    const payload = {
+        title: ruleForm.value.title,
+        trigger: ruleForm.value.trigger,
+        calculation_type: ruleForm.value.calculation_type,
+        amount: ruleForm.value.amount === '' ? null : Number(ruleForm.value.amount),
+        threshold_minutes: ruleNeedsMinuteThreshold.value && ruleForm.value.threshold_minutes !== '' ? Number(ruleForm.value.threshold_minutes) : null,
+        max_amount: ruleForm.value.max_amount === '' ? null : Number(ruleForm.value.max_amount),
+        unit_label: ruleForm.value.unit_label || null,
+        description: ruleForm.value.description || null,
+        is_active: ruleForm.value.is_active,
+    }
+    const previousRules = [...penalties.value.rules]
+    const targetRuleId = editingRuleId.value
+    const optimisticId = targetRuleId || `temp-${Date.now()}`
+    const optimisticRule = optimisticRuleFromPayload(payload, optimisticId)
+
+    penalties.value.rules = targetRuleId
+        ? penalties.value.rules.map((rule) => Number(rule.id) === Number(targetRuleId) ? { ...rule, ...optimisticRule, id: targetRuleId } : rule)
+        : [optimisticRule, ...penalties.value.rules]
+
+    resetRuleForm()
+
+    try {
+        let response
+        if (targetRuleId) {
+            response = await window.axios.put(route('auth.teams.penalty-rules.update', [props.teamProfile.id, targetRuleId]), payload)
+        } else {
+            response = await window.axios.post(route('auth.teams.penalty-rules.store', props.teamProfile.id), payload)
+        }
+
+        const savedRule = response.data?.data
+        if (savedRule) {
+            penalties.value.rules = penalties.value.rules.map((rule) => String(rule.id) === String(optimisticId) ? savedRule : rule)
+        } else {
+            await loadPenalties()
+        }
+    } catch (error) {
+        penalties.value.rules = previousRules
+        penaltiesError.value = error.response?.data?.message || 'Regel konnte nicht gespeichert werden.'
+    }
+}
+
+const editRule = (rule) => {
+    editingRuleId.value = rule.id
+    ruleForm.value = {
+        title: rule.title || '',
+        trigger: rule.trigger || 'custom',
+        calculation_type: rule.calculation_type || 'fixed',
+        amount: rule.amount ?? '',
+        threshold_minutes: rule.threshold_minutes ?? '',
+        max_amount: rule.max_amount ?? '',
+        unit_label: rule.unit_label || '',
+        description: rule.description || '',
+        is_active: rule.is_active !== false,
+    }
+}
+
+const deactivateRule = async (rule) => {
+    if (!confirm(`Regel "${rule.title}" deaktivieren? Bestehende Buchungen bleiben erhalten.`)) return
+
+    try {
+        await window.axios.delete(route('auth.teams.penalty-rules.destroy', [props.teamProfile.id, rule.id]))
+        await loadPenalties()
+    } catch (error) {
+        penaltiesError.value = error.response?.data?.message || 'Regel konnte nicht deaktiviert werden.'
+    }
+}
+
+const submitFee = async () => {
+    penaltiesError.value = ''
+    const payload = {
+        user_id: Number(feeForm.value.user_id),
+        penalty_rule_id: feeForm.value.penalty_rule_id ? Number(feeForm.value.penalty_rule_id) : null,
+        amount: feeForm.value.amount === '' ? null : Number(feeForm.value.amount),
+        minutes: feeForm.value.minutes === '' ? null : Number(feeForm.value.minutes),
+        note: feeForm.value.note || null,
+        due_date: feeForm.value.due_date || null,
+    }
+
+    try {
+        await window.axios.post(route('auth.teams.penalty-fees.store', props.teamProfile.id), payload)
+        resetFeeForm()
+        await loadPenalties()
+    } catch (error) {
+        penaltiesError.value = error.response?.data?.message || 'Strafe konnte nicht gebucht werden.'
+    }
+}
+
+const markFeePaid = async (fee) => {
+    try {
+        await window.axios.post(route('auth.teams.penalty-fees.paid', [props.teamProfile.id, fee.id]))
+        await loadPenalties()
+    } catch (error) {
+        penaltiesError.value = error.response?.data?.message || 'Buchung konnte nicht bezahlt markiert werden.'
+    }
+}
+
+const cancelFee = async (fee) => {
+    if (!confirm('Diese Buchung stornieren?')) return
+
+    try {
+        await window.axios.post(route('auth.teams.penalty-fees.cancel', [props.teamProfile.id, fee.id]))
+        await loadPenalties()
+    } catch (error) {
+        penaltiesError.value = error.response?.data?.message || 'Buchung konnte nicht storniert werden.'
+    }
+}
+
+watch(() => ruleForm.value.calculation_type, (type) => {
+    if (type !== 'threshold_fixed') {
+        ruleForm.value.threshold_minutes = ''
+    }
+})
+
+onMounted(loadPenalties)
 
 const uploadImage = (field, event) => {
     const file = event.target.files?.[0] || null
@@ -131,6 +372,281 @@ const uploadImage = (field, event) => {
                 <div class="rounded-lg border border-border bg-card p-4">
                     <div class="text-2xl font-semibold text-primary">{{ teamProfile.files_count }}</div>
                     <div class="text-sm text-secondary">Dateien</div>
+                </div>
+            </section>
+
+            <section v-if="attendanceStats" class="rounded-lg border border-border bg-card p-5">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Training</p>
+                        <h2 class="mt-1 text-xl font-bold text-primary">Trainingsbeteiligung</h2>
+                        <p class="mt-1 text-sm text-secondary">
+                            Gezählt werden abgeschlossene Trainingseinheiten. Zusage und Verspätet zählen als Teilnahme.
+                        </p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 text-sm sm:min-w-72">
+                        <div class="rounded-lg border border-border bg-inputBg p-3">
+                            <p class="text-xs font-semibold uppercase text-secondary">Trainings</p>
+                            <p class="mt-1 text-2xl font-bold text-primary">{{ attendanceStats.trainings_total }}</p>
+                        </div>
+                        <div class="rounded-lg border border-border bg-inputBg p-3">
+                            <p class="text-xs font-semibold uppercase text-secondary">Mitglieder</p>
+                            <p class="mt-1 text-2xl font-bold text-primary">{{ attendanceStats.members_total }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-5 overflow-hidden rounded-lg border border-border">
+                    <div class="hidden grid-cols-[1.4fr_repeat(6,minmax(72px,1fr))] gap-3 bg-inputBg px-4 py-3 text-xs font-bold uppercase tracking-wide text-secondary lg:grid">
+                        <span>Spieler</span>
+                        <span>Dabei</span>
+                        <span>Spät</span>
+                        <span>Vielleicht</span>
+                        <span>Absage</span>
+                        <span>Keine Antw.</span>
+                        <span>Quote</span>
+                    </div>
+                    <div v-for="member in attendanceStats.members" :key="member.user_id" class="border-t border-border bg-card p-4 first:border-t-0 lg:grid lg:grid-cols-[1.4fr_repeat(6,minmax(72px,1fr))] lg:items-center lg:gap-3">
+                        <div class="min-w-0">
+                            <p class="truncate font-semibold text-primary">{{ member.name }}</p>
+                            <p class="text-xs text-secondary">{{ member.attended }} von {{ member.trainings_total }} Trainings</p>
+                        </div>
+                        <div class="mt-3 grid grid-cols-3 gap-2 text-sm lg:contents">
+                            <span class="rounded-lg bg-success/10 px-2 py-1 font-semibold text-success lg:bg-transparent lg:p-0">{{ member.yes }}</span>
+                            <span class="rounded-lg bg-air-blue/10 px-2 py-1 font-semibold text-air-blue lg:bg-transparent lg:p-0">{{ member.late }}</span>
+                            <span class="rounded-lg bg-warning/10 px-2 py-1 font-semibold text-warning lg:bg-transparent lg:p-0">{{ member.maybe }}</span>
+                            <span class="rounded-lg bg-error/10 px-2 py-1 font-semibold text-error lg:bg-transparent lg:p-0">{{ member.no }}</span>
+                            <span class="rounded-lg bg-muted px-2 py-1 font-semibold text-secondary lg:bg-transparent lg:p-0">{{ member.no_response }}</span>
+                            <span class="rounded-lg border border-border px-2 py-1 font-bold text-primary lg:border-0 lg:p-0">{{ member.attendance_rate }}%</span>
+                        </div>
+                    </div>
+                    <div v-if="!attendanceStats.members.length" class="bg-card p-4 text-sm text-secondary">
+                        Noch keine Mitglieder oder Trainingseinheiten vorhanden.
+                    </div>
+                </div>
+            </section>
+
+            <section class="min-w-0 overflow-hidden rounded-lg border border-border bg-card p-5">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Teamkasse</p>
+                        <h2 class="mt-1 text-xl font-bold text-primary">Strafkatalog & Kasse</h2>
+                        <p class="mt-1 text-sm text-secondary">
+                            Individuelle Regeln für {{ teamProfile.name }} und offene Strafbuchungen.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-inputBg disabled:opacity-60"
+                        :disabled="penaltiesLoading"
+                        @click="loadPenalties"
+                    >
+                        <i class="las la-sync"></i> Aktualisieren
+                    </button>
+                </div>
+
+                <div v-if="penaltiesError" class="mt-4 rounded-lg border border-error/40 bg-error/10 px-4 py-3 text-sm font-semibold text-error">
+                    {{ penaltiesError }}
+                </div>
+
+                <div class="mt-5 grid gap-3 sm:grid-cols-3">
+                    <div class="rounded-lg border border-border bg-inputBg p-4">
+                        <p class="text-xs font-semibold uppercase text-secondary">Offen</p>
+                        <p class="mt-1 text-2xl font-bold text-primary">{{ formatMoney(penalties.summary?.open_amount) }}</p>
+                    </div>
+                    <div class="rounded-lg border border-border bg-inputBg p-4">
+                        <p class="text-xs font-semibold uppercase text-secondary">Bezahlt</p>
+                        <p class="mt-1 text-2xl font-bold text-primary">{{ formatMoney(penalties.summary?.paid_amount) }}</p>
+                    </div>
+                    <div class="rounded-lg border border-border bg-inputBg p-4">
+                        <p class="text-xs font-semibold uppercase text-secondary">Offene Fälle</p>
+                        <p class="mt-1 text-2xl font-bold text-primary">{{ penalties.summary?.open_count || 0 }}</p>
+                    </div>
+                </div>
+
+                <div class="mt-6 grid min-w-0 gap-5 xl:grid-cols-[420px_1fr]">
+                    <div class="min-w-0 space-y-4">
+                        <form v-if="canManagePenalties" class="rounded-lg border border-border bg-inputBg p-4" @submit.prevent="submitRule">
+                            <div class="flex items-center justify-between gap-3">
+                                <h3 class="font-bold text-primary">{{ editingRuleId ? 'Regel bearbeiten' : 'Neue Regel' }}</h3>
+                                <button v-if="editingRuleId" type="button" class="text-sm font-semibold text-secondary hover:text-primary" @click="resetRuleForm">
+                                    Abbrechen
+                                </button>
+                            </div>
+
+                            <div class="mt-4 grid gap-3">
+                                <label class="text-sm font-semibold text-primary">
+                                    Titel
+                                    <input v-model="ruleForm.title" required class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="Zu spät zum Training">
+                                </label>
+                                <div class="grid gap-3 sm:grid-cols-2">
+                                    <label class="text-sm font-semibold text-primary">
+                                        Auslöser
+                                        <select v-model="ruleForm.trigger" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary">
+                                            <option value="late">Zu spät</option>
+                                            <option value="absence">Fehlt</option>
+                                            <option value="forgotten_equipment">Ausrüstung vergessen</option>
+                                            <option value="custom">Individuell</option>
+                                        </select>
+                                    </label>
+                                    <label class="text-sm font-semibold text-primary">
+                                        Berechnung
+                                        <select v-model="ruleForm.calculation_type" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary">
+                                            <option value="fixed">Fester Betrag</option>
+                                            <option value="per_minute">Pro Minute</option>
+                                            <option value="threshold_fixed">Ab Minuten-Grenze</option>
+                                            <option value="item">Sachstrafe</option>
+                                        </select>
+                                    </label>
+                                </div>
+                                <div class="grid gap-3" :class="ruleNeedsMinuteThreshold ? 'sm:grid-cols-3' : 'sm:grid-cols-2'">
+                                    <label class="text-sm font-semibold text-primary">
+                                        Betrag
+                                        <input v-model="ruleForm.amount" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="1.00">
+                                    </label>
+                                    <label v-if="ruleNeedsMinuteThreshold" class="text-sm font-semibold text-primary">
+                                        Grenze Min.
+                                        <input v-model="ruleForm.threshold_minutes" type="number" min="0" step="1" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="10">
+                                    </label>
+                                    <label class="text-sm font-semibold text-primary">
+                                        Max.
+                                        <input v-model="ruleForm.max_amount" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="optional">
+                                    </label>
+                                </div>
+                                <label class="text-sm font-semibold text-primary">
+                                    Sachstrafe / Einheit
+                                    <input v-model="ruleForm.unit_label" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="Kiste, Kuchen, Teamdienst">
+                                </label>
+                                <label class="text-sm font-semibold text-primary">
+                                    Beschreibung
+                                    <textarea v-model="ruleForm.description" rows="2" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="Optionaler Hinweis für das Team"></textarea>
+                                </label>
+                                <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold text-primary">
+                                    <input v-model="ruleForm.is_active" type="checkbox" class="peer sr-only">
+                                    <span class="flex h-5 w-5 items-center justify-center rounded-md border border-border bg-card text-xs font-black text-transparent transition peer-checked:border-buttonPrimary peer-checked:bg-buttonPrimary peer-checked:text-buttonTextPrimary">
+                                        ✓
+                                    </span>
+                                    Aktiv
+                                </label>
+                            </div>
+
+                            <button type="submit" class="mt-4 w-full rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary hover:bg-buttonPrimaryHover">
+                                {{ editingRuleId ? 'Regel speichern' : 'Regel anlegen' }}
+                            </button>
+                        </form>
+
+                        <form v-if="canManagePenalties" class="rounded-lg border border-border bg-inputBg p-4" @submit.prevent="submitFee">
+                            <h3 class="font-bold text-primary">Strafe buchen</h3>
+                            <div class="mt-4 grid gap-3">
+                                <label class="text-sm font-semibold text-primary">
+                                    Mitglied
+                                    <select v-model="feeForm.user_id" required class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary">
+                                        <option value="">Auswählen</option>
+                                        <option v-for="member in teamProfile.members" :key="member.id" :value="member.id">
+                                            {{ member.name }}
+                                        </option>
+                                    </select>
+                                </label>
+                                <label class="text-sm font-semibold text-primary">
+                                    Regel
+                                    <select v-model="feeForm.penalty_rule_id" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary">
+                                        <option value="">Manueller Betrag</option>
+                                        <option v-for="rule in activePenaltyRules" :key="rule.id" :value="rule.id">
+                                            {{ penaltyRuleLabel(rule) }}
+                                        </option>
+                                    </select>
+                                </label>
+                                <div class="grid gap-3 sm:grid-cols-3">
+                                    <label class="text-sm font-semibold text-primary">
+                                        Minuten
+                                        <input v-model="feeForm.minutes" type="number" min="0" step="1" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="0">
+                                    </label>
+                                    <label class="text-sm font-semibold text-primary">
+                                        Betrag
+                                        <input v-model="feeForm.amount" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" :placeholder="selectedPenaltyRule ? 'Automatisch' : '5.00'">
+                                    </label>
+                                    <label class="text-sm font-semibold text-primary">
+                                        Fällig
+                                        <input v-model="feeForm.due_date" type="date" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary">
+                                    </label>
+                                </div>
+                                <label class="text-sm font-semibold text-primary">
+                                    Notiz
+                                    <input v-model="feeForm.note" class="mt-1 w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-primary" placeholder="z.B. Training Dienstag">
+                                </label>
+                            </div>
+                            <button type="submit" class="mt-4 w-full rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary hover:bg-buttonPrimaryHover">
+                                Strafe buchen
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="min-w-0 space-y-4">
+                        <div class="rounded-lg border border-border bg-inputBg p-4">
+                            <h3 class="font-bold text-primary">Aktive Regeln</h3>
+                            <div class="mt-4 divide-y divide-border overflow-hidden rounded-lg border border-border">
+                                <div v-for="rule in activePenaltyRules" :key="rule.id" class="bg-card p-3">
+                                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                        <div>
+                                            <p class="font-semibold text-primary">{{ rule.title }}</p>
+                                            <p class="mt-1 text-xs text-secondary">
+                                                {{ triggerLabels[rule.trigger] || rule.trigger }} · {{ calculationLabels[rule.calculation_type] || rule.calculation_type }}
+                                                <span v-if="rule.calculation_type !== 'item'"> · {{ formatMoney(rule.amount, rule.currency) }}</span>
+                                                <span v-if="rule.threshold_minutes"> · ab {{ rule.threshold_minutes }} Min.</span>
+                                                <span v-if="rule.max_amount"> · max. {{ formatMoney(rule.max_amount, rule.currency) }}</span>
+                                                <span v-if="rule.unit_label"> · {{ rule.unit_label }}</span>
+                                                <span v-if="rule.is_saving"> · wird gespeichert…</span>
+                                            </p>
+                                            <p v-if="rule.description" class="mt-2 text-sm text-secondary">{{ rule.description }}</p>
+                                        </div>
+                                        <div v-if="canManagePenalties" class="flex gap-2">
+                                            <button type="button" class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-primary hover:bg-inputBg" @click="editRule(rule)">
+                                                Bearbeiten
+                                            </button>
+                                            <button type="button" class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-secondary hover:text-error" @click="deactivateRule(rule)">
+                                                Deaktivieren
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-if="!activePenaltyRules.length" class="bg-card p-4 text-sm text-secondary">
+                                    Noch keine aktiven Regeln.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-lg border border-border bg-inputBg p-4">
+                            <h3 class="font-bold text-primary">Buchungen</h3>
+                            <div class="mt-4 overflow-hidden rounded-lg border border-border">
+                                <div v-for="fee in penalties.fees" :key="fee.id" class="border-b border-border bg-card p-3 last:border-b-0">
+                                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                        <div>
+                                            <p class="font-semibold text-primary">{{ fee.member?.name || 'Mitglied' }}</p>
+                                            <p class="mt-1 text-sm text-secondary">
+                                                {{ fee.rule?.title || fee.note || 'Strafe' }} · {{ formatMoney(fee.amount, fee.currency) }}
+                                            </p>
+                                            <p class="mt-1 text-xs text-secondary">
+                                                Status: {{ fee.status }}
+                                                <span v-if="fee.due_date"> · fällig {{ formatDate(fee.due_date) }}</span>
+                                                <span v-if="fee.paid_at"> · bezahlt {{ formatDate(fee.paid_at) }}</span>
+                                            </p>
+                                        </div>
+                                        <div v-if="canManagePenalties && fee.status === 'open'" class="flex gap-2">
+                                            <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-1 text-xs font-bold text-buttonTextPrimary hover:bg-buttonPrimaryHover" @click="markFeePaid(fee)">
+                                                Bezahlt
+                                            </button>
+                                            <button type="button" class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-secondary hover:text-error" @click="cancelFee(fee)">
+                                                Storno
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-if="!penalties.fees.length" class="bg-card p-4 text-sm text-secondary">
+                                    Noch keine Buchungen.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 

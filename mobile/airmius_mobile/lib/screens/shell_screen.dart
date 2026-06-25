@@ -54,13 +54,38 @@ class ShellScreen extends StatefulWidget {
 class _ShellScreenState extends State<ShellScreen> {
   AppTab _tab = AppTab.dashboard;
   ModuleDefinition? _openedModule;
+  final List<AppTab> _tabHistory = [];
   final Set<int> _requestedClubIds = {};
 
-  void _openTab(AppTab tab) {
+  void _openTab(AppTab tab, {bool remember = true}) {
+    if (_openedModule == null && _tab == tab) return;
     setState(() {
+      if (remember) {
+        _tabHistory.add(_tab);
+      }
       _tab = tab;
       _openedModule = null;
     });
+  }
+
+  bool _handleBackNavigation() {
+    if (_openedModule != null) {
+      setState(() => _openedModule = null);
+      return true;
+    }
+
+    if (_tabHistory.isNotEmpty) {
+      final previousTab = _tabHistory.removeLast();
+      _openTab(previousTab, remember: false);
+      return true;
+    }
+
+    if (_tab != AppTab.dashboard) {
+      _openTab(AppTab.dashboard, remember: false);
+      return true;
+    }
+
+    return false;
   }
 
   void _openModule(ModuleDefinition module) {
@@ -124,6 +149,9 @@ class _ShellScreenState extends State<ShellScreen> {
   void _requestClub(ClubSummary club) {
     setState(() {
       _requestedClubIds.add(club.id);
+      if (_tab != AppTab.updates) {
+        _tabHistory.add(_tab);
+      }
       _tab = AppTab.updates;
       _openedModule = null;
     });
@@ -152,45 +180,46 @@ class _ShellScreenState extends State<ShellScreen> {
             AppTab.profile => const ProfileScreen(),
           };
 
-    return Scaffold(
-      backgroundColor: AirmiusColors.bg,
-      appBar: AirmiusTopBar(
-        title: _openedModule == null ? scope.t(_tab.i18nKey) : scope.copy(_openedModule!.title),
-        onSearch: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GlobalSearchScreen())),
-        onMessages: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ConversationsCenterScreen())),
-        onNotifications: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationsCenterScreen())),
-        userLabel: userLabel,
-        userImageUrl: authState.user?.avatarUrl,
-        onOpenProfile: authState.isAuthenticated
-            ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()))
-            : null,
-        onOpenSettings: authState.isAuthenticated
-            ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsCenterScreen()))
-            : null,
-        onSignOut: authState.isAuthenticated ? authState.signOut : null,
-      ),
-      drawer: _ModuleDrawer(
-        currentTab: _tab,
-        onOpenTab: _openTab,
-        onOpenModule: _openModule,
-        onSignOut: () {
-          Navigator.pop(context);
-          authState.signOut();
-        },
-      ),
-      body: page,
-      bottomNavigationBar: NavigationBar(
-        backgroundColor: AirmiusColors.header,
-        indicatorColor: AirmiusColors.blue.withValues(alpha: 0.22),
-        selectedIndex: AppTab.values.indexOf(_tab),
-        onDestinationSelected: (index) => _openTab(AppTab.values[index]),
-        destinations: [
-          NavigationDestination(icon: const Icon(Icons.grid_view_outlined), selectedIcon: const Icon(Icons.grid_view), label: scope.t('dashboard')),
-          NavigationDestination(icon: const Icon(Icons.groups_outlined), selectedIcon: const Icon(Icons.groups), label: scope.t('clubs')),
-          NavigationDestination(icon: const Icon(Icons.dynamic_feed_outlined), selectedIcon: const Icon(Icons.dynamic_feed), label: scope.t('feed.title')),
-          NavigationDestination(icon: const Icon(Icons.notifications_outlined), selectedIcon: const Icon(Icons.notifications), label: scope.t('updates')),
-          NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: scope.t('profile')),
-        ],
+    return WillPopScope(
+      onWillPop: () async => !_handleBackNavigation(),
+      child: Scaffold(
+        backgroundColor: AirmiusColors.bg,
+        appBar: AirmiusTopBar(
+          title: _openedModule == null ? scope.t(_tab.i18nKey) : scope.copy(_openedModule!.title),
+          onSearch: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GlobalSearchScreen())),
+          onMessages: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ConversationsCenterScreen())),
+          onNotifications: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationsCenterScreen())),
+          userLabel: userLabel,
+          userImageUrl: authState.user?.avatarUrl,
+          onOpenProfile: authState.isAuthenticated ? () => _openTab(AppTab.profile) : null,
+          onOpenSettings: authState.isAuthenticated
+              ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsCenterScreen()))
+              : null,
+          onSignOut: authState.isAuthenticated ? authState.signOut : null,
+        ),
+        drawer: _ModuleDrawer(
+          currentTab: _tab,
+          onOpenTab: _openTab,
+          onOpenModule: _openModule,
+          onSignOut: () {
+            Navigator.pop(context);
+            authState.signOut();
+          },
+        ),
+        body: page,
+        bottomNavigationBar: NavigationBar(
+          backgroundColor: AirmiusColors.header,
+          indicatorColor: AirmiusColors.blue.withValues(alpha: 0.22),
+          selectedIndex: AppTab.values.indexOf(_tab),
+          onDestinationSelected: (index) => _openTab(AppTab.values[index]),
+          destinations: [
+            NavigationDestination(icon: const Icon(Icons.grid_view_outlined), selectedIcon: const Icon(Icons.grid_view), label: scope.t('dashboard')),
+            NavigationDestination(icon: const Icon(Icons.groups_outlined), selectedIcon: const Icon(Icons.groups), label: scope.t('clubs')),
+            NavigationDestination(icon: const Icon(Icons.dynamic_feed_outlined), selectedIcon: const Icon(Icons.dynamic_feed), label: scope.t('feed.title')),
+            NavigationDestination(icon: const Icon(Icons.notifications_outlined), selectedIcon: const Icon(Icons.notifications), label: scope.t('updates')),
+            NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: scope.t('profile')),
+          ],
+        ),
       ),
     );
   }
@@ -219,6 +248,7 @@ class _ModuleDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
+    final drawerModules = appModules.where((module) => !_hiddenDrawerModuleTitles.contains(module.title));
     return Drawer(
       backgroundColor: AirmiusColors.header,
       child: SafeArea(
@@ -231,12 +261,11 @@ class _ModuleDrawer extends StatelessWidget {
             _DrawerTab(icon: Icons.groups_outlined, label: scope.t('clubs'), active: currentTab == AppTab.clubs, onTap: () => _selectTab(context, AppTab.clubs)),
             _DrawerTab(icon: Icons.dynamic_feed_outlined, label: scope.t('feed.title'), active: currentTab == AppTab.feed, onTap: () => _selectTab(context, AppTab.feed)),
             _DrawerTab(icon: Icons.notifications_outlined, label: scope.t('updates'), active: currentTab == AppTab.updates, onTap: () => _selectTab(context, AppTab.updates)),
-            _DrawerTab(icon: Icons.person_outline, label: scope.t('profile'), active: currentTab == AppTab.profile, onTap: () => _selectTab(context, AppTab.profile)),
             _DrawerTab(icon: Icons.hub_outlined, label: scope.t('ops.hub'), active: false, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OperationsHubScreen()))),
             const SizedBox(height: 18),
             const Eyebrow('Alle Module'),
             const SizedBox(height: 8),
-            for (final module in appModules)
+            for (final module in drawerModules)
               _DrawerTab(icon: module.icon, label: scope.copy(module.title), active: false, onTap: () {
                 Navigator.pop(context);
                 onOpenModule(module);
@@ -256,6 +285,13 @@ class _ModuleDrawer extends StatelessWidget {
     onOpenTab(tab);
   }
 }
+
+const _hiddenDrawerModuleTitles = {
+  'Vereins-Cockpit',
+  'Vereine & Teams',
+  'Teams',
+  'Feed',
+};
 
 class _DrawerTab extends StatelessWidget {
   const _DrawerTab({required this.icon, required this.label, required this.active, required this.onTap});

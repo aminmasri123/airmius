@@ -113,6 +113,36 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> teamDetail(int teamId) => _json('GET', '/api/v1/teams/$teamId');
 
+  Future<AirmiusJson> teamAttendanceStats(int teamId) => _json('GET', '/api/v1/teams/$teamId/attendance-stats');
+
+  Future<AirmiusJson> teamPenalties(int teamId, {int? eventId}) => _json('GET', '/api/v1/teams/$teamId/penalties', query: {
+        if (eventId != null) 'event_id': '$eventId',
+      });
+
+  Future<AirmiusJson> createTeamPenaltyRule(int teamId, AirmiusJson payload) {
+    return _json('POST', '/api/v1/teams/$teamId/penalty-rules', body: payload);
+  }
+
+  Future<AirmiusJson> updateTeamPenaltyRule(int teamId, int ruleId, AirmiusJson payload) {
+    return _json('PUT', '/api/v1/teams/$teamId/penalty-rules/$ruleId', body: payload);
+  }
+
+  Future<AirmiusJson> deactivateTeamPenaltyRule(int teamId, int ruleId) {
+    return _json('DELETE', '/api/v1/teams/$teamId/penalty-rules/$ruleId');
+  }
+
+  Future<AirmiusJson> createTeamPenaltyFee(int teamId, AirmiusJson payload) {
+    return _json('POST', '/api/v1/teams/$teamId/penalty-fees', body: payload);
+  }
+
+  Future<AirmiusJson> markTeamPenaltyFeePaid(int teamId, int feeId) {
+    return _json('POST', '/api/v1/teams/$teamId/penalty-fees/$feeId/paid');
+  }
+
+  Future<AirmiusJson> cancelTeamPenaltyFee(int teamId, int feeId) {
+    return _json('POST', '/api/v1/teams/$teamId/penalty-fees/$feeId/cancel');
+  }
+
   Future<AirmiusJson> createClubMembershipRequest(int clubId, AirmiusJson payload) {
     return _json('POST', '/api/v1/clubs/$clubId/membership-requests', body: payload);
   }

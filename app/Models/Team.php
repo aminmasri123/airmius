@@ -4,7 +4,10 @@ namespace App\Models;
 
 use App\Models\Club;
 use App\Models\Event;
+use App\Models\TeamFee;
+use App\Models\TeamPenaltyRule;
 use App\Models\User;
+use App\Support\TeamRoles;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -14,7 +17,7 @@ class Team extends Model
 
     protected $fillable = ['name','club_id','sport_type','logo','cover_image'];
 
-    public const ROLES = ['Coach', 'Captain', 'Player'];
+    public const ROLES = TeamRoles::TEAM_ASSIGNABLE_ROLES;
 
 
     public function scopeVisibleTo($query, $user)
@@ -69,5 +72,15 @@ class Team extends Model
     public function joinRequests()
     {
         return $this->hasMany(TeamJoinRequest::class);
+    }
+
+    public function penaltyRules()
+    {
+        return $this->hasMany(TeamPenaltyRule::class);
+    }
+
+    public function fees()
+    {
+        return $this->hasMany(TeamFee::class);
     }
 }

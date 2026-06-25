@@ -1,5 +1,5 @@
-﻿name: airmius_mobile
-description: "Airmius mobile app for clubs, teams, membership requests, messages, events and member services."
+﻿name: airmius
+description: "Airmius is a social platform for clubs, teams, membership requests, messages, events and member services."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -63,7 +63,8 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
-
+
+
   assets:
     - assets/images/airmius-logo.png
     - assets/images/airmius-mark.png

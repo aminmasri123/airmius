@@ -16,11 +16,18 @@ const props = defineProps({
     participantStatuses: Array,
     currentParticipantStatus: String,
     can: { type: Object, default: () => ({ update: false, delete: false, cancel: false }) },
+    penaltyCatalog: { type: Object, default: null },
 })
 
 const showEditModal = ref(false)
 const showDeleteModal = ref(false)
 const showCancelModal = ref(false)
+const penaltyError = ref('')
+const attendanceError = ref('')
+const attendanceSaving = ref(false)
+const eventState = ref(JSON.parse(JSON.stringify(props.event)))
+const currentParticipantStatus = ref(props.currentParticipantStatus)
+const penaltyCatalogState = ref(props.penaltyCatalog || { rules: [], fees: [], can_manage: false })
 const commentForm = useForm({ content: '' })
 const cancelForm = useForm({ reason: '' })
 const page = usePage()
@@ -42,6 +49,7 @@ const visibilityLabels = {
 
 const statusLabels = {
     yes: 'Zusage',
+    late: 'Verspätet',
     maybe: 'Vielleicht',
     no: 'Absage',
 }
@@ -105,6 +113,7 @@ const editForm = useForm({
     location_city: props.event.location_city || '',
     location_country: props.event.location_country || 'DE',
     max_participants: props.event.max_participants || '',
+    uses_penalty_catalog: Boolean(props.event.uses_penalty_catalog),
     notes: props.event.notes || '',
     recurring: props.event.recurring || '',
     recurrence_days: props.event.recurrence_days || [],
@@ -123,6 +132,14 @@ watch(() => editForm.club_id, () => {
     if (editForm.team_id && !filteredTeams.value.some((team) => Number(team.id) === Number(editForm.team_id))) {
         editForm.team_id = ''
     }
+})
+
+watch(() => props.event, (next) => {
+    eventState.value = JSON.parse(JSON.stringify(next))
+}, { deep: true })
+
+watch(() => props.currentParticipantStatus, (next) => {
+    currentParticipantStatus.value = next
 })
 
 const formatDateTime = (date) => {
@@ -149,16 +166,18 @@ const formatDate = (date) => {
     }).format(new Date(date))
 }
 
+const event = computed(() => eventState.value)
+
 const timeRange = computed(() => {
-    if (!props.event.end_time) {
-        return formatDateTime(props.event.start_time)
+    if (!event.value.end_time) {
+        return formatDateTime(event.value.start_time)
     }
 
-    return `${formatDateTime(props.event.start_time)} bis ${formatDateTime(props.event.end_time)}`
+    return `${formatDateTime(event.value.start_time)} bis ${formatDateTime(event.value.end_time)}`
 })
 
 const recurrenceDaysLabel = computed(() => {
-    const days = Array.isArray(props.event.recurrence_days) ? props.event.recurrence_days : []
+    const days = Array.isArray(event.value.recurrence_days) ? event.value.recurrence_days : []
     const labels = {
         0: 'So',
         1: 'Mo',
@@ -172,22 +191,168 @@ const recurrenceDaysLabel = computed(() => {
     return days.map((day) => labels[Number(day)] || day).join(', ')
 })
 
-const yesCount = computed(() => props.event.participants?.filter((participant) => participant.pivot?.status === 'yes').length || 0)
-const maybeCount = computed(() => props.event.participants?.filter((participant) => participant.pivot?.status === 'maybe').length || 0)
-const noCount = computed(() => props.event.participants?.filter((participant) => participant.pivot?.status === 'no').length || 0)
-const hasParticipantLimit = computed(() => Number(props.event.max_participants || 0) > 0)
+const yesCount = computed(() => event.value.participants?.filter((participant) => participant.pivot?.status === 'yes').length || 0)
+const maybeCount = computed(() => event.value.participants?.filter((participant) => participant.pivot?.status === 'maybe').length || 0)
+const noCount = computed(() => event.value.participants?.filter((participant) => participant.pivot?.status === 'no').length || 0)
+const eventPenaltyParticipants = computed(() => (event.value.participants || [])
+    .filter((participant) => ['yes', 'late'].includes(participant.pivot?.status)))
+const activePenaltyRules = computed(() => penaltyCatalogState.value?.rules || [])
+const eventPenaltyFees = computed(() => penaltyCatalogState.value?.fees || [])
+const canManageEventPenalties = computed(() => Boolean(event.value.uses_penalty_catalog && event.value.team_id && (props.can.manage_penalties || penaltyCatalogState.value?.can_manage)))
+const penaltyForm = ref({
+    user_id: '',
+    penalty_rule_id: '',
+    amount: '',
+    minutes: '',
+    note: '',
+    due_date: '',
+})
+const hasParticipantLimit = computed(() => Number(event.value.max_participants || 0) > 0)
 const isFullForYes = computed(() => hasParticipantLimit.value
-    && yesCount.value >= Number(props.event.max_participants)
-    && props.currentParticipantStatus !== 'yes')
+    && yesCount.value >= Number(event.value.max_participants)
+    && currentParticipantStatus.value !== 'yes')
 const capacityLabel = computed(() => hasParticipantLimit.value
-    ? `${yesCount.value}/${props.event.max_participants} Plätze belegt`
+    ? `${yesCount.value}/${event.value.max_participants} Plätze belegt`
     : `${yesCount.value} Zusagen, unbegrenzt`)
 
+const optimisticParticipantForViewer = (status) => {
+    const user = page.props.auth?.user || page.props.user || {}
+
+    return {
+        id: user.id,
+        name: user.name || 'Du',
+        email: user.email || '',
+        profile_photo_url: user.profile_photo_url || null,
+        pivot: { status },
+    }
+}
+
+const applyOptimisticStatus = (status) => {
+    const userId = page.props.auth?.user?.id || page.props.user?.id
+    const participants = [...(eventState.value.participants || [])]
+    const index = participants.findIndex((participant) => Number(participant.id) === Number(userId))
+
+    if (index >= 0) {
+        participants[index] = {
+            ...participants[index],
+            pivot: {
+                ...(participants[index].pivot || {}),
+                status,
+            },
+        }
+    } else {
+        participants.push(optimisticParticipantForViewer(status))
+    }
+
+    eventState.value = {
+        ...eventState.value,
+        participants,
+    }
+    currentParticipantStatus.value = status
+}
+
 const setStatus = (status) => {
-    if (props.event.status === 'cancelled') return
+    if (attendanceSaving.value) return
+    if (event.value.status === 'cancelled') return
     if (status === 'yes' && isFullForYes.value) return
 
-    router.post(route('auth.events.join', props.event.id), { status }, { preserveScroll: true })
+    const previousEvent = JSON.parse(JSON.stringify(eventState.value))
+    const previousStatus = currentParticipantStatus.value
+    attendanceError.value = ''
+    attendanceSaving.value = true
+    applyOptimisticStatus(status)
+
+    router.post(route('auth.events.join', props.event.id), { status }, {
+        preserveScroll: true,
+        onError: (errors) => {
+            eventState.value = previousEvent
+            currentParticipantStatus.value = previousStatus
+            attendanceError.value = Object.values(errors || {})[0] || 'Teilnahme konnte nicht gespeichert werden.'
+        },
+        onFinish: () => {
+            attendanceSaving.value = false
+        },
+    })
+}
+
+const formatMoney = (amount, currency = 'EUR') => new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: currency || 'EUR',
+}).format(Number(amount || 0))
+
+const penaltyRuleLabel = (rule) => {
+    if (!rule) return 'Manueller Betrag'
+    if (rule.calculation_type === 'item') return `${rule.title} (${rule.unit_label || 'Sachstrafe'})`
+    if (rule.calculation_type === 'per_minute') return `${rule.title} (${formatMoney(rule.amount, rule.currency)} / Min.)`
+    if (rule.calculation_type === 'threshold_fixed') return `${rule.title} (ab ${rule.threshold_minutes || 0} Min.)`
+    return `${rule.title} (${formatMoney(rule.amount, rule.currency)})`
+}
+
+const loadEventPenalties = async () => {
+    if (!props.event.team_id) return
+
+    try {
+        const response = await window.axios.get(route('auth.teams.penalties.index', props.event.team_id), {
+            params: { event_id: props.event.id },
+        })
+        penaltyCatalogState.value = response.data.data
+    } catch (error) {
+        penaltyError.value = error.response?.data?.message || 'Event-Strafen konnten nicht geladen werden.'
+    }
+}
+
+const resetPenaltyForm = () => {
+    penaltyForm.value = {
+        user_id: '',
+        penalty_rule_id: '',
+        amount: '',
+        minutes: '',
+        note: '',
+        due_date: '',
+    }
+}
+
+const submitEventPenalty = async () => {
+    if (!props.event.team_id) return
+    penaltyError.value = ''
+
+    try {
+        await window.axios.post(route('auth.teams.penalty-fees.store', props.event.team_id), {
+            event_id: props.event.id,
+            user_id: Number(penaltyForm.value.user_id),
+            penalty_rule_id: penaltyForm.value.penalty_rule_id ? Number(penaltyForm.value.penalty_rule_id) : null,
+            amount: penaltyForm.value.amount === '' ? null : Number(penaltyForm.value.amount),
+            minutes: penaltyForm.value.minutes === '' ? null : Number(penaltyForm.value.minutes),
+            note: penaltyForm.value.note || null,
+            due_date: penaltyForm.value.due_date || null,
+        })
+        resetPenaltyForm()
+        await loadEventPenalties()
+    } catch (error) {
+        penaltyError.value = error.response?.data?.message || 'Strafe konnte nicht gebucht werden.'
+    }
+}
+
+const markEventPenaltyPaid = async (fee) => {
+    if (!props.event.team_id) return
+
+    try {
+        await window.axios.post(route('auth.teams.penalty-fees.paid', [props.event.team_id, fee.id]))
+        await loadEventPenalties()
+    } catch (error) {
+        penaltyError.value = error.response?.data?.message || 'Strafe konnte nicht bezahlt markiert werden.'
+    }
+}
+
+const cancelEventPenalty = async (fee) => {
+    if (!props.event.team_id || !confirm('Diese Strafe stornieren?')) return
+
+    try {
+        await window.axios.post(route('auth.teams.penalty-fees.cancel', [props.event.team_id, fee.id]))
+        await loadEventPenalties()
+    } catch (error) {
+        penaltyError.value = error.response?.data?.message || 'Strafe konnte nicht storniert werden.'
+    }
 }
 
 const submitComment = () => {
@@ -243,6 +408,9 @@ const cancelEvent = () => {
 onMounted(() => {
     if (props.can.update && page.url.includes('edit=1')) {
         showEditModal.value = true
+    }
+    if (props.event.uses_penalty_catalog) {
+        loadEventPenalties()
     }
 })
 </script>
@@ -379,6 +547,9 @@ onMounted(() => {
                 <section class="rounded-lg border border-border bg-card p-5">
                     <h2 class="text-lg font-semibold text-primary">Teilnahme</h2>
                     <p class="mt-1 text-sm text-secondary">{{ capacityLabel }}</p>
+                    <p v-if="attendanceError" class="mt-3 rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-sm font-semibold text-error">
+                        {{ attendanceError }}
+                    </p>
                     <div class="mt-4 grid grid-cols-3 gap-2 text-center">
                         <div class="rounded-lg bg-success/10 p-3 text-success">
                             <p class="text-2xl font-bold">{{ yesCount }}</p>
@@ -400,13 +571,16 @@ onMounted(() => {
                             :key="status"
                             class="rounded-lg border px-4 py-2 text-sm font-semibold"
                             :class="currentParticipantStatus === status ? 'border-buttonPrimary bg-buttonPrimary text-buttonTextPrimary' : 'border-border text-primary hover:bg-muted'"
-                            :disabled="event.status === 'cancelled' || (status === 'yes' && isFullForYes)"
+                            :disabled="attendanceSaving || event.status === 'cancelled' || (status === 'yes' && isFullForYes)"
                             :title="event.status === 'cancelled' ? 'Event ist abgesagt' : status === 'yes' && isFullForYes ? 'Dieses Event ist voll' : ''"
                             @click="setStatus(status)"
                         >
                             {{ statusLabels[status] || status }}
                         </button>
                     </div>
+                    <p v-if="attendanceSaving" class="mt-2 text-xs font-semibold text-secondary">
+                        Teilnahme wird gespeichert…
+                    </p>
                 </section>
 
                 <section class="rounded-lg border border-border bg-card p-5">
@@ -422,6 +596,108 @@ onMounted(() => {
                     </div>
                 </section>
             </aside>
+        </section>
+
+        <section v-if="event.uses_penalty_catalog && event.team_id" class="rounded-lg border border-border bg-card p-5">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Mannschaftskasse</p>
+                    <h2 class="mt-1 text-lg font-semibold text-primary">Event-Strafen</h2>
+                    <p class="mt-1 text-sm text-secondary">
+                        Strafen aus diesem Event werden der internen Teamkasse zugeordnet, nicht der Vereinskasse.
+                    </p>
+                </div>
+                <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-muted" @click="loadEventPenalties">
+                    Aktualisieren
+                </button>
+            </div>
+
+            <p v-if="penaltyError" class="mt-4 rounded-lg border border-error/40 bg-error/10 p-3 text-sm font-semibold text-error">
+                {{ penaltyError }}
+            </p>
+
+            <div class="mt-5 grid gap-5 lg:grid-cols-[360px_1fr]">
+                <form v-if="canManageEventPenalties" class="rounded-lg border border-border bg-inputBg p-4" @submit.prevent="submitEventPenalty">
+                    <h3 class="font-semibold text-primary">Strafe zuweisen</h3>
+                    <div class="mt-4 space-y-3">
+                        <label class="block text-sm font-semibold text-primary">
+                            Spieler
+                            <select v-model="penaltyForm.user_id" required class="mt-1 w-full rounded-lg border-border bg-card text-primary">
+                                <option value="">Anwesenden Spieler auswählen</option>
+                                <option v-for="participant in eventPenaltyParticipants" :key="participant.id" :value="participant.id">
+                                    {{ participant.name }} · {{ statusLabels[participant.pivot?.status] || participant.pivot?.status }}
+                                </option>
+                            </select>
+                        </label>
+                        <label class="block text-sm font-semibold text-primary">
+                            Strafe
+                            <select v-model="penaltyForm.penalty_rule_id" class="mt-1 w-full rounded-lg border-border bg-card text-primary">
+                                <option value="">Manueller Betrag</option>
+                                <option v-for="rule in activePenaltyRules" :key="rule.id" :value="rule.id">
+                                    {{ penaltyRuleLabel(rule) }}
+                                </option>
+                            </select>
+                        </label>
+                        <div class="grid gap-3 sm:grid-cols-3">
+                            <label class="block text-sm font-semibold text-primary">
+                                Minuten
+                                <input v-model="penaltyForm.minutes" type="number" min="0" step="1" class="mt-1 w-full rounded-lg border-border bg-card text-primary" placeholder="0">
+                            </label>
+                            <label class="block text-sm font-semibold text-primary">
+                                Betrag
+                                <input v-model="penaltyForm.amount" type="number" min="0" step="0.01" class="mt-1 w-full rounded-lg border-border bg-card text-primary" placeholder="Automatisch">
+                            </label>
+                            <label class="block text-sm font-semibold text-primary">
+                                Fällig
+                                <input v-model="penaltyForm.due_date" type="date" class="mt-1 w-full rounded-lg border-border bg-card text-primary">
+                            </label>
+                        </div>
+                        <label class="block text-sm font-semibold text-primary">
+                            Notiz
+                            <input v-model="penaltyForm.note" class="mt-1 w-full rounded-lg border-border bg-card text-primary" placeholder="z.B. Tunnel, zu spät, Ball vergessen">
+                        </label>
+                    </div>
+                    <button class="mt-4 w-full rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-bold text-buttonTextPrimary hover:bg-buttonPrimaryHover">
+                        Strafe buchen
+                    </button>
+                </form>
+
+                <div v-else class="rounded-lg border border-border bg-inputBg p-4 text-sm text-secondary">
+                    Du kannst die Event-Strafen ansehen. Buchen dürfen Kassenwart, Trainer, Kapitän oder berechtigte Teamrollen.
+                </div>
+
+                <div class="rounded-lg border border-border bg-inputBg p-4">
+                    <h3 class="font-semibold text-primary">Buchungen dieses Events</h3>
+                    <div class="mt-4 divide-y divide-border overflow-hidden rounded-lg border border-border">
+                        <div v-for="fee in eventPenaltyFees" :key="fee.id" class="bg-card p-3">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <p class="font-semibold text-primary">{{ fee.member?.name || 'Spieler' }}</p>
+                                    <p class="mt-1 text-sm text-secondary">
+                                        {{ fee.rule?.title || fee.note || 'Strafe' }} · {{ formatMoney(fee.amount, fee.currency) }}
+                                    </p>
+                                    <p class="mt-1 text-xs text-secondary">
+                                        Status: {{ fee.status }}
+                                        <span v-if="fee.due_date"> · fällig {{ formatDate(fee.due_date) }}</span>
+                                        <span v-if="fee.paid_at"> · bezahlt {{ formatDate(fee.paid_at) }}</span>
+                                    </p>
+                                </div>
+                                <div v-if="canManageEventPenalties && fee.status === 'open'" class="flex gap-2">
+                                    <button type="button" class="rounded-lg bg-buttonPrimary px-3 py-1 text-xs font-bold text-buttonTextPrimary" @click="markEventPenaltyPaid(fee)">
+                                        Bezahlt
+                                    </button>
+                                    <button type="button" class="rounded-lg border border-border px-3 py-1 text-xs font-semibold text-secondary hover:text-error" @click="cancelEventPenalty(fee)">
+                                        Storno
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <p v-if="!eventPenaltyFees.length" class="bg-card p-4 text-sm text-secondary">
+                            Für dieses Event wurden noch keine Strafen gebucht.
+                        </p>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <section class="rounded-lg border border-border bg-card p-5">
@@ -578,6 +854,16 @@ onMounted(() => {
                             <p class="mt-1 text-xs text-secondary">Nur Zusagen zählen gegen diese Grenze. Vielleicht und Absagen bleiben möglich.</p>
                             <p v-if="editForm.errors.max_participants" class="mt-1 text-sm text-error">{{ editForm.errors.max_participants }}</p>
                         </div>
+
+                        <label class="flex items-start gap-3 rounded-lg border border-border bg-inputBg p-4 text-sm md:col-span-2" :class="editForm.visibility === 'private' && editForm.team_id ? 'text-primary' : 'opacity-60'">
+                            <input v-model="editForm.uses_penalty_catalog" type="checkbox" class="mt-1 rounded border-border bg-card" :disabled="editForm.visibility !== 'private' || !editForm.team_id">
+                            <span>
+                                <span class="block font-semibold">Mit Strafkatalog arbeiten</span>
+                                <span class="mt-1 block text-secondary">
+                                    Berechtigte Teamrollen können während des Events Strafen an anwesende Spieler vergeben.
+                                </span>
+                            </span>
+                        </label>
 
                         <div class="md:col-span-2">
                             <label class="text-sm font-semibold text-primary" for="edit-notes">Notizen</label>

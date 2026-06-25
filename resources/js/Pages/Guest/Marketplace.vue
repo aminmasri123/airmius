@@ -581,8 +581,8 @@ const selectSegment = (segment) => {
             </section>
 
             <section
-                class="mx-auto grid max-w-7xl gap-3 px-3 py-3 sm:px-4 sm:py-4 xl:grid-cols-[minmax(0,1fr)_15rem]"
-                :class="isRtlLocale ? '' : 'xl:grid-cols-[15rem_minmax(0,1fr)]'"
+                class="mx-auto grid max-w-7xl gap-3 px-3 py-3 sm:px-4 sm:py-4"
+                :class="isRtlLocale ? 'xl:grid-cols-[minmax(0,1fr)_15rem]' : 'xl:grid-cols-[15rem_minmax(0,1fr)]'"
             >
                 <div class="hidden md:block xl:hidden">
                     <div class="flex gap-2 overflow-x-auto pb-1" :class="isRtlLocale ? 'justify-end' : ''">

@@ -32,12 +32,25 @@ class EventResource extends JsonResource
             'location_latitude' => $this->location_latitude,
             'location_longitude' => $this->location_longitude,
             'max_participants' => $this->max_participants,
+            'uses_penalty_catalog' => (bool) $this->uses_penalty_catalog,
             'recurring' => (bool) $this->recurring,
             'recurrence_days' => $this->recurrence_days,
             'recurrence_ends_at' => $this->recurrence_ends_at?->toJSON(),
             'club' => new ClubResource($this->whenLoaded('club')),
             'team' => new TeamResource($this->whenLoaded('team')),
             'user' => new UserResource($this->whenLoaded('user')),
+            'participants' => $this->whenLoaded('participants', fn () => $this->participants
+                ->map(fn ($participant) => [
+                    'id' => $participant->id,
+                    'name' => $participant->name,
+                    'email' => $participant->email,
+                    'profile_photo_url' => $participant->profile_photo_url,
+                    'pivot' => [
+                        'status' => $participant->pivot?->status,
+                        'response_reason' => $participant->pivot?->response_reason,
+                    ],
+                ])
+                ->values()),
             'participants_count' => $this->whenCounted('participants'),
             'yes_count' => (int) ($this->yes_count ?? 0),
             'maybe_count' => (int) ($this->maybe_count ?? 0),

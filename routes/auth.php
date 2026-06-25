@@ -31,6 +31,7 @@ use App\Http\Controllers\RoleWorkspaceController;
 use App\Http\Controllers\SportIntegrationController;
 use App\Http\Controllers\SportMapController;
 use App\Http\Controllers\StoryController;
+use App\Http\Controllers\Api\V1\TeamPenaltyController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\SubscriptionInvoiceController;
 use App\Http\Controllers\SubscriptionPlanController;
@@ -263,6 +264,14 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     // TEAMS
     Route::get('/teams', [TeamController::class, 'index'])->name('auth.teams.index');
     Route::get('/teams/{team}', [TeamController::class, 'show'])->name('auth.teams.show');
+    Route::get('/teams/{team}/attendance-stats', [TeamController::class, 'attendanceStats'])->name('auth.teams.attendance-stats');
+    Route::get('/teams/{team}/penalties', [TeamPenaltyController::class, 'index'])->name('auth.teams.penalties.index');
+    Route::post('/teams/{team}/penalty-rules', [TeamPenaltyController::class, 'storeRule'])->name('auth.teams.penalty-rules.store');
+    Route::put('/teams/{team}/penalty-rules/{penaltyRule}', [TeamPenaltyController::class, 'updateRule'])->name('auth.teams.penalty-rules.update');
+    Route::delete('/teams/{team}/penalty-rules/{penaltyRule}', [TeamPenaltyController::class, 'destroyRule'])->name('auth.teams.penalty-rules.destroy');
+    Route::post('/teams/{team}/penalty-fees', [TeamPenaltyController::class, 'storeFee'])->name('auth.teams.penalty-fees.store');
+    Route::post('/teams/{team}/penalty-fees/{fee}/paid', [TeamPenaltyController::class, 'markFeePaid'])->name('auth.teams.penalty-fees.paid');
+    Route::post('/teams/{team}/penalty-fees/{fee}/cancel', [TeamPenaltyController::class, 'cancelFee'])->name('auth.teams.penalty-fees.cancel');
     Route::post('/teams', [TeamController::class, 'store'])->name('auth.teams.store');
     Route::put('/teams/{team}', [TeamController::class, 'update'])->name('auth.teams.update');
     Route::post('/teams/{team}/images', [TeamController::class, 'updateImages'])->name('auth.teams.images.update');

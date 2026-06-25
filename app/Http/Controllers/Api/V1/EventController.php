@@ -153,6 +153,7 @@ class EventController extends Controller
             'location_latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'location_longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'max_participants' => ['nullable', 'integer', 'min:1', 'max:100000'],
+            'uses_penalty_catalog' => ['nullable', 'boolean'],
             'notes' => ['nullable', 'string'],
             'event_timezone' => ['nullable', 'timezone'],
         ]);
@@ -163,10 +164,12 @@ class EventController extends Controller
         if (($data['visibility'] ?? null) === 'public') {
             $data['club_id'] = null;
             $data['team_id'] = null;
+            $data['uses_penalty_catalog'] = false;
         }
 
         if (($data['visibility'] ?? null) === 'organization') {
             $data['team_id'] = null;
+            $data['uses_penalty_catalog'] = false;
         }
 
         if (($data['visibility'] ?? null) === 'private') {
@@ -198,6 +201,14 @@ class EventController extends Controller
                 'club_id' => 'Vereins-Events brauchen einen Verein.',
             ]);
         }
+
+        if (! empty($data['uses_penalty_catalog']) && empty($data['team_id'])) {
+            throw ValidationException::withMessages([
+                'uses_penalty_catalog' => 'Der Strafkatalog ist nur für Team-Events verfügbar.',
+            ]);
+        }
+
+        $data['uses_penalty_catalog'] = (bool) ($data['uses_penalty_catalog'] ?? false);
 
         $event = $this->service->create($data);
 
@@ -281,7 +292,7 @@ class EventController extends Controller
         $user = $request->user();
 
         return $query
-            ->with(['club', 'team', 'user'])
+            ->with(['club', 'team', 'user', 'participants:id,name,email,profile_photo_path'])
             ->withCount([
                 'participants',
                 'comments',

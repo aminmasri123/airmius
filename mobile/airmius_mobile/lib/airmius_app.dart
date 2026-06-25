@@ -107,7 +107,10 @@ class _AirmiusAppState extends State<AirmiusApp> {
             builder: (context, child) {
               return Directionality(
                 textDirection: _language.isRtl ? TextDirection.rtl : TextDirection.ltr,
-                child: child ?? const SizedBox.shrink(),
+                child: DefaultTextStyle.merge(
+                  style: const TextStyle(decoration: TextDecoration.none),
+                  child: child ?? const SizedBox.shrink(),
+                ),
               );
             },
                     home: _services.authState.phase == AirmiusAuthPhase.authenticated

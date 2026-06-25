@@ -7,7 +7,6 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'badge_detail_screen.dart';
-import 'conversations_center_screen.dart';
 import 'edit_form_screen.dart';
 import 'feed_center_screen.dart';
 import 'sport_profile_detail_screen.dart';
@@ -46,10 +45,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final role = hasAuthUser ? _roleLabel(user.role) : 'Nutzer';
         final isLoading = authState.phase == AirmiusAuthPhase.loading || authState.phase == AirmiusAuthPhase.booting;
 
-        return PageFrame(
-          title: scope.t('profile.title'),
-          subtitle: scope.t('profile.subtitle'),
-          child: Column(
+        return DefaultTextStyle.merge(
+          style: const TextStyle(fontSize: 14, decoration: TextDecoration.none),
+          child: PageFrame(
+            title: scope.t('profile.title'),
+            subtitle: scope.t('profile.subtitle'),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _ProfileHero(
@@ -69,7 +70,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 onEdit: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditFormScreen(title: 'Profilinformationen', subtitle: 'Name, Bio, Foto, Sportprofil und Skills bearbeiten.', mode: EditFormMode.profile))),
-                onMessage: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ConversationsCenterScreen())),
                 onMore: () => _openMoreActions(context, authState),
               ),
               const SizedBox(height: 14),
@@ -104,6 +104,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ],
           ),
+          ),
         );
       },
     );
@@ -124,8 +125,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 const Text('Weitere Aktionen', style: TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 14),
-                AirmiusButton(label: 'Profil melden', icon: Icons.flag_outlined, secondary: true, onPressed: () => Navigator.pop(sheetContext)),
-                const SizedBox(height: 10),
                 AirmiusButton(label: 'Daten aktualisieren', icon: Icons.refresh_outlined, secondary: true, onPressed: authState.refreshUser),
                 const SizedBox(height: 10),
                 AirmiusButton(label: 'Abmelden', icon: Icons.logout_outlined, danger: true, onPressed: authState.signOut),
@@ -145,7 +144,6 @@ class _ProfileHero extends StatelessWidget {
     required this.isLoading,
     required this.onOpenProfile,
     required this.onEdit,
-    required this.onMessage,
     required this.onMore,
   });
 
@@ -154,7 +152,6 @@ class _ProfileHero extends StatelessWidget {
   final bool isLoading;
   final VoidCallback onOpenProfile;
   final VoidCallback onEdit;
-  final VoidCallback onMessage;
   final VoidCallback onMore;
 
   @override
@@ -258,7 +255,6 @@ class _ProfileHero extends StatelessWidget {
                           runSpacing: 9,
                           children: [
                             AirmiusButton(label: 'Bearbeiten', icon: Icons.edit_outlined, onPressed: onEdit),
-                            AirmiusButton(label: 'Nachricht', icon: Icons.chat_bubble_outline, secondary: true, onPressed: onMessage),
                             AirmiusButton(label: 'Mehr', icon: Icons.more_horiz, secondary: true, onPressed: onMore),
                           ],
                         ),
@@ -561,7 +557,7 @@ class _OverviewSection extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(color: AirmiusColors.bg, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border, style: BorderStyle.solid)),
-                child: Text(user.bio?.trim().isNotEmpty == true ? user.bio!.trim() : 'Dieses Profil hat noch keine Bio.', style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+                child: Text(user.bio?.trim().isNotEmpty == true ? user.bio!.trim() : 'Dieses Profil hat noch keine Bio.', style: const TextStyle(color: AirmiusColors.muted, fontSize: 15, height: 1.45, fontWeight: FontWeight.w700)),
               ),
             ],
           ),
@@ -619,7 +615,7 @@ class _GamificationOverview extends StatelessWidget {
                           const SizedBox(height: 5),
                           Text('Level ${gamification.level}', style: const TextStyle(color: AirmiusColors.text, fontSize: 30, fontWeight: FontWeight.w900)),
                           const SizedBox(height: 4),
-                          Text('${gamification.xp} XP von ${gamification.nextLevelXp} XP', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+                          Text('${gamification.xp} XP von ${gamification.nextLevelXp} XP', style: const TextStyle(color: AirmiusColors.muted, fontSize: 20, fontWeight: FontWeight.w800)),
                           const SizedBox(height: 3),
                           Text('Noch ${gamification.xpToNextLevel} XP bis zum naechsten Level', style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w900)),
                         ],
@@ -666,7 +662,7 @@ class _GamificationOverview extends StatelessWidget {
                 const Text('BADGES', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 12),
                 if (badges.isEmpty)
-                  const Text('Noch keine Badges vorhanden.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700))
+                  const Text('Noch keine Badges vorhanden.', style: TextStyle(color: AirmiusColors.muted, fontSize: 14, fontWeight: FontWeight.w700))
                 else
                   GridView.count(
                     shrinkWrap: true,
@@ -834,7 +830,7 @@ class _SectionHeader extends StatelessWidget {
       children: [
         Text(title, style: const TextStyle(color: AirmiusColors.text, fontSize: 19, fontWeight: FontWeight.w900)),
         const SizedBox(height: 4),
-        Text(subtitle, style: const TextStyle(color: AirmiusColors.muted, height: 1.35, fontWeight: FontWeight.w700)),
+        Text(subtitle, style: const TextStyle(color: AirmiusColors.muted, fontSize: 13, height: 1.35, fontWeight: FontWeight.w700)),
       ],
     );
   }
@@ -862,7 +858,7 @@ class _InfoRow extends StatelessWidget {
               children: [
                 Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 3),
-                Text(body, style: const TextStyle(color: AirmiusColors.muted, height: 1.3, fontWeight: FontWeight.w700)),
+                Text(body, style: const TextStyle(color: AirmiusColors.muted, fontSize: 13, height: 1.3, fontWeight: FontWeight.w700)),
               ],
             ),
           ),
@@ -887,7 +883,7 @@ class _EmptyProfileState extends StatelessWidget {
         children: [
           Icon(icon, color: AirmiusColors.blue),
           const SizedBox(width: 10),
-          Expanded(child: Text(text, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700, height: 1.35))),
+          Expanded(child: Text(text, style: const TextStyle(color: AirmiusColors.muted, fontSize: 13, fontWeight: FontWeight.w700, height: 1.35))),
         ],
       ),
     );

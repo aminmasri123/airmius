@@ -116,6 +116,7 @@ const form = useForm({
     location_city: '',
     location_country: 'DE',
     max_participants: '',
+    uses_penalty_catalog: false,
     notes: '',
     recurring: '',
     recurrence_days: [],
@@ -259,11 +260,13 @@ watch(() => form.visibility, (visibility) => {
     if (visibility === 'public') {
         form.club_id = ''
         form.team_id = ''
+        form.uses_penalty_catalog = false
         return
     }
 
     if (visibility === 'organization') {
         form.team_id = ''
+        form.uses_penalty_catalog = false
         if (!form.club_id && props.clubs?.length) {
             form.club_id = props.clubs[0].id
         }
@@ -306,6 +309,7 @@ const resetCreateForm = () => {
         'location_city',
         'location_country',
         'max_participants',
+        'uses_penalty_catalog',
         'notes',
         'recurring',
         'recurrence_days',
@@ -440,8 +444,10 @@ const submit = () => {
     if (form.visibility === 'public') {
         form.club_id = ''
         form.team_id = ''
+        form.uses_penalty_catalog = false
     } else if (form.visibility === 'organization') {
         form.team_id = ''
+        form.uses_penalty_catalog = false
     } else if (form.visibility === 'private') {
         form.club_id = ''
     }
@@ -1430,6 +1436,24 @@ const resetFilters = () => {
                                 </div>
                             </div>
 
+                            <label
+                                class="flex items-start gap-3 rounded-lg border border-border bg-inputBg p-4 text-sm"
+                                :class="form.visibility === 'private' && form.team_id ? 'text-primary' : 'opacity-60'"
+                            >
+                                <input
+                                    v-model="form.uses_penalty_catalog"
+                                    type="checkbox"
+                                    class="mt-1 rounded border-border bg-card"
+                                    :disabled="form.visibility !== 'private' || !form.team_id"
+                                >
+                                <span>
+                                    <span class="block font-semibold">Mit Strafkatalog arbeiten</span>
+                                    <span class="mt-1 block text-secondary">
+                                        Berechtigte Teamrollen können während des Events anwesenden Spielern Strafen aus der Mannschaftskasse zuweisen.
+                                    </span>
+                                </span>
+                            </label>
+
                             <div>
                                 <label for="event-notes" class="block text-sm font-semibold text-primary">
                                     {{ $t('events.fields.notes') }}
@@ -1542,16 +1566,25 @@ const resetFilters = () => {
                                         </p>
                                     </div>
 
-                                    <div>
-                                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
-                                            Teilnehmerlimit
-                                        </p>
-                                        <p class="mt-1 text-primary">
-                                            {{ form.max_participants ? `${form.max_participants} Personen` : 'Unbegrenzt' }}
-                                        </p>
-                                    </div>
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                                        Teilnehmerlimit
+                                    </p>
+                                    <p class="mt-1 text-primary">
+                                        {{ form.max_participants ? `${form.max_participants} Personen` : 'Unbegrenzt' }}
+                                    </p>
+                                </div>
 
-                                        <div>
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+                                        Strafkatalog
+                                    </p>
+                                    <p class="mt-1 text-primary">
+                                        {{ form.uses_penalty_catalog ? 'Aktiv für dieses Team-Event' : 'Nicht aktiv' }}
+                                    </p>
+                                </div>
+
+                                <div>
                                             <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
                                                 Ort
                                             </p>
