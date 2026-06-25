@@ -134,11 +134,40 @@ class AirmiusAuthState extends ChangeNotifier {
     _setPhase(AirmiusAuthPhase.loading);
     try {
       final guestClient = clientFactory(null);
+      final email = payload['email']?.toString().trim() ?? '';
+      if (email.isNotEmpty) {
+        final existingMessage = await _existingRegistrationEmailMessage(guestClient, email);
+        if (existingMessage != null) {
+          _error = existingMessage;
+          _setPhase(AirmiusAuthPhase.error);
+          return;
+        }
+      }
+
       final json = await guestClient.register(payload);
       await _completeTokenSignIn(json, locale: locale, missingTokenMessage: 'Registrierung fehlgeschlagen: Token vom Server fehlt.');
     } catch (error) {
       _error = error is AirmiusApiException ? _readableAuthError(error) : error.toString();
       _setPhase(AirmiusAuthPhase.error);
+    }
+  }
+
+  Future<String?> _existingRegistrationEmailMessage(AirmiusApiClient client, String email) async {
+    try {
+      final json = await client.registrationEmailStatus(email: email);
+      final data = json['data'];
+      final exists = data is JsonMap ? _truthy(data['exists']) : _truthy(json['exists']);
+      if (!exists) return null;
+
+      final message = data is JsonMap ? data['message']?.toString().trim() : json['message']?.toString().trim();
+      return message == null || message.isEmpty ? 'Dieses Konto existiert bereits. Bitte melde dich an oder nutze Passwort vergessen.' : message;
+    } on AirmiusApiException catch (error) {
+      if (error.statusCode == 404 || error.statusCode == 405) {
+        return null;
+      }
+      return null;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -359,6 +388,12 @@ class AirmiusAuthState extends ChangeNotifier {
       return 'Dieses Konto existiert bereits. Bitte melde dich an oder nutze Passwort vergessen.';
     }
     return message;
+  }
+
+  bool _truthy(Object? value) {
+    if (value == true) return true;
+    final normalized = value?.toString().trim().toLowerCase();
+    return normalized == 'true' || normalized == '1' || normalized == 'yes';
   }
 
   Map<String, dynamic>? _safeJsonDecode(String body) {

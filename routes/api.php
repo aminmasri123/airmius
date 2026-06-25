@@ -58,6 +58,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         ->middleware('throttle:10,1')
         ->name('auth.login');
 
+    Route::get('/auth/register/email', [AuthController::class, 'registrationEmail'])
+        ->middleware('throttle:20,1')
+        ->name('auth.register.email');
+
     Route::post('/auth/register', [AuthController::class, 'register'])
         ->middleware('throttle:5,1')
         ->name('auth.register');

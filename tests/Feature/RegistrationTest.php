@@ -119,6 +119,18 @@ class RegistrationTest extends TestCase
             ->assertJsonPath('errors.email.0', 'Dieses Konto existiert bereits. Bitte melde dich an oder nutze Passwort vergessen.');
     }
 
+    public function test_mobile_api_can_check_existing_registration_email(): void
+    {
+        User::factory()->create(['email' => 'existing@example.com']);
+
+        $response = $this->getJson('/api/v1/auth/register/email?email=existing@example.com');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.exists', true)
+            ->assertJsonPath('data.message', 'Dieses Konto existiert bereits. Bitte melde dich an oder nutze Passwort vergessen.');
+    }
+
     public function test_minor_users_need_guardian_email(): void
     {
         if (! Features::enabled(Features::registration())) {

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Actions\Fortify\CreateNewUser;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\UserResource;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -12,6 +13,24 @@ use Laravel\Fortify\Features;
 
 class AuthController extends Controller
 {
+    public function registrationEmail(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'string', 'email', 'max:255'],
+        ]);
+
+        $exists = User::where('email', $validated['email'])->exists();
+
+        return response()->json([
+            'data' => [
+                'exists' => $exists,
+                'message' => $exists
+                    ? 'Dieses Konto existiert bereits. Bitte melde dich an oder nutze Passwort vergessen.'
+                    : null,
+            ],
+        ]);
+    }
+
     public function register(Request $request, CreateNewUser $creator)
     {
         abort_unless(Features::enabled(Features::registration()), 404);

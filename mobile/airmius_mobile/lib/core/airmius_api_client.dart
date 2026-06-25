@@ -71,6 +71,10 @@ class AirmiusApiClient {
     return _json('POST', '/api/v1/auth/register', body: payload);
   }
 
+  Future<AirmiusJson> registrationEmailStatus({required String email}) {
+    return _json('GET', '/api/v1/auth/register/email', query: {'email': email});
+  }
+
   Future<AirmiusJson> me() async {
     try {
       return await _json('GET', '/api/v1/me');
