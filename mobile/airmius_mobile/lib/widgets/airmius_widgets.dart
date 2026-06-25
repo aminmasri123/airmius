@@ -863,6 +863,8 @@ class AirmiusTextField extends StatelessWidget {
     this.controller,
     this.focusNode,
     this.onChanged,
+    this.keyboardType,
+    this.obscureText = false,
   });
 
   final String label;
@@ -872,6 +874,8 @@ class AirmiusTextField extends StatelessWidget {
   final TextEditingController? controller;
   final FocusNode? focusNode;
   final ValueChanged<String>? onChanged;
+  final TextInputType? keyboardType;
+  final bool obscureText;
 
   @override
   Widget build(BuildContext context) {
@@ -879,6 +883,8 @@ class AirmiusTextField extends StatelessWidget {
       controller: controller,
       focusNode: focusNode,
       onChanged: onChanged,
+      keyboardType: keyboardType,
+      obscureText: obscureText,
       maxLines: maxLines,
       style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w700),
       decoration: InputDecoration(

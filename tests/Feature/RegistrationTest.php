@@ -62,6 +62,37 @@ class RegistrationTest extends TestCase
         $response->assertRedirect(config('fortify.home'));
     }
 
+    public function test_new_users_can_register_through_mobile_api(): void
+    {
+        if (! Features::enabled(Features::registration())) {
+            $this->markTestSkipped('Registration support is not enabled.');
+        }
+
+        $this->seed(RolesPermissionsSeeder::class);
+        Mail::fake();
+
+        $response = $this->postJson('/api/v1/auth/register', [
+            'first_name' => 'Mobile',
+            'last_name' => 'User',
+            'email' => 'mobile@example.com',
+            'country' => 'DE',
+            'birth_date' => now()->subYears(16)->subDay()->toDateString(),
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'terms' => true,
+            'device_name' => 'airmius-mobile-test',
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('data.token_type', 'Bearer')
+            ->assertJsonPath('data.user.email', 'mobile@example.com');
+
+        $this->assertNotEmpty($response->json('data.token'));
+        $this->assertTrue(User::where('email', 'mobile@example.com')->firstOrFail()->hasRole('player'));
+        Mail::assertNothingSent();
+    }
+
     public function test_minor_users_need_guardian_email(): void
     {
         if (! Features::enabled(Features::registration())) {
@@ -84,6 +115,35 @@ class RegistrationTest extends TestCase
 
         $response->assertSessionHasErrors('guardian_email');
         $this->assertGuest();
+    }
+
+    public function test_minor_users_need_guardian_email_through_mobile_api(): void
+    {
+        if (! Features::enabled(Features::registration())) {
+            $this->markTestSkipped('Registration support is not enabled.');
+        }
+
+        $this->seed(RolesPermissionsSeeder::class);
+        Mail::fake();
+
+        $response = $this->postJson('/api/v1/auth/register', [
+            'first_name' => 'Minor',
+            'last_name' => 'Mobile',
+            'email' => 'minor-mobile@example.com',
+            'country' => 'DE',
+            'birth_date' => now()->subYears(15)->toDateString(),
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'terms' => true,
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('guardian_email');
+
+        $this->assertDatabaseMissing('users', [
+            'email' => 'minor-mobile@example.com',
+        ]);
     }
 
     public function test_minor_users_are_registered_pending_guardian_consent(): void

@@ -118,26 +118,26 @@ class AirmiusAuthState extends ChangeNotifier {
     try {
       final guestClient = clientFactory(null);
       final json = await guestClient.login(email: email, password: password);
-      final token = _tokenFrom(json);
-      if (token.isEmpty) {
-        _error = 'Login fehlgeschlagen: Token vom Server fehlt.';
-        _setPhase(AirmiusAuthPhase.error);
-        return;
-      }
-
-      final loginUser = _extractUser(json);
-      final tokenSession = AirmiusSession(token: token, locale: locale, user: loginUser);
-      final user = await _refreshUserProfileIfPossible(tokenSession);
-      final session = tokenSession.copyWith(user: user, clearUser: user == null);
-      await tokenStore.write(session);
-      _session = session;
-      _setPhase(AirmiusAuthPhase.authenticated);
+      await _completeTokenSignIn(json, locale: locale, missingTokenMessage: 'Login fehlgeschlagen: Token vom Server fehlt.');
     } catch (error) {
       if (error is AirmiusApiException) {
         _error = _readableAuthError(error);
       } else {
         _error = error.toString();
       }
+      _setPhase(AirmiusAuthPhase.error);
+    }
+  }
+
+  Future<void> register({required JsonMap payload, String locale = 'de'}) async {
+    _error = null;
+    _setPhase(AirmiusAuthPhase.loading);
+    try {
+      final guestClient = clientFactory(null);
+      final json = await guestClient.register(payload);
+      await _completeTokenSignIn(json, locale: locale, missingTokenMessage: 'Registrierung fehlgeschlagen: Token vom Server fehlt.');
+    } catch (error) {
+      _error = error is AirmiusApiException ? _readableAuthError(error) : error.toString();
       _setPhase(AirmiusAuthPhase.error);
     }
   }
@@ -211,6 +211,23 @@ class AirmiusAuthState extends ChangeNotifier {
   void _setPhase(AirmiusAuthPhase phase) {
     _phase = phase;
     notifyListeners();
+  }
+
+  Future<void> _completeTokenSignIn(JsonMap json, {required String locale, required String missingTokenMessage}) async {
+    final token = _tokenFrom(json);
+    if (token.isEmpty) {
+      _error = missingTokenMessage;
+      _setPhase(AirmiusAuthPhase.error);
+      return;
+    }
+
+    final loginUser = _extractUser(json);
+    final tokenSession = AirmiusSession(token: token, locale: locale, user: loginUser);
+    final user = await _refreshUserProfileIfPossible(tokenSession);
+    final session = tokenSession.copyWith(user: user, clearUser: user == null);
+    await tokenStore.write(session);
+    _session = session;
+    _setPhase(AirmiusAuthPhase.authenticated);
   }
 
   String _tokenFrom(JsonMap json) {

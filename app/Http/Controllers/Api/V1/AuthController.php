@@ -2,14 +2,32 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Fortify\CreateNewUser;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Laravel\Fortify\Features;
 
 class AuthController extends Controller
 {
+    public function register(Request $request, CreateNewUser $creator)
+    {
+        abort_unless(Features::enabled(Features::registration()), 404);
+
+        $user = $creator->create($request->all());
+        $tokenName = trim((string) $request->input('device_name', '')) ?: 'mobile';
+
+        return response()->json([
+            'data' => [
+                'token' => $user->createToken($tokenName)->plainTextToken,
+                'token_type' => 'Bearer',
+                'user' => new UserResource($user->loadMissing(['roles', 'permissions'])),
+            ],
+        ], 201);
+    }
+
     public function login(Request $request)
     {
         $credentials = $request->validate([

@@ -58,6 +58,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         ->middleware('throttle:10,1')
         ->name('auth.login');
 
+    Route::post('/auth/register', [AuthController::class, 'register'])
+        ->middleware('throttle:5,1')
+        ->name('auth.register');
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
 

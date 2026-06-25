@@ -121,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           label: 'Registrieren / Passwort vergessen',
                           icon: Icons.manage_accounts_outlined,
                           secondary: true,
-                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AuthFlowsScreen())),
+                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AuthFlowsScreen(onSocialLogin: widget.onSocialLogin))),
                         ),
                         const SizedBox(height: 10),
                         AirmiusButton(

@@ -67,6 +67,10 @@ class AirmiusApiClient {
     }
   }
 
+  Future<AirmiusJson> register(AirmiusJson payload) {
+    return _json('POST', '/api/v1/auth/register', body: payload);
+  }
+
   Future<AirmiusJson> me() async {
     try {
       return await _json('GET', '/api/v1/me');
