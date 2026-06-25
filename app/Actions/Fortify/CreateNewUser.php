@@ -35,6 +35,8 @@ class CreateNewUser implements CreatesNewUsers
             'guardian_email' => ['nullable', 'string', 'email', 'max:255', 'different:email'],
             'password' => $this->passwordRules(),
             'terms' => ['accepted', 'required'],
+        ], [
+            'email.unique' => 'Dieses Konto existiert bereits. Bitte melde dich an oder nutze Passwort vergessen.',
         ])->after(function ($validator) use ($input) {
             if (! isset($input['birth_date'])) {
                 return;

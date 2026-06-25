@@ -122,6 +122,11 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
     final error = services.authState.error;
     if (error != null && error.isNotEmpty) {
       setState(() => _registerError = error);
+      return;
+    }
+
+    if (services.authState.isAuthenticated) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
 

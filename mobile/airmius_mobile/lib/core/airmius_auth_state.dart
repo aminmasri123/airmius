@@ -322,17 +322,43 @@ class AirmiusAuthState extends ChangeNotifier {
       if (message is String && message.trim().isNotEmpty) return message.trim();
       final errors = json['errors'];
       if (errors is Map) {
+        final emailErrors = errors['email'];
+        final emailMessage = _firstValidationMessage(emailErrors);
+        if (_isUniqueValidationMessage(emailMessage)) {
+          return 'Dieses Konto existiert bereits. Bitte melde dich an oder nutze Passwort vergessen.';
+        }
+
         for (final entry in errors.values) {
-          if (entry is List && entry.isNotEmpty && entry.first is String) {
-            final first = entry.first.toString().trim();
-            if (first.isNotEmpty) return first;
-          }
+          final first = _firstValidationMessage(entry);
+          if (first.isNotEmpty) return _readableValidationMessage(first);
         }
       }
     } catch (_) {
       return '';
     }
     return '';
+  }
+
+  String _firstValidationMessage(Object? value) {
+    if (value is List && value.isNotEmpty) {
+      return value.first.toString().trim();
+    }
+    if (value is String) {
+      return value.trim();
+    }
+    return '';
+  }
+
+  bool _isUniqueValidationMessage(String message) {
+    final normalized = message.toLowerCase();
+    return normalized.contains('validation.unique') || normalized.contains('already been taken') || normalized.contains('bereits vergeben');
+  }
+
+  String _readableValidationMessage(String message) {
+    if (_isUniqueValidationMessage(message)) {
+      return 'Dieses Konto existiert bereits. Bitte melde dich an oder nutze Passwort vergessen.';
+    }
+    return message;
   }
 
   Map<String, dynamic>? _safeJsonDecode(String body) {

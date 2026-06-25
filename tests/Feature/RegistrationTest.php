@@ -93,6 +93,32 @@ class RegistrationTest extends TestCase
         Mail::assertNothingSent();
     }
 
+    public function test_mobile_api_rejects_duplicate_registration_email(): void
+    {
+        if (! Features::enabled(Features::registration())) {
+            $this->markTestSkipped('Registration support is not enabled.');
+        }
+
+        $this->seed(RolesPermissionsSeeder::class);
+        User::factory()->create(['email' => 'existing@example.com']);
+
+        $response = $this->postJson('/api/v1/auth/register', [
+            'first_name' => 'Existing',
+            'last_name' => 'User',
+            'email' => 'existing@example.com',
+            'country' => 'DE',
+            'birth_date' => now()->subYears(16)->subDay()->toDateString(),
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'terms' => true,
+        ]);
+
+        $response
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('email')
+            ->assertJsonPath('errors.email.0', 'Dieses Konto existiert bereits. Bitte melde dich an oder nutze Passwort vergessen.');
+    }
+
     public function test_minor_users_need_guardian_email(): void
     {
         if (! Features::enabled(Features::registration())) {
