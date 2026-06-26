@@ -51,6 +51,7 @@ class MeController extends Controller
             'country' => ['required', 'string', 'size:2'],
             'birth_date' => ['required', 'date', 'before_or_equal:today'],
             'gender' => ['required', 'string', Rule::in(['female', 'male', 'diverse', 'not_specified'])],
+            'bio' => ['nullable', 'string', 'max:1000'],
             'guardian_email' => ['nullable', 'string', 'email', 'max:255', 'different:email'],
         ]);
 
@@ -75,6 +76,7 @@ class MeController extends Controller
             'country' => strtoupper($data['country']),
             'birth_date' => $birthDate->toDateString(),
             'gender' => $data['gender'],
+            'bio' => array_key_exists('bio', $data) ? $data['bio'] : $user->bio,
             'guardian_email' => $guardianEmail,
             'guardian_consent_requested_at' => $requiresGuardianConsent ? now() : null,
             'guardian_consent_rejected_at' => null,

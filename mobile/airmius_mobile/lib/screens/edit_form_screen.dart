@@ -24,6 +24,8 @@ class _EditFormScreenState extends State<EditFormScreen> {
   String _role = 'Mitglied';
   String _gender = '';
   bool _profileInitialized = false;
+  bool _saving = false;
+  String? _error;
   late final TextEditingController _firstNameController;
   late final TextEditingController _lastNameController;
   late final TextEditingController _bioController;
@@ -94,10 +96,18 @@ class _EditFormScreenState extends State<EditFormScreen> {
             ),
             const SizedBox(height: 12),
             ..._fieldsForMode(),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(_error!, style: const TextStyle(color: AirmiusColors.red, fontWeight: FontWeight.w800)),
+            ],
             const SizedBox(height: 16),
-            AirmiusButton(label: 'Speichern', icon: Icons.save_outlined, onPressed: () => Navigator.pop(context)),
+            AirmiusButton(
+              label: _saving ? 'Speichere...' : 'Speichern',
+              icon: Icons.save_outlined,
+              onPressed: _saving ? null : _save,
+            ),
             const SizedBox(height: 10),
-            AirmiusButton(label: 'Abbrechen', icon: Icons.close_outlined, secondary: true, onPressed: () => Navigator.pop(context)),
+            AirmiusButton(label: 'Abbrechen', icon: Icons.close_outlined, secondary: true, onPressed: _saving ? null : () => Navigator.pop(context)),
           ],
         ),
       ),
@@ -273,6 +283,67 @@ class _EditFormScreenState extends State<EditFormScreen> {
       ])),
     ];
   }
+
+  Future<void> _save() async {
+    if (widget.mode != EditFormMode.profile) {
+      Navigator.pop(context);
+      return;
+    }
+
+    final services = AirmiusServicesScope.of(context);
+    final authState = services.authState;
+    final user = authState.user;
+    final firstName = _firstNameController.text.trim();
+    final lastName = _lastNameController.text.trim();
+    final country = (user?.country ?? 'DE').trim().toUpperCase();
+    final birthDate = user?.birthDate;
+
+    if (firstName.isEmpty || lastName.isEmpty || _gender.isEmpty) {
+      setState(() => _error = 'Bitte Vorname, Nachname und Geschlecht ausfuellen.');
+      return;
+    }
+
+    if (birthDate == null || country.length != 2) {
+      setState(() => _error = 'Bitte vervollstaendige zuerst Geburtsdatum und Land.');
+      return;
+    }
+
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+
+    await authState.completeProfile(
+      payload: {
+        'first_name': firstName,
+        'last_name': lastName,
+        'birth_date': _dateText(birthDate),
+        'gender': _gender,
+        'country': country,
+        'bio': _bioController.text.trim(),
+        'guardian_email': user?.guardianEmail ?? '',
+      },
+    );
+
+    if (!mounted) return;
+
+    final error = authState.error;
+    if (error != null && error.isNotEmpty) {
+      setState(() {
+        _saving = false;
+        _error = error;
+      });
+      return;
+    }
+
+    Navigator.pop(context);
+  }
 }
 
 const _genderOptions = ['female', 'male', 'diverse', 'not_specified'];
+
+String _dateText(DateTime date) {
+  final month = date.month.toString().padLeft(2, '0');
+  final day = date.day.toString().padLeft(2, '0');
+  return '${date.year}-$month-$day';
+}

@@ -53,7 +53,7 @@ class _ProfileCompletionGateScreenState extends State<ProfileCompletionGateScree
     final error = _localError ?? widget.authState.error;
 
     return Scaffold(
-      backgroundColor: AirmiusColors.background,
+      backgroundColor: AirmiusColors.bg,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -203,7 +203,7 @@ class GuardianConsentPendingScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final email = authState.user?.guardianEmail;
     return Scaffold(
-      backgroundColor: AirmiusColors.background,
+      backgroundColor: AirmiusColors.bg,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
