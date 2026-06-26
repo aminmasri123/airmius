@@ -83,7 +83,7 @@ const navItems = [
                 </Link>
             </div>
 
-            <div class="flex shrink-0 items-center gap-2 sm:gap-3">
+            <div class="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
                 <LanguageDropdown />
 
                 <Link

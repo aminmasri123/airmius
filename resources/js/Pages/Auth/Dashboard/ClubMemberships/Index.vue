@@ -688,25 +688,25 @@ const inviteExternalMember = (member) => {
         </section>
 
         <template v-else-if="selectedClub">
-            <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <div class="surface-card p-4">
+            <section class="grid grid-cols-2 gap-3 xl:grid-cols-4">
+                <div class="surface-card p-3 sm:p-4">
                     <div class="text-xs font-semibold uppercase text-secondary">Aktive Mitglieder</div>
-                    <div class="mt-2 text-2xl font-bold text-primary">{{ activeMembersCount }}</div>
+                    <div class="mt-2 text-xl font-bold text-primary sm:text-2xl">{{ activeMembersCount }}</div>
                     <div class="mt-1 text-xs text-secondary">von {{ members.length }} verknüpften Personen</div>
                 </div>
-                <div class="surface-card p-4">
+                <div class="surface-card p-3 sm:p-4">
                     <div class="text-xs font-semibold uppercase text-secondary">Offen</div>
-                    <div class="mt-2 text-2xl font-bold text-primary">{{ formatMoney(openInvoiceTotal) }}</div>
+                    <div class="mt-2 text-xl font-bold text-primary sm:text-2xl">{{ formatMoney(openInvoiceTotal) }}</div>
                     <div class="mt-1 text-xs text-secondary">{{ openInvoices.length }} offene Rechnung(en)</div>
                 </div>
-                <div class="surface-card p-4">
+                <div class="surface-card p-3 sm:p-4">
                     <div class="text-xs font-semibold uppercase text-secondary">SEPA bereit</div>
-                    <div class="mt-2 text-2xl font-bold text-primary">{{ sepaReadyMembersCount }}</div>
+                    <div class="mt-2 text-xl font-bold text-primary sm:text-2xl">{{ sepaReadyMembersCount }}</div>
                     <div class="mt-1 text-xs text-secondary">Mandate mit IBAN und Referenz</div>
                 </div>
-                <div class="surface-card p-4">
+                <div class="surface-card p-3 sm:p-4">
                     <div class="text-xs font-semibold uppercase text-secondary">Wiederkehrende Beiträge</div>
-                    <div class="mt-2 text-2xl font-bold text-primary">{{ formatMoney(recurringContributionTotal) }}</div>
+                    <div class="mt-2 text-xl font-bold text-primary sm:text-2xl">{{ formatMoney(recurringContributionTotal) }}</div>
                     <div class="mt-1 text-xs text-secondary">Summe aktiver Beitragssätze</div>
                 </div>
             </section>

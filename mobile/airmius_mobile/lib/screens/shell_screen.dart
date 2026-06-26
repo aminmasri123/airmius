@@ -1,4 +1,7 @@
 ﻿import 'package:flutter/material.dart';
+
+import 'dart:async';
+
 import 'operations_hub_screen.dart';
 
 import '../core/airmius_l10n.dart';
@@ -56,6 +59,31 @@ class _ShellScreenState extends State<ShellScreen> {
   ModuleDefinition? _openedModule;
   final List<AppTab> _tabHistory = [];
   final Set<int> _requestedClubIds = {};
+  int _notificationCount = 0;
+  Timer? _notificationTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshNotificationCount());
+    _notificationTimer = Timer.periodic(const Duration(seconds: 45), (_) => _refreshNotificationCount());
+  }
+
+  @override
+  void dispose() {
+    _notificationTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshNotificationCount() async {
+    try {
+      final page = await AirmiusServicesScope.of(context).repositories.notifications.notifications();
+      if (!mounted) return;
+      setState(() => _notificationCount = page.unreadCount ?? page.items.where((item) => item.unread).length);
+    } catch (_) {
+      // Badge refresh is best-effort; the notification center still shows its own error state.
+    }
+  }
 
   void _openTab(AppTab tab, {bool remember = true}) {
     if (_openedModule == null && _tab == tab) return;
@@ -66,6 +94,9 @@ class _ShellScreenState extends State<ShellScreen> {
       _tab = tab;
       _openedModule = null;
     });
+    if (tab == AppTab.updates) {
+      _refreshNotificationCount();
+    }
   }
 
   bool _handleBackNavigation() {
@@ -155,6 +186,7 @@ class _ShellScreenState extends State<ShellScreen> {
       _tab = AppTab.updates;
       _openedModule = null;
     });
+    _refreshNotificationCount();
   }
 
   void _withdrawClub(ClubSummary club) {
@@ -188,7 +220,11 @@ class _ShellScreenState extends State<ShellScreen> {
           title: _openedModule == null ? scope.t(_tab.i18nKey) : scope.copy(_openedModule!.title),
           onSearch: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GlobalSearchScreen())),
           onMessages: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ConversationsCenterScreen())),
-          onNotifications: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationsCenterScreen())),
+          onNotifications: () async {
+            await Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationsCenterScreen()));
+            if (mounted) _refreshNotificationCount();
+          },
+          notificationCount: _notificationCount,
           userLabel: userLabel,
           userImageUrl: authState.user?.avatarUrl,
           onOpenProfile: authState.isAuthenticated ? () => _openTab(AppTab.profile) : null,
@@ -216,11 +252,47 @@ class _ShellScreenState extends State<ShellScreen> {
             NavigationDestination(icon: const Icon(Icons.grid_view_outlined), selectedIcon: const Icon(Icons.grid_view), label: scope.t('dashboard')),
             NavigationDestination(icon: const Icon(Icons.groups_outlined), selectedIcon: const Icon(Icons.groups), label: scope.t('clubs')),
             NavigationDestination(icon: const Icon(Icons.dynamic_feed_outlined), selectedIcon: const Icon(Icons.dynamic_feed), label: scope.t('feed.title')),
-            NavigationDestination(icon: const Icon(Icons.notifications_outlined), selectedIcon: const Icon(Icons.notifications), label: scope.t('updates')),
+            NavigationDestination(icon: _NavigationBadgeIcon(icon: Icons.notifications_outlined, count: _notificationCount), selectedIcon: _NavigationBadgeIcon(icon: Icons.notifications, count: _notificationCount), label: scope.t('updates')),
             NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: scope.t('profile')),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _NavigationBadgeIcon extends StatelessWidget {
+  const _NavigationBadgeIcon({required this.icon, required this.count});
+
+  final IconData icon;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(icon),
+        if (count > 0)
+          Positioned(
+            right: -9,
+            top: -7,
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                color: AirmiusColors.red,
+                borderRadius: BorderRadius.circular(99),
+                border: Border.all(color: AirmiusColors.header, width: 2),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                count > 99 ? '99+' : '$count',
+                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900, height: 1),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -326,4 +398,3 @@ class _DrawerTab extends StatelessWidget {
     );
   }
 }
-

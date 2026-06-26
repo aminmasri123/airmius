@@ -527,6 +527,7 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
     this.onSearch,
     this.onMessages,
     this.onNotifications,
+    this.notificationCount = 0,
     this.userLabel,
     this.userImageUrl,
     this.onOpenProfile,
@@ -538,6 +539,7 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onSearch;
   final VoidCallback? onMessages;
   final VoidCallback? onNotifications;
+  final int notificationCount;
   final String? userLabel;
   final String? userImageUrl;
   final VoidCallback? onOpenProfile;
@@ -584,7 +586,7 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
         IconButton(
           tooltip: 'Benachrichtigungen',
           onPressed: onNotifications,
-          icon: const Icon(Icons.notifications_none, color: AirmiusColors.muted),
+          icon: _NotificationBell(count: notificationCount),
         ),
         if (onOpenProfile != null || onOpenSettings != null || onSignOut != null)
           _ProfileMenuBubble(
@@ -597,6 +599,41 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
         else
           UserBubble(label: fallbackLabel, imageUrl: userImageUrl),
         const SizedBox(width: 12),
+      ],
+    );
+  }
+}
+
+class _NotificationBell extends StatelessWidget {
+  const _NotificationBell({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const Icon(Icons.notifications_none, color: AirmiusColors.muted),
+        if (count > 0)
+          Positioned(
+            right: -6,
+            top: -7,
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                color: AirmiusColors.red,
+                borderRadius: BorderRadius.circular(99),
+                border: Border.all(color: AirmiusColors.header, width: 2),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                count > 99 ? '99+' : '$count',
+                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900, height: 1),
+              ),
+            ),
+          ),
       ],
     );
   }

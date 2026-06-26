@@ -1174,11 +1174,13 @@ class AirmiusPage<T> {
     required this.items,
     required this.currentPage,
     required this.lastPage,
+    this.unreadCount,
   });
 
   final List<T> items;
   final int currentPage;
   final int lastPage;
+  final int? unreadCount;
 
   factory AirmiusPage.fromJson(JsonMap json, T Function(JsonMap json) map) {
     final rawItems = json['data'];
@@ -1188,6 +1190,7 @@ class AirmiusPage<T> {
       items: list,
       currentPage: meta is JsonMap ? _int(meta['current_page'], fallback: 1) : _int(json['current_page'], fallback: 1),
       lastPage: meta is JsonMap ? _int(meta['last_page'], fallback: 1) : _int(json['last_page'], fallback: 1),
+      unreadCount: meta is JsonMap && meta.containsKey('unread_count') ? _int(meta['unread_count']) : null,
     );
   }
 }
