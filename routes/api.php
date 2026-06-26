@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\AccountDeletionController as MobileAccountDeletionController;
 use App\Http\Controllers\Api\V1\ChatController;
 use App\Http\Controllers\Api\V1\ClubController;
 use App\Http\Controllers\Api\V1\CommentController as MobileCommentController;
@@ -68,6 +69,12 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
+        Route::post('/account/deletion-code', [MobileAccountDeletionController::class, 'sendCode'])
+            ->middleware('throttle:5,1')
+            ->name('account.deletion-code');
+        Route::delete('/account', [MobileAccountDeletionController::class, 'destroy'])
+            ->middleware('throttle:5,1')
+            ->name('account.destroy');
 
         Route::get('/me', [MeController::class, 'show'])->name('me.show');
         Route::patch('/me/language', [MeController::class, 'updateLanguage'])->name('me.language');

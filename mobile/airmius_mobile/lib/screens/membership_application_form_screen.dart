@@ -1,5 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 
+import '../core/airmius_api_models.dart';
+import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'club_policy_documents_screen.dart';
@@ -13,15 +15,15 @@ class MembershipApplicationFormScreen extends StatefulWidget {
 }
 
 class _MembershipApplicationFormScreenState extends State<MembershipApplicationFormScreen> {
-  final _firstName = TextEditingController(text: 'ZBB');
-  final _lastName = TextEditingController(text: 'Konto');
-  final _birthday = TextEditingController(text: '01.01.2000');
-  final _email = TextEditingController(text: 'zbb.bop.it@gmail.com');
+  final _firstName = TextEditingController();
+  final _lastName = TextEditingController();
+  final _birthday = TextEditingController();
+  final _email = TextEditingController();
   final _phone = TextEditingController();
-  final _street = TextEditingController(text: 'Saargemuender Str.');
-  final _house = TextEditingController(text: '110');
-  final _zip = TextEditingController(text: '66271');
-  final _city = TextEditingController(text: 'Kleinblittersdorf');
+  final _street = TextEditingController();
+  final _house = TextEditingController();
+  final _zip = TextEditingController();
+  final _city = TextEditingController();
   final _license = TextEditingController();
   final _guardianName = TextEditingController();
   final _emergencyName = TextEditingController();
@@ -34,6 +36,18 @@ class _MembershipApplicationFormScreenState extends State<MembershipApplicationF
   bool _rulesAccepted = true;
   bool _contributionAccepted = true;
   bool _sepaAccepted = false;
+  bool _profilePrefilled = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_profilePrefilled) return;
+    _profilePrefilled = true;
+    final authUser = AirmiusServicesScope.of(context).authState.user;
+    if (authUser != null) {
+      _prefillFromUser(authUser);
+    }
+  }
 
   @override
   void dispose() {
@@ -55,6 +69,9 @@ class _MembershipApplicationFormScreenState extends State<MembershipApplicationF
 
   @override
   Widget build(BuildContext context) {
+    final authUser = AirmiusServicesScope.of(context).authState.user;
+    final showGuardianSection = !_isKnownAdult(authUser?.birthDate ?? _parseBirthDate(_birthday.text));
+
     return Scaffold(
       backgroundColor: AirmiusColors.bg,
       body: SafeArea(
@@ -93,9 +110,10 @@ class _MembershipApplicationFormScreenState extends State<MembershipApplicationF
                           AirmiusTextField(label: 'PLZ *', controller: _zip),
                           AirmiusTextField(label: 'Stadt *', controller: _city),
                         ]),
-                        _FormSection(title: 'Erziehungsberechtigte', children: [
-                          AirmiusTextField(label: 'Name Erziehungsberechtigte/r', controller: _guardianName),
-                        ]),
+                        if (showGuardianSection)
+                          _FormSection(title: 'Erziehungsberechtigte', children: [
+                            AirmiusTextField(label: 'Name Erziehungsberechtigte/r', controller: _guardianName),
+                          ]),
                         _FormSection(title: 'Notfallkontakt', children: [
                           AirmiusTextField(label: 'Notfallkontakt Name', controller: _emergencyName),
                         ]),
@@ -144,6 +162,57 @@ class _MembershipApplicationFormScreenState extends State<MembershipApplicationF
   void _submit() {
     _toast('Mitgliedsanfrage senden vorbereitet');
     Navigator.push(context, MaterialPageRoute(builder: (_) => MembershipRequestStatusScreen()));
+  }
+
+  void _prefillFromUser(AirmiusUser user) {
+    final nameParts = _splitName(user);
+    _fillIfEmpty(_firstName, user.firstName ?? nameParts.$1);
+    _fillIfEmpty(_lastName, user.lastName ?? nameParts.$2);
+    _fillIfEmpty(_birthday, _formatDate(user.birthDate));
+    _fillIfEmpty(_email, user.email);
+    _fillIfEmpty(_street, user.street);
+    _fillIfEmpty(_house, user.houseNumber);
+    _fillIfEmpty(_zip, user.postalCode);
+    _fillIfEmpty(_city, user.city);
+  }
+
+  void _fillIfEmpty(TextEditingController controller, String? value) {
+    final text = value?.trim();
+    if (text == null || text.isEmpty || controller.text.trim().isNotEmpty) return;
+    controller.text = text;
+  }
+
+  (String?, String?) _splitName(AirmiusUser user) {
+    final parts = user.name.trim().split(RegExp(r'\s+')).where((part) => part.isNotEmpty).toList();
+    if (parts.isEmpty) return (null, null);
+    if (parts.length == 1) return (parts.first, null);
+    return (parts.first, parts.skip(1).join(' '));
+  }
+
+  String? _formatDate(DateTime? date) {
+    if (date == null) return null;
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day.$month.${date.year}';
+  }
+
+  DateTime? _parseBirthDate(String value) {
+    final text = value.trim();
+    if (text.isEmpty) return null;
+    final iso = DateTime.tryParse(text);
+    if (iso != null) return iso;
+    final match = RegExp(r'^(\d{1,2})\.(\d{1,2})\.(\d{4})$').firstMatch(text);
+    if (match == null) return null;
+    return DateTime.tryParse('${match.group(3)}-${match.group(2)!.padLeft(2, '0')}-${match.group(1)!.padLeft(2, '0')}');
+  }
+
+  bool _isKnownAdult(DateTime? birthDate) {
+    if (birthDate == null) return false;
+    final today = DateTime.now();
+    var age = today.year - birthDate.year;
+    final hadBirthdayThisYear = today.month > birthDate.month || (today.month == birthDate.month && today.day >= birthDate.day);
+    if (!hadBirthdayThisYear) age -= 1;
+    return age >= 18;
   }
 
   void _toast(String message) {

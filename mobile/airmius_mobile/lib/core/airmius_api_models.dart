@@ -8,6 +8,14 @@ class AirmiusUser {
     required this.role,
     this.firstName,
     this.lastName,
+    this.birthDate,
+    this.guardianEmail,
+    this.country,
+    this.street,
+    this.houseNumber,
+    this.postalCode,
+    this.city,
+    this.state,
     this.avatarUrl,
     this.bio,
     this.profileVisibility,
@@ -27,6 +35,14 @@ class AirmiusUser {
   final String role;
   final String? firstName;
   final String? lastName;
+  final DateTime? birthDate;
+  final String? guardianEmail;
+  final String? country;
+  final String? street;
+  final String? houseNumber;
+  final String? postalCode;
+  final String? city;
+  final String? state;
   final String? avatarUrl;
   final String? bio;
   final String? profileVisibility;
@@ -46,6 +62,14 @@ class AirmiusUser {
         role: _string(json['role'], fallback: 'member'),
         firstName: _nullableString(json['first_name']),
         lastName: _nullableString(json['last_name']),
+        birthDate: json['birth_date'] == null ? null : _date(json['birth_date']),
+        guardianEmail: _nullableString(json['guardian_email']),
+        country: _nullableString(json['country']),
+        street: _nullableString(json['street']),
+        houseNumber: _nullableString(json['house_number']),
+        postalCode: _nullableString(json['postal_code']),
+        city: _nullableString(json['city']),
+        state: _nullableString(json['state']),
         avatarUrl: _userAvatarUrl(json),
         bio: _nullableString(json['bio']),
         profileVisibility: _nullableString(json['profile_visibility']),

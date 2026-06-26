@@ -3,9 +3,11 @@
 namespace App\Actions\Fortify;
 
 use App\Models\User;
+use App\Notifications\AccountWelcomeNotification;
 use App\Support\GuardianConsentNotifier;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
@@ -81,6 +83,16 @@ class CreateNewUser implements CreatesNewUsers
         ]);
 
         $user->assignRole($requiresGuardianConsent ? 'minor_pending_consent' : 'player');
+
+        try {
+            $user->notify(new AccountWelcomeNotification());
+        } catch (\Throwable $exception) {
+            Log::warning('Account welcome notification could not be sent.', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'exception' => $exception->getMessage(),
+            ]);
+        }
 
         if ($requiresGuardianConsent) {
             GuardianConsentNotifier::send($user, $guardianEmail);

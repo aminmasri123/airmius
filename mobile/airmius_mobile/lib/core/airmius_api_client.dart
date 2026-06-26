@@ -106,6 +106,14 @@ class AirmiusApiClient {
     }
   }
 
+  Future<AirmiusJson> requestAccountDeletionCode({required String password}) {
+    return _json('POST', '/api/v1/account/deletion-code', body: {'password': password});
+  }
+
+  Future<AirmiusJson> deleteAccount({required String code}) {
+    return _json('DELETE', '/api/v1/account', body: {'code': code});
+  }
+
   Future<AirmiusJson> search(String query) => _json('GET', '/api/v1/search', query: {'q': query});
 
   Future<AirmiusJson> sports() => _json('GET', '/api/v1/sports');

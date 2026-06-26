@@ -95,6 +95,17 @@ class EmailTemplate
     public static function definitions(): array
     {
         return [
+            'account_welcome' => [
+                'label' => 'Konto: Willkommen',
+                'description' => 'Wird nach erfolgreicher Registrierung gesendet.',
+                'variables' => ['name'],
+                'template' => [
+                    'subject' => 'Willkommen bei Airmius',
+                    'greeting' => 'Hallo {{ name }},',
+                    'body' => "willkommen bei Airmius. Dein Konto wurde erfolgreich erstellt.\nDu kannst dich jetzt anmelden, dein Profil vervollstaendigen und Airmius fuer Training, Vereine, Teams, Events und deinen Sportalltag nutzen.\nWenn du dieses Konto nicht selbst erstellt hast, kontaktiere bitte den Airmius-Support.",
+                    'action_label' => 'Airmius öffnen',
+                ],
+            ],
             'account_deletion_code' => [
                 'label' => 'Kontolöschung: Code',
                 'description' => 'Wird gesendet, bevor ein Konto gelöscht werden kann.',

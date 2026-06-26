@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
@@ -16,6 +17,25 @@ class ApplicationScreen extends StatefulWidget {
 }
 
 class _ApplicationScreenState extends State<ApplicationScreen> {
+  final _firstName = TextEditingController();
+  final _lastName = TextEditingController();
+  final _birthDate = TextEditingController();
+  final _gender = TextEditingController();
+  final _license = TextEditingController();
+  final _email = TextEditingController();
+  final _phone = TextEditingController();
+  final _country = TextEditingController();
+  final _street = TextEditingController();
+  final _houseNumber = TextEditingController();
+  final _postalCode = TextEditingController();
+  final _city = TextEditingController();
+  final _state = TextEditingController();
+  final _guardianName = TextEditingController();
+  final _guardianEmail = TextEditingController();
+  final _emergencyName = TextEditingController();
+  final _emergencyPhone = TextEditingController();
+  final _iban = TextEditingController();
+  final _bic = TextEditingController();
   String _membershipType = 'Allgemeine Anfrage';
   String _paymentMethod = 'Ueberweisung';
   String _paymentCycle = 'Monatlich';
@@ -24,12 +44,50 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
   bool _uploadedDocument = false;
   bool _sending = false;
   String? _sendError;
+  bool _profilePrefilled = false;
 
   bool get _canSend => _documentsAccepted && _privacyAccepted;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_profilePrefilled) return;
+    _profilePrefilled = true;
+    final authUser = AirmiusServicesScope.of(context).authState.user;
+    if (authUser != null) {
+      _prefillFromUser(authUser);
+    }
+  }
+
+  @override
+  void dispose() {
+    _firstName.dispose();
+    _lastName.dispose();
+    _birthDate.dispose();
+    _gender.dispose();
+    _license.dispose();
+    _email.dispose();
+    _phone.dispose();
+    _country.dispose();
+    _street.dispose();
+    _houseNumber.dispose();
+    _postalCode.dispose();
+    _city.dispose();
+    _state.dispose();
+    _guardianName.dispose();
+    _guardianEmail.dispose();
+    _emergencyName.dispose();
+    _emergencyPhone.dispose();
+    _iban.dispose();
+    _bic.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
+    final authUser = AirmiusServicesScope.of(context).authState.user;
+    final showGuardianSection = !_isKnownAdult(authUser?.birthDate ?? _parseBirthDate(_birthDate.text));
     return Scaffold(
       backgroundColor: Colors.black.withValues(alpha: 0.62),
       body: SafeArea(
@@ -92,36 +150,38 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
             const SizedBox(height: 12),
             _ProgressPanel(done: _canSend ? 6 : 4),
             const SizedBox(height: 12),
-            const _FormSection(step: '1', title: 'Personendaten', children: [
-              AirmiusTextField(label: 'Vorname *', hint: 'ZBB'),
-              AirmiusTextField(label: 'Nachname *', hint: 'Konto'),
-              AirmiusTextField(label: 'Geburtsdatum *', hint: '01.01.2000', icon: Icons.calendar_today_outlined),
-              AirmiusTextField(label: 'Geschlecht', hint: 'Optional'),
-              AirmiusTextField(label: 'Lizenznummer', hint: 'Sport- oder Vereinslizenz'),
+            _FormSection(step: '1', title: 'Personendaten', children: [
+              AirmiusTextField(label: 'Vorname *', controller: _firstName),
+              AirmiusTextField(label: 'Nachname *', controller: _lastName),
+              AirmiusTextField(label: 'Geburtsdatum *', hint: 'TT.MM.JJJJ', icon: Icons.calendar_today_outlined, controller: _birthDate),
+              AirmiusTextField(label: 'Geschlecht', hint: 'Optional', controller: _gender),
+              AirmiusTextField(label: 'Lizenznummer', hint: 'Sport- oder Vereinslizenz', controller: _license),
             ]),
             const SizedBox(height: 12),
-            const _FormSection(step: '2', title: 'Kontaktdaten', children: [
-              AirmiusTextField(label: 'E-Mail *', hint: 'zbb.bop.it@gmail.com', icon: Icons.mail_outline),
-              AirmiusTextField(label: 'Telefon', hint: '+49 ...', icon: Icons.phone_outlined),
+            _FormSection(step: '2', title: 'Kontaktdaten', children: [
+              AirmiusTextField(label: 'E-Mail *', icon: Icons.mail_outline, controller: _email),
+              AirmiusTextField(label: 'Telefon', hint: '+49 ...', icon: Icons.phone_outlined, controller: _phone),
             ]),
             const SizedBox(height: 12),
-            const _FormSection(step: '3', title: 'Wohndaten', children: [
-              AirmiusTextField(label: 'Land *', hint: 'DE'),
-              AirmiusTextField(label: 'Strasse *', hint: 'Saargemuender Str.'),
-              AirmiusTextField(label: 'Hausnummer *', hint: '110'),
-              AirmiusTextField(label: 'PLZ *', hint: '66271'),
-              AirmiusTextField(label: 'Stadt *', hint: 'Kleinblittersdorf'),
-              AirmiusTextField(label: 'Bundesland / Region', hint: 'Saarland'),
+            _FormSection(step: '3', title: 'Wohndaten', children: [
+              AirmiusTextField(label: 'Land *', hint: 'DE', controller: _country),
+              AirmiusTextField(label: 'Strasse *', controller: _street),
+              AirmiusTextField(label: 'Hausnummer *', controller: _houseNumber),
+              AirmiusTextField(label: 'PLZ *', controller: _postalCode),
+              AirmiusTextField(label: 'Stadt *', controller: _city),
+              AirmiusTextField(label: 'Bundesland / Region', controller: _state),
             ]),
+            if (showGuardianSection) ...[
+              const SizedBox(height: 12),
+              _FormSection(step: '4', title: 'Erziehungsberechtigte', children: [
+                AirmiusTextField(label: 'Name Erziehungsberechtigte/r', hint: 'Falls minderjaehrig', controller: _guardianName),
+                AirmiusTextField(label: 'E-Mail Erziehungsberechtigte/r', hint: 'Optional', controller: _guardianEmail),
+              ]),
+            ],
             const SizedBox(height: 12),
-            const _FormSection(step: '4', title: 'Erziehungsberechtigte', children: [
-              AirmiusTextField(label: 'Name Erziehungsberechtigte/r', hint: 'Falls minderjaehrig'),
-              AirmiusTextField(label: 'E-Mail Erziehungsberechtigte/r', hint: 'Optional'),
-            ]),
-            const SizedBox(height: 12),
-            const _FormSection(step: '5', title: 'Notfallkontakt', children: [
-              AirmiusTextField(label: 'Notfallkontakt Name', hint: 'Name'),
-              AirmiusTextField(label: 'Notfallkontakt Telefon', hint: '+49 ...'),
+            _FormSection(step: '5', title: 'Notfallkontakt', children: [
+              AirmiusTextField(label: 'Notfallkontakt Name', hint: 'Name', controller: _emergencyName),
+              AirmiusTextField(label: 'Notfallkontakt Telefon', hint: '+49 ...', controller: _emergencyPhone),
             ]),
             const SizedBox(height: 12),
             AirmiusPanel(
@@ -134,9 +194,9 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
                   const SizedBox(height: 12),
                   _SelectField(label: 'Zahlungsrhythmus', value: _paymentCycle, items: const ['Monatlich', 'Alle 4 Monate', 'Halbjaehrlich', 'Jaehrlich'], onChanged: (value) => setState(() => _paymentCycle = value)),
                   const SizedBox(height: 12),
-                  const AirmiusTextField(label: 'IBAN', hint: 'Nur falls SEPA aktiv ist'),
+                  AirmiusTextField(label: 'IBAN', hint: 'Nur falls SEPA aktiv ist', controller: _iban),
                   const SizedBox(height: 12),
-                  const AirmiusTextField(label: 'BIC', hint: 'Optional'),
+                  AirmiusTextField(label: 'BIC', hint: 'Optional', controller: _bic),
                 ],
               ),
             ),
@@ -194,6 +254,25 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
         'requested_billing_interval': _paymentCycleValue(_paymentCycle),
         'application_data': {
           'membership_type': _membershipType,
+          'first_name': _firstName.text.trim(),
+          'last_name': _lastName.text.trim(),
+          'birth_date': _birthDate.text.trim(),
+          'gender': _gender.text.trim(),
+          'license_number': _license.text.trim(),
+          'email': _email.text.trim(),
+          'phone': _phone.text.trim(),
+          'country': _country.text.trim(),
+          'street': _street.text.trim(),
+          'house_number': _houseNumber.text.trim(),
+          'postal_code': _postalCode.text.trim(),
+          'city': _city.text.trim(),
+          'state': _state.text.trim(),
+          'guardian_name': _guardianName.text.trim(),
+          'guardian_email': _guardianEmail.text.trim(),
+          'emergency_name': _emergencyName.text.trim(),
+          'emergency_phone': _emergencyPhone.text.trim(),
+          'iban': _iban.text.trim(),
+          'bic': _bic.text.trim(),
           'privacy_accepted': _privacyAccepted,
           'documents_accepted': _documentsAccepted,
           'uploaded_document': _uploadedDocument,
@@ -232,6 +311,61 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
       'Jaehrlich' => 'yearly',
       _ => 'monthly',
     };
+  }
+
+  void _prefillFromUser(AirmiusUser user) {
+    final nameParts = _splitName(user);
+    _fillIfEmpty(_firstName, user.firstName ?? nameParts.$1);
+    _fillIfEmpty(_lastName, user.lastName ?? nameParts.$2);
+    _fillIfEmpty(_birthDate, _formatDate(user.birthDate));
+    _fillIfEmpty(_email, user.email);
+    _fillIfEmpty(_country, user.country ?? 'DE');
+    _fillIfEmpty(_street, user.street);
+    _fillIfEmpty(_houseNumber, user.houseNumber);
+    _fillIfEmpty(_postalCode, user.postalCode);
+    _fillIfEmpty(_city, user.city);
+    _fillIfEmpty(_state, user.state);
+    _fillIfEmpty(_guardianEmail, user.guardianEmail);
+  }
+
+  void _fillIfEmpty(TextEditingController controller, String? value) {
+    final text = value?.trim();
+    if (text == null || text.isEmpty || controller.text.trim().isNotEmpty) return;
+    controller.text = text;
+  }
+
+  (String?, String?) _splitName(AirmiusUser user) {
+    final parts = user.name.trim().split(RegExp(r'\s+')).where((part) => part.isNotEmpty).toList();
+    if (parts.isEmpty) return (null, null);
+    if (parts.length == 1) return (parts.first, null);
+    return (parts.first, parts.skip(1).join(' '));
+  }
+
+  String? _formatDate(DateTime? date) {
+    if (date == null) return null;
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day.$month.${date.year}';
+  }
+
+  DateTime? _parseBirthDate(String value) {
+    final text = value.trim();
+    if (text.isEmpty) return null;
+    final iso = DateTime.tryParse(text);
+    if (iso != null) return iso;
+    final match = RegExp(r'^(\d{1,2})\.(\d{1,2})\.(\d{4})$').firstMatch(text);
+    if (match == null) return null;
+    return DateTime.tryParse('${match.group(3)}-${match.group(2)!.padLeft(2, '0')}-${match.group(1)!.padLeft(2, '0')}');
+  }
+
+  bool _isKnownAdult(DateTime? birthDate) {
+    if (birthDate == null) return false;
+    final today = DateTime.now();
+    var age = today.year - birthDate.year;
+    if (today.month < birthDate.month || (today.month == birthDate.month && today.day < birthDate.day)) {
+      age -= 1;
+    }
+    return age >= 18;
   }
 }
 

@@ -865,6 +865,7 @@ class AirmiusTextField extends StatelessWidget {
     this.onChanged,
     this.keyboardType,
     this.obscureText = false,
+    this.suffixIcon,
   });
 
   final String label;
@@ -876,6 +877,7 @@ class AirmiusTextField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final TextInputType? keyboardType;
   final bool obscureText;
+  final Widget? suffixIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -891,6 +893,7 @@ class AirmiusTextField extends StatelessWidget {
         labelText: label,
         hintText: hint,
         prefixIcon: icon == null ? null : Icon(icon, color: AirmiusColors.muted),
+        suffixIcon: suffixIcon,
       ),
     );
   }

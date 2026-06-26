@@ -3,9 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Notifications\AccountWelcomeNotification;
+use App\Notifications\GuardianConsentRequested;
 use Database\Seeders\RolesPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Features;
 use Tests\TestCase;
@@ -43,7 +45,7 @@ class RegistrationTest extends TestCase
         }
 
         $this->seed(RolesPermissionsSeeder::class);
-        Mail::fake();
+        Notification::fake();
 
         $response = $this->post('/register', [
             'first_name' => 'Test',
@@ -58,7 +60,7 @@ class RegistrationTest extends TestCase
 
         $this->assertAuthenticated();
         $this->assertTrue(auth()->user()->hasRole('player'));
-        Mail::assertNothingSent();
+        Notification::assertSentTo(auth()->user(), AccountWelcomeNotification::class);
         $response->assertRedirect(config('fortify.home'));
     }
 
@@ -69,7 +71,7 @@ class RegistrationTest extends TestCase
         }
 
         $this->seed(RolesPermissionsSeeder::class);
-        Mail::fake();
+        Notification::fake();
 
         $response = $this->postJson('/api/v1/auth/register', [
             'first_name' => 'Mobile',
@@ -89,8 +91,9 @@ class RegistrationTest extends TestCase
             ->assertJsonPath('data.user.email', 'mobile@example.com');
 
         $this->assertNotEmpty($response->json('data.token'));
-        $this->assertTrue(User::where('email', 'mobile@example.com')->firstOrFail()->hasRole('player'));
-        Mail::assertNothingSent();
+        $user = User::where('email', 'mobile@example.com')->firstOrFail();
+        $this->assertTrue($user->hasRole('player'));
+        Notification::assertSentTo($user, AccountWelcomeNotification::class);
     }
 
     public function test_mobile_api_rejects_duplicate_registration_email(): void
@@ -138,7 +141,7 @@ class RegistrationTest extends TestCase
         }
 
         $this->seed(RolesPermissionsSeeder::class);
-        Mail::fake();
+        Notification::fake();
 
         $response = $this->post('/register', [
             'first_name' => 'Minor',
@@ -153,6 +156,7 @@ class RegistrationTest extends TestCase
 
         $response->assertSessionHasErrors('guardian_email');
         $this->assertGuest();
+        Notification::assertNothingSent();
     }
 
     public function test_minor_users_need_guardian_email_through_mobile_api(): void
@@ -162,7 +166,7 @@ class RegistrationTest extends TestCase
         }
 
         $this->seed(RolesPermissionsSeeder::class);
-        Mail::fake();
+        Notification::fake();
 
         $response = $this->postJson('/api/v1/auth/register', [
             'first_name' => 'Minor',
@@ -182,6 +186,7 @@ class RegistrationTest extends TestCase
         $this->assertDatabaseMissing('users', [
             'email' => 'minor-mobile@example.com',
         ]);
+        Notification::assertNothingSent();
     }
 
     public function test_minor_users_are_registered_pending_guardian_consent(): void
@@ -191,6 +196,7 @@ class RegistrationTest extends TestCase
         }
 
         $this->seed(RolesPermissionsSeeder::class);
+        Notification::fake();
 
         $response = $this->post('/register', [
             'first_name' => 'Minor',
@@ -211,6 +217,8 @@ class RegistrationTest extends TestCase
             'guardian_email' => 'parent@example.com',
         ]);
         $this->assertNotNull(auth()->user()->guardian_consent_token);
+        Notification::assertSentTo(auth()->user(), AccountWelcomeNotification::class);
+        Notification::assertSentOnDemand(GuardianConsentRequested::class);
         $response->assertRedirect(config('fortify.home'));
     }
 

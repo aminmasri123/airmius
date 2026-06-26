@@ -26,6 +26,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isPasswordVisible = false;
 
   @override
   void dispose() {
@@ -91,6 +92,15 @@ class _LoginScreenState extends State<LoginScreen> {
                           hint: 'Passwort',
                           icon: Icons.lock_outline,
                           controller: _passwordController,
+                          obscureText: !_isPasswordVisible,
+                          suffixIcon: IconButton(
+                            tooltip: _isPasswordVisible ? 'Passwort ausblenden' : 'Passwort einblenden',
+                            icon: Icon(
+                              _isPasswordVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              color: AirmiusColors.muted,
+                            ),
+                            onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                          ),
                         ),
                         const SizedBox(height: 16),
                         AirmiusButton(
