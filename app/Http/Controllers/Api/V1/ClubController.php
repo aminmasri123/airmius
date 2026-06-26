@@ -14,6 +14,7 @@ use App\Models\ClubContributionRule;
 use App\Models\ClubMembershipRequest;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\User;
 use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
 use App\Support\ClubMembershipApplication;
@@ -267,6 +268,14 @@ class ClubController extends Controller
                     ],
         );
 
+        $this->notifyClubManagers($club, 'club.membership_request_created', [
+            'title' => 'Neue Mitgliedschaftsanfrage',
+            'body' => $request->user()->name.' moechte Mitglied bei '.$club->name.' werden.',
+            'url' => '/club-memberships',
+            'club_id' => $club->id,
+            'membership_request_id' => $membershipRequest->id,
+        ], $request->user()->id);
+
         return (new ClubMembershipRequestResource($membershipRequest->load(['club', 'user'])))
             ->response()
             ->setStatusCode(201);
@@ -289,6 +298,14 @@ class ClubController extends Controller
             'reviewed_by' => $request->user()->id,
             'reviewed_at' => now(),
         ]);
+
+        $this->notifyClubManagers($club, 'club.membership_request_withdrawn', [
+            'title' => 'Mitgliedschaftsanfrage zurueckgezogen',
+            'body' => $request->user()->name.' hat die Anfrage bei '.$club->name.' zurueckgezogen.',
+            'url' => '/club-memberships',
+            'club_id' => $club->id,
+            'membership_request_id' => $membershipRequest->id,
+        ], $request->user()->id);
 
         return new ClubMembershipRequestResource(
             $membershipRequest->fresh()->load(['club', 'user'])
@@ -360,6 +377,15 @@ class ClubController extends Controller
             });
 
         return $memberQuery->exists();
+    }
+
+    private function notifyClubManagers(Club $club, string $type, array $data, ?int $exceptUserId = null): void
+    {
+        $club->users()
+            ->tap(fn ($query) => ClubRoles::whereAny($query, ClubRoles::ELEVATED))
+            ->when($exceptUserId, fn ($query) => $query->where('users.id', '!=', $exceptUserId))
+            ->get(['users.id'])
+            ->each(fn (User $manager) => AppNotification::send($manager, $type, $data));
     }
 
     private function matchingContributionRule(Club $club, ?int $membershipTypeId): ?ClubContributionRule

@@ -7,6 +7,7 @@ import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
 import 'application_screen.dart';
 import 'club_cockpit_screen.dart';
+import 'club_membership_management_screen.dart';
 import 'team_detail_screen.dart';
 import 'ui_action_result_screen.dart';
 
@@ -46,22 +47,12 @@ class _ClubsScreenState extends State<ClubsScreen> {
     return PageFrame(
       title: 'Vereine & Teams',
       subtitle: 'Verwalte Vereinsstruktur, Teams, Rollen und Einladungen',
+      showHeader: true,
+      trailing: _CreateClubButton(onPressed: _openCreateClub),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _ClubWorkspaceNav(
-            onCreateClub: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const UiActionResultScreen(
-                  title: 'Verein registrieren',
-                  body: 'Verein wie in Laravel/Inertia anlegen: Basisdaten, Adresse und Pruefschritt.',
-                  status: 'Verein',
-                  icon: Icons.add_business_outlined,
-                ),
-              ),
-            ),
-          ),
+          const _ClubWorkspaceNav(),
           const SizedBox(height: 24),
           FutureBuilder<List<ClubSummary>>(
             future: _clubsFuture,
@@ -110,6 +101,20 @@ class _ClubsScreenState extends State<ClubsScreen> {
       ),
     );
   }
+
+  void _openCreateClub() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const UiActionResultScreen(
+          title: 'Verein registrieren',
+          body: 'Verein wie in Laravel/Inertia anlegen: Basisdaten, Adresse und Pruefschritt.',
+          status: 'Verein',
+          icon: Icons.add_business_outlined,
+        ),
+      ),
+    );
+  }
 }
 
 class _CreateClubButton extends StatelessWidget {
@@ -119,29 +124,22 @@ class _CreateClubButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: 'Verein registrieren',
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(4),
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: AirmiusColors.text,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: const Icon(Icons.add, color: AirmiusColors.header, size: 24),
-        ),
+    return FilledButton.icon(
+      onPressed: onPressed,
+      icon: const Icon(Icons.add, size: 18),
+      label: const Text('Verein registrieren', style: TextStyle(fontWeight: FontWeight.w900)),
+      style: FilledButton.styleFrom(
+        backgroundColor: AirmiusColors.text,
+        foregroundColor: AirmiusColors.header,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
 }
 
 class _ClubWorkspaceNav extends StatelessWidget {
-  const _ClubWorkspaceNav({required this.onCreateClub});
-
-  final VoidCallback onCreateClub;
+  const _ClubWorkspaceNav();
 
   @override
   Widget build(BuildContext context) {
@@ -153,31 +151,41 @@ class _ClubWorkspaceNav extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(child: Text('VEREINSBEREICH', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, letterSpacing: .4, fontWeight: FontWeight.w900))),
-              _CreateClubButton(onPressed: onCreateClub),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Text('Vereinsstruktur, Teams, Rollen und\nEinladungen.', style: TextStyle(color: AirmiusColors.muted, fontSize: 14, height: 1.45, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: _WorkspaceTab(
-                  icon: Icons.speed_outlined,
-                  label: 'Vereins-Cockpit',
-                  selected: false,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClubCockpitScreen())),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('VEREINSBEREICH', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, letterSpacing: .4, fontWeight: FontWeight.w900)),
+                    SizedBox(height: 8),
+                    Text('Vereinsstruktur, Teams, Rollen und Einladungen.', style: TextStyle(color: AirmiusColors.muted, fontSize: 14, height: 1.45, fontWeight: FontWeight.w600)),
+                  ],
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _WorkspaceTab(
-                  icon: Icons.account_tree_outlined,
-                  label: 'Vereine & Teams',
-                  selected: true,
-                  onTap: () {},
-                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _WorkspaceTab(
+                icon: Icons.speed_outlined,
+                label: 'Vereins-Cockpit',
+                selected: false,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClubCockpitScreen())),
+              ),
+              _WorkspaceTab(
+                icon: Icons.account_tree_outlined,
+                label: 'Vereine & Teams',
+                selected: true,
+                onTap: () {},
+              ),
+              _WorkspaceTab(
+                icon: Icons.badge_outlined,
+                label: 'Mitglieder & Beitraege',
+                selected: false,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClubMembershipManagementScreen())),
               ),
             ],
           ),
@@ -203,6 +211,7 @@ class _WorkspaceTab extends StatelessWidget {
       borderRadius: BorderRadius.circular(4),
       child: Container(
         height: 38,
+        constraints: const BoxConstraints(minWidth: 148),
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           color: selected ? AirmiusColors.text : AirmiusColors.card,
@@ -384,6 +393,7 @@ class ClubProfileScreen extends StatefulWidget {
 class _ClubProfileScreenState extends State<ClubProfileScreen> {
   String _activeTab = 'struktur';
   Future<ClubSummary>? _clubDetailFuture;
+  bool? _requestStatusOverride;
 
   ClubSummary get club => widget.club;
 
@@ -417,7 +427,7 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
               future: _clubDetailFuture,
               builder: (context, snapshot) {
                 final profileClub = snapshot.data ?? club;
-                final requested = widget.requested || profileClub.hasPendingMembershipRequest;
+                final requested = _isRequested(profileClub);
                 return _ClubProfileHero(
                   club: profileClub,
                   requested: requested,
@@ -438,7 +448,7 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
               future: _clubDetailFuture,
               builder: (context, snapshot) {
                 final profileClub = snapshot.data ?? club;
-                final requested = widget.requested || profileClub.hasPendingMembershipRequest;
+                final requested = _isRequested(profileClub);
                 return _ClubTabBody(
                   tab: _activeTab,
                   club: profileClub,
@@ -458,7 +468,11 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
     final sent = await Navigator.push<bool>(context, MaterialPageRoute(fullscreenDialog: true, builder: (_) => ApplicationScreen(club: selectedClub)));
     if (sent == true && context.mounted) {
       widget.onRequest(selectedClub);
-      Navigator.pop(context);
+      setState(() {
+        _requestStatusOverride = true;
+        _activeTab = 'beitritt';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mitgliedschaftsanfrage gesendet.')));
     }
   }
 
@@ -469,12 +483,17 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
         final services = AirmiusServicesScope.of(context);
         await services.repositories.memberships.withdrawClubRequest(selectedClub.id);
         widget.onWithdraw(selectedClub);
-        Navigator.pop(context);
+        setState(() => _requestStatusOverride = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mitgliedschaftsanfrage zurueckgezogen.')));
       } catch (error) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Anfrage konnte nicht zurueckgezogen werden: $error')));
       }
     }
+  }
+
+  bool _isRequested(ClubSummary profileClub) {
+    return _requestStatusOverride ?? (widget.requested || profileClub.hasPendingMembershipRequest);
   }
 }
 

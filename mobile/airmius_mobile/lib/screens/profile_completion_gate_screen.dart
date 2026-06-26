@@ -107,7 +107,7 @@ class _ProfileCompletionGateScreenState extends State<ProfileCompletionGateScree
                         style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
                         items: const [
                           DropdownMenuItem(value: 'female', child: Text('Weiblich')),
-                          DropdownMenuItem(value: 'male', child: Text('Maennlich')),
+                          DropdownMenuItem(value: 'male', child: Text('Männlich')),
                           DropdownMenuItem(value: 'diverse', child: Text('Divers')),
                           DropdownMenuItem(value: 'not_specified', child: Text('Keine Angabe')),
                         ],

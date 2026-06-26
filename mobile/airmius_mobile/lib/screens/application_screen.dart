@@ -154,7 +154,22 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
               AirmiusTextField(label: 'Vorname *', controller: _firstName),
               AirmiusTextField(label: 'Nachname *', controller: _lastName),
               AirmiusTextField(label: 'Geburtsdatum *', hint: 'TT.MM.JJJJ', icon: Icons.calendar_today_outlined, controller: _birthDate),
-              AirmiusTextField(label: 'Geschlecht', hint: 'Optional', controller: _gender),
+              DropdownButtonFormField<String>(
+                value: _membershipGenderOptions.contains(_gender.text.trim()) ? _gender.text.trim() : null,
+                dropdownColor: AirmiusColors.cardSoft,
+                decoration: const InputDecoration(
+                  labelText: 'Geschlecht *',
+                  prefixIcon: Icon(Icons.wc_outlined, color: AirmiusColors.muted),
+                ),
+                style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
+                items: const [
+                  DropdownMenuItem(value: 'female', child: Text('Weiblich')),
+                  DropdownMenuItem(value: 'male', child: Text('Männlich')),
+                  DropdownMenuItem(value: 'diverse', child: Text('Divers')),
+                  DropdownMenuItem(value: 'not_specified', child: Text('Keine Angabe')),
+                ],
+                onChanged: (value) => setState(() => _gender.text = value ?? ''),
+              ),
               AirmiusTextField(label: 'Lizenznummer', hint: 'Sport- oder Vereinslizenz', controller: _license),
             ]),
             const SizedBox(height: 12),
@@ -318,6 +333,9 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
     _fillIfEmpty(_firstName, user.firstName ?? nameParts.$1);
     _fillIfEmpty(_lastName, user.lastName ?? nameParts.$2);
     _fillIfEmpty(_birthDate, _formatDate(user.birthDate));
+    if (_gender.text.trim().isEmpty && _membershipGenderOptions.contains(user.gender)) {
+      _gender.text = user.gender!;
+    }
     _fillIfEmpty(_email, user.email);
     _fillIfEmpty(_country, user.country ?? 'DE');
     _fillIfEmpty(_street, user.street);
@@ -368,6 +386,8 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
     return age >= 18;
   }
 }
+
+const _membershipGenderOptions = ['female', 'male', 'diverse', 'not_specified'];
 
 class _FormSection extends StatelessWidget {
   const _FormSection({required this.step, required this.title, required this.children});
