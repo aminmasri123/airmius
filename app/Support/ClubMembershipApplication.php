@@ -12,6 +12,7 @@ class ClubMembershipApplication
         'first_name' => 'required',
         'last_name' => 'required',
         'birth_date' => 'required',
+        'gender' => 'required',
         'email' => 'required',
         'phone' => 'optional',
         'country' => 'required',
@@ -137,7 +138,9 @@ class ClubMembershipApplication
         $modes = self::normalizeFieldModes($settings);
 
         return collect(self::fields())
-            ->map(fn (array $field) => $field + ['mode' => $modes[$field['key']] ?? 'off'])
+            ->map(fn (array $field) => $field + [
+                'mode' => $field['key'] === 'gender' ? 'required' : ($modes[$field['key']] ?? 'off'),
+            ])
             ->values()
             ->all();
     }
@@ -158,6 +161,7 @@ class ClubMembershipApplication
             'first_name' => $nameParts[0] ?? '',
             'last_name' => $nameParts[1] ?? '',
             'birth_date' => $user->birth_date?->toDateString() ?: '',
+            'gender' => $user->gender ?: '',
             'email' => $user->email,
             'country' => $user->country ?: 'DE',
             'street' => $user->street ?: '',

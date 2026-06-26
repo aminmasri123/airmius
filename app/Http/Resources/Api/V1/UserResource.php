@@ -24,6 +24,7 @@ class UserResource extends JsonResource
             'last_name' => $this->last_name,
             'email' => $this->email,
             'birth_date' => $this->birth_date?->toDateString(),
+            'gender' => $this->gender,
             'guardian_email' => $this->guardian_email,
             'role' => $roleLabel ?: 'Member',
             'language' => $this->language ?? 'de',

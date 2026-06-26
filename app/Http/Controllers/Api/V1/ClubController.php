@@ -16,10 +16,12 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
+use App\Support\ClubMembershipApplication;
 use App\Support\ClubRoles;
 use App\Support\Roles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
 
 class ClubController extends Controller
@@ -243,6 +245,7 @@ class ClubController extends Controller
 
         abort_unless($club->membership_requests_enabled, 403, 'Dieser Verein nimmt aktuell keine Online-Mitgliedsanfragen an.');
 
+        $applicationData = $this->validatedMembershipApplicationData($request, $club, $data['application_data'] ?? []);
         $previewRule = $this->matchingContributionRule($club, $data['club_membership_type_id'] ?? null);
         $membershipRequest = ClubMembershipRequest::query()->updateOrCreate(
             [
@@ -254,7 +257,7 @@ class ClubController extends Controller
             [
                         'club_membership_type_id' => $data['club_membership_type_id'] ?? null,
                         'message' => $data['message'] ?? null,
-                        'application_data' => $data['application_data'] ?? [],
+                        'application_data' => $applicationData,
                         'accepted_documents' => $data['accepted_documents'] ?? [],
                         'preferred_payment_method' => $data['preferred_payment_method'] ?? null,
                         'requested_billing_interval' => $data['requested_billing_interval'] ?? null,
@@ -298,6 +301,48 @@ class ClubController extends Controller
             Club::visibleTo($request->user())->whereKey($club->id)->exists(),
             404
         );
+    }
+
+    private function validatedMembershipApplicationData(Request $request, Club $club, array $input): array
+    {
+        $applicationFields = ClubMembershipApplication::fieldsForClub($club->membership_application_fields);
+        $enabledApplicationFields = collect($applicationFields)->where('mode', '!=', 'off')->values();
+        $inputApplicationData = array_merge(
+            ClubMembershipApplication::prefillFor($request->user()),
+            $input,
+        );
+        $applicationData = [];
+        $errors = [];
+
+        foreach ($enabledApplicationFields as $field) {
+            $key = $field['key'];
+            $value = $inputApplicationData[$key] ?? null;
+            $isCheckbox = ($field['type'] ?? null) === 'checkbox';
+            $isEmpty = $isCheckbox ? ! (bool) $value : blank($value);
+
+            if (($field['mode'] ?? 'off') === 'required' && $isEmpty) {
+                $errors['application_data.'.$key] = $field['label'].' ist erforderlich.';
+            }
+
+            if (! $isEmpty && ($field['type'] ?? null) === 'select') {
+                $allowedValues = collect($field['options'] ?? [])->pluck('value')->all();
+
+                if ($allowedValues && ! in_array((string) $value, $allowedValues, true)) {
+                    $errors['application_data.'.$key] = $field['label'].' ist ungültig.';
+                    continue;
+                }
+            }
+
+            if (! $isEmpty) {
+                $applicationData[$key] = $isCheckbox ? (bool) $value : trim((string) $value);
+            }
+        }
+
+        if ($errors) {
+            throw ValidationException::withMessages($errors);
+        }
+
+        return $applicationData;
     }
 
     private function canManageMembership(Request $request, Club $club): bool

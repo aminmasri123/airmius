@@ -34,6 +34,7 @@ class EnsureProfileIsComplete
         return filled($user->first_name)
             && filled($user->last_name)
             && filled($user->country)
-            && filled($user->birth_date);
+            && filled($user->birth_date)
+            && filled($user->gender);
     }
 }

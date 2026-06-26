@@ -561,7 +561,10 @@ class ClubMembershipController extends Controller
 
         $applicationData = [];
         $missingFields = [];
-        $inputApplicationData = $data['application_data'] ?? [];
+        $inputApplicationData = array_merge(
+            ClubMembershipApplication::prefillFor($request->user()),
+            $data['application_data'] ?? [],
+        );
 
         foreach ($enabledApplicationFields as $field) {
             $key = $field['key'];
@@ -571,6 +574,15 @@ class ClubMembershipController extends Controller
 
             if (($field['mode'] ?? 'off') === 'required' && $isEmpty) {
                 $missingFields['application_data.'.$key] = $field['label'].' ist erforderlich.';
+            }
+
+            if (! $isEmpty && ($field['type'] ?? null) === 'select') {
+                $allowedValues = collect($field['options'] ?? [])->pluck('value')->all();
+
+                if ($allowedValues && ! in_array((string) $value, $allowedValues, true)) {
+                    $missingFields['application_data.'.$key] = $field['label'].' ist ungültig.';
+                    continue;
+                }
             }
 
             if (! $isEmpty) {

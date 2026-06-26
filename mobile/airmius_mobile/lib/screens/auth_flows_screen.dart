@@ -18,6 +18,7 @@ class AuthFlowsScreen extends StatefulWidget {
 class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   String _flow = 'Registrieren';
   bool _terms = false;
+  String _gender = '';
   String? _registerError;
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
@@ -97,6 +98,11 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
       return;
     }
 
+    if (_gender.isEmpty) {
+      setState(() => _registerError = 'Bitte waehle dein Geschlecht aus.');
+      return;
+    }
+
     await services.authState.register(
       locale: language,
       payload: {
@@ -110,6 +116,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
         'city': _emptyToNull(_cityController.text),
         'state': _emptyToNull(_stateController.text),
         'birth_date': _birthDateController.text.trim(),
+        'gender': _gender,
         'guardian_email': _requiresGuardianConsent ? _guardianEmailController.text.trim() : null,
         'password': _passwordController.text,
         'password_confirmation': _passwordConfirmationController.text,
@@ -243,6 +250,23 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
                 icon: const Icon(Icons.calendar_month_outlined),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: _gender.isEmpty ? null : _gender,
+            dropdownColor: AirmiusColors.card,
+            decoration: const InputDecoration(
+              labelText: 'Geschlecht',
+              prefixIcon: Icon(Icons.wc_outlined, color: AirmiusColors.muted),
+            ),
+            style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
+            items: const [
+              DropdownMenuItem(value: 'female', child: Text('Weiblich')),
+              DropdownMenuItem(value: 'male', child: Text('Maennlich')),
+              DropdownMenuItem(value: 'diverse', child: Text('Divers')),
+              DropdownMenuItem(value: 'not_specified', child: Text('Keine Angabe')),
+            ],
+            onChanged: (value) => setState(() => _gender = value ?? ''),
           ),
           if (_requiresGuardianConsent) ...[
             const SizedBox(height: 12),
@@ -466,4 +490,3 @@ class _AuthStatusLine extends StatelessWidget {
     );
   }
 }
-

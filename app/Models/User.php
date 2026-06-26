@@ -62,6 +62,7 @@ class User extends Authenticatable
         'suspended_until',
         'suspension_reason',
         'birth_date',
+        'gender',
         'guardian_email',
         'guardian_user_id',
         'guardian_consent_requested_at',

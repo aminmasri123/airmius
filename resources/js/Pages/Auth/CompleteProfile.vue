@@ -17,6 +17,7 @@ const form = useForm({
     last_name: props.user.last_name || '',
     country: props.user.country || 'DE',
     birth_date: props.user.birth_date || '',
+    gender: props.user.gender || '',
     guardian_email: props.user.guardian_email || '',
 })
 
@@ -76,6 +77,20 @@ const submit = () => {
                     <InputError class="mt-2" :message="form.errors.birth_date" />
                 </div>
 
+                <div>
+                    <InputLabel for="gender" :value="$t('Geschlecht')" />
+                    <select id="gender" v-model="form.gender" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary" required>
+                        <option value="">{{ $t('Bitte wählen') }}</option>
+                        <option value="female">{{ $t('Weiblich') }}</option>
+                        <option value="male">{{ $t('Männlich') }}</option>
+                        <option value="diverse">{{ $t('Divers') }}</option>
+                        <option value="not_specified">{{ $t('Keine Angabe') }}</option>
+                    </select>
+                    <InputError class="mt-2" :message="form.errors.gender" />
+                </div>
+            </div>
+
+            <div class="mt-4">
                 <div>
                     <InputLabel for="country" :value="$t('Land')" />
                     <select id="country" v-model="form.country" class="mt-1 block w-full rounded-lg border-border bg-inputBg text-primary" required autocomplete="country">

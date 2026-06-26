@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 
 class CreateNewUser implements CreatesNewUsers
@@ -34,6 +35,7 @@ class CreateNewUser implements CreatesNewUsers
             'city' => ['nullable', 'string', 'max:255'],
             'state' => ['nullable', 'string', 'max:255'],
             'birth_date' => ['required', 'date', 'before_or_equal:today'],
+            'gender' => ['required', 'string', Rule::in(['female', 'male', 'diverse', 'not_specified'])],
             'guardian_email' => ['nullable', 'string', 'email', 'max:255', 'different:email'],
             'password' => $this->passwordRules(),
             'terms' => ['accepted', 'required'],
@@ -76,6 +78,7 @@ class CreateNewUser implements CreatesNewUsers
             'city' => $input['city'] ?? null,
             'state' => $input['state'] ?? null,
             'birth_date' => $birthDate->toDateString(),
+            'gender' => $input['gender'],
             'guardian_email' => $guardianEmail,
             'guardian_consent_requested_at' => $requiresGuardianConsent ? now() : null,
             'guardian_consent_token' => $requiresGuardianConsent ? Str::random(64) : null,

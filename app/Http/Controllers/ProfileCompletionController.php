@@ -6,6 +6,7 @@ use App\Support\GuardianConsentNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class ProfileCompletionController extends Controller
@@ -13,7 +14,7 @@ class ProfileCompletionController extends Controller
     public function edit(Request $request)
     {
         return Inertia::render('Auth/CompleteProfile', [
-            'user' => $request->user()->only(['first_name', 'last_name', 'email', 'country', 'birth_date', 'guardian_email']),
+            'user' => $request->user()->only(['first_name', 'last_name', 'email', 'country', 'birth_date', 'gender', 'guardian_email']),
         ]);
     }
 
@@ -24,6 +25,7 @@ class ProfileCompletionController extends Controller
             'last_name' => ['required', 'string', 'max:120'],
             'country' => ['required', 'string', 'size:2'],
             'birth_date' => ['required', 'date', 'before_or_equal:today'],
+            'gender' => ['required', 'string', Rule::in(['female', 'male', 'diverse', 'not_specified'])],
             'guardian_email' => ['nullable', 'string', 'email', 'max:255', 'different:email'],
         ]);
 
@@ -44,6 +46,7 @@ class ProfileCompletionController extends Controller
             'name' => trim($data['first_name'].' '.$data['last_name']),
             'country' => strtoupper($data['country']),
             'birth_date' => $birthDate->toDateString(),
+            'gender' => $data['gender'],
             'guardian_email' => $guardianEmail,
             'guardian_consent_requested_at' => $requiresGuardianConsent ? now() : null,
             'guardian_consent_token' => $requiresGuardianConsent ? Str::random(64) : null,
