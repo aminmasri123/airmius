@@ -134,7 +134,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
         floatingActionButton: FloatingActionButton.extended(backgroundColor: const Color(0xFF1D5FA8), foregroundColor: Colors.white, icon: const Icon(Icons.manage_accounts_outlined), label: const Text('Konto Ops', style: TextStyle(fontWeight: FontWeight.w900)), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AccountOperationsScreen(initialTab: 'Auth')))),
-        
+
       appBar: AppBar(
         backgroundColor: AirmiusColors.header,
         surfaceTintColor: Colors.transparent,
@@ -159,7 +159,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      for (final flow in const ['Registrieren', 'Social', 'Passwort', '2FA', 'E-Mail', 'Profil', 'Gesperrt', 'Loeschen'])
+                      for (final flow in const ['Registrieren', 'Social', 'Passwort', '2FA', 'E-Mail', 'Profil', 'Gesperrt', 'Löschen'])
                         ChoiceChip(
                           selected: _flow == flow,
                           label: Text(flow),
@@ -400,18 +400,18 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Eyebrow('Konto loeschen'),
+          Eyebrow('Konto löschen'),
           SizedBox(height: 8),
-          Text('Die Web-App sendet zuerst einen Loeschcode. Die native App zeigt Warnung, Code-Eingabe, Export-Hinweis und finale Bestaetigung.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+          Text('Die Web-App sendet zuerst einen Löschcode. Die native App zeigt Warnung, Code-Eingabe, Export-Hinweis und finale Bestätigung.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
           SizedBox(height: 12),
-          AirmiusTextField(label: 'Loeschcode', hint: 'Code aus der E-Mail', icon: Icons.password_outlined),
+          AirmiusTextField(label: 'Löschcode', hint: 'Code aus der E-Mail', icon: Icons.password_outlined),
           SizedBox(height: 12),
-          _AuthStatusLine(icon: Icons.download_outlined, title: 'Datenexport', body: 'Profil, Mitgliedschaften, Zahlungen und Medien vor Loeschung exportieren.', status: 'Empfohlen'),
-          _AuthStatusLine(icon: Icons.warning_amber_outlined, title: 'Endgueltige Loeschung', body: 'Konto wird erst nach API-Bestaetigung final geloescht.', status: 'Kritisch'),
+          _AuthStatusLine(icon: Icons.download_outlined, title: 'Datenexport', body: 'Profil, Mitgliedschaften, Zahlungen und Medien vor Löschung exportieren.', status: 'Empfohlen'),
+          _AuthStatusLine(icon: Icons.warning_amber_outlined, title: 'Endgueltige Löschung', body: 'Konto wird erst nach API-Bestätigung final gelöscht.', status: 'Kritisch'),
           SizedBox(height: 12),
-          _AuthAction(label: 'Loeschcode senden', icon: Icons.mark_email_read_outlined),
+          _AuthAction(label: 'Löschcode senden', icon: Icons.mark_email_read_outlined),
           SizedBox(height: 10),
-          _AuthAction(label: 'Konto endgueltig loeschen', icon: Icons.delete_forever_outlined),
+          _AuthAction(label: 'Konto endgueltig löschen', icon: Icons.delete_forever_outlined),
         ],
       ),
     );

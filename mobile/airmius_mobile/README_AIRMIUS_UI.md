@@ -7,7 +7,7 @@ Diese Flutter-App ist als native UI-Konvertierung der mobilen Airmius-Web-App an
 - Login mit Airmius-Logo, Sprache und Web-App-Optik
 - Native Auth-Zusatzflows fuer Registrierung, Passwort vergessen/zuruecksetzen, Zwei-Faktor-Code, E-Mail-Verifizierung, Profil vervollstaendigen und gesperrtes Konto
 - Auth-Aktionen wie Registrierung, Reset-Link, 2FA, E-Mail-Verifizierung, Profilabschluss und Supportkontakt fuehren in native UI-Aktionsflows
-- Auth-Randflows aus der Web-App wie Social Login, Account-Linking, Konto-Loeschcode und finale Kontoloeschung sind als native UI vorbereitet
+- Auth-Randflows aus der Web-App wie Social Login, Account-Linking, Konto-Löschcode und finale Kontolöschung sind als native UI vorbereitet
 - Login bietet direkten Einstieg in Registrierung/Passwort/2FA/Profile-Completion-UI
 - Native Gastseite/Public-Portal mit Landingpage, Vereine, Marketplace, E-Learning, Blog, Jobs, Sponsoren, Gamification, Werbeagentur und Legal-Links
 - Native Top-Inhalte-Public-UI mit kuratierten Blog-, Kurs-, Vereins-, Marketplace- und Sponsoring-Karten
@@ -19,8 +19,8 @@ Diese Flutter-App ist als native UI-Konvertierung der mobilen Airmius-Web-App an
 - Native Public-Standort-Einreichung fuer Vereine, Sportorte, Anbieter und Korrekturen mit Datenschutz, Kontakt und Moderationsstatus
 - Login bietet direkten Einstieg in die Gastseite
 - App-Shell mit Topbar, Drawer, Bottom-Navigation und globaler Suche
-- Globale Suche oeffnet native Treffer fuer Vereine, Teams und Personen
-- Topbar-Icons fuer Suche, Nachrichten und Benachrichtigungen oeffnen native Center-Screens
+- Globale Suche öffnet native Treffer fuer Vereine, Teams und Personen
+- Topbar-Icons fuer Suche, Nachrichten und Benachrichtigungen öffnen native Center-Screens
 - Mehrsprachigkeit: DE, EN, FR, AR inklusive Flutter-Locales, Material-Delegates und RTL-Richtung
 - Native Sprachzentrale fuer Sprache wechseln, RTL-Hinweis, Moduluebersetzungen und spaeteren Laravel-Sprachsync
 - Dashboard, Drawer und Modul-Screens nutzen zentrale Moduluebersetzungen mit lokalisiertem Untertitel-Fallback

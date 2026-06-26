@@ -104,7 +104,7 @@ class _SessionSecurityTokenParitySuiteScreenState extends State<SessionSecurityT
     _SecurityFlow(
       scope: 'Account',
       title: 'Sensible Account-Aktion',
-      body: 'Passwort bestaetigen, 2FA pruefen, Datenexport, Konto loeschen, Loeschcode und Rueckweg als geschuetzte mobile Strecke.',
+      body: 'Passwort bestaetigen, 2FA pruefen, Datenexport, Konto löschen, Löschcode und Rueckweg als geschützte mobile Strecke.',
       status: 'Sensitive',
       icon: Icons.lock_outline,
       primary: 'Bestaetigen',
@@ -114,7 +114,7 @@ class _SessionSecurityTokenParitySuiteScreenState extends State<SessionSecurityT
     _SecurityFlow(
       scope: 'Account',
       title: 'Logout und Session-Ende',
-      body: 'Einzelnes Geraet abmelden, alle Sessions beenden, Cache loeschen, Offline-Drafts warnen und zur Loginseite fuehren.',
+      body: 'Einzelnes Geraet abmelden, alle Sessions beenden, Cache löschen, Offline-Drafts warnen und zur Loginseite fuehren.',
       status: 'Logout',
       icon: Icons.logout_outlined,
       primary: 'Logout',
@@ -186,7 +186,7 @@ class _SessionSecurityTokenParitySuiteScreenState extends State<SessionSecurityT
                 onOpen: () => openUiAction(
                   context,
                   title: 'Session Security Token Parity',
-                  body: 'Session Restore, Token Refresh, 2FA, Recovery Codes, Device Sessions, API Tokens, Logout und Account-Loeschung sind als mobile UI vorbereitet.',
+                  body: 'Session Restore, Token Refresh, 2FA, Recovery Codes, Device Sessions, API Tokens, Logout und Account-Löschung sind als mobile UI vorbereitet.',
                   status: 'Security',
                   icon: Icons.security_outlined,
                 ),
@@ -494,7 +494,7 @@ class _Checklist extends StatelessWidget {
         const _CheckLine('Session Restore, Token Refresh und Rolle/Workspace werden beim App-Start sichtbar.'),
         const _CheckLine('2FA, Recovery Codes, Trusted Device und Rate Limit haben eigene mobile Zustaende.'),
         const _CheckLine('Geraete, Web-Sessions, API Tokens und Logout anderer Sessions sind als UI vorbereitet.'),
-        const _CheckLine('Konto loeschen, Datenexport und sensible Aktionen brauchen Passwort/2FA, Audit und Rueckweg.'),
+        const _CheckLine('Konto löschen, Datenexport und sensible Aktionen brauchen Passwort/2FA, Audit und Rueckweg.'),
         const SizedBox(height: 12),
         AirmiusButton(label: 'Security-Paritaet markieren', icon: Icons.fact_check_outlined, onPressed: onOpen),
       ],

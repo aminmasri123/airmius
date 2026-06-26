@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/airmius_auth_state.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_theme.dart';
+import '../core/airmius_theme_mode_scope.dart';
 import '../widgets/airmius_widgets.dart';
 import 'auth_flows_screen.dart';
 import 'guest_portal_screen.dart';
@@ -60,23 +61,33 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const AirmiusLogo(),
-                  const SizedBox(height: 30),
+                  const _LoginTopBar(),
+                  const SizedBox(height: 18),
                   AirmiusPanel(
                     gradient: true,
+                    padding: const EdgeInsets.all(18),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Eyebrow('Airmius Mobile'),
-                        const SizedBox(height: 12),
-                        Text(scope.t('login.title'), style: const TextStyle(color: AirmiusColors.text, fontSize: 34, fontWeight: FontWeight.w900, height: 1.04)),
-                        const SizedBox(height: 12),
-                        Text(scope.t('login.subtitle'), style: const TextStyle(color: AirmiusColors.muted, height: 1.45)),
+                        const SizedBox(height: 10),
+                        FittedBox(
+                          alignment: Alignment.centerLeft,
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            scope.t('login.title'),
+                            maxLines: 1,
+                            style: const TextStyle(color: AirmiusColors.text, fontSize: 30, fontWeight: FontWeight.w900, height: 1.04),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(scope.t('login.subtitle'), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
                   AirmiusPanel(
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -102,21 +113,29 @@ class _LoginScreenState extends State<LoginScreen> {
                             onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        AirmiusButton(
-                          label: 'Mit Google anmelden',
-                          icon: Icons.g_mobiledata,
-                          secondary: true,
-                          onPressed: isLoading ? null : () => widget.onSocialLogin('google'),
-                        ),
-                        const SizedBox(height: 10),
-                        AirmiusButton(
-                          label: 'Mit Outlook anmelden',
-                          icon: Icons.mail_outline,
-                          secondary: true,
-                          onPressed: isLoading ? null : () => widget.onSocialLogin('microsoft'),
-                        ),
                         const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: AirmiusButton(
+                                label: 'Google',
+                                icon: Icons.g_mobiledata,
+                                secondary: true,
+                                onPressed: isLoading ? null : () => widget.onSocialLogin('google'),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: AirmiusButton(
+                                label: 'Outlook',
+                                icon: Icons.mail_outline,
+                                secondary: true,
+                                onPressed: isLoading ? null : () => widget.onSocialLogin('microsoft'),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
                         if (error != null) ...[
                           Text(error, style: const TextStyle(color: AirmiusColors.red, fontWeight: FontWeight.w700)),
                           const SizedBox(height: 10),
@@ -126,35 +145,180 @@ class _LoginScreenState extends State<LoginScreen> {
                           icon: Icons.login,
                           onPressed: isLoading ? null : _onSubmit,
                         ),
-                        const SizedBox(height: 10),
-                        AirmiusButton(
-                          label: 'Registrieren / Passwort vergessen',
-                          icon: Icons.manage_accounts_outlined,
-                          secondary: true,
-                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AuthFlowsScreen(onSocialLogin: widget.onSocialLogin))),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 6,
+                          runSpacing: 2,
+                          children: [
+                            TextButton.icon(
+                              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AuthFlowsScreen(onSocialLogin: widget.onSocialLogin))),
+                              icon: const Icon(Icons.manage_accounts_outlined, size: 18),
+                              label: const Text('Registrieren'),
+                            ),
+                            TextButton.icon(
+                              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AuthFlowsScreen(onSocialLogin: widget.onSocialLogin))),
+                              icon: const Icon(Icons.help_outline, size: 18),
+                              label: const Text('Passwort'),
+                            ),
+                            TextButton.icon(
+                              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GuestPortalScreen())),
+                              icon: const Icon(Icons.open_in_new, size: 18),
+                              label: const Text('Gast'),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 10),
-                        AirmiusButton(
-                          label: 'Gastseite ansehen',
-                          icon: Icons.open_in_new,
-                          secondary: true,
-                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GuestPortalScreen())),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text('Airmius App: Anmeldung direkt ueber das Laravel API', textAlign: TextAlign.center, style: TextStyle(color: AirmiusColors.mutedSoft, fontSize: 12)),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  const AirmiusThemeChooser(),
-                  const SizedBox(height: 14),
-                  const LanguageChooser(),
                 ],
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _LoginTopBar extends StatelessWidget {
+  const _LoginTopBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Expanded(
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: AirmiusLogo(compact: true),
+          ),
+        ),
+        const SizedBox(width: 12),
+        _LoginIconMenu<AirmiusLanguage>(
+          tooltip: 'Sprache',
+          icon: Icons.language_outlined,
+          value: AirmiusScope.of(context).language,
+          entries: [
+            for (final language in AirmiusLanguage.values)
+              PopupMenuItem(
+                value: language,
+                child: _MenuLine(
+                  icon: Icons.translate_outlined,
+                  label: language.label,
+                  trailing: language.code,
+                  selected: AirmiusScope.of(context).language == language,
+                ),
+              ),
+          ],
+          onSelected: AirmiusScope.of(context).setLanguage,
+        ),
+        const SizedBox(width: 8),
+        _LoginIconMenu<ThemeMode>(
+          tooltip: 'Design',
+          icon: Icons.contrast_outlined,
+          value: AirmiusThemeModeScope.of(context).mode,
+          entries: [
+            PopupMenuItem(
+              value: ThemeMode.dark,
+              child: _MenuLine(
+                icon: Icons.dark_mode_outlined,
+                label: 'Dunkel',
+                selected: AirmiusThemeModeScope.of(context).mode == ThemeMode.dark,
+              ),
+            ),
+            PopupMenuItem(
+              value: ThemeMode.light,
+              child: _MenuLine(
+                icon: Icons.light_mode_outlined,
+                label: 'Normal',
+                selected: AirmiusThemeModeScope.of(context).mode == ThemeMode.light,
+              ),
+            ),
+            PopupMenuItem(
+              value: ThemeMode.system,
+              child: _MenuLine(
+                icon: Icons.phone_iphone_outlined,
+                label: 'System',
+                selected: AirmiusThemeModeScope.of(context).mode == ThemeMode.system,
+              ),
+            ),
+          ],
+          onSelected: AirmiusThemeModeScope.of(context).setMode,
+        ),
+      ],
+    );
+  }
+}
+
+class _LoginIconMenu<T> extends StatelessWidget {
+  const _LoginIconMenu({
+    required this.tooltip,
+    required this.icon,
+    required this.value,
+    required this.entries,
+    required this.onSelected,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final T value;
+  final List<PopupMenuEntry<T>> entries;
+  final ValueChanged<T> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<T>(
+      tooltip: tooltip,
+      initialValue: value,
+      onSelected: onSelected,
+      color: AirmiusColors.card,
+      surfaceTintColor: Colors.transparent,
+      itemBuilder: (_) => entries,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: AirmiusColors.cardSoft,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AirmiusColors.border),
+        ),
+        child: Icon(icon, color: AirmiusColors.text, size: 21),
+      ),
+    );
+  }
+}
+
+class _MenuLine extends StatelessWidget {
+  const _MenuLine({
+    required this.icon,
+    required this.label,
+    this.trailing,
+    this.selected = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final String? trailing;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? AirmiusColors.blue : AirmiusColors.text;
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 19),
+        const SizedBox(width: 10),
+        Expanded(child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w900))),
+        if (trailing != null) ...[
+          const SizedBox(width: 14),
+          Text(trailing!, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w900)),
+        ],
+        if (selected) ...[
+          const SizedBox(width: 10),
+          const Icon(Icons.check_circle, color: AirmiusColors.blue, size: 18),
+        ],
+      ],
     );
   }
 }

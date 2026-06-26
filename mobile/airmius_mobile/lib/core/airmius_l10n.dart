@@ -172,8 +172,8 @@ const _baseRelease = {
 
 const _strings = {
   AirmiusLanguage.de: {
-    'login.title': 'Dein Verein. Deine Teams. Eine App.',
-    'login.subtitle': 'Native Airmius-App mit der Optik der mobilen Web-App: dunkel, klar, schnell und vereinsnah.',
+    'login.title': 'Dein Verein, deine Teams, eine App.',
+    'login.subtitle': 'Trainiere, organisiere Teams, Events und Vereine direkt in einer modernen Sportapp.',
     'login.button': 'Einloggen',
     'dashboard': 'Dashboard',
     'clubs': 'Vereine & Teams',
@@ -340,7 +340,7 @@ const _strings = {
   },
   AirmiusLanguage.en: {
     'login.title': 'Your club. Your teams. One app.',
-    'login.subtitle': 'Native Airmius app with the look of the mobile web app: dark, clear, fast and club-focused.',
+    'login.subtitle': 'Train, organize teams, events and clubs directly in one modern sports app.',
     'login.button': 'Sign in',
     'dashboard': 'Dashboard',
     'clubs': 'Clubs & Teams',
@@ -507,7 +507,7 @@ const _strings = {
   },
   AirmiusLanguage.fr: {
     'login.title': 'Ton club. Tes equipes. Une app.',
-    'login.subtitle': 'Application native Airmius proche de la version web mobile: sombre, claire, rapide et orientee clubs.',
+    'login.subtitle': 'Entraine-toi et organise equipes, evenements et clubs dans une app sportive moderne.',
     'login.button': 'Connexion',
     'dashboard': 'Tableau de bord',
     'clubs': 'Clubs & equipes',
@@ -674,7 +674,7 @@ const _strings = {
   },
   AirmiusLanguage.ar: {
     'login.title': 'Airmius clubs and teams',
-    'login.subtitle': 'Native Airmius mobile app with a dark, clear and club-focused web-app style.',
+    'login.subtitle': 'Train and organize teams, events and clubs in one modern sports app.',
     'login.button': 'Sign in',
     'dashboard': 'Dashboard',
     'clubs': 'Clubs and teams',

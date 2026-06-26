@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'account_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
@@ -42,7 +42,7 @@ class _SettingsDetailScreenState extends State<SettingsDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
         floatingActionButton: FloatingActionButton.extended(backgroundColor: const Color(0xFF1D5FA8), foregroundColor: Colors.white, icon: const Icon(Icons.manage_accounts_outlined), label: const Text('Security Ops', style: TextStyle(fontWeight: FontWeight.w900)), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AccountOperationsScreen(initialTab: '2FA')))),
-        
+
       appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Einstellung', style: TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
         title: widget.section,
@@ -71,7 +71,7 @@ class _SettingsDetailScreenState extends State<SettingsDetailScreen> {
             const Eyebrow('Sichtbarkeit'),
             const SizedBox(height: 10),
             Wrap(spacing: 8, runSpacing: 8, children: [
-              for (final item in const ['Privat', 'Verein', 'Oeffentlich'])
+              for (final item in const ['Privat', 'Verein', 'Öffentlich'])
                 ChoiceChip(
                   selected: _visibility == item,
                   label: Text(item),
@@ -103,19 +103,19 @@ class _SettingsDetailScreenState extends State<SettingsDetailScreen> {
           AirmiusPanel(borderColor: AirmiusColors.red.withValues(alpha: 0.45), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Kontoaktion'),
             const SizedBox(height: 8),
-            SwitchListTile(value: _deleteRequested, onChanged: (value) => setState(() => _deleteRequested = value), activeColor: AirmiusColors.red, contentPadding: EdgeInsets.zero, title: const Text('Kontoloeschung anfragen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Erst nach Warnung, Frist und API-Bestaetigung final.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _deleteRequested, onChanged: (value) => setState(() => _deleteRequested = value), activeColor: AirmiusColors.red, contentPadding: EdgeInsets.zero, title: const Text('Kontolöschung anfragen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Erst nach Warnung, Frist und API-Bestaetigung final.', style: TextStyle(color: AirmiusColors.muted))),
             const SizedBox(height: 10),
             if (_deleteRequested) ...[
-              const Text('Fordere zuerst einen Loeschcode an. Bei Passwort-Login gib dein Passwort ein, bei Social Login deine Konto-E-Mail.', style: TextStyle(color: AirmiusColors.muted, height: 1.35, fontWeight: FontWeight.w700)),
+              const Text('Fordere zuerst einen Löschcode an. Bei Passwort-Login gib dein Passwort ein, bei Social Login deine Konto-E-Mail.', style: TextStyle(color: AirmiusColors.muted, height: 1.35, fontWeight: FontWeight.w700)),
               const SizedBox(height: 10),
               AirmiusTextField(label: 'Passwort oder E-Mail', hint: 'Zur Identitaetsbestaetigung', icon: Icons.lock_outline, controller: _deletePasswordController, obscureText: true),
               const SizedBox(height: 10),
-              AirmiusButton(label: _deletionCodeRequested ? 'Loeschcode erneut senden' : 'Loeschcode senden', icon: Icons.mark_email_read_outlined, danger: true, onPressed: _deletingAccount ? null : _requestDeletionCode),
+              AirmiusButton(label: _deletionCodeRequested ? 'Löschcode erneut senden' : 'Löschcode senden', icon: Icons.mark_email_read_outlined, danger: true, onPressed: _deletingAccount ? null : _requestDeletionCode),
               if (_deletionCodeRequested) ...[
                 const SizedBox(height: 12),
-                AirmiusTextField(label: 'Loeschcode', hint: 'Code aus der E-Mail', icon: Icons.password_outlined, controller: _deleteCodeController),
+                AirmiusTextField(label: 'Löschcode', hint: 'Code aus der E-Mail', icon: Icons.password_outlined, controller: _deleteCodeController),
                 const SizedBox(height: 10),
-                AirmiusButton(label: _deletingAccount ? 'Konto wird geloescht...' : 'Konto endgueltig loeschen', icon: Icons.delete_forever_outlined, danger: true, onPressed: _deletingAccount ? null : _confirmDeleteAccount),
+                AirmiusButton(label: _deletingAccount ? 'Konto wird gelöscht...' : 'Konto endgültig löschen', icon: Icons.delete_forever_outlined, danger: true, onPressed: _deletingAccount ? null : _confirmDeleteAccount),
               ],
             ],
           ])),
@@ -142,7 +142,7 @@ class _SettingsDetailScreenState extends State<SettingsDetailScreen> {
         _deletionCodeRequested = true;
         _deletingAccount = false;
       });
-      _toast('Loeschcode wurde per E-Mail gesendet.');
+      _toast('Löschcode wurde per E-Mail gesendet.');
     } catch (error) {
       if (!mounted) return;
       setState(() => _deletingAccount = false);
@@ -153,7 +153,7 @@ class _SettingsDetailScreenState extends State<SettingsDetailScreen> {
   Future<void> _confirmDeleteAccount() async {
     final code = _deleteCodeController.text.trim();
     if (code.isEmpty) {
-      _toast('Bitte den Loeschcode eingeben.');
+      _toast('Bitte den Löschcode eingeben.');
       return;
     }
 
@@ -161,11 +161,11 @@ class _SettingsDetailScreenState extends State<SettingsDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AirmiusColors.card,
-        title: const Text('Konto endgueltig loeschen?', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-        content: const Text('Diese Aktion loescht dein Konto dauerhaft. Danach wirst du aus der Flutter-App abgemeldet.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+        title: const Text('Konto endgueltig löschen?', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+        content: const Text('Diese Aktion löscht dein Konto dauerhaft. Danach wirst du aus der Flutter-App abgemeldet.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Abbrechen')),
-          FilledButton(style: FilledButton.styleFrom(backgroundColor: AirmiusColors.red), onPressed: () => Navigator.pop(context, true), child: const Text('Loeschen')),
+          FilledButton(style: FilledButton.styleFrom(backgroundColor: AirmiusColors.red), onPressed: () => Navigator.pop(context, true), child: const Text('Löschen')),
         ],
       ),
     );
