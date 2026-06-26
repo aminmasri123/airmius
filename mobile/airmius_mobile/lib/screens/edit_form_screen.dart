@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 
+import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 
@@ -21,6 +22,48 @@ class _EditFormScreenState extends State<EditFormScreen> {
   bool _publicVisible = true;
   String _status = 'Aktiv';
   String _role = 'Mitglied';
+  String _gender = '';
+  bool _profileInitialized = false;
+  late final TextEditingController _firstNameController;
+  late final TextEditingController _lastNameController;
+  late final TextEditingController _bioController;
+
+  @override
+  void initState() {
+    super.initState();
+    _firstNameController = TextEditingController();
+    _lastNameController = TextEditingController();
+    _bioController = TextEditingController();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    if (widget.mode != EditFormMode.profile || _profileInitialized) {
+      return;
+    }
+
+    final user = AirmiusServicesScope.of(context).authState.user;
+    _firstNameController.text = user?.firstName?.trim().isNotEmpty == true ? user!.firstName!.trim() : '';
+    _lastNameController.text = user?.lastName?.trim().isNotEmpty == true ? user!.lastName!.trim() : '';
+    _bioController.text = user?.bio?.trim() ?? '';
+
+    final gender = user?.gender?.trim() ?? '';
+    if (_gender.isEmpty && _genderOptions.contains(gender)) {
+      _gender = gender;
+    }
+
+    _profileInitialized = true;
+  }
+
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _bioController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,18 +128,35 @@ class _EditFormScreenState extends State<EditFormScreen> {
   }
 
   List<Widget> _profileFields() {
-    return const [
+    return [
       AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Eyebrow('Persoenliche Daten'),
-        SizedBox(height: 12),
-        AirmiusTextField(label: 'Vorname', hint: 'ZBB'),
-        SizedBox(height: 12),
-        AirmiusTextField(label: 'Nachname', hint: 'Konto'),
-        SizedBox(height: 12),
-        AirmiusTextField(label: 'Bio', hint: 'Sport, Verein, Ziele...', maxLines: 3),
+        const Eyebrow('Persoenliche Daten'),
+        const SizedBox(height: 12),
+        AirmiusTextField(label: 'Vorname', hint: 'Vorname', controller: _firstNameController),
+        const SizedBox(height: 12),
+        AirmiusTextField(label: 'Nachname', hint: 'Nachname', controller: _lastNameController),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          value: _gender.isEmpty ? null : _gender,
+          dropdownColor: AirmiusColors.cardSoft,
+          decoration: const InputDecoration(
+            labelText: 'Geschlecht',
+            prefixIcon: Icon(Icons.wc_outlined, color: AirmiusColors.muted),
+          ),
+          style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
+          items: const [
+            DropdownMenuItem(value: 'female', child: Text('Weiblich')),
+            DropdownMenuItem(value: 'male', child: Text('Maennlich')),
+            DropdownMenuItem(value: 'diverse', child: Text('Divers')),
+            DropdownMenuItem(value: 'not_specified', child: Text('Keine Angabe')),
+          ],
+          onChanged: (value) => setState(() => _gender = value ?? ''),
+        ),
+        const SizedBox(height: 12),
+        AirmiusTextField(label: 'Bio', hint: 'Sport, Verein, Ziele...', controller: _bioController, maxLines: 3),
       ])),
-      SizedBox(height: 12),
-      AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const SizedBox(height: 12),
+      const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Eyebrow('Sportprofil'),
         SizedBox(height: 12),
         AirmiusTextField(label: 'Hauptsportart', hint: 'Laufen, Tennis, Fitness...'),
@@ -214,3 +274,5 @@ class _EditFormScreenState extends State<EditFormScreen> {
     ];
   }
 }
+
+const _genderOptions = ['female', 'male', 'diverse', 'not_specified'];

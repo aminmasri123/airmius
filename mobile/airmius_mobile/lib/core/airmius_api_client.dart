@@ -95,6 +95,10 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> friendsMe() => _json('GET', '/friends/me');
 
+  Future<AirmiusJson> updateProfile(AirmiusJson payload) {
+    return _json('PUT', '/api/v1/me/profile', body: payload);
+  }
+
   Future<AirmiusJson> logout() async {
     try {
       return await _json('POST', '/api/v1/auth/logout');

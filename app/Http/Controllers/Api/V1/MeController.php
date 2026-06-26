@@ -4,17 +4,23 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\UserResource;
+use App\Support\GuardianConsentState;
+use App\Support\GuardianConsentNotifier;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class MeController extends Controller
 {
     public function show(Request $request)
     {
-        $request->user()->loadCount(['followers', 'following', 'posts']);
+        $user = $request->user();
+        GuardianConsentState::sync($user);
+        $user->loadCount(['followers', 'following', 'posts']);
 
         return new UserResource(
-            $request->user()->loadMissing([
+            $user->loadMissing([
                 'roles',
                 'permissions',
                 'clubs',
@@ -35,5 +41,62 @@ class MeController extends Controller
         ])->save();
 
         return new UserResource($request->user()->refresh());
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $data = $request->validate([
+            'first_name' => ['required', 'string', 'max:120'],
+            'last_name' => ['required', 'string', 'max:120'],
+            'country' => ['required', 'string', 'size:2'],
+            'birth_date' => ['required', 'date', 'before_or_equal:today'],
+            'gender' => ['required', 'string', Rule::in(['female', 'male', 'diverse', 'not_specified'])],
+            'guardian_email' => ['nullable', 'string', 'email', 'max:255', 'different:email'],
+        ]);
+
+        $birthDate = Carbon::parse($data['birth_date']);
+        $requiresGuardianConsent = $birthDate->age < 16;
+        $guardianEmail = $requiresGuardianConsent ? mb_strtolower(trim((string) ($data['guardian_email'] ?? ''))) : null;
+
+        if ($requiresGuardianConsent && $guardianEmail === '') {
+            return response()->json([
+                'message' => 'Bei Nutzern unter 16 Jahren ist die E-Mail eines Erziehungsberechtigten erforderlich.',
+                'errors' => [
+                    'guardian_email' => ['Bei Nutzern unter 16 Jahren ist die E-Mail eines Erziehungsberechtigten erforderlich.'],
+                ],
+            ], 422);
+        }
+
+        $user = $request->user();
+        $user->update([
+            'first_name' => trim($data['first_name']),
+            'last_name' => trim($data['last_name']),
+            'name' => trim($data['first_name'].' '.$data['last_name']),
+            'country' => strtoupper($data['country']),
+            'birth_date' => $birthDate->toDateString(),
+            'gender' => $data['gender'],
+            'guardian_email' => $guardianEmail,
+            'guardian_consent_requested_at' => $requiresGuardianConsent ? now() : null,
+            'guardian_consent_rejected_at' => null,
+            'guardian_consent_token' => $requiresGuardianConsent ? Str::random(64) : null,
+        ]);
+
+        if ($requiresGuardianConsent) {
+            $user->syncRoles(['minor_pending_consent']);
+            GuardianConsentNotifier::send($user, $guardianEmail);
+        } elseif ($user->hasRole('minor_pending_consent')) {
+            $user->removeRole('minor_pending_consent');
+            $user->assignRole('player');
+        } elseif (! $user->roles()->exists()) {
+            $user->assignRole('player');
+        }
+
+        return new UserResource($user->refresh()->loadMissing([
+            'roles',
+            'permissions',
+            'clubs',
+            'teams.club',
+            'sportProfiles.sport',
+        ]));
     }
 }

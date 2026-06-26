@@ -9,6 +9,7 @@ class AirmiusUser {
     this.firstName,
     this.lastName,
     this.birthDate,
+    this.gender,
     this.guardianEmail,
     this.country,
     this.street,
@@ -36,6 +37,7 @@ class AirmiusUser {
   final String? firstName;
   final String? lastName;
   final DateTime? birthDate;
+  final String? gender;
   final String? guardianEmail;
   final String? country;
   final String? street;
@@ -55,6 +57,27 @@ class AirmiusUser {
   final List<AirmiusUserBadge> badges;
   final AirmiusGamification? gamification;
 
+  bool get isProfileIncomplete =>
+      _blank(firstName) ||
+      _blank(lastName) ||
+      birthDate == null ||
+      _blank(gender) ||
+      _blank(country) ||
+      (isMinor && _blank(guardianEmail) && !requiresGuardianConsent);
+
+  bool get isMinor {
+    final date = birthDate;
+    if (date == null) return false;
+    final today = DateTime.now();
+    var age = today.year - date.year;
+    if (today.month < date.month || (today.month == date.month && today.day < date.day)) {
+      age--;
+    }
+    return age < 16;
+  }
+
+  bool get requiresGuardianConsent => role.toLowerCase() == 'minor_pending_consent';
+
   factory AirmiusUser.fromJson(JsonMap json) => AirmiusUser(
         id: _int(json['id']),
         name: _string(json['name']),
@@ -63,6 +86,7 @@ class AirmiusUser {
         firstName: _nullableString(json['first_name']),
         lastName: _nullableString(json['last_name']),
         birthDate: json['birth_date'] == null ? null : _date(json['birth_date']),
+        gender: _nullableString(json['gender']),
         guardianEmail: _nullableString(json['guardian_email']),
         country: _nullableString(json['country']),
         street: _nullableString(json['street']),
@@ -1540,6 +1564,8 @@ String? _nullableString(Object? value) {
   final string = value?.toString().trim();
   return string == null || string.isEmpty ? null : string;
 }
+
+bool _blank(String? value) => value == null || value.trim().isEmpty;
 
 String _storyMediaKind(Object? kind, Object? mediaType, String mediaUrl) {
   final explicit = (_nullableString(kind) ?? '').toLowerCase();

@@ -72,6 +72,7 @@ class AirmiusSecureTokenStore implements AirmiusTokenStore {
               'first_name': user.firstName,
               'last_name': user.lastName,
               'birth_date': user.birthDate?.toIso8601String(),
+              'gender': user.gender,
               'guardian_email': user.guardianEmail,
               'country': user.country,
               'street': user.street,
@@ -82,6 +83,7 @@ class AirmiusSecureTokenStore implements AirmiusTokenStore {
               'email': user.email,
               'role': user.role,
               'avatar_url': user.avatarUrl,
+              'bio': user.bio,
             },
     });
   }

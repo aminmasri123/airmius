@@ -77,6 +77,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             ->name('account.destroy');
 
         Route::get('/me', [MeController::class, 'show'])->name('me.show');
+        Route::put('/me/profile', [MeController::class, 'updateProfile'])->name('me.profile.update');
         Route::patch('/me/language', [MeController::class, 'updateLanguage'])->name('me.language');
 
         Route::get('/settings', [SettingsController::class, 'show'])->name('settings.show');

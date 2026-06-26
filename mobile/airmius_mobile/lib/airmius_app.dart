@@ -17,6 +17,7 @@ import 'core/airmius_theme_mode_scope.dart';
 import 'core/airmius_web_location.dart';
 import 'navigation/airmius_deep_link_navigator.dart';
 import 'screens/login_screen.dart';
+import 'screens/profile_completion_gate_screen.dart';
 import 'screens/shell_screen.dart';
 
 class AirmiusApp extends StatefulWidget {
@@ -113,9 +114,28 @@ class _AirmiusAppState extends State<AirmiusApp> {
                 ),
               );
             },
-                    home: _services.authState.phase == AirmiusAuthPhase.authenticated
-                    ? const ShellScreen()
-                    : LoginScreen(
+                    home: _homeForAuthState(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _homeForAuthState() {
+    final authState = _services.authState;
+    final user = authState.user;
+    if (authState.phase == AirmiusAuthPhase.authenticated) {
+      if (user?.isProfileIncomplete == true) {
+        return ProfileCompletionGateScreen(authState: authState);
+      }
+      if (user?.requiresGuardianConsent == true) {
+        return GuardianConsentPendingScreen(authState: authState);
+      }
+      return const ShellScreen();
+    }
+
+    return LoginScreen(
                     authState: _services.authState,
                     onLogin: (email, password) => _services.authState.signIn(
                       email: email,
@@ -123,12 +143,7 @@ class _AirmiusAppState extends State<AirmiusApp> {
                       locale: _language.code.toLowerCase(),
                     ),
                     onSocialLogin: _openSocialLogin,
-                  ),
-            ),
-          ),
-        ),
-      ),
-    );
+                  );
   }
 
   void _openNativeDeepLink(String link) {

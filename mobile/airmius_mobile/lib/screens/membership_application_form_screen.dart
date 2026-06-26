@@ -29,6 +29,7 @@ class _MembershipApplicationFormScreenState extends State<MembershipApplicationF
   final _emergencyName = TextEditingController();
   final _iban = TextEditingController();
 
+  String _gender = '';
   String _membershipType = 'Allgemeine Anfrage';
   String _paymentMethod = 'Ueberweisung';
   String _interval = 'Monatlich';
@@ -95,6 +96,22 @@ class _MembershipApplicationFormScreenState extends State<MembershipApplicationF
                         _FormSection(title: 'Personendaten', children: [
                           AirmiusTextField(label: 'Vorname *', controller: _firstName),
                           AirmiusTextField(label: 'Nachname *', controller: _lastName),
+                          DropdownButtonFormField<String>(
+                            value: _gender.isEmpty ? null : _gender,
+                            dropdownColor: AirmiusColors.cardSoft,
+                            decoration: const InputDecoration(
+                              labelText: 'Geschlecht *',
+                              prefixIcon: Icon(Icons.wc_outlined, color: AirmiusColors.muted),
+                            ),
+                            style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
+                            items: const [
+                              DropdownMenuItem(value: 'female', child: Text('Weiblich')),
+                              DropdownMenuItem(value: 'male', child: Text('Maennlich')),
+                              DropdownMenuItem(value: 'diverse', child: Text('Divers')),
+                              DropdownMenuItem(value: 'not_specified', child: Text('Keine Angabe')),
+                            ],
+                            onChanged: (value) => setState(() => _gender = value ?? ''),
+                          ),
                           AirmiusTextField(label: 'Geburtsdatum *', controller: _birthday),
                         ]),
                         _FormSection(title: 'Sportdaten', children: [
@@ -168,6 +185,9 @@ class _MembershipApplicationFormScreenState extends State<MembershipApplicationF
     final nameParts = _splitName(user);
     _fillIfEmpty(_firstName, user.firstName ?? nameParts.$1);
     _fillIfEmpty(_lastName, user.lastName ?? nameParts.$2);
+    if (_gender.isEmpty && _membershipGenderOptions.contains(user.gender)) {
+      _gender = user.gender!;
+    }
     _fillIfEmpty(_birthday, _formatDate(user.birthDate));
     _fillIfEmpty(_email, user.email);
     _fillIfEmpty(_street, user.street);
@@ -370,3 +390,5 @@ class _CheckRow extends StatelessWidget {
     );
   }
 }
+
+const _membershipGenderOptions = ['female', 'male', 'diverse', 'not_specified'];

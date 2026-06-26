@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\GuardianConsentState;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -11,6 +12,10 @@ class EnsureGuardianConsentResolved
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
+
+        if ($user) {
+            GuardianConsentState::sync($user);
+        }
 
         if (! $user || ! $user->hasRole('minor_pending_consent')) {
             return $next($request);

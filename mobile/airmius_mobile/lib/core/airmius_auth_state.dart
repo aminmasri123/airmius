@@ -148,7 +148,7 @@ class AirmiusAuthState extends ChangeNotifier {
       await _completeTokenSignIn(json, locale: locale, missingTokenMessage: 'Registrierung fehlgeschlagen: Token vom Server fehlt.');
     } catch (error) {
       _error = error is AirmiusApiException ? _readableAuthError(error) : error.toString();
-      _setPhase(AirmiusAuthPhase.error);
+      _setPhase(AirmiusAuthPhase.authenticated);
     }
   }
 
@@ -207,6 +207,25 @@ class AirmiusAuthState extends ChangeNotifier {
       _setPhase(AirmiusAuthPhase.authenticated);
     } catch (error) {
       _error = error.toString();
+      _setPhase(AirmiusAuthPhase.error);
+    }
+  }
+
+  Future<void> completeProfile({required JsonMap payload}) async {
+    final current = _session;
+    if (current == null || !current.isAuthenticated) return;
+    _error = null;
+    _setPhase(AirmiusAuthPhase.loading);
+    try {
+      final sessionClient = clientFactory(current);
+      final json = await sessionClient.updateProfile(payload);
+      final updatedUser = _extractUser(json) ?? await _refreshUserProfileIfPossible(current);
+      final next = current.copyWith(user: updatedUser, clearUser: updatedUser == null);
+      await tokenStore.write(next);
+      _session = next;
+      _setPhase(AirmiusAuthPhase.authenticated);
+    } catch (error) {
+      _error = error is AirmiusApiException ? _readableAuthError(error) : error.toString();
       _setPhase(AirmiusAuthPhase.error);
     }
   }
