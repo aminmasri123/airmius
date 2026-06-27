@@ -11,6 +11,50 @@ use App\Http\Controllers\OutfitSubscriptionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/site.webmanifest', function () {
+    return response()->json([
+        'name' => 'Airmius',
+        'short_name' => 'Airmius',
+        'description' => 'Airmius verbindet Sportler, Teams und Vereine in einer mobilen Sportapp.',
+        'id' => '/',
+        'start_url' => '/',
+        'scope' => '/',
+        'display' => 'standalone',
+        'orientation' => 'portrait',
+        'background_color' => '#07101D',
+        'theme_color' => '#07101D',
+        'icons' => [
+            [
+                'src' => '/img/logo/airmius-icon-192.png',
+                'sizes' => '192x192',
+                'type' => 'image/png',
+                'purpose' => 'any',
+            ],
+            [
+                'src' => '/img/logo/airmius-icon-512.png',
+                'sizes' => '512x512',
+                'type' => 'image/png',
+                'purpose' => 'any',
+            ],
+            [
+                'src' => '/img/logo/airmius-maskable-192.png',
+                'sizes' => '192x192',
+                'type' => 'image/png',
+                'purpose' => 'maskable',
+            ],
+            [
+                'src' => '/img/logo/airmius-maskable-512.png',
+                'sizes' => '512x512',
+                'type' => 'image/png',
+                'purpose' => 'maskable',
+            ],
+        ],
+    ], 200, [
+        'Content-Type' => 'application/manifest+json',
+        'Cache-Control' => 'no-cache, must-revalidate',
+    ]);
+})->name('site.webmanifest');
+
 Route::get('/auth/{provider}/redirect', [SocialAuthController::class, 'redirect'])
     ->whereIn('provider', ['google', 'microsoft'])
     ->name('social-auth.redirect');

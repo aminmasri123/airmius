@@ -14,7 +14,7 @@
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        <link rel="manifest" href="{{ asset('site.webmanifest') }}?v=4">
+        <link rel="manifest" href="{{ route('site.webmanifest') }}?v=5">
         <link rel="shortcut icon" href="{{ asset('favicon.ico') }}?v=4" type="image/x-icon">
         <link rel="icon" href="{{ asset('favicon.ico') }}?v=4" type="image/x-icon">
         <link rel="icon" href="{{ asset('favicon.png') }}?v=4" type="image/png" sizes="512x512">
