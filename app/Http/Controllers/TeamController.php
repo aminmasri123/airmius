@@ -13,6 +13,7 @@ use App\Models\TeamInvitation;
 use App\Models\TeamJoinRequest;
 use App\Models\User;
 use App\Models\UserBadge;
+use App\Http\Resources\Api\V1\TeamResource;
 use App\Notifications\ExternalTeamInvitation;
 use App\Services\MediaOptimizer;
 use App\Services\GamificationService;
@@ -751,6 +752,10 @@ class TeamController extends Controller
             ]);
         }
 
+        if ($request->expectsJson()) {
+            return new TeamResource($joinRequest->team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
+        }
+
         return back()->with('success', 'Beitrittsanfrage angenommen.');
     }
 
@@ -776,6 +781,10 @@ class TeamController extends Controller
             'team_id' => $joinRequest->team_id,
             'club_id' => $joinRequest->team->club_id,
         ]);
+
+        if ($request->expectsJson()) {
+            return new TeamResource($joinRequest->team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
+        }
 
         return back()->with('success', 'Beitrittsanfrage abgelehnt.');
     }

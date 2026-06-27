@@ -33,6 +33,7 @@ use App\Http\Controllers\SportMapController;
 use App\Http\Controllers\StoryController;
 use App\Http\Controllers\Api\V1\TeamPenaltyController;
 use App\Http\Controllers\TeamController;
+use App\Http\Middleware\EnsureApiCorsHeaders;
 use App\Http\Controllers\SubscriptionInvoiceController;
 use App\Http\Controllers\SubscriptionPlanController;
 use App\Http\Controllers\TrainingController;
@@ -43,6 +44,13 @@ use App\Http\Controllers\UserStatusController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
+Route::options('/team-join-requests/{joinRequest}/approve', fn () => response('', 204))
+    ->middleware(EnsureApiCorsHeaders::class)
+    ->name('auth.team-join-requests.approve.options');
+Route::options('/team-join-requests/{joinRequest}/decline', fn () => response('', 204))
+    ->middleware(EnsureApiCorsHeaders::class)
+    ->name('auth.team-join-requests.decline.options');
 
 Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])->group(function () {
 
@@ -285,8 +293,10 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::get('/team-invitations/token/{token}/accept', [TeamController::class, 'acceptInvitationByToken'])
         ->name('auth.team-invitations.accept-by-token');
     Route::post('/team-join-requests/{joinRequest}/approve', [TeamController::class, 'approveJoinRequest'])
+        ->middleware(EnsureApiCorsHeaders::class)
         ->name('auth.team-join-requests.approve');
     Route::post('/team-join-requests/{joinRequest}/decline', [TeamController::class, 'declineJoinRequest'])
+        ->middleware(EnsureApiCorsHeaders::class)
         ->name('auth.team-join-requests.decline');
     Route::put('/teams/{team}/members/{user}', [TeamController::class, 'updateMember'])->name('auth.teams.members.update');
     Route::delete('/teams/{team}/members/{user}', [TeamController::class, 'removeMember'])->name('auth.teams.members.destroy');

@@ -143,8 +143,13 @@ class AirmiusApiClient {
     try {
       return await _json('POST', '/api/v1/team-join-requests/$requestId/approve', body: {'role': role});
     } on AirmiusApiException catch (error) {
-      if (!_shouldTryNestedTeamJoinRoute(error)) rethrow;
-      return _json('POST', '/api/v1/teams/$teamId/join-requests/$requestId/approve', body: {'role': role});
+      if (!_shouldTryTeamJoinFallback(error)) rethrow;
+      try {
+        return await _json('POST', '/api/v1/teams/$teamId/join-requests/$requestId/approve', body: {'role': role});
+      } on AirmiusApiException catch (nestedError) {
+        if (!_shouldTryTeamJoinFallback(nestedError)) rethrow;
+        return _json('POST', '/team-join-requests/$requestId/approve', body: {'role': role});
+      }
     }
   }
 
@@ -152,12 +157,17 @@ class AirmiusApiClient {
     try {
       return await _json('POST', '/api/v1/team-join-requests/$requestId/decline');
     } on AirmiusApiException catch (error) {
-      if (!_shouldTryNestedTeamJoinRoute(error)) rethrow;
-      return _json('POST', '/api/v1/teams/$teamId/join-requests/$requestId/decline');
+      if (!_shouldTryTeamJoinFallback(error)) rethrow;
+      try {
+        return await _json('POST', '/api/v1/teams/$teamId/join-requests/$requestId/decline');
+      } on AirmiusApiException catch (nestedError) {
+        if (!_shouldTryTeamJoinFallback(nestedError)) rethrow;
+        return _json('POST', '/team-join-requests/$requestId/decline');
+      }
     }
   }
 
-  bool _shouldTryNestedTeamJoinRoute(AirmiusApiException error) => error.statusCode == 404 || error.statusCode == 405;
+  bool _shouldTryTeamJoinFallback(AirmiusApiException error) => error.statusCode == 0 || error.statusCode == 404 || error.statusCode == 405 || error.statusCode == 599;
 
   Future<AirmiusJson> teamAttendanceStats(int teamId) => _json('GET', '/api/v1/teams/$teamId/attendance-stats');
 
