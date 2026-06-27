@@ -14,12 +14,12 @@
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        <link rel="manifest" href="{{ asset('site.webmanifest') }}?v=3">
-        <link rel="shortcut icon" href="{{ asset('favicon.ico') }}?v=3" type="image/x-icon">
-        <link rel="icon" href="{{ asset('favicon.ico') }}?v=3" type="image/x-icon">
-        <link rel="icon" href="{{ asset('favicon.png') }}?v=3" type="image/png" sizes="512x512">
-        <link rel="icon" href="{{ asset('img/logo/airmius-icon-192.png') }}?v=3" type="image/png" sizes="192x192">
-        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('img/logo/airmius-icon-192.png') }}?v=3">
+        <link rel="manifest" href="{{ asset('site.webmanifest') }}?v=4">
+        <link rel="shortcut icon" href="{{ asset('favicon.ico') }}?v=4" type="image/x-icon">
+        <link rel="icon" href="{{ asset('favicon.ico') }}?v=4" type="image/x-icon">
+        <link rel="icon" href="{{ asset('favicon.png') }}?v=4" type="image/png" sizes="512x512">
+        <link rel="icon" href="{{ asset('img/logo/airmius-icon-192.png') }}?v=4" type="image/png" sizes="192x192">
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('img/logo/airmius-icon-192.png') }}?v=4">
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
         <!-- Fonts -->

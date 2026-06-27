@@ -1,4 +1,8 @@
 <IfModule mod_rewrite.c>
+    AddType application/manifest+json .webmanifest
+    AddType image/png .png
+    AddType image/x-icon .ico
+
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
     </IfModule>
