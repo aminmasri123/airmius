@@ -37,6 +37,10 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::prefix('v1')->name('api.v1.')->group(function () {
+    Route::options('/{any}', fn () => response('', 204))
+        ->where('any', '.*')
+        ->name('options');
+
     Route::get('/meta', MobileMetaController::class)->name('meta');
     Route::get('/posts/{post}/image', function (Post $post) {
         abort_unless($post->image, 404);
