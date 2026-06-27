@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\TeamResource;
+use App\Models\Club;
 use App\Models\Event;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\PlanFeatureService;
 use App\Support\ClubRoles;
 use App\Support\Roles;
 use App\Support\TeamRoles;
@@ -15,6 +17,8 @@ use Illuminate\Support\Facades\DB;
 
 class TeamController extends Controller
 {
+    public function __construct(private readonly PlanFeatureService $planFeatures) {}
+
     public function index(Request $request)
     {
         $teams = Team::visibleTo($request->user())
@@ -42,6 +46,71 @@ class TeamController extends Controller
         );
 
         return new TeamResource($team);
+    }
+
+    public function store(Request $request)
+    {
+        $this->authorize('create', Team::class);
+
+        $data = $request->validate([
+            'club_id' => ['required', 'exists:clubs,id'],
+            'name' => ['required', 'string', 'max:255'],
+            'sport_type' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $club = Club::findOrFail($data['club_id']);
+        abort_unless($request->user()->can('update', $club), 403);
+
+        if (! Team::query()->where('club_id', $club->id)->where('name', $data['name'])->exists()) {
+            $this->planFeatures->ensureCanCreateTeam($club);
+        }
+
+        $team = DB::transaction(function () use ($club, $data, $request) {
+            $team = Team::firstOrCreate(
+                ['club_id' => $club->id, 'name' => $data['name']],
+                ['sport_type' => $data['sport_type'] ?? $club->sport_type]
+            );
+
+            if (! $team->wasRecentlyCreated) {
+                $team->update(['sport_type' => $data['sport_type'] ?? $team->sport_type]);
+            }
+
+            $team->users()->syncWithoutDetaching([
+                $request->user()->id => ['role' => TeamRoles::COACH],
+            ]);
+
+            return $team;
+        });
+
+        return (new TeamResource($team->fresh()->load(['club', 'users'])->loadCount(['users', 'events'])))
+            ->response()
+            ->setStatusCode(201);
+    }
+
+    public function update(Request $request, Team $team)
+    {
+        $this->authorize('update', $team);
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'sport_type' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $team->update([
+            'name' => $data['name'],
+            'sport_type' => $data['sport_type'] ?? $team->sport_type,
+        ]);
+
+        return new TeamResource($team->fresh()->load(['club', 'users'])->loadCount(['users', 'events']));
+    }
+
+    public function destroy(Request $request, Team $team)
+    {
+        $this->authorize('delete', $team);
+
+        $team->delete();
+
+        return response()->json(['data' => ['deleted' => true]]);
     }
 
     public function attendanceStats(Request $request, Team $team)

@@ -69,6 +69,25 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
     final data = json['data'];
     return AirmiusTeam.fromJson(data is JsonMap ? data : json);
   }
+
+  @override
+  Future<AirmiusTeam> createTeam(JsonMap payload) async {
+    final json = await client.createTeam(payload);
+    final data = json['data'];
+    return AirmiusTeam.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<AirmiusTeam> updateTeam(int id, JsonMap payload) async {
+    final json = await client.updateTeam(id, payload);
+    final data = json['data'];
+    return AirmiusTeam.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<void> deleteTeam(int id) async {
+    await client.deleteTeam(id);
+  }
 }
 
 class AirmiusApiSportRepository implements AirmiusSportRepository {

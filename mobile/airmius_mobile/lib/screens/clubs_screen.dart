@@ -8,6 +8,7 @@ import '../widgets/airmius_widgets.dart';
 import 'application_screen.dart';
 import 'club_cockpit_screen.dart';
 import 'club_membership_management_screen.dart';
+import 'team_detail_screen.dart';
 import 'ui_action_result_screen.dart';
 
 class ClubsScreen extends StatefulWidget {
@@ -396,7 +397,7 @@ class _ClubInlineWorkspace extends StatelessWidget {
           const SizedBox(height: 12),
         ],
         if (panel == 'team') ...[
-          _TeamCreateInlinePanel(club: club),
+          _TeamCreateInlinePanel(club: club, onCreated: onReload),
           const SizedBox(height: 12),
         ],
         _InlineSection(
@@ -414,7 +415,17 @@ class _ClubInlineWorkspace extends StatelessWidget {
                       spacing: gap,
                       runSpacing: gap,
                       children: [
-                        for (final team in club.teamList) SizedBox(width: width, child: _InlineTeamCard(team: team)),
+                        for (final team in club.teamList)
+                          SizedBox(
+                            width: width,
+                            child: _InlineTeamCard(
+                              team: team,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => TeamDetailScreen(title: team.name, mode: 'Profil', teamId: team.id)),
+                              ),
+                            ),
+                          ),
                       ],
                     );
                   },
@@ -492,26 +503,83 @@ class _ClubEditInlinePanel extends StatelessWidget {
   }
 }
 
-class _TeamCreateInlinePanel extends StatelessWidget {
-  const _TeamCreateInlinePanel({required this.club});
+class _TeamCreateInlinePanel extends StatefulWidget {
+  const _TeamCreateInlinePanel({required this.club, required this.onCreated});
 
   final ClubSummary club;
+  final VoidCallback onCreated;
+
+  @override
+  State<_TeamCreateInlinePanel> createState() => _TeamCreateInlinePanelState();
+}
+
+class _TeamCreateInlinePanelState extends State<_TeamCreateInlinePanel> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _sportController = TextEditingController();
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _sportController.text = widget.club.sportType ?? '';
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _sportController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _createTeam() async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty || _saving) {
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      final services = AirmiusServicesScope.of(context);
+      await services.repositories.clubs.createTeam({
+        'club_id': widget.club.id,
+        'name': name,
+        if (_sportController.text.trim().isNotEmpty) 'sport_type': _sportController.text.trim(),
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Team erstellt.')));
+      widget.onCreated();
+      _nameController.clear();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Team konnte nicht erstellt werden: $error')));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return _InlineSection(
       title: 'Team hinzufuegen',
-      subtitle: 'Neues Team fuer ${club.name} vorbereiten.',
+      subtitle: 'Neues Team fuer ${widget.club.name} erstellen.',
       child: Column(
         children: [
-          const _ReadOnlyFormLine(label: 'Teamname', value: 'Neues Team'),
+          TextField(
+            controller: _nameController,
+            style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
+            decoration: const InputDecoration(labelText: 'Teamname', hintText: 'z.B. U16, Herren Aktiv'),
+          ),
           const SizedBox(height: 10),
-          _ReadOnlyFormLine(label: 'Verein', value: club.name),
+          TextField(
+            controller: _sportController,
+            style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
+            decoration: const InputDecoration(labelText: 'Sportart', hintText: 'z.B. fussball'),
+          ),
           const SizedBox(height: 12),
           _SmallInlineButton(
-            label: 'Team erstellen',
+            label: _saving ? 'Speichert...' : 'Team erstellen',
             filled: true,
-            onPressed: () => openUiAction(context, title: 'Team erstellen', body: 'Der native Flutter-Flow ist vorbereitet. Fuer echtes Erstellen braucht die mobile API noch POST /api/v1/teams.', status: 'API fehlt', icon: Icons.group_add_outlined),
+            onPressed: _createTeam,
           ),
         ],
       ),
@@ -559,31 +627,37 @@ class _InlineSection extends StatelessWidget {
 }
 
 class _InlineTeamCard extends StatelessWidget {
-  const _InlineTeamCard({required this.team});
+  const _InlineTeamCard({required this.team, required this.onTap});
 
   final TeamSummary team;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AirmiusColors.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: AirmiusColors.border)),
-      child: Row(
-        children: [
-          _InitialsCircle(team.name, size: 34),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(team.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 3),
-                Text(team.meta, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12)),
-              ],
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: AirmiusColors.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: AirmiusColors.border)),
+        child: Row(
+          children: [
+            _InitialsCircle(team.name, size: 34),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(team.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 3),
+                  Text(team.meta, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12)),
+                ],
+              ),
             ),
-          ),
-          const StatusPill('Aktiv', color: AirmiusColors.green),
-        ],
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right, color: AirmiusColors.muted),
+          ],
+        ),
       ),
     );
   }

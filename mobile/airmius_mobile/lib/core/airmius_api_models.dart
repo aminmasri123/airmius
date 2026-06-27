@@ -279,6 +279,9 @@ class AirmiusTeam {
     this.visibility,
     this.logoUrl,
     this.attendanceStats,
+    this.users = const [],
+    this.canManage = false,
+    this.canDelete = false,
     this.usersCount,
     this.eventsCount,
   });
@@ -293,6 +296,9 @@ class AirmiusTeam {
   final String? visibility;
   final String? logoUrl;
   final AirmiusTeamAttendanceStats? attendanceStats;
+  final List<AirmiusUser> users;
+  final bool canManage;
+  final bool canDelete;
   final int? usersCount;
   final int? eventsCount;
 
@@ -309,6 +315,9 @@ class AirmiusTeam {
       visibility: _nullableString(json['visibility']),
       logoUrl: _mediaUrl(json['logo_url'] ?? json['logo']),
       attendanceStats: json['attendance_stats'] is JsonMap ? AirmiusTeamAttendanceStats.fromJson(json['attendance_stats'] as JsonMap) : null,
+      users: _jsonList(json['users']).map(AirmiusUser.fromJson).toList(),
+      canManage: _bool(json['can_manage']) || _bool(json['can_update']),
+      canDelete: _bool(json['can_delete']) || _bool(json['can_destroy']),
       usersCount: json.containsKey('users_count') ? _int(json['users_count']) : null,
       eventsCount: json.containsKey('events_count') ? _int(json['events_count']) : null,
     );
@@ -1301,6 +1310,9 @@ abstract class AirmiusClubRepository {
   Future<AirmiusClub> club(int id);
   Future<AirmiusPage<AirmiusTeam>> teams({int page = 1});
   Future<AirmiusTeam> team(int id);
+  Future<AirmiusTeam> createTeam(JsonMap payload);
+  Future<AirmiusTeam> updateTeam(int id, JsonMap payload);
+  Future<void> deleteTeam(int id);
 }
 
 abstract class AirmiusSportRepository {

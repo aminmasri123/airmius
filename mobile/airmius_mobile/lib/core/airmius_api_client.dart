@@ -135,6 +135,9 @@ class AirmiusApiClient {
       });
 
   Future<AirmiusJson> teamDetail(int teamId) => _json('GET', '/api/v1/teams/$teamId');
+  Future<AirmiusJson> createTeam(JsonMap payload) => _json('POST', '/api/v1/teams', body: payload);
+  Future<AirmiusJson> updateTeam(int teamId, JsonMap payload) => _json('PUT', '/api/v1/teams/$teamId', body: payload);
+  Future<AirmiusJson> deleteTeam(int teamId) => _json('DELETE', '/api/v1/teams/$teamId');
 
   Future<AirmiusJson> teamAttendanceStats(int teamId) => _json('GET', '/api/v1/teams/$teamId/attendance-stats');
 

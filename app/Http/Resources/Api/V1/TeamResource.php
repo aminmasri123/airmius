@@ -22,6 +22,8 @@ class TeamResource extends JsonResource
             'visibility' => $this->visibility,
             'logo_url' => UploadStorage::url($this->logo),
             'cover_image_url' => UploadStorage::url($this->cover_image),
+            'can_manage' => (bool) ($request->user()?->can('update', $this->resource) ?? false),
+            'can_delete' => (bool) ($request->user()?->can('delete', $this->resource) ?? false),
             'membership' => $this->pivot ? [
                 'role' => $this->pivot->role ?? null,
             ] : null,

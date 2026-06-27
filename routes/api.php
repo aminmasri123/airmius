@@ -145,7 +145,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/clubs/{club}/subscriptions/{subscription}/renew', [SubscriptionController::class, 'renewClubSubscription'])->name('clubs.subscriptions.renew');
 
         Route::get('/teams', [TeamController::class, 'index'])->name('teams.index');
+        Route::post('/teams', [TeamController::class, 'store'])->name('teams.store');
         Route::get('/teams/{team}', [TeamController::class, 'show'])->name('teams.show');
+        Route::put('/teams/{team}', [TeamController::class, 'update'])->name('teams.update');
+        Route::delete('/teams/{team}', [TeamController::class, 'destroy'])->name('teams.destroy');
         Route::get('/teams/{team}/attendance-stats', [TeamController::class, 'attendanceStats'])->name('teams.attendance-stats');
         Route::get('/teams/{team}/penalties', [TeamPenaltyController::class, 'index'])->name('teams.penalties.index');
         Route::post('/teams/{team}/penalty-rules', [TeamPenaltyController::class, 'storeRule'])->name('teams.penalty-rules.store');

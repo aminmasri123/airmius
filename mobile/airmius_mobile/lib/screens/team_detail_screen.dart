@@ -46,6 +46,21 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
     setState(() => _teamFuture = AirmiusServicesScope.of(context).repositories.clubs.team(teamId));
   }
 
+  Future<void> _deleteTeam(AirmiusTeam team) async {
+    final confirmed = await confirmDanger(context, 'Team "${team.name}" loeschen', 'Dieses Team wird geloescht. Diese Aktion kann nicht rueckgaengig gemacht werden.', 'Loeschen');
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await AirmiusServicesScope.of(context).repositories.clubs.deleteTeam(team.id);
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Team geloescht.')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Team konnte nicht geloescht werden: $error')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final future = _teamFuture;
@@ -111,7 +126,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
           ]),
           const SizedBox(height: 14),
           if (_section == 'Profil') _ProfilePanel(team: team, fallbackTitle: title, joinRequests: _joinRequests, teamChat: _teamChat, guardianGate: _guardianGate, onJoin: (value) => setState(() => _joinRequests = value), onChat: (value) => setState(() => _teamChat = value), onGuardian: (value) => setState(() => _guardianGate = value)),
-          if (_section == 'Kader') const _RosterPanel(),
+          if (_section == 'Kader') _RosterPanel(team: team),
           if (_section == 'Rollen') const _RolesPanel(),
           if (_section == 'Einladungen') const _InvitePanel(),
           if (_section == 'Kalender') const _CalendarPanel(),
@@ -120,6 +135,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [
             if (widget.teamId != null && widget.teamId! > 0) AirmiusButton(label: 'Neu laden', icon: Icons.refresh_outlined, onPressed: _reloadTeam),
+            if (team?.canDelete == true) AirmiusButton(label: 'Team loeschen', icon: Icons.delete_outline, danger: true, onPressed: () => _deleteTeam(team!)),
             AirmiusButton(label: 'Operations', icon: Icons.tune_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeamOperationsScreen()))),
           ]),
         ]),
@@ -249,18 +265,23 @@ class _TeamInfoRow extends StatelessWidget {
 }
 
 class _RosterPanel extends StatelessWidget {
-  const _RosterPanel();
+  const _RosterPanel({required this.team});
+
+  final AirmiusTeam? team;
 
   @override
   Widget build(BuildContext context) {
-    return AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: const [
-      Eyebrow('Kader'),
-      SizedBox(height: 12),
-      _MemberRow(name: 'ZBB Konto', role: 'Spieler', status: 'Aktiv'),
-      SizedBox(height: 10),
-      _MemberRow(name: 'verein airmius', role: 'Trainer', status: 'Admin'),
-      SizedBox(height: 10),
-      _MemberRow(name: 'Max Beispiel', role: 'Captain', status: 'Einladung'),
+    final users = team?.users ?? const <AirmiusUser>[];
+    return AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const Eyebrow('Kader'),
+      const SizedBox(height: 12),
+      if (users.isEmpty)
+        const Text('Noch keine Teammitglieder geladen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700))
+      else
+        for (final user in users) ...[
+          _MemberRow(name: user.name, role: user.email.isNotEmpty ? user.email : user.role, status: 'Aktiv'),
+          const SizedBox(height: 10),
+        ],
     ]));
   }
 }
