@@ -323,33 +323,55 @@ class _ModuleDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
     final drawerModules = appModules.where((module) => !_hiddenDrawerModuleTitles.contains(module.title));
-    return Drawer(
-      backgroundColor: AirmiusColors.header,
-      child: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(14, 16, 14, 20),
-          children: [
-            const AirmiusLogo(),
-            const SizedBox(height: 18),
-            _DrawerTab(icon: Icons.home_outlined, label: scope.t('dashboard'), active: currentTab == AppTab.dashboard, onTap: () => _selectTab(context, AppTab.dashboard)),
-            _DrawerTab(icon: Icons.groups_outlined, label: scope.t('clubs'), active: currentTab == AppTab.clubs, onTap: () => _selectTab(context, AppTab.clubs)),
-            _DrawerTab(icon: Icons.dynamic_feed_outlined, label: scope.t('feed.title'), active: currentTab == AppTab.feed, onTap: () => _selectTab(context, AppTab.feed)),
-            _DrawerTab(icon: Icons.notifications_outlined, label: scope.t('updates'), active: currentTab == AppTab.updates, onTap: () => _selectTab(context, AppTab.updates)),
-            _DrawerTab(icon: Icons.public_outlined, label: 'Gastseite', active: false, onTap: () => _openScreen(context, const GuestPortalScreen())),
-            _DrawerTab(icon: Icons.hub_outlined, label: scope.t('ops.hub'), active: false, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OperationsHubScreen()))),
-            const SizedBox(height: 18),
-            const Eyebrow('Alle Module'),
-            const SizedBox(height: 8),
-            for (final module in drawerModules)
-              _DrawerTab(icon: module.icon, label: scope.copy(module.title), active: false, onTap: () {
-                Navigator.pop(context);
-                onOpenModule(module);
-              }),
-            const SizedBox(height: 16),
-            const LanguageChooser(),
-            const SizedBox(height: 16),
-            _DrawerTab(icon: Icons.logout_outlined, label: 'Abmelden', active: false, onTap: onSignOut),
-          ],
+    return SizedBox(
+      width: MediaQuery.of(context).size.width,
+      child: Material(
+        color: AirmiusColors.header,
+        elevation: 16,
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
+                child: Row(
+                  children: [
+                    const AirmiusLogo(),
+                    const Spacer(),
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(width: 44, height: 44),
+                      tooltip: 'Menue schliessen',
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded, color: AirmiusColors.text),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: AirmiusColors.border),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 20),
+                  children: [
+                    _DrawerTab(icon: Icons.home_outlined, label: scope.t('dashboard'), active: currentTab == AppTab.dashboard, onTap: () => _selectTab(context, AppTab.dashboard)),
+                    _DrawerTab(icon: Icons.groups_outlined, label: scope.t('clubs'), active: currentTab == AppTab.clubs, onTap: () => _selectTab(context, AppTab.clubs)),
+                    _DrawerTab(icon: Icons.dynamic_feed_outlined, label: scope.t('feed.title'), active: currentTab == AppTab.feed, onTap: () => _selectTab(context, AppTab.feed)),
+                    _DrawerTab(icon: Icons.notifications_outlined, label: scope.t('updates'), active: currentTab == AppTab.updates, onTap: () => _selectTab(context, AppTab.updates)),
+                    _DrawerTab(icon: Icons.public_outlined, label: 'Gastseite', active: false, onTap: () => _openScreen(context, const GuestPortalScreen())),
+                    _DrawerTab(icon: Icons.hub_outlined, label: scope.t('ops.hub'), active: false, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OperationsHubScreen()))),
+                    const SizedBox(height: 18),
+                    const Eyebrow('Alle Module'),
+                    const SizedBox(height: 8),
+                    for (final module in drawerModules)
+                      _DrawerTab(icon: module.icon, label: scope.copy(module.title), active: false, onTap: () {
+                        Navigator.pop(context);
+                        onOpenModule(module);
+                      }),
+                    _DrawerTab(icon: Icons.logout_outlined, label: 'Abmelden', active: false, onTap: onSignOut),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

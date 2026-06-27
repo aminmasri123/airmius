@@ -1,6 +1,6 @@
 ﻿<script setup>
-import { ref, watch } from 'vue'
-import { Link, router } from '@inertiajs/vue3'
+import { computed, ref, watch } from 'vue'
+import { Link, router, usePage } from '@inertiajs/vue3'
 import LanguageDropdown from '@/Components/LanguageDropdown.vue'
 import ApplicationLogo from '@/Components/ApplicationLogo.vue'
 import UserCard from '@/Components/Auth/UserCard.vue'
@@ -12,6 +12,8 @@ const props = defineProps({
 })
 
 const mobileOpen = ref(false)
+const page = usePage()
+const isRtl = computed(() => page.props.direction === 'rtl')
 
 const scrollTo = (id) => {
     const el = document.getElementById(id)
@@ -56,7 +58,11 @@ const navItems = [
 <template>
     <nav id="nav" class="fixed top-0 left-0 w-full z-50 nav-blur border-b backdrop-blur">
         <div class="relative mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6">
-            <button @click="scrollTo('hero')" class="flex shrink-0 items-center gap-2 font-heading font-900 text-xl tracking-tight">
+            <button
+                @click="scrollTo('hero')"
+                class="flex shrink-0 items-center gap-2 font-heading font-900 text-xl tracking-tight"
+                :class="isRtl ? 'max-lg:order-2 max-lg:flex-row-reverse' : ''"
+            >
                 <ApplicationLogo class="w-8 h-8" />
                 <span class="text-primary font-[--ubuntu]">AIRMIUS</span>
             </button>
@@ -83,7 +89,10 @@ const navItems = [
                 </Link>
             </div>
 
-            <div class="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
+            <div
+                class="flex shrink-0 items-center gap-2 sm:gap-3"
+                :class="isRtl ? 'max-lg:order-1 max-lg:mr-auto lg:ml-auto' : 'ml-auto'"
+            >
                 <LanguageDropdown />
 
                 <Link
@@ -135,13 +144,17 @@ const navItems = [
 
                 <Transition
                     enter-active-class="transition duration-300 ease-out"
-                    enter-from-class="translate-x-full"
+                    :enter-from-class="isRtl ? '-translate-x-full' : 'translate-x-full'"
                     enter-to-class="translate-x-0"
                     leave-active-class="transition duration-200 ease-in"
                     leave-from-class="translate-x-0"
-                    leave-to-class="translate-x-full"
+                    :leave-to-class="isRtl ? '-translate-x-full' : 'translate-x-full'"
                 >
-                    <div v-if="mobileOpen" class="absolute right-0 top-0 h-full w-full bg-card border-l border-border flex flex-col">
+                    <div
+                        v-if="mobileOpen"
+                        class="absolute top-0 h-full w-full bg-card flex flex-col"
+                        :class="isRtl ? 'left-0 border-r border-border' : 'right-0 border-l border-border'"
+                    >
                         <div class="flex justify-between items-center p-5 border-b border-border">
                             <span class="text-primary font-bold text-lg">{{ $t('guest.nav.menu') }}</span>
                             <button @click="mobileOpen = false" class="text-primary text-2xl p-1">&times;</button>
