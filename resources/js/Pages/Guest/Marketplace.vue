@@ -291,10 +291,7 @@ const selectSegment = (segment) => {
             <div class="absolute inset-0 bg-bg/35"></div>
         </aside>
 
-        <main
-            class="relative z-10 mx-auto max-w-[86rem] pb-24 pt-0 md:pb-14"
-            :class="isRtlLocale ? 'md:pl-44 2xl:pl-48' : 'md:pr-44 2xl:pr-48'"
-        >
+        <main class="relative z-10 mx-auto max-w-[86rem] pb-24 pt-0 md:pb-14">
             <section class="border-b border-border bg-bg px-3 py-2 shadow-sm sm:px-4 sm:py-3">
                 <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2 text-primary shadow-sm sm:flex-nowrap sm:gap-3 sm:px-5 sm:py-3">
                     <div class="flex min-w-0 flex-1 items-center gap-3">
@@ -376,7 +373,6 @@ const selectSegment = (segment) => {
 
                     <div class="hidden gap-2 lg:order-1 lg:flex lg:items-center">
                         <label class="relative block">
-                            <span class="mb-1 block text-[11px] font-black uppercase text-secondary">{{ $t("Kategorie") }}</span>
                             <select v-model="form.category" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
                                 <option v-for="category in localizedCategories" :key="category.value" :value="category.value">
                                     {{ category.label }}
@@ -385,7 +381,7 @@ const selectSegment = (segment) => {
                         </label>
                         <button
                             type="button"
-                            class="mt-5 inline-flex h-12 items-center gap-2 rounded border border-border bg-card px-4 text-sm font-black text-primary transition hover:border-buttonPrimary hover:text-buttonPrimary"
+                            class="inline-flex h-12 items-center gap-2 rounded border border-border bg-card px-4 text-sm font-black text-primary transition hover:border-buttonPrimary hover:text-buttonPrimary"
                             :aria-expanded="advancedFilterOpen"
                             @click="advancedFilterOpen = !advancedFilterOpen"
                         >
