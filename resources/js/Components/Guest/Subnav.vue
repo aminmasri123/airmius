@@ -20,6 +20,7 @@ const safeRoute = (name, fallback) => {
 const page = usePage()
 const isAuthenticated = computed(() => Boolean(page.props.auth?.user))
 const isRtl = computed(() => page.props.direction === 'rtl')
+const brandName = computed(() => isRtl.value ? 'إيرميوس' : 'Airmius')
 const mobileSubnavOpen = ref(false)
 const items = computed(() => [
     ...(isAuthenticated.value ? [['las la-newspaper', 'guest.subnav.feed', safeRoute('auth.feed.index', '/feed')]] : []),
@@ -60,7 +61,7 @@ const items = computed(() => [
                 <div class="mx-auto mb-3 h-1 w-12 rounded-full bg-white/25"></div>
                 <div class="flex items-center justify-between gap-3">
                     <div>
-                        <p class="text-[11px] font-black uppercase tracking-wide text-buttonPrimary">Airmius</p>
+                        <p class="text-[11px] font-black uppercase tracking-wide text-buttonPrimary">{{ brandName }}</p>
                         <p class="text-sm font-black text-primary">{{ $t('guest.subnav.quick_navigation') }}</p>
                     </div>
                     <button

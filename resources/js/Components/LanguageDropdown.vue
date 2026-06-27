@@ -1,5 +1,5 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useLanguage } from '@/services/i18nService'
 
 const props = defineProps({
@@ -12,9 +12,41 @@ const props = defineProps({
 
 const open = ref(false)
 const dropdownRef = ref(null)
+const buttonRef = ref(null)
 const showSuccess = ref(false)
+const menuStyle = ref({})
 
 const { locale, languages, changeLang } = useLanguage()
+
+const updateDropdownPosition = () => {
+    if (!buttonRef.value || typeof window === 'undefined') {
+        return
+    }
+
+    const rect = buttonRef.value.getBoundingClientRect()
+    const viewportPadding = 8
+    const menuWidth = Math.min(176, window.innerWidth - viewportPadding * 2)
+    const preferredLeft = props.align === 'start' ? rect.left : rect.right - menuWidth
+    const left = Math.min(
+        Math.max(preferredLeft, viewportPadding),
+        window.innerWidth - menuWidth - viewportPadding,
+    )
+
+    menuStyle.value = {
+        left: `${Math.round(left)}px`,
+        top: `${Math.round(rect.bottom + 8)}px`,
+        width: `${Math.round(menuWidth)}px`,
+    }
+}
+
+const toggleOpen = async () => {
+    open.value = !open.value
+
+    if (open.value) {
+        await nextTick()
+        updateDropdownPosition()
+    }
+}
 
 const handleLanguageChange = async (code) => {
     await changeLang(code)
@@ -29,15 +61,31 @@ const handleClickOutside = (event) => {
     }
 }
 
-onMounted(() => document.addEventListener('click', handleClickOutside))
-onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
+const handleViewportChange = () => {
+    if (open.value) {
+        updateDropdownPosition()
+    }
+}
+
+onMounted(() => {
+    document.addEventListener('click', handleClickOutside)
+    window.addEventListener('resize', handleViewportChange)
+    window.addEventListener('scroll', handleViewportChange, true)
+})
+
+onBeforeUnmount(() => {
+    document.removeEventListener('click', handleClickOutside)
+    window.removeEventListener('resize', handleViewportChange)
+    window.removeEventListener('scroll', handleViewportChange, true)
+})
 </script>
 
 <template>
     <div ref="dropdownRef" class="relative inline-block text-start">
         <button
+            ref="buttonRef"
             type="button"
-            @click="open = !open"
+            @click="toggleOpen"
             class="flex items-center gap-2 rounded-lg border border-border bg-card/80 px-4 py-2 text-sm text-primary transition hover:border-borderHover hover:bg-muted active:scale-95"
         >
             <span v-if="!showSuccess">{{ locale.toUpperCase() }}</span>
@@ -54,8 +102,9 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
         >
             <div
                 v-if="open"
-                class="absolute z-50 mt-2 w-44 overflow-hidden rounded-xl border border-border bg-card text-primary shadow-xl"
-                :class="props.align === 'start' ? 'start-0' : 'end-0'"
+                class="fixed z-[100] overflow-hidden rounded-xl border border-border bg-card text-primary shadow-xl"
+                :class="props.align === 'start' ? 'origin-top-left' : 'origin-top-right'"
+                :style="menuStyle"
             >
                 <div class="py-1">
                     <button

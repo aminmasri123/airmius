@@ -14,7 +14,7 @@ export function useLanguage() {
         { code: 'de', label: 'Deutsch', native: 'Deutsch' },
         { code: 'en', label: 'English', native: 'English' },
         { code: 'fr', label: 'French', native: 'Français' },
-        { code: 'ar', label: 'Arabic', native: 'ا�"عرب�Sة' },
+        { code: 'ar', label: 'Arabic', native: 'العربية' },
     ]
 
     watch(() => page.props.locale, (newLocale) => {
