@@ -550,7 +550,7 @@ const onBannerSecondaryCtaClick = () => {
                             class="bg-gradient-to-r from-air-blue via-air-green to-air-orange bg-clip-text text-transparent">{{ heroCopy.highlight }}</span>
                     </h1>
                     <p id="hero-subtitle"
-                        class="anim-fade-d2 mt-5 text-gray-400 text-lg sm:text-xl max-w-xl mx-auto lg:mx-0 leading-relaxed">
+                        class="anim-fade-d2 mt-5 text-secondary text-lg sm:text-xl max-w-xl mx-auto lg:mx-0 leading-relaxed">
                         {{ heroCopy.subtitle }}
                     </p>
                     <div class="anim-fade-d3 mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
@@ -559,22 +559,22 @@ const onBannerSecondaryCtaClick = () => {
                             {{ heroPrimaryCtaLabel }}
                         </a>
                         <button type="button" @click="onHeroSecondaryCtaClick"
-                            class="border border-white/15 hover:border-white/30 text-white font-semibold px-8 py-3.5 rounded-full text-center transition">
+                            class="border border-border bg-card text-primary hover:border-air-blue/50 hover:bg-muted font-semibold px-8 py-3.5 rounded-full text-center transition">
                             {{ heroCopy.secondaryCta }}
                         </button>
                     </div>
                     <div
-                        class="anim-fade-d4 mt-8 flex flex-wrap items-center gap-4 justify-center lg:justify-start text-sm text-gray-500">
+                        class="anim-fade-d4 mt-8 flex flex-wrap items-center gap-4 justify-center lg:justify-start text-sm text-secondary">
                         <span v-for="item in heroTrustItems" :key="item.key" class="flex items-center gap-1.5">
                             <i class="las la-check-circle text-air-green" aria-hidden="true"></i>{{ t(item.titleKey) }}
                         </span>
                     </div>
                     <div class="anim-fade-d4 mt-6 hidden sm:grid sm:grid-cols-3 gap-3 max-w-2xl mx-auto lg:mx-0">
                         <div v-for="item in heroTrustItems" :key="item.key"
-                            class="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left">
+                            class="rounded-2xl border border-border bg-card p-4 text-left">
                             <i :class="[item.icon, 'text-air-green text-xl mb-2']" aria-hidden="true"></i>
-                            <div class="font-heading font-700 text-sm text-white">{{ t(item.titleKey) }}</div>
-                            <p class="mt-1 text-xs text-gray-500 leading-snug">{{ t(item.textKey) }}</p>
+                            <div class="font-heading font-700 text-sm text-primary">{{ t(item.titleKey) }}</div>
+                            <p class="mt-1 text-xs text-secondary leading-snug">{{ t(item.textKey) }}</p>
                         </div>
                     </div>
                 </div>
