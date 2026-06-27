@@ -136,7 +136,7 @@ class AirmiusApiClient {
       await _json('PUT', '/clubs/$clubId/members/$userId', body: {'role': role, 'roles': [role]});
       final detail = await clubDetail(clubId);
       final data = detail['data'];
-      return data is JsonMap && data['management'] is JsonMap ? data['management'] as JsonMap : detail;
+      return data is Map<String, dynamic> && data['management'] is Map<String, dynamic> ? data['management'] as Map<String, dynamic> : detail;
     }
   }
 

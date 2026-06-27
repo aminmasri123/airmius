@@ -53,6 +53,7 @@ const form = ref({
     availability: props.filters.availability || '',
 })
 const mobileFilterOpen = ref(false)
+const advancedFilterOpen = ref(false)
 
 const translated = (value) => value ? t(String(value)) : value
 const translatedOption = (option) => ({
@@ -343,7 +344,7 @@ const selectSegment = (segment) => {
             </section>
 
             <section class="bg-card/70 px-3 py-3 shadow-sm backdrop-blur sm:px-4">
-                <form class="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto_auto] gap-2 rounded-xl border border-border bg-bg/80 p-2 shadow-sm sm:p-3 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,30rem)_auto] lg:items-center lg:gap-3" @submit.prevent="search">
+                <form class="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto_auto] gap-2 rounded-xl border border-border bg-bg/80 p-2 shadow-sm sm:p-3 lg:grid-cols-[minmax(12rem,18rem)_minmax(18rem,1fr)_auto] lg:items-center lg:gap-3" @submit.prevent="search">
                     <div class="relative order-1 min-w-0 lg:order-2 lg:min-w-[22rem] xl:min-w-[30rem]">
                         <i class="las la-search absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-buttonPrimary"></i>
                         <input
@@ -373,48 +374,24 @@ const selectSegment = (segment) => {
                         <span class="sr-only">{{ $t("Filter") }}</span>
                     </button>
 
-                    <div class="hidden gap-3 lg:order-1 lg:grid lg:grid-cols-5">
+                    <div class="hidden gap-2 lg:order-1 lg:flex lg:items-center">
                         <label class="relative block">
-                            <span class="sr-only">{{ $t("Kategorie") }}</span>
+                            <span class="mb-1 block text-[11px] font-black uppercase text-secondary">{{ $t("Kategorie") }}</span>
                             <select v-model="form.category" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
                                 <option v-for="category in localizedCategories" :key="category.value" :value="category.value">
                                     {{ category.label }}
                                 </option>
                             </select>
                         </label>
-                        <label class="relative block">
-                            <span class="sr-only">{{ $t("Bereich") }}</span>
-                            <select v-model="form.segment" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
-                                <option v-for="segment in localizedSegments" :key="segment.value || 'all'" :value="segment.value">
-                                    {{ segment.label }}
-                                </option>
-                            </select>
-                        </label>
-                        <label class="relative block">
-                            <span class="sr-only">{{ $t("Verfügbarkeit") }}</span>
-                            <select v-model="form.availability" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
-                                <option v-for="option in localizedAvailabilityOptions" :key="option.value || 'all'" :value="option.value">
-                                    {{ option.label }}
-                                </option>
-                            </select>
-                        </label>
-                        <label class="relative block">
-                            <span class="sr-only">{{ $t("Sortierung") }}</span>
-                            <select v-model="form.sort" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
-                                <option v-for="option in localizedSortOptions" :key="option.value" :value="option.value">
-                                    {{ option.label }}
-                                </option>
-                            </select>
-                        </label>
-                        <label class="relative block sm:col-span-2 xl:col-span-2">
-                            <span class="sr-only">{{ $t("Land") }}</span>
-                            <select v-model="form.country" class="h-12 w-full rounded border-border bg-inputBg px-4 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25" @change="search">
-                                <option value="">{{ $t("Land automatisch") }}</option>
-                                <option v-for="country in pricingCountries" :key="country.country" :value="country.country">
-                                    {{ country.label }}
-                                </option>
-                            </select>
-                        </label>
+                        <button
+                            type="button"
+                            class="mt-5 inline-flex h-12 items-center gap-2 rounded border border-border bg-card px-4 text-sm font-black text-primary transition hover:border-buttonPrimary hover:text-buttonPrimary"
+                            :aria-expanded="advancedFilterOpen"
+                            @click="advancedFilterOpen = !advancedFilterOpen"
+                        >
+                            <i class="las la-sliders-h text-lg"></i>
+                            {{ $t("Filter") }}
+                        </button>
                     </div>
 
                     <div class="order-3 grid grid-cols-[auto] gap-2 lg:order-3 lg:w-auto lg:shrink-0 lg:grid-cols-[1fr_auto]">
@@ -425,6 +402,45 @@ const selectSegment = (segment) => {
                         <button type="button" class="hidden h-12 rounded border border-border bg-card px-4 text-sm font-bold text-primary transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-buttonPrimary/20 sm:block" @click="reset">
                             {{ $t("Reset") }}
                         </button>
+                    </div>
+
+                    <div
+                        v-if="advancedFilterOpen"
+                        class="order-4 col-span-3 hidden grid-cols-4 gap-3 rounded-xl border border-border bg-card p-3 lg:grid"
+                    >
+                        <label class="relative block">
+                            <span class="mb-1 block text-[11px] font-black uppercase text-secondary">{{ $t("Bereich") }}</span>
+                            <select v-model="form.segment" class="h-11 w-full rounded border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
+                                <option v-for="segment in localizedSegments" :key="segment.value || 'all'" :value="segment.value">
+                                    {{ segment.label }}
+                                </option>
+                            </select>
+                        </label>
+                        <label class="relative block">
+                            <span class="mb-1 block text-[11px] font-black uppercase text-secondary">{{ $t("Verfügbarkeit") }}</span>
+                            <select v-model="form.availability" class="h-11 w-full rounded border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
+                                <option v-for="option in localizedAvailabilityOptions" :key="option.value || 'all'" :value="option.value">
+                                    {{ option.label }}
+                                </option>
+                            </select>
+                        </label>
+                        <label class="relative block">
+                            <span class="mb-1 block text-[11px] font-black uppercase text-secondary">{{ $t("Sortierung") }}</span>
+                            <select v-model="form.sort" class="h-11 w-full rounded border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25">
+                                <option v-for="option in localizedSortOptions" :key="option.value" :value="option.value">
+                                    {{ option.label }}
+                                </option>
+                            </select>
+                        </label>
+                        <label class="relative block">
+                            <span class="mb-1 block text-[11px] font-black uppercase text-secondary">{{ $t("Land") }}</span>
+                            <select v-model="form.country" class="h-11 w-full rounded border-border bg-inputBg px-3 pr-9 text-sm font-bold text-primary outline-none transition focus:border-buttonPrimary focus:ring-2 focus:ring-buttonPrimary/25" @change="search">
+                                <option value="">{{ $t("Land automatisch") }}</option>
+                                <option v-for="country in pricingCountries" :key="country.country" :value="country.country">
+                                    {{ country.label }}
+                                </option>
+                            </select>
+                        </label>
                     </div>
 
                     <div
@@ -522,10 +538,12 @@ const selectSegment = (segment) => {
                 </form>
 
                 <div class="mx-auto mt-2 flex max-w-7xl gap-2 overflow-x-auto pb-1 text-xs font-semibold text-secondary sm:mt-3 sm:flex-wrap">
-                    <span class="rounded bg-muted px-2 py-1">{{ $t('Kategorie:') }} {{ activeCategoryLabel }}</span>
-                    <span class="rounded bg-muted px-2 py-1">{{ $t('Bereich:') }} {{ activeSegmentLabel }}</span>
-                    <span class="hidden rounded bg-muted px-2 py-1 sm:inline">{{ $t('Status:') }} {{ activeAvailabilityLabel }}</span>
                     <span class="shrink-0 rounded bg-buttonPrimary/15 px-2 py-1 text-buttonPrimary">{{ $t('{count} Treffer', { count: totalProducts }) }}</span>
+                    <span v-if="form.category" class="rounded bg-muted px-2 py-1">{{ activeCategoryLabel }}</span>
+                    <span v-if="form.segment" class="rounded bg-muted px-2 py-1">{{ activeSegmentLabel }}</span>
+                    <span v-if="form.availability" class="hidden rounded bg-muted px-2 py-1 sm:inline">{{ activeAvailabilityLabel }}</span>
+                    <span v-if="form.country" class="hidden rounded bg-muted px-2 py-1 sm:inline">{{ form.country }}</span>
+                    <span v-if="form.sort && form.sort !== 'recommended'" class="hidden rounded bg-muted px-2 py-1 sm:inline">{{ localizedSortOptions.find((option) => option.value === form.sort)?.label }}</span>
                 </div>
             </section>
 

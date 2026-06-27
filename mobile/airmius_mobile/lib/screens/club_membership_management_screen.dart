@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/airmius_api_models.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
@@ -17,38 +18,7 @@ class ClubMembershipManagementScreen extends StatefulWidget {
 class _ClubMembershipManagementScreenState extends State<ClubMembershipManagementScreen> {
   String _filter = 'Alle';
   String _period = 'Juni 2026';
-  Future<bool>? _accessFuture;
-
-  final List<_MemberEntry> _members = const [
-    _MemberEntry(name: 'ZBB Konto', email: 'zbb.bop.it@gmail.com', type: 'Aktiv', number: 'ZBB-0001', balance: '0,00 EUR', sepa: true),
-    _MemberEntry(name: 'Amir Masri', email: 'amir@example.com', type: 'Extern', number: 'EXT-0002', balance: '12,00 EUR', sepa: false),
-    _MemberEntry(name: 'Junior Mitglied', email: 'eltern@example.com', type: 'Jugend', number: 'ZBB-0003', balance: '0,00 EUR', sepa: true),
-  ];
-
-  final List<_InvoiceEntry> _invoices = const [
-    _InvoiceEntry(title: 'Mitgliedsbeitrag Juni', person: 'ZBB Konto', amount: '12,00 EUR', status: 'Bezahlt', color: AirmiusColors.green),
-    _InvoiceEntry(title: 'Mitgliedsbeitrag Juni', person: 'Amir Masri', amount: '12,00 EUR', status: 'Offen', color: AirmiusColors.amber),
-    _InvoiceEntry(title: 'SEPA Sammellauf 06/2026', person: 'Junior Mitglied', amount: '9,00 EUR', status: 'Vorgemerkt', color: AirmiusColors.blue),
-  ];
-
-  final List<_BankEntry> _bankEntries = const [
-    _BankEntry(title: 'Banktransaktion erkannt', detail: '12,00 EUR von Amir Masri - Zuordnung vorgeschlagen'),
-    _BankEntry(title: 'Rücklastschrift prüfen', detail: 'SEPA Mandat Junior Mitglied braucht Bestätigung'),
-  ];
-
-  int get _activeMembersCount => _members.where((member) => member.type != 'Extern').length;
-  int get _sepaReadyMembersCount => _members.where((member) => member.sepa).length;
-  int get _openInvoicesCount => _invoices.where((invoice) => invoice.status == 'Offen').length;
-
-  String get _openInvoiceTotal {
-    final total = _invoices.where((invoice) => invoice.status == 'Offen').fold<int>(0, (sum, invoice) => sum + _parseEuroCents(invoice.amount));
-    return _formatEuro(total);
-  }
-
-  String get _recurringContributionTotal {
-    final total = _members.fold<int>(0, (sum, member) => sum + (member.type == 'Jugend' ? 900 : member.type == 'Aktiv' ? 1200 : 0));
-    return _formatEuro(total);
-  }
+  Future<ClubSummary?>? _clubFuture;
 
   int _parseEuroCents(String value) {
     final normalized = value.replaceAll(' EUR', '').replaceAll('.', '').replaceAll(',', '.').trim();
@@ -60,22 +30,137 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     return '$euros EUR';
   }
 
+  String _formatEuroAmount(double value) {
+    return '${value.toStringAsFixed(2).replaceAll('.', ',')} EUR';
+  }
+
+  String _openTotalFromInvoices(List<_InvoiceEntry> invoices) {
+    final total = invoices.where((invoice) => invoice.status == 'Offen').fold<int>(0, (sum, invoice) => sum + _parseEuroCents(invoice.amount));
+    return _formatEuro(total);
+  }
+
+  String _recurringTotalFromMembers(List<_MemberEntry> members) {
+    final total = members.fold<int>(0, (sum, member) {
+      if (member.type == 'Jugend') return sum + 900;
+      if (member.type == 'Aktiv') return sum + 1200;
+      return sum;
+    });
+    return _formatEuro(total);
+  }
+
+  bool _boolFromAny(Object? value) {
+    if (value is bool) return value;
+    final normalized = '$value'.toLowerCase();
+    return normalized == '1' || normalized == 'true' || normalized == 'yes';
+  }
+
+  String _stringFromJson(JsonMap json, List<String> keys, {String fallback = ''}) {
+    for (final key in keys) {
+      final value = json[key];
+      if (value != null && '$value'.trim().isNotEmpty) return '$value';
+    }
+    return fallback;
+  }
+
+  String _moneyFromValue(Object? value) {
+    if (value is num) return _formatEuroAmount(value.toDouble());
+    final raw = '$value'.trim();
+    if (raw.isEmpty || raw == 'null') return '0,00 EUR';
+    final normalized = raw.replaceAll('EUR', '').replaceAll('€', '').replaceAll('.', '').replaceAll(',', '.').trim();
+    final parsed = double.tryParse(normalized);
+    return parsed == null ? raw : _formatEuroAmount(parsed);
+  }
+
+  String _memberType(AirmiusClubMember member) {
+    final role = (member.role ?? '').toLowerCase();
+    final status = (member.status ?? '').toLowerCase();
+    if (status == 'pending' || status == 'open') return 'Offen';
+    if (role == 'external' || status == 'external') return 'Extern';
+    if (role == 'youth' || role == 'junior' || status == 'youth') return 'Jugend';
+    return 'Aktiv';
+  }
+
+  List<_MemberEntry> _membersFromManagement(AirmiusClubManagement? management) {
+    final members = management?.members ?? const <AirmiusClubMember>[];
+    return members
+        .map(
+          (member) => _MemberEntry(
+            name: member.name,
+            email: member.email,
+            type: _memberType(member),
+            number: (member.memberNumber != null && member.memberNumber!.isNotEmpty) ? member.memberNumber! : 'ID-${member.id}',
+            balance: _moneyFromValue(member.membership['balance'] ?? member.membership['open_balance'] ?? member.membership['contribution_amount']),
+            sepa: _boolFromAny(member.membership['sepa_mandate_active'] ?? member.membership['sepa_ready'] ?? member.membership['has_sepa_mandate']),
+          ),
+        )
+        .toList();
+  }
+
+  List<_InvoiceEntry> _invoicesFromManagement(AirmiusClubManagement? management) {
+    final invoices = management?.invoices ?? const <JsonMap>[];
+    return invoices.map((invoice) {
+      final user = invoice['user'];
+      final member = invoice['member'];
+      final person = user is JsonMap
+          ? _stringFromJson(user, ['name', 'email'], fallback: 'Mitglied')
+          : member is JsonMap
+              ? _stringFromJson(member, ['name', 'email'], fallback: 'Mitglied')
+              : _stringFromJson(invoice, ['member_name', 'user_name', 'recipient_name'], fallback: 'Mitglied');
+      final rawStatus = _stringFromJson(invoice, ['status', 'payment_status'], fallback: 'open').toLowerCase();
+      final paid = rawStatus == 'paid' || rawStatus == 'bezahlt' || rawStatus == 'settled';
+      final status = paid ? 'Bezahlt' : 'Offen';
+      return _InvoiceEntry(
+        title: _stringFromJson(invoice, ['title', 'number', 'invoice_number'], fallback: 'Rechnung'),
+        person: person,
+        amount: _moneyFromValue(invoice['amount'] ?? invoice['amount_due'] ?? invoice['total'] ?? invoice['total_amount']),
+        status: status,
+        color: paid ? AirmiusColors.green : AirmiusColors.amber,
+      );
+    }).toList();
+  }
+
+  List<_BankEntry> _bankEntriesFromManagement(AirmiusClubManagement? management) {
+    final entries = management?.bankTransactions ?? const <JsonMap>[];
+    return entries
+        .map(
+          (entry) => _BankEntry(
+            title: _stringFromJson(entry, ['debtor_name', 'counterparty', 'booking_text', 'title'], fallback: 'Banktransaktion'),
+            detail: '${_moneyFromValue(entry['amount'])} - ${_stringFromJson(entry, [
+                  'purpose',
+                  'remittance_information',
+                  'description',
+                  'status',
+                ], fallback: 'nicht zugeordnet')}',
+          ),
+        )
+        .toList();
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _accessFuture ??= _canManageAnyClub();
+    _clubFuture ??= _loadManagedClub();
   }
 
-  Future<bool> _canManageAnyClub() async {
+  Future<ClubSummary?> _loadManagedClub() async {
     final services = AirmiusServicesScope.of(context);
     final page = await services.repositories.clubs.searchClubs(mine: true);
-    return page.items.map(ClubSummary.fromAirmiusClub).any((club) => club.canManage);
+    final managed = page.items.map(ClubSummary.fromAirmiusClub).where((club) => club.canManage).toList();
+    if (managed.isEmpty) return null;
+    final lag = managed.where((club) => club.name.toLowerCase().contains('lag saar')).toList();
+    final selected = lag.isNotEmpty ? lag.first : managed.first;
+    final detail = await services.repositories.clubs.club(selected.id);
+    return ClubSummary.fromAirmiusClub(detail);
+  }
+
+  void _reloadClub() {
+    setState(() => _clubFuture = _loadManagedClub());
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _accessFuture,
+    return FutureBuilder<ClubSummary?>(
+      future: _clubFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -88,7 +173,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
           );
         }
 
-        if (snapshot.hasError || snapshot.data != true) {
+        if (snapshot.hasError || snapshot.data == null) {
           return Scaffold(
             backgroundColor: AirmiusColors.bg,
             appBar: AppBar(
@@ -113,13 +198,25 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                       style: const TextStyle(color: AirmiusColors.muted, height: 1.4),
                     ),
                     const SizedBox(height: 12),
-                    AirmiusButton(label: 'Erneut prüfen', icon: Icons.refresh_outlined, secondary: true, onPressed: () => setState(() => _accessFuture = _canManageAnyClub())),
+                    AirmiusButton(label: 'Erneut prüfen', icon: Icons.refresh_outlined, secondary: true, onPressed: _reloadClub),
                   ],
                 ),
               ),
             ),
           );
         }
+
+        final club = snapshot.data!;
+        final management = club.management;
+        final members = _membersFromManagement(management);
+        final invoices = _invoicesFromManagement(management);
+        final bankEntries = _bankEntriesFromManagement(management);
+        final activeMembersCount = management?.activeMembersCount ?? members.where((member) => member.type == 'Aktiv').length;
+        final linkedPeopleCount = management?.linkedPeopleCount ?? members.length;
+        final openInvoicesCount = management?.openInvoicesCount ?? invoices.where((invoice) => invoice.status == 'Offen').length;
+        final sepaReadyMembersCount = management?.sepaReadyMembersCount ?? members.where((member) => member.sepa).length;
+        final openInvoiceTotal = management == null ? _openTotalFromInvoices(invoices) : _formatEuroAmount(management.openInvoiceAmount);
+        final recurringContributionTotal = management == null ? _recurringTotalFromMembers(members) : _formatEuroAmount(management.recurringContributionTotal);
 
     return Scaffold(
       appBar: AppBar(
@@ -129,8 +226,8 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
       ),
       body: PageFrame(
         title: 'Mitglieder & Beiträge',
-        subtitle: 'Mitgliederdaten, Rechnungen, Zahlungen, SEPA, DATEV und Import',
-        trailing: const StatusPill('Admin'),
+        subtitle: '${club.name} - Mitgliederdaten, Rechnungen, Zahlungen, SEPA, DATEV und Import',
+        trailing: StatusPill(club.name),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -138,10 +235,10 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
             const SizedBox(height: 14),
             _MembershipKpiGrid(
               cards: [
-                _MembershipKpi(title: 'Aktive Mitglieder', value: '$_activeMembersCount', detail: 'von ${_members.length} verknüpften Personen'),
-                _MembershipKpi(title: 'Offen', value: _openInvoiceTotal, detail: '$_openInvoicesCount offene Rechnung(en)'),
-                _MembershipKpi(title: 'SEPA bereit', value: '$_sepaReadyMembersCount', detail: 'Mandate mit IBAN und Referenz'),
-                _MembershipKpi(title: 'Wiederkehrende Beiträge', value: _recurringContributionTotal, detail: 'Summe aktiver Beitragssätze'),
+                _MembershipKpi(title: 'Aktive Mitglieder', value: '$activeMembersCount', detail: 'von $linkedPeopleCount verknüpften Personen'),
+                _MembershipKpi(title: 'Offen', value: openInvoiceTotal, detail: '$openInvoicesCount offene Rechnung(en)'),
+                _MembershipKpi(title: 'SEPA bereit', value: '$sepaReadyMembersCount', detail: 'Mandate mit IBAN und Referenz'),
+                _MembershipKpi(title: 'Wiederkehrende Beiträge', value: recurringContributionTotal, detail: 'Summe aktiver Beitragssätze'),
               ],
             ),
             const SizedBox(height: 14),
@@ -172,8 +269,13 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                     }).toList(),
                   ),
                   const SizedBox(height: 12),
-                  for (final member in _members.where((member) => _filter == 'Alle' || member.type == _filter || (_filter == 'Offen' && member.balance != '0,00 EUR')))
+                  for (final member in members.where((member) => _filter == 'Alle' || member.type == _filter || (_filter == 'Offen' && member.balance != '0,00 EUR')))
                     _MemberCard(member: member),
+                  if (members.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Text('Keine Mitglieder aus der Vereinsverwaltung geladen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+                    ),
                 ],
               ),
             ),
@@ -219,7 +321,12 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                     ],
                   ),
                   const SizedBox(height: 12),
-                  for (final invoice in _invoices) _InvoiceLine(invoice: invoice),
+                  for (final invoice in invoices) _InvoiceLine(invoice: invoice),
+                  if (invoices.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Text('Keine Rechnungen fuer diesen Verein geladen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+                    ),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 10,
@@ -240,7 +347,12 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                 children: [
                   const Eyebrow('Bankabgleich'),
                   const SizedBox(height: 10),
-                  for (final entry in _bankEntries) _BankLine(entry: entry),
+                  for (final entry in bankEntries) _BankLine(entry: entry),
+                  if (bankEntries.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Text('Keine Banktransaktionen fuer diesen Verein geladen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+                    ),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 10,
