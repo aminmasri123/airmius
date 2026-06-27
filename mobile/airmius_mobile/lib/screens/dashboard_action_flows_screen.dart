@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -22,7 +22,7 @@ class _DashboardActionFlowsScreenState extends State<DashboardActionFlowsScreen>
       title: 'User erstellen',
       area: 'CRUD',
       status: 'Create',
-      body: 'Mobile Formularstrecke fuer neue Benutzer, Rollen, Vereinsbezug, E-Mail und Status.',
+      body: 'Mobile Formularstrecke für neue Benutzer, Rollen, Vereinsbezug, E-Mail und Status.',
       icon: Icons.person_add_alt_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -46,7 +46,7 @@ class _DashboardActionFlowsScreenState extends State<DashboardActionFlowsScreen>
       title: 'Commerce Banktransfer',
       area: 'Payments',
       status: 'Bank',
-      body: 'Bankueberweisung fuer Commerce-Bestellungen mit Referenz, IBAN-Hinweis und Zahlungsstatus.',
+      body: 'Banküberweisung für Commerce-Bestellungen mit Referenz, IBAN-Hinweis und Zahlungsstatus.',
       icon: Icons.account_balance_outlined,
       color: Color(0xFFB084FF),
     ),
@@ -62,7 +62,7 @@ class _DashboardActionFlowsScreenState extends State<DashboardActionFlowsScreen>
       title: 'Event Detail',
       area: 'Details',
       status: 'Show',
-      body: 'Detailansicht fuer Events mit Teilnahme, Ort, Zeiten, Teams, Rollen und Check-in-Status.',
+      body: 'Detailansicht für Events mit Teilnahme, Ort, Zeiten, Teams, Rollen und Check-in-Status.',
       icon: Icons.event_available_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -78,7 +78,7 @@ class _DashboardActionFlowsScreenState extends State<DashboardActionFlowsScreen>
       title: 'Team Profil',
       area: 'Details',
       status: 'Team',
-      body: 'Teamprofil mit Mitgliedern, Trainer, Terminen, Rollen, Beitraegen und Vereinszuordnung.',
+      body: 'Teamprofil mit Mitgliedern, Trainer, Terminen, Rollen, Beiträgen und Vereinszuordnung.',
       icon: Icons.groups_2_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -139,12 +139,12 @@ class _DashboardActionFlowsScreenState extends State<DashboardActionFlowsScreen>
                       onCreate: () => openUiAction(
                         context,
                         title: 'Create/Edit Flow',
-                        message: 'Die mobile Formular-UI ist vorbereitet; API-Daten werden spaeter pro Modul geladen.',
+                        message: 'Die mobile Formular-UI ist vorbereitet; API-Daten werden später pro Modul geladen.',
                       ),
                       onPayment: () => openUiAction(
                         context,
                         title: 'Banktransfer',
-                        message: 'Die Zahlungsstrecke ist als UI vorhanden und wird spaeter mit Laravel-Zahlstatus verbunden.',
+                        message: 'Die Zahlungsstrecke ist als UI vorhanden und wird später mit Laravel-Zahlstatus verbunden.',
                       ),
                       onSupport: () => _openSupport(context),
                     ),
@@ -225,7 +225,7 @@ class _Hero extends StatelessWidget {
           Text('Create, Edit, Show & Payment', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
           SizedBox(height: 8),
           Text(
-            'Native Mobile-UI fuer die kleinen Dashboard-Aktionsseiten: User Create/Edit, Training Logs, Banktransfer, Events, Teams und Plan Items.',
+            'Native Mobile-UI für die kleinen Dashboard-Aktionsseiten: User Create/Edit, Training Logs, Banktransfer, Events, Teams und Plan Items.',
             style: TextStyle(color: Color(0xFFAFC0D8), height: 1.45, fontWeight: FontWeight.w600),
           ),
         ],

@@ -65,7 +65,7 @@ class _GlobalSearchDirectorySuiteScreenState extends State<GlobalSearchDirectory
                 const SectionLabel('DISCOVERY'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Suche wie in der Web-App nach Personen, Vereinen, Teams und oeffentlichen Profilen. Treffer fuehren direkt in die passende mobile Detailansicht.',
+                  'Suche wie in der Web-App nach Personen, Vereinen, Teams und öffentlichen Profilen. Treffer fuehren direkt in die passende mobile Detailansicht.',
                   style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 16),
@@ -148,7 +148,7 @@ class _GlobalSearchDirectorySuiteScreenState extends State<GlobalSearchDirectory
                   else if (query.trim().isEmpty)
                     const EmptyPanel('Gib einen Suchbegriff ein, um Personen, Vereine und Teams zu finden.')
                   else if (filtered.isEmpty)
-                    const EmptyPanel('Keine Treffer fuer diese Suche.')
+                    const EmptyPanel('Keine Treffer für diese Suche.')
                   else
                     for (final result in filtered) ...[
                       _ResultCard(result: result),

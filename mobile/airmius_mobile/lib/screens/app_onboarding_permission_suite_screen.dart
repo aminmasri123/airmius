@@ -22,9 +22,9 @@ class _AppOnboardingPermissionSuiteScreenState extends State<AppOnboardingPermis
   Widget build(BuildContext context) {
     final steps = [
       const _OnboardingStep(
-        title: 'Sprache waehlen',
+        title: 'Sprache wählen',
         status: 'DE',
-        body: 'Erststart mit Deutsch, Englisch, Franzoesisch und Arabisch inklusive spaeterer RTL-Unterstuetzung.',
+        body: 'Erststart mit Deutsch, Englisch, Franzoesisch und Arabisch inklusive späterer RTL-Unterstuetzung.',
         icon: Icons.language_outlined,
         color: AirmiusColors.blue,
       ),
@@ -36,14 +36,14 @@ class _AppOnboardingPermissionSuiteScreenState extends State<AppOnboardingPermis
         color: AirmiusColors.green,
       ),
       const _OnboardingStep(
-        title: 'Berechtigungen pruefen',
+        title: 'Berechtigungen prüfen',
         status: 'Native',
         body: 'Push, Standort, Dateien und Kamera werden mit erklaerendem Kontext abgefragt.',
         icon: Icons.security_outlined,
         color: AirmiusColors.amber,
       ),
       const _OnboardingStep(
-        title: 'Datenschutz bestaetigen',
+        title: 'Datenschutz bestätigen',
         status: 'Consent',
         body: 'Privacy, Nutzungsregeln, Datenrechte und Profil-Sichtbarkeit werden vor Nutzung erklaert.',
         icon: Icons.privacy_tip_outlined,
@@ -107,10 +107,10 @@ class _AppOnboardingPermissionSuiteScreenState extends State<AppOnboardingPermis
               children: [
                 const SectionLabel('BERECHTIGUNGEN'),
                 const SizedBox(height: 8),
-                _PermissionSwitch(title: 'Push-Benachrichtigungen', body: 'Fuer Anfragen, Events, Zahlungen, Chat und Support.', value: notificationPermission, color: AirmiusColors.blue, onChanged: (value) => setState(() => notificationPermission = value)),
-                _PermissionSwitch(title: 'Standort', body: 'Fuer Orte, Routen, Fahrgemeinschaften und Abholung.', value: locationPermission, color: AirmiusColors.green, onChanged: (value) => setState(() => locationPermission = value)),
-                _PermissionSwitch(title: 'Dateien', body: 'Fuer Dokumente, Nachweise, Uploads und Chat-Anhaenge.', value: filePermission, color: AirmiusColors.amber, onChanged: (value) => setState(() => filePermission = value)),
-                _PermissionSwitch(title: 'Kamera', body: 'Fuer Profilbilder, Dokument-Scan, QR-Code und Medien.', value: cameraPermission, color: AirmiusColors.pink, onChanged: (value) => setState(() => cameraPermission = value)),
+                _PermissionSwitch(title: 'Push-Benachrichtigungen', body: 'Für Anfragen, Events, Zahlungen, Chat und Support.', value: notificationPermission, color: AirmiusColors.blue, onChanged: (value) => setState(() => notificationPermission = value)),
+                _PermissionSwitch(title: 'Standort', body: 'Für Orte, Routen, Fahrgemeinschaften und Abholung.', value: locationPermission, color: AirmiusColors.green, onChanged: (value) => setState(() => locationPermission = value)),
+                _PermissionSwitch(title: 'Dateien', body: 'Für Dokumente, Nachweise, Uploads und Chat-Anhaenge.', value: filePermission, color: AirmiusColors.amber, onChanged: (value) => setState(() => filePermission = value)),
+                _PermissionSwitch(title: 'Kamera', body: 'Für Profilbilder, Dokument-Scan, QR-Code und Medien.', value: cameraPermission, color: AirmiusColors.pink, onChanged: (value) => setState(() => cameraPermission = value)),
                 _PermissionSwitch(title: 'Datenschutz akzeptiert', body: 'Consent, Datenrechte und Sichtbarkeitsregeln sind erklaert.', value: privacyAccepted, color: AirmiusColors.green, onChanged: (value) => setState(() => privacyAccepted = value)),
               ],
             ),
@@ -127,7 +127,7 @@ class _AppOnboardingPermissionSuiteScreenState extends State<AppOnboardingPermis
                 const SectionLabel('VORSCHAU'),
                 const SizedBox(height: 8),
                 Text(
-                  'Startrolle: $startRole. Spaeter verbindet die API Profil, Sprache, Workspace, Consent, Device Token und native Berechtigungszustaende.',
+                  'Startrolle: $startRole. Später verbindet die API Profil, Sprache, Workspace, Consent, Device Token und native Berechtigungszustaende.',
                   style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),
@@ -137,7 +137,7 @@ class _AppOnboardingPermissionSuiteScreenState extends State<AppOnboardingPermis
                   onPressed: () => openUiAction(
                     context,
                     title: 'Onboarding starten',
-                    body: 'Diese UI bereitet Erststart, Sprache, Rollenwahl, Workspace, Datenschutz und native Berechtigungen fuer die spaetere App/API vor.',
+                    body: 'Diese UI bereitet Erststart, Sprache, Rollenwahl, Workspace, Datenschutz und native Berechtigungen für die spätere App/API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.phone_iphone_outlined,
                   ),

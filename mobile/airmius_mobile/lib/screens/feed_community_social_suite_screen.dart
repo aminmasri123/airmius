@@ -181,12 +181,12 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
     if ((!hasMedia && content.isEmpty) || _sending) return false;
     if (_visibility == 'organization' && _clubId == null) {
       setState(() => _advanced = true);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Waehle einen Verein fuer einen Vereinsbeitrag.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wähle einen Verein für einen Vereinsbeitrag.')));
       return false;
     }
     if (_visibility == 'team' && _teamId == null) {
       setState(() => _advanced = true);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Waehle ein Team fuer einen Teambeitrag.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wähle ein Team für einen Teambeitrag.')));
       return false;
     }
 
@@ -242,7 +242,7 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Schliessen'),
+            child: const Text('Schließen'),
           ),
         ],
       ),
@@ -309,10 +309,10 @@ class _FeedCommunitySocialSuiteScreenState extends State<FeedCommunitySocialSuit
     return switch (message) {
       'validation.string' => 'validation.string (Server erwartet Text/String, bekam aber einen anderen Wert)',
       'validation.image' => 'validation.image (Server erkennt die Datei nicht als Bild)',
-      'validation.file' => 'validation.file (Server erkennt keinen gueltigen Datei-Upload)',
+      'validation.file' => 'validation.file (Server erkennt keinen gültigen Datei-Upload)',
       'validation.mimes' => 'validation.mimes (Dateityp ist nicht erlaubt)',
-      'validation.max.file' => 'validation.max.file (Datei ist zu gross)',
-      'validation.max' => 'validation.max (Wert oder Datei ist zu gross)',
+      'validation.max.file' => 'validation.max.file (Datei ist zu groß)',
+      'validation.max' => 'validation.max (Wert oder Datei ist zu groß)',
       _ => message,
     };
   }
@@ -880,7 +880,7 @@ class _StoryChip extends StatelessWidget {
                           try {
                             await AirmiusServicesScope.of(context).repositories.feed.deleteStory(deletedStory.id);
                             if (!rootContext.mounted) return;
-                            ScaffoldMessenger.of(rootContext).showSnackBar(const SnackBar(content: Text('Story geloescht.')));
+                            ScaffoldMessenger.of(rootContext).showSnackBar(const SnackBar(content: Text('Story gelöscht.')));
                           } catch (_) {
                             if (!rootContext.mounted) return;
                             if (!closesViewer && stories.isNotEmpty) {
@@ -1117,7 +1117,7 @@ class _Composer extends StatelessWidget {
             _SelectedFileCard(
               icon: Icons.image_outlined,
               title: imageFile!.name,
-              subtitle: 'Bild ausgewaehlt',
+              subtitle: 'Bild ausgewählt',
               onClear: sending ? null : onClearImage,
             ),
           ],
@@ -1126,7 +1126,7 @@ class _Composer extends StatelessWidget {
             _SelectedFileCard(
               icon: Icons.video_file_outlined,
               title: '$attachmentCount Datei(en)',
-              subtitle: 'Video, Bild oder Datei ausgewaehlt',
+              subtitle: 'Video, Bild oder Datei ausgewählt',
               onClear: sending ? null : onClearAttachments,
             ),
           ],
@@ -1232,7 +1232,7 @@ class _ComposerAdvanced extends StatelessWidget {
             decoration: const InputDecoration(labelText: 'Zielgruppe'),
             dropdownColor: AirmiusColors.card,
             items: const [
-              DropdownMenuItem(value: 'public', child: Text('Oeffentlich')),
+              DropdownMenuItem(value: 'public', child: Text('Öffentlich')),
               DropdownMenuItem(value: 'organization', child: Text('Verein')),
               DropdownMenuItem(value: 'team', child: Text('Team')),
             ],
@@ -1360,9 +1360,9 @@ class _ComposerAdvanced extends StatelessWidget {
 
   String _visibilityHint(String visibility) {
     return switch (visibility) {
-      'organization' => 'Sichtbar fuer Mitglieder des ausgewaehlten Vereins.',
-      'team' => 'Sichtbar fuer Mitglieder des ausgewaehlten Teams.',
-      _ => 'Sichtbar fuer dein Netzwerk und passende oeffentliche Feed-Kontexte.',
+      'organization' => 'Sichtbar für Mitglieder des ausgewählten Vereins.',
+      'team' => 'Sichtbar für Mitglieder des ausgewählten Teams.',
+      _ => 'Sichtbar für dein Netzwerk und passende öffentliche Feed-Kontexte.',
     };
   }
 }
@@ -1378,10 +1378,10 @@ class _SportSkillPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (sport == null) {
-      return const Text('Optional: Sportart waehlen, um passende Skills zu markieren.', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700));
+      return const Text('Optional: Sportart wählen, um passende Skills zu markieren.', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700));
     }
     if (sport!.skills.isEmpty) {
-      return Text('Keine Skills fuer ${sport!.name}.', style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700));
+      return Text('Keine Skills für ${sport!.name}.', style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700));
     }
     return Wrap(
       spacing: 8,
@@ -1570,7 +1570,7 @@ class _PostCardState extends State<_PostCard> {
   }
 
   Future<void> _deletePost() async {
-    final ok = await confirmDanger(context, 'Beitrag loeschen', 'Moechtest du diesen Beitrag wirklich loeschen?');
+    final ok = await confirmDanger(context, 'Beitrag löschen', 'Moechtest du diesen Beitrag wirklich löschen?');
     if (!ok || !mounted) return;
     final deletedPost = widget.post;
     widget.onDeleted(deletedPost.id);
@@ -1632,11 +1632,11 @@ class _PostCardState extends State<_PostCard> {
               final hasNewMedia = imageFile != null || attachments.isNotEmpty;
               if (_savingEdit || (content.isEmpty && !hasNewMedia)) return;
               if (visibility == 'organization' && clubId == null) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Waehle einen Verein fuer einen Vereinsbeitrag.')));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wähle einen Verein für einen Vereinsbeitrag.')));
                 return;
               }
               if (visibility == 'team' && teamId == null) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Waehle ein Team fuer einen Teambeitrag.')));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wähle ein Team für einen Teambeitrag.')));
                 return;
               }
 
@@ -1740,7 +1740,7 @@ class _PostCardState extends State<_PostCard> {
                                         _SelectedFileCard(
                                           icon: Icons.image_outlined,
                                           title: imageFile!.name,
-                                          subtitle: 'Neues Bild ausgewaehlt',
+                                          subtitle: 'Neues Bild ausgewählt',
                                           onClear: _savingEdit ? null : () => setDialogState(() => imageFile = null),
                                         ),
                                         const SizedBox(height: 10),
@@ -1878,7 +1878,7 @@ class _PostCardState extends State<_PostCard> {
                   return [
                     if (post.canUpdate || isOwnPost) const PopupMenuItem(value: 'edit', child: Text('Beitrag bearbeiten')),
                     if (!isOwnPost) const PopupMenuItem(value: 'report', child: Text('Beitrag melden')),
-                    if (post.canDelete || isOwnPost) const PopupMenuItem(value: 'delete', child: Text('Beitrag loeschen')),
+                    if (post.canDelete || isOwnPost) const PopupMenuItem(value: 'delete', child: Text('Beitrag löschen')),
                   ];
                 },
               ),

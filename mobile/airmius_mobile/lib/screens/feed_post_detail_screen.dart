@@ -346,11 +346,11 @@ class _FeedPostDetailScreenState extends State<FeedPostDetailScreen> {
               final hasNewMedia = imageFile != null || attachments.isNotEmpty;
               if (_savingEdit || (content.isEmpty && !hasNewMedia)) return;
               if (visibility == 'organization' && _post.clubId == null) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Oeffne den Beitrag im Feed, um einen Verein auszuwaehlen.')));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Öffne den Beitrag im Feed, um einen Verein auszuwählen.')));
                 return;
               }
               if (visibility == 'team' && _post.teamId == null) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Oeffne den Beitrag im Feed, um ein Team auszuwaehlen.')));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Öffne den Beitrag im Feed, um ein Team auszuwählen.')));
                 return;
               }
 
@@ -417,7 +417,7 @@ class _FeedPostDetailScreenState extends State<FeedPostDetailScreen> {
                               decoration: const InputDecoration(labelText: 'Zielgruppe'),
                               dropdownColor: AirmiusColors.card,
                               items: const [
-                                DropdownMenuItem(value: 'public', child: Text('Oeffentlich')),
+                                DropdownMenuItem(value: 'public', child: Text('Öffentlich')),
                                 DropdownMenuItem(value: 'organization', child: Text('Verein')),
                                 DropdownMenuItem(value: 'team', child: Text('Team')),
                               ],

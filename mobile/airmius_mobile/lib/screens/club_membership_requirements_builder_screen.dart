@@ -12,7 +12,7 @@ class ClubMembershipRequirementsBuilderScreen extends StatefulWidget {
 
 class _ClubMembershipRequirementsBuilderScreenState extends State<ClubMembershipRequirementsBuilderScreen> {
   String paymentCycle = 'Jaehrlich';
-  String paymentMethod = 'Ueberweisung';
+  String paymentMethod = 'Überweisung';
   bool personalRequired = true;
   bool addressRequired = true;
   bool contactRequired = true;
@@ -35,7 +35,7 @@ class _ClubMembershipRequirementsBuilderScreenState extends State<ClubMembership
       ),
       _RequirementGroup(
         title: 'Wohndaten',
-        body: 'Land, Strasse, Hausnummer, PLZ, Stadt, Bundesland/Region und optionale abweichende Rechnungsadresse.',
+        body: 'Land, Straße, Hausnummer, PLZ, Stadt, Bundesland/Region und optionale abweichende Rechnungsadresse.',
         required: addressRequired,
         onChanged: (value) => setState(() => addressRequired = value),
         icon: Icons.home_outlined,
@@ -51,7 +51,7 @@ class _ClubMembershipRequirementsBuilderScreenState extends State<ClubMembership
       ),
       _RequirementGroup(
         title: 'Erziehungsberechtigte',
-        body: 'Pflicht fuer Minderjaehrige: Name, E-Mail, Telefon, Zustimmung und Beziehung zum Mitglied.',
+        body: 'Pflicht für Minderjaehrige: Name, E-Mail, Telefon, Zustimmung und Beziehung zum Mitglied.',
         required: guardianRequired,
         onChanged: (value) => setState(() => guardianRequired = value),
         icon: Icons.family_restroom_outlined,
@@ -105,7 +105,7 @@ class _ClubMembershipRequirementsBuilderScreenState extends State<ClubMembership
                 const SectionLabel('FORMULAR-LOGIK'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Jeder Verein kann mobil bestimmen, welche Daten im Mitgliedsantrag sichtbar, optional oder verpflichtend sind. Die UI ist vorbereitet fuer spaetere API-Schemas pro Verein.',
+                  'Jeder Verein kann mobil bestimmen, welche Daten im Mitgliedsantrag sichtbar, optional oder verpflichtend sind. Die UI ist vorbereitet für spätere API-Schemas pro Verein.',
                   style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 16),
@@ -140,7 +140,7 @@ class _ClubMembershipRequirementsBuilderScreenState extends State<ClubMembership
                 const SizedBox(height: 14),
                 SegmentedButton<String>(
                   segments: const [
-                    ButtonSegment(value: 'Ueberweisung', label: Text('Ueberweisung')),
+                    ButtonSegment(value: 'Überweisung', label: Text('Überweisung')),
                     ButtonSegment(value: 'Bar', label: Text('Bar')),
                     ButtonSegment(value: 'SEPA', label: Text('SEPA')),
                   ],
@@ -167,12 +167,12 @@ class _ClubMembershipRequirementsBuilderScreenState extends State<ClubMembership
                 ),
                 const SizedBox(height: 14),
                 AirmiusButton(
-                  label: 'Formularvorschau oeffnen',
+                  label: 'Formularvorschau öffnen',
                   icon: Icons.preview_outlined,
                   onPressed: () => openUiAction(
                     context,
                     title: 'Formularvorschau',
-                    body: 'Die mobile Vorschau zeigt spaeter exakt, was der User beim Mitgliedschaftsantrag sieht, bevor der Verein die Regeln aktiviert.',
+                    body: 'Die mobile Vorschau zeigt später exakt, was der User beim Mitgliedschaftsantrag sieht, bevor der Verein die Regeln aktiviert.',
                     status: 'UI vorbereitet',
                     icon: Icons.preview_outlined,
                   ),

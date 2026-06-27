@@ -23,7 +23,7 @@ class _RoleWorkspaceSwitcherSuiteScreenState extends State<RoleWorkspaceSwitcher
       const _WorkspaceRole(
         title: 'Mitglied',
         status: 'Aktiv',
-        body: 'Startet mit Mitgliedschaften, Karte, Beitraegen, Events, Nachrichten, Badges und Support.',
+        body: 'Startet mit Mitgliedschaften, Karte, Beiträgen, Events, Nachrichten, Badges und Support.',
         icon: Icons.badge_outlined,
         color: AirmiusColors.green,
       ),
@@ -51,7 +51,7 @@ class _RoleWorkspaceSwitcherSuiteScreenState extends State<RoleWorkspaceSwitcher
       const _WorkspaceRole(
         title: 'Plattformadmin',
         status: 'Admin',
-        body: 'Oeffnet Moderation, Audit, Verifizierung, Support, Analytics, Content, Ads und Systembetrieb.',
+        body: 'Öffnet Moderation, Audit, Verifizierung, Support, Analytics, Content, Ads und Systembetrieb.',
         icon: Icons.admin_panel_settings_outlined,
         color: AirmiusColors.blue,
       ),
@@ -59,7 +59,7 @@ class _RoleWorkspaceSwitcherSuiteScreenState extends State<RoleWorkspaceSwitcher
 
     return PageFrame(
       title: 'Rollen & Workspaces',
-      subtitle: 'Kontextwechsel fuer die mobile App',
+      subtitle: 'Kontextwechsel für die mobile App',
       actions: const [AirmiusLogoMark(size: 34)],
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
@@ -132,7 +132,7 @@ class _RoleWorkspaceSwitcherSuiteScreenState extends State<RoleWorkspaceSwitcher
                 const SectionLabel('VORSCHAU'),
                 const SizedBox(height: 8),
                 Text(
-                  'Aktiver Workspace: $workspace. Spaeter verbindet die API Rollen, Berechtigungen, Vereine, Teams, Guardian-Beziehungen und Adminrechte mit der mobilen Navigation.',
+                  'Aktiver Workspace: $workspace. Später verbindet die API Rollen, Berechtigungen, Vereine, Teams, Guardian-Beziehungen und Adminrechte mit der mobilen Navigation.',
                   style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),
@@ -142,7 +142,7 @@ class _RoleWorkspaceSwitcherSuiteScreenState extends State<RoleWorkspaceSwitcher
                   onPressed: () => openUiAction(
                     context,
                     title: 'Workspace wechseln',
-                    body: 'Diese UI bereitet Rollenwechsel, Workspace-Startseite, Berechtigungen und kontextbezogene Navigation fuer die spaetere Laravel-API vor.',
+                    body: 'Diese UI bereitet Rollenwechsel, Workspace-Startseite, Berechtigungen und kontextbezogene Navigation für die spätere Laravel-API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.swap_horiz_outlined,
                   ),

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -20,12 +20,12 @@ class _TrustModerationAdminControlSuiteScreenState extends State<TrustModeration
   final List<_SuiteItem> _items = const [
     _SuiteItem('Moderation Queue', 'Moderation', 'Review', 'Gemeldete Inhalte, Nutzer, Vereine, Kommentare und Entscheidungsstatus.', Icons.report_gmailerrorred_outlined, Color(0xFFFF6B6B)),
     _SuiteItem('Report Detail', 'Moderation', 'Case', 'Fallansicht mit Beweisen, Verlauf, Entscheidung, Notizen und Audit-Spur.', Icons.fact_check_outlined, Color(0xFFF8B84E)),
-    _SuiteItem('Club Verification', 'Trust', 'Verein', 'Vereinspruefung, Dokumente, Admins, Adresse, Status und Freigabeprozess.', Icons.verified_outlined, Color(0xFF2EE59D)),
-    _SuiteItem('Provider Verification', 'Trust', 'Anbieter', 'Anbieterpruefung, Vertrauenssignale, Kosten, VertrÃ¤ge und Marketplace-Zugang.', Icons.verified_user_outlined, Color(0xFF5BA7FF)),
+    _SuiteItem('Club Verification', 'Trust', 'Verein', 'Vereinsprüfung, Dokumente, Admins, Adresse, Status und Freigabeprozess.', Icons.verified_outlined, Color(0xFF2EE59D)),
+    _SuiteItem('Provider Verification', 'Trust', 'Anbieter', 'Anbieterprüfung, Vertrauenssignale, Kosten, Verträge und Marketplace-Zugang.', Icons.verified_user_outlined, Color(0xFF5BA7FF)),
     _SuiteItem('System Settings', 'Admin', 'Config', 'Plattformkonfiguration, Feature Flags, Sichtbarkeit, Limits und globale Einstellungen.', Icons.settings_suggest_outlined, Color(0xFFB084FF)),
     _SuiteItem('Mail Center', 'Admin', 'Mail', 'Systemmails, Templates, Versandstatus, Zielgruppen und Kommunikationskontrolle.', Icons.mark_email_unread_outlined, Color(0xFF5BA7FF)),
     _SuiteItem('User Management', 'Admin', 'Users', 'Nutzer suchen, sperren, Rollen setzen, Verifizierung und Accountstatus steuern.', Icons.manage_accounts_outlined, Color(0xFF2EE59D)),
-    _SuiteItem('Audit & Legal Status', 'Trust', 'Audit', 'Datenschutz, Nutzungsstatus, Einwilligungen, Loeschfristen und Compliance-Hinweise.', Icons.policy_outlined, Color(0xFFF8B84E)),
+    _SuiteItem('Audit & Legal Status', 'Trust', 'Audit', 'Datenschutz, Nutzungsstatus, Einwilligungen, Löschfristen und Compliance-Hinweise.', Icons.policy_outlined, Color(0xFFF8B84E)),
   ];
 
   List<_SuiteItem> get _visible => _filter == 'Alle' ? _items : _items.where((item) => item.area == _filter).toList();
@@ -48,7 +48,7 @@ class _TrustModerationAdminControlSuiteScreenState extends State<TrustModeration
                     const _Hero(
                       eyebrow: 'TRUST CONTROL',
                       title: 'Moderation & Admin',
-                      subtitle: 'Native Mobile-UI fuer Moderation, Trust-Prüfungen, System Settings, Mail Center, User Management und Audit.',
+                      subtitle: 'Native Mobile-UI für Moderation, Trust-Prüfungen, System Settings, Mail Center, User Management und Audit.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -78,10 +78,10 @@ class _TrustModerationAdminControlSuiteScreenState extends State<TrustModeration
                     ],
                     _ActionPanel(
                       firstIcon: Icons.report_gmailerrorred_outlined,
-                      firstLabel: 'Case pruefen',
+                      firstLabel: 'Case prüfen',
                       secondIcon: Icons.verified_outlined,
                       secondLabel: 'Verifizierung starten',
-                      onFirst: () => openUiAction(context, title: 'Moderation Case', body: 'Die Moderations-UI ist vorbereitet; echte Cases kommen spaeter ueber Laravel.', status: 'UI bereit', icon: Icons.info_outline),
+                      onFirst: () => openUiAction(context, title: 'Moderation Case', body: 'Die Moderations-UI ist vorbereitet; echte Cases kommen später über Laravel.', status: 'UI bereit', icon: Icons.info_outline),
                       onSecond: () => openUiAction(context, title: 'Trust Prüfung', body: 'Verifizierungs- und Audit-UI sind vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
                       onSupport: () => _openSupport(context),
                     ),

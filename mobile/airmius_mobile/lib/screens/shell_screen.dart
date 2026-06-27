@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import 'dart:async';
 
@@ -155,7 +155,7 @@ class _ShellScreenState extends State<ShellScreen> {
       'Sportarten' => const SportsCenterScreen(),
       'Events & Training' => const EventManagementScreen(),
       'Trainer-Cockpit' => const TrainerCockpitScreen(),
-      'Ernaehrung' => const NutritionCenterScreen(),
+      'Ernährung' => const NutritionCenterScreen(),
       'Sportkarte' => const SportMapCenterScreen(),
       'Freunde' => const FriendsSocialGraphScreen(),
       'Fahrgemeinschaften' => const CarpoolCenterScreen(),
@@ -219,6 +219,7 @@ class _ShellScreenState extends State<ShellScreen> {
         backgroundColor: AirmiusColors.bg,
         appBar: AirmiusTopBar(
           title: _openedModule == null ? scope.t(_tab.i18nKey) : scope.copy(_openedModule!.title),
+          onLogoTap: () => _openTab(AppTab.feed),
           onSearch: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GlobalSearchScreen())),
           onMessages: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ConversationsCenterScreen())),
           onNotifications: () async {

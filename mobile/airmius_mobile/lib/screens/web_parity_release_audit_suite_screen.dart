@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -23,10 +23,10 @@ class _WebParityReleaseAuditSuiteScreenState extends State<WebParityReleaseAudit
     _AuditItem('Commerce & Finance', 'Mapped', 'UI fertig', 'Marketplace, Cart, Checkout, Subscriptions, Outfit, Billing, Club Finance und Member Finance sind als App-UI vorhanden.', Icons.storefront_outlined, Color(0xFFF8B84E)),
     _AuditItem('Content, Learning & Social', 'Mapped', 'UI fertig', 'Blog, Public Content, Learning Studio, Courses, Feed, Community, Friends und Search/Directory sind als Mobile-Suiten vorhanden.', Icons.dynamic_feed_outlined, Color(0xFFB084FF)),
     _AuditItem('Admin, Trust & Operations', 'Mapped', 'UI fertig', 'Admin Finance, Contracts, Moderation, Verification, Mail Center, Settings, Audit und Platform Controls sind abgebildet.', Icons.verified_user_outlined, Color(0xFFFF6B6B)),
-    _AuditItem('API-Anbindung', 'Api', 'Backend offen', 'Alle Suiten sind API-ready: Buttons, Statuskarten, Filter und Formzustaende sind vorbereitet, Laravel liefert spaeter echte Daten.', Icons.cloud_sync_outlined, Color(0xFF5BA7FF)),
+    _AuditItem('API-Anbindung', 'Api', 'Backend offen', 'Alle Suiten sind API-ready: Buttons, Statuskarten, Filter und Formzustaende sind vorbereitet, Laravel liefert später echte Daten.', Icons.cloud_sync_outlined, Color(0xFF5BA7FF)),
     _AuditItem('State Management', 'Api', 'Planen', 'Nach der UI-Paritaet braucht die App Auth-State, User-Kontext, Rollen, Cache, Offline-Zustaende und Fehlerbehandlung.', Icons.account_tree_outlined, Color(0xFF2EE59D)),
-    _AuditItem('Compile Gate', 'Checks', 'Offen', 'Flutter Analyze/Build wurde bewusst noch nicht gestartet; dieser Gate prueft Imports, Icons, Konstruktoren und Syntax.', Icons.terminal_outlined, Color(0xFFF8B84E)),
-    _AuditItem('Design Gate', 'Checks', 'Offen', 'Mobile Screens muessen visuell gegen die Web-App geprueft werden: Farben, Abstand, Typografie, Cards, Modals und Navigation.', Icons.palette_outlined, Color(0xFFB084FF)),
+    _AuditItem('Compile Gate', 'Checks', 'Offen', 'Flutter Analyze/Build wurde bewusst noch nicht gestartet; dieser Gate prüft Imports, Icons, Konstruktoren und Syntax.', Icons.terminal_outlined, Color(0xFFF8B84E)),
+    _AuditItem('Design Gate', 'Checks', 'Offen', 'Mobile Screens müssen visuell gegen die Web-App geprüft werden: Farben, Abstand, Typografie, Cards, Modals und Navigation.', Icons.palette_outlined, Color(0xFFB084FF)),
     _AuditItem('Route-Parity Gate', 'Checks', 'Offen', 'Zum Abschluss muss jede Vue/Webseite einem Flutter-Screen, einer Suite oder einem bewusst ausgeschlossenen Backend-only Flow zugeordnet sein.', Icons.alt_route_outlined, Color(0xFFFF6B6B)),
   ];
 
@@ -50,7 +50,7 @@ class _WebParityReleaseAuditSuiteScreenState extends State<WebParityReleaseAudit
                     const _Hero(
                       eyebrow: 'WEB PARITY AUDIT',
                       title: 'Release-Mapping',
-                      subtitle: 'Native Kontroll-UI fuer Web-zu-Flutter-Paritaet, API-Readiness, Build-Gates, Design-Gates und Abschlusspruefung.',
+                      subtitle: 'Native Kontroll-UI für Web-zu-Flutter-Paritaet, API-Readiness, Build-Gates, Design-Gates und Abschlussprüfung.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -70,7 +70,7 @@ class _WebParityReleaseAuditSuiteScreenState extends State<WebParityReleaseAudit
                       rows: [
                         _SwitchRowData('Mapping anzeigen', _showMapped, (value) => setState(() => _showMapped = value)),
                         _SwitchRowData('API-Readiness anzeigen', _showApi, (value) => setState(() => _showApi = value)),
-                        _SwitchRowData('Pruef-Gates anzeigen', _showChecks, (value) => setState(() => _showChecks = value)),
+                        _SwitchRowData('Prüf-Gates anzeigen', _showChecks, (value) => setState(() => _showChecks = value)),
                       ],
                     ),
                     const SizedBox(height: 14),
@@ -83,7 +83,7 @@ class _WebParityReleaseAuditSuiteScreenState extends State<WebParityReleaseAudit
                       firstLabel: 'Parity-Matrix ansehen',
                       secondIcon: Icons.terminal_outlined,
                       secondLabel: 'Build-Gate planen',
-                      onFirst: () => openUiAction(context, title: 'Web-Parity Matrix', body: 'Die UI-Mapping-Matrix ist vorbereitet; finaler Nachweis braucht spaeter einen expliziten Prueflauf.', status: 'UI bereit', icon: Icons.info_outline),
+                      onFirst: () => openUiAction(context, title: 'Web-Parity Matrix', body: 'Die UI-Mapping-Matrix ist vorbereitet; finaler Nachweis braucht später einen expliziten Prüflauf.', status: 'UI bereit', icon: Icons.info_outline),
                       onSecond: () => openUiAction(context, title: 'Build-Gate', body: 'Flutter Analyze/Build wurde noch nicht ausgefuehrt und sollte als naechster technischer Gate geplant werden.', status: 'UI bereit', icon: Icons.info_outline),
                       onSupport: () => _openSupport(context),
                     ),

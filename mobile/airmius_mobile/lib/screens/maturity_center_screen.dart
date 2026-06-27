@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -46,18 +46,18 @@ class _MaturityCenterScreenState extends State<MaturityCenterScreen> {
           const SizedBox(height: 14),
           Row(children: const [Expanded(child: MetricCard(value: '3', label: 'Gates')), SizedBox(width: 10), Expanded(child: MetricCard(value: '1', label: 'Offen')), SizedBox(width: 10), Expanded(child: MetricCard(value: '2', label: 'Consents'))]),
           const SizedBox(height: 14),
-          const _MaturityLine(icon: Icons.family_restroom_outlined, title: 'Guardian-Freigabe', body: 'Elternzustimmung fuer Medien, Events und Fahrgemeinschaften pruefen.', status: 'Offen', color: AirmiusColors.amber),
+          const _MaturityLine(icon: Icons.family_restroom_outlined, title: 'Guardian-Freigabe', body: 'Elternzustimmung für Medien, Events und Fahrgemeinschaften prüfen.', status: 'Offen', color: AirmiusColors.amber),
           const SizedBox(height: 12),
-          const _MaturityLine(icon: Icons.visibility_off_outlined, title: 'Content-Gate', body: 'Sensible Inhalte nur fuer erlaubte Altersgruppen anzeigen.', status: 'Aktiv', color: AirmiusColors.blue),
+          const _MaturityLine(icon: Icons.visibility_off_outlined, title: 'Content-Gate', body: 'Sensible Inhalte nur für erlaubte Altersgruppen anzeigen.', status: 'Aktiv', color: AirmiusColors.blue),
           const SizedBox(height: 12),
-          const _MaturityLine(icon: Icons.storefront_outlined, title: 'Marketplace Altersregel', body: 'Produkte und Kurse koennen Altersfreigaben verlangen.', status: 'Regel', color: AirmiusColors.green),
+          const _MaturityLine(icon: Icons.storefront_outlined, title: 'Marketplace Altersregel', body: 'Produkte und Kurse können Altersfreigaben verlangen.', status: 'Regel', color: AirmiusColors.green),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Aktionen'),
             const SizedBox(height: 12),
             Wrap(spacing: 10, runSpacing: 10, children: [
               AirmiusButton(label: 'Gate erstellen', icon: Icons.lock_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Gate erstellen', body: 'Content-Gate, Altersgruppe, Sichtbarkeit und Guardian-Freigabe vorbereiten.', status: 'Gate', icon: Icons.lock_outlined)))),
-              AirmiusButton(label: 'Consent pruefen', icon: Icons.fact_check_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Consent pruefen', body: 'Guardian Consent, Altersfreigabe und API-Prüfung vorbereiten.', status: 'Consent', icon: Icons.fact_check_outlined)))),
+              AirmiusButton(label: 'Consent prüfen', icon: Icons.fact_check_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Consent prüfen', body: 'Guardian Consent, Altersfreigabe und API-Prüfung vorbereiten.', status: 'Consent', icon: Icons.fact_check_outlined)))),
               AirmiusButton(label: 'Regeln bearbeiten', icon: Icons.tune_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Maturity-Regeln bearbeiten', body: 'Altersgruppen, Content-Typen und Schutzregeln konfigurieren.', status: 'Regeln', icon: Icons.tune_outlined)))),
               AirmiusButton(label: 'Safety Ops', icon: Icons.health_and_safety_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SafetyCommunityOperationsScreen()))),
             ]),

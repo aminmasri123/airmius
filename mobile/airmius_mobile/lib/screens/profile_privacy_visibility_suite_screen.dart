@@ -32,7 +32,7 @@ class _ProfilePrivacyVisibilitySuiteScreenState extends State<ProfilePrivacyVisi
       ),
       _PrivacyRow(
         title: 'Teams anzeigen',
-        body: 'Teamzugehoerigkeit kann fuer Kontakte, Verein oder nur fuer Admins sichtbar sein.',
+        body: 'Teamzugehoerigkeit kann für Kontakte, Verein oder nur für Admins sichtbar sein.',
         value: showTeams,
         onChanged: (value) => setState(() => showTeams = value),
         icon: Icons.groups_2_outlined,
@@ -40,7 +40,7 @@ class _ProfilePrivacyVisibilitySuiteScreenState extends State<ProfilePrivacyVisi
       ),
       _PrivacyRow(
         title: 'Nachrichten erlauben',
-        body: 'Kontaktrechte fuer private Nachrichten, Vereinsadmins, Teamchats und Support-Konversationen.',
+        body: 'Kontaktrechte für private Nachrichten, Vereinsadmins, Teamchats und Support-Konversationen.',
         value: allowMessages,
         onChanged: (value) => setState(() => allowMessages = value),
         icon: Icons.chat_bubble_outline,
@@ -64,7 +64,7 @@ class _ProfilePrivacyVisibilitySuiteScreenState extends State<ProfilePrivacyVisi
       ),
       _PrivacyRow(
         title: 'Blockierte Nutzer',
-        body: 'Blockieren, Melden und Kontaktbeschraenkungen werden fuer private Nachrichten und Feed vorbereitet.',
+        body: 'Blockieren, Melden und Kontaktbeschraenkungen werden für private Nachrichten und Feed vorbereitet.',
         value: blockedUsers,
         onChanged: (value) => setState(() => blockedUsers = value),
         icon: Icons.block_outlined,
@@ -86,7 +86,7 @@ class _ProfilePrivacyVisibilitySuiteScreenState extends State<ProfilePrivacyVisi
                 const SectionLabel('PRIVACY CENTER'),
                 const SizedBox(height: 8),
                 const Text(
-                  'User brauchen Kontrolle ueber Profil, Suche, Vereinszugehoerigkeit, Teams, Nachrichten, blockierte Nutzer und Datenrechte.',
+                  'User brauchen Kontrolle über Profil, Suche, Vereinszugehoerigkeit, Teams, Nachrichten, blockierte Nutzer und Datenrechte.',
                   style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 16),
@@ -113,7 +113,7 @@ class _ProfilePrivacyVisibilitySuiteScreenState extends State<ProfilePrivacyVisi
                     ButtonSegment(value: 'Privat', label: Text('Privat')),
                     ButtonSegment(value: 'Verein', label: Text('Verein')),
                     ButtonSegment(value: 'Kontakte', label: Text('Kontakte')),
-                    ButtonSegment(value: 'Oeffentlich', label: Text('Public')),
+                    ButtonSegment(value: 'Öffentlich', label: Text('Public')),
                   ],
                   selected: {visibility},
                   onSelectionChanged: (value) => setState(() => visibility = value.first),
@@ -133,7 +133,7 @@ class _ProfilePrivacyVisibilitySuiteScreenState extends State<ProfilePrivacyVisi
                 const SectionLabel('DATENRECHTE'),
                 const SizedBox(height: 8),
                 Text(
-                  'Aktuelle Sichtbarkeit: $visibility. Spaeter koennen Datenexport, Datenkorrektur, Loeschanfrage, Consent-Historie und Sichtbarkeits-Audit per API angebunden werden.',
+                  'Aktuelle Sichtbarkeit: $visibility. Später können Datenexport, Datenkorrektur, Löschanfrage, Consent-Historie und Sichtbarkeits-Audit per API angebunden werden.',
                   style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),
@@ -147,19 +147,19 @@ class _ProfilePrivacyVisibilitySuiteScreenState extends State<ProfilePrivacyVisi
                       onPressed: () => openUiAction(
                         context,
                         title: 'Datenexport',
-                        body: 'Diese UI bereitet Datenexport fuer Profil, Mitgliedschaften, Zahlungen, Dokumente, Nachrichten und Consent-Verlauf vor.',
+                        body: 'Diese UI bereitet Datenexport für Profil, Mitgliedschaften, Zahlungen, Dokumente, Nachrichten und Consent-Verlauf vor.',
                         status: 'UI vorbereitet',
                         icon: Icons.download_outlined,
                       ),
                     ),
                     AirmiusButton(
-                      label: 'Loeschanfrage',
+                      label: 'Löschanfrage',
                       icon: Icons.delete_outline,
                       secondary: true,
                       onPressed: () => openUiAction(
                         context,
-                        title: 'Loeschanfrage',
-                        body: 'Loesch- und Korrekturanfragen werden spaeter mit Datenschutz, Audit und Adminfreigabe verbunden.',
+                        title: 'Löschanfrage',
+                        body: 'Lösch- und Korrekturanfragen werden später mit Datenschutz, Audit und Adminfreigabe verbunden.',
                         status: 'UI vorbereitet',
                         icon: Icons.delete_outline,
                       ),

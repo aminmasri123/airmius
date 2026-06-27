@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -19,7 +19,7 @@ class BillingDetailScreen extends StatefulWidget {
 }
 
 class _BillingDetailScreenState extends State<BillingDetailScreen> {
-  String _payment = 'Ueberweisung';
+  String _payment = 'Überweisung';
   bool _autoRenew = true;
 
   @override
@@ -44,13 +44,13 @@ class _BillingDetailScreenState extends State<BillingDetailScreen> {
             ])),
           ])),
           const SizedBox(height: 14),
-          Row(children: const [Expanded(child: MetricCard(value: 'PDF', label: 'Rechnung')), SizedBox(width: 10), Expanded(child: MetricCard(value: 'SEPA', label: 'Option')), SizedBox(width: 10), Expanded(child: MetricCard(value: 'API', label: 'Spaeter'))]),
+          Row(children: const [Expanded(child: MetricCard(value: 'PDF', label: 'Rechnung')), SizedBox(width: 10), Expanded(child: MetricCard(value: 'SEPA', label: 'Option')), SizedBox(width: 10), Expanded(child: MetricCard(value: 'API', label: 'Später'))]),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Zahlung'),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: _payment, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Zahlmethode'), items: const ['Ueberweisung', 'SEPA-Lastschrift', 'Kreditkarte', 'PayPal'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _payment = value ?? _payment)),
-            SwitchListTile(value: _autoRenew, onChanged: (value) => setState(() => _autoRenew = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Automatisch verlaengern', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Spaeter ueber Provider/API steuerbar.', style: TextStyle(color: AirmiusColors.muted))),
+            DropdownButtonFormField<String>(value: _payment, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Zahlmethode'), items: const ['Überweisung', 'SEPA-Lastschrift', 'Kreditkarte', 'PayPal'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _payment = value ?? _payment)),
+            SwitchListTile(value: _autoRenew, onChanged: (value) => setState(() => _autoRenew = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Automatisch verlaengern', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Später über Provider/API steuerbar.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -66,7 +66,7 @@ class _BillingDetailScreenState extends State<BillingDetailScreen> {
             AirmiusButton(label: 'Plan wechseln', icon: Icons.swap_horiz_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Plan wechseln', body: 'Abo-Plan, Preis, Laufzeit und Checkout-Redirect vorbereiten.', status: 'Plan', icon: Icons.swap_horiz_outlined)))),
             AirmiusButton(label: 'Checkout Erfolg', icon: Icons.check_circle_outline, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CheckoutStatusScreen(flow: 'Subscription', status: 'Success', amount: widget.amount)))),
             AirmiusButton(label: 'Banktransfer', icon: Icons.account_balance_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CheckoutStatusScreen(flow: 'Subscription', status: 'Banktransfer', amount: widget.amount)))),
-            AirmiusButton(label: 'Kuendigen', icon: Icons.cancel_outlined, danger: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Abo kuendigen', body: 'Kuendigungsfrist, Warnung, Bestaetigung und Provider-API vorbereiten.', status: 'Kuendigung', icon: Icons.cancel_outlined)))),
+            AirmiusButton(label: 'Kündigen', icon: Icons.cancel_outlined, danger: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Abo kündigen', body: 'Kündigungsfrist, Warnung, Bestätigung und Provider-API vorbereiten.', status: 'Kündigung', icon: Icons.cancel_outlined)))),
           ]),
         ]),
       ),

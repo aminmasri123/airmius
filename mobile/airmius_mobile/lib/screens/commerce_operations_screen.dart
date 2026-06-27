@@ -65,7 +65,7 @@ class _CommerceOperationsScreenState extends State<CommerceOperationsScreen> {
                 children: [
                   const Eyebrow('Ausfuehrungsregeln'),
                   const SizedBox(height: 8),
-                  SwitchListTile(value: _notifySeller, onChanged: (value) => setState(() => _notifySeller = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Anbieter informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Statuswechsel und Entscheidungen erzeugen spaeter Benachrichtigungen.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _notifySeller, onChanged: (value) => setState(() => _notifySeller = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Anbieter informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Statuswechsel und Entscheidungen erzeugen später Benachrichtigungen.', style: TextStyle(color: AirmiusColors.muted))),
                   SwitchListTile(value: _audit, onChanged: (value) => setState(() => _audit = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Audit verpflichtend', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Admin-Commerce-Aktionen werden nachvollziehbar protokolliert.', style: TextStyle(color: AirmiusColors.muted))),
                 ],
               ),
@@ -119,7 +119,7 @@ class _OperationCard extends StatelessWidget {
             runSpacing: 10,
             children: [
               AirmiusButton(label: item.primaryLabel, icon: item.icon, danger: item.danger, secondary: !item.danger, onPressed: () => _run(context, item)),
-              AirmiusButton(label: 'Details vormerken', icon: Icons.fact_check_outlined, secondary: true, onPressed: () => openUiAction(context, title: '${item.title} pruefen', body: '${item.body} Details, Rechte, Benachrichtigung und Audit spaeter ueber Laravel synchronisieren.', status: item.status, icon: Icons.fact_check_outlined)),
+              AirmiusButton(label: 'Details vormerken', icon: Icons.fact_check_outlined, secondary: true, onPressed: () => openUiAction(context, title: '${item.title} prüfen', body: '${item.body} Details, Rechte, Benachrichtigung und Audit später über Laravel synchronisieren.', status: item.status, icon: Icons.fact_check_outlined)),
             ],
           ),
         ],
@@ -128,9 +128,9 @@ class _OperationCard extends StatelessWidget {
   }
 
   void _run(BuildContext context, _CommerceOperation item) {
-    final action = () => openUiAction(context, title: item.primaryLabel, body: '${item.primaryLabel} fuer ${item.title}: ${item.body}', status: item.status, icon: item.icon);
+    final action = () => openUiAction(context, title: item.primaryLabel, body: '${item.primaryLabel} für ${item.title}: ${item.body}', status: item.status, icon: item.icon);
     if (item.danger) {
-      confirmDanger(context, '${item.primaryLabel}?', 'Diese Commerce-Aktion kann Zahlungen, Rueckgaben oder Sichtbarkeit beeinflussen. Sie wird spaeter mit Audit gespeichert.', item.primaryLabel, action);
+      confirmDanger(context, '${item.primaryLabel}?', 'Diese Commerce-Aktion kann Zahlungen, Rückgaben oder Sichtbarkeit beeinflussen. Sie wird später mit Audit gespeichert.', item.primaryLabel, action);
       return;
     }
     action();
@@ -150,22 +150,22 @@ class _CommerceOperation {
 }
 
 const _items = [
-  _CommerceOperation(area: 'Orders', title: 'Order #A-1024 als bezahlt markieren', body: 'Banktransfer oder Admin-Zahlung bestaetigen und Rechnung freischalten.', status: 'Mark paid', icon: Icons.payments_outlined, primaryLabel: 'Bezahlt markieren'),
-  _CommerceOperation(area: 'Orders', title: 'Order-Dokumente', body: 'Rechnung, Gutschrift und Bestelldokumente fuer Download vorbereiten.', status: 'Docs', icon: Icons.picture_as_pdf_outlined, primaryLabel: 'Dokumente laden'),
-  _CommerceOperation(area: 'Orders', title: 'Problemfall beantworten', body: 'Order-Issue pruefen, Anbieterantwort speichern und User benachrichtigen.', status: 'Issue', icon: Icons.support_agent_outlined, primaryLabel: 'Antwort senden'),
+  _CommerceOperation(area: 'Orders', title: 'Order #A-1024 als bezahlt markieren', body: 'Banktransfer oder Admin-Zahlung bestätigen und Rechnung freischalten.', status: 'Mark paid', icon: Icons.payments_outlined, primaryLabel: 'Bezahlt markieren'),
+  _CommerceOperation(area: 'Orders', title: 'Order-Dokumente', body: 'Rechnung, Gutschrift und Bestelldokumente für Download vorbereiten.', status: 'Docs', icon: Icons.picture_as_pdf_outlined, primaryLabel: 'Dokumente laden'),
+  _CommerceOperation(area: 'Orders', title: 'Problemfall beantworten', body: 'Order-Issue prüfen, Anbieterantwort speichern und User benachrichtigen.', status: 'Issue', icon: Icons.support_agent_outlined, primaryLabel: 'Antwort senden'),
   _CommerceOperation(area: 'Produkte', title: 'Produktstatus setzen', body: 'Produkt sichtbar, gesperrt, Entwurf oder Review markieren.', status: 'Status', icon: Icons.inventory_2_outlined, primaryLabel: 'Status setzen'),
-  _CommerceOperation(area: 'Produkte', title: 'Bestand anpassen', body: 'Stock-Korrektur fuer Varianten mit Audit und Inventarwarnung.', status: 'Stock', icon: Icons.warehouse_outlined, primaryLabel: 'Bestand buchen'),
+  _CommerceOperation(area: 'Produkte', title: 'Bestand anpassen', body: 'Stock-Korrektur für Varianten mit Audit und Inventarwarnung.', status: 'Stock', icon: Icons.warehouse_outlined, primaryLabel: 'Bestand buchen'),
   _CommerceOperation(area: 'Produkte', title: 'Marketplace Visuals', body: 'Hero-Banner, Kategorie-Kacheln und Public-Shop-Creatives aktualisieren.', status: 'Visuals', icon: Icons.image_outlined, primaryLabel: 'Visuals speichern'),
-  _CommerceOperation(area: 'Coupons', title: 'Coupon erstellen', body: 'Rabattcode, Gueltigkeit, Produktauswahl und Nutzungsgrenzen speichern.', status: 'Coupon', icon: Icons.local_offer_outlined, primaryLabel: 'Coupon speichern'),
-  _CommerceOperation(area: 'Coupons', title: 'Addon erstellen', body: 'Zusatzprodukt, Laufzeit, Preis und Sichtbarkeit fuer Commerce-Abos definieren.', status: 'Addon', icon: Icons.extension_outlined, primaryLabel: 'Addon speichern'),
+  _CommerceOperation(area: 'Coupons', title: 'Coupon erstellen', body: 'Rabattcode, Gültigkeit, Produktauswahl und Nutzungsgrenzen speichern.', status: 'Coupon', icon: Icons.local_offer_outlined, primaryLabel: 'Coupon speichern'),
+  _CommerceOperation(area: 'Coupons', title: 'Addon erstellen', body: 'Zusatzprodukt, Laufzeit, Preis und Sichtbarkeit für Commerce-Abos definieren.', status: 'Addon', icon: Icons.extension_outlined, primaryLabel: 'Addon speichern'),
   _CommerceOperation(area: 'Versand', title: 'Versandregel speichern', body: 'Standardversand, Abholung, Kostenlos-ab-Warenwert und Lieferland konfigurieren.', status: 'Shipping', icon: Icons.local_shipping_outlined, primaryLabel: 'Versand speichern'),
-  _CommerceOperation(area: 'Versand', title: 'Steuersatz speichern', body: 'MwSt.-Satz, Steuerklasse und Land fuer Produktabrechnung verwalten.', status: 'Tax', icon: Icons.percent_outlined, primaryLabel: 'Steuer speichern'),
-  _CommerceOperation(area: 'Retouren', title: 'Retoure entscheiden', body: 'Rueckgabe genehmigen, ablehnen, Ersatz oder Erstattung vorbereiten.', status: 'Return', icon: Icons.assignment_return_outlined, primaryLabel: 'Retoure entscheiden', danger: true),
-  _CommerceOperation(area: 'Retouren', title: 'Refund starten', body: 'Rueckerstattung mit Betrag, Grund, Provider und Gutschrift vormerken.', status: 'Refund', icon: Icons.currency_exchange_outlined, primaryLabel: 'Refund starten', danger: true),
-  _CommerceOperation(area: 'Payouts', title: 'Payout erstellen', body: 'Auszahlungsbetrag fuer Anbieter berechnen und Zahlungsprofil pruefen.', status: 'Payout', icon: Icons.account_balance_wallet_outlined, primaryLabel: 'Payout erstellen'),
-  _CommerceOperation(area: 'Payouts', title: 'Payout als bezahlt markieren', body: 'Auszahlung abschliessen, Beleg verknuepfen und Anbieter informieren.', status: 'Paid', icon: Icons.task_alt_outlined, primaryLabel: 'Bezahlt setzen'),
+  _CommerceOperation(area: 'Versand', title: 'Steuersatz speichern', body: 'MwSt.-Satz, Steuerklasse und Land für Produktabrechnung verwalten.', status: 'Tax', icon: Icons.percent_outlined, primaryLabel: 'Steuer speichern'),
+  _CommerceOperation(area: 'Retouren', title: 'Retoure entscheiden', body: 'Rückgabe genehmigen, ablehnen, Ersatz oder Erstattung vorbereiten.', status: 'Return', icon: Icons.assignment_return_outlined, primaryLabel: 'Retoure entscheiden', danger: true),
+  _CommerceOperation(area: 'Retouren', title: 'Refund starten', body: 'Rückerstattung mit Betrag, Grund, Provider und Gutschrift vormerken.', status: 'Refund', icon: Icons.currency_exchange_outlined, primaryLabel: 'Refund starten', danger: true),
+  _CommerceOperation(area: 'Payouts', title: 'Payout erstellen', body: 'Auszahlungsbetrag für Anbieter berechnen und Zahlungsprofil prüfen.', status: 'Payout', icon: Icons.account_balance_wallet_outlined, primaryLabel: 'Payout erstellen'),
+  _CommerceOperation(area: 'Payouts', title: 'Payout als bezahlt markieren', body: 'Auszahlung abschließen, Beleg verknuepfen und Anbieter informieren.', status: 'Paid', icon: Icons.task_alt_outlined, primaryLabel: 'Bezahlt setzen'),
   _CommerceOperation(area: 'Payouts', title: 'Payout-Profil aktualisieren', body: 'IBAN, Rechnungsdaten, Anbieteradresse und Steuerdaten verwalten.', status: 'Profile', icon: Icons.account_balance_outlined, primaryLabel: 'Profil speichern'),
   _CommerceOperation(area: 'Website', title: 'Website-Anfrage bearbeiten', body: 'Public-Werbeagentur-Anfrage klassifizieren, Status setzen und Kontakt aufnehmen.', status: 'Lead', icon: Icons.web_outlined, primaryLabel: 'Anfrage aktualisieren'),
   _CommerceOperation(area: 'Website', title: 'Marketplace Provisionen', body: 'Kommissionen, Anbieteranteile und Plattformgebuehren konfigurieren.', status: 'Commission', icon: Icons.tune_outlined, primaryLabel: 'Provision speichern'),
-  _CommerceOperation(area: 'Website', title: 'Seller Application', body: 'Verkaeuferbewerbung pruefen, freigeben, ablehnen oder Nachweise anfordern.', status: 'Seller', icon: Icons.fact_check_outlined, primaryLabel: 'Seller pruefen'),
+  _CommerceOperation(area: 'Website', title: 'Seller Application', body: 'Verkaeuferbewerbung prüfen, freigeben, ablehnen oder Nachweise anfordern.', status: 'Seller', icon: Icons.fact_check_outlined, primaryLabel: 'Seller prüfen'),
 ];

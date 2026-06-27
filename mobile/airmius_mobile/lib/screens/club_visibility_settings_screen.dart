@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -41,7 +41,7 @@ class _ClubVisibilitySettingsScreenState extends State<ClubVisibilitySettingsScr
       appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Vereinssichtbarkeit', style: TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
         title: 'Vereinssichtbarkeit',
-        subtitle: 'Public-Profil, Kontakt, Teams, Mitglieder, Beitraege, Dokumente und Beitrittsbutton steuern',
+        subtitle: 'Public-Profil, Kontakt, Teams, Mitglieder, Beiträge, Dokumente und Beitrittsbutton steuern',
         trailing: StatusPill('$activeCount aktiv', color: AirmiusColors.green),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -55,7 +55,7 @@ class _ClubVisibilitySettingsScreenState extends State<ClubVisibilitySettingsScr
                   const SizedBox(height: 14),
                   const Text('Vereine bestimmen selbst, was Nutzer sehen.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
                   const SizedBox(height: 8),
-                  const Text('Diese UI uebersetzt die Web-App-Sichtbarkeit in mobile Schalter: Profil oeffentlich, Adresse, Kontakt, Admins, Mitglieder, Teams, Beitraege, Regeln, Dokumente und Beitrittsanfrage.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+                  const Text('Diese UI übersetzt die Web-App-Sichtbarkeit in mobile Schalter: Profil öffentlich, Adresse, Kontakt, Admins, Mitglieder, Teams, Beiträge, Regeln, Dokumente und Beitrittsanfrage.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
                   const SizedBox(height: 14),
                   Row(children: [Expanded(child: MetricCard(value: '$activeCount', label: 'Sichtbar')), const SizedBox(width: 10), const Expanded(child: MetricCard(value: 'Club', label: 'Owner')), const SizedBox(width: 10), const Expanded(child: MetricCard(value: 'Public', label: 'Preview'))]),
                   const SizedBox(height: 14),
@@ -161,18 +161,18 @@ class _VisibilitySwitchPanel extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const Eyebrow('Sichtbarkeitsschalter'),
           const SizedBox(height: 8),
-          const Text('Diese Schalter bilden ab, was der Verein spaeter serverseitig speichern kann. Flutter zeigt nur, was laut Verein, Rolle und Datenschutz erlaubt ist.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+          const Text('Diese Schalter bilden ab, was der Verein später serverseitig speichern kann. Flutter zeigt nur, was laut Verein, Rolle und Datenschutz erlaubt ist.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
           const SizedBox(height: 10),
-          _VisibilitySwitch(icon: Icons.public_outlined, title: 'Public-Profil aktiv', body: 'Vereinsprofil ist fuer Gastseite und globale Suche sichtbar.', value: publicProfile, onChanged: onPublicProfile, color: AirmiusColors.green),
-          _VisibilitySwitch(icon: Icons.location_on_outlined, title: 'Adresse anzeigen', body: 'Ort, PLZ, Strasse oder nur Region im Vereinsprofil anzeigen.', value: showAddress, onChanged: onAddress, color: AirmiusColors.blue),
-          _VisibilitySwitch(icon: Icons.contact_mail_outlined, title: 'Kontakt anzeigen', body: 'E-Mail, Telefon oder Kontaktformular oeffentlich oder nur fuer Mitglieder.', value: showContact, onChanged: onContact, color: AirmiusColors.amber),
+          _VisibilitySwitch(icon: Icons.public_outlined, title: 'Public-Profil aktiv', body: 'Vereinsprofil ist für Gastseite und globale Suche sichtbar.', value: publicProfile, onChanged: onPublicProfile, color: AirmiusColors.green),
+          _VisibilitySwitch(icon: Icons.location_on_outlined, title: 'Adresse anzeigen', body: 'Ort, PLZ, Straße oder nur Region im Vereinsprofil anzeigen.', value: showAddress, onChanged: onAddress, color: AirmiusColors.blue),
+          _VisibilitySwitch(icon: Icons.contact_mail_outlined, title: 'Kontakt anzeigen', body: 'E-Mail, Telefon oder Kontaktformular öffentlich oder nur für Mitglieder.', value: showContact, onChanged: onContact, color: AirmiusColors.amber),
           _VisibilitySwitch(icon: Icons.admin_panel_settings_outlined, title: 'Admins anzeigen', body: 'Adminliste im Profil sichtbar oder nur intern im Vereinsbereich.', value: showAdmins, onChanged: onAdmins, color: AirmiusColors.green),
           _VisibilitySwitch(icon: Icons.people_outline, title: 'Mitglieder anzeigen', body: 'Mitgliederliste komplett, anonymisiert, nur Anzahl oder versteckt.', value: showMembers, onChanged: onMembers, color: AirmiusColors.blue),
           _VisibilitySwitch(icon: Icons.groups_2_outlined, title: 'Teams anzeigen', body: 'Teams im Profil sichtbar machen und Teamseiten verlinken.', value: showTeams, onChanged: onTeams, color: AirmiusColors.green),
-          _VisibilitySwitch(icon: Icons.dynamic_feed_outlined, title: 'Beitraege anzeigen', body: 'Sichtbare Vereinsbeitraege, Public Feed oder nur interne Posts.', value: showPosts, onChanged: onPosts, color: AirmiusColors.blue),
+          _VisibilitySwitch(icon: Icons.dynamic_feed_outlined, title: 'Beiträge anzeigen', body: 'Sichtbare Vereinsbeiträge, Public Feed oder nur interne Posts.', value: showPosts, onChanged: onPosts, color: AirmiusColors.blue),
           _VisibilitySwitch(icon: Icons.rule_folder_outlined, title: 'Regeln & Dokumente anzeigen', body: 'Datenschutz, Beitragsordnung, Satzung oder Medienregeln im Profil/Antrag sichtbar.', value: showDocuments, onChanged: onDocuments, color: AirmiusColors.amber),
-          _VisibilitySwitch(icon: Icons.receipt_long_outlined, title: 'Beitraege anzeigen', body: 'Beitragshoehen und Zahlungsrhythmus transparent vor Antrag anzeigen.', value: showFees, onChanged: onFees, color: AirmiusColors.green),
-          _VisibilitySwitch(icon: Icons.assignment_ind_outlined, title: 'Beitrittsanfrage erlauben', body: 'Button fuer Mitgliedschaftsanfrage aktivieren oder nur Teams ansehen.', value: joinEnabled, onChanged: onJoin, color: AirmiusColors.blue),
+          _VisibilitySwitch(icon: Icons.receipt_long_outlined, title: 'Beiträge anzeigen', body: 'Beitragshoehen und Zahlungsrhythmus transparent vor Antrag anzeigen.', value: showFees, onChanged: onFees, color: AirmiusColors.green),
+          _VisibilitySwitch(icon: Icons.assignment_ind_outlined, title: 'Beitrittsanfrage erlauben', body: 'Button für Mitgliedschaftsanfrage aktivieren oder nur Teams ansehen.', value: joinEnabled, onChanged: onJoin, color: AirmiusColors.blue),
           _VisibilitySwitch(icon: Icons.handshake_outlined, title: 'Sponsoren anzeigen', body: 'Sponsorlogos und Kampagnen im Vereinsprofil sichtbar machen.', value: sponsorVisible, onChanged: onSponsor, color: AirmiusColors.amber),
           _VisibilitySwitch(icon: Icons.photo_library_outlined, title: 'Galerie anzeigen', body: 'Medienbereich nur mit Foto-/Guardian-Freigabe anzeigen.', value: galleryVisible, onChanged: onGallery, color: AirmiusColors.green),
         ]),
@@ -217,7 +217,7 @@ class _PublicPreviewCard extends StatelessWidget {
             if (showAdmins) const StatusPill('Admins'),
             if (showMembers) const StatusPill('Mitglieder'),
             if (showTeams) const StatusPill('Teams'),
-            if (showPosts) const StatusPill('Beitraege'),
+            if (showPosts) const StatusPill('Beiträge'),
             if (showDocuments) const StatusPill('Dokumente'),
             if (showFees) const StatusPill('Beitrag'),
           ]),
@@ -247,8 +247,8 @@ class _VisibilityItemCard extends StatelessWidget {
           ]),
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: [
-            AirmiusButton(label: 'Konfigurieren', icon: Icons.tune_outlined, onPressed: () => openUiAction(context, title: '${item.title} konfigurieren', body: 'Sichtbarkeit, Zielgruppe, Rollenrechte, Public-Preview und Datenschutz fuer diesen Vereinsbereich speichern.', status: 'Sichtbarkeit', icon: Icons.tune_outlined)),
-            AirmiusButton(label: 'Preview', icon: Icons.visibility_outlined, secondary: true, onPressed: () => openUiAction(context, title: '${item.title} Preview', body: 'Mobile Vorschau fuer ${item.audience}: ${item.body}', status: 'Preview', icon: Icons.visibility_outlined)),
+            AirmiusButton(label: 'Konfigurieren', icon: Icons.tune_outlined, onPressed: () => openUiAction(context, title: '${item.title} konfigurieren', body: 'Sichtbarkeit, Zielgruppe, Rollenrechte, Public-Preview und Datenschutz für diesen Vereinsbereich speichern.', status: 'Sichtbarkeit', icon: Icons.tune_outlined)),
+            AirmiusButton(label: 'Preview', icon: Icons.visibility_outlined, secondary: true, onPressed: () => openUiAction(context, title: '${item.title} Preview', body: 'Mobile Vorschau für ${item.audience}: ${item.body}', status: 'Preview', icon: Icons.visibility_outlined)),
           ]),
         ]),
       );
@@ -265,11 +265,11 @@ class _VisibilityWorkflowPanel extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const Eyebrow('Sichtbarkeits-Workflow'),
           const SizedBox(height: 8),
-          Text('Aktueller Bereich: $tab. Spaeter speichert Laravel diese Schalter pro Verein und liefert sie als capability flags fuer Public-Profil, Suche, Mitgliedsantrag und Vereinsbereich.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+          Text('Aktueller Bereich: $tab. Später speichert Laravel diese Schalter pro Verein und liefert sie als capability flags für Public-Profil, Suche, Mitgliedsantrag und Vereinsbereich.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: [
-            AirmiusButton(label: 'Speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Sichtbarkeit speichern', body: 'Public-Profil, Kontakt, Mitglieder, Teams, Dokumente, Beitraege, Sponsoren und Antragsschalter fuer den Verein speichern.', status: 'Visibility', icon: Icons.save_outlined)),
-            AirmiusButton(label: 'Suche pruefen', icon: Icons.manage_search_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SearchOperationsScreen()))),
+            AirmiusButton(label: 'Speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Sichtbarkeit speichern', body: 'Public-Profil, Kontakt, Mitglieder, Teams, Dokumente, Beiträge, Sponsoren und Antragsschalter für den Verein speichern.', status: 'Visibility', icon: Icons.save_outlined)),
+            AirmiusButton(label: 'Suche prüfen', icon: Icons.manage_search_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SearchOperationsScreen()))),
             AirmiusButton(label: 'Anfragen', icon: Icons.inbox_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubRequestInboxScreen()))),
             AirmiusButton(label: 'Regeln', icon: Icons.rule_folder_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubPolicyDocumentsScreen()))),
           ]),
@@ -314,16 +314,16 @@ class _VisibilityItem {
 const _tabs = ['Public', 'Profil', 'Mitglieder', 'Content', 'Kontakt', 'Antrag'];
 
 const _items = <_VisibilityItem>[
-  _VisibilityItem(area: 'Public', title: 'Globale Suche', body: 'Verein erscheint in Suchvorschlaegen, Clublisten und Public Discovery.', mode: 'Ein/Aus', audience: 'Gaeste', icon: Icons.manage_search_outlined, color: AirmiusColors.blue),
-  _VisibilityItem(area: 'Public', title: 'Gastseiten-Profil', body: 'Hero, Vereinsname, Ort, Mitgliedszahl, Teams und Anfragebutton fuer externe Nutzer.', mode: 'Public', audience: 'Gaeste', icon: Icons.public_outlined, color: AirmiusColors.green),
+  _VisibilityItem(area: 'Public', title: 'Globale Suche', body: 'Verein erscheint in Suchvorschlägen, Clublisten und Public Discovery.', mode: 'Ein/Aus', audience: 'Gäste', icon: Icons.manage_search_outlined, color: AirmiusColors.blue),
+  _VisibilityItem(area: 'Public', title: 'Gastseiten-Profil', body: 'Hero, Vereinsname, Ort, Mitgliedszahl, Teams und Anfragebutton für externe Nutzer.', mode: 'Public', audience: 'Gäste', icon: Icons.public_outlined, color: AirmiusColors.green),
   _VisibilityItem(area: 'Profil', title: 'Vereinsdaten', body: 'Name, Beschreibung, Logo, Banner, Sportarten, Standort und Kontakt sichtbar steuern.', mode: 'Profil', audience: 'Alle', icon: Icons.badge_outlined, color: AirmiusColors.blue),
   _VisibilityItem(area: 'Profil', title: 'Admins', body: 'Adminliste sichtbar, anonymisiert oder nur intern im Vereinsbereich anzeigen.', mode: 'Rollen', audience: 'Mitglieder', icon: Icons.admin_panel_settings_outlined, color: AirmiusColors.green),
   _VisibilityItem(area: 'Mitglieder', title: 'Mitgliederliste', body: 'Komplette Liste, nur Anzahl, nur Teams oder versteckt abbilden.', mode: 'Datenschutz', audience: 'Mitglieder', icon: Icons.people_outline, color: AirmiusColors.amber),
   _VisibilityItem(area: 'Mitglieder', title: 'Teams & Kader', body: 'Teams, Kader, Trainer, Captain und Join Requests sichtbar steuern.', mode: 'Team', audience: 'Team', icon: Icons.groups_2_outlined, color: AirmiusColors.green),
-  _VisibilityItem(area: 'Content', title: 'Sichtbare Beitraege', body: 'Public Posts, Vereinsbeitraege, Medienfreigaben und Moderationsstatus.', mode: 'Feed', audience: 'Public/Mitglieder', icon: Icons.dynamic_feed_outlined, color: AirmiusColors.blue),
+  _VisibilityItem(area: 'Content', title: 'Sichtbare Beiträge', body: 'Public Posts, Vereinsbeiträge, Medienfreigaben und Moderationsstatus.', mode: 'Feed', audience: 'Public/Mitglieder', icon: Icons.dynamic_feed_outlined, color: AirmiusColors.blue),
   _VisibilityItem(area: 'Content', title: 'Galerie & Sponsoren', body: 'Bilder, Sponsorlogos, Kampagnen und Medienrechte sichtbar machen.', mode: 'Media', audience: 'Public', icon: Icons.photo_library_outlined, color: AirmiusColors.amber),
-  _VisibilityItem(area: 'Kontakt', title: 'Kontaktwege', body: 'E-Mail, Telefon, Kontaktformular, Adminchat oder nur Anfrageformular.', mode: 'Kontakt', audience: 'Gaeste', icon: Icons.contact_mail_outlined, color: AirmiusColors.green),
+  _VisibilityItem(area: 'Kontakt', title: 'Kontaktwege', body: 'E-Mail, Telefon, Kontaktformular, Adminchat oder nur Anfrageformular.', mode: 'Kontakt', audience: 'Gäste', icon: Icons.contact_mail_outlined, color: AirmiusColors.green),
   _VisibilityItem(area: 'Kontakt', title: 'Adresse & Region', body: 'Volle Adresse, nur Stadt, nur Region oder versteckt.', mode: 'Adresse', audience: 'Public', icon: Icons.location_on_outlined, color: AirmiusColors.blue),
   _VisibilityItem(area: 'Antrag', title: 'Mitgliedschaftsanfrage', body: 'Button sichtbar, gesperrt, nur bestimmte Typen oder nur nach Login.', mode: 'Join', audience: 'Nutzer', icon: Icons.assignment_ind_outlined, color: AirmiusColors.green),
-  _VisibilityItem(area: 'Antrag', title: 'Beitraege & Regeln vor Antrag', body: 'Beitragshoehen, Zahlrhythmus, Dokumentpflicht und Consent vor Absenden anzeigen.', mode: 'Consent', audience: 'Nutzer', icon: Icons.rule_folder_outlined, color: AirmiusColors.amber),
+  _VisibilityItem(area: 'Antrag', title: 'Beiträge & Regeln vor Antrag', body: 'Beitragshoehen, Zahlrhythmus, Dokumentpflicht und Consent vor Absenden anzeigen.', mode: 'Consent', audience: 'Nutzer', icon: Icons.rule_folder_outlined, color: AirmiusColors.amber),
 ];

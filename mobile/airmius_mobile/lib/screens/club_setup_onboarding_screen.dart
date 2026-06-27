@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -24,7 +24,7 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
 
   final List<_SetupStep> _steps = const [
     _SetupStep(title: 'Vereinsprofil', body: 'Name, Logo, Beschreibung, Sportarten, Standort und Kontakt.', status: 'Bereit', icon: Icons.apartment_outlined, color: AirmiusColors.blue),
-    _SetupStep(title: 'Sichtbarkeit', body: 'Welche Felder, Beitraege, Kontakte und Teams oeffentlich sichtbar sind.', status: 'Pruefen', icon: Icons.visibility_outlined, color: AirmiusColors.green),
+    _SetupStep(title: 'Sichtbarkeit', body: 'Welche Felder, Beiträge, Kontakte und Teams öffentlich sichtbar sind.', status: 'Prüfen', icon: Icons.visibility_outlined, color: AirmiusColors.green),
     _SetupStep(title: 'Beitragsregeln', body: 'Intervall, Zahlmethode, Preis, Dokumente und Mitgliedschaftstypen.', status: 'Offen', icon: Icons.receipt_long_outlined, color: AirmiusColors.amber),
     _SetupStep(title: 'Rollen & Rechte', body: 'Inhaber, Admins, Trainer, Finanzen und sensible Freigaben.', status: 'Offen', icon: Icons.admin_panel_settings_outlined, color: AirmiusColors.blueDeep),
     _SetupStep(title: 'Dokumente', body: 'Datenschutz, Regeln, SEPA, Formulare und Dateimanager-Verknuepfung.', status: 'Offen', icon: Icons.folder_copy_outlined, color: AirmiusColors.red),
@@ -48,7 +48,7 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const PageTitle(title: 'Verein einrichten', subtitle: 'Setup-Checkliste fuer Profil, Sichtbarkeit, Beitraege, Rollen, Dokumente und Startfreigabe.'),
+                        const PageTitle(title: 'Verein einrichten', subtitle: 'Setup-Checkliste für Profil, Sichtbarkeit, Beiträge, Rollen, Dokumente und Startfreigabe.'),
                         const SizedBox(height: 16),
                         _SetupHero(doneCount: _doneCount, onContinue: () => _toast('Setup fortsetzen vorbereitet')),
                         const SizedBox(height: 16),
@@ -57,8 +57,8 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
                           child: Column(
                             children: [
                               _CheckRow(title: 'Profil vervollstaendigt', subtitle: 'Vereinsname, Ort, Kontakt und Beschreibung.', value: _profileDone, onChanged: (value) => setState(() => _profileDone = value)),
-                              _CheckRow(title: 'Sichtbarkeit entschieden', subtitle: 'Verein bestimmt, was oeffentlich angezeigt wird.', value: _visibilityDone, onChanged: (value) => setState(() => _visibilityDone = value)),
-                              _CheckRow(title: 'Beitraege konfiguriert', subtitle: 'Monatlich, quartalsweise, halbjaehrlich, jaehrlich, bar oder Ueberweisung.', value: _rulesDone, onChanged: (value) => setState(() => _rulesDone = value)),
+                              _CheckRow(title: 'Sichtbarkeit entschieden', subtitle: 'Verein bestimmt, was öffentlich angezeigt wird.', value: _visibilityDone, onChanged: (value) => setState(() => _visibilityDone = value)),
+                              _CheckRow(title: 'Beiträge konfiguriert', subtitle: 'Monatlich, quartalsweise, halbjaehrlich, jaehrlich, bar oder Überweisung.', value: _rulesDone, onChanged: (value) => setState(() => _rulesDone = value)),
                               _CheckRow(title: 'Rollen vergeben', subtitle: 'Admins, Trainer und Finanzen haben passende Rechte.', value: _rolesDone, onChanged: (value) => setState(() => _rolesDone = value)),
                               _CheckRow(title: 'Dokumente verknuepft', subtitle: 'Datenschutz, Regeln und Formulare liegen im Dateimanager.', value: _documentsDone, onChanged: (value) => setState(() => _documentsDone = value)),
                             ],
@@ -77,7 +77,7 @@ class _ClubSetupOnboardingScreenState extends State<ClubSetupOnboardingScreen> {
                             children: [
                               AirmiusButton(label: 'Profil', icon: Icons.apartment_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubProfileEditorScreen()))),
                               AirmiusButton(label: 'Sichtbarkeit', icon: Icons.visibility_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubVisibilitySettingsScreen()))),
-                              AirmiusButton(label: 'Beitraege', icon: Icons.receipt_long_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubContributionRulesScreen()))),
+                              AirmiusButton(label: 'Beiträge', icon: Icons.receipt_long_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubContributionRulesScreen()))),
                               AirmiusButton(label: 'Rollen', icon: Icons.admin_panel_settings_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubRolePermissionsScreen()))),
                               AirmiusButton(label: 'Dokumente', icon: Icons.folder_copy_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubDocumentUploadManagerScreen()))),
                             ],
@@ -152,7 +152,7 @@ class _SetupHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Der Verein bekommt eine klare Setup-Strecke, damit Antraege, Dateien, Rechte, Beitraege und Sichtbarkeit vor dem Start sauber eingerichtet sind.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          const Text('Der Verein bekommt eine klare Setup-Strecke, damit Antraege, Dateien, Rechte, Beiträge und Sichtbarkeit vor dem Start sauber eingerichtet sind.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           ClipRRect(borderRadius: BorderRadius.circular(999), child: LinearProgressIndicator(value: progress, minHeight: 10, backgroundColor: AirmiusColors.input, color: AirmiusColors.blue)),
           const SizedBox(height: 12),

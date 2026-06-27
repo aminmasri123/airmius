@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -21,10 +21,10 @@ class _LegalStatusCenterScreenState extends State<LegalStatusCenterScreen> {
 
   final List<_LegalItem> _items = const [
     _LegalItem(title: 'Datenschutzerklaerung', area: 'Legal', body: 'PrivacyPolicy, Datenverarbeitung, Mitgliedschaft, Verein, Zahlung und App-Nutzung.', status: 'Aktuell', icon: Icons.privacy_tip_outlined, color: AirmiusColors.blue),
-    _LegalItem(title: 'Nutzungsbedingungen', area: 'Legal', body: 'TermsOfService, Regeln fuer Nutzer, Vereine, Trainer, Marketplace und Plattform.', status: 'Aktuell', icon: Icons.article_outlined, color: AirmiusColors.green),
-    _LegalItem(title: 'Legal Dokument', area: 'Legal', body: 'Legal/Show fuer dynamische rechtliche Inhalte, Versionen und Dokumenttypen.', status: 'Versioniert', icon: Icons.gavel_outlined, color: AirmiusColors.amber),
+    _LegalItem(title: 'Nutzungsbedingungen', area: 'Legal', body: 'TermsOfService, Regeln für Nutzer, Vereine, Trainer, Marketplace und Plattform.', status: 'Aktuell', icon: Icons.article_outlined, color: AirmiusColors.green),
+    _LegalItem(title: 'Legal Dokument', area: 'Legal', body: 'Legal/Show für dynamische rechtliche Inhalte, Versionen und Dokumenttypen.', status: 'Versioniert', icon: Icons.gavel_outlined, color: AirmiusColors.amber),
     _LegalItem(title: 'Wartungsmodus', area: 'Status', body: 'Maintenance-Seite mit Status, Hinweis, erwarteter Dauer und Supportkontakt.', status: 'Bereit', icon: Icons.construction_outlined, color: AirmiusColors.blueDeep),
-    _LegalItem(title: 'Zugriff verweigert', area: 'Status', body: 'Forbidden-Seite fuer fehlende Rechte, Rollen, Vereinszugriff oder gesperrte Bereiche.', status: 'Sicher', icon: Icons.block_outlined, color: AirmiusColors.red),
+    _LegalItem(title: 'Zugriff verweigert', area: 'Status', body: 'Forbidden-Seite für fehlende Rechte, Rollen, Vereinszugriff oder gesperrte Bereiche.', status: 'Sicher', icon: Icons.block_outlined, color: AirmiusColors.red),
   ];
 
   List<_LegalItem> get _visibleItems => _items.where((item) => _tab == 'Alle' || item.area == _tab).toList();
@@ -59,8 +59,8 @@ class _LegalStatusCenterScreenState extends State<LegalStatusCenterScreen> {
                             children: [
                               _SwitchRow(title: 'Datenschutz anzeigen', subtitle: 'PrivacyPolicy und Einwilligungscenter in der App sichtbar machen.', value: _showPrivacy, onChanged: (value) => setState(() => _showPrivacy = value)),
                               _SwitchRow(title: 'Nutzungsbedingungen anzeigen', subtitle: 'TermsOfService, Regeln und Plattformbedingungen darstellen.', value: _showTerms, onChanged: (value) => setState(() => _showTerms = value)),
-                              _SwitchRow(title: 'Wartungsmodus anzeigen', subtitle: 'Maintenance-Hinweis fuer technische Arbeiten vorbereiten.', value: _showMaintenance, onChanged: (value) => setState(() => _showMaintenance = value)),
-                              _SwitchRow(title: 'Forbidden anzeigen', subtitle: 'Zugriff verweigert fuer Rollen- und Rechtefaelle abbilden.', value: _showForbidden, onChanged: (value) => setState(() => _showForbidden = value)),
+                              _SwitchRow(title: 'Wartungsmodus anzeigen', subtitle: 'Maintenance-Hinweis für technische Arbeiten vorbereiten.', value: _showMaintenance, onChanged: (value) => setState(() => _showMaintenance = value)),
+                              _SwitchRow(title: 'Forbidden anzeigen', subtitle: 'Zugriff verweigert für Rollen- und Rechtefaelle abbilden.', value: _showForbidden, onChanged: (value) => setState(() => _showForbidden = value)),
                             ],
                           ),
                         ),
@@ -69,7 +69,7 @@ class _LegalStatusCenterScreenState extends State<LegalStatusCenterScreen> {
                           _LegalCard(item: item, onOpen: () => _toast('${item.title}: Detail vorbereitet')),
                           const SizedBox(height: 12),
                         ],
-                        if (items.isEmpty) const EmptyPanel('Keine Seiten fuer diesen Bereich gefunden.'),
+                        if (items.isEmpty) const EmptyPanel('Keine Seiten für diesen Bereich gefunden.'),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Aktionen',
@@ -79,7 +79,7 @@ class _LegalStatusCenterScreenState extends State<LegalStatusCenterScreen> {
                             children: [
                               AirmiusButton(label: 'Privacy Center', icon: Icons.privacy_tip_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PrivacyConsentCenterScreen()))),
                               AirmiusButton(label: 'Support', icon: Icons.support_agent_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()))),
-                              AirmiusButton(label: 'Version pruefen', icon: Icons.history_outlined, onPressed: () => _toast('Dokumentversion pruefen vorbereitet')),
+                              AirmiusButton(label: 'Version prüfen', icon: Icons.history_outlined, onPressed: () => _toast('Dokumentversion prüfen vorbereitet')),
                             ],
                           ),
                         ),
@@ -126,7 +126,7 @@ class _LegalHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Die Webseiten PrivacyPolicy, TermsOfService, Legal/Show, Maintenance und Forbidden werden als mobile UI fuer App und Store-Readiness vorbereitet.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          const Text('Die Webseiten PrivacyPolicy, TermsOfService, Legal/Show, Maintenance und Forbidden werden als mobile UI für App und Store-Readiness vorbereitet.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           const Row(children: [Expanded(child: MetricCard(value: '3', label: 'Legal')), SizedBox(width: 10), Expanded(child: MetricCard(value: '2', label: 'Status')), SizedBox(width: 10), Expanded(child: MetricCard(value: '1', label: 'Support'))]),
         ],

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'trust_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
@@ -22,11 +22,11 @@ class AdminCenterScreen extends StatefulWidget {
 }
 
 class _AdminCenterScreenState extends State<AdminCenterScreen> {
-  String _area = 'Uebersicht';
+  String _area = 'Übersicht';
 
   @override
   Widget build(BuildContext context) {
-    final items = _items.where((item) => _area == 'Uebersicht' || item.area == _area).toList();
+    final items = _items.where((item) => _area == 'Übersicht' || item.area == _area).toList();
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AirmiusColors.header,
@@ -46,13 +46,13 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                 children: [
                   const Eyebrow('Systemverwaltung'),
                   const SizedBox(height: 8),
-                  const Text('Native Admin-Oberflaeche fuer Rollen, Prüfungen, Zahlungen, Moderation und Commerce.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  const Text('Native Admin-Oberflaeche für Rollen, Prüfungen, Zahlungen, Moderation und Commerce.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      for (final area in const ['Uebersicht', 'Nutzer', 'Moderation', 'Billing', 'Commerce', 'Content', 'Outfit', 'System'])
+                      for (final area in const ['Übersicht', 'Nutzer', 'Moderation', 'Billing', 'Commerce', 'Content', 'Outfit', 'System'])
                         ChoiceChip(
                           selected: _area == area,
                           label: Text(area),
@@ -146,17 +146,17 @@ class _AdminItem {
 const _items = [
   _AdminItem(area: 'Nutzer', title: 'Mitglieder & Users', body: 'Nutzerliste, Rollen, Inaktivitaet und Profilstatus.', status: 'Aktiv', icon: Icons.people_alt_outlined),
   _AdminItem(area: 'Nutzer', title: 'Rollen & Berechtigungen', body: 'Permissions, Rollen, Club Admins und Systemrechte.', status: 'Rollen', icon: Icons.rule_outlined),
-  _AdminItem(area: 'Moderation', title: 'Content Reports', body: 'Beitraege, Kommentare und Meldungen pruefen.', status: '2 offen', icon: Icons.report_outlined, urgent: true),
-  _AdminItem(area: 'Moderation', title: 'Club-Verifizierungen', body: 'Vereine pruefen, genehmigen oder ablehnen.', status: '1 offen', icon: Icons.verified_user_outlined),
+  _AdminItem(area: 'Moderation', title: 'Content Reports', body: 'Beiträge, Kommentare und Meldungen prüfen.', status: '2 offen', icon: Icons.report_outlined, urgent: true),
+  _AdminItem(area: 'Moderation', title: 'Club-Verifizierungen', body: 'Vereine prüfen, genehmigen oder ablehnen.', status: '1 offen', icon: Icons.verified_user_outlined),
   _AdminItem(area: 'Moderation', title: 'Reports & Flags', body: 'Moderationsflags, Nutzerreports, Entscheidungen und Eskalation.', status: 'Review', icon: Icons.flag_outlined, urgent: true),
   _AdminItem(area: 'Billing', title: 'Abos & Rechnungen', body: 'Subscription-Plans, Zahlstatus, Banktransfer und Rechnungen.', status: 'Billing', icon: Icons.receipt_long_outlined),
   _AdminItem(area: 'Billing', title: 'Provider Costs', body: 'Kosten, Payouts und Zahlungsanbieter im Blick.', status: 'Kosten', icon: Icons.account_balance_wallet_outlined),
   _AdminItem(area: 'Commerce', title: 'Commerce Admin', body: 'Produkte, Coupons, Bestellungen, Retouren und Payouts.', status: 'Shop', icon: Icons.storefront_outlined),
   _AdminItem(area: 'Commerce', title: 'Seller Applications', body: 'Verkaeuferbewerbungen, Providerprofile, Standorte und Marketplace-Freigabe.', status: 'Seller', icon: Icons.fact_check_outlined),
-  _AdminItem(area: 'Content', title: 'Badges verwalten', body: 'Badges erstellen, Regeln pruefen, Sichtbarkeit und Achievement-Historie.', status: 'Badges', icon: Icons.workspace_premium_outlined),
+  _AdminItem(area: 'Content', title: 'Badges verwalten', body: 'Badges erstellen, Regeln prüfen, Sichtbarkeit und Achievement-Historie.', status: 'Badges', icon: Icons.workspace_premium_outlined),
   _AdminItem(area: 'Content', title: 'Sportarten verwalten', body: 'Sportarten, Disziplinen, Leistungsfelder und KI-Readiness konfigurieren.', status: 'Sports', icon: Icons.sports_outlined),
-  _AdminItem(area: 'Content', title: 'Learning Quality', body: 'Kurse, Aufgaben, Zertifikate und Qualitaetsfreigabe pruefen.', status: 'Learning', icon: Icons.school_outlined),
-  _AdminItem(area: 'Outfit', title: 'Outfit Admin', body: 'Lieferungen, Zahlstatus, Adresse, Reminder, Kuendigung und Visuals.', status: 'Outfit', icon: Icons.checkroom_outlined),
+  _AdminItem(area: 'Content', title: 'Learning Quality', body: 'Kurse, Aufgaben, Zertifikate und Qualitaetsfreigabe prüfen.', status: 'Learning', icon: Icons.school_outlined),
+  _AdminItem(area: 'Outfit', title: 'Outfit Admin', body: 'Lieferungen, Zahlstatus, Adresse, Reminder, Kündigung und Visuals.', status: 'Outfit', icon: Icons.checkroom_outlined),
   _AdminItem(area: 'System', title: 'Mail Center', body: 'Absender, Testmails, Zustellungen und Fehler.', status: 'System', icon: Icons.mark_email_read_outlined),
   _AdminItem(area: 'System', title: 'System Settings', body: 'Globale Einstellungen, Maintenance und Plattform-Konfiguration.', status: 'Config', icon: Icons.settings_suggest_outlined),
   _AdminItem(area: 'System', title: 'Plattformbetrieb', body: 'API, Webhooks, SEO, Gast-Checkout, Wartung und Auditstatus.', status: 'Ops', icon: Icons.monitor_heart_outlined),

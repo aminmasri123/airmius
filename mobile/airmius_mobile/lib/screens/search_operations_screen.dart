@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/api_contract.dart';
 import '../core/airmius_theme.dart';
@@ -32,7 +32,7 @@ class _SearchOperationsScreenState extends State<SearchOperationsScreen> {
             const SizedBox(height: 8),
             const Text('Die Suche muss Personen, Vereine, Teams, Dateien, Kurse, Events, Produkte und Public-Inhalte typisiert liefern. Genau diese Logik wird hier nativ vorbereitet.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
             const SizedBox(height: 12),
-            SwitchListTile(value: _clubs, onChanged: (value) => setState(() => _clubs = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Vereine einschliessen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Header-Suche darf nicht nur Personen liefern.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _clubs, onChanged: (value) => setState(() => _clubs = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Vereine einschließen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Header-Suche darf nicht nur Personen liefern.', style: TextStyle(color: AirmiusColors.muted))),
             SwitchListTile(value: _maturitySafe, onChanged: (value) => setState(() => _maturitySafe = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Maturity-Schutz', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Minderjaehrige sehen nur erlaubte Inhalte.', style: TextStyle(color: AirmiusColors.muted))),
             SwitchListTile(value: _recentFirst, onChanged: (value) => setState(() => _recentFirst = value), activeColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Neueste zuerst', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Ranking nach Relevanz oder Aktualitaet steuern.', style: TextStyle(color: AirmiusColors.muted))),
             const SizedBox(height: 10),
@@ -84,10 +84,10 @@ const _tabs = ['Alle', 'Personen', 'Vereine', 'Teams', 'Content', 'Commerce', 'S
 
 final _operations = <_SearchOperation>[
   _SearchOperation(tab: 'Personen', title: 'Personen suchen', body: 'Nutzer, Freunde, Admins und Kontakte typisiert suchen.', method: 'GET', endpoint: ApiContract.globalSearchType('people'), icon: Icons.person_search_outlined, action: 'Suchen', color: AirmiusColors.blue),
-  _SearchOperation(tab: 'Vereine', title: 'Vereine suchen', body: 'Vereine muessen im Header-Suchfeld angeboten und direkt oeffenbar sein.', method: 'GET', endpoint: ApiContract.globalSearchType('clubs'), icon: Icons.groups_outlined, action: 'Vereine', color: AirmiusColors.green),
+  _SearchOperation(tab: 'Vereine', title: 'Vereine suchen', body: 'Vereine müssen im Header-Suchfeld angeboten und direkt öffenbar sein.', method: 'GET', endpoint: ApiContract.globalSearchType('clubs'), icon: Icons.groups_outlined, action: 'Vereine', color: AirmiusColors.green),
   _SearchOperation(tab: 'Teams', title: 'Teams suchen', body: 'Teams, Kader, Trainingsgruppen und Einladungen finden.', method: 'GET', endpoint: ApiContract.globalSearchType('teams'), icon: Icons.groups_2_outlined, action: 'Teams', color: AirmiusColors.blue),
   _SearchOperation(tab: 'Content', title: 'Dateien suchen', body: 'Vereinsdokumente, Teamdateien und geteilte Dateien finden.', method: 'GET', endpoint: ApiContract.globalSearchType('files'), icon: Icons.folder_outlined, action: 'Dateien', color: AirmiusColors.amber),
   _SearchOperation(tab: 'Content', title: 'Kurse & Events suchen', body: 'Kurse, Zertifikate, Events und Trainingskontexte finden.', method: 'GET', endpoint: ApiContract.globalSearchType('learning-events'), icon: Icons.school_outlined, action: 'Content', color: AirmiusColors.green),
   _SearchOperation(tab: 'Commerce', title: 'Produkte suchen', body: 'Marketplace-Produkte, Anbieter und Angebote suchen.', method: 'GET', endpoint: ApiContract.globalSearchType('products'), icon: Icons.storefront_outlined, action: 'Produkte', color: AirmiusColors.blue),
-  _SearchOperation(tab: 'Safety', title: 'Maturity Search', body: 'Altersgerechte Suche mit Safety-Filter fuer Feed und Discovery.', method: 'GET', endpoint: ApiContract.maturitySearch, icon: Icons.security_outlined, action: 'Safety', color: AirmiusColors.amber),
+  _SearchOperation(tab: 'Safety', title: 'Maturity Search', body: 'Altersgerechte Suche mit Safety-Filter für Feed und Discovery.', method: 'GET', endpoint: ApiContract.maturitySearch, icon: Icons.security_outlined, action: 'Safety', color: AirmiusColors.amber),
 ];

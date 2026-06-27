@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'trust_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
@@ -67,11 +67,11 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Eyebrow('Pruefliste'),
+            const Eyebrow('Prüfliste'),
             const SizedBox(height: 10),
             _AdminCheckLine(icon: Icons.fact_check_outlined, title: _checkTitleOne(), body: _checkBodyOne(), status: 'OK'),
-            _AdminCheckLine(icon: Icons.security_outlined, title: 'Berechtigung pruefen', body: 'Rollen, Besitzer, Verein und sensible Daten gegen Regeln pruefen.', status: 'Pflicht'),
-            _AdminCheckLine(icon: Icons.history_outlined, title: 'Audit Trail', body: 'Aenderungen, Entscheidung, Bearbeiter und Zeitpunkt spaeter speichern.', status: 'Audit'),
+            _AdminCheckLine(icon: Icons.security_outlined, title: 'Berechtigung prüfen', body: 'Rollen, Besitzer, Verein und sensible Daten gegen Regeln prüfen.', status: 'Pflicht'),
+            _AdminCheckLine(icon: Icons.history_outlined, title: 'Audit Trail', body: 'Änderungen, Entscheidung, Bearbeiter und Zeitpunkt später speichern.', status: 'Audit'),
           ])),
           const SizedBox(height: 14),
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -100,9 +100,9 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
 
   String _specialIntro() {
     if (widget.title.contains('Mitglieder') || widget.title.contains('Users')) return 'Nutzerverwaltung aus der Web-App: Inaktivitaetsnotiz, Rollen, Sperre, DSGVO-Export und Statuswechsel.';
-    if (widget.title.contains('Club-Verifizierungen')) return 'Club-Verifizierung: Verein pruefen, Dokumente ansehen, genehmigen oder ablehnen.';
-    if (widget.area == 'Moderation') return 'Moderationsentscheidungen: Flag pruefen, Report aktualisieren, Nutzer informieren und Audit schreiben.';
-    if (widget.area == 'Billing') return 'Billing-Admin: Banktransfer markieren, Rechnung laden, Mahnung, Kuendigung oder Erneuerung vorbereiten.';
+    if (widget.title.contains('Club-Verifizierungen')) return 'Club-Verifizierung: Verein prüfen, Dokumente ansehen, genehmigen oder ablehnen.';
+    if (widget.area == 'Moderation') return 'Moderationsentscheidungen: Flag prüfen, Report aktualisieren, Nutzer informieren und Audit schreiben.';
+    if (widget.area == 'Billing') return 'Billing-Admin: Banktransfer markieren, Rechnung laden, Mahnung, Kündigung oder Erneuerung vorbereiten.';
     if (widget.area == 'Commerce') return 'Commerce-Admin: Produktstatus, Seller-Antrag, Shipping, Refund, Return und Payout bearbeiten.';
     if (widget.area == 'Content') return 'Content-Admin: Badges, Sportarten, Blog, Media und Learning-Quality freigeben.';
     if (widget.area == 'Outfit') return 'Outfit-Admin: Zahlstatus, Lieferadresse, Payment Reminder, Lieferung und Visuals steuern.';
@@ -117,7 +117,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
         icon: icon,
         danger: danger,
         secondary: !danger,
-        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: label, body: '$label fuer ${widget.title} vorbereiten, Audit schreiben und spaeter mit Laravel Admin-Route verbinden.', status: status, icon: icon))),
+        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: label, body: '$label für ${widget.title} vorbereiten, Audit schreiben und später mit Laravel Admin-Route verbinden.', status: status, icon: icon))),
       ));
     }
 
@@ -125,7 +125,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
       add('Inaktivitaetsnotiz senden', Icons.mark_email_read_outlined, 'Notice');
       add('Rolle zuweisen', Icons.admin_panel_settings_outlined, 'Role');
       add('DSGVO Export', Icons.download_outlined, 'Export');
-      add('Nutzer loeschen', Icons.delete_outline, 'Delete', danger: true);
+      add('Nutzer löschen', Icons.delete_outline, 'Delete', danger: true);
       return actions;
     }
     if (widget.title.contains('Club-Verifizierungen')) {
@@ -136,7 +136,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
     }
     if (widget.area == 'Moderation') {
       add('Flag aktualisieren', Icons.flag_outlined, 'Flag');
-      add('Report schliessen', Icons.task_alt_outlined, 'Closed');
+      add('Report schließen', Icons.task_alt_outlined, 'Closed');
       add('Eskalieren', Icons.warning_amber_outlined, 'Urgent', danger: true);
       return actions;
     }
@@ -144,7 +144,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
       add('Als bezahlt markieren', Icons.payments_outlined, 'Paid');
       add('Rechnung downloaden', Icons.picture_as_pdf_outlined, 'PDF');
       add('Abo erneuern', Icons.autorenew_outlined, 'Renew');
-      add('Abo kuendigen', Icons.cancel_outlined, 'Cancel', danger: true);
+      add('Abo kündigen', Icons.cancel_outlined, 'Cancel', danger: true);
       return actions;
     }
     if (widget.area == 'Commerce') {
@@ -165,7 +165,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
       add('Zahlung erinnern', Icons.notification_important_outlined, 'Reminder');
       add('Lieferung aktualisieren', Icons.local_shipping_outlined, 'Delivery');
       add('Adresse bearbeiten', Icons.location_on_outlined, 'Address');
-      add('Abo loeschen', Icons.delete_outline, 'Delete', danger: true);
+      add('Abo löschen', Icons.delete_outline, 'Delete', danger: true);
       return actions;
     }
 
@@ -177,20 +177,20 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
 
   String _checkTitleOne() {
     if (widget.area == 'Moderation') return 'Meldung bewerten';
-    if (widget.area == 'Billing') return 'Zahlungsstatus pruefen';
-    if (widget.area == 'Commerce') return 'Produkt/Order pruefen';
-    if (widget.area == 'System') return 'Konfiguration pruefen';
-    if (widget.area == 'Nutzer') return 'Nutzerkontext pruefen';
+    if (widget.area == 'Billing') return 'Zahlungsstatus prüfen';
+    if (widget.area == 'Commerce') return 'Produkt/Order prüfen';
+    if (widget.area == 'System') return 'Konfiguration prüfen';
+    if (widget.area == 'Nutzer') return 'Nutzerkontext prüfen';
     return 'Admin-Prüfung';
   }
 
   String _checkBodyOne() {
     if (widget.area == 'Moderation') return 'Content, Meldungsgrund, Autor, Kommentare und Eskalation bewerten.';
     if (widget.area == 'Billing') return 'Invoice, Providerstatus, Banktransfer, Mahnung und Zahlungsausgleich ansehen.';
-    if (widget.area == 'Commerce') return 'Produktqualitaet, Bestand, Bestellung, Retoure oder Payout pruefen.';
-    if (widget.area == 'System') return 'Mail, Maintenance, globale Settings und Fehlerzustand pruefen.';
+    if (widget.area == 'Commerce') return 'Produktqualitaet, Bestand, Bestellung, Retoure oder Payout prüfen.';
+    if (widget.area == 'System') return 'Mail, Maintenance, globale Settings und Fehlerzustand prüfen.';
     if (widget.area == 'Nutzer') return 'Profil, Rolle, Status, Verbindung und Verifizierung kontrollieren.';
-    return 'Details und naechste Aktion pruefen.';
+    return 'Details und naechste Aktion prüfen.';
   }
 }
 

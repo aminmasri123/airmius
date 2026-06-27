@@ -20,7 +20,7 @@ class AirmiusLocalizationReadiness {
   static const remainingGates = [
     'Alle public/member-facing Screens vollstaendig auf Keys umstellen',
     'Mitgliedsantrag-Felder und Deep-Link-Texte final extrahieren',
-    'Arabisch RTL visuell pruefen',
-    'Store-Screenshots je Listing-Sprache pruefen',
+    'Arabisch RTL visuell prüfen',
+    'Store-Screenshots je Listing-Sprache prüfen',
   ];
 }

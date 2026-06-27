@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -22,7 +22,7 @@ class _AuthRecoverySecurityScreenState extends State<AuthRecoverySecurityScreen>
       title: 'Profil vervollstaendigen',
       area: 'Profil',
       status: 'Pflicht',
-      body: 'Mobile UI fuer fehlende Profildaten, Rolle, Verein, Standort und erste Sicherheitspruefung.',
+      body: 'Mobile UI für fehlende Profildaten, Rolle, Verein, Standort und erste Sicherheitsprüfung.',
       icon: Icons.assignment_ind_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -30,23 +30,23 @@ class _AuthRecoverySecurityScreenState extends State<AuthRecoverySecurityScreen>
       title: 'Passwort vergessen',
       area: 'Recovery',
       status: 'E-Mail',
-      body: 'Anfrage fuer Passwort-Reset mit E-Mail, Sicherheitsmeldung und Rueckkehr zum Login.',
+      body: 'Anfrage für Passwort-Reset mit E-Mail, Sicherheitsmeldung und Rückkehr zum Login.',
       icon: Icons.lock_reset_outlined,
       color: Color(0xFF2EE59D),
     ),
     _AuthFlow(
-      title: 'Passwort zuruecksetzen',
+      title: 'Passwort zurücksetzen',
       area: 'Recovery',
       status: 'Token',
-      body: 'Reset-Formular mit Token, neuem Passwort, Bestaetigung und Erfolgsmeldung.',
+      body: 'Reset-Formular mit Token, neuem Passwort, Bestätigung und Erfolgsmeldung.',
       icon: Icons.password_outlined,
       color: Color(0xFF2EE59D),
     ),
     _AuthFlow(
-      title: 'Passwort bestaetigen',
+      title: 'Passwort bestätigen',
       area: 'Security',
       status: 'Check',
-      body: 'Sicherheitsabfrage vor sensiblen Aktionen wie Konto loeschen, 2FA oder Zahlungsdaten.',
+      body: 'Sicherheitsabfrage vor sensiblen Aktionen wie Konto löschen, 2FA oder Zahlungsdaten.',
       icon: Icons.enhanced_encryption_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -54,7 +54,7 @@ class _AuthRecoverySecurityScreenState extends State<AuthRecoverySecurityScreen>
       title: 'Zwei-Faktor Challenge',
       area: 'Security',
       status: '2FA',
-      body: 'Code-Eingabe, Recovery-Code Umschaltung und klare Fehlermeldungen fuer Login-Schutz.',
+      body: 'Code-Eingabe, Recovery-Code Umschaltung und klare Fehlermeldungen für Login-Schutz.',
       icon: Icons.pin_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -131,12 +131,12 @@ class _AuthRecoverySecurityScreenState extends State<AuthRecoverySecurityScreen>
                       onReset: () => openUiAction(
                         context,
                         title: 'Passwort-Reset',
-                        message: 'Hier wird spaeter die Laravel-API fuer Forgot/Reset Password angebunden.',
+                        message: 'Hier wird später die Laravel-API für Forgot/Reset Password angebunden.',
                       ),
                       onVerify: () => openUiAction(
                         context,
                         title: 'E-Mail erneut senden',
-                        message: 'Die mobile UI ist vorbereitet; die API sendet spaeter den Verify-Link.',
+                        message: 'Die mobile UI ist vorbereitet; die API sendet später den Verify-Link.',
                       ),
                       onSupport: () => _openSupport(context),
                     ),
@@ -217,7 +217,7 @@ class _IntroPanel extends StatelessWidget {
           Text('Login-Randfaelle', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
           SizedBox(height: 8),
           Text(
-            'Mobile UI fuer Complete Profile, Forgot/Reset Password, Confirm Password, 2FA, Verify Email und Suspended.',
+            'Mobile UI für Complete Profile, Forgot/Reset Password, Confirm Password, 2FA, Verify Email und Suspended.',
             style: TextStyle(color: Color(0xFFAFC0D8), height: 1.45, fontWeight: FontWeight.w600),
           ),
         ],

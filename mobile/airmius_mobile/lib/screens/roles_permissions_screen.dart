@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -29,7 +29,7 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
             const SizedBox(height: 8),
             const Text('Wer darf was in Airmius?', style: TextStyle(color: AirmiusColors.text, fontSize: 23, fontWeight: FontWeight.w900)),
             const SizedBox(height: 8),
-            const Text('Admin, Coach, Captain, Mitglied, Guardian und Gast bekommen getrennte Rechte fuer sensible Bereiche wie Finanzen, Medien, Jugend und Vereinsdaten.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+            const Text('Admin, Coach, Captain, Mitglied, Guardian und Gast bekommen getrennte Rechte für sensible Bereiche wie Finanzen, Medien, Jugend und Vereinsdaten.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
             const SizedBox(height: 14),
             Wrap(spacing: 8, runSpacing: 8, children: ['Rollen', 'Permissions', 'Audit', 'Sicherheit'].map((item) => ChoiceChip(
               selected: _scope == item,
@@ -47,7 +47,7 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
           _RoleLine(
             icon: Icons.admin_panel_settings_outlined,
             title: 'Vereinsadmin',
-            body: 'Mitglieder, Teams, Dokumente, Beitraege und Zahlungen verwalten.',
+            body: 'Mitglieder, Teams, Dokumente, Beiträge und Zahlungen verwalten.',
             status: 'Vollzugriff',
             color: AirmiusColors.blue,
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RolePermissionDetailScreen(title: 'Vereinsadmin', status: 'Vollzugriff'))),
@@ -65,7 +65,7 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
           _RoleLine(
             icon: Icons.family_restroom_outlined,
             title: 'Guardian',
-            body: 'Kinderkonten, Zustimmung, Medienfreigabe und Jugendschutz pruefen.',
+            body: 'Kinderkonten, Zustimmung, Medienfreigabe und Jugendschutz prüfen.',
             status: 'Schutz',
             color: AirmiusColors.amber,
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RolePermissionDetailScreen(title: 'Guardian', status: 'Schutz'))),

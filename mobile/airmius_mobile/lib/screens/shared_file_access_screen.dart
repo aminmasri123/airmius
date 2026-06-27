@@ -30,7 +30,7 @@ class _SharedFileAccessScreenState extends State<SharedFileAccessScreen> {
           AirmiusPanel(gradient: true, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Shared Link'),
             const SizedBox(height: 8),
-            const Text('Oeffentliche oder halbprivate Dateilinks werden mobil als eigener sicherer Zugriff dargestellt.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+            const Text('Öffentliche oder halbprivate Dateilinks werden mobil als eigener sicherer Zugriff dargestellt.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
             const SizedBox(height: 12),
             AirmiusTextField(label: 'Token', hint: widget.token, icon: Icons.link_outlined),
           ])),
@@ -39,9 +39,9 @@ class _SharedFileAccessScreenState extends State<SharedFileAccessScreen> {
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Zugriff'),
-            SwitchListTile(value: _requiresPassword, onChanged: (value) => setState(() => _requiresPassword = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Passwort erforderlich', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Optionaler Schutz fuer sensible Vereinsdokumente.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _accepted, onChanged: (value) => setState(() => _accepted = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Datenschutzhinweis akzeptiert', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Vor Download oder Preview bestaetigen.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _expired, onChanged: (value) => setState(() => _expired = value), activeColor: AirmiusColors.red, contentPadding: EdgeInsets.zero, title: const Text('Link abgelaufen simulieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Zeigt den spaeteren Error-State fuer ungueltige Tokens.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _requiresPassword, onChanged: (value) => setState(() => _requiresPassword = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Passwort erforderlich', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Optionaler Schutz für sensible Vereinsdokumente.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _accepted, onChanged: (value) => setState(() => _accepted = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Datenschutzhinweis akzeptiert', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Vor Download oder Preview bestätigen.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _expired, onChanged: (value) => setState(() => _expired = value), activeColor: AirmiusColors.red, contentPadding: EdgeInsets.zero, title: const Text('Link abgelaufen simulieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Zeigt den späteren Error-State für ungültige Tokens.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -53,8 +53,8 @@ class _SharedFileAccessScreenState extends State<SharedFileAccessScreen> {
           ])),
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [
-            AirmiusButton(label: 'Datei oeffnen', icon: Icons.visibility_outlined, onPressed: !_accepted || _expired ? null : () => openUiAction(context, title: 'Geteilte Datei oeffnen', body: 'Token pruefen, Zugriff protokollieren und Preview laden.', status: 'Share', icon: Icons.visibility_outlined)),
-            AirmiusButton(label: 'Download', icon: Icons.download_outlined, secondary: true, onPressed: !_accepted || _expired ? null : () => openUiAction(context, title: 'Geteilte Datei herunterladen', body: 'Download ueber geteilten Token, Ablaufdatum und Audit vorbereiten.', status: 'Download', icon: Icons.download_outlined)),
+            AirmiusButton(label: 'Datei öffnen', icon: Icons.visibility_outlined, onPressed: !_accepted || _expired ? null : () => openUiAction(context, title: 'Geteilte Datei öffnen', body: 'Token prüfen, Zugriff protokollieren und Preview laden.', status: 'Share', icon: Icons.visibility_outlined)),
+            AirmiusButton(label: 'Download', icon: Icons.download_outlined, secondary: true, onPressed: !_accepted || _expired ? null : () => openUiAction(context, title: 'Geteilte Datei herunterladen', body: 'Download über geteilten Token, Ablaufdatum und Audit vorbereiten.', status: 'Download', icon: Icons.download_outlined)),
             AirmiusButton(label: 'Link melden', icon: Icons.report_outlined, danger: true, onPressed: () => openUiAction(context, title: 'Geteilten Link melden', body: 'Missbrauchsmeldung, Datenschutz-Hinweis und Admin-Review vorbereiten.', status: 'Meldung', icon: Icons.report_outlined)),
           ]),
         ]),

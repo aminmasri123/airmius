@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -23,10 +23,10 @@ class _AdminSubscriptionOutfitCenterState extends State<AdminSubscriptionOutfitC
 
   final List<_SubscriptionItem> _items = const [
     _SubscriptionItem(title: 'Club Pro Abo', area: 'Abos', body: 'Vereinsabo mit Laufzeit, Rechnung, Renewal und Featureumfang.', status: 'Aktiv', meta: '79 EUR / Monat', icon: Icons.autorenew_outlined, color: AirmiusColors.blue),
-    _SubscriptionItem(title: 'Outfit Subscription', area: 'Outfits', body: 'Ausstattung, Groessen, Lieferung, Status und Support fuer Team-Outfits.', status: 'Lieferung', meta: 'Team U16', icon: Icons.checkroom_outlined, color: AirmiusColors.green),
+    _SubscriptionItem(title: 'Outfit Subscription', area: 'Outfits', body: 'Ausstattung, Groessen, Lieferung, Status und Support für Team-Outfits.', status: 'Lieferung', meta: 'Team U16', icon: Icons.checkroom_outlined, color: AirmiusColors.green),
     _SubscriptionItem(title: 'Renewal Entscheidung', area: 'Renewals', body: 'Naechste Verlaengerung, Rechnung, Zahlung und Adminentscheidung.', status: 'Faellig', meta: 'in 14 Tagen', icon: Icons.update_outlined, color: AirmiusColors.amber),
     _SubscriptionItem(title: 'Pausiertes Abo', area: 'Pausiert', body: 'Pause, Grund, Reaktivierung, Laufzeit und Benachrichtigung.', status: 'Pausiert', meta: 'Support', icon: Icons.pause_circle_outline, color: AirmiusColors.blueDeep),
-    _SubscriptionItem(title: 'Kuendigung pruefen', area: 'Kuendigungen', body: 'Kuendigungsgrund, Datenexport, Rechnung, Refund und Retention-Hinweis.', status: 'Pruefen', meta: 'Risiko', icon: Icons.cancel_outlined, color: AirmiusColors.red),
+    _SubscriptionItem(title: 'Kündigung prüfen', area: 'Kündigungen', body: 'Kündigungsgrund, Datenexport, Rechnung, Refund und Retention-Hinweis.', status: 'Prüfen', meta: 'Risiko', icon: Icons.cancel_outlined, color: AirmiusColors.red),
   ];
 
   List<_SubscriptionItem> get _visibleItems => _items.where((item) => _section == 'Alle' || item.area == _section).toList();
@@ -49,11 +49,11 @@ class _AdminSubscriptionOutfitCenterState extends State<AdminSubscriptionOutfitC
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const PageTitle(title: 'Admin Subscriptions & Outfits', subtitle: 'Abos, OutfitSubscriptions, Laufzeiten, Renewals, Lieferungen, Pausen und Kuendigungen.'),
+                        const PageTitle(title: 'Admin Subscriptions & Outfits', subtitle: 'Abos, OutfitSubscriptions, Laufzeiten, Renewals, Lieferungen, Pausen und Kündigungen.'),
                         const SizedBox(height: 16),
                         _SubscriptionHero(onExport: () => _toast('Abo-Export vorbereitet')),
                         const SizedBox(height: 16),
-                        _ChoicePanel(title: 'Bereich', value: _section, values: const ['Alle', 'Abos', 'Outfits', 'Renewals', 'Pausiert', 'Kuendigungen'], onChanged: (value) => setState(() => _section = value)),
+                        _ChoicePanel(title: 'Bereich', value: _section, values: const ['Alle', 'Abos', 'Outfits', 'Renewals', 'Pausiert', 'Kündigungen'], onChanged: (value) => setState(() => _section = value)),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Abo-Filter',
@@ -62,8 +62,8 @@ class _AdminSubscriptionOutfitCenterState extends State<AdminSubscriptionOutfitC
                               _SwitchRow(title: 'Aktive anzeigen', subtitle: 'Aktive Subscriptions mit Status und Rechnung.', value: _showActive, onChanged: (value) => setState(() => _showActive = value)),
                               _SwitchRow(title: 'Pausierte anzeigen', subtitle: 'Pausen, Gruende und Reaktivierung sichtbar machen.', value: _showPaused, onChanged: (value) => setState(() => _showPaused = value)),
                               _SwitchRow(title: 'Renewals anzeigen', subtitle: 'Verlaengerungen, Fristen und Zahlungsstatus anzeigen.', value: _showRenewals, onChanged: (value) => setState(() => _showRenewals = value)),
-                              _SwitchRow(title: 'Outfit-Lieferungen anzeigen', subtitle: 'Groessen, Versand, Status und Support fuer Outfit-Abos.', value: _showDeliveries, onChanged: (value) => setState(() => _showDeliveries = value)),
-                              _SwitchRow(title: 'Kuendigungen anzeigen', subtitle: 'Kuendigung, Retention, Refund und Datenexport vorbereiten.', value: _showCancellations, onChanged: (value) => setState(() => _showCancellations = value)),
+                              _SwitchRow(title: 'Outfit-Lieferungen anzeigen', subtitle: 'Groessen, Versand, Status und Support für Outfit-Abos.', value: _showDeliveries, onChanged: (value) => setState(() => _showDeliveries = value)),
+                              _SwitchRow(title: 'Kündigungen anzeigen', subtitle: 'Kündigung, Retention, Refund und Datenexport vorbereiten.', value: _showCancellations, onChanged: (value) => setState(() => _showCancellations = value)),
                             ],
                           ),
                         ),
@@ -72,7 +72,7 @@ class _AdminSubscriptionOutfitCenterState extends State<AdminSubscriptionOutfitC
                           _SubscriptionCard(item: item, onOpen: () => _toast('${item.title}: Abo-Detail vorbereitet')),
                           const SizedBox(height: 12),
                         ],
-                        if (items.isEmpty) const EmptyPanel('Keine Abos fuer diesen Bereich gefunden.'),
+                        if (items.isEmpty) const EmptyPanel('Keine Abos für diesen Bereich gefunden.'),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Admin-Aktionen',
@@ -80,7 +80,7 @@ class _AdminSubscriptionOutfitCenterState extends State<AdminSubscriptionOutfitC
                             spacing: 10,
                             runSpacing: 10,
                             children: [
-                              AirmiusButton(label: 'Renewal pruefen', icon: Icons.update_outlined, onPressed: () => _toast('Renewal pruefen vorbereitet')),
+                              AirmiusButton(label: 'Renewal prüfen', icon: Icons.update_outlined, onPressed: () => _toast('Renewal prüfen vorbereitet')),
                               AirmiusButton(label: 'Billing', icon: Icons.receipt_long_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BillingOperationsScreen()))),
                               AirmiusButton(label: 'Outfit Ops', icon: Icons.checkroom_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OutfitOperationsScreen()))),
                               AirmiusButton(label: 'Support', icon: Icons.support_agent_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()))),
@@ -130,7 +130,7 @@ class _SubscriptionHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Die Admin-Subscriptions- und OutfitSubscriptions-Webmodule werden als mobile UI abgebildet: Status, Laufzeit, Renewal, Lieferung, Pause und Kuendigung.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          const Text('Die Admin-Subscriptions- und OutfitSubscriptions-Webmodule werden als mobile UI abgebildet: Status, Laufzeit, Renewal, Lieferung, Pause und Kündigung.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           const Row(children: [Expanded(child: MetricCard(value: '5', label: 'Bereiche')), SizedBox(width: 10), Expanded(child: MetricCard(value: '2', label: 'Faellig')), SizedBox(width: 10), Expanded(child: MetricCard(value: '1', label: 'Outfit'))]),
         ],

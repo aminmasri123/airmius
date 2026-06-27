@@ -404,6 +404,9 @@ class AirmiusTeam {
     this.users = const [],
     this.canManage = false,
     this.canDelete = false,
+    this.viewerIsMember = false,
+    this.canRequestJoin = false,
+    this.viewerPendingJoinRequestId,
     this.usersCount,
     this.eventsCount,
   });
@@ -421,6 +424,9 @@ class AirmiusTeam {
   final List<AirmiusUser> users;
   final bool canManage;
   final bool canDelete;
+  final bool viewerIsMember;
+  final bool canRequestJoin;
+  final int? viewerPendingJoinRequestId;
   final int? usersCount;
   final int? eventsCount;
 
@@ -440,6 +446,9 @@ class AirmiusTeam {
       users: _jsonList(json['users']).map(AirmiusUser.fromJson).toList(),
       canManage: _bool(json['can_manage']) || _bool(json['can_update']),
       canDelete: _bool(json['can_delete']) || _bool(json['can_destroy']),
+      viewerIsMember: _bool(json['viewer_is_member']),
+      canRequestJoin: _bool(json['can_request_join']),
+      viewerPendingJoinRequestId: _nullableInt(json['viewer_pending_join_request_id']),
       usersCount: json.containsKey('users_count') ? _int(json['users_count']) : null,
       eventsCount: json.containsKey('events_count') ? _int(json['events_count']) : null,
     );
@@ -891,6 +900,16 @@ class AirmiusNotification {
   final String timeLabel;
   final bool unread;
   final String? actionUrl;
+
+  AirmiusNotification copyWith({bool? unread}) => AirmiusNotification(
+        id: id,
+        type: type,
+        title: title,
+        body: body,
+        timeLabel: timeLabel,
+        unread: unread ?? this.unread,
+        actionUrl: actionUrl,
+      );
 }
 
 class AirmiusConversation {
@@ -1439,6 +1458,7 @@ abstract class AirmiusClubRepository {
   Future<AirmiusTeam> createTeam(JsonMap payload);
   Future<AirmiusTeam> updateTeam(int id, JsonMap payload);
   Future<void> deleteTeam(int id);
+  Future<AirmiusTeam> requestTeamJoin(int id);
 }
 
 abstract class AirmiusSportRepository {

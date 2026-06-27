@@ -61,7 +61,7 @@ class _ConversationsCenterScreenState extends State<ConversationsCenterScreen> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          tooltip: 'Zurueck',
+          tooltip: 'Zurück',
           icon: const Icon(Icons.arrow_back, color: AirmiusColors.text),
           onPressed: () => Navigator.maybePop(context),
         ),
@@ -206,7 +206,7 @@ class _ChatListPanel extends StatelessWidget {
                       width: 38,
                       height: 38,
                       child: IconButton(
-                        tooltip: 'Zurueck',
+                        tooltip: 'Zurück',
                         onPressed: onBack,
                         padding: EdgeInsets.zero,
                         icon: const Icon(Icons.arrow_back, color: AirmiusColors.text, size: 22),
@@ -219,7 +219,7 @@ class _ChatListPanel extends StatelessWidget {
                         children: [
                           Text('Chat', style: TextStyle(color: AirmiusColors.text, fontSize: 20, fontWeight: FontWeight.w900)),
                           SizedBox(height: 5),
-                          Text('Erst Person oder Gruppe waehlen, dann oeffnen.', style: TextStyle(color: AirmiusColors.muted, fontSize: 13, height: 1.25)),
+                          Text('Erst Person oder Gruppe wählen, dann öffnen.', style: TextStyle(color: AirmiusColors.muted, fontSize: 13, height: 1.25)),
                         ],
                       ),
                     ),
@@ -261,7 +261,7 @@ class _ChatListPanel extends StatelessWidget {
           if (conversations.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 36),
-              child: Text('Keine passenden Chats fuer diesen Filter.', textAlign: TextAlign.center, style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+              child: Text('Keine passenden Chats für diesen Filter.', textAlign: TextAlign.center, style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
             )
           else
             Padding(

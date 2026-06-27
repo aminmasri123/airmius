@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -30,7 +30,7 @@ class _ClubEventAttendanceScreenState extends State<ClubEventAttendanceScreen> {
       area: 'Events',
       title: 'Saisonauftakt ZBB',
       team: 'Herren Aktiv',
-      body: 'Oeffentliches Vereins-Event mit Anmeldung, Teilnehmerlimit, Check-in und Eventchat.',
+      body: 'Öffentliches Vereins-Event mit Anmeldung, Teilnehmerlimit, Check-in und Eventchat.',
       status: 'Anmeldung offen',
       participants: '28 / 40',
       waitlist: '0',
@@ -45,7 +45,7 @@ class _ClubEventAttendanceScreenState extends State<ClubEventAttendanceScreen> {
       title: 'Freitagstraining',
       team: 'Laufgruppe',
       body: 'Regeltermin mit Team-Zuordnung, Trainerhinweis, Teilnehmerstatus und Push-Erinnerung.',
-      status: '18 bestaetigt',
+      status: '18 bestätigt',
       participants: '18 / 20',
       waitlist: '2',
       attendance: '12 anwesend',
@@ -58,7 +58,7 @@ class _ClubEventAttendanceScreenState extends State<ClubEventAttendanceScreen> {
       area: 'Warteliste',
       title: 'Probetraining Jugend',
       team: 'U16 Jugend',
-      body: 'Mitglieder und Interessenten koennen nachruecken, sobald ein Platz frei wird.',
+      body: 'Mitglieder und Interessenten können nachrücken, sobald ein Platz frei wird.',
       status: 'Ausgebucht',
       participants: '10 / 10',
       waitlist: '5',
@@ -73,7 +73,7 @@ class _ClubEventAttendanceScreenState extends State<ClubEventAttendanceScreen> {
       title: 'U16 Techniktraining',
       team: 'U16 Jugend',
       body: 'Anwesenheit mit Trainerfreigabe, Elternkontakt, Notfallinfo und Nachtrag.',
-      status: 'Check-in laeuft',
+      status: 'Check-in läuft',
       participants: '14 / 18',
       waitlist: '1',
       attendance: '8 eingecheckt',
@@ -86,7 +86,7 @@ class _ClubEventAttendanceScreenState extends State<ClubEventAttendanceScreen> {
       area: 'Abgesagt',
       title: 'Hallenzeit Sonntag',
       team: 'Freies Spiel',
-      body: 'Absagegrund, automatische Information, Rueckzahlungshinweis und Ersatztermin vorbereitet.',
+      body: 'Absagegrund, automatische Information, Rückzahlungshinweis und Ersatztermin vorbereitet.',
       status: 'Abgesagt',
       participants: '0 / 24',
       waitlist: '0',
@@ -151,7 +151,7 @@ class _ClubEventAttendanceScreenState extends State<ClubEventAttendanceScreen> {
                           const SizedBox(height: 12),
                         ],
                         if (visibleEvents.isEmpty)
-                          const EmptyPanel('Keine Events fuer diese Filter gefunden.'),
+                          const EmptyPanel('Keine Events für diese Filter gefunden.'),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           child: Column(
@@ -214,7 +214,7 @@ class _ClubEventAttendanceScreenState extends State<ClubEventAttendanceScreen> {
       return;
     }
     if (action == 'attendance') {
-      _toast('Anwesenheit fuer ${event.title} vorbereitet');
+      _toast('Anwesenheit für ${event.title} vorbereitet');
       return;
     }
     _toast('${event.title}: Detailansicht vorbereitet');
@@ -265,7 +265,7 @@ class _EventHero extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           const Text(
-            'Admins koennen Termine, Trainings, Anmeldungen, Wartelisten, Erinnerungen, Absagen und Anwesenheit mobil steuern.',
+            'Admins können Termine, Trainings, Anmeldungen, Wartelisten, Erinnerungen, Absagen und Anwesenheit mobil steuern.',
             style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
@@ -343,8 +343,8 @@ class _ControlPanel extends StatelessWidget {
         children: [
           const Eyebrow('Event-Regeln'),
           const SizedBox(height: 12),
-          _SwitchRow(title: 'Warteliste anzeigen', subtitle: 'Nachruecker und volle Termine bleiben sichtbar.', value: showWaitlist, onChanged: onWaitlist),
-          _SwitchRow(title: 'Anwesenheit erfassen', subtitle: 'Trainer koennen Check-ins und Nachtraege pflegen.', value: showAttendance, onChanged: onAttendance),
+          _SwitchRow(title: 'Warteliste anzeigen', subtitle: 'Nachrücker und volle Termine bleiben sichtbar.', value: showWaitlist, onChanged: onWaitlist),
+          _SwitchRow(title: 'Anwesenheit erfassen', subtitle: 'Trainer können Check-ins und Nachtraege pflegen.', value: showAttendance, onChanged: onAttendance),
           _SwitchRow(title: 'Erinnerungen aktiv', subtitle: 'Push, Chat und E-Mail sind als mobile Aktion vorbereitet.', value: showReminders, onChanged: onReminders),
           _SwitchRow(title: 'Absagen sichtbar', subtitle: 'Abgesagte Termine zeigen Grund, Ersatztermin und Hinweise.', value: showCancellations, onChanged: onCancellations),
         ],

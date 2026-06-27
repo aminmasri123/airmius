@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -19,12 +19,12 @@ class _ContentBlogEditorialSuiteScreenState extends State<ContentBlogEditorialSu
 
   final List<_SuiteItem> _items = const [
     _SuiteItem('Blog Dashboard', 'Editorial', 'Index', 'Redaktionelle Blogliste mit Status, Autor, Kategorie, Sichtbarkeit und Vorschau.', Icons.article_outlined, Color(0xFF5BA7FF)),
-    _SuiteItem('Blog Kategorien', 'Editorial', 'Taxonomie', 'Kategorien, Slugs, Farben, Reihenfolge und oeffentliche Sichtbarkeit als mobile Admin-UI.', Icons.category_outlined, Color(0xFF2EE59D)),
+    _SuiteItem('Blog Kategorien', 'Editorial', 'Taxonomie', 'Kategorien, Slugs, Farben, Reihenfolge und öffentliche Sichtbarkeit als mobile Admin-UI.', Icons.category_outlined, Color(0xFF2EE59D)),
     _SuiteItem('Blog Detail', 'Editorial', 'Show', 'Beitragsdetail mit Titel, Hero, Inhalt, Tags, Freigabe, Bearbeiten und Teilen.', Icons.chrome_reader_mode_outlined, Color(0xFFF8B84E)),
-    _SuiteItem('Public Blog', 'Public', 'Gast', 'Oeffentliche Blogliste mit Suche, Themen, Top-Beitraegen und App-tauglichen Karten.', Icons.public_outlined, Color(0xFFB084FF)),
-    _SuiteItem('Public Blog Show', 'Public', 'Lesen', 'Mobile Leseansicht fuer Gastartikel mit Autor, Datum, Abschnitten und CTA.', Icons.menu_book_outlined, Color(0xFF5BA7FF)),
-    _SuiteItem('Top-Inhalte', 'Public', 'Highlights', 'Kuratiertes Content-Schaufenster fuer Vereine, Events, Lerninhalte, Blog und Community.', Icons.auto_awesome_outlined, Color(0xFF2EE59D)),
-    _SuiteItem('Content Moderation', 'Moderation', 'Review', 'Melden, pruefen, freigeben, ausblenden und dokumentieren von oeffentlichen Inhalten.', Icons.fact_check_outlined, Color(0xFFFF6B6B)),
+    _SuiteItem('Public Blog', 'Public', 'Gast', 'Öffentliche Blogliste mit Suche, Themen, Top-Beiträgen und App-tauglichen Karten.', Icons.public_outlined, Color(0xFFB084FF)),
+    _SuiteItem('Public Blog Show', 'Public', 'Lesen', 'Mobile Leseansicht für Gastartikel mit Autor, Datum, Abschnitten und CTA.', Icons.menu_book_outlined, Color(0xFF5BA7FF)),
+    _SuiteItem('Top-Inhalte', 'Public', 'Highlights', 'Kuratiertes Content-Schaufenster für Vereine, Events, Lerninhalte, Blog und Community.', Icons.auto_awesome_outlined, Color(0xFF2EE59D)),
+    _SuiteItem('Content Moderation', 'Moderation', 'Review', 'Melden, prüfen, freigeben, ausblenden und dokumentieren von öffentlichen Inhalten.', Icons.fact_check_outlined, Color(0xFFFF6B6B)),
   ];
 
   List<_SuiteItem> get _visible {
@@ -50,7 +50,7 @@ class _ContentBlogEditorialSuiteScreenState extends State<ContentBlogEditorialSu
                     const _Hero(
                       eyebrow: 'CONTENT SUITE',
                       title: 'Blog & Editorial',
-                      subtitle: 'Native Mobile-UI fuer Blog-Index, Kategorien, Detailseiten, Public Blog, Top-Inhalte und Moderation.',
+                      subtitle: 'Native Mobile-UI für Blog-Index, Kategorien, Detailseiten, Public Blog, Top-Inhalte und Moderation.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -83,8 +83,8 @@ class _ContentBlogEditorialSuiteScreenState extends State<ContentBlogEditorialSu
                       primaryLabel: 'Beitrag vorbereiten',
                       secondaryIcon: Icons.visibility_outlined,
                       secondaryLabel: 'Public Preview',
-                      onPrimary: () => openUiAction(context, title: 'Blog Beitrag', body: 'Die mobile Editorial-UI ist vorbereitet; echte Inhalte kommen spaeter ueber API/CMS.', status: 'UI bereit', icon: Icons.info_outline),
-                      onSecondary: () => openUiAction(context, title: 'Public Preview', body: 'Oeffentliche Blog- und Top-Inhalte-Ansichten sind als App-UI vorhanden.', status: 'UI bereit', icon: Icons.info_outline),
+                      onPrimary: () => openUiAction(context, title: 'Blog Beitrag', body: 'Die mobile Editorial-UI ist vorbereitet; echte Inhalte kommen später über API/CMS.', status: 'UI bereit', icon: Icons.info_outline),
+                      onSecondary: () => openUiAction(context, title: 'Public Preview', body: 'Öffentliche Blog- und Top-Inhalte-Ansichten sind als App-UI vorhanden.', status: 'UI bereit', icon: Icons.info_outline),
                       onSupport: () => _openSupport(context),
                     ),
                   ],

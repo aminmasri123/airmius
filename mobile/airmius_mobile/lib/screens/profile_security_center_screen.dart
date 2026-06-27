@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -21,10 +21,10 @@ class _ProfileSecurityCenterScreenState extends State<ProfileSecurityCenterScree
 
   final List<_ProfileSecurityItem> _items = const [
     _ProfileSecurityItem(title: 'Profilinformationen', body: 'Name, E-Mail, Sprache, Rolle, Avatar und sichtbare Profildaten aktualisieren.', status: 'Aktuell', icon: Icons.manage_accounts_outlined, color: AirmiusColors.blue),
-    _ProfileSecurityItem(title: 'Passwort aendern', body: 'UpdatePasswordForm mit aktuellem Passwort, neuem Passwort und Sicherheitsfeedback.', status: 'Sicher', icon: Icons.lock_reset_outlined, color: AirmiusColors.green),
+    _ProfileSecurityItem(title: 'Passwort ändern', body: 'UpdatePasswordForm mit aktuellem Passwort, neuem Passwort und Sicherheitsfeedback.', status: 'Sicher', icon: Icons.lock_reset_outlined, color: AirmiusColors.green),
     _ProfileSecurityItem(title: 'Two-Factor Authentication', body: '2FA aktivieren, QR-Code, Recovery-Codes und Challenge-Status als mobile UI.', status: 'Aktiv', icon: Icons.phonelink_lock_outlined, color: AirmiusColors.amber),
-    _ProfileSecurityItem(title: 'Andere Sessions abmelden', body: 'LogoutOtherBrowserSessionsForm mit Geraeten, Zeitpunkt und Abmeldeaktion.', status: '2 Sessions', icon: Icons.devices_other_outlined, color: AirmiusColors.blueDeep),
-    _ProfileSecurityItem(title: 'Konto loeschen', body: 'DeleteUserForm mit Warnung, Datenrechte, Bestaetigung und Supportkontakt.', status: 'Sensibel', icon: Icons.delete_forever_outlined, color: AirmiusColors.red),
+    _ProfileSecurityItem(title: 'Andere Sessions abmelden', body: 'LogoutOtherBrowserSessionsForm mit Geräten, Zeitpunkt und Abmeldeaktion.', status: '2 Sessions', icon: Icons.devices_other_outlined, color: AirmiusColors.blueDeep),
+    _ProfileSecurityItem(title: 'Konto löschen', body: 'DeleteUserForm mit Warnung, Datenrechte, Bestätigung und Supportkontakt.', status: 'Sensibel', icon: Icons.delete_forever_outlined, color: AirmiusColors.red),
   ];
 
   @override
@@ -43,7 +43,7 @@ class _ProfileSecurityCenterScreenState extends State<ProfileSecurityCenterScree
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const PageTitle(title: 'Profil & Sicherheit', subtitle: 'Profilinformationen, Passwort, 2FA, Browser-Sessions, Datenrechte und Konto loeschen.'),
+                        const PageTitle(title: 'Profil & Sicherheit', subtitle: 'Profilinformationen, Passwort, 2FA, Browser-Sessions, Datenrechte und Konto löschen.'),
                         const SizedBox(height: 16),
                         _ProfileHero(onSave: () => _toast('Profil speichern vorbereitet')),
                         const SizedBox(height: 16),
@@ -54,8 +54,8 @@ class _ProfileSecurityCenterScreenState extends State<ProfileSecurityCenterScree
                               _SwitchRow(title: 'Profilinformationen aktiv', subtitle: 'UpdateProfileInformationForm als mobile UI sichtbar.', value: _profileInfo, onChanged: (value) => setState(() => _profileInfo = value)),
                               _SwitchRow(title: 'Passwort stark', subtitle: 'UpdatePasswordForm und Sicherheitsfeedback aktiv.', value: _passwordStrong, onChanged: (value) => setState(() => _passwordStrong = value)),
                               _SwitchRow(title: '2FA eingeschaltet', subtitle: 'TwoFactorAuthenticationForm mit Recovery-Codes aktiv.', value: _twoFactor, onChanged: (value) => setState(() => _twoFactor = value)),
-                              _SwitchRow(title: 'Sessions pruefen', subtitle: 'Andere Browser-Sessions anzeigen und abmelden.', value: _sessionReview, onChanged: (value) => setState(() => _sessionReview = value)),
-                              _SwitchRow(title: 'Konto loeschen sichtbar', subtitle: 'DeleteUserForm mit Warnung und Datenrechte-Hinweis.', value: _deleteAvailable, onChanged: (value) => setState(() => _deleteAvailable = value)),
+                              _SwitchRow(title: 'Sessions prüfen', subtitle: 'Andere Browser-Sessions anzeigen und abmelden.', value: _sessionReview, onChanged: (value) => setState(() => _sessionReview = value)),
+                              _SwitchRow(title: 'Konto löschen sichtbar', subtitle: 'DeleteUserForm mit Warnung und Datenrechte-Hinweis.', value: _deleteAvailable, onChanged: (value) => setState(() => _deleteAvailable = value)),
                             ],
                           ),
                         ),
@@ -119,7 +119,7 @@ class _ProfileHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Die Profil-Partial-Webseiten werden als mobile UI gebuendelt: Profilinfo, Passwort, 2FA, andere Sessions und Konto loeschen.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          const Text('Die Profil-Partial-Webseiten werden als mobile UI gebuendelt: Profilinfo, Passwort, 2FA, andere Sessions und Konto löschen.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           const Row(children: [Expanded(child: MetricCard(value: '5', label: 'Bereiche')), SizedBox(width: 10), Expanded(child: MetricCard(value: '2', label: 'Sessions')), SizedBox(width: 10), Expanded(child: MetricCard(value: '1', label: '2FA'))]),
         ],

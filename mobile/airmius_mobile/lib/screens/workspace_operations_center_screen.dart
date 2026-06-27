@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -21,9 +21,9 @@ class _WorkspaceOperationsCenterState extends State<WorkspaceOperationsCenterScr
   bool _showPermissions = true;
 
   final List<_WorkspaceItem> _items = const [
-    _WorkspaceItem(title: 'Vereinsvorstand', area: 'Aktiv', body: 'Gemeinsamer Arbeitsbereich fuer Vorstand, Dokumente, Aufgaben und Beschluesse.', status: 'Aktiv', meta: '5 Mitglieder', icon: Icons.groups_2_outlined, color: AirmiusColors.blue),
+    _WorkspaceItem(title: 'Vereinsvorstand', area: 'Aktiv', body: 'Gemeinsamer Arbeitsbereich für Vorstand, Dokumente, Aufgaben und Beschluesse.', status: 'Aktiv', meta: '5 Mitglieder', icon: Icons.groups_2_outlined, color: AirmiusColors.blue),
     _WorkspaceItem(title: 'Trainerteam U16', area: 'Teams', body: 'Training, Anwesenheit, Teamdateien, Medienfreigabe und interne Abstimmung.', status: 'Team', meta: '3 Trainer', icon: Icons.sports_outlined, color: AirmiusColors.green),
-    _WorkspaceItem(title: 'Finanzen 2026', area: 'Finanzen', body: 'Beitraege, Rechnungen, Zahlungsstatus, Exporte und Vorstandsauswertung.', status: 'Sensibel', meta: 'Rollenpflicht', icon: Icons.account_balance_wallet_outlined, color: AirmiusColors.amber),
+    _WorkspaceItem(title: 'Finanzen 2026', area: 'Finanzen', body: 'Beiträge, Rechnungen, Zahlungsstatus, Exporte und Vorstandsauswertung.', status: 'Sensibel', meta: 'Rollenpflicht', icon: Icons.account_balance_wallet_outlined, color: AirmiusColors.amber),
     _WorkspaceItem(title: 'Archiv', area: 'Archiv', body: 'Abgeschlossene Projekte, alte Dokumente, Versionen und Datenschutzaufbewahrung.', status: 'Archiv', meta: '12 Dateien', icon: Icons.archive_outlined, color: AirmiusColors.red),
   ];
 
@@ -69,7 +69,7 @@ class _WorkspaceOperationsCenterState extends State<WorkspaceOperationsCenterScr
                           _WorkspaceCard(item: item, onOpen: () => _toast('${item.title}: Workspace-Detail vorbereitet')),
                           const SizedBox(height: 12),
                         ],
-                        if (items.isEmpty) const EmptyPanel('Keine Workspaces fuer diesen Bereich gefunden.'),
+                        if (items.isEmpty) const EmptyPanel('Keine Workspaces für diesen Bereich gefunden.'),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Workspace-Aktionen',

@@ -38,11 +38,11 @@ class _AdminModerationAuditQueueSuiteScreenState extends State<AdminModerationAu
         title: 'Vereinsverifizierung',
         area: 'Clubs',
         status: 'Eskalation',
-        body: 'Vereinsdaten, Dokumente, Adminrechte und Sichtbarkeit muessen durch Plattformadmin geprueft werden.',
+        body: 'Vereinsdaten, Dokumente, Adminrechte und Sichtbarkeit müssen durch Plattformadmin geprüft werden.',
         color: AirmiusColors.amber,
       ),
       const _ModerationCase(
-        title: 'Datenloeschanfrage',
+        title: 'Datenlöschanfrage',
         area: 'Privacy',
         status: 'Audit',
         body: 'DSGVO-Anfrage mit Profil, Mitgliedschaften, Dokumenten, Zahlungen und Nachrichtenverlauf.',
@@ -66,7 +66,7 @@ class _AdminModerationAuditQueueSuiteScreenState extends State<AdminModerationAu
                 const SectionLabel('ADMIN QUEUE'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Plattformadmins brauchen eine mobile Queue fuer Meldungen, Vereinspruefungen, Support-Eskalationen, Datenschutzanfragen und Audit-Verlauf.',
+                  'Plattformadmins brauchen eine mobile Queue für Meldungen, Vereinsprüfungen, Support-Eskalationen, Datenschutzanfragen und Audit-Verlauf.',
                   style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 16),
@@ -111,7 +111,7 @@ class _AdminModerationAuditQueueSuiteScreenState extends State<AdminModerationAu
                 const SizedBox(height: 8),
                 _AuditSwitch(title: 'Content Reports', value: showContentReports, color: AirmiusColors.pink, onChanged: (value) => setState(() => showContentReports = value)),
                 _AuditSwitch(title: 'User Reports', value: showUserReports, color: AirmiusColors.blue, onChanged: (value) => setState(() => showUserReports = value)),
-                _AuditSwitch(title: 'Vereinspruefung', value: showClubReviews, color: AirmiusColors.amber, onChanged: (value) => setState(() => showClubReviews = value)),
+                _AuditSwitch(title: 'Vereinsprüfung', value: showClubReviews, color: AirmiusColors.amber, onChanged: (value) => setState(() => showClubReviews = value)),
                 _AuditSwitch(title: 'Audit-Verlauf', value: showAuditTrail, color: AirmiusColors.green, onChanged: (value) => setState(() => showAuditTrail = value)),
               ],
             ),
@@ -212,12 +212,12 @@ class _ModerationCaseCard extends StatelessWidget {
             runSpacing: 8,
             children: [
               AirmiusButton(
-                label: 'Pruefen',
+                label: 'Prüfen',
                 icon: Icons.fact_check_outlined,
                 onPressed: () => openUiAction(
                   context,
-                  title: 'Fall pruefen',
-                  body: 'Diese UI bereitet Moderationsfaelle mit Kontext, Reporter, Adminentscheidung, Status und Audit-Verlauf fuer die spaetere API vor.',
+                  title: 'Fall prüfen',
+                  body: 'Diese UI bereitet Moderationsfaelle mit Kontext, Reporter, Adminentscheidung, Status und Audit-Verlauf für die spätere API vor.',
                   status: 'UI vorbereitet',
                   icon: Icons.fact_check_outlined,
                 ),
@@ -229,7 +229,7 @@ class _ModerationCaseCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Entscheidung',
-                  body: 'Adminentscheidungen koennen spaeter Freigabe, Sperre, Hinweis, Eskalation oder Ablehnung enthalten.',
+                  body: 'Adminentscheidungen können später Freigabe, Sperre, Hinweis, Eskalation oder Ablehnung enthalten.',
                   status: 'UI vorbereitet',
                   icon: Icons.verified_user_outlined,
                 ),
@@ -241,7 +241,7 @@ class _ModerationCaseCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Audit-Verlauf',
-                  body: 'Der Audit-Verlauf zeigt spaeter alle Aktionen, Rollen, Zeitpunkte, Dateien und Entscheidungen.',
+                  body: 'Der Audit-Verlauf zeigt später alle Aktionen, Rollen, Zeitpunkte, Dateien und Entscheidungen.',
                   status: 'UI vorbereitet',
                   icon: Icons.history_outlined,
                 ),

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -18,14 +18,14 @@ class _SportsTrainingWellbeingSuiteScreenState extends State<SportsTrainingWellb
   bool _showWellbeing = true;
 
   final List<_SuiteItem> _items = const [
-    _SuiteItem('Sportarten', 'Sports', 'Index', 'Sportarten, Profile, Skills, Empfehlungen und Vereinsbezug als mobile Uebersicht.', Icons.sports_soccer_outlined, Color(0xFF5BA7FF)),
+    _SuiteItem('Sportarten', 'Sports', 'Index', 'Sportarten, Profile, Skills, Empfehlungen und Vereinsbezug als mobile Übersicht.', Icons.sports_soccer_outlined, Color(0xFF5BA7FF)),
     _SuiteItem('Sportkarte', 'Sports', 'Map', 'Standorte, Vereine, Sportplaetze, Routen und lokale Sportangebote als App-Kartenlogik.', Icons.map_outlined, Color(0xFF2EE59D)),
     _SuiteItem('Training', 'Training', 'Planung', 'Trainingsplaene, Einheiten, Logs, Fortschritt und Trainerhinweise als zentrale Trainings-UI.', Icons.fitness_center_outlined, Color(0xFFF8B84E)),
-    _SuiteItem('Training Log', 'Training', 'Log', 'Mobile Eingabe und Detailansicht fuer Dauer, Intensitaet, Notizen, Werte und Verlauf.', Icons.post_add_outlined, Color(0xFFB084FF)),
-    _SuiteItem('Trainer Cockpit', 'Training', 'Coach', 'Traineransicht fuer Teams, Plaene, offene Aufgaben, Feedback und Anwesenheit.', Icons.sports_outlined, Color(0xFF5BA7FF)),
+    _SuiteItem('Training Log', 'Training', 'Log', 'Mobile Eingabe und Detailansicht für Dauer, Intensitaet, Notizen, Werte und Verlauf.', Icons.post_add_outlined, Color(0xFFB084FF)),
+    _SuiteItem('Trainer Cockpit', 'Training', 'Coach', 'Traineransicht für Teams, Plaene, offene Aufgaben, Feedback und Anwesenheit.', Icons.sports_outlined, Color(0xFF5BA7FF)),
     _SuiteItem('Events & Teilnahme', 'Training', 'Events', 'Termine, Event-Details, Teilnahme, Check-in, Rollen und Teamzuordnung.', Icons.event_available_outlined, Color(0xFF2EE59D)),
-    _SuiteItem('Ernaehrung', 'Wellbeing', 'Nutrition', 'Mahlzeiten, Plaene, Ziele, Allergien, Notizen und sportbezogene Hinweise.', Icons.restaurant_menu_outlined, Color(0xFFFF6B6B)),
-    _SuiteItem('Rides & Carpool', 'Wellbeing', 'Mobilitaet', 'Mitfahrten, Routen, Fahrer, Plaetze, Treffpunkte und Status fuer Teams.', Icons.directions_car_filled_outlined, Color(0xFF5BA7FF)),
+    _SuiteItem('Ernährung', 'Wellbeing', 'Nutrition', 'Mahlzeiten, Plaene, Ziele, Allergien, Notizen und sportbezogene Hinweise.', Icons.restaurant_menu_outlined, Color(0xFFFF6B6B)),
+    _SuiteItem('Rides & Carpool', 'Wellbeing', 'Mobilitaet', 'Mitfahrten, Routen, Fahrer, Plaetze, Treffpunkte und Status für Teams.', Icons.directions_car_filled_outlined, Color(0xFF5BA7FF)),
   ];
 
   List<_SuiteItem> get _visible => _filter == 'Alle' ? _items : _items.where((item) => item.area == _filter).toList();
@@ -48,7 +48,7 @@ class _SportsTrainingWellbeingSuiteScreenState extends State<SportsTrainingWellb
                     const _Hero(
                       eyebrow: 'SPORT & WELLBEING',
                       title: 'Training, Karte & Gesundheit',
-                      subtitle: 'Native Mobile-UI fuer Sportarten, Sportkarte, Training, Logs, Trainer Cockpit, Events, Ernaehrung und Carpool.',
+                      subtitle: 'Native Mobile-UI für Sportarten, Sportkarte, Training, Logs, Trainer Cockpit, Events, Ernährung und Carpool.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -80,8 +80,8 @@ class _SportsTrainingWellbeingSuiteScreenState extends State<SportsTrainingWellb
                       firstIcon: Icons.add_task_outlined,
                       firstLabel: 'Training erfassen',
                       secondIcon: Icons.map_outlined,
-                      secondLabel: 'Sportkarte oeffnen',
-                      onFirst: () => openUiAction(context, title: 'Training erfassen', body: 'Die mobile Trainings-UI ist vorbereitet; echte Logs kommen spaeter ueber Laravel.', status: 'UI bereit', icon: Icons.info_outline),
+                      secondLabel: 'Sportkarte öffnen',
+                      onFirst: () => openUiAction(context, title: 'Training erfassen', body: 'Die mobile Trainings-UI ist vorbereitet; echte Logs kommen später über Laravel.', status: 'UI bereit', icon: Icons.info_outline),
                       onSecond: () => openUiAction(context, title: 'Sportkarte', body: 'Die Karten-UI ist als App-Suite vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
                       onSupport: () => _openSupport(context),
                     ),

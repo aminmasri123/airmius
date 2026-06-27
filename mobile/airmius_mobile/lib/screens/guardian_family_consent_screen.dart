@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -22,10 +22,10 @@ class _GuardianFamilyConsentScreenState extends State<GuardianFamilyConsentScree
   bool _clubRulesConsent = true;
 
   final List<_GuardianItem> _items = const [
-    _GuardianItem(title: 'Kindkonto bestaetigen', body: 'Elternteil bestaetigt Kindkonto, Alter, Kontakt und Verantwortlichkeit.', status: 'Offen', icon: Icons.child_care_outlined, color: AirmiusColors.blue),
-    _GuardianItem(title: 'Vereinsbeitritt freigeben', body: 'Mitgliedsantrag, Datenschutz, Regeln und Zahlungsdaten fuer Minderjaehrige pruefen.', status: 'Prüfung', icon: Icons.assignment_turned_in_outlined, color: AirmiusColors.green),
+    _GuardianItem(title: 'Kindkonto bestätigen', body: 'Elternteil bestätigt Kindkonto, Alter, Kontakt und Verantwortlichkeit.', status: 'Offen', icon: Icons.child_care_outlined, color: AirmiusColors.blue),
+    _GuardianItem(title: 'Vereinsbeitritt freigeben', body: 'Mitgliedsantrag, Datenschutz, Regeln und Zahlungsdaten für Minderjaehrige prüfen.', status: 'Prüfung', icon: Icons.assignment_turned_in_outlined, color: AirmiusColors.green),
     _GuardianItem(title: 'Training & Events', body: 'Teilnahme, Anwesenheit, Notfallkontakt und Trainerkommunikation erlauben.', status: 'Aktiv', icon: Icons.event_available_outlined, color: AirmiusColors.amber),
-    _GuardianItem(title: 'Medienfreigabe', body: 'Fotos, Videos, Teambeitraege und oeffentliche Vereinsinhalte optional erlauben.', status: 'Optional', icon: Icons.photo_camera_outlined, color: AirmiusColors.red),
+    _GuardianItem(title: 'Medienfreigabe', body: 'Fotos, Videos, Teambeiträge und öffentliche Vereinsinhalte optional erlauben.', status: 'Optional', icon: Icons.photo_camera_outlined, color: AirmiusColors.red),
   ];
 
   @override
@@ -55,9 +55,9 @@ class _GuardianFamilyConsentScreenState extends State<GuardianFamilyConsentScree
                           child: Column(
                             children: [
                               _SwitchRow(title: 'Training erlauben', subtitle: 'Teilnahme an Training, Events und Anwesenheitslisten.', value: _trainingConsent, onChanged: (value) => setState(() => _trainingConsent = value)),
-                              _SwitchRow(title: 'Medienfreigabe erlauben', subtitle: 'Fotos, Videos und oeffentliche Vereinsbeitraege optional erlauben.', value: _mediaConsent, onChanged: (value) => setState(() => _mediaConsent = value)),
-                              _SwitchRow(title: 'Notfallkontakt erlauben', subtitle: 'Trainer und Verein duerfen Notfallkontakt einsehen.', value: _emergencyConsent, onChanged: (value) => setState(() => _emergencyConsent = value)),
-                              _SwitchRow(title: 'Zahlungsdaten erlauben', subtitle: 'Beitraege, Zahlungsintervall und Zahlmethode fuer Kindkonto.', value: _paymentConsent, onChanged: (value) => setState(() => _paymentConsent = value)),
+                              _SwitchRow(title: 'Medienfreigabe erlauben', subtitle: 'Fotos, Videos und öffentliche Vereinsbeiträge optional erlauben.', value: _mediaConsent, onChanged: (value) => setState(() => _mediaConsent = value)),
+                              _SwitchRow(title: 'Notfallkontakt erlauben', subtitle: 'Trainer und Verein dürfen Notfallkontakt einsehen.', value: _emergencyConsent, onChanged: (value) => setState(() => _emergencyConsent = value)),
+                              _SwitchRow(title: 'Zahlungsdaten erlauben', subtitle: 'Beiträge, Zahlungsintervall und Zahlmethode für Kindkonto.', value: _paymentConsent, onChanged: (value) => setState(() => _paymentConsent = value)),
                               _SwitchRow(title: 'Vereinsregeln akzeptieren', subtitle: 'Regeln, Datenschutz, Beitragsordnung und Pflichtdokumente.', value: _clubRulesConsent, onChanged: (value) => setState(() => _clubRulesConsent = value)),
                             ],
                           ),

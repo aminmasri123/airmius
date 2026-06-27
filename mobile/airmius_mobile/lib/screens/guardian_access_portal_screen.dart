@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -13,7 +13,7 @@ class GuardianAccessPortalScreen extends StatefulWidget {
 }
 
 class _GuardianAccessPortalScreenState extends State<GuardianAccessPortalScreen> {
-  String _active = 'Uebersicht';
+  String _active = 'Übersicht';
   bool _guardianVerified = false;
   bool _mailConfirmed = true;
   bool _childLinked = true;
@@ -23,7 +23,7 @@ class _GuardianAccessPortalScreenState extends State<GuardianAccessPortalScreen>
       title: 'Elternkonto erstellen',
       area: 'Create',
       status: 'Start',
-      description: 'Registrierung fuer Erziehungsberechtigte mit Name, E-Mail, Passwort und Consent-Hinweisen.',
+      description: 'Registrierung für Erziehungsberechtigte mit Name, E-Mail, Passwort und Consent-Hinweisen.',
       icon: Icons.person_add_alt_1_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -31,14 +31,14 @@ class _GuardianAccessPortalScreenState extends State<GuardianAccessPortalScreen>
       title: 'Guardian Login',
       area: 'Login',
       status: 'Sicher',
-      description: 'Separater Login fuer Eltern, damit Kinderkonten, Einwilligungen und Nachrichten geschuetzt bleiben.',
+      description: 'Separater Login für Eltern, damit Kinderkonten, Einwilligungen und Nachrichten geschuetzt bleiben.',
       icon: Icons.login_outlined,
       color: Color(0xFF2EE59D),
     ),
     _GuardianStep(
       title: 'Verifizierung',
       area: 'Verify',
-      status: 'Pruefen',
+      status: 'Prüfen',
       description: 'E-Mail, Token, Identitaetsstatus und offene Freigaben werden vor der Nutzung sichtbar gemacht.',
       icon: Icons.verified_outlined,
       color: Color(0xFFF8B84E),
@@ -54,7 +54,7 @@ class _GuardianAccessPortalScreenState extends State<GuardianAccessPortalScreen>
   ];
 
   List<_GuardianStep> get _visibleSteps {
-    if (_active == 'Uebersicht') return _steps;
+    if (_active == 'Übersicht') return _steps;
     return _steps.where((step) => step.area == _active).toList();
   }
 
@@ -87,7 +87,7 @@ class _GuardianAccessPortalScreenState extends State<GuardianAccessPortalScreen>
                     const SizedBox(height: 18),
                     _Tabs(
                       active: _active,
-                      values: const ['Uebersicht', 'Create', 'Login', 'Verify', 'Children'],
+                      values: const ['Übersicht', 'Create', 'Login', 'Verify', 'Children'],
                       onChanged: (value) => setState(() => _active = value),
                     ),
                     const SizedBox(height: 14),
@@ -111,7 +111,7 @@ class _GuardianAccessPortalScreenState extends State<GuardianAccessPortalScreen>
                       onVerify: () => openUiAction(
                         context,
                         title: 'Guardian verifizieren',
-                        message: 'Hier wird spaeter die Laravel-API fuer Guardian-Verify und Consent-Token angebunden.',
+                        message: 'Hier wird später die Laravel-API für Guardian-Verify und Consent-Token angebunden.',
                       ),
                       onSupport: () => _openSupport(context),
                     ),
@@ -192,7 +192,7 @@ class _HeroPanel extends StatelessWidget {
           Text('Elternkonto & Kinderfreigaben', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
           SizedBox(height: 8),
           Text(
-            'Native Mobile-UI fuer Guardian Login, Kontoerstellung, Verifizierung, Kinderverwaltung und offene Einwilligungen.',
+            'Native Mobile-UI für Guardian Login, Kontoerstellung, Verifizierung, Kinderverwaltung und offene Einwilligungen.',
             style: TextStyle(color: Color(0xFFAFC0D8), height: 1.45, fontWeight: FontWeight.w600),
           ),
         ],
@@ -285,7 +285,7 @@ class _StatePanel extends StatelessWidget {
       child: Column(
         children: [
           _SwitchRow(label: 'Guardian verifiziert', value: guardianVerified, onChanged: onGuardianVerified),
-          _SwitchRow(label: 'E-Mail bestaetigt', value: mailConfirmed, onChanged: onMailConfirmed),
+          _SwitchRow(label: 'E-Mail bestätigt', value: mailConfirmed, onChanged: onMailConfirmed),
           _SwitchRow(label: 'Kind verknuepft', value: childLinked, onChanged: onChildLinked),
         ],
       ),

@@ -28,7 +28,7 @@ class _MapLocationRouteParitySuiteScreenState extends State<MapLocationRoutePari
       body: 'Orte, Routen, Trainingsspots, Filter, Distanz, Kategorie, Datenschutz und Melden als mobile Kartenansicht.',
       status: 'Map',
       icon: Icons.map_outlined,
-      primary: 'Karte oeffnen',
+      primary: 'Karte öffnen',
       secondary: 'Filter',
       color: AirmiusColors.blue,
     ),
@@ -117,7 +117,7 @@ class _MapLocationRouteParitySuiteScreenState extends State<MapLocationRoutePari
                 onOpen: () => openUiAction(
                   context,
                   title: 'Kartenansicht',
-                  body: 'Mobile Kartenansicht fuer $_area mit Standortfreigabe $_permission, Offline-Karte $_offlineMap und Live-Tracking $_liveTracking.',
+                  body: 'Mobile Kartenansicht für $_area mit Standortfreigabe $_permission, Offline-Karte $_offlineMap und Live-Tracking $_liveTracking.',
                   status: 'Map',
                   icon: Icons.map_outlined,
                 ),
@@ -164,7 +164,7 @@ class _MapLocationRouteParitySuiteScreenState extends State<MapLocationRoutePari
                 _MapFlowCard(flow: flow),
                 const SizedBox(height: 12),
               ],
-              if (_visibleFlows.isEmpty) const EmptyPanel('Keine Kartenflows fuer diesen Bereich sichtbar.'),
+              if (_visibleFlows.isEmpty) const EmptyPanel('Keine Kartenflows für diesen Bereich sichtbar.'),
               const SizedBox(height: 4),
               _Checklist(
                 onOpen: () => openUiAction(
@@ -211,7 +211,7 @@ class _Hero extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Flutter bereitet Sportkarte, Routen, Treffpunkte, Vereinsadressen, Standortvorschlaege, Berechtigungen, Datenschutz und Offline-Zustaende als native mobile UI vor.',
+            'Flutter bereitet Sportkarte, Routen, Treffpunkte, Vereinsadressen, Standortvorschläge, Berechtigungen, Datenschutz und Offline-Zustaende als native mobile UI vor.',
             style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
@@ -387,7 +387,7 @@ class _RulesPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Location-Regeln',
-      subtitle: 'Diese Optionen werden spaeter von Android/iOS Permissions und Laravel-API-Zwecken gesteuert.',
+      subtitle: 'Diese Optionen werden später von Android/iOS Permissions und Laravel-API-Zwecken gesteuert.',
       children: [
         _SwitchLine(title: 'Datenschutzhinweis anzeigen', value: showPrivacyHint, onChanged: onPrivacy),
         _SwitchLine(title: 'Offline-Kartenmodus', value: offlineMap, onChanged: onOffline),
@@ -497,7 +497,7 @@ class _MapFlowCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: flow.secondary,
-                  body: 'Filter, Datenschutz, Berechtigung, Offline, Route und API-Zustand fuer ${flow.title}.',
+                  body: 'Filter, Datenschutz, Berechtigung, Offline, Route und API-Zustand für ${flow.title}.',
                   status: 'Location Detail',
                   icon: Icons.tune_outlined,
                 ),
@@ -519,12 +519,12 @@ class _Checklist extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Karten-/Location-Paritaet',
-      subtitle: 'Was aus Web-Orten mobil uebernommen wird.',
+      subtitle: 'Was aus Web-Orten mobil übernommen wird.',
       children: [
         const _CheckLine('Sportkarte, Routen, Events, Fahrgemeinschaften und Public-Orte haben eigene mobile Kartenzustaende.'),
         const _CheckLine('Standortfreigabe zeigt Zweck, Genauigkeit, Datenschutz, Guardian-Regeln und Widerruf.'),
         const _CheckLine('Treffpunkte, Navigation, Offline-Karten und Live-Tracking werden als UI-Zustaende vorbereitet.'),
-        const _CheckLine('Vereinsadresse und Standortvorschlaege bleiben mit Sichtbarkeit und Moderation verbunden.'),
+        const _CheckLine('Vereinsadresse und Standortvorschläge bleiben mit Sichtbarkeit und Moderation verbunden.'),
         const SizedBox(height: 12),
         AirmiusButton(label: 'Location-Paritaet markieren', icon: Icons.fact_check_outlined, onPressed: onOpen),
       ],

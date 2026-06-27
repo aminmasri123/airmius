@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -18,9 +18,9 @@ class _NutritionCenterScreenState extends State<NutritionCenterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Ernaehrung', style: TextStyle(fontWeight: FontWeight.w900))),
+      appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Ernährung', style: TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
-        title: 'Ernaehrung',
+        title: 'Ernährung',
         subtitle: 'Kalorien, Makros, Wasser, Barcode und KI-Mahlzeitenanalyse',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

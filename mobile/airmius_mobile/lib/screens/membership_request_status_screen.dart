@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -19,9 +19,9 @@ class _MembershipRequestStatusScreenState extends State<MembershipRequestStatusS
   bool _showDocuments = true;
 
   final List<_TimelineItem> _timeline = const [
-    _TimelineItem(title: 'Anfrage gesendet', body: 'Dein Antrag wurde an ZBB uebermittelt.', status: 'Erledigt', icon: Icons.send_outlined, color: AirmiusColors.green),
-    _TimelineItem(title: 'Datenpruefung', body: 'Der Verein prueft Pflichtfelder, Dokumente und Zahlungsangaben.', status: 'Laeuft', icon: Icons.manage_search_outlined, color: AirmiusColors.blue),
-    _TimelineItem(title: 'Rueckfrage moeglich', body: 'Falls Angaben fehlen, bekommst du eine Nachricht im Chat.', status: 'Bereit', icon: Icons.forum_outlined, color: AirmiusColors.amber),
+    _TimelineItem(title: 'Anfrage gesendet', body: 'Dein Antrag wurde an ZBB übermittelt.', status: 'Erledigt', icon: Icons.send_outlined, color: AirmiusColors.green),
+    _TimelineItem(title: 'Datenprüfung', body: 'Der Verein prüft Pflichtfelder, Dokumente und Zahlungsangaben.', status: 'Läuft', icon: Icons.manage_search_outlined, color: AirmiusColors.blue),
+    _TimelineItem(title: 'Rückfrage möglich', body: 'Falls Angaben fehlen, bekommst du eine Nachricht im Chat.', status: 'Bereit', icon: Icons.forum_outlined, color: AirmiusColors.amber),
     _TimelineItem(title: 'Entscheidung', body: 'Der Verein kann annehmen, ablehnen oder weitere Daten anfordern.', status: 'Ausstehend', icon: Icons.verified_outlined, color: AirmiusColors.muted),
   ];
 
@@ -41,7 +41,7 @@ class _MembershipRequestStatusScreenState extends State<MembershipRequestStatusS
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const PageTitle(title: 'Meine Mitgliedsanfrage', subtitle: 'Status, eingereichte Daten, Rueckfragen, Dokumente und Anfrage zurueckziehen.'),
+                        const PageTitle(title: 'Meine Mitgliedsanfrage', subtitle: 'Status, eingereichte Daten, Rückfragen, Dokumente und Anfrage zurückziehen.'),
                         const SizedBox(height: 16),
                         _StatusHero(onWithdraw: _confirmWithdraw),
                         const SizedBox(height: 16),
@@ -57,7 +57,7 @@ class _MembershipRequestStatusScreenState extends State<MembershipRequestStatusS
                         ),
                         const SizedBox(height: 16),
                         if (_showPersonalData) const _DataPanel(title: 'Personendaten', rows: ['Vorname: ZBB', 'Nachname: Konto', 'Geburtsdatum: 01.01.2000', 'Adresse: Saargemuender Str. 110, 66271 Kleinblittersdorf']),
-                        if (_showPaymentData) const _DataPanel(title: 'Zahlungsdaten', rows: ['Zahlmethode: Ueberweisung', 'Intervall: Monatlich', 'Beitragsregel: Allgemeine Mitgliedschaft', 'Status: Noch nicht faellig']),
+                        if (_showPaymentData) const _DataPanel(title: 'Zahlungsdaten', rows: ['Zahlmethode: Überweisung', 'Intervall: Monatlich', 'Beitragsregel: Allgemeine Mitgliedschaft', 'Status: Noch nicht faellig']),
                         if (_showDocuments) const _DataPanel(title: 'Dokumente', rows: ['Datenschutz gelesen', 'Vereinsregeln akzeptiert', 'Beitragsordnung verknuepft', 'SEPA optional']),
                         const SizedBox(height: 16),
                         AirmiusPanel(
@@ -71,7 +71,7 @@ class _MembershipRequestStatusScreenState extends State<MembershipRequestStatusS
                             spacing: 10,
                             runSpacing: 10,
                             children: [
-                              AirmiusButton(label: 'Rueckfrage senden', icon: Icons.forum_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationChatOperationsScreen(initialTab: 'Chat')))),
+                              AirmiusButton(label: 'Rückfrage senden', icon: Icons.forum_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationChatOperationsScreen(initialTab: 'Chat')))),
                                 AirmiusButton(label: 'Daten nachreichen', icon: Icons.edit_document, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MembershipApplicationFormScreen()))),
                               AirmiusButton(
                                 label: 'Andere Vereine',
@@ -79,7 +79,7 @@ class _MembershipRequestStatusScreenState extends State<MembershipRequestStatusS
                                 secondary: true,
                                 onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubsScreen(requestedClubIds: const {}, onRequestClub: (_) {}, onWithdrawClub: (_) {}))),
                               ),
-                              AirmiusButton(label: 'Zurueckziehen', icon: Icons.undo_outlined, secondary: true, onPressed: _confirmWithdraw),
+                              AirmiusButton(label: 'Zurückziehen', icon: Icons.undo_outlined, secondary: true, onPressed: _confirmWithdraw),
                             ],
                           ),
                         ),
@@ -101,20 +101,20 @@ class _MembershipRequestStatusScreenState extends State<MembershipRequestStatusS
       builder: (context) => AlertDialog(
         backgroundColor: AirmiusColors.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: const BorderSide(color: AirmiusColors.border)),
-        title: const Text('Anfrage zurueckziehen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-        content: const Text('Moechtest du deine Mitgliedsanfrage bei ZBB wirklich zurueckziehen?', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+        title: const Text('Anfrage zurückziehen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+        content: const Text('Moechtest du deine Mitgliedsanfrage bei ZBB wirklich zurückziehen?', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Abbrechen')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AirmiusColors.red, foregroundColor: Colors.white),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Zurueckziehen'),
+            child: const Text('Zurückziehen'),
           ),
         ],
       ),
     );
     if (confirm == true) {
-      _toast('Anfrage zurueckziehen vorbereitet');
+      _toast('Anfrage zurückziehen vorbereitet');
     }
   }
 
@@ -144,15 +144,15 @@ class _StatusHero extends StatelessWidget {
             children: [
               const AirmiusAvatar('ZBB', large: true),
               const SizedBox(width: 12),
-              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Eyebrow('MITGLIEDSANFRAGE'), SizedBox(height: 4), Text('ZBB', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900)), Text('Anfrage gesendet - Prüfung laeuft', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800))])),
+              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Eyebrow('MITGLIEDSANFRAGE'), SizedBox(height: 4), Text('ZBB', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900)), Text('Anfrage gesendet - Prüfung läuft', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800))])),
               StatusPill('Gesendet', color: AirmiusColors.green),
             ],
           ),
           const SizedBox(height: 16),
-          const Text('Du kannst sehen, welche Daten uebermittelt wurden, Rueckfragen beantworten und die Anfrage zurueckziehen, falls sie versehentlich gesendet wurde.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          const Text('Du kannst sehen, welche Daten übermittelt wurden, Rückfragen beantworten und die Anfrage zurückziehen, falls sie versehentlich gesendet wurde.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           Wrap(spacing: 10, runSpacing: 10, children: [
-            AirmiusButton(label: 'Zurueckziehen', icon: Icons.undo_outlined, secondary: true, onPressed: onWithdraw),
+            AirmiusButton(label: 'Zurückziehen', icon: Icons.undo_outlined, secondary: true, onPressed: onWithdraw),
             AirmiusButton(
               label: 'Status ansehen',
               icon: Icons.timeline_outlined,

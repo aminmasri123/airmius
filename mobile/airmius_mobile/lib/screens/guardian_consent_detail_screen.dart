@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -56,13 +56,13 @@ class _GuardianConsentDetailScreenState extends State<GuardianConsentDetailScree
             SizedBox(height: 10),
             AirmiusTextField(label: 'Consent Token oder Elterncode', hint: 'Code aus E-Mail oder Elternlogin', icon: Icons.password_outlined),
             SizedBox(height: 10),
-            _GuardianActionLine(icon: Icons.password_outlined, title: 'Elterncode', body: 'Code-Verifizierung fuer Elternlogin vorbereiten.', status: 'Code'),
+            _GuardianActionLine(icon: Icons.password_outlined, title: 'Elterncode', body: 'Code-Verifizierung für Elternlogin vorbereiten.', status: 'Code'),
             _GuardianActionLine(icon: Icons.mark_email_read_outlined, title: 'E-Mail Einladung', body: 'Consent-Link senden, erneut senden oder widerrufen.', status: 'Mail'),
-            _GuardianActionLine(icon: Icons.history_outlined, title: 'Consent Historie', body: 'Zustimmung, Widerruf, IP und Zeitpunkt spaeter per API.', status: 'Audit'),
+            _GuardianActionLine(icon: Icons.history_outlined, title: 'Consent Historie', body: 'Zustimmung, Widerruf, IP und Zeitpunkt später per API.', status: 'Audit'),
           ])),
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [
-            AirmiusButton(label: 'Zustimmen', icon: Icons.check_circle_outline, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Guardian Consent bestaetigen', body: 'Granulare Freigaben bestaetigen, Code pruefen und Historie schreiben.', status: 'Zustimmung', icon: Icons.check_circle_outline)))),
+            AirmiusButton(label: 'Zustimmen', icon: Icons.check_circle_outline, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Guardian Consent bestätigen', body: 'Granulare Freigaben bestätigen, Code prüfen und Historie schreiben.', status: 'Zustimmung', icon: Icons.check_circle_outline)))),
             AirmiusButton(label: 'Widerrufen', icon: Icons.block_outlined, danger: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Guardian Consent widerrufen', body: 'Freigaben entziehen, Schutzregeln aktualisieren und Audit vorbereiten.', status: 'Widerruf', icon: Icons.block_outlined)))),
           ]),
         ]),

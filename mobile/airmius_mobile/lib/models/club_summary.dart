@@ -98,6 +98,6 @@ class TeamSummary {
 
 const demoClubs = [
   ClubSummary(id: 26, name: 'ZBB', city: 'Kleinblittersdorf', members: 1, teams: 0, posts: 0, acceptsMemberships: true, hasPendingMembershipRequest: false, isMember: false, verified: false, sportType: 'Fu\u00dfball', postalCode: '66271', country: 'DE', canManage: true),
-  ClubSummary(id: 2, name: 'Airmius Running Club', city: 'Saarbruecken', members: 42, teams: 4, posts: 8, acceptsMemberships: true, hasPendingMembershipRequest: false, isMember: false, verified: true, sportType: 'Running', country: 'DE', canManage: true),
+  ClubSummary(id: 2, name: 'Airmius Running Club', city: 'Saarbrücken', members: 42, teams: 4, posts: 8, acceptsMemberships: true, hasPendingMembershipRequest: false, isMember: false, verified: true, sportType: 'Running', country: 'DE', canManage: true),
   ClubSummary(id: 3, name: 'Tennis Zentrum West', city: 'Trier', members: 128, teams: 7, posts: 13, acceptsMemberships: false, hasPendingMembershipRequest: false, isMember: false, verified: true, sportType: 'Tennis', country: 'DE'),
 ];

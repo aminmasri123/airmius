@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_api_models.dart';
 import '../core/airmius_services_scope.dart';
@@ -24,6 +24,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
   bool _joinRequests = true;
   bool _teamChat = true;
   bool _guardianGate = true;
+  bool _requestingJoin = false;
 
   @override
   void initState() {
@@ -47,17 +48,36 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
   }
 
   Future<void> _deleteTeam(AirmiusTeam team) async {
-    final confirmed = await confirmDanger(context, 'Team "${team.name}" loeschen', 'Dieses Team wird geloescht. Diese Aktion kann nicht rueckgaengig gemacht werden.', 'Loeschen');
+    final confirmed = await confirmDanger(context, 'Team "${team.name}" löschen', 'Dieses Team wird gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.', 'Löschen');
     if (confirmed != true || !mounted) return;
 
     try {
       await AirmiusServicesScope.of(context).repositories.clubs.deleteTeam(team.id);
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Team geloescht.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Team gelöscht.')));
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Team konnte nicht geloescht werden: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Team konnte nicht gelöscht werden: $error')));
+    }
+  }
+
+  Future<void> _requestJoin(AirmiusTeam team) async {
+    if (_requestingJoin) return;
+    setState(() => _requestingJoin = true);
+
+    try {
+      final updatedTeam = await AirmiusServicesScope.of(context).repositories.clubs.requestTeamJoin(team.id);
+      if (!mounted) return;
+      setState(() {
+        _teamFuture = Future.value(updatedTeam);
+        _requestingJoin = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Beitrittsanfrage gesendet.')));
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _requestingJoin = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Beitrittsanfrage konnte nicht gesendet werden: $error')));
     }
   }
 
@@ -79,6 +99,19 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
   Widget _buildScaffold(AirmiusTeam? team, {bool isLoading = false, Object? error}) {
     final title = team?.name ?? widget.title;
     final subtitle = _teamSubtitle(team);
+    final canManageTeam = team?.canManage == true || (team == null && widget.teamId == null);
+    final sections = [
+      'Profil',
+      'Kader',
+      if (canManageTeam) 'Rollen',
+      if (canManageTeam) 'Einladungen',
+      'Kalender',
+      'Dateien',
+      'Chat',
+    ];
+    if (!sections.contains(_section)) {
+      _section = 'Profil';
+    }
     return Scaffold(
       appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Team', style: TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
@@ -106,7 +139,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
               Text('Teamdetails konnten gerade nicht geladen werden: $error', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)),
             ],
             const SizedBox(height: 14),
-            Wrap(spacing: 8, runSpacing: 8, children: ['Profil', 'Kader', 'Rollen', 'Einladungen', 'Kalender', 'Dateien', 'Chat'].map((item) => ChoiceChip(
+            Wrap(spacing: 8, runSpacing: 8, children: sections.map((item) => ChoiceChip(
               selected: _section == item,
               label: Text(item),
               onSelected: (_) => setState(() => _section = item),
@@ -125,18 +158,23 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
             Expanded(child: MetricCard(value: '${team?.attendanceStats?.trainingsTotal ?? '-'}', label: 'Trainings')),
           ]),
           const SizedBox(height: 14),
-          if (_section == 'Profil') _ProfilePanel(team: team, fallbackTitle: title, joinRequests: _joinRequests, teamChat: _teamChat, guardianGate: _guardianGate, onJoin: (value) => setState(() => _joinRequests = value), onChat: (value) => setState(() => _teamChat = value), onGuardian: (value) => setState(() => _guardianGate = value)),
+          if (_section == 'Profil') _ProfilePanel(team: team, fallbackTitle: title, canManageTeam: canManageTeam, joinRequests: _joinRequests, teamChat: _teamChat, guardianGate: _guardianGate, onJoin: (value) => setState(() => _joinRequests = value), onChat: (value) => setState(() => _teamChat = value), onGuardian: (value) => setState(() => _guardianGate = value)),
           if (_section == 'Kader') _RosterPanel(team: team),
-          if (_section == 'Rollen') const _RolesPanel(),
-          if (_section == 'Einladungen') const _InvitePanel(),
+          if (_section == 'Rollen' && canManageTeam) const _RolesPanel(),
+          if (_section == 'Einladungen' && canManageTeam) const _InvitePanel(),
           if (_section == 'Kalender') const _CalendarPanel(),
           if (_section == 'Dateien') const _FilesPanel(),
           if (_section == 'Chat') const _ChatPanel(),
           const SizedBox(height: 14),
+          if (team?.viewerPendingJoinRequestId != null) ...[
+            const _JoinRequestPendingNotice(),
+            const SizedBox(height: 10),
+          ],
           Wrap(spacing: 10, runSpacing: 10, children: [
+            if (team?.canRequestJoin == true) AirmiusButton(label: _requestingJoin ? 'Wird gesendet...' : 'Beitritt anfragen', icon: Icons.how_to_reg_outlined, onPressed: _requestingJoin ? null : () => _requestJoin(team!)),
             if (widget.teamId != null && widget.teamId! > 0) AirmiusButton(label: 'Neu laden', icon: Icons.refresh_outlined, onPressed: _reloadTeam),
             if (team?.canDelete == true) AirmiusButton(label: 'Team löschen', icon: Icons.delete_outline, danger: true, onPressed: () => _deleteTeam(team!)),
-            AirmiusButton(label: 'Operations', icon: Icons.tune_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeamOperationsScreen()))),
+            if (canManageTeam) AirmiusButton(label: 'Operations', icon: Icons.tune_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeamOperationsScreen()))),
           ]),
         ]),
       ),
@@ -155,11 +193,33 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
   }
 }
 
+class _JoinRequestPendingNotice extends StatelessWidget {
+  const _JoinRequestPendingNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AirmiusColors.blue.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AirmiusColors.blue.withValues(alpha: 0.35)),
+      ),
+      child: const Row(children: [
+        Icon(Icons.hourglass_top_outlined, color: AirmiusColors.blue, size: 20),
+        SizedBox(width: 10),
+        Expanded(child: Text('Deine Beitrittsanfrage wartet auf Freigabe.', style: TextStyle(color: AirmiusColors.blue, fontWeight: FontWeight.w900))),
+      ]),
+    );
+  }
+}
+
 class _ProfilePanel extends StatelessWidget {
-  const _ProfilePanel({required this.team, required this.fallbackTitle, required this.joinRequests, required this.teamChat, required this.guardianGate, required this.onJoin, required this.onChat, required this.onGuardian});
+  const _ProfilePanel({required this.team, required this.fallbackTitle, required this.canManageTeam, required this.joinRequests, required this.teamChat, required this.guardianGate, required this.onJoin, required this.onChat, required this.onGuardian});
 
   final AirmiusTeam? team;
   final String fallbackTitle;
+  final bool canManageTeam;
   final bool joinRequests;
   final bool teamChat;
   final bool guardianGate;
@@ -185,11 +245,13 @@ class _ProfilePanel extends StatelessWidget {
         _AttendanceStatsPanel(stats: team!.attendanceStats!),
         const SizedBox(height: 12),
       ],
-      const Eyebrow('Mobile Teamfunktionen'),
-      const SizedBox(height: 8),
-      SwitchListTile(value: joinRequests, onChanged: onJoin, activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Beitrittsanfragen erlauben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Interessierte koennen sich direkt beim Team melden.', style: TextStyle(color: AirmiusColors.muted))),
-      SwitchListTile(value: teamChat, onChanged: onChat, activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Teamchat aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Chat wird mit Kalender und Dateien verbunden.', style: TextStyle(color: AirmiusColors.muted))),
-      SwitchListTile(value: guardianGate, onChanged: onGuardian, activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Jugendschutz pruefen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Minderjaehrige brauchen passende Freigaben.', style: TextStyle(color: AirmiusColors.muted))),
+      if (canManageTeam) ...[
+        const Eyebrow('Mobile Teamfunktionen'),
+        const SizedBox(height: 8),
+        SwitchListTile(value: joinRequests, onChanged: onJoin, activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Beitrittsanfragen erlauben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Interessierte können sich direkt beim Team melden.', style: TextStyle(color: AirmiusColors.muted))),
+        SwitchListTile(value: teamChat, onChanged: onChat, activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Teamchat aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Chat wird mit Kalender und Dateien verbunden.', style: TextStyle(color: AirmiusColors.muted))),
+        SwitchListTile(value: guardianGate, onChanged: onGuardian, activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Jugendschutz prüfen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Minderjährige brauchen passende Freigaben.', style: TextStyle(color: AirmiusColors.muted))),
+      ],
     ]));
   }
 }
@@ -232,7 +294,7 @@ class _AttendanceStatsPanel extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 5),
-                  Text('Dabei ${member.yes} · Verspaetet ${member.late} · Absage ${member.no} · Keine Antwort ${member.noResponse}', style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
+                  Text('Dabei ${member.yes} · Verspätet ${member.late} · Absage ${member.no} · Keine Antwort ${member.noResponse}', style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
                 ]),
               )),
       ]),
@@ -347,7 +409,7 @@ class _InvitePanel extends StatelessWidget {
       SizedBox(height: 10),
       AirmiusTextField(label: 'Rolle', hint: 'Spieler, Trainer, Captain', icon: Icons.admin_panel_settings_outlined),
       SizedBox(height: 10),
-      Text('Einladungstoken, Ablaufdatum und Guardian-Prüfung werden spaeter ueber die API erzeugt.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+      Text('Einladungstoken, Ablaufdatum und Guardian-Prüfung werden später über die API erzeugt.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
     ]));
   }
 }
@@ -377,9 +439,9 @@ class _FilesPanel extends StatelessWidget {
     return AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: const [
       Eyebrow('Teamdateien'),
       SizedBox(height: 12),
-      _EventLine(title: 'Trainingsordnung.pdf', body: 'Aus Vereins-Dateimanager verknuepft', status: 'Pflicht'),
+      _EventLine(title: 'Trainingsordnung.pdf', body: 'Aus Vereins-Dateimanager verknüpft', status: 'Pflicht'),
       SizedBox(height: 10),
-      _EventLine(title: 'Spielplan.xlsx', body: 'Nur Trainer und Captain duerfen bearbeiten', status: 'Team'),
+      _EventLine(title: 'Spielplan.xlsx', body: 'Nur Trainer und Captain dürfen bearbeiten', status: 'Team'),
     ]));
   }
 }
@@ -392,7 +454,7 @@ class _ChatPanel extends StatelessWidget {
     return AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: const [
       Eyebrow('Teamchat'),
       SizedBox(height: 12),
-      _EventLine(title: 'Trainer', body: 'Bitte Teilnahme fuer morgen bestaetigen.', status: 'Neu'),
+      _EventLine(title: 'Trainer', body: 'Bitte Teilnahme für morgen bestätigen.', status: 'Neu'),
       SizedBox(height: 10),
       AirmiusTextField(label: 'Nachricht', hint: 'Nachricht an das Team', icon: Icons.chat_bubble_outline, maxLines: 2),
     ]));

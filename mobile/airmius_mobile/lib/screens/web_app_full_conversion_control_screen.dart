@@ -12,7 +12,7 @@ class WebAppFullConversionControlScreen extends StatelessWidget {
       const _ConversionSection(
         title: 'Gastbereich',
         status: 'UI bereit',
-        body: 'Landing, Preise, Jobs, Ads, Blog, Sponsoren, Marketplace, Lernen und oeffentliche Systemseiten.',
+        body: 'Landing, Preise, Jobs, Ads, Blog, Sponsoren, Marketplace, Lernen und öffentliche Systemseiten.',
         icon: Icons.public_outlined,
         color: AirmiusColors.blue,
       ),
@@ -26,7 +26,7 @@ class WebAppFullConversionControlScreen extends StatelessWidget {
       const _ConversionSection(
         title: 'Vereine & Mitgliedschaft',
         status: 'UI bereit',
-        body: 'Vereinsprofil, Beitrittsformular, Status, Rueckzug, Rollen, Teams, Dateien, Regeln und Admin-Freigaben.',
+        body: 'Vereinsprofil, Beitrittsformular, Status, Rückzug, Rollen, Teams, Dateien, Regeln und Admin-Freigaben.',
         icon: Icons.groups_2_outlined,
         color: AirmiusColors.green,
       ),
@@ -101,7 +101,7 @@ class WebAppFullConversionControlScreen extends StatelessWidget {
                 const SectionLabel('NAECHSTER TECHNISCHER SCHRITT'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Nach der UI-Paritaet wird die App an Laravel angebunden: Auth, User, Clubs, Mitgliedsantraege, Dateien, Zahlungen und Benachrichtigungen laufen dann ueber echte API-Endpunkte.',
+                  'Nach der UI-Paritaet wird die App an Laravel angebunden: Auth, User, Clubs, Mitgliedsanträge, Dateien, Zahlungen und Benachrichtigungen laufen dann über echte API-Endpunkte.',
                   style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),

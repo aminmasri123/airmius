@@ -9,16 +9,16 @@ class LegalPolicyRolloutSuiteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final policies = [
-      _PolicyItem('Datenschutz 2026.06', '78% bestaetigt', 'Neue Verarbeitungshinweise fuer Vereinsprofile, Dateien und Push.', AirmiusColors.blue, Icons.privacy_tip_outlined),
-      _PolicyItem('Beitragsordnung', 'Entwurf', 'Neue Zahlungszyklen, Barzahlung, Ueberweisung und SEPA-Regeln.', AirmiusColors.amber, Icons.receipt_long_outlined),
+      _PolicyItem('Datenschutz 2026.06', '78% bestätigt', 'Neue Verarbeitungshinweise für Vereinsprofile, Dateien und Push.', AirmiusColors.blue, Icons.privacy_tip_outlined),
+      _PolicyItem('Beitragsordnung', 'Entwurf', 'Neue Zahlungszyklen, Barzahlung, Überweisung und SEPA-Regeln.', AirmiusColors.amber, Icons.receipt_long_outlined),
       _PolicyItem('Satzung & Regeln', 'Aktiv', 'Vereinsregeln, Rollen, Stimmrecht, Ausschluss und Beschwerdeweg.', AirmiusColors.green, Icons.gavel_outlined),
       _PolicyItem('Medienfreigabe', 'Guardian', 'Foto, Video, Social Feed, Teamseiten und Altersfreigabe.', AirmiusColors.pink, Icons.photo_library_outlined),
     ];
 
     final rollout = [
-      _RolloutStep('Version erstellen', 'Dokument, Pflichttext, Kurzfassung, Sprache und Gueltigkeitsdatum vorbereiten.'),
-      _RolloutStep('Zielgruppe waehlen', 'Alle Mitglieder, neues Formular, Team, Guardian, Trainer, Verein oder Rolle.'),
-      _RolloutStep('Bestaetigung einholen', 'App-Banner, Push, E-Mail, Formularblocker, Erinnerung und Rueckfrage.'),
+      _RolloutStep('Version erstellen', 'Dokument, Pflichttext, Kurzfassung, Sprache und Gültigkeitsdatum vorbereiten.'),
+      _RolloutStep('Zielgruppe wählen', 'Alle Mitglieder, neues Formular, Team, Guardian, Trainer, Verein oder Rolle.'),
+      _RolloutStep('Bestätigung einholen', 'App-Banner, Push, E-Mail, Formularblocker, Erinnerung und Rückfrage.'),
       _RolloutStep('Audit sichern', 'Zeitpunkt, IP/Device, Version, Guardian, Widerruf, Export und Aufbewahrung.'),
     ];
 
@@ -43,9 +43,9 @@ class LegalPolicyRolloutSuiteScreen extends StatelessWidget {
                 children: const [
                   Eyebrow('LEGAL ROLLOUT'),
                   SizedBox(height: 10),
-                  Text('Neue Regeln muessen aktiv bei Mitgliedern ankommen.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
+                  Text('Neue Regeln müssen aktiv bei Mitgliedern ankommen.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
                   SizedBox(height: 8),
-                  Text('Diese mobile Suite macht Dokumentversionen, Pflichtbestaetigungen, Guardian-Freigaben, Erinnerungen, Widerruf und Audit fuer Vereine und Plattform sauber steuerbar.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
+                  Text('Diese mobile Suite macht Dokumentversionen, Pflichtbestätigungen, Guardian-Freigaben, Erinnerungen, Widerruf und Audit für Vereine und Plattform sauber steuerbar.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
                 ],
               ),
             ),
@@ -114,10 +114,10 @@ class LegalPolicyRolloutSuiteScreen extends StatelessWidget {
                 children: const [
                   Eyebrow('API & COMPLIANCE'),
                   SizedBox(height: 10),
-                  _ApiLine(label: 'policy_version', value: 'Typ, Version, Sprache, Datei, Kurztext, Pflichtstatus, Gueltigkeit'),
+                  _ApiLine(label: 'policy_version', value: 'Typ, Version, Sprache, Datei, Kurztext, Pflichtstatus, Gültigkeit'),
                   _ApiLine(label: 'targeting', value: 'Mitglied, Team, Rolle, Guardian, neuer Antrag, Bestandsmitglied'),
-                  _ApiLine(label: 'consent_event', value: 'Bestaetigt, abgelehnt, widerrufen, erinnert, blockiert, exportiert'),
-                  _ApiLine(label: 'audit_retention', value: 'Aufbewahrung, Datenschutzexport, Loeschfrist, Adminnachweis'),
+                  _ApiLine(label: 'consent_event', value: 'Bestätigt, abgelehnt, widerrufen, erinnert, blockiert, exportiert'),
+                  _ApiLine(label: 'audit_retention', value: 'Aufbewahrung, Datenschutzexport, Löschfrist, Adminnachweis'),
                 ],
               ),
             ),

@@ -24,7 +24,7 @@ class _OfflineSyncCacheParitySuiteScreenState extends State<OfflineSyncCachePari
     _SyncState(
       title: 'Mitgliedsantrag zwischenspeichern',
       area: 'Membership',
-      body: 'Langer Antrag bleibt lokal erhalten, wenn Internet weg ist. Pflichtfelder, Dokumente und Zahlweise werden spaeter synchronisiert.',
+      body: 'Langer Antrag bleibt lokal erhalten, wenn Internet weg ist. Pflichtfelder, Dokumente und Zahlweise werden später synchronisiert.',
       status: 'Queued',
       icon: Icons.assignment_ind_outlined,
       primary: 'Queue ansehen',
@@ -44,7 +44,7 @@ class _OfflineSyncCacheParitySuiteScreenState extends State<OfflineSyncCachePari
     _SyncState(
       title: 'Datei-Upload fortsetzen',
       area: 'Files',
-      body: 'Upload-Fortschritt, Dateimanager-Verknuepfung und Datenschutz-Zweckbindung bleiben sichtbar, bis Laravel Storage bestaetigt.',
+      body: 'Upload-Fortschritt, Dateimanager-Verknuepfung und Datenschutz-Zweckbindung bleiben sichtbar, bis Laravel Storage bestätigt.',
       status: 'Resume',
       icon: Icons.cloud_upload_outlined,
       primary: 'Fortsetzen',
@@ -54,7 +54,7 @@ class _OfflineSyncCacheParitySuiteScreenState extends State<OfflineSyncCachePari
     _SyncState(
       title: 'Training Log offline erfassen',
       area: 'Training',
-      body: 'Training, Messwerte, Notizen und Coach-Sichtbarkeit koennen offline vorbereitet und spaeter mit API-Konfliktpruefung gesendet werden.',
+      body: 'Training, Messwerte, Notizen und Coach-Sichtbarkeit können offline vorbereitet und später mit API-Konfliktprüfung gesendet werden.',
       status: 'Draft',
       icon: Icons.fitness_center_outlined,
       primary: 'Draft speichern',
@@ -97,7 +97,7 @@ class _OfflineSyncCacheParitySuiteScreenState extends State<OfflineSyncCachePari
       body: SafeArea(
         child: PageFrame(
           title: 'Offline Sync Cache Parity',
-          subtitle: 'Mobile API-Zustaende fuer Laravel-Anbindung vorbereiten.',
+          subtitle: 'Mobile API-Zustaende für Laravel-Anbindung vorbereiten.',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -113,8 +113,8 @@ class _OfflineSyncCacheParitySuiteScreenState extends State<OfflineSyncCachePari
                   network: _network,
                   onRetry: () => openUiAction(
                     context,
-                    title: 'Verbindung pruefen',
-                    body: 'Netzwerkstatus $_network, Strategie $_strategy, Queue $queued und Retry $_retryEnabled als mobile API-Zustaende pruefen.',
+                    title: 'Verbindung prüfen',
+                    body: 'Netzwerkstatus $_network, Strategie $_strategy, Queue $queued und Retry $_retryEnabled als mobile API-Zustaende prüfen.',
                     status: 'Network',
                     icon: Icons.sync_outlined,
                   ),
@@ -166,7 +166,7 @@ class _OfflineSyncCacheParitySuiteScreenState extends State<OfflineSyncCachePari
                 onOpen: () => openUiAction(
                   context,
                   title: 'Offline Sync Parity',
-                  body: 'Offline-Banner, Cache, Retry, Queue, Drafts, Upload Resume, Konflikte und Sync-Historie sind fuer mobile Laravel-API-Anbindung vorbereitet.',
+                  body: 'Offline-Banner, Cache, Retry, Queue, Drafts, Upload Resume, Konflikte und Sync-Historie sind für mobile Laravel-API-Anbindung vorbereitet.',
                   status: 'Offline Sync',
                   icon: Icons.fact_check_outlined,
                 ),
@@ -207,7 +207,7 @@ class _Hero extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Wenn Laravel spaeter per API angebunden wird, zeigt Flutter bereits Offline, Cache, Queue, Retry, Upload Resume, Konflikte und Sync-Historie im Airmius-Stil.',
+            'Wenn Laravel später per API angebunden wird, zeigt Flutter bereits Offline, Cache, Queue, Retry, Upload Resume, Konflikte und Sync-Historie im Airmius-Stil.',
             style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
@@ -327,7 +327,7 @@ class _RulesPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Sync-Regeln',
-      subtitle: 'Diese Flags werden spaeter durch API-Client, Storage und Netzwerkstatus gesteuert.',
+      subtitle: 'Diese Flags werden später durch API-Client, Storage und Netzwerkstatus gesteuert.',
       children: [
         _SwitchLine(title: 'Offline-Banner anzeigen', value: offlineBanner, onChanged: onBanner),
         _SwitchLine(title: 'Retry-Aktionen aktivieren', value: retryEnabled, onChanged: onRetry),
@@ -445,7 +445,7 @@ class _SyncStateCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: state.secondary,
-                  body: 'Retry, Cache, Queue, API-Fehler, Konfliktstatus und letzte Synchronisierung fuer ${state.title}.',
+                  body: 'Retry, Cache, Queue, API-Fehler, Konfliktstatus und letzte Synchronisierung für ${state.title}.',
                   status: retryEnabled ? 'Retry aktiv' : 'Info',
                   icon: retryEnabled ? Icons.refresh_outlined : Icons.info_outline,
                 ),
@@ -467,10 +467,10 @@ class _Checklist extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Offline-/Sync-Paritaet',
-      subtitle: 'Was fuer die spaetere Laravel-API-Verbindung sichtbar vorbereitet ist.',
+      subtitle: 'Was für die spätere Laravel-API-Verbindung sichtbar vorbereitet ist.',
       children: [
-        const _CheckLine('Offline-Banner, schwache Verbindung und Retry bleiben fuer User sichtbar.'),
-        const _CheckLine('Lange Formulare, Uploads, Chat und Training koennen als lokale Drafts/Queue abgebildet werden.'),
+        const _CheckLine('Offline-Banner, schwache Verbindung und Retry bleiben für User sichtbar.'),
+        const _CheckLine('Lange Formulare, Uploads, Chat und Training können als lokale Drafts/Queue abgebildet werden.'),
         const _CheckLine('Konflikte zeigen alten Wert, neuen Wert, Bearbeiter und sichere Aufloesung.'),
         const _CheckLine('Cache, Sync-Historie und API-Fehler bekommen eigene mobile Statuskarten.'),
         const SizedBox(height: 12),

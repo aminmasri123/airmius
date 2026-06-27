@@ -28,7 +28,17 @@ class NotificationDetailScreen extends StatefulWidget {
 class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
   bool _busy = false;
 
-  Future<void> _markRead() async {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.notification.unread) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _markRead(silent: true);
+      });
+    }
+  }
+
+  Future<void> _markRead({bool silent = false}) async {
     if (_busy) return;
     setState(() => _busy = true);
     try {
@@ -39,6 +49,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _busy = false);
+      if (silent) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AirmiusScope.of(context).t('notifications.error'))));
     }
   }

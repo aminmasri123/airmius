@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/api_contract.dart';
 import '../core/airmius_theme.dart';
@@ -46,7 +46,7 @@ class _FileOperationsScreenState extends State<FileOperationsScreen> {
                 children: [
                   const Eyebrow('Dokumente & Dateimanager'),
                   const SizedBox(height: 8),
-                  const Text('Vereine koennen Dateien hochladen, als Pflichtdokument markieren, mit Mitgliedsantraegen oder Beitragsregeln verknuepfen und sicher teilen.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+                  const Text('Vereine können Dateien hochladen, als Pflichtdokument markieren, mit Mitgliedsanträgen oder Beitragsregeln verknuepfen und sicher teilen.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
                   const SizedBox(height: 14),
                   SearchBox(hint: 'Dateiaktion suchen', onChanged: (value) => setState(() => _query = value.trim().toLowerCase())),
                   const SizedBox(height: 14),
@@ -134,7 +134,7 @@ class _FileOperationCard extends StatelessWidget {
               runSpacing: 8,
               children: [
                 AirmiusButton(label: operation.action, icon: operation.icon, danger: operation.danger, onPressed: () => openUiAction(context, title: operation.title, body: '${operation.body}\n\nEndpoint: ${operation.method} ${operation.endpoint}', status: operation.tab, icon: operation.icon)),
-                AirmiusButton(label: 'API Kontext', icon: Icons.api_outlined, secondary: true, onPressed: () => openUiAction(context, title: '${operation.title} API', body: 'Payload, Rollenrechte, Auditlog, Dateimanager-Ziel und spaetere Laravel-Response fuer ${operation.title} anzeigen.', status: 'API', icon: Icons.api_outlined)),
+                AirmiusButton(label: 'API Kontext', icon: Icons.api_outlined, secondary: true, onPressed: () => openUiAction(context, title: '${operation.title} API', body: 'Payload, Rollenrechte, Auditlog, Dateimanager-Ziel und spätere Laravel-Response für ${operation.title} anzeigen.', status: 'API', icon: Icons.api_outlined)),
               ],
             ),
           ],
@@ -160,15 +160,15 @@ const _tabs = ['Uploads', 'Verein', 'Antrag', 'Team', 'Share', 'Regeln', 'Alle']
 final _operations = <_FileOperation>[
   _FileOperation(tab: 'Uploads', title: 'Datei hochladen', body: 'Datei aus Galerie, Kamera oder Dateisystem in den zentralen Dateimanager laden.', method: 'POST', endpoint: ApiContract.uploads, icon: Icons.upload_file_outlined, action: 'Upload starten', color: AirmiusColors.blue),
   _FileOperation(tab: 'Uploads', title: 'Datei aktualisieren', body: 'Name, Beschreibung, Ordner, Sichtbarkeit und Metadaten einer Datei bearbeiten.', method: 'PATCH', endpoint: ApiContract.upload(1), icon: Icons.edit_outlined, action: 'Aktualisieren', color: AirmiusColors.blue),
-  _FileOperation(tab: 'Uploads', title: 'Datei loeschen', body: 'Datei entfernen und bestehende Verknuepfungen vorher anzeigen.', method: 'DELETE', endpoint: ApiContract.upload(1), icon: Icons.delete_outline, action: 'Loeschen', color: AirmiusColors.red, danger: true),
+  _FileOperation(tab: 'Uploads', title: 'Datei löschen', body: 'Datei entfernen und bestehende Verknuepfungen vorher anzeigen.', method: 'DELETE', endpoint: ApiContract.upload(1), icon: Icons.delete_outline, action: 'Löschen', color: AirmiusColors.red, danger: true),
   _FileOperation(tab: 'Verein', title: 'Vereinsdokument verknuepfen', body: 'Datenschutz, Beitragsordnung oder Vereinsregeln an das Vereinsprofil haengen.', method: 'POST', endpoint: ApiContract.clubDocuments(1), icon: Icons.folder_shared_outlined, action: 'Verknuepfen', color: AirmiusColors.amber),
-  _FileOperation(tab: 'Verein', title: 'Vereinsdokument entfernen', body: 'Verknuepfung loesen, ohne die Datei aus dem Dateimanager zu loeschen.', method: 'DELETE', endpoint: ApiContract.clubDocument(1, 1), icon: Icons.link_off_outlined, action: 'Entfernen', color: AirmiusColors.red, danger: true),
-  _FileOperation(tab: 'Antrag', title: 'Pflichtdokument an Antrag haengen', body: 'Dokumente fuer Mitgliedsantrag sichtbar machen und als Pflicht/Optional markieren.', method: 'POST', endpoint: ApiContract.clubMembershipDocuments(1), icon: Icons.assignment_outlined, action: 'Antrag verknuepfen', color: AirmiusColors.green),
+  _FileOperation(tab: 'Verein', title: 'Vereinsdokument entfernen', body: 'Verknuepfung loesen, ohne die Datei aus dem Dateimanager zu löschen.', method: 'DELETE', endpoint: ApiContract.clubDocument(1, 1), icon: Icons.link_off_outlined, action: 'Entfernen', color: AirmiusColors.red, danger: true),
+  _FileOperation(tab: 'Antrag', title: 'Pflichtdokument an Antrag haengen', body: 'Dokumente für Mitgliedsantrag sichtbar machen und als Pflicht/Optional markieren.', method: 'POST', endpoint: ApiContract.clubMembershipDocuments(1), icon: Icons.assignment_outlined, action: 'Antrag verknuepfen', color: AirmiusColors.green),
   _FileOperation(tab: 'Antrag', title: 'Antragsdokument entfernen', body: 'Pflichtdokument aus Mitgliedsantrag oder Beitragsregel entfernen.', method: 'DELETE', endpoint: ApiContract.clubMembershipDocument(1, 1), icon: Icons.assignment_return_outlined, action: 'Antrag loesen', color: AirmiusColors.red, danger: true),
   _FileOperation(tab: 'Team', title: 'Teamdatei verknuepfen', body: 'Trainingsordnung, Spielplan oder interne Datei an ein Team haengen.', method: 'POST', endpoint: ApiContract.teamFiles(1), icon: Icons.groups_2_outlined, action: 'Team verknuepfen', color: AirmiusColors.blue),
-  _FileOperation(tab: 'Team', title: 'Teamdatei entfernen', body: 'Dateizugriff fuer Team entfernen und Rechte aktualisieren.', method: 'DELETE', endpoint: ApiContract.teamFile(1, 1), icon: Icons.group_remove_outlined, action: 'Team loesen', color: AirmiusColors.red, danger: true),
+  _FileOperation(tab: 'Team', title: 'Teamdatei entfernen', body: 'Dateizugriff für Team entfernen und Rechte aktualisieren.', method: 'DELETE', endpoint: ApiContract.teamFile(1, 1), icon: Icons.group_remove_outlined, action: 'Team loesen', color: AirmiusColors.red, danger: true),
   _FileOperation(tab: 'Share', title: 'Share-Link erstellen', body: 'Zeitlich begrenzten Link mit Token, Ablaufdatum und Datenschutzhinweis erzeugen.', method: 'POST', endpoint: ApiContract.uploadShare(1), icon: Icons.link_outlined, action: 'Link erstellen', color: AirmiusColors.green),
-  _FileOperation(tab: 'Share', title: 'Geteilte Datei oeffnen', body: 'Oeffentliche Token-Route fuer Download oder Vorschau abbilden.', method: 'GET', endpoint: ApiContract.sharedFilePublic('{token}'), icon: Icons.visibility_outlined, action: 'Token oeffnen', color: AirmiusColors.green),
+  _FileOperation(tab: 'Share', title: 'Geteilte Datei öffnen', body: 'Öffentliche Token-Route für Download oder Vorschau abbilden.', method: 'GET', endpoint: ApiContract.sharedFilePublic('{token}'), icon: Icons.visibility_outlined, action: 'Token öffnen', color: AirmiusColors.green),
   _FileOperation(tab: 'Regeln', title: 'Dokument als Datenschutz setzen', body: 'Datei als aktuelle Datenschutzversion markieren und mit Antraegen verbinden.', method: 'PUT', endpoint: ApiContract.clubDocumentPurpose(1, 1, 'privacy'), icon: Icons.privacy_tip_outlined, action: 'Zweck setzen', color: AirmiusColors.amber),
   _FileOperation(tab: 'Regeln', title: 'Dokument als Beitragsordnung setzen', body: 'Datei als Beitragsregel markieren, damit Mitglieder sie vor Antrag sehen.', method: 'PUT', endpoint: ApiContract.clubDocumentPurpose(1, 1, 'fees'), icon: Icons.payments_outlined, action: 'Regel setzen', color: AirmiusColors.amber),
 ];

@@ -43,18 +43,18 @@ class _SessionSecurityTokenParitySuiteScreenState extends State<SessionSecurityT
     ),
     _SecurityFlow(
       scope: '2FA',
-      title: 'Zwei-Faktor bestaetigen',
+      title: 'Zwei-Faktor bestätigen',
       body: 'Authenticator-Code, Recovery-Code, Trusted Device, Fehlertext, Rate Limit und Weiterleitung als mobile Security-Karte.',
       status: '2FA',
       icon: Icons.security_outlined,
-      primary: 'Code pruefen',
+      primary: 'Code prüfen',
       secondary: 'Recovery',
       color: AirmiusColors.blue,
     ),
     _SecurityFlow(
       scope: '2FA',
       title: 'Recovery-Codes verwalten',
-      body: 'Codes anzeigen, neu generieren, kopieren, warnen und mit Passwortbestaetigung schuetzen.',
+      body: 'Codes anzeigen, neu generieren, kopieren, warnen und mit Passwortbestätigung schuetzen.',
       status: 'Recovery',
       icon: Icons.key_outlined,
       primary: 'Codes',
@@ -63,11 +63,11 @@ class _SessionSecurityTokenParitySuiteScreenState extends State<SessionSecurityT
     ),
     _SecurityFlow(
       scope: 'Devices',
-      title: 'Geraete und Sessions',
-      body: 'Aktuelles Geraet, Browser/Web-Sessions, letzte Aktivitaet, IP-Hinweis, Logout anderer Sessions und Audit.',
+      title: 'Geräte und Sessions',
+      body: 'Aktuelles Gerät, Browser/Web-Sessions, letzte Aktivitaet, IP-Hinweis, Logout anderer Sessions und Audit.',
       status: 'Devices',
       icon: Icons.devices_outlined,
-      primary: 'Geraete',
+      primary: 'Geräte',
       secondary: 'Andere abmelden',
       color: AirmiusColors.green,
     ),
@@ -104,17 +104,17 @@ class _SessionSecurityTokenParitySuiteScreenState extends State<SessionSecurityT
     _SecurityFlow(
       scope: 'Account',
       title: 'Sensible Account-Aktion',
-      body: 'Passwort bestaetigen, 2FA pruefen, Datenexport, Konto löschen, Löschcode und Rueckweg als geschützte mobile Strecke.',
+      body: 'Passwort bestätigen, 2FA prüfen, Datenexport, Konto löschen, Löschcode und Rückweg als geschützte mobile Strecke.',
       status: 'Sensitive',
       icon: Icons.lock_outline,
-      primary: 'Bestaetigen',
+      primary: 'Bestätigen',
       secondary: 'Abbrechen',
       color: AirmiusColors.amber,
     ),
     _SecurityFlow(
       scope: 'Account',
       title: 'Logout und Session-Ende',
-      body: 'Einzelnes Geraet abmelden, alle Sessions beenden, Cache löschen, Offline-Drafts warnen und zur Loginseite fuehren.',
+      body: 'Einzelnes Gerät abmelden, alle Sessions beenden, Cache löschen, Offline-Drafts warnen und zur Loginseite fuehren.',
       status: 'Logout',
       icon: Icons.logout_outlined,
       primary: 'Logout',
@@ -137,7 +137,7 @@ class _SessionSecurityTokenParitySuiteScreenState extends State<SessionSecurityT
       body: SafeArea(
         child: PageFrame(
           title: 'Session Security Token Parity',
-          subtitle: 'Mobile Auth-Sessions, 2FA, Geraete und API Tokens.',
+          subtitle: 'Mobile Auth-Sessions, 2FA, Geräte und API Tokens.',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -180,7 +180,7 @@ class _SessionSecurityTokenParitySuiteScreenState extends State<SessionSecurityT
                 _SecurityFlowCard(flow: flow, risk: _risk),
                 const SizedBox(height: 12),
               ],
-              if (_visibleFlows.isEmpty) const EmptyPanel('Keine Security-Flows fuer diesen Bereich sichtbar.'),
+              if (_visibleFlows.isEmpty) const EmptyPanel('Keine Security-Flows für diesen Bereich sichtbar.'),
               const SizedBox(height: 4),
               _Checklist(
                 onOpen: () => openUiAction(
@@ -310,10 +310,10 @@ class _RulesPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Security-Regeln',
-      subtitle: 'Diese Optionen machen Auth-Zustaende spaeter mit Laravel/Sanctum nachvollziehbar.',
+      subtitle: 'Diese Optionen machen Auth-Zustaende später mit Laravel/Sanctum nachvollziehbar.',
       children: [
         _SwitchLine(title: '2FA-Gate aktivieren', value: twoFactor, onChanged: onTwoFactor),
-        _SwitchLine(title: 'Geraet merken erlauben', value: rememberDevice, onChanged: onRememberDevice),
+        _SwitchLine(title: 'Gerät merken erlauben', value: rememberDevice, onChanged: onRememberDevice),
         _SwitchLine(title: 'Token automatisch erneuern', value: tokenRefresh, onChanged: onTokenRefresh),
       ],
     );
@@ -366,7 +366,7 @@ class _SessionPreview extends StatelessWidget {
             runSpacing: 10,
             children: [
               AirmiusButton(
-                label: 'Security pruefen',
+                label: 'Security prüfen',
                 icon: Icons.security_outlined,
                 danger: risk == 'Compromised',
                 onPressed: () => openUiAction(
@@ -384,7 +384,7 @@ class _SessionPreview extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Security Audit',
-                  body: 'Letzte Aktivitaet, Geraet, IP-Hinweis, Tokenstatus, Rollenwechsel und sensible Aktion.',
+                  body: 'Letzte Aktivitaet, Gerät, IP-Hinweis, Tokenstatus, Rollenwechsel und sensible Aktion.',
                   status: 'Audit',
                   icon: Icons.history_outlined,
                 ),
@@ -467,7 +467,7 @@ class _SecurityFlowCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: flow.secondary,
-                  body: 'Details, Audit, API-Fehler, Retry und Permission fuer ${flow.title}.',
+                  body: 'Details, Audit, API-Fehler, Retry und Permission für ${flow.title}.',
                   status: 'Security Detail',
                   icon: Icons.manage_search_outlined,
                 ),
@@ -493,8 +493,8 @@ class _Checklist extends StatelessWidget {
       children: [
         const _CheckLine('Session Restore, Token Refresh und Rolle/Workspace werden beim App-Start sichtbar.'),
         const _CheckLine('2FA, Recovery Codes, Trusted Device und Rate Limit haben eigene mobile Zustaende.'),
-        const _CheckLine('Geraete, Web-Sessions, API Tokens und Logout anderer Sessions sind als UI vorbereitet.'),
-        const _CheckLine('Konto löschen, Datenexport und sensible Aktionen brauchen Passwort/2FA, Audit und Rueckweg.'),
+        const _CheckLine('Geräte, Web-Sessions, API Tokens und Logout anderer Sessions sind als UI vorbereitet.'),
+        const _CheckLine('Konto löschen, Datenexport und sensible Aktionen brauchen Passwort/2FA, Audit und Rückweg.'),
         const SizedBox(height: 12),
         AirmiusButton(label: 'Security-Paritaet markieren', icon: Icons.fact_check_outlined, onPressed: onOpen),
       ],

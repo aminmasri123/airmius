@@ -1,4 +1,4 @@
-﻿class AirmiusApiContract {
+class AirmiusApiContract {
   const AirmiusApiContract._();
 
   static const baseUrl = String.fromEnvironment(
@@ -402,8 +402,8 @@
   static const publicPricingAlt = '/preise';
   static const publicPricingInterest = '/friends/public/pricing-interest';
   static const publicJobs = '/jobs';
-  static const publicAgency = '/werbeagentur-fuer-vereine';
-  static const publicWebsiteRequest = '/werbeagentur-fuer-vereine/anfrage';
+  static const publicAgency = '/werbeagentur-für-vereine';
+  static const publicWebsiteRequest = '/werbeagentur-für-vereine/anfrage';
   static String publicLead(int id) => '$publicLeads/$id';
   static String publicJobInterest(int id) => '/jobs/$id/interest';
   static const publicActiveAd = '/ads/active';
@@ -579,8 +579,8 @@ class AirmiusApiTodo {
   static const publicPricingAlt = '/preise';
   static const publicPricingInterest = '/friends/public/pricing-interest';
   static const publicJobs = '/jobs';
-  static const publicAgency = '/werbeagentur-fuer-vereine';
-  static const publicWebsiteRequest = '/werbeagentur-fuer-vereine/anfrage';
+  static const publicAgency = '/werbeagentur-für-vereine';
+  static const publicWebsiteRequest = '/werbeagentur-für-vereine/anfrage';
   static String publicJobInterest(int id) => '/jobs/$id/interest';
   static String publicLead(int id) => '${ApiContract.publicLeads}/$id';
   static const adminInactiveUsers = '/friends/admin/inactive-users';

@@ -72,7 +72,7 @@ class _ProfileCompletionGateScreenState extends State<ProfileCompletionGateScree
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Diese Angaben sind wichtig fuer Jugendschutz, Elternfreigabe und faire Nutzung der Sportplattform.',
+                  'Diese Angaben sind wichtig für Jugendschutz, Elternfreigabe und faire Nutzung der Sportplattform.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AirmiusColors.muted, height: 1.4),
                 ),

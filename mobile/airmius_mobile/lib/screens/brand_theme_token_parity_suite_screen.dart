@@ -27,7 +27,7 @@ class _BrandThemeTokenParitySuiteScreenState extends State<BrandThemeTokenParity
       body: 'Dunkler Header, Logo, Suche, Notifications, Profilchip und klare Trennung zum Inhalt.',
       status: 'Shell',
       icon: Icons.web_asset_outlined,
-      primary: 'Header pruefen',
+      primary: 'Header prüfen',
       secondary: 'Suche',
       color: AirmiusColors.blue,
     ),
@@ -157,7 +157,7 @@ class _BrandThemeTokenParitySuiteScreenState extends State<BrandThemeTokenParity
                 onOpen: () => openUiAction(
                   context,
                   title: 'Brand Theme Parity',
-                  body: 'Logo, Header, Farben, Panels, Cards, Inputs, Buttons, Status-Pills, Overlays und Bottom Navigation sind als Airmius-Designsystem fuer Flutter vorbereitet.',
+                  body: 'Logo, Header, Farben, Panels, Cards, Inputs, Buttons, Status-Pills, Overlays und Bottom Navigation sind als Airmius-Designsystem für Flutter vorbereitet.',
                   status: 'Brand UI',
                   icon: Icons.palette_outlined,
                 ),
@@ -339,7 +339,7 @@ class _VisualPreview extends StatelessWidget {
           Text(surface, style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
           const SizedBox(height: 6),
           Text(
-            'Preview fuer $density-Dichte mit Web-App-Farben, runden Cards, Status-Pills und klarer Button-Hierarchie.',
+            'Preview für $density-Dichte mit Web-App-Farben, runden Cards, Status-Pills und klarer Button-Hierarchie.',
             style: const TextStyle(color: AirmiusColors.muted, height: 1.4, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 14),
@@ -348,12 +348,12 @@ class _VisualPreview extends StatelessWidget {
             runSpacing: 10,
             children: [
               AirmiusButton(
-                label: 'Design pruefen',
+                label: 'Design prüfen',
                 icon: Icons.palette_outlined,
                 onPressed: () => openUiAction(
                   context,
                   title: 'Design Preview',
-                  body: 'Surface $surface, Dichte $density, Header $webLikeHeader und Airmius-Theme als visuelle Paritaet pruefen.',
+                  body: 'Surface $surface, Dichte $density, Header $webLikeHeader und Airmius-Theme als visuelle Paritaet prüfen.',
                   status: 'Design',
                   icon: Icons.palette_outlined,
                 ),
@@ -431,7 +431,7 @@ class _DesignTokenCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: token.secondary,
-                  body: 'Farbe, Border, Radius, Spacing, Kontrast, Icon und mobile Dichte fuer ${token.title}.',
+                  body: 'Farbe, Border, Radius, Spacing, Kontrast, Icon und mobile Dichte für ${token.title}.',
                   status: 'Token',
                   icon: Icons.tune_outlined,
                 ),

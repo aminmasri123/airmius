@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -21,10 +21,10 @@ class _AdminFinanceBillingCenterScreenState extends State<AdminFinanceBillingCen
   bool _showTransfers = true;
 
   final List<_FinanceItem> _items = const [
-    _FinanceItem(title: 'Plattform-Rechnung', body: 'Abo-Rechnung fuer Verein, Providerkosten und Plattformgebuehren.', status: 'Offen', amount: '129 EUR', icon: Icons.receipt_long_outlined, color: AirmiusColors.blue),
-    _FinanceItem(title: 'Subscription Invoice', body: 'Wiederkehrende Rechnung fuer Airmius-Mitgliedschaft oder Vereinsabo.', status: 'Faellig', amount: '49 EUR', icon: Icons.autorenew_outlined, color: AirmiusColors.amber),
-    _FinanceItem(title: 'Payment Eingang', body: 'Zahlungseingang, Banktransfer, Ueberweisung oder manuelle Zuordnung.', status: 'Gebucht', amount: '89 EUR', icon: Icons.payments_outlined, color: AirmiusColors.green),
-    _FinanceItem(title: 'Rueckzahlung pruefen', body: 'Refund, Storno, fehlgeschlagene Zahlung oder Supportfall.', status: 'Pruefen', amount: '19 EUR', icon: Icons.undo_outlined, color: AirmiusColors.red),
+    _FinanceItem(title: 'Plattform-Rechnung', body: 'Abo-Rechnung für Verein, Providerkosten und Plattformgebuehren.', status: 'Offen', amount: '129 EUR', icon: Icons.receipt_long_outlined, color: AirmiusColors.blue),
+    _FinanceItem(title: 'Subscription Invoice', body: 'Wiederkehrende Rechnung für Airmius-Mitgliedschaft oder Vereinsabo.', status: 'Faellig', amount: '49 EUR', icon: Icons.autorenew_outlined, color: AirmiusColors.amber),
+    _FinanceItem(title: 'Payment Eingang', body: 'Zahlungseingang, Banktransfer, Überweisung oder manuelle Zuordnung.', status: 'Gebucht', amount: '89 EUR', icon: Icons.payments_outlined, color: AirmiusColors.green),
+    _FinanceItem(title: 'Rückzahlung prüfen', body: 'Refund, Storno, fehlgeschlagene Zahlung oder Supportfall.', status: 'Prüfen', amount: '19 EUR', icon: Icons.undo_outlined, color: AirmiusColors.red),
     _FinanceItem(title: 'Commerce Order', body: 'Marktplatzbestellung, Outfit, Sponsorleistung oder digitale Leistung.', status: 'Commerce', amount: '239 EUR', icon: Icons.shopping_bag_outlined, color: AirmiusColors.blueDeep),
   ];
 
@@ -56,8 +56,8 @@ class _AdminFinanceBillingCenterScreenState extends State<AdminFinanceBillingCen
                             children: [
                               _SwitchRow(title: 'Rechnungen anzeigen', subtitle: 'Admin-Invoices, SubscriptionInvoices und offene Posten.', value: _showInvoices, onChanged: (value) => setState(() => _showInvoices = value)),
                               _SwitchRow(title: 'Payments anzeigen', subtitle: 'Zahlungseingaenge, Providerstatus und manuelle Buchungen.', value: _showPayments, onChanged: (value) => setState(() => _showPayments = value)),
-                              _SwitchRow(title: 'Subscriptions anzeigen', subtitle: 'Abo, Laufzeit, VerlÃ¤ngerung, Status und Abrechnung.', value: _showSubscriptions, onChanged: (value) => setState(() => _showSubscriptions = value)),
-                              _SwitchRow(title: 'Banktransfer anzeigen', subtitle: 'Ueberweisungen, Referenzen, Zuordnung und Status.', value: _showTransfers, onChanged: (value) => setState(() => _showTransfers = value)),
+                              _SwitchRow(title: 'Subscriptions anzeigen', subtitle: 'Abo, Laufzeit, Verlängerung, Status und Abrechnung.', value: _showSubscriptions, onChanged: (value) => setState(() => _showSubscriptions = value)),
+                              _SwitchRow(title: 'Banktransfer anzeigen', subtitle: 'Überweisungen, Referenzen, Zuordnung und Status.', value: _showTransfers, onChanged: (value) => setState(() => _showTransfers = value)),
                             ],
                           ),
                         ),
@@ -122,7 +122,7 @@ class _FinanceHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Admin-UI fuer Invoices, Payments, Subscriptions, SubscriptionInvoices und Commerce-Abrechnung als mobile Plattform-Finanzflaeche.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          const Text('Admin-UI für Invoices, Payments, Subscriptions, SubscriptionInvoices und Commerce-Abrechnung als mobile Plattform-Finanzflaeche.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           const Row(children: [Expanded(child: MetricCard(value: '5', label: 'Bereiche')), SizedBox(width: 10), Expanded(child: MetricCard(value: '329', label: 'EUR')), SizedBox(width: 10), Expanded(child: MetricCard(value: '2', label: 'Offen'))]),
         ],

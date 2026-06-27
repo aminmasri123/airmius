@@ -23,14 +23,14 @@ class _AnalyticsReportingKpiSuiteScreenState extends State<AnalyticsReportingKpi
       const _ReportRow(
         title: 'Mitgliederentwicklung',
         status: '+12%',
-        body: 'Neue Anfragen, angenommene Mitglieder, Rueckzuege, offene Rueckfragen und Teamzuweisungen.',
+        body: 'Neue Anfragen, angenommene Mitglieder, Rückzuege, offene Rückfragen und Teamzuweisungen.',
         icon: Icons.groups_2_outlined,
         color: AirmiusColors.green,
       ),
       const _ReportRow(
         title: 'Finanzen',
         status: '180 EUR',
-        body: 'Offene Beitraege, bezahlte Rechnungen, Rueckerstattungen, Mahnungen und Zahlungsarten.',
+        body: 'Offene Beiträge, bezahlte Rechnungen, Rückerstattungen, Mahnungen und Zahlungsarten.',
         icon: Icons.receipt_long_outlined,
         color: AirmiusColors.amber,
       ),
@@ -125,7 +125,7 @@ class _AnalyticsReportingKpiSuiteScreenState extends State<AnalyticsReportingKpi
                 const SectionLabel('EXPORT'),
                 const SizedBox(height: 8),
                 Text(
-                  'Aktueller Zeitraum: $period. Spaeter koennen CSV, PDF, Diagramme, Rollenrechte und geplante Reports per Laravel-API angebunden werden.',
+                  'Aktueller Zeitraum: $period. Später können CSV, PDF, Diagramme, Rollenrechte und geplante Reports per Laravel-API angebunden werden.',
                   style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),
@@ -135,7 +135,7 @@ class _AnalyticsReportingKpiSuiteScreenState extends State<AnalyticsReportingKpi
                   onPressed: () => openUiAction(
                     context,
                     title: 'Report exportieren',
-                    body: 'Diese UI bereitet KPI-Reports, CSV/PDF-Export, Diagramme, Rollenrechte und geplante Auswertungen fuer die spaetere API vor.',
+                    body: 'Diese UI bereitet KPI-Reports, CSV/PDF-Export, Diagramme, Rollenrechte und geplante Auswertungen für die spätere API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.file_download_outlined,
                   ),

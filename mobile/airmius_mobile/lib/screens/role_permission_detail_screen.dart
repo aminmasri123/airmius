@@ -45,7 +45,7 @@ class _RolePermissionDetailScreenState extends State<RolePermissionDetailScreen>
             const Eyebrow('Permission-Matrix'),
             const SizedBox(height: 8),
             _PermissionSwitch(title: 'Mitglieder verwalten', body: 'Anfragen, Kader, Rollen und Mitgliedsdaten.', value: _members, onChanged: (value) => setState(() => _members = value)),
-            _PermissionSwitch(title: 'Finanzen sehen', body: 'Beitraege, Rechnungen, SEPA und DATEV.', value: _finance, onChanged: (value) => setState(() => _finance = value)),
+            _PermissionSwitch(title: 'Finanzen sehen', body: 'Beiträge, Rechnungen, SEPA und DATEV.', value: _finance, onChanged: (value) => setState(() => _finance = value)),
             _PermissionSwitch(title: 'Medien freigeben', body: 'Uploads, Bildrechte und Medienrichtlinien.', value: _media, onChanged: (value) => setState(() => _media = value)),
             _PermissionSwitch(title: 'Jugendschutz entscheiden', body: 'Guardian Consent und Altersfreigaben.', value: _guardian, onChanged: (value) => setState(() => _guardian = value)),
           ])),
@@ -53,8 +53,8 @@ class _RolePermissionDetailScreenState extends State<RolePermissionDetailScreen>
           AirmiusPanel(borderColor: AirmiusColors.amber.withValues(alpha: 0.55), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Security Gates'),
             const SizedBox(height: 8),
-            SwitchListTile(value: _auditRequired, onChanged: (value) => setState(() => _auditRequired = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Auditpflicht bei sensiblen Aktionen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Alle Aenderungen werden protokolliert.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _twoFactor, onChanged: (value) => setState(() => _twoFactor = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('2FA fuer Rolle verlangen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Empfohlen fuer Admin, Finanzen und Jugendschutz.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _auditRequired, onChanged: (value) => setState(() => _auditRequired = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Auditpflicht bei sensiblen Aktionen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Alle Änderungen werden protokolliert.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _twoFactor, onChanged: (value) => setState(() => _twoFactor = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('2FA für Rolle verlangen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Empfohlen für Admin, Finanzen und Jugendschutz.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: const [
@@ -64,10 +64,10 @@ class _RolePermissionDetailScreenState extends State<RolePermissionDetailScreen>
             SizedBox(height: 10),
             _AuditRow(title: 'Medienfreigabe aktiviert', body: 'Gestern 18:02 - Admin'),
             SizedBox(height: 10),
-            _AuditRow(title: '2FA Gate bestaetigt', body: 'Vor 3 Tagen - System'),
+            _AuditRow(title: '2FA Gate bestätigt', body: 'Vor 3 Tagen - System'),
           ])),
           const SizedBox(height: 14),
-          AirmiusButton(label: 'Rolle speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Rolle speichern', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.save_outlined)),
+          AirmiusButton(label: 'Rolle speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Rolle speichern', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.save_outlined)),
         ]),
       ),
     );

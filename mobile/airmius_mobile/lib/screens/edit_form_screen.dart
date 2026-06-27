@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
@@ -184,7 +184,7 @@ class _EditFormScreenState extends State<EditFormScreen> {
           value: _publicVisible,
           onChanged: (value) => setState(() => _publicVisible = value),
           title: const Text('Profil sichtbar', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-          subtitle: const Text('Andere Nutzer koennen dein Profil finden.', style: TextStyle(color: AirmiusColors.muted)),
+          subtitle: const Text('Andere Nutzer können dein Profil finden.', style: TextStyle(color: AirmiusColors.muted)),
           activeColor: AirmiusColors.blue,
           contentPadding: EdgeInsets.zero,
         ),
@@ -201,7 +201,7 @@ class _EditFormScreenState extends State<EditFormScreen> {
       const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Eyebrow('Datenrechte'),
         SizedBox(height: 10),
-        AirmiusTextField(label: 'Export-Kommentar', hint: 'Optionaler Hinweis fuer Datenexport oder Loeschanfrage', maxLines: 3),
+        AirmiusTextField(label: 'Export-Kommentar', hint: 'Optionaler Hinweis für Datenexport oder Löschanfrage', maxLines: 3),
       ])),
     ];
   }
@@ -211,11 +211,11 @@ class _EditFormScreenState extends State<EditFormScreen> {
       AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Eyebrow('Zahlung'),
         SizedBox(height: 12),
-        AirmiusTextField(label: 'Zahlmethode', hint: 'Ueberweisung, Bar, SEPA'),
+        AirmiusTextField(label: 'Zahlmethode', hint: 'Überweisung, Bar, SEPA'),
         SizedBox(height: 12),
         AirmiusTextField(label: 'IBAN', hint: 'DE...'),
         SizedBox(height: 12),
-        AirmiusTextField(label: 'Rechnungsadresse', hint: 'Adresse fuer Rechnungen', maxLines: 3),
+        AirmiusTextField(label: 'Rechnungsadresse', hint: 'Adresse für Rechnungen', maxLines: 3),
       ])),
     ];
   }
@@ -241,7 +241,7 @@ class _EditFormScreenState extends State<EditFormScreen> {
           onChanged: (value) => setState(() => _role = value ?? _role),
         ),
         const SizedBox(height: 12),
-        const AirmiusTextField(label: 'Interne Notiz', hint: 'Warum wird der Status geaendert?', maxLines: 3),
+        const AirmiusTextField(label: 'Interne Notiz', hint: 'Warum wird der Status geändert?', maxLines: 3),
       ])),
     ];
   }

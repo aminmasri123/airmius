@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -23,7 +23,7 @@ class _ApiTokenManagerScreenState extends State<ApiTokenManagerScreen> {
   final _tokenName = TextEditingController(text: 'Mobile Laravel API');
 
   final List<_TokenItem> _tokens = const [
-    _TokenItem(title: 'Mobile App Token', body: 'Clubs, Teams, Mitgliedsantraege, Feed und Notifications fuer Flutter-App.', status: 'Aktiv', scope: 'Clubs, Feed', icon: Icons.phone_iphone_outlined, color: AirmiusColors.blue),
+    _TokenItem(title: 'Mobile App Token', body: 'Clubs, Teams, Mitgliedsanträge, Feed und Notifications für Flutter-App.', status: 'Aktiv', scope: 'Clubs, Feed', icon: Icons.phone_iphone_outlined, color: AirmiusColors.blue),
     _TokenItem(title: 'Admin Dashboard Token', body: 'Admin-Module, Rechnungen, Verifizierungen, Providerkosten und Moderation.', status: 'Sensibel', scope: 'Admin', icon: Icons.admin_panel_settings_outlined, color: AirmiusColors.red),
     _TokenItem(title: 'Webhook Receiver', body: 'Payments, SubscriptionInvoices, Supporttickets und Eventupdates empfangen.', status: 'Webhook', scope: 'Payments', icon: Icons.webhook_outlined, color: AirmiusColors.green),
     _TokenItem(title: 'Read-only Reporting', body: 'Reports, Analytics, Clubauswertungen und Vorstandsexport.', status: 'Read', scope: 'Reports', icon: Icons.insights_outlined, color: AirmiusColors.amber),
@@ -63,11 +63,11 @@ class _ApiTokenManagerScreenState extends State<ApiTokenManagerScreen> {
                           title: 'Zugriff & Sicherheit',
                           child: Column(
                             children: [
-                              _SwitchRow(title: 'Read-Zugriff', subtitle: 'Daten lesen fuer UI, Reports und Detailseiten.', value: _readAccess, onChanged: (value) => setState(() => _readAccess = value)),
-                              _SwitchRow(title: 'Write-Zugriff', subtitle: 'Aktionen wie Antrag senden, Rueckzug, Update und Adminfreigaben.', value: _writeAccess, onChanged: (value) => setState(() => _writeAccess = value)),
+                              _SwitchRow(title: 'Read-Zugriff', subtitle: 'Daten lesen für UI, Reports und Detailseiten.', value: _readAccess, onChanged: (value) => setState(() => _readAccess = value)),
+                              _SwitchRow(title: 'Write-Zugriff', subtitle: 'Aktionen wie Antrag senden, Rückzug, Update und Adminfreigaben.', value: _writeAccess, onChanged: (value) => setState(() => _writeAccess = value)),
                               _SwitchRow(title: 'Webhook-Zugriff', subtitle: 'Payments, Notifications und Eventupdates empfangen.', value: _webhookAccess, onChanged: (value) => setState(() => _webhookAccess = value)),
-                              _SwitchRow(title: 'Ablaufdatum setzen', subtitle: 'Token laeuft automatisch ab und muss erneuert werden.', value: _expires, onChanged: (value) => setState(() => _expires = value)),
-                              _SwitchRow(title: 'Rotation erforderlich', subtitle: 'Regelmaessige Token-Rotation fuer Store- und API-Sicherheit.', value: _rotateRequired, onChanged: (value) => setState(() => _rotateRequired = value)),
+                              _SwitchRow(title: 'Ablaufdatum setzen', subtitle: 'Token läuft automatisch ab und muss erneuert werden.', value: _expires, onChanged: (value) => setState(() => _expires = value)),
+                              _SwitchRow(title: 'Rotation erforderlich', subtitle: 'Regelmaessige Token-Rotation für Store- und API-Sicherheit.', value: _rotateRequired, onChanged: (value) => setState(() => _rotateRequired = value)),
                             ],
                           ),
                         ),
@@ -131,7 +131,7 @@ class _ApiHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Die API-Webseite und der Token Manager werden als mobile UI vorbereitet: Scopes, Rechte, Webhooks, Ablauf und Rotation fuer die spaetere Laravel-Anbindung.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          const Text('Die API-Webseite und der Token Manager werden als mobile UI vorbereitet: Scopes, Rechte, Webhooks, Ablauf und Rotation für die spätere Laravel-Anbindung.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           const Row(children: [Expanded(child: MetricCard(value: '4', label: 'Tokens')), SizedBox(width: 10), Expanded(child: MetricCard(value: '6', label: 'Scopes')), SizedBox(width: 10), Expanded(child: MetricCard(value: '2', label: 'Risiken'))]),
         ],

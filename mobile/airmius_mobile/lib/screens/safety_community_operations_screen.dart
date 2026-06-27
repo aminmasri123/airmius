@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/api_contract.dart';
 
@@ -126,8 +126,8 @@ class _SafetyCommunityOperationsScreenState extends State<SafetyCommunityOperati
 
   static final _communityOps = <_Operation>[
     _Operation('Einladungslink erstellen', 'Freundschaftseinladung erzeugen und teilen.', 'POST', ApiContract.friendInvitations, Icons.link_outlined),
-    _Operation('Einladung per Token annehmen', 'Token pruefen und Beziehung herstellen.', 'GET', ApiContract.friendInvitationToken('{token}'), Icons.task_alt_outlined),
-    _Operation('Freundschaft annehmen', 'Ausstehende Anfrage bestaetigen.', 'POST', ApiContract.friendInvitationAccept(1), Icons.check_circle_outline),
+    _Operation('Einladung per Token annehmen', 'Token prüfen und Beziehung herstellen.', 'GET', ApiContract.friendInvitationToken('{token}'), Icons.task_alt_outlined),
+    _Operation('Freundschaft annehmen', 'Ausstehende Anfrage bestätigen.', 'POST', ApiContract.friendInvitationAccept(1), Icons.check_circle_outline),
     _Operation('Freundschaft ablehnen', 'Ausstehende Anfrage ablehnen.', 'DELETE', ApiContract.friendInvitationDecline(1), Icons.cancel_outlined, danger: true),
     _Operation('Freund entfernen', 'Bestehende Verbindung sauber trennen.', 'DELETE', ApiContract.friendRemove(1), Icons.person_remove_outlined, danger: true),
     _Operation('User blockieren', 'Kontakt und Interaktion sofort stoppen.', 'POST', ApiContract.friendBlock(1), Icons.block_outlined, danger: true),
@@ -136,25 +136,25 @@ class _SafetyCommunityOperationsScreenState extends State<SafetyCommunityOperati
   static final _carpoolOps = <_Operation>[
     _Operation('Fahrt anbieten', 'Fahrgemeinschaft mit Plaetzen, Route und Zeiten erstellen.', 'POST', ApiContract.carpools, Icons.add_circle_outline),
     _Operation('Mitfahrt suchen', 'Offene Fahrten passend zum Verein finden.', 'GET', ApiContract.carpools, Icons.search_outlined),
-    _Operation('Mitfahrt anfragen', 'Platz fuer eine konkrete Fahrt anfragen.', 'POST', ApiContract.carpoolJoin(1), Icons.how_to_reg_outlined),
-    _Operation('Anfrage bestaetigen', 'Fahrer bestaetigt Mitfahrer.', 'PUT', ApiContract.carpoolRequest(1, 1), Icons.check_circle_outline),
+    _Operation('Mitfahrt anfragen', 'Platz für eine konkrete Fahrt anfragen.', 'POST', ApiContract.carpoolJoin(1), Icons.how_to_reg_outlined),
+    _Operation('Anfrage bestätigen', 'Fahrer bestätigt Mitfahrer.', 'PUT', ApiContract.carpoolRequest(1, 1), Icons.check_circle_outline),
     _Operation('Mitfahrer entfernen', 'Teilnehmer aus Fahrt entfernen.', 'DELETE', ApiContract.carpoolMember(1, 1), Icons.person_remove_outlined, danger: true),
     _Operation('Kontaktfreigabe', 'Telefon oder Chatdaten nur nach Zustimmung freigeben.', 'POST', ApiContract.carpoolContactRelease(1), Icons.visibility_outlined),
-    _Operation('Fahrt verlassen', 'Eigene Teilnahme zurueckziehen.', 'DELETE', ApiContract.carpoolLeave(1), Icons.logout_outlined, danger: true),
+    _Operation('Fahrt verlassen', 'Eigene Teilnahme zurückziehen.', 'DELETE', ApiContract.carpoolLeave(1), Icons.logout_outlined, danger: true),
   ];
 
   static final _guardianOps = <_Operation>[
     _Operation('Zustimmung ausstehend', 'Offene Elternfreigaben laden.', 'GET', ApiContract.guardianConsentPending(), Icons.pending_actions_outlined),
     _Operation('Zustimmung erneut senden', 'Erziehungsberechtigte erneut benachrichtigen.', 'POST', ApiContract.guardianConsentResend(), Icons.mark_email_unread_outlined),
-    _Operation('Consent Token ansehen', 'Oeffentliche Freigabeseite per Token laden.', 'GET', ApiContract.guardianConsentToken('{token}'), Icons.password_outlined),
-    _Operation('Consent bestaetigen', 'Elternfreigabe per Token bestaetigen.', 'POST', ApiContract.guardianConsentApproveToken('{token}'), Icons.check_circle_outline),
+    _Operation('Consent Token ansehen', 'Öffentliche Freigabeseite per Token laden.', 'GET', ApiContract.guardianConsentToken('{token}'), Icons.password_outlined),
+    _Operation('Consent bestätigen', 'Elternfreigabe per Token bestätigen.', 'POST', ApiContract.guardianConsentApproveToken('{token}'), Icons.check_circle_outline),
     _Operation('Consent ablehnen', 'Elternfreigabe per Token ablehnen.', 'DELETE', ApiContract.guardianConsentRejectToken('{token}'), Icons.cancel_outlined, danger: true),
     _Operation('Elternlogin starten', 'Elternzugang mit E-Mail oder Daten beginnen.', 'POST', ApiContract.guardianAccessPublic, Icons.login_outlined),
-    _Operation('Elterncode pruefen', 'Einmalcode bestaetigen und Zugriff herstellen.', 'POST', ApiContract.guardianAccessCode, Icons.verified_user_outlined),
+    _Operation('Elterncode prüfen', 'Einmalcode bestätigen und Zugriff herstellen.', 'POST', ApiContract.guardianAccessCode, Icons.verified_user_outlined),
     _Operation('Kinder verwalten', 'Kinderkonten und Freigaben anzeigen.', 'GET', ApiContract.guardianChildrenPublic, Icons.child_care_outlined),
     _Operation('Kinderkonto erstellen', 'Neues Eltern-/Kinderkonto anlegen.', 'POST', ApiContract.guardianAccountCreate, Icons.person_add_alt_1_outlined),
-    _Operation('Kind zustimmen', 'Freigabe fuer Kind aktivieren.', 'PUT', ApiContract.guardianChildApprove(1), Icons.check_circle_outline),
-    _Operation('Kind widerrufen', 'Freigabe fuer Kind zurueckziehen.', 'PUT', ApiContract.guardianChildRevoke(1), Icons.undo_outlined, danger: true),
+    _Operation('Kind zustimmen', 'Freigabe für Kind aktivieren.', 'PUT', ApiContract.guardianChildApprove(1), Icons.check_circle_outline),
+    _Operation('Kind widerrufen', 'Freigabe für Kind zurückziehen.', 'PUT', ApiContract.guardianChildRevoke(1), Icons.undo_outlined, danger: true),
     _Operation('Elternlogout', 'Elternsession beenden.', 'POST', ApiContract.guardianAccessLogout, Icons.logout_outlined),
   ];
 
@@ -166,19 +166,19 @@ class _SafetyCommunityOperationsScreenState extends State<SafetyCommunityOperati
     _Operation('Maturity Suche', 'Suche mit Minderjaehrigen-Schutz ausfuehren.', 'GET', ApiContract.maturitySearch, Icons.search_outlined),
     _Operation('Challenges', 'Freigegebene Challenges laden.', 'GET', ApiContract.maturityChallenges, Icons.emoji_events_outlined),
     _Operation('Routen Analytics', 'SportRoute-Auswertung altersgerecht anzeigen.', 'GET', ApiContract.sportRouteAnalytics(1), Icons.analytics_outlined),
-    _Operation('Coach Weekly', 'Wochenuebersicht fuer Coaching laden.', 'GET', ApiContract.coachWeekly, Icons.calendar_month_outlined),
+    _Operation('Coach Weekly', 'Wochenübersicht für Coaching laden.', 'GET', ApiContract.coachWeekly, Icons.calendar_month_outlined),
     _Operation('Onboarding', 'Maturity-Onboarding starten.', 'POST', ApiContract.maturityOnboarding, Icons.flag_outlined),
-    _Operation('Viral Guard', 'Virale Inhalte vor Ausspielung pruefen.', 'GET', ApiContract.maturityViral, Icons.privacy_tip_outlined),
+    _Operation('Viral Guard', 'Virale Inhalte vor Ausspielung prüfen.', 'GET', ApiContract.maturityViral, Icons.privacy_tip_outlined),
     _Operation('Safety Center', 'Safety-Regeln und Warnungen anzeigen.', 'GET', ApiContract.maturitySafety, Icons.security_outlined),
-    _Operation('Gate erstellen', 'Content Gate fuer sensible Inhalte anlegen.', 'POST', ApiContract.maturityGates, Icons.lock_outlined),
+    _Operation('Gate erstellen', 'Content Gate für sensible Inhalte anlegen.', 'POST', ApiContract.maturityGates, Icons.lock_outlined),
     _Operation('Gate aktualisieren', 'Gate-Regeln bearbeiten.', 'PUT', ApiContract.maturityGate(1), Icons.edit_outlined),
-    _Operation('Gate loeschen', 'Content Gate entfernen.', 'DELETE', ApiContract.maturityGate(1), Icons.delete_outline, danger: true),
+    _Operation('Gate löschen', 'Content Gate entfernen.', 'DELETE', ApiContract.maturityGate(1), Icons.delete_outline, danger: true),
   ];
 
   static final _reportOps = <_Operation>[
     _Operation('Community melden', 'Problematische Verbindung oder Einladung melden.', 'POST', ApiContract.friendReport(1), Icons.report_outlined, danger: true),
     _Operation('Fahrt melden', 'Fahrgemeinschaft wegen Sicherheit oder Verhalten melden.', 'POST', ApiContract.carpoolReport(1), Icons.warning_amber_outlined, danger: true),
-    _Operation('Safety Fall pruefen', 'Meldung fuer Admin-Moderation vorbereiten.', 'GET', ApiContract.maturitySafety, Icons.fact_check_outlined),
+    _Operation('Safety Fall prüfen', 'Meldung für Admin-Moderation vorbereiten.', 'GET', ApiContract.maturitySafety, Icons.fact_check_outlined),
   ];
 }
 
@@ -327,7 +327,7 @@ class _OperationSheet extends StatelessWidget {
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(color: _SafetyCommunityOperationsScreenState._bg, borderRadius: BorderRadius.circular(18), border: Border.all(color: _SafetyCommunityOperationsScreenState._border)),
                 child: const Text(
-                  'Backend-Anbindung folgt ueber den Laravel API-Client. Diese Flutter-UI bildet den kompletten Prozess bereits nativ ab.',
+                  'Backend-Anbindung folgt über den Laravel API-Client. Diese Flutter-UI bildet den kompletten Prozess bereits nativ ab.',
                   style: TextStyle(color: _SafetyCommunityOperationsScreenState._muted, fontWeight: FontWeight.w700),
                 ),
               ),

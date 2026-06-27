@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -21,9 +21,9 @@ class _AdminProviderContractsScreenState extends State<AdminProviderContractsScr
 
   final List<_ProviderItem> _items = const [
     _ProviderItem(title: 'Mail Provider', body: 'SMTP, Transaktionsmails, Zustellstatus und monatliche Versandkosten.', status: 'Aktiv', amount: '39 EUR / Monat', icon: Icons.mark_email_read_outlined, color: AirmiusColors.blue),
-    _ProviderItem(title: 'Payment Provider', body: 'Zahlungsgebuehren, Banktransfer, SEPA-Hinweise und Providerabrechnung.', status: 'Pruefen', amount: '2.9% + Gebuehr', icon: Icons.payments_outlined, color: AirmiusColors.green),
+    _ProviderItem(title: 'Payment Provider', body: 'Zahlungsgebuehren, Banktransfer, SEPA-Hinweise und Providerabrechnung.', status: 'Prüfen', amount: '2.9% + Gebuehr', icon: Icons.payments_outlined, color: AirmiusColors.green),
     _ProviderItem(title: 'Storage & Dateien', body: 'Dateimanager, Uploads, Dokumente, Backups und Speicherlimit.', status: 'Aktiv', amount: '120 GB', icon: Icons.cloud_outlined, color: AirmiusColors.amber),
-    _ProviderItem(title: 'Operating Contract', body: 'Betriebsvertrag, SLA, Supportfenster, Laufzeit und Kuendigungsfrist.', status: 'Vertrag', amount: '12 Monate', icon: Icons.assignment_outlined, color: AirmiusColors.blueDeep),
+    _ProviderItem(title: 'Operating Contract', body: 'Betriebsvertrag, SLA, Supportfenster, Laufzeit und Kündigungsfrist.', status: 'Vertrag', amount: '12 Monate', icon: Icons.assignment_outlined, color: AirmiusColors.blueDeep),
     _ProviderItem(title: 'Security Monitoring', body: 'Logs, Warnungen, Moderation, Datenschutz und Incident-Prozesse.', status: 'Sensibel', amount: '24/7', icon: Icons.security_outlined, color: AirmiusColors.red),
   ];
 
@@ -43,17 +43,17 @@ class _AdminProviderContractsScreenState extends State<AdminProviderContractsScr
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const PageTitle(title: 'Providerkosten & Betriebsvertraege', subtitle: 'Kosten, Provider, SLA, Laufzeiten, Risiken, VerlÃ¤ngerungen und Plattformbetrieb.'),
+                        const PageTitle(title: 'Providerkosten & Betriebsverträge', subtitle: 'Kosten, Provider, SLA, Laufzeiten, Risiken, Verlängerungen und Plattformbetrieb.'),
                         const SizedBox(height: 16),
                         _ContractsHero(onExport: () => _toast('Kostenexport vorbereitet')),
                         const SizedBox(height: 16),
-                        _ChoicePanel(title: 'Ansicht', value: _view, values: const ['Kosten', 'Vertraege', 'Risiken', 'Renewals'], onChanged: (value) => setState(() => _view = value)),
+                        _ChoicePanel(title: 'Ansicht', value: _view, values: const ['Kosten', 'Verträge', 'Risiken', 'Renewals'], onChanged: (value) => setState(() => _view = value)),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Filter',
                           child: Column(
                             children: [
-                              _SwitchRow(title: 'Betriebsvertraege anzeigen', subtitle: 'SLA, Laufzeit, Kuendigung und Verantwortliche.', value: _showContracts, onChanged: (value) => setState(() => _showContracts = value)),
+                              _SwitchRow(title: 'Betriebsverträge anzeigen', subtitle: 'SLA, Laufzeit, Kündigung und Verantwortliche.', value: _showContracts, onChanged: (value) => setState(() => _showContracts = value)),
                               _SwitchRow(title: 'Providerkosten anzeigen', subtitle: 'Monatliche Kosten, Volumen, Gebuehren und Kostenstellen.', value: _showProviderCosts, onChanged: (value) => setState(() => _showProviderCosts = value)),
                               _SwitchRow(title: 'Verlaengerungen anzeigen', subtitle: 'Renewals, Fristen und naechste Entscheidung.', value: _showRenewals, onChanged: (value) => setState(() => _showRenewals = value)),
                               _SwitchRow(title: 'Risiken anzeigen', subtitle: 'Sicherheits-, Datenschutz-, Kosten- und Betriebsrisiken.', value: _showRisks, onChanged: (value) => setState(() => _showRisks = value)),
@@ -115,12 +115,12 @@ class _ContractsHero extends StatelessWidget {
             children: [
               const AirmiusLogo(size: 42),
               const SizedBox(width: 12),
-              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Eyebrow('PLATTFORMBETRIEB'), SizedBox(height: 4), Text('Kosten und VertrÃ¤ge im Blick', style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900))])),
+              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Eyebrow('PLATTFORMBETRIEB'), SizedBox(height: 4), Text('Kosten und Verträge im Blick', style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900))])),
               AirmiusButton(label: 'Export', icon: Icons.download_outlined, onPressed: onExport),
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Admin-UI fuer die Webmodule OperatingContracts und ProviderCosts: Kosten, Provider, Laufzeiten, SLA und Risiken werden mobil vorbereitet.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          const Text('Admin-UI für die Webmodule OperatingContracts und ProviderCosts: Kosten, Provider, Laufzeiten, SLA und Risiken werden mobil vorbereitet.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           const Row(children: [Expanded(child: MetricCard(value: '5', label: 'Provider')), SizedBox(width: 10), Expanded(child: MetricCard(value: '12', label: 'Monate')), SizedBox(width: 10), Expanded(child: MetricCard(value: '4', label: 'Risiken'))]),
         ],

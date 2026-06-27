@@ -35,7 +35,7 @@ class _ContentOperationsScreenState extends State<ContentOperationsScreen> {
                 children: [
                   const Eyebrow('Redaktion & Public Content'),
                   const SizedBox(height: 8),
-                  const Text('Mobile Admin-UI fuer Content-Funktionen aus der Web-App: Kategorien, Bilduploads, Vorschau, Medienvisuals, Kursqualitaet und Sponsorenverwaltung.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  const Text('Mobile Admin-UI für Content-Funktionen aus der Web-App: Kategorien, Bilduploads, Vorschau, Medienvisuals, Kursqualitaet und Sponsorenverwaltung.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 8,
@@ -64,7 +64,7 @@ class _ContentOperationsScreenState extends State<ContentOperationsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Eyebrow('Freigaberegeln'),
-                  SwitchListTile(value: _publicPreview, onChanged: (value) => setState(() => _publicPreview = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Public Preview aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Artikel, Kurs und Sponsor werden vor Veroeffentlichung als Vorschau angezeigt.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _publicPreview, onChanged: (value) => setState(() => _publicPreview = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Public Preview aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Artikel, Kurs und Sponsor werden vor Veröffentlichung als Vorschau angezeigt.', style: TextStyle(color: AirmiusColors.muted))),
                   SwitchListTile(value: _qualityGate, onChanged: (value) => setState(() => _qualityGate = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Qualitaetsfreigabe erforderlich', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Learning, Medien und Public-Inhalte brauchen Review/Audit.', style: TextStyle(color: AirmiusColors.muted))),
                 ],
               ),
@@ -118,7 +118,7 @@ class _ContentOperationCard extends StatelessWidget {
             runSpacing: 10,
             children: [
               AirmiusButton(label: item.action, icon: item.icon, danger: item.danger, secondary: !item.danger, onPressed: () => _run(context, item)),
-              AirmiusButton(label: 'Preview', icon: Icons.visibility_outlined, secondary: true, onPressed: () => openUiAction(context, title: '${item.title} Preview', body: 'Mobile Vorschau, Public-Sichtbarkeit, Sprache und Freigabestatus fuer ${item.title} anzeigen.', status: 'Preview', icon: Icons.visibility_outlined)),
+              AirmiusButton(label: 'Preview', icon: Icons.visibility_outlined, secondary: true, onPressed: () => openUiAction(context, title: '${item.title} Preview', body: 'Mobile Vorschau, Public-Sichtbarkeit, Sprache und Freigabestatus für ${item.title} anzeigen.', status: 'Preview', icon: Icons.visibility_outlined)),
             ],
           ),
         ],
@@ -129,7 +129,7 @@ class _ContentOperationCard extends StatelessWidget {
   void _run(BuildContext context, _ContentOperation item) {
     final action = () => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
     if (item.danger) {
-      confirmDanger(context, '${item.action}?', 'Diese Content-Aktion kann Public-Inhalte entfernen oder Sichtbarkeit aendern.', item.action, action);
+      confirmDanger(context, '${item.action}?', 'Diese Content-Aktion kann Public-Inhalte entfernen oder Sichtbarkeit ändern.', item.action, action);
       return;
     }
     action();
@@ -151,14 +151,14 @@ class _ContentOperation {
 const _items = [
   _ContentOperation(area: 'Blog', title: 'Blog-Kategorie erstellen', body: 'Kategorie, Slug, Beschreibung, Sprache und Public-Sichtbarkeit anlegen.', status: 'Category', icon: Icons.category_outlined, action: 'Kategorie speichern'),
   _ContentOperation(area: 'Blog', title: 'Blog-Kategorie bearbeiten', body: 'Name, Slug, Reihenfolge und Sichtbarkeit aktualisieren.', status: 'Category', icon: Icons.edit_note_outlined, action: 'Kategorie aktualisieren'),
-  _ContentOperation(area: 'Blog', title: 'Blog-Kategorie loeschen', body: 'Kategorie entfernen oder Inhalte in eine andere Kategorie verschieben.', status: 'Delete', icon: Icons.delete_outline, action: 'Kategorie loeschen', danger: true),
-  _ContentOperation(area: 'Blog', title: 'Content-Bild hochladen', body: 'Inline-Bild fuer Artikel hochladen, Alt-Text und Rechtehinweis speichern.', status: 'Image', icon: Icons.cloud_upload_outlined, action: 'Bild hochladen'),
-  _ContentOperation(area: 'Blog', title: 'Artikelvorschau', body: 'Public Preview fuer Artikel vor Veroeffentlichung anzeigen.', status: 'Preview', icon: Icons.visibility_outlined, action: 'Vorschau oeffnen'),
+  _ContentOperation(area: 'Blog', title: 'Blog-Kategorie löschen', body: 'Kategorie entfernen oder Inhalte in eine andere Kategorie verschieben.', status: 'Delete', icon: Icons.delete_outline, action: 'Kategorie löschen', danger: true),
+  _ContentOperation(area: 'Blog', title: 'Content-Bild hochladen', body: 'Inline-Bild für Artikel hochladen, Alt-Text und Rechtehinweis speichern.', status: 'Image', icon: Icons.cloud_upload_outlined, action: 'Bild hochladen'),
+  _ContentOperation(area: 'Blog', title: 'Artikelvorschau', body: 'Public Preview für Artikel vor Veröffentlichung anzeigen.', status: 'Preview', icon: Icons.visibility_outlined, action: 'Vorschau öffnen'),
   _ContentOperation(area: 'Medien', title: 'Media Visuals aktualisieren', body: 'Bildrechte, Upload-Regeln, Public-Visuals und Richtlinienbanner speichern.', status: 'Visuals', icon: Icons.image_outlined, action: 'Visuals speichern'),
-  _ContentOperation(area: 'Medien', title: 'Medienrichtlinie pruefen', body: 'Guardian Consent, Datenschutz, Sichtbarkeit und Altersfreigabe fuer Medien kontrollieren.', status: 'Policy', icon: Icons.policy_outlined, action: 'Richtlinie speichern'),
-  _ContentOperation(area: 'Learning', title: 'Learning Quality freigeben', body: 'Kursqualitaet, Lektionen, Aufgaben, Quiz und Zertifikat pruefen.', status: 'Quality', icon: Icons.school_outlined, action: 'Qualitaet speichern'),
-  _ContentOperation(area: 'Learning', title: 'Kurszertifikat pruefen', body: 'Zertifikatslogik, Gueltigkeit, Code und Public-Verifizierung kontrollieren.', status: 'Certificate', icon: Icons.verified_outlined, action: 'Zertifikat pruefen'),
+  _ContentOperation(area: 'Medien', title: 'Medienrichtlinie prüfen', body: 'Guardian Consent, Datenschutz, Sichtbarkeit und Altersfreigabe für Medien kontrollieren.', status: 'Policy', icon: Icons.policy_outlined, action: 'Richtlinie speichern'),
+  _ContentOperation(area: 'Learning', title: 'Learning Quality freigeben', body: 'Kursqualitaet, Lektionen, Aufgaben, Quiz und Zertifikat prüfen.', status: 'Quality', icon: Icons.school_outlined, action: 'Qualitaet speichern'),
+  _ContentOperation(area: 'Learning', title: 'Kurszertifikat prüfen', body: 'Zertifikatslogik, Gültigkeit, Code und Public-Verifizierung kontrollieren.', status: 'Certificate', icon: Icons.verified_outlined, action: 'Zertifikat prüfen'),
   _ContentOperation(area: 'Sponsoren', title: 'Sponsor erstellen', body: 'Sponsorprofil, Logo, Paket, Kontakt und Public-Sichtbarkeit anlegen.', status: 'Sponsor', icon: Icons.handshake_outlined, action: 'Sponsor speichern'),
   _ContentOperation(area: 'Sponsoren', title: 'Sponsor bearbeiten', body: 'Paket, Kampagne, Reporting, Kontaktstatus und Sichtbarkeit aktualisieren.', status: 'Sponsor', icon: Icons.campaign_outlined, action: 'Sponsor aktualisieren'),
-  _ContentOperation(area: 'Sponsoren', title: 'Sponsor loeschen', body: 'Sponsorprofil entfernen oder archivieren und Public-Sichtbarkeit stoppen.', status: 'Delete', icon: Icons.delete_forever_outlined, action: 'Sponsor loeschen', danger: true),
+  _ContentOperation(area: 'Sponsoren', title: 'Sponsor löschen', body: 'Sponsorprofil entfernen oder archivieren und Public-Sichtbarkeit stoppen.', status: 'Delete', icon: Icons.delete_forever_outlined, action: 'Sponsor löschen', danger: true),
 ];

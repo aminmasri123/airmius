@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
@@ -56,7 +56,7 @@ class ModuleSpecificSection extends StatelessWidget {
       'Events' => const _EventsSection(),
       'Events & Training' => const _TrainingSection(),
       'Trainer-Cockpit' => const _TrainerCockpitSection(),
-      'Ernaehrung' => const _NutritionSection(),
+      'Ernährung' => const _NutritionSection(),
       'Sportkarte' => const _SportMapSection(),
       'Freunde' => const _FriendsSection(),
       'Nachrichten' => const _ChatSection(),
@@ -93,12 +93,12 @@ class _WorkspaceSection extends StatelessWidget {
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.dashboard_customize_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Arbeitsbereiche oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Gastseite, Dashboard, Vereinsbereich, Trainerbereich, Rollen und Einladungen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Arbeitsbereiche öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Gastseite, Dashboard, Vereinsbereich, Trainerbereich, Rollen und Einladungen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
-      const _WideStatus(title: 'Gastseite', body: 'Oeffentliche Ansicht, Vorschau und externe Links.', icon: Icons.open_in_new),
-      const _WideStatus(title: 'Vereinsbereich', body: 'Admin-Rollen, Teams, Mitglieder, Beitraege und Vereinsprofil.', icon: Icons.apartment_outlined),
+      const _WideStatus(title: 'Gastseite', body: 'Öffentliche Ansicht, Vorschau und externe Links.', icon: Icons.open_in_new),
+      const _WideStatus(title: 'Vereinsbereich', body: 'Admin-Rollen, Teams, Mitglieder, Beiträge und Vereinsprofil.', icon: Icons.apartment_outlined),
       const _WideStatus(title: 'Trainerbereich', body: 'Trainingsplaene, Feedback, Teilnehmer und Termine.', icon: Icons.sports_outlined),
     ]);
   }
@@ -115,13 +115,13 @@ class _ClubCockpitSection extends StatelessWidget {
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.apartment_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Vereins-Cockpit oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Profil, Teams, Mitglieder, Beitraege, Dokumente und Sichtbarkeit verwalten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Vereins-Cockpit öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Profil, Teams, Mitglieder, Beiträge, Dokumente und Sichtbarkeit verwalten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
-      const _ListLine(icon: Icons.assignment_ind_outlined, title: 'Mitgliedschaftsanfrage', body: 'Formular, Dokumente und Zahlung pruefen.', trailing: 'Offen'),
+      const _ListLine(icon: Icons.assignment_ind_outlined, title: 'Mitgliedschaftsanfrage', body: 'Formular, Dokumente und Zahlung prüfen.', trailing: 'Offen'),
       const _ListLine(icon: Icons.folder_outlined, title: 'Vereinsdokumente', body: 'Datenschutz, Beitragsordnung und Regeln verknuepfen.', trailing: '3'),
-      const _WideStatus(title: 'Public Sichtbarkeit', body: 'Vereinsprofil, Teams und sichtbare Beitraege fuer Gastseite steuern.', icon: Icons.visibility_outlined),
+      const _WideStatus(title: 'Public Sichtbarkeit', body: 'Vereinsprofil, Teams und sichtbare Beiträge für Gastseite steuern.', icon: Icons.visibility_outlined),
     ]);
   }
 }
@@ -146,7 +146,7 @@ class _ClubTeamSection extends StatelessWidget {
               const Text('Noch keine offenen Vereinsanfragen.', style: TextStyle(color: AirmiusColors.muted)),
             for (final club in requested) ...[
               _ListLine(icon: Icons.pending_actions_outlined, title: club.name, body: '${club.city} - Anfrage gesendet', trailing: 'Offen'),
-              AirmiusButton(label: 'Zurueckziehen', icon: Icons.undo_outlined, danger: true, onPressed: onWithdrawClub == null ? null : () => onWithdrawClub!(club)),
+              AirmiusButton(label: 'Zurückziehen', icon: Icons.undo_outlined, danger: true, onPressed: onWithdrawClub == null ? null : () => onWithdrawClub!(club)),
             ],
           ],
         ),
@@ -188,7 +188,7 @@ class _FeedSection extends StatelessWidget {
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.dynamic_feed_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Echten Feed oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('API-Feed mit echten Beitraegen, Storys, Kommentaren und Reaktionen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Echten Feed öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('API-Feed mit echten Beiträgen, Storys, Kommentaren und Reaktionen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
@@ -197,11 +197,11 @@ class _FeedSection extends StatelessWidget {
         child: const Row(children: [
           CircleAvatar(radius: 26, backgroundColor: AirmiusColors.blue, child: Icon(Icons.add, color: Colors.white)),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Story oder Beitrag erstellen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Keine Fake-Storys: Erstellen laeuft ueber den echten Feed und die Laravel-API.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Story oder Beitrag erstellen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Keine Fake-Storys: Erstellen läuft über den echten Feed und die Laravel-API.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
-      const _WideStatus(title: 'Feed-Daten', body: 'Dieser Modulbereich zeigt keine Demo-Posts mehr. Oeffne den Feed fuer echte API-Daten.', icon: Icons.verified_outlined),
+      const _WideStatus(title: 'Feed-Daten', body: 'Dieser Modulbereich zeigt keine Demo-Posts mehr. Öffne den Feed für echte API-Daten.', icon: Icons.verified_outlined),
     ]);
   }
 }
@@ -217,7 +217,7 @@ class _EventsSection extends StatelessWidget {
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.event_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Eventverwaltung oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Kalender, Teilnahme, Warteliste, Eventchat, Kommentare und Erinnerungen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Eventverwaltung öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Kalender, Teilnahme, Warteliste, Eventchat, Kommentare und Erinnerungen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
@@ -239,7 +239,7 @@ class _TeamsSection extends StatelessWidget {
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.groups_2_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Teams Center oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Teamprofile, Kader, Rollen, Einladungen, Beitritte, Kalender und Teamchat.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Teams Center öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Teamprofile, Kader, Rollen, Einladungen, Beitritte, Kalender und Teamchat.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
@@ -262,13 +262,13 @@ class _RolesPermissionsSection extends StatelessWidget {
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.admin_panel_settings_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Rollen & Rechte oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Rollenmatrix, Permissions, Sicherheitsregeln und Audit Trail verwalten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Rollen & Rechte öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Rollenmatrix, Permissions, Sicherheitsregeln und Audit Trail verwalten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
       const _ListLine(icon: Icons.lock_open_outlined, title: 'Berechtigungen', body: 'Lesen, erstellen, bearbeiten, freigeben, exportieren und moderieren.', trailing: '42'),
       const _ListLine(icon: Icons.security_outlined, title: 'Sicherheitsregeln', body: 'Jugendschutz, sensible Daten und Finanzrechte getrennt absichern.', trailing: 'Sicher'),
-      const _WideStatus(title: 'Audit Trail', body: 'Aenderungen an Rollen und Rechten nachvollziehbar anzeigen.', icon: Icons.history_outlined),
+      const _WideStatus(title: 'Audit Trail', body: 'Änderungen an Rollen und Rechten nachvollziehbar anzeigen.', icon: Icons.history_outlined),
     ]);
   }
 }
@@ -284,7 +284,7 @@ class _SportsSection extends StatelessWidget {
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.sports_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Sportarten Center oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Sportprofile, Disziplinen, Leistungsdaten, Ziele und KI-Plan-Voraussetzungen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Sportarten Center öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Sportprofile, Disziplinen, Leistungsdaten, Ziele und KI-Plan-Voraussetzungen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
@@ -308,7 +308,7 @@ class _TrainingSection extends StatelessWidget {
           children: [
             Icon(Icons.event_available_outlined, color: AirmiusColors.blue, size: 26),
             SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Events & Training oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Kalender, Liste, Filter, Eventdetails und Rueckmeldung wie in der Web-App.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Events & Training öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Kalender, Liste, Filter, Eventdetails und Rückmeldung wie in der Web-App.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
             Icon(Icons.chevron_right, color: AirmiusColors.muted),
           ],
         ),
@@ -330,13 +330,13 @@ class _TrainerCockpitSection extends StatelessWidget {
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.sports_score_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Trainer-Cockpit oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Athleten, Wochenaktionen, Feedback und Belastungsrisiken.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Trainer-Cockpit öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Athleten, Wochenaktionen, Feedback und Belastungsrisiken.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
       const _ListLine(icon: Icons.rate_review_outlined, title: 'Feedback offen', body: '2 Trainingseinheiten warten auf Antwort.', trailing: '2'),
-      const _ListLine(icon: Icons.warning_amber_outlined, title: 'Risiko-Athlet', body: 'Hohe Belastung und wenig Regeneration.', trailing: 'Pruefen'),
-      const _WideStatus(title: 'Wochenplan freigeben', body: 'Trainingsplan pruefen, duplizieren und fuer Teams sichtbar machen.', icon: Icons.calendar_month_outlined),
+      const _ListLine(icon: Icons.warning_amber_outlined, title: 'Risiko-Athlet', body: 'Hohe Belastung und wenig Regeneration.', trailing: 'Prüfen'),
+      const _WideStatus(title: 'Wochenplan freigeben', body: 'Trainingsplan prüfen, duplizieren und für Teams sichtbar machen.', icon: Icons.calendar_month_outlined),
     ]);
   }
 }
@@ -353,7 +353,7 @@ class _NutritionSection extends StatelessWidget {
           children: [
             Icon(Icons.restaurant_menu_outlined, color: AirmiusColors.blue, size: 26),
             SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Ernaehrungscenter oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Makros, Mahlzeiten, Wasser, Barcode und KI-Analyse.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Ernährungscenter öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Makros, Mahlzeiten, Wasser, Barcode und KI-Analyse.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
             Icon(Icons.chevron_right, color: AirmiusColors.muted),
           ],
         ),
@@ -379,7 +379,7 @@ class _SportMapSection extends StatelessWidget {
           children: [
             Icon(Icons.map_outlined, color: AirmiusColors.blue, size: 26),
             SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Sportkarte oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Routen, Tracks, Orte, Live Track und Vorschlaege.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Sportkarte öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Routen, Tracks, Orte, Live Track und Vorschläge.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
             Icon(Icons.chevron_right, color: AirmiusColors.muted),
           ],
         ),
@@ -395,9 +395,9 @@ class _SportMapSection extends StatelessWidget {
           child: const Center(child: Icon(Icons.map_outlined, color: AirmiusColors.text, size: 56)),
         ),
       ),
-      const _ListLine(icon: Icons.route_outlined, title: 'Saar Runde', body: '8.4 km - oeffentlich', trailing: 'Route'),
+      const _ListLine(icon: Icons.route_outlined, title: 'Saar Runde', body: '8.4 km - öffentlich', trailing: 'Route'),
       const _ListLine(icon: Icons.place_outlined, title: 'Sportplatz Kleinblittersdorf', body: 'Trainingsort - Verein', trailing: 'Ort'),
-      const _ListLine(icon: Icons.gps_fixed, title: 'Live Track', body: 'Track starten, Punkte speichern und abschliessen.', trailing: 'Neu'),
+      const _ListLine(icon: Icons.gps_fixed, title: 'Live Track', body: 'Track starten, Punkte speichern und abschließen.', trailing: 'Neu'),
     ]);
   }
 }
@@ -413,13 +413,13 @@ class _FriendsSection extends StatelessWidget {
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.people_alt_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Community Center oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Freunde, Einladungen, Empfehlungen und gemeinsame Vereine.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Community Center öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Freunde, Einladungen, Empfehlungen und gemeinsame Vereine.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
       const _ListLine(icon: Icons.person_add_alt, title: 'Freundschaftsanfrage', body: 'Max Mustermann moechte sich verbinden.', trailing: 'Offen'),
       const _ListLine(icon: Icons.recommend_outlined, title: 'Empfehlung', body: 'Gemeinsamer Verein: Airmius Running Club', trailing: 'Match'),
-      const _WideStatus(title: 'Einladungslink', body: 'Freunde koennen per Token-Link eingeladen werden.', icon: Icons.link_outlined),
+      const _WideStatus(title: 'Einladungslink', body: 'Freunde können per Token-Link eingeladen werden.', icon: Icons.link_outlined),
     ]);
   }
 }
@@ -431,7 +431,7 @@ class _ChatSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return const _StackedPanels(children: [
       _ListLine(icon: Icons.chat_bubble_outline, title: 'ZBB Admins', body: 'Neue Mitgliedschaftsanfrage eingegangen.', trailing: 'Jetzt'),
-      _ListLine(icon: Icons.group_outlined, title: 'Training Gruppe', body: 'Bitte morgen Laufschuhe fuer Bahn mitbringen.', trailing: '2'),
+      _ListLine(icon: Icons.group_outlined, title: 'Training Gruppe', body: 'Bitte morgen Laufschuhe für Bahn mitbringen.', trailing: '2'),
       _MessageComposer(),
     ]);
   }
@@ -449,13 +449,13 @@ class _CarpoolSection extends StatelessWidget {
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.directions_car_filled_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Fahrgemeinschaften oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Mitfahrten, Routen, Treffpunkte und Sicherheit verwalten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Fahrgemeinschaften öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Mitfahrten, Routen, Treffpunkte und Sicherheit verwalten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
       const _ListLine(icon: Icons.directions_car_filled_outlined, title: 'Zum Training fahren', body: '2 freie Plaetze - Heute 18:00', trailing: 'Angebot'),
-      const _ListLine(icon: Icons.account_circle_outlined, title: 'Mitfahrt gesucht', body: 'Saarbruecken Hbf -> ZBB', trailing: 'Gesuch'),
-      const _WideStatus(title: 'Sicherheit & Treffpunkte', body: 'Freigaben, Sichtbarkeit und Meldungen fuer sichere Fahrten.', icon: Icons.verified_user_outlined),
+      const _ListLine(icon: Icons.account_circle_outlined, title: 'Mitfahrt gesucht', body: 'Saarbrücken Hbf -> ZBB', trailing: 'Gesuch'),
+      const _WideStatus(title: 'Sicherheit & Treffpunkte', body: 'Freigaben, Sichtbarkeit und Meldungen für sichere Fahrten.', icon: Icons.verified_user_outlined),
     ]);
   }
 }
@@ -476,7 +476,7 @@ class _FilesSection extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Dateimanager oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                  Text('Dateimanager öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
                   SizedBox(height: 4),
                   Text('Ordner, Uploads, Freigaben und Vereinsdokumente verwalten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                 ],
@@ -488,7 +488,7 @@ class _FilesSection extends StatelessWidget {
       ),
       const _ListLine(icon: Icons.folder_outlined, title: 'Vereinsdokumente', body: 'Datenschutz, Regeln, Beitragsordnung', trailing: '3'),
       const _ListLine(icon: Icons.picture_as_pdf_outlined, title: 'Datenschutz.pdf', body: 'Verknuepft mit Mitgliedsantrag', trailing: 'Pflicht'),
-      const _ListLine(icon: Icons.description_outlined, title: 'Beitragsordnung.docx', body: 'Sichtbar fuer Antragsteller', trailing: 'Pflicht'),
+      const _ListLine(icon: Icons.description_outlined, title: 'Beitragsordnung.docx', body: 'Sichtbar für Antragsteller', trailing: 'Pflicht'),
     ]);
   }
 }
@@ -504,7 +504,7 @@ class _BadgesSection extends StatelessWidget {
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.workspace_premium_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Badges Center oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Gamification, Fortschritt, Regeln und Auszeichnungen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Badges Center öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Gamification, Fortschritt, Regeln und Auszeichnungen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
@@ -525,12 +525,12 @@ class _GamificationRulesSection extends StatelessWidget {
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.rule_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Gamification-Regeln oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('XP, Badges, Streaks, Leaderboard und Datenschutzregeln verwalten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Gamification-Regeln öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('XP, Badges, Streaks, Leaderboard und Datenschutzregeln verwalten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
       const _ListLine(icon: Icons.workspace_premium_outlined, title: 'Vereinsstarter', body: 'Badge nach erster angenommenen Vereinsmitgliedschaft.', trailing: 'Aktiv'),
-      const _ListLine(icon: Icons.local_fire_department_outlined, title: 'Trainings-Streak', body: 'XP fuer dokumentierte Trainingstage in Folge.', trailing: 'XP'),
+      const _ListLine(icon: Icons.local_fire_department_outlined, title: 'Trainings-Streak', body: 'XP für dokumentierte Trainingstage in Folge.', trailing: 'XP'),
       const _WideStatus(title: 'Leaderboard Datenschutz', body: 'Anzeige nur mit Opt-in und passender Profil-Sichtbarkeit.', icon: Icons.leaderboard_outlined),
     ]);
   }
@@ -553,7 +553,7 @@ class _CoursesSection extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Learning Center oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                  Text('Learning Center öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
                   SizedBox(height: 4),
                   Text('Kurse, Lektionen, Zertifikate und Lernstudio verwalten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                 ],
@@ -563,9 +563,9 @@ class _CoursesSection extends StatelessWidget {
           ],
         ),
       ),
-      const _ListLine(icon: Icons.play_circle_outline, title: 'Grundlagen Vereinsverwaltung', body: '4 Lektionen - Zertifikat moeglich', trailing: 'Kurs'),
+      const _ListLine(icon: Icons.play_circle_outline, title: 'Grundlagen Vereinsverwaltung', body: '4 Lektionen - Zertifikat möglich', trailing: 'Kurs'),
       const _ListLine(icon: Icons.assignment_turned_in_outlined, title: 'Datenschutz im Sportverein', body: 'Quiz und Abschlussbescheinigung', trailing: '72%'),
-      const _WideStatus(title: 'Lernstudio', body: 'Trainer und Admins koennen Kurse, Lektionen und Aufgaben verwalten.', icon: Icons.school_outlined),
+      const _WideStatus(title: 'Lernstudio', body: 'Trainer und Admins können Kurse, Lektionen und Aufgaben verwalten.', icon: Icons.school_outlined),
     ]);
   }
 }
@@ -587,9 +587,9 @@ class _MarketplaceSection extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Marketplace oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                  Text('Marketplace öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
                   SizedBox(height: 4),
-                  Text('Produkte, Anbieter, Warenkorb, Bestellungen und Rueckgaben.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  Text('Produkte, Anbieter, Warenkorb, Bestellungen und Rückgaben.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                 ],
               ),
             ),
@@ -599,7 +599,7 @@ class _MarketplaceSection extends StatelessWidget {
       ),
       const _ListLine(icon: Icons.shopping_bag_outlined, title: 'Airmius Teamshirt', body: 'Groessen, Bestand und Varianten', trailing: '29,90'),
       const _ListLine(icon: Icons.receipt_long_outlined, title: 'Bestellung #A-1024', body: 'Bezahlt - Versand wird vorbereitet', trailing: 'Order'),
-      const _WideStatus(title: 'Anbieterprofil', body: 'Vereine und Partner koennen Produkte und Services anbieten.', icon: Icons.storefront_outlined),
+      const _WideStatus(title: 'Anbieterprofil', body: 'Vereine und Partner können Produkte und Services anbieten.', icon: Icons.storefront_outlined),
     ]);
   }
 }
@@ -615,12 +615,12 @@ class _CommerceSection extends StatelessWidget {
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.store_mall_directory_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Commerce Center oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Produkte, Orders, Coupons, Inventar, Payouts und Qualitaetsfreigaben.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Commerce Center öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Produkte, Orders, Coupons, Inventar, Payouts und Qualitaetsfreigaben.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
       const _ListLine(icon: Icons.receipt_long_outlined, title: 'Bestellung #A-1024', body: 'Bezahlt, Versand wird vorbereitet.', trailing: 'Order'),
-      const _ListLine(icon: Icons.inventory_2_outlined, title: 'Produktqualitaet', body: 'Bilder, Beschreibung, Varianten und Fulfillment pruefen.', trailing: 'Gate'),
+      const _ListLine(icon: Icons.inventory_2_outlined, title: 'Produktqualitaet', body: 'Bilder, Beschreibung, Varianten und Fulfillment prüfen.', trailing: 'Gate'),
       const _WideStatus(title: 'Payouts & Coupons', body: 'Auszahlungen, Rabatte, Anbieterabrechnung und Shop-Regeln verwalten.', icon: Icons.payments_outlined),
     ]);
   }
@@ -637,13 +637,13 @@ class _SponsorsSection extends StatelessWidget {
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.handshake_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Sponsoren Center oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Sponsorprofile, Pakete, Kampagnen, Kontaktanfragen und Sichtbarkeit.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Sponsoren Center öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Sponsorprofile, Pakete, Kampagnen, Kontaktanfragen und Sichtbarkeit.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
       const _ListLine(icon: Icons.campaign_outlined, title: 'Sponsoring-Kampagne', body: 'Banner, Laufzeit, Zielgruppe und Reporting.', trailing: 'Aktiv'),
       const _ListLine(icon: Icons.inventory_2_outlined, title: 'Sponsor-Paket', body: 'Leistung, Preis, Reichweite und Verknuepfung mit Verein.', trailing: 'Paket'),
-      const _WideStatus(title: 'Kontaktanfrage', body: 'Interessenten koennen Sponsoren und Vereine direkt kontaktieren.', icon: Icons.contact_mail_outlined),
+      const _WideStatus(title: 'Kontaktanfrage', body: 'Interessenten können Sponsoren und Vereine direkt kontaktieren.', icon: Icons.contact_mail_outlined),
     ]);
   }
 }
@@ -659,11 +659,11 @@ class _MediaGuidelinesSection extends StatelessWidget {
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.policy_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Medienrichtlinien oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Bildrechte, Upload-Regeln, Guardian Consent, Sichtbarkeit und Moderation.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Medienrichtlinien öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Bildrechte, Upload-Regeln, Guardian Consent, Sichtbarkeit und Moderation.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
-      const _ListLine(icon: Icons.photo_library_outlined, title: 'Upload-Regeln', body: 'Dateitypen, Rechtehinweis und sensible Inhalte pruefen.', trailing: 'Aktiv'),
+      const _ListLine(icon: Icons.photo_library_outlined, title: 'Upload-Regeln', body: 'Dateitypen, Rechtehinweis und sensible Inhalte prüfen.', trailing: 'Aktiv'),
       const _ListLine(icon: Icons.family_restroom_outlined, title: 'Guardian Consent', body: 'Medien mit Minderjaehrigen nur mit Zustimmung anzeigen.', trailing: 'Pflicht'),
       const _WideStatus(title: 'Medienfreigabe', body: 'Public, Verein, Team oder Admin-Sichtbarkeit pro Medium festlegen.', icon: Icons.visibility_outlined),
     ]);
@@ -681,17 +681,17 @@ class _BlogMediaSection extends StatelessWidget {
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.article_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Blog & Medien Center oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Artikel, Redaktion, Medienbibliothek, Freigaben und Richtlinien verwalten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Blog & Medien Center öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Artikel, Redaktion, Medienbibliothek, Freigaben und Richtlinien verwalten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
-      const _ListLine(icon: Icons.edit_note_outlined, title: 'Artikel planen', body: 'Titel, Teaser, Inhalt, Tags, Autor und Veroeffentlichung.', trailing: 'Entwurf'),
+      const _ListLine(icon: Icons.edit_note_outlined, title: 'Artikel planen', body: 'Titel, Teaser, Inhalt, Tags, Autor und Veröffentlichung.', trailing: 'Entwurf'),
       AirmiusPanel(
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MediaGuidelinesScreen())),
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.policy_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Medienrichtlinien', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Upload-Regeln, Bildrechte, Altersfreigabe und Datenschutz oeffnen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Medienrichtlinien', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Upload-Regeln, Bildrechte, Altersfreigabe und Datenschutz öffnen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           StatusPill('Pflicht'),
           SizedBox(width: 6),
           Icon(Icons.chevron_right, color: AirmiusColors.muted, size: 20),
@@ -713,13 +713,13 @@ class _UsersSection extends StatelessWidget {
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.people_alt_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Nutzercenter oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Personen, Profile, Rollen, Status, Verbindungen und Moderation verwalten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Nutzercenter öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Personen, Profile, Rollen, Status, Verbindungen und Moderation verwalten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
       const _ListLine(icon: Icons.account_circle_outlined, title: 'ZBB Konto', body: 'Player - Profilvollstaendigkeit 82%', trailing: 'Aktiv'),
       const _ListLine(icon: Icons.verified_user_outlined, title: 'verein airmius', body: 'Admin - Vereinsbereich und Rollen aktiv.', trailing: 'Admin'),
-      const _WideStatus(title: 'Profilmoderation', body: 'Sperren, Entsperren, Verifizieren und Datenschutzstatus pruefen.', icon: Icons.gpp_maybe_outlined),
+      const _WideStatus(title: 'Profilmoderation', body: 'Sperren, Entsperren, Verifizieren und Datenschutzstatus prüfen.', icon: Icons.gpp_maybe_outlined),
     ]);
   }
 }
@@ -735,7 +735,7 @@ class _SettingsSection extends StatelessWidget {
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.settings_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Einstellungen oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Profil, Sprache, Datenschutz, Push, Sicherheit und Zahlungen konfigurieren.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Einstellungen öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Profil, Sprache, Datenschutz, Push, Sicherheit und Zahlungen konfigurieren.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
@@ -753,7 +753,7 @@ class _SubscriptionSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _PlatformOpenSection(
-      title: 'Abo- und Rechnungscenter oeffnen',
+      title: 'Abo- und Rechnungscenter öffnen',
       body: 'Plaene, Checkouts, offene Zahlungen, Rechnungen und Banktransfer.',
       icon: Icons.receipt_long_outlined,
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SubscriptionCenterScreen())),
@@ -767,7 +767,7 @@ class _GuardianSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _PlatformOpenSection(
-      title: 'Eltern- und Jugendschutzcenter oeffnen',
+      title: 'Eltern- und Jugendschutzcenter öffnen',
       body: 'Guardian Consent, Elternlogin, Kinderkonten und Widerruf.',
       icon: Icons.family_restroom_outlined,
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GuardianCenterScreen())),
@@ -781,7 +781,7 @@ class _MaturitySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _PlatformOpenSection(
-      title: 'Altersfreigaben oeffnen',
+      title: 'Altersfreigaben öffnen',
       body: 'Maturity, Content-Gates, Guardian-Freigaben, Altersgruppen und sichere Sichtbarkeit.',
       icon: Icons.visibility_off_outlined,
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MaturityCenterScreen())),
@@ -795,7 +795,7 @@ class _OutfitSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _PlatformOpenSection(
-      title: 'Outfit-Abo-Center oeffnen',
+      title: 'Outfit-Abo-Center öffnen',
       body: 'Style-Profil, Plaene, Lieferungen, Pause und Support-Faelle.',
       icon: Icons.checkroom_outlined,
       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OutfitSubscriptionCenterScreen())),
@@ -839,7 +839,7 @@ class _AdminSection extends StatelessWidget {
         child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Icon(Icons.admin_panel_settings_outlined, color: AirmiusColors.blue, size: 26),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Admin Center oeffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Nutzer, Rollen, Moderation, Billing, Commerce und System.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Admin Center öffnen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), SizedBox(height: 4), Text('Nutzer, Rollen, Moderation, Billing, Commerce und System.', style: TextStyle(color: AirmiusColors.muted, height: 1.35))])),
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
@@ -1008,7 +1008,7 @@ class _MessageComposer extends StatelessWidget {
         children: [
           const Expanded(child: AirmiusTextField(label: 'Nachricht', hint: 'Schreibe eine Nachricht...')),
           const SizedBox(width: 10),
-          AirmiusButton(label: 'Senden', icon: Icons.send_outlined, onPressed: () => openUiAction(context, title: 'Senden', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.send_outlined)),
+          AirmiusButton(label: 'Senden', icon: Icons.send_outlined, onPressed: () => openUiAction(context, title: 'Senden', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.send_outlined)),
         ],
       ),
     );

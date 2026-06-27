@@ -38,7 +38,7 @@ class _MarketplaceOrderFulfillmentSuiteScreenState extends State<MarketplaceOrde
         title: 'Sponsor Gutschein',
         status: 'Aktiv',
         price: 'Code',
-        body: 'Sponsorangebot mit Gueltigkeit, Clubbezug und Einloesehinweis.',
+        body: 'Sponsorangebot mit Gültigkeit, Clubbezug und Einloesehinweis.',
         color: AirmiusColors.amber,
       ),
     ];
@@ -57,7 +57,7 @@ class _MarketplaceOrderFulfillmentSuiteScreenState extends State<MarketplaceOrde
                 const SectionLabel('COMMERCE'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Die mobile App braucht eine Shop-Strecke fuer Clubartikel, Sponsorangebote, Warenkorb, Bestellungen, Abholung, Versand, Rueckgaben und Statusmeldungen.',
+                  'Die mobile App braucht eine Shop-Strecke für Clubartikel, Sponsorangebote, Warenkorb, Bestellungen, Abholung, Versand, Rückgaben und Statusmeldungen.',
                   style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 16),
@@ -100,7 +100,7 @@ class _MarketplaceOrderFulfillmentSuiteScreenState extends State<MarketplaceOrde
                 const SizedBox(height: 8),
                 _MarketplaceSwitch(title: 'Clubshop aktivieren', value: clubShopEnabled, color: AirmiusColors.green, onChanged: (value) => setState(() => clubShopEnabled = value)),
                 _MarketplaceSwitch(title: 'Sponsorangebote anzeigen', value: sponsorOffers, color: AirmiusColors.blue, onChanged: (value) => setState(() => sponsorOffers = value)),
-                _MarketplaceSwitch(title: 'Rueckgaben erlauben', value: allowReturns, color: AirmiusColors.amber, onChanged: (value) => setState(() => allowReturns = value)),
+                _MarketplaceSwitch(title: 'Rückgaben erlauben', value: allowReturns, color: AirmiusColors.amber, onChanged: (value) => setState(() => allowReturns = value)),
                 _MarketplaceSwitch(title: 'Statusbenachrichtigung', value: notifyOrderStatus, color: AirmiusColors.pink, onChanged: (value) => setState(() => notifyOrderStatus = value)),
               ],
             ),
@@ -117,7 +117,7 @@ class _MarketplaceOrderFulfillmentSuiteScreenState extends State<MarketplaceOrde
                 const SectionLabel('VORSCHAU'),
                 const SizedBox(height: 8),
                 Text(
-                  'Aktuelle Erfuellung: $fulfillment. Spaeter verbindet die API Produkte, Warenkorb, Zahlung, Rechnung, Bestellstatus, Abholung, Versand und Support.',
+                  'Aktuelle Erfuellung: $fulfillment. Später verbindet die API Produkte, Warenkorb, Zahlung, Rechnung, Bestellstatus, Abholung, Versand und Support.',
                   style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),
@@ -127,7 +127,7 @@ class _MarketplaceOrderFulfillmentSuiteScreenState extends State<MarketplaceOrde
                   onPressed: () => openUiAction(
                     context,
                     title: 'Bestellung vorbereiten',
-                    body: 'Diese UI bereitet Clubshop, Warenkorb, Zahlung, Abholung, Versand, Rueckgabe und Bestellstatus fuer die spaetere Laravel-API vor.',
+                    body: 'Diese UI bereitet Clubshop, Warenkorb, Zahlung, Abholung, Versand, Rückgabe und Bestellstatus für die spätere Laravel-API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.shopping_bag_outlined,
                   ),
@@ -228,7 +228,7 @@ class _OrderCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Bestelldetails',
-                  body: 'Bestelldetails koennen spaeter Produkte, Menge, Rechnung, Zahlung, Status und Supportverlauf enthalten.',
+                  body: 'Bestelldetails können später Produkte, Menge, Rechnung, Zahlung, Status und Supportverlauf enthalten.',
                   status: 'UI vorbereitet',
                   icon: Icons.inventory_2_outlined,
                 ),
@@ -240,19 +240,19 @@ class _OrderCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Lieferstatus',
-                  body: 'Abholung, Versand, Tracking, Vereinshinweise und Benachrichtigungen werden fuer die API vorbereitet.',
+                  body: 'Abholung, Versand, Tracking, Vereinshinweise und Benachrichtigungen werden für die API vorbereitet.',
                   status: 'UI vorbereitet',
                   icon: Icons.local_shipping_outlined,
                 ),
               ),
               AirmiusButton(
-                label: 'Rueckgabe',
+                label: 'Rückgabe',
                 icon: Icons.undo_outlined,
                 secondary: true,
                 onPressed: () => openUiAction(
                   context,
-                  title: 'Rueckgabe',
-                  body: 'Rueckgaben koennen spaeter Grund, Status, Verein, Zahlung und Supportticket verbinden.',
+                  title: 'Rückgabe',
+                  body: 'Rückgaben können später Grund, Status, Verein, Zahlung und Supportticket verbinden.',
                   status: 'UI vorbereitet',
                   icon: Icons.undo_outlined,
                 ),

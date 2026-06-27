@@ -88,6 +88,13 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   Future<void> deleteTeam(int id) async {
     await client.deleteTeam(id);
   }
+
+  @override
+  Future<AirmiusTeam> requestTeamJoin(int id) async {
+    final json = await client.requestTeamJoin(id);
+    final data = json['data'];
+    return AirmiusTeam.fromJson(data is JsonMap ? data : json);
+  }
 }
 
 class AirmiusApiSportRepository implements AirmiusSportRepository {

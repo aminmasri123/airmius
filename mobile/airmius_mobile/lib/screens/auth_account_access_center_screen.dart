@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -24,7 +24,7 @@ class _AuthAccountAccessCenterScreenState extends State<AuthAccountAccessCenterS
     _AuthFlowItem(title: 'Registrierung', body: 'Neues Konto, Rolle, Sprache, Datenschutz und Profilstart.', status: 'Public', icon: Icons.person_add_outlined, color: AirmiusColors.green),
     _AuthFlowItem(title: 'Profil vervollstaendigen', body: 'CompleteProfile mit Name, Rolle, Kontaktdaten und Onboarding-Hinweis.', status: 'Pflicht', icon: Icons.assignment_ind_outlined, color: AirmiusColors.amber),
     _AuthFlowItem(title: 'E-Mail verifizieren', body: 'VerifyEmail mit Status, erneut senden und naechstem Schritt.', status: 'Sicherheit', icon: Icons.mark_email_read_outlined, color: AirmiusColors.blueDeep),
-    _AuthFlowItem(title: 'Passwort zuruecksetzen', body: 'ForgotPassword, ResetPassword und ConfirmPassword als mobile Form-Flows.', status: 'Recovery', icon: Icons.lock_reset_outlined, color: AirmiusColors.red),
+    _AuthFlowItem(title: 'Passwort zurücksetzen', body: 'ForgotPassword, ResetPassword und ConfirmPassword als mobile Form-Flows.', status: 'Recovery', icon: Icons.lock_reset_outlined, color: AirmiusColors.red),
     _AuthFlowItem(title: 'Two-Factor Challenge', body: '2FA-Code, Recovery-Code, Sicherheitshinweis und Support-Option.', status: '2FA', icon: Icons.phonelink_lock_outlined, color: AirmiusColors.blue),
     _AuthFlowItem(title: 'Konto gesperrt', body: 'Suspended-Seite mit Grund, Supportkontakt, Status und naechster Aktion.', status: 'Sperre', icon: Icons.block_outlined, color: AirmiusColors.red),
   ];

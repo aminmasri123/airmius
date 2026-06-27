@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -20,13 +20,13 @@ class _ReportModerationCenterState extends State<ReportModerationCenterScreen> {
   bool _anonymous = false;
   bool _notifyResult = true;
 
-  final _details = TextEditingController(text: 'Bitte pruefen, ob dieser Inhalt gegen Regeln verstoesst.');
+  final _details = TextEditingController(text: 'Bitte prüfen, ob dieser Inhalt gegen Regeln verstoesst.');
 
   final List<_ModerationCase> _cases = const [
     _ModerationCase(title: 'Beitrag melden', body: 'Post, Kommentar, Bild oder Link wegen Spam, Beleidigung oder Regelverstoss melden.', status: 'User-Flow', icon: Icons.flag_outlined, color: AirmiusColors.blue),
-    _ModerationCase(title: 'Nutzer melden', body: 'Profil, Chatverhalten, Missbrauch, Fake-Konto oder BelÃ¤stigung melden.', status: 'Sicherheit', icon: Icons.person_off_outlined, color: AirmiusColors.red),
+    _ModerationCase(title: 'Nutzer melden', body: 'Profil, Chatverhalten, Missbrauch, Fake-Konto oder Belästigung melden.', status: 'Sicherheit', icon: Icons.person_off_outlined, color: AirmiusColors.red),
     _ModerationCase(title: 'Verein melden', body: 'Falsche Vereinsdaten, Missbrauch, unerwuenschte Kontaktaufnahme oder Regelverstoss melden.', status: 'Club', icon: Icons.apartment_outlined, color: AirmiusColors.amber),
-    _ModerationCase(title: 'Chat melden', body: 'Nachrichtenverlauf, Rueckfragen oder Supportkontext fuer Moderation vorbereiten.', status: 'Chat', icon: Icons.forum_outlined, color: AirmiusColors.green),
+    _ModerationCase(title: 'Chat melden', body: 'Nachrichtenverlauf, Rückfragen oder Supportkontext für Moderation vorbereiten.', status: 'Chat', icon: Icons.forum_outlined, color: AirmiusColors.green),
   ];
 
   @override
@@ -51,7 +51,7 @@ class _ReportModerationCenterState extends State<ReportModerationCenterScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const PageTitle(title: 'Melden & Moderation', subtitle: 'Beitraege, Nutzer, Vereine, Chats, Beweise, Anonymitaet und Ergebnisbenachrichtigung.'),
+                        const PageTitle(title: 'Melden & Moderation', subtitle: 'Beiträge, Nutzer, Vereine, Chats, Beweise, Anonymitaet und Ergebnisbenachrichtigung.'),
                         const SizedBox(height: 16),
                         _ModerationHero(onSubmit: _submit),
                         const SizedBox(height: 16),
@@ -65,8 +65,8 @@ class _ReportModerationCenterState extends State<ReportModerationCenterScreen> {
                           title: 'Meldeoptionen',
                           child: Column(
                             children: [
-                              _SwitchRow(title: 'Beweise anhaengen', subtitle: 'Screenshots, Datei, Chatkontext oder Link fuer Moderation vormerken.', value: _includeEvidence, onChanged: (value) => setState(() => _includeEvidence = value)),
-                              _SwitchRow(title: 'Anonym melden', subtitle: 'Identitaet gegenueber gemeldeter Person oder Verein verbergen.', value: _anonymous, onChanged: (value) => setState(() => _anonymous = value)),
+                              _SwitchRow(title: 'Beweise anhaengen', subtitle: 'Screenshots, Datei, Chatkontext oder Link für Moderation vormerken.', value: _includeEvidence, onChanged: (value) => setState(() => _includeEvidence = value)),
+                              _SwitchRow(title: 'Anonym melden', subtitle: 'Identitaet gegenüber gemeldeter Person oder Verein verbergen.', value: _anonymous, onChanged: (value) => setState(() => _anonymous = value)),
                               _SwitchRow(title: 'Ergebnisbenachrichtigung', subtitle: 'Nach Abschluss per App-Update oder Chat informiert werden.', value: _notifyResult, onChanged: (value) => setState(() => _notifyResult = value)),
                             ],
                           ),
@@ -84,7 +84,7 @@ class _ReportModerationCenterState extends State<ReportModerationCenterScreen> {
                             children: [
                               AirmiusButton(label: 'Meldung senden', icon: Icons.flag_outlined, onPressed: _submit),
                               AirmiusButton(label: 'Safety Center', icon: Icons.shield_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SafetyCommunityOperationsScreen()))),
-                              AirmiusButton(label: 'Chat pruefen', icon: Icons.forum_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationChatOperationsScreen(initialTab: 'Chat')))),
+                              AirmiusButton(label: 'Chat prüfen', icon: Icons.forum_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationChatOperationsScreen(initialTab: 'Chat')))),
                               AirmiusButton(label: 'Support', icon: Icons.support_agent_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()))),
                             ],
                           ),
@@ -131,12 +131,12 @@ class _ModerationHero extends StatelessWidget {
             children: [
               const AirmiusLogo(size: 42),
               const SizedBox(width: 12),
-              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Eyebrow('SAFETY'), SizedBox(height: 4), Text('Fair melden, sauber pruefen', style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900))])),
+              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Eyebrow('SAFETY'), SizedBox(height: 4), Text('Fair melden, sauber prüfen', style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900))])),
               AirmiusButton(label: 'Melden', icon: Icons.flag_outlined, onPressed: onSubmit),
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Meldungen brauchen Kontext, Prioritaet und Transparenz. Die UI bereitet Moderationsfaelle fuer Inhalte, Profile, Vereine und Chats vor.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          const Text('Meldungen brauchen Kontext, Prioritaet und Transparenz. Die UI bereitet Moderationsfaelle für Inhalte, Profile, Vereine und Chats vor.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           const Row(children: [Expanded(child: MetricCard(value: '5', label: 'Ziele')), SizedBox(width: 10), Expanded(child: MetricCard(value: '5', label: 'Gruende')), SizedBox(width: 10), Expanded(child: MetricCard(value: '3', label: 'Optionen'))]),
         ],

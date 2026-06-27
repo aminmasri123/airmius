@@ -38,7 +38,7 @@ class _TeamRosterRoleAssignmentSuiteScreenState extends State<TeamRosterRoleAssi
         name: 'Warteliste Training',
         meta: '5 Join-Requests',
         status: 'Prüfung',
-        body: 'Neue Anfragen koennen geprueft, angenommen, abgelehnt oder Rueckfragen erhalten.',
+        body: 'Neue Anfragen können geprüft, angenommen, abgelehnt oder Rückfragen erhalten.',
         color: AirmiusColors.amber,
       ),
     ];
@@ -101,8 +101,8 @@ class _TeamRosterRoleAssignmentSuiteScreenState extends State<TeamRosterRoleAssi
               children: [
                 const SectionLabel('ROLLENRECHTE'),
                 const SizedBox(height: 8),
-                _RoleSwitch(title: 'Trainer duerfen Kader bearbeiten', value: trainerCanEdit, color: AirmiusColors.blue, onChanged: (value) => setState(() => trainerCanEdit = value)),
-                _RoleSwitch(title: 'Captains duerfen einladen', value: captainCanInvite, color: AirmiusColors.green, onChanged: (value) => setState(() => captainCanInvite = value)),
+                _RoleSwitch(title: 'Trainer dürfen Kader bearbeiten', value: trainerCanEdit, color: AirmiusColors.blue, onChanged: (value) => setState(() => trainerCanEdit = value)),
+                _RoleSwitch(title: 'Captains dürfen einladen', value: captainCanInvite, color: AirmiusColors.green, onChanged: (value) => setState(() => captainCanInvite = value)),
                 _RoleSwitch(title: 'Mitglieder sehen Kader', value: membersCanSeeRoster, color: AirmiusColors.amber, onChanged: (value) => setState(() => membersCanSeeRoster = value)),
                 _RoleSwitch(title: 'Join-Requests erlauben', value: joinRequestsEnabled, color: AirmiusColors.pink, onChanged: (value) => setState(() => joinRequestsEnabled = value)),
               ],
@@ -110,7 +110,7 @@ class _TeamRosterRoleAssignmentSuiteScreenState extends State<TeamRosterRoleAssi
           ),
           const SizedBox(height: 14),
           if (filtered.isEmpty)
-            const EmptyPanel('Keine Teams fuer diesen Filter.')
+            const EmptyPanel('Keine Teams für diesen Filter.')
           else
             for (final team in filtered) ...[
               _TeamCard(team: team),
@@ -209,7 +209,7 @@ class _TeamCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Kader bearbeiten',
-                  body: 'Diese UI bereitet Mitgliederzuweisung, Rollen, Trainer, Captains und Teamrechte fuer die spaetere API vor.',
+                  body: 'Diese UI bereitet Mitgliederzuweisung, Rollen, Trainer, Captains und Teamrechte für die spätere API vor.',
                   status: 'UI vorbereitet',
                   icon: Icons.manage_accounts_outlined,
                 ),
@@ -220,8 +220,8 @@ class _TeamCard extends StatelessWidget {
                 secondary: true,
                 onPressed: () => openUiAction(
                   context,
-                  title: 'Join-Request pruefen',
-                  body: 'Join-Requests koennen spaeter angenommen, abgelehnt oder mit Rueckfrage versehen werden.',
+                  title: 'Join-Request prüfen',
+                  body: 'Join-Requests können später angenommen, abgelehnt oder mit Rückfrage versehen werden.',
                   status: 'UI vorbereitet',
                   icon: Icons.person_add_alt_outlined,
                 ),

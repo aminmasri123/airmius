@@ -86,7 +86,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
                   for (final entry in clubs.indexed) ...[
                     _ClubCard(
                       club: entry.$2,
-                      showManageActions: entry.$2.canManage || entry.$1 == 0,
+                      showManageActions: entry.$2.canManage,
                       requested: widget.requestedClubIds.contains(entry.$2.id) || entry.$2.hasPendingMembershipRequest,
                       onRequest: widget.onRequestClub,
                       onWithdraw: widget.onWithdrawClub,
@@ -109,7 +109,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
       MaterialPageRoute(
         builder: (_) => const UiActionResultScreen(
           title: 'Verein registrieren',
-          body: 'Verein wie in Laravel/Inertia anlegen: Basisdaten, Adresse und Pruefschritt.',
+          body: 'Verein wie in Laravel/Inertia anlegen: Basisdaten, Adresse und Prüfschritt.',
           status: 'Verein',
           icon: Icons.add_business_outlined,
         ),
@@ -331,7 +331,7 @@ class _ClubCardState extends State<_ClubCard> {
                   _InlineAction(
                     label: 'L\u00f6schen',
                     danger: true,
-                    onPressed: () => confirmDanger(context, 'Verein "${club.name}" l\u00f6schen', 'Dadurch werden auch alle Teams dieses Vereins geloescht. Diese Aktion kann nicht rueckgaengig gemacht werden.', 'L\u00f6schen'),
+                    onPressed: () => confirmDanger(context, 'Verein "${club.name}" l\u00f6schen', 'Dadurch werden auch alle Teams dieses Vereins gelöscht. Diese Aktion kann nicht rückgaengig gemacht werden.', 'L\u00f6schen'),
                   ),
                 if (widget.requested && !club.canManage)
                   _InlineAction(label: 'Anfrage offen', onPressed: null),
@@ -491,7 +491,7 @@ class _ClubManagementSection extends StatelessWidget {
     final management = club.management!;
     return _InlineSection(
       title: 'Verwaltungsdaten',
-      subtitle: 'Mitglieder, Anfragen, Beitraege und Abrechnung wie im Web',
+      subtitle: 'Mitglieder, Anfragen, Beiträge und Abrechnung wie im Web',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -506,7 +506,7 @@ class _ClubManagementSection extends StatelessWidget {
                 children: [
                   SizedBox(width: width, child: _ManagementMetricTile(title: 'Offen', value: _formatMoney(management.openInvoiceAmount), subtitle: '${management.openInvoicesCount} Rechnung(en)')),
                   SizedBox(width: width, child: _ManagementMetricTile(title: 'SEPA bereit', value: '${management.sepaReadyMembersCount}', subtitle: 'Mandate mit IBAN und Referenz')),
-                  SizedBox(width: width, child: _ManagementMetricTile(title: 'Wiederkehrende Beitraege', value: _formatMoney(management.recurringContributionTotal), subtitle: 'Summe aktiver Beitragssaetze')),
+                  SizedBox(width: width, child: _ManagementMetricTile(title: 'Wiederkehrende Beiträge', value: _formatMoney(management.recurringContributionTotal), subtitle: 'Summe aktiver Beitragssaetze')),
                   SizedBox(width: width, child: _ManagementMetricTile(title: 'Regeln', value: '${club.contributionRulesCount}', subtitle: '${club.membershipTypesCount} Mitgliedschaftstyp(en)')),
                   SizedBox(width: width, child: _ManagementMetricTile(title: 'Zahlungen', value: '${club.paymentsCount}', subtitle: '${club.bankTransactionsCount} Banktransaktion(en)')),
                   SizedBox(width: width, child: _ManagementMetricTile(title: 'Externe Mitglieder', value: '${club.externalMembersCount}', subtitle: 'Importierte oder eingeladene Personen')),
@@ -583,7 +583,7 @@ class _ManagementMetricTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      minHeight: 82,
+      constraints: const BoxConstraints(minHeight: 82),
       padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(color: AirmiusColors.card, borderRadius: BorderRadius.circular(10), border: Border.all(color: AirmiusColors.border)),
       child: Column(
@@ -708,7 +708,7 @@ class _ClubEditInlinePanel extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _SmallInlineButton(label: 'Speichern', filled: true, onPressed: () => openUiAction(context, title: 'Vereinsdaten speichern', body: 'Der native Flutter-Dialog ist vorbereitet. Fuer echtes Speichern braucht die mobile API noch PUT /api/v1/clubs/{id}.', status: 'API fehlt', icon: Icons.save_outlined))),
+              Expanded(child: _SmallInlineButton(label: 'Speichern', filled: true, onPressed: () => openUiAction(context, title: 'Vereinsdaten speichern', body: 'Der native Flutter-Dialog ist vorbereitet. Für echtes Speichern braucht die mobile API noch PUT /api/v1/clubs/{id}.', status: 'API fehlt', icon: Icons.save_outlined))),
               const SizedBox(width: 10),
               Expanded(child: _SmallInlineButton(label: 'Details', onPressed: onOpenProfile)),
             ],
@@ -777,7 +777,7 @@ class _TeamCreateInlinePanelState extends State<_TeamCreateInlinePanel> {
   Widget build(BuildContext context) {
     return _InlineSection(
       title: 'Team hinzufuegen',
-      subtitle: 'Neues Team fuer ${widget.club.name} erstellen.',
+      subtitle: 'Neues Team für ${widget.club.name} erstellen.',
       child: Column(
         children: [
           TextField(
@@ -1046,7 +1046,7 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
       ),
       body: PageFrame(
         title: club.name,
-        subtitle: 'Vereinsprofil, Teams, Rollen und sichtbare Beitraege',
+        subtitle: 'Vereinsprofil, Teams, Rollen und sichtbare Beiträge',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -1104,17 +1104,17 @@ class _ClubProfileScreenState extends State<ClubProfileScreen> {
   }
 
   Future<void> _withdraw(BuildContext context, ClubSummary selectedClub) async {
-    final ok = await confirmDanger(context, 'Anfrage zurueckziehen', 'Moechtest du deine Mitgliedschaftsanfrage bei ${selectedClub.name} wirklich zurueckziehen?');
+    final ok = await confirmDanger(context, 'Anfrage zurückziehen', 'Moechtest du deine Mitgliedschaftsanfrage bei ${selectedClub.name} wirklich zurückziehen?');
     if (ok && context.mounted) {
       try {
         final services = AirmiusServicesScope.of(context);
         await services.repositories.memberships.withdrawClubRequest(selectedClub.id);
         widget.onWithdraw(selectedClub);
         setState(() => _requestStatusOverride = false);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mitgliedschaftsanfrage zurueckgezogen.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mitgliedschaftsanfrage zurückgezogen.')));
       } catch (error) {
         if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Anfrage konnte nicht zurueckgezogen werden: $error')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Anfrage konnte nicht zurückgezogen werden: $error')));
       }
     }
   }
@@ -1310,7 +1310,7 @@ class _ClubWorkspaceTabs extends StatelessWidget {
   static const tabs = [
     _ClubTab('struktur', 'Struktur', Icons.account_tree_outlined),
     _ClubTab('beitritt', 'Beitritt', Icons.assignment_outlined),
-    _ClubTab('beitraege', 'Beitraege', Icons.forum_outlined),
+    _ClubTab('beiträge', 'Beiträge', Icons.forum_outlined),
     _ClubTab('dokumente', 'Dokumente', Icons.folder_open_outlined),
   ];
 
@@ -1343,7 +1343,7 @@ class _ClubTabBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (tab) {
       'beitritt' => _MembershipPanel(club: club, requested: requested, onJoin: onJoin, onWithdraw: onWithdraw),
-      'beitraege' => _ClubPostsPanel(club: club),
+      'beiträge' => _ClubPostsPanel(club: club),
       'dokumente' => const _DocumentsPanel(),
       _ => _StructurePanel(club: club),
     };
@@ -1410,7 +1410,7 @@ class _MembershipPanel extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const _MembershipOption(title: 'Standard-Mitgliedschaft', meta: 'Jaehrlich - Dokumente erforderlich'),
-          const _MembershipOption(title: 'Foerdermitgliedschaft', meta: 'Optional - Verein prueft manuell'),
+          const _MembershipOption(title: 'Foerdermitgliedschaft', meta: 'Optional - Verein prüft manuell'),
           const SizedBox(height: 14),
           if (club.isMember)
             AirmiusButton(label: 'Mitglied', icon: Icons.verified_user_outlined, secondary: true, onPressed: null)
@@ -1435,12 +1435,12 @@ class _ClubPostsPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Eyebrow('Vereinsbeitraege'),
+          const Eyebrow('Vereinsbeiträge'),
           const SizedBox(height: 8),
-          Text('${club.posts} sichtbare Beitraege fuer Mitglieder und Community.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+          Text('${club.posts} sichtbare Beiträge für Mitglieder und Community.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
           const SizedBox(height: 14),
-          _FeedPreviewLine(title: 'Willkommen im Vereinsfeed', meta: 'Ankuendigungen, Bilder und Videos erscheinen hier.'),
-          _FeedPreviewLine(title: 'Training & Termine', meta: 'Team-Updates koennen im Feed verknuepft werden.'),
+          _FeedPreviewLine(title: 'Willkommen im Vereinsfeed', meta: 'Ankündigungen, Bilder und Videos erscheinen hier.'),
+          _FeedPreviewLine(title: 'Training & Termine', meta: 'Team-Updates können im Feed verknuepft werden.'),
         ],
       ),
     );
@@ -1485,7 +1485,7 @@ class _DocumentsPanel extends StatelessWidget {
         children: [
           Eyebrow('Vereinsdokumente'),
           SizedBox(height: 8),
-          Text('Datenschutz, Beitragsordnung und Vereinsregeln werden wie im Web-Cockpit fuer die mobile Anmeldung sichtbar gemacht.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+          Text('Datenschutz, Beitragsordnung und Vereinsregeln werden wie im Web-Cockpit für die mobile Anmeldung sichtbar gemacht.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
           SizedBox(height: 12),
           _DocumentLine(title: 'Datenschutz', requiredDoc: true),
           _DocumentLine(title: 'Beitragsordnung', requiredDoc: true),

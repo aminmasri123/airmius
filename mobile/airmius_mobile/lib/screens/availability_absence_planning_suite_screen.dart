@@ -30,7 +30,7 @@ class _AvailabilityAbsencePlanningSuiteScreenState extends State<AvailabilityAbs
       ),
       body: PageFrame(
         title: 'Availability Absence Planning',
-        subtitle: 'Mobile UI fuer Verfuegbarkeit, Abwesenheit, Traineruebersicht, Guardian-Meldungen, Gesundheitsnotizen und Anwesenheits-Sync.',
+        subtitle: 'Mobile UI für Verfuegbarkeit, Abwesenheit, Trainerübersicht, Guardian-Meldungen, Gesundheitsnotizen und Anwesenheits-Sync.',
         trailing: const StatusPill('Planning', color: AirmiusColors.green),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -48,7 +48,7 @@ class _AvailabilityAbsencePlanningSuiteScreenState extends State<AvailabilityAbs
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Die App bereitet Verfuegbarkeiten, Absagen, Guardian-Meldungen, Verletzungshinweise und Teamplanung fuer Training, Events und Spiele vor.',
+                    'Die App bereitet Verfuegbarkeiten, Absagen, Guardian-Meldungen, Verletzungshinweise und Teamplanung für Training, Events und Spiele vor.',
                     style: TextStyle(color: AirmiusColors.muted, height: 1.42),
                   ),
                   const SizedBox(height: 14),
@@ -90,20 +90,20 @@ class _AvailabilityAbsencePlanningSuiteScreenState extends State<AvailabilityAbs
                   _PlanningToggle(
                     icon: Icons.how_to_reg_outlined,
                     title: 'Selbstmeldung',
-                    body: 'Mitglieder koennen Zusage, Absage, vielleicht und spaeter antworten direkt mobil melden.',
+                    body: 'Mitglieder können Zusage, Absage, vielleicht und später antworten direkt mobil melden.',
                     enabled: _selfReport,
                     onChanged: (value) => setState(() => _selfReport = value),
                   ),
                   _PlanningToggle(
                     icon: Icons.family_restroom_outlined,
                     title: 'Guardian-Meldung',
-                    body: 'Eltern oder Guardians koennen Minderjaehrige abmelden und kurze Hinweise fuer Trainer hinterlegen.',
+                    body: 'Eltern oder Guardians können Minderjaehrige abmelden und kurze Hinweise für Trainer hinterlegen.',
                     enabled: _guardianReport,
                     onChanged: (value) => setState(() => _guardianReport = value),
                   ),
                   _PlanningToggle(
                     icon: Icons.groups_2_outlined,
-                    title: 'Traineruebersicht',
+                    title: 'Trainerübersicht',
                     body: 'Trainer sehen Teamstatus, offene Antworten, Konflikte, Mindeststaerke und Anwesenheitsprognose.',
                     enabled: _coachOverview,
                     onChanged: (value) => setState(() => _coachOverview = value),
@@ -182,10 +182,10 @@ class _AvailabilityEntry {
 const _entries = [
   _AvailabilityEntry(scope: 'Training', title: 'U16 Training Dienstag', body: '18 Zusagen, 4 Absagen, 2 offene Antworten und ein Rollen-Konflikt.', status: 'Planbar', icon: Icons.event_available_outlined, color: AirmiusColors.green),
   _AvailabilityEntry(scope: 'Training', title: 'Torwart fehlt', body: 'Trainerhinweis: Mindestposition nicht besetzt, Erinnerung an Ersatzspieler empfohlen.', status: 'Konflikt', icon: Icons.sports_soccer_outlined, color: AirmiusColors.amber),
-  _AvailabilityEntry(scope: 'Event', title: 'Sommerfest Helferplan', body: 'Helfer, Aufbau, Kasse und Abbau koennen als Verfuegbarkeits-Slots geplant werden.', status: 'Slots', icon: Icons.celebration_outlined, color: AirmiusColors.blue),
+  _AvailabilityEntry(scope: 'Event', title: 'Sommerfest Helferplan', body: 'Helfer, Aufbau, Kasse und Abbau können als Verfuegbarkeits-Slots geplant werden.', status: 'Slots', icon: Icons.celebration_outlined, color: AirmiusColors.blue),
   _AvailabilityEntry(scope: 'Spiel', title: 'Auswaertsspiel Samstag', body: 'Fahrgemeinschaft, Treffpunkt, Kader, Guardian-Freigabe und Abwesenheiten verknuepft.', status: 'Kader', icon: Icons.emoji_events_outlined, color: AirmiusColors.green),
-  _AvailabilityEntry(scope: 'Team', title: 'Team U14', body: 'Trainer sieht Wochenuebersicht, offene Rueckmeldungen und wiederkehrende Abwesenheiten.', status: 'Team', icon: Icons.groups_2_outlined, color: AirmiusColors.blue),
-  _AvailabilityEntry(scope: 'Guardian', title: 'Elternmeldung Krankheit', body: 'Guardian meldet Abwesenheit und optionale Rueckkehrprognose fuer Minderjaehrigen.', status: 'Privat', icon: Icons.family_restroom_outlined, color: AirmiusColors.amber),
+  _AvailabilityEntry(scope: 'Team', title: 'Team U14', body: 'Trainer sieht Wochenübersicht, offene Rückmeldungen und wiederkehrende Abwesenheiten.', status: 'Team', icon: Icons.groups_2_outlined, color: AirmiusColors.blue),
+  _AvailabilityEntry(scope: 'Guardian', title: 'Elternmeldung Krankheit', body: 'Guardian meldet Abwesenheit und optionale Rückkehrprognose für Minderjaehrigen.', status: 'Privat', icon: Icons.family_restroom_outlined, color: AirmiusColors.amber),
   _AvailabilityEntry(scope: 'Gesundheit', title: 'Schonung Knie', body: 'Trainer sieht nur relevanten Trainingshinweis, keine sensiblen Details.', status: 'Limited', icon: Icons.health_and_safety_outlined, color: AirmiusColors.green),
 ];
 

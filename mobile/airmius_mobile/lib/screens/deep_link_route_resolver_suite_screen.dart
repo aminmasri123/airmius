@@ -31,7 +31,7 @@ class _DeepLinkRouteResolverSuiteScreenState extends State<DeepLinkRouteResolver
       ),
       body: PageFrame(
         title: 'Deep Link Route Resolver',
-        subtitle: 'Mobile UI fuer Einladung, QR, Push, E-Mail, Chat, Zahlung, Datei und Event-Routing mit Auth- und Workspace-Prüfung.',
+        subtitle: 'Mobile UI für Einladung, QR, Push, E-Mail, Chat, Zahlung, Datei und Event-Routing mit Auth- und Workspace-Prüfung.',
         trailing: const StatusPill('Routing', color: AirmiusColors.blue),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -49,7 +49,7 @@ class _DeepLinkRouteResolverSuiteScreenState extends State<DeepLinkRouteResolver
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Die Flutter-App bereitet Deep Links fuer Einladungen, Mitgliedsantraege, QR-Codes, Push, Rechnungen, Chat, Dateien und Events vor.',
+                    'Die Flutter-App bereitet Deep Links für Einladungen, Mitgliedsanträge, QR-Codes, Push, Rechnungen, Chat, Dateien und Events vor.',
                     style: TextStyle(color: AirmiusColors.muted, height: 1.42),
                   ),
                   const SizedBox(height: 14),
@@ -91,7 +91,7 @@ class _DeepLinkRouteResolverSuiteScreenState extends State<DeepLinkRouteResolver
                   _RouteToggle(
                     icon: Icons.lock_outline,
                     title: 'Auth Gate',
-                    body: 'Links duerfen Login, E-Mail-Verifizierung, 2FA, Suspended und Guardian-Pending sauber abfangen.',
+                    body: 'Links dürfen Login, E-Mail-Verifizierung, 2FA, Suspended und Guardian-Pending sauber abfangen.',
                     enabled: _authGate,
                     onChanged: (value) => setState(() => _authGate = value),
                   ),
@@ -112,7 +112,7 @@ class _DeepLinkRouteResolverSuiteScreenState extends State<DeepLinkRouteResolver
                   _RouteToggle(
                     icon: Icons.history_outlined,
                     title: 'Routing Audit',
-                    body: 'Sensible Links werden mit Quelle, Ziel, Status und Fehlergrund fuer Support nachvollziehbar.',
+                    body: 'Sensible Links werden mit Quelle, Ziel, Status und Fehlergrund für Support nachvollziehbar.',
                     enabled: _auditRoute,
                     onChanged: (value) => setState(() => _auditRoute = value),
                     last: true,
@@ -132,7 +132,7 @@ class _DeepLinkRouteResolverSuiteScreenState extends State<DeepLinkRouteResolver
                 children: [
                   const Eyebrow('RESOLUTION PREVIEW'),
                   const SizedBox(height: 8),
-                  const Text('airmius://clubs/26 -> Auth pruefen -> Club Workspace setzen -> Vereinsprofil/Vereine oeffnen -> Mitgliedsantrag erreichbar machen.', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, height: 1.38)),
+                  const Text('airmius://clubs/26 -> Auth prüfen -> Club Workspace setzen -> Vereinsprofil/Vereine öffnen -> Mitgliedsantrag erreichbar machen.', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, height: 1.38)),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
@@ -183,13 +183,13 @@ class _DeepLink {
 
 const _links = [
   _DeepLink(source: 'Invite', title: 'Vereinsbeitritt', body: 'Einladung fuehrt zu Club Public Preview, Mitgliedsantrag oder Konto-Verknuepfung.', status: 'Mapped', rawLink: 'airmius://clubs/26', icon: Icons.person_add_alt_1_outlined, color: AirmiusColors.blue),
-  _DeepLink(source: 'QR', title: 'Member Card Check-in', body: 'QR-Code prueft Mitgliedsstatus, Rolle, Gueltigkeit und Trainingskontext.', status: 'Native', rawLink: 'airmius://profile/member-card', icon: Icons.qr_code_2_outlined, color: AirmiusColors.green),
-  _DeepLink(source: 'Push', title: 'Chat Nachricht', body: 'Push oeffnet passende Konversation, prueft Mute, Rollen und Meldekontext.', status: 'Ready', rawLink: 'airmius://messages/1', icon: Icons.notifications_active_outlined, color: AirmiusColors.blue),
-  _DeepLink(source: 'Push', title: 'Event Reminder', body: 'Erinnerung oeffnet Event, RSVP, Fahrgemeinschaft und Check-in Aktion.', status: 'Ready', rawLink: 'airmius://events/1', icon: Icons.event_available_outlined, color: AirmiusColors.green),
+  _DeepLink(source: 'QR', title: 'Member Card Check-in', body: 'QR-Code prüft Mitgliedsstatus, Rolle, Gültigkeit und Trainingskontext.', status: 'Native', rawLink: 'airmius://profile/member-card', icon: Icons.qr_code_2_outlined, color: AirmiusColors.green),
+  _DeepLink(source: 'Push', title: 'Chat Nachricht', body: 'Push öffnet passende Konversation, prüft Mute, Rollen und Meldekontext.', status: 'Ready', rawLink: 'airmius://messages/1', icon: Icons.notifications_active_outlined, color: AirmiusColors.blue),
+  _DeepLink(source: 'Push', title: 'Event Reminder', body: 'Erinnerung öffnet Event, RSVP, Fahrgemeinschaft und Check-in Aktion.', status: 'Ready', rawLink: 'airmius://events/1', icon: Icons.event_available_outlined, color: AirmiusColors.green),
   _DeepLink(source: 'Mail', title: 'E-Mail Verifizierung', body: 'Mail-Link verifiziert Konto und fuehrt danach zum urspruenglichen Ziel.', status: 'Auth', rawLink: 'airmius://profile/security', icon: Icons.mark_email_read_outlined, color: AirmiusColors.amber),
-  _DeepLink(source: 'Payment', title: 'Rechnung bezahlen', body: 'Zahlungslink oeffnet Rechnung, Zahlungsstatus, Retry oder Banktransfer-Hinweise.', status: 'Secure', rawLink: 'https://app.airmius.com/membership-applications/1001', icon: Icons.receipt_long_outlined, color: AirmiusColors.amber),
-  _DeepLink(source: 'Chat', title: 'Support Ticket', body: 'Support-Link oeffnet Ticketverlauf, Anhaenge und Eskalationsstatus.', status: 'Mapped', rawLink: 'airmius://messages/4', icon: Icons.support_agent_outlined, color: AirmiusColors.blue),
-  _DeepLink(source: 'File', title: 'Dokument Preview', body: 'Dateilink prueft Zugriff, Zweck, Consent-Pflicht und Downloadrechte.', status: 'Guarded', rawLink: 'airmius://files/club-doc-2026-001', icon: Icons.folder_copy_outlined, color: AirmiusColors.green),
+  _DeepLink(source: 'Payment', title: 'Rechnung bezahlen', body: 'Zahlungslink öffnet Rechnung, Zahlungsstatus, Retry oder Banktransfer-Hinweise.', status: 'Secure', rawLink: 'https://app.airmius.com/membership-applications/1001', icon: Icons.receipt_long_outlined, color: AirmiusColors.amber),
+  _DeepLink(source: 'Chat', title: 'Support Ticket', body: 'Support-Link öffnet Ticketverlauf, Anhaenge und Eskalationsstatus.', status: 'Mapped', rawLink: 'airmius://messages/4', icon: Icons.support_agent_outlined, color: AirmiusColors.blue),
+  _DeepLink(source: 'File', title: 'Dokument Preview', body: 'Dateilink prüft Zugriff, Zweck, Consent-Pflicht und Downloadrechte.', status: 'Guarded', rawLink: 'airmius://files/club-doc-2026-001', icon: Icons.folder_copy_outlined, color: AirmiusColors.green),
 ];
 
 class _LinkCard extends StatelessWidget {
@@ -227,7 +227,7 @@ class _LinkCard extends StatelessWidget {
                 const SizedBox(height: 9),
                 Wrap(spacing: 8, runSpacing: 8, children: [StatusPill(link.source, color: link.color), StatusPill(AirmiusDeepLinkNavigator.destinationLabel(target))]),
                 const SizedBox(height: 10),
-                AirmiusButton(label: 'Route oeffnen', icon: Icons.open_in_new_outlined, secondary: true, onPressed: () => AirmiusDeepLinkNavigator.open(context, link.rawLink)),
+                AirmiusButton(label: 'Route öffnen', icon: Icons.open_in_new_outlined, secondary: true, onPressed: () => AirmiusDeepLinkNavigator.open(context, link.rawLink)),
               ],
             ),
           ),

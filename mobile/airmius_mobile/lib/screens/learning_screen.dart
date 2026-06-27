@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'learning_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
@@ -43,7 +43,7 @@ class _LearningScreenState extends State<LearningScreen> {
                 children: const [
                   Eyebrow('Learning'),
                   SizedBox(height: 8),
-                  Text('Kurse starten, Lektionen abschliessen, Quiz bestehen und Zertifikate anzeigen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  Text('Kurse starten, Lektionen abschließen, Quiz bestehen und Zertifikate anzeigen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                 ],
               ),
             ),
@@ -152,10 +152,10 @@ class _CertificatesPanel extends StatelessWidget {
         children: [
           const Eyebrow('Zertifikate'),
           const SizedBox(height: 10),
-          const _LearningLine(icon: Icons.verified_outlined, title: 'Datenschutz im Sportverein', body: 'Zertifikat #AIR-2026-001', trailing: 'Gueltig'),
+          const _LearningLine(icon: Icons.verified_outlined, title: 'Datenschutz im Sportverein', body: 'Zertifikat #AIR-2026-001', trailing: 'Gültig'),
           const _LearningLine(icon: Icons.download_outlined, title: 'Download', body: 'PDF-Zertifikat herunterladen oder teilen.', trailing: 'PDF'),
           const SizedBox(height: 12),
-          AirmiusButton(label: 'Zertifikat pruefen', icon: Icons.fact_check_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CertificateVerificationScreen()))),
+          AirmiusButton(label: 'Zertifikat prüfen', icon: Icons.fact_check_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CertificateVerificationScreen()))),
         ],
       ),
     );
@@ -222,6 +222,6 @@ const _courses = [
   _Course(title: 'Grundlagen Vereinsverwaltung', description: 'Rollen, Mitglieder, Dokumente und digitale Prozesse.', status: 'Meine Kurse', lessons: 4, progress: 0.42),
   _Course(title: 'Datenschutz im Sportverein', description: 'Einwilligungen, Dokumente, Minderjaehrige und Datenrechte.', status: 'Meine Kurse', lessons: 6, progress: 0.72),
   _Course(title: 'Trainer-Kommunikation', description: 'Feedback, Chat, Events und Trainingsplanung.', status: 'Alle', lessons: 5, progress: 0.0),
-  _Course(title: 'Kursentwurf: Vereinsbeitraege', description: 'Lernstudio-Entwurf mit Quiz und Zertifikat.', status: 'Lernstudio', lessons: 3, progress: 0.25),
+  _Course(title: 'Kursentwurf: Vereinsbeiträge', description: 'Lernstudio-Entwurf mit Quiz und Zertifikat.', status: 'Lernstudio', lessons: 3, progress: 0.25),
 ];
 

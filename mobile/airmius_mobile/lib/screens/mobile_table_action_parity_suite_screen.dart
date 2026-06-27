@@ -26,9 +26,9 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
       title: 'Mitgliedschaftsanfrage ZBB Konto',
       meta: 'ClubMemberships/Index',
       status: 'Offen',
-      body: 'Antrag, Formularfelder, Dokumente, Zahlweise, Rueckzug und Adminentscheidung als mobile Listenkarte.',
+      body: 'Antrag, Formularfelder, Dokumente, Zahlweise, Rückzug und Adminentscheidung als mobile Listenkarte.',
       icon: Icons.assignment_ind_outlined,
-      primary: 'Antrag pruefen',
+      primary: 'Antrag prüfen',
       secondary: 'Dokumente',
       color: AirmiusColors.green,
     ),
@@ -37,7 +37,7 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
       title: 'Mitglied Max Mustermann',
       meta: 'Users/Profile + Club Member Directory',
       status: 'Aktiv',
-      body: 'Rolle, Team, Zahlstatus, Dateien, Notizen, Audit und schnelle Statusaenderung ohne breite Tabelle.',
+      body: 'Rolle, Team, Zahlstatus, Dateien, Notizen, Audit und schnelle Statusänderung ohne breite Tabelle.',
       icon: Icons.people_outline,
       primary: 'Profil',
       secondary: 'Status',
@@ -59,7 +59,7 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
       title: 'Moderationsmeldung Beitrag #482',
       meta: 'Admin/Moderation',
       status: 'Eskalation',
-      body: 'Reportgrund, Autor, Inhalt, Maturity, Aktion, Sperre, Audit und Rueckmeldung im mobilen Action-Sheet.',
+      body: 'Reportgrund, Autor, Inhalt, Maturity, Aktion, Sperre, Audit und Rückmeldung im mobilen Action-Sheet.',
       icon: Icons.flag_outlined,
       primary: 'Entscheiden',
       secondary: 'Audit',
@@ -70,7 +70,7 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
       title: 'Bestellung Marketplace #A-1042',
       meta: 'MarketplaceOrderStatus',
       status: 'Banktransfer',
-      body: 'Zahlstatus, Bankdaten, Rechnung, Lieferung, Support und Rueckkehr zum Produkt als mobile Statuskarte.',
+      body: 'Zahlstatus, Bankdaten, Rechnung, Lieferung, Support und Rückkehr zum Produkt als mobile Statuskarte.',
       icon: Icons.receipt_long_outlined,
       primary: 'Status',
       secondary: 'Beleg',
@@ -105,7 +105,7 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
       status: 'Verknuepft',
       body: 'Upload, Zweck, Sichtbarkeit, Link, Pflichtdokument, Version und Dateimanager-Zuordnung als mobile Zeile.',
       icon: Icons.folder_outlined,
-      primary: 'Oeffnen',
+      primary: 'Öffnen',
       secondary: 'Verknuepfen',
       color: AirmiusColors.amber,
     ),
@@ -185,7 +185,7 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
                   onAction: () => openUiAction(
                     context,
                     title: 'Bulk-Aktion',
-                    body: 'Mehrfachauswahl fuer $_area: Statuswechsel, Export, Benachrichtigung oder Rollenaktion vorbereiten.',
+                    body: 'Mehrfachauswahl für $_area: Statuswechsel, Export, Benachrichtigung oder Rollenaktion vorbereiten.',
                     status: 'Bulk',
                     icon: Icons.select_all_outlined,
                   ),
@@ -204,7 +204,7 @@ class _MobileTableActionParitySuiteScreenState extends State<MobileTableActionPa
                 onOpen: () => openUiAction(
                   context,
                   title: 'Table Action Parity',
-                  body: 'Desktop-Tabellenmuster wurden fuer mobile Karten, Filter, Sortierung, Pagination, Bulk-Auswahl, Export und Action-Sheets vorbereitet.',
+                  body: 'Desktop-Tabellenmuster wurden für mobile Karten, Filter, Sortierung, Pagination, Bulk-Auswahl, Export und Action-Sheets vorbereitet.',
                   status: 'Mobile Tables',
                   icon: Icons.table_rows_outlined,
                 ),
@@ -329,7 +329,7 @@ class _ModePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Aktionen',
-      subtitle: 'Listenaktionen werden auf Mobile sichtbar, aber nicht ueberladen.',
+      subtitle: 'Listenaktionen werden auf Mobile sichtbar, aber nicht überladen.',
       children: [
         _SwitchLine(title: 'Bulk-Auswahl aktivieren', value: bulkMode, onChanged: onBulk),
         _SwitchLine(title: 'Export-/Download-CTAs zeigen', value: showExports, onChanged: onExports),
@@ -359,7 +359,7 @@ class _BulkBar extends StatelessWidget {
         runSpacing: 10,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          StatusPill('$count ausgewaehlt', color: AirmiusColors.green),
+          StatusPill('$count ausgewählt', color: AirmiusColors.green),
           AirmiusButton(label: 'Status wechseln', icon: Icons.swap_horiz_outlined, onPressed: onAction),
           AirmiusButton(label: 'Benachrichtigen', icon: Icons.mark_email_read_outlined, secondary: true, onPressed: onAction),
           if (showExports) AirmiusButton(label: 'Export', icon: Icons.download_outlined, secondary: true, onPressed: onAction),
@@ -431,7 +431,7 @@ class _MobileRowCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: row.primary,
-                  body: '${row.title}: ${row.body}\n\nMobile Tabellenzeile fuer ${row.meta}.',
+                  body: '${row.title}: ${row.body}\n\nMobile Tabellenzeile für ${row.meta}.',
                   status: row.status,
                   icon: row.icon,
                 ),
@@ -443,7 +443,7 @@ class _MobileRowCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: row.secondary,
-                  body: 'Action-Sheet mit Details, Rollen, Dokumenten, Export, Benachrichtigung und Audit fuer ${row.title}.',
+                  body: 'Action-Sheet mit Details, Rollen, Dokumenten, Export, Benachrichtigung und Audit für ${row.title}.',
                   status: 'Action Sheet',
                   icon: Icons.more_horiz_outlined,
                 ),
@@ -456,7 +456,7 @@ class _MobileRowCard extends StatelessWidget {
                   onPressed: () => openUiAction(
                     context,
                     title: 'Gefaehrliche Aktion',
-                    body: 'Danger-Aktion fuer ${row.title}: Bestaetigung, Grund, Audit und Rueckmeldung erforderlich.',
+                    body: 'Danger-Aktion für ${row.title}: Bestätigung, Grund, Audit und Rückmeldung erforderlich.',
                     status: 'Danger',
                     icon: Icons.block_outlined,
                   ),
@@ -478,7 +478,7 @@ class _Checklist extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Tabellen-Paritaet',
-      subtitle: 'Was aus Desktop-Listen mobil uebersetzt wird.',
+      subtitle: 'Was aus Desktop-Listen mobil übersetzt wird.',
       children: [
         const _CheckLine('Jede Tabellenzeile wird eine lesbare Karte mit Status, Kontext und CTA.'),
         const _CheckLine('Filter, Suche und Sortierung werden als Chips und kompakte Panels gefuehrt.'),

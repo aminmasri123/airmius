@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -24,7 +24,7 @@ class _AppShellLocalizationQualitySuiteScreenState extends State<AppShellLocaliz
     _SuiteItem('Localization Center', 'Localization', 'i18n', 'Deutsch, Englisch, Franzoesisch, Arabisch, RTL-Hinweise und Sprachwechsel.', Icons.language_outlined, Color(0xFFB084FF)),
     _SuiteItem('Design System', 'Quality', 'UI Kit', 'Airmius-Farben, Panels, Buttons, Inputs, Pills, Karten und mobile Komponenten.', Icons.palette_outlined, Color(0xFFFF6B6B)),
     _SuiteItem('Route Parity', 'Quality', 'Routes', 'Abgleich Web-Routen zu Flutter-Screens, offene Luecken, Coverage und Navigationsziele.', Icons.alt_route_outlined, Color(0xFF5BA7FF)),
-    _SuiteItem('UI Coverage', 'Quality', 'Audit', 'Release-Abdeckung, Modulstatus, App-Readiness, bekannte Risiken und naechste Pruefschritte.', Icons.fact_check_outlined, Color(0xFF2EE59D)),
+    _SuiteItem('UI Coverage', 'Quality', 'Audit', 'Release-Abdeckung, Modulstatus, App-Readiness, bekannte Risiken und naechste Prüfschritte.', Icons.fact_check_outlined, Color(0xFF2EE59D)),
   ];
 
   List<_SuiteItem> get _visible => _filter == 'Alle' ? _items : _items.where((item) => item.area == _filter).toList();
@@ -47,7 +47,7 @@ class _AppShellLocalizationQualitySuiteScreenState extends State<AppShellLocaliz
                     const _Hero(
                       eyebrow: 'APP FOUNDATION',
                       title: 'Shell, Sprache & Qualitaet',
-                      subtitle: 'Native Mobile-UI fuer App-Shell, Onboarding, Settings, Localization, Designsystem, Route-Parity und UI-Coverage.',
+                      subtitle: 'Native Mobile-UI für App-Shell, Onboarding, Settings, Localization, Designsystem, Route-Parity und UI-Coverage.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -77,7 +77,7 @@ class _AppShellLocalizationQualitySuiteScreenState extends State<AppShellLocaliz
                     ],
                     _ActionPanel(
                       firstIcon: Icons.language_outlined,
-                      firstLabel: 'Sprache pruefen',
+                      firstLabel: 'Sprache prüfen',
                       secondIcon: Icons.fact_check_outlined,
                       secondLabel: 'Coverage ansehen',
                       onFirst: () => openUiAction(context, title: 'Localization', body: 'Mehrsprachige UI-Struktur ist vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),

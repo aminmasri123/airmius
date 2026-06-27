@@ -30,7 +30,7 @@ class _SystemStatusIncidentCenterSuiteScreenState extends State<SystemStatusInci
       ),
       body: PageFrame(
         title: 'System Status Incident Center',
-        subtitle: 'Mobile UI fuer Systemstatus, Wartungsfenster, Incident-Kommunikation, Service-Health und Admin-Eskalation.',
+        subtitle: 'Mobile UI für Systemstatus, Wartungsfenster, Incident-Kommunikation, Service-Health und Admin-Eskalation.',
         trailing: const StatusPill('Health', color: AirmiusColors.green),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -48,7 +48,7 @@ class _SystemStatusIncidentCenterSuiteScreenState extends State<SystemStatusInci
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Die App bereitet Statusbanner, Wartungsmodus, Incident-Verlauf, Service-Health und klare Nutzerhinweise fuer mobile Web-App-Paritaet vor.',
+                    'Die App bereitet Statusbanner, Wartungsmodus, Incident-Verlauf, Service-Health und klare Nutzerhinweise für mobile Web-App-Paritaet vor.',
                     style: TextStyle(color: AirmiusColors.muted, height: 1.42),
                   ),
                   const SizedBox(height: 14),
@@ -104,14 +104,14 @@ class _SystemStatusIncidentCenterSuiteScreenState extends State<SystemStatusInci
                   _StatusToggle(
                     icon: Icons.public_outlined,
                     title: 'Public Status Page',
-                    body: 'Oeffentliche Statusseite fuer App, API, Provider und Store-relevante Dienste.',
+                    body: 'Öffentliche Statusseite für App, API, Provider und Store-relevante Dienste.',
                     enabled: _statusPage,
                     onChanged: (value) => setState(() => _statusPage = value),
                   ),
                   _StatusToggle(
                     icon: Icons.support_agent_outlined,
                     title: 'Admin Eskalation',
-                    body: 'Kritische Stoerungen koennen an Platform Admins, Provider oder Support eskaliert werden.',
+                    body: 'Kritische Stoerungen können an Platform Admins, Provider oder Support eskaliert werden.',
                     enabled: _adminEscalation,
                     onChanged: (value) => setState(() => _adminEscalation = value),
                     last: true,
@@ -131,11 +131,11 @@ class _SystemStatusIncidentCenterSuiteScreenState extends State<SystemStatusInci
                 children: [
                   const Eyebrow('INCIDENT TIMELINE'),
                   const SizedBox(height: 10),
-                  const _IncidentLine(time: '09:05', title: 'Webhook-Verzoegerung erkannt', body: 'Payment-Events kamen verspaetet an; Nutzer sehen Zahlungsstatus als “wird synchronisiert”.', color: AirmiusColors.amber),
+                  const _IncidentLine(time: '09:05', title: 'Webhook-Verzoegerung erkannt', body: 'Payment-Events kamen verspätet an; Nutzer sehen Zahlungsstatus als “wird synchronisiert”.', color: AirmiusColors.amber),
                   const _IncidentLine(time: '09:18', title: 'Retry Queue aktiv', body: 'Fehlgeschlagene Webhooks werden automatisch erneut verarbeitet.', color: AirmiusColors.blue),
                   const _IncidentLine(time: '09:42', title: 'Service stabil', body: 'Provider antwortet wieder normal, Queue wird abgearbeitet.', color: AirmiusColors.green),
                   const SizedBox(height: 10),
-                  AirmiusButton(label: 'Incident-Update veroeffentlichen', icon: Icons.campaign_outlined, onPressed: () {}),
+                  AirmiusButton(label: 'Incident-Update veröffentlichen', icon: Icons.campaign_outlined, onPressed: () {}),
                 ],
               ),
             ),
@@ -183,10 +183,10 @@ class _Service {
 
 const _services = [
   _Service(scope: 'App', name: 'Mobile App Shell', body: 'Navigation, Header, Bottom Navigation, Rollenwechsel und lokale UI-Zustaende.', status: 'Operational', icon: Icons.phone_iphone_outlined, color: AirmiusColors.green),
-  _Service(scope: 'App', name: 'Forms & Modals', body: 'Mitgliedsantrag, Validierung, Uploads, Rueckzug und lange Formulare.', status: 'Operational', icon: Icons.dynamic_form_outlined, color: AirmiusColors.green),
+  _Service(scope: 'App', name: 'Forms & Modals', body: 'Mitgliedsantrag, Validierung, Uploads, Rückzug und lange Formulare.', status: 'Operational', icon: Icons.dynamic_form_outlined, color: AirmiusColors.green),
   _Service(scope: 'API', name: 'Laravel API v1', body: 'Auth, Clubs, Membership, Files, Social, Commerce, Admin und Public Endpunkte.', status: 'Planned', icon: Icons.api_outlined, color: AirmiusColors.blue),
   _Service(scope: 'API', name: 'Error Contract', body: 'Validation, Unauthorized, Forbidden, Rate Limit, Offline und Retry-Zustaende.', status: 'Mapped', icon: Icons.sync_problem_outlined, color: AirmiusColors.amber),
-  _Service(scope: 'Provider', name: 'Payment Provider', body: 'Checkout, Beitraege, Rechnungen, Webhooks und Refunds.', status: 'Degraded', icon: Icons.payments_outlined, color: AirmiusColors.amber),
+  _Service(scope: 'Provider', name: 'Payment Provider', body: 'Checkout, Beiträge, Rechnungen, Webhooks und Refunds.', status: 'Degraded', icon: Icons.payments_outlined, color: AirmiusColors.amber),
   _Service(scope: 'Provider', name: 'Mail Provider', body: 'Verifizierung, Admin-Hinweise, Support, Rechnungen und Systemmeldungen.', status: 'Operational', icon: Icons.mail_outline, color: AirmiusColors.green),
   _Service(scope: 'Jobs', name: 'Queue Worker', body: 'Mail, Push, Upload-Scan, Import, Export, Payments und Webhook-Retry.', status: 'Operational', icon: Icons.pending_actions_outlined, color: AirmiusColors.green),
   _Service(scope: 'Jobs', name: 'Dead Letter Queue', body: 'Nicht zustellbare oder defekte Jobs mit Admin-Aktion und Audit.', status: 'Watching', icon: Icons.error_outline, color: AirmiusColors.amber),

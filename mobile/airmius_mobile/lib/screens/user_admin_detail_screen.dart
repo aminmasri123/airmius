@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'trust_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
@@ -63,30 +63,30 @@ class _UserAdminDetailScreenState extends State<UserAdminDetailScreen> {
             ),
             const SizedBox(height: 8),
             SwitchListTile(value: _verified, onChanged: (value) => setState(() => _verified = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('E-Mail verifiziert', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Kann Login, Anfragen und Benachrichtigungen nutzen.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _twoFactor, onChanged: (value) => setState(() => _twoFactor = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('2FA aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Empfohlen fuer Admin- und Finanzrechte.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _twoFactor, onChanged: (value) => setState(() => _twoFactor = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('2FA aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Empfohlen für Admin- und Finanzrechte.', style: TextStyle(color: AirmiusColors.muted))),
             SwitchListTile(value: _blocked, onChanged: (value) => setState(() => _blocked = value), activeColor: AirmiusColors.red, contentPadding: EdgeInsets.zero, title: const Text('Konto sperren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Sperre verhindert Login und neue Aktionen.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Datenschutz & Sicherheit'),
             const SizedBox(height: 8),
-            SwitchListTile(value: _dataExport, onChanged: (value) => setState(() => _dataExport = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Datenexport angefragt', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('DSGVO Export wird spaeter ueber API bereitgestellt.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _dataExport, onChanged: (value) => setState(() => _dataExport = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Datenexport angefragt', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('DSGVO Export wird später über API bereitgestellt.', style: TextStyle(color: AirmiusColors.muted))),
             const Wrap(spacing: 8, runSpacing: 8, children: [StatusPill('Consent OK'), StatusPill('Push aktiv'), StatusPill('Keine Reports')]),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(borderColor: AirmiusColors.amber.withValues(alpha: 0.55), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: const [
             Eyebrow('Moderationsnotiz'),
             SizedBox(height: 12),
-            AirmiusTextField(label: 'Interne Notiz', hint: 'Nur fuer Admins sichtbar', icon: Icons.gpp_maybe_outlined, maxLines: 4),
+            AirmiusTextField(label: 'Interne Notiz', hint: 'Nur für Admins sichtbar', icon: Icons.gpp_maybe_outlined, maxLines: 4),
             SizedBox(height: 10),
-            _AuditLine(title: 'Profil geprueft', body: 'Heute 10:15 - verein airmius'),
+            _AuditLine(title: 'Profil geprüft', body: 'Heute 10:15 - verein airmius'),
             SizedBox(height: 8),
             _AuditLine(title: 'Rolle aktualisiert', body: 'Gestern 18:42 - Admin'),
           ])),
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [
             AirmiusButton(label: 'Speichern', icon: Icons.save_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Nutzer speichern', body: '${widget.name} mit Rolle, Status, Datenschutz und Audit aktualisieren.', status: 'Speichern', icon: Icons.save_outlined)))),
-            AirmiusButton(label: 'Supportfall', icon: Icons.support_agent_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Supportfall erstellen', body: 'Supportfall fuer ${widget.name} erstellen und Moderationsnotiz verknuepfen.', status: 'Support', icon: Icons.support_agent_outlined)))),
+            AirmiusButton(label: 'Supportfall', icon: Icons.support_agent_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Supportfall erstellen', body: 'Supportfall für ${widget.name} erstellen und Moderationsnotiz verknuepfen.', status: 'Support', icon: Icons.support_agent_outlined)))),
             AirmiusButton(label: 'Konto sperren', icon: Icons.block_outlined, danger: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Konto sperren', body: '${widget.name} sperren, Login blockieren und Audit schreiben.', status: 'Sperre', icon: Icons.block_outlined)))),
           ]),
         ]),

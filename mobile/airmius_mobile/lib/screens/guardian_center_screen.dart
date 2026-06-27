@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -31,7 +31,7 @@ class _GuardianCenterScreenState extends State<GuardianCenterScreen> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               const Eyebrow('Schutz minderjaehriger Nutzer'),
               const SizedBox(height: 8),
-              const Text('Eltern koennen Zustimmung geben, Kinder verwalten und Zugriffe widerrufen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+              const Text('Eltern können Zustimmung geben, Kinder verwalten und Zugriffe widerrufen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
               const SizedBox(height: 12),
               SwitchListTile(
                 value: _consentEnabled,
@@ -50,7 +50,7 @@ class _GuardianCenterScreenState extends State<GuardianCenterScreen> {
           const SizedBox(height: 12),
           const _GuardianCard(title: 'Elternlogin', body: 'Code-Verifizierung und Zugriff auf Kinderkonten.', status: 'Login', icon: Icons.family_restroom_outlined),
           const SizedBox(height: 12),
-          const _GuardianCard(title: 'Elterncode pruefen', body: 'Token oder Code aus E-Mail eingeben und Elternzugang freischalten.', status: 'Code', icon: Icons.password_outlined),
+          const _GuardianCard(title: 'Elterncode prüfen', body: 'Token oder Code aus E-Mail eingeben und Elternzugang freischalten.', status: 'Code', icon: Icons.password_outlined),
           const SizedBox(height: 12),
           const _GuardianCard(title: 'Kinder verwalten', body: 'Profile, Vereine, Zustimmung und Widerruf verwalten.', status: '2 Kinder', icon: Icons.child_care_outlined),
           const SizedBox(height: 12),
@@ -59,7 +59,7 @@ class _GuardianCenterScreenState extends State<GuardianCenterScreen> {
             const SizedBox(height: 12),
             Wrap(spacing: 10, runSpacing: 10, children: [
               AirmiusButton(label: 'Zustimmung senden', icon: Icons.send_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Zustimmung senden', body: 'Guardian Consent, Eltern-E-Mail, Token und Freigabeumfang vorbereiten.', status: 'Consent', icon: Icons.send_outlined)))),
-              AirmiusButton(label: 'Elternlogin starten', icon: Icons.family_restroom_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Elternlogin starten', body: 'Elternzugang, Code-Verifizierung, Kinderuebersicht und Session vorbereiten.', status: 'Elternlogin', icon: Icons.family_restroom_outlined)))),
+              AirmiusButton(label: 'Elternlogin starten', icon: Icons.family_restroom_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Elternlogin starten', body: 'Elternzugang, Code-Verifizierung, Kinderübersicht und Session vorbereiten.', status: 'Elternlogin', icon: Icons.family_restroom_outlined)))),
               AirmiusButton(label: 'Kinderkonto erstellen', icon: Icons.child_care_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Kinderkonto erstellen', body: 'Elternkonto, Kindprofil, Altersfreigaben und Consent-Historie vorbereiten.', status: 'Kinderkonto', icon: Icons.child_care_outlined)))),
               AirmiusButton(label: 'Safety Ops', icon: Icons.health_and_safety_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SafetyCommunityOperationsScreen()))),
               AirmiusButton(label: 'Widerrufen', icon: Icons.block_outlined, danger: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Zustimmung widerrufen', body: 'Widerruf, betroffene Rechte und Historie vorbereiten.', status: 'Widerruf', icon: Icons.block_outlined)))),

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -56,7 +56,7 @@ class _WorkspaceCenterScreenState extends State<WorkspaceCenterScreen> {
           _WorkspaceLine(
             icon: Icons.apartment_outlined,
             title: 'Vereinsbereich',
-            body: 'Vereinsprofil, Teams, Mitglieder, Dokumente und Beitraege.',
+            body: 'Vereinsprofil, Teams, Mitglieder, Dokumente und Beiträge.',
             status: 'ZBB',
             color: AirmiusColors.green,
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => WorkspaceDetailScreen(title: 'Vereinsbereich', status: 'ZBB'))),
@@ -77,7 +77,7 @@ class _WorkspaceCenterScreenState extends State<WorkspaceCenterScreen> {
             Wrap(spacing: 10, runSpacing: 10, children: [
               AirmiusButton(label: 'Bereich wechseln', icon: Icons.swap_horiz_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => WorkspaceDetailScreen(title: 'Bereich wechseln', status: 'Aktiv')))),
               AirmiusButton(label: 'Einladungen', icon: Icons.mark_email_read_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => WorkspaceDetailScreen(title: 'Einladungen', status: 'Offen')))),
-              AirmiusButton(label: 'Rollen pruefen', icon: Icons.verified_user_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => WorkspaceDetailScreen(title: 'Rollen pruefen', status: 'Audit')))),
+              AirmiusButton(label: 'Rollen prüfen', icon: Icons.verified_user_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => WorkspaceDetailScreen(title: 'Rollen prüfen', status: 'Audit')))),
               AirmiusButton(label: 'Access Ops', icon: Icons.admin_panel_settings_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AccessOperationsScreen()))),
             ]),
           ])),

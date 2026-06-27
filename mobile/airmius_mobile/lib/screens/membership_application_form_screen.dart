@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_api_models.dart';
 import '../core/airmius_services_scope.dart';
@@ -31,7 +31,7 @@ class _MembershipApplicationFormScreenState extends State<MembershipApplicationF
 
   String _gender = '';
   String _membershipType = 'Allgemeine Anfrage';
-  String _paymentMethod = 'Ueberweisung';
+  String _paymentMethod = 'Überweisung';
   String _interval = 'Monatlich';
   bool _privacyAccepted = true;
   bool _rulesAccepted = true;
@@ -87,7 +87,7 @@ class _MembershipApplicationFormScreenState extends State<MembershipApplicationF
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const PageTitle(title: 'Mitgliedsantrag', subtitle: 'Mobile Formularstrecke fuer Vereinsbeitritt, Daten, Zahlung, Dokumente und Senden.'),
+                        const PageTitle(title: 'Mitgliedsantrag', subtitle: 'Mobile Formularstrecke für Vereinsbeitritt, Daten, Zahlung, Dokumente und Senden.'),
                         const SizedBox(height: 16),
                         _ApplicationHero(onSubmit: _submit),
                         const SizedBox(height: 16),
@@ -122,7 +122,7 @@ class _MembershipApplicationFormScreenState extends State<MembershipApplicationF
                           AirmiusTextField(label: 'Telefon', controller: _phone),
                         ]),
                         _FormSection(title: 'Wohndaten', children: [
-                          AirmiusTextField(label: 'Strasse *', controller: _street),
+                          AirmiusTextField(label: 'Straße *', controller: _street),
                           AirmiusTextField(label: 'Hausnummer *', controller: _house),
                           AirmiusTextField(label: 'PLZ *', controller: _zip),
                           AirmiusTextField(label: 'Stadt *', controller: _city),
@@ -134,7 +134,7 @@ class _MembershipApplicationFormScreenState extends State<MembershipApplicationF
                         _FormSection(title: 'Notfallkontakt', children: [
                           AirmiusTextField(label: 'Notfallkontakt Name', controller: _emergencyName),
                         ]),
-                        _SelectPanel(title: 'Zahlmethode', value: _paymentMethod, values: const ['Ueberweisung', 'Bar', 'SEPA'], onChanged: (value) => setState(() => _paymentMethod = value)),
+                        _SelectPanel(title: 'Zahlmethode', value: _paymentMethod, values: const ['Überweisung', 'Bar', 'SEPA'], onChanged: (value) => setState(() => _paymentMethod = value)),
                         const SizedBox(height: 12),
                         _SelectPanel(title: 'Zahlungsintervall', value: _interval, values: const ['Monatlich', '4 Monate', '6 Monate', 'Jaehrlich'], onChanged: (value) => setState(() => _interval = value)),
                         const SizedBox(height: 12),

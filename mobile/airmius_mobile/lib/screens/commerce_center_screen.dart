@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -30,7 +30,7 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
             const SizedBox(height: 8),
             const Text('Marketplace von der Anbieter-Seite verwalten.', style: TextStyle(color: AirmiusColors.text, fontSize: 23, fontWeight: FontWeight.w900)),
             const SizedBox(height: 8),
-            const Text('Native UI fuer Produktqualitaet, Bestellungen, Payouts, Coupons, Varianten und Lagerbestand.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+            const Text('Native UI für Produktqualitaet, Bestellungen, Payouts, Coupons, Varianten und Lagerbestand.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
             const SizedBox(height: 14),
             Wrap(spacing: 8, runSpacing: 8, children: ['Orders', 'Produkte', 'Inventar', 'Payouts', 'Coupons', 'Anbieter', 'Ads', 'Retouren'].map((item) => ChoiceChip(
               selected: _tab == item,
@@ -47,11 +47,11 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
           const SizedBox(height: 14),
           _CommerceLine(icon: Icons.receipt_long_outlined, title: 'Bestellung #A-1024', body: 'Teamshirt, bezahlt, Versand wird vorbereitet.', status: 'Bezahlt', color: AirmiusColors.green, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CommerceDetailScreen(title: 'Bestellung #A-1024', status: 'Bezahlt')))),
           const SizedBox(height: 12),
-          _CommerceLine(icon: Icons.inventory_2_outlined, title: 'Airmius Teamshirt', body: 'Varianten, Bestand, Preis und Fulfillment pruefen.', status: 'Qualitaet ok', color: AirmiusColors.blue, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CommerceDetailScreen(title: 'Airmius Teamshirt', status: 'Qualitaet ok')))),
+          _CommerceLine(icon: Icons.inventory_2_outlined, title: 'Airmius Teamshirt', body: 'Varianten, Bestand, Preis und Fulfillment prüfen.', status: 'Qualitaet ok', color: AirmiusColors.blue, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CommerceDetailScreen(title: 'Airmius Teamshirt', status: 'Qualitaet ok')))),
           const SizedBox(height: 12),
-          _CommerceLine(icon: Icons.payments_outlined, title: 'Payout Juni', body: 'Auszahlung fuer Vereinsanbieter vorbereiten und dokumentieren.', status: 'Offen', color: AirmiusColors.amber, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CommerceDetailScreen(title: 'Payout Juni', status: 'Offen')))),
+          _CommerceLine(icon: Icons.payments_outlined, title: 'Payout Juni', body: 'Auszahlung für Vereinsanbieter vorbereiten und dokumentieren.', status: 'Offen', color: AirmiusColors.amber, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CommerceDetailScreen(title: 'Payout Juni', status: 'Offen')))),
           const SizedBox(height: 12),
-          _CommerceLine(icon: Icons.assignment_return_outlined, title: 'Rueckgabe #R-88', body: 'Retourenentscheidung, Erstattung und Anbieterantwort pruefen.', status: 'Review', color: AirmiusColors.amber, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CommerceDetailScreen(title: 'Rueckgabe #R-88', status: 'Review')))),
+          _CommerceLine(icon: Icons.assignment_return_outlined, title: 'Rückgabe #R-88', body: 'Retourenentscheidung, Erstattung und Anbieterantwort prüfen.', status: 'Review', color: AirmiusColors.amber, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CommerceDetailScreen(title: 'Rückgabe #R-88', status: 'Review')))),
           const SizedBox(height: 12),
           _CommerceLine(icon: Icons.campaign_outlined, title: 'Marketplace Kampagne', body: 'Hero-Banner, Sale-Kachel, Klicks und Conversion vorbereiten.', status: 'Ads', color: AirmiusColors.blue, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdCampaignScreen(title: 'Marketplace Kampagne', status: 'Ads')))),
           const SizedBox(height: 12),
@@ -63,7 +63,7 @@ class _CommerceCenterScreenState extends State<CommerceCenterScreen> {
             Wrap(spacing: 10, runSpacing: 10, children: [
               AirmiusButton(label: 'Produkt anlegen', icon: Icons.add_box_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CommerceDetailScreen(title: 'Produkt anlegen', status: 'Entwurf')))),
               AirmiusButton(label: 'Coupon erstellen', icon: Icons.local_offer_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CommerceDetailScreen(title: 'Coupon erstellen', status: 'Coupon')))),
-              AirmiusButton(label: 'Payout pruefen', icon: Icons.account_balance_wallet_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CommerceDetailScreen(title: 'Payout pruefen', status: 'Offen')))),
+              AirmiusButton(label: 'Payout prüfen', icon: Icons.account_balance_wallet_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CommerceDetailScreen(title: 'Payout prüfen', status: 'Offen')))),
               AirmiusButton(label: 'Kampagne erstellen', icon: Icons.campaign_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AdCampaignScreen(title: 'Kampagne erstellen', status: 'Planung')))),
               AirmiusButton(label: 'Operations', icon: Icons.tune_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CommerceOperationsScreen()))),
             ]),

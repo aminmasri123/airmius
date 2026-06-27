@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -26,7 +26,7 @@ class PlatformOperationsScreen extends StatelessWidget {
                 children: const [
                   Eyebrow('Mobile Web-App Abgleich'),
                   SizedBox(height: 8),
-                  Text('Diese Ansicht sammelt technische Web-App-Routen, die in einer nativen App nicht als normale Seite auffallen, aber fuer Betrieb, Checkout und Public-Reichweite wichtig sind.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  Text('Diese Ansicht sammelt technische Web-App-Routen, die in einer nativen App nicht als normale Seite auffallen, aber für Betrieb, Checkout und Public-Reichweite wichtig sind.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                   SizedBox(height: 12),
                   Wrap(spacing: 8, runSpacing: 8, children: [StatusPill('API'), StatusPill('Webhooks'), StatusPill('SEO'), StatusPill('Checkout'), StatusPill('System')]),
                 ],
@@ -40,7 +40,7 @@ class PlatformOperationsScreen extends StatelessWidget {
               icon: Icons.api_outlined,
               description: 'Base URL, Sanctum-Session, CSRF-Token, Sprache und Mobile-Meta-Daten.',
               actions: [
-                _OpsAction(label: 'API-Status pruefen', icon: Icons.health_and_safety_outlined, body: 'Meta-Endpunkt laden, App-Version pruefen und Feature-Flags synchronisieren.'),
+                _OpsAction(label: 'API-Status prüfen', icon: Icons.health_and_safety_outlined, body: 'Meta-Endpunkt laden, App-Version prüfen und Feature-Flags synchronisieren.'),
                 _OpsAction(label: 'CSRF/Session erneuern', icon: Icons.lock_outline, body: 'Checkout-CSRF und Auth-Session aktualisieren, bevor sensible Mutationen ausgefuehrt werden.'),
                 _OpsAction(label: 'Sprache synchronisieren', icon: Icons.language_outlined, body: 'Aktuelle App-Sprache in Laravel speichern und Inhalte lokalisiert neu laden.'),
               ],
@@ -49,11 +49,11 @@ class PlatformOperationsScreen extends StatelessWidget {
             _OpsGroup(
               title: 'Checkout & Webhooks',
               icon: Icons.payments_outlined,
-              description: 'Stripe, PayPal, Commerce, Subscription, Outfit und Gast-Checkout-Rueckkehrseiten.',
+              description: 'Stripe, PayPal, Commerce, Subscription, Outfit und Gast-Checkout-Rückkehrseiten.',
               actions: [
-                _OpsAction(label: 'Webhook-Status', icon: Icons.sync_outlined, body: 'Stripe-, PayPal-, Commerce- und Outfit-Webhooks in einer Betriebsuebersicht pruefen.'),
-                _OpsAction(label: 'Gast-Checkout pruefen', icon: Icons.shopping_bag_outlined, body: 'Success, Cancel, Banktransfer und Return-Links fuer Gastbestellungen darstellen.'),
-                _OpsAction(label: 'Banktransfer abgleichen', icon: Icons.account_balance_outlined, body: 'Offene Ueberweisungen markieren, Belege anzeigen und Admin-Zahlstatus vorbereiten.'),
+                _OpsAction(label: 'Webhook-Status', icon: Icons.sync_outlined, body: 'Stripe-, PayPal-, Commerce- und Outfit-Webhooks in einer Betriebsübersicht prüfen.'),
+                _OpsAction(label: 'Gast-Checkout prüfen', icon: Icons.shopping_bag_outlined, body: 'Success, Cancel, Banktransfer und Return-Links für Gastbestellungen darstellen.'),
+                _OpsAction(label: 'Banktransfer abgleichen', icon: Icons.account_balance_outlined, body: 'Offene Überweisungen markieren, Belege anzeigen und Admin-Zahlstatus vorbereiten.'),
               ],
             ),
             const SizedBox(height: 12),
@@ -62,9 +62,9 @@ class PlatformOperationsScreen extends StatelessWidget {
               icon: Icons.public_outlined,
               description: 'Robots, Sitemap, RSS, Legal-Seiten, Standortformular und Public-Content.',
               actions: [
-                _OpsAction(label: 'Sitemap/Robots', icon: Icons.travel_explore_outlined, body: 'Sitemap, robots.txt und Public-Seitenstatus fuer die App sichtbar machen.'),
-                _OpsAction(label: 'RSS & Blog', icon: Icons.rss_feed_outlined, body: 'Blog-RSS, Kategorien und Public-Artikel fuer mobile Leser bereitstellen.'),
-                _OpsAction(label: 'Legal-Status', icon: Icons.gavel_outlined, body: 'Impressum, Datenschutz, AGB, Jugendschutz, Cookies und Widerrufsversionen pruefen.'),
+                _OpsAction(label: 'Sitemap/Robots', icon: Icons.travel_explore_outlined, body: 'Sitemap, robots.txt und Public-Seitenstatus für die App sichtbar machen.'),
+                _OpsAction(label: 'RSS & Blog', icon: Icons.rss_feed_outlined, body: 'Blog-RSS, Kategorien und Public-Artikel für mobile Leser bereitstellen.'),
+                _OpsAction(label: 'Legal-Status', icon: Icons.gavel_outlined, body: 'Impressum, Datenschutz, AGB, Jugendschutz, Cookies und Widerrufsversionen prüfen.'),
               ],
             ),
             const SizedBox(height: 12),
@@ -73,7 +73,7 @@ class PlatformOperationsScreen extends StatelessWidget {
               icon: Icons.settings_suggest_outlined,
               description: 'Testmails, Wartung, Audit-Export, Queue-Hinweise und Upload-Speicher.',
               actions: [
-                _OpsAction(label: 'Testmail senden', icon: Icons.mark_email_read_outlined, body: 'Mailzustellung testen und Fehler fuer Admins sichtbar machen.'),
+                _OpsAction(label: 'Testmail senden', icon: Icons.mark_email_read_outlined, body: 'Mailzustellung testen und Fehler für Admins sichtbar machen.'),
                 _OpsAction(label: 'Wartungsmodus', icon: Icons.construction_outlined, body: 'Maintenance-Hinweis, Login-Verhalten und Public-Kommunikation vorbereiten.'),
                 _OpsAction(label: 'Audit exportieren', icon: Icons.history_outlined, body: 'Systemaktionen, Adminentscheidungen und sensible Mutationen als Audit-Export vormerken.'),
               ],

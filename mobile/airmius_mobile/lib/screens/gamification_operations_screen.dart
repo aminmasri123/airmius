@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/api_contract.dart';
 import '../core/airmius_theme.dart';
@@ -99,7 +99,7 @@ class _GamificationOperationCard extends StatelessWidget {
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: [
             AirmiusButton(label: item.action, icon: item.icon, danger: item.danger, onPressed: () => openUiAction(context, title: item.title, body: '${item.body}\n\nEndpoint: ${item.method} ${item.endpoint}', status: item.tab, icon: item.icon)),
-            AirmiusButton(label: 'Audit', icon: Icons.history_outlined, secondary: true, onPressed: () => openUiAction(context, title: '${item.title} Audit', body: 'Regelversion, Trigger, User, Datenschutzstatus, Guardian/Maturity-Gate und XP-Aenderung anzeigen.', status: 'Audit', icon: Icons.history_outlined)),
+            AirmiusButton(label: 'Audit', icon: Icons.history_outlined, secondary: true, onPressed: () => openUiAction(context, title: '${item.title} Audit', body: 'Regelversion, Trigger, User, Datenschutzstatus, Guardian/Maturity-Gate und XP-Änderung anzeigen.', status: 'Audit', icon: Icons.history_outlined)),
           ]),
         ]),
       );
@@ -122,15 +122,15 @@ const _tabs = ['Badges', 'Regeln', 'XP', 'Streaks', 'Leaderboard', 'Alle'];
 
 final _operations = <_GamificationOperation>[
   _GamificationOperation(tab: 'Badges', title: 'Badges laden', body: 'Eigene Badges, Fortschritt und sichtbare Auszeichnungen laden.', method: 'GET', endpoint: ApiContract.badges, icon: Icons.workspace_premium_outlined, action: 'Laden', color: AirmiusColors.amber),
-  _GamificationOperation(tab: 'Badges', title: 'Badge Detail', body: 'Fortschritt, Freischaltung, Sichtbarkeit und Empfehlung eines Badges anzeigen.', method: 'GET', endpoint: ApiContract.badge(1), icon: Icons.military_tech_outlined, action: 'Oeffnen', color: AirmiusColors.amber),
+  _GamificationOperation(tab: 'Badges', title: 'Badge Detail', body: 'Fortschritt, Freischaltung, Sichtbarkeit und Empfehlung eines Badges anzeigen.', method: 'GET', endpoint: ApiContract.badge(1), icon: Icons.military_tech_outlined, action: 'Öffnen', color: AirmiusColors.amber),
   _GamificationOperation(tab: 'Badges', title: 'Admin Badge erstellen', body: 'Badge mit Name, Icon, Regel, Sichtbarkeit und Lokalisierung erstellen.', method: 'POST', endpoint: ApiContract.adminBadges, icon: Icons.add_circle_outline, action: 'Erstellen', color: AirmiusColors.blue),
-  _GamificationOperation(tab: 'Badges', title: 'Admin Badge loeschen', body: 'Badge entfernen und bestehende User-Fortschritte vorher pruefen.', method: 'DELETE', endpoint: ApiContract.adminBadge(1), icon: Icons.delete_outline, action: 'Loeschen', color: AirmiusColors.red, danger: true),
+  _GamificationOperation(tab: 'Badges', title: 'Admin Badge löschen', body: 'Badge entfernen und bestehende User-Fortschritte vorher prüfen.', method: 'DELETE', endpoint: ApiContract.adminBadge(1), icon: Icons.delete_outline, action: 'Löschen', color: AirmiusColors.red, danger: true),
   _GamificationOperation(tab: 'Regeln', title: 'Regeln laden', body: 'XP-, Badge-, Streak- und Leaderboard-Regeln laden.', method: 'GET', endpoint: ApiContract.gamificationRules, icon: Icons.rule_outlined, action: 'Regeln laden', color: AirmiusColors.blue),
   _GamificationOperation(tab: 'Regeln', title: 'Regeln speichern', body: 'Admin-Regeln aktualisieren, versionieren und Audit schreiben.', method: 'PUT', endpoint: ApiContract.gamificationRules, icon: Icons.save_outlined, action: 'Speichern', color: AirmiusColors.green),
   _GamificationOperation(tab: 'XP', title: 'XP Ledger anzeigen', body: 'XP-Historie mit Quelle, Trigger, Modul und Korrektur anzeigen.', method: 'GET', endpoint: ApiContract.gamificationXpLedger, icon: Icons.receipt_long_outlined, action: 'Ledger', color: AirmiusColors.green),
   _GamificationOperation(tab: 'XP', title: 'XP korrigieren', body: 'XP-Korrektur mit Admin-Grund und Auditlog vorbereiten.', method: 'POST', endpoint: ApiContract.gamificationXpAdjust, icon: Icons.tune_outlined, action: 'Korrigieren', color: AirmiusColors.amber),
   _GamificationOperation(tab: 'Streaks', title: 'Streaks laden', body: 'Training, Lernen, Community und Vereinsaktivitaet als Streaks anzeigen.', method: 'GET', endpoint: ApiContract.gamificationStreaks, icon: Icons.local_fire_department_outlined, action: 'Streaks', color: AirmiusColors.amber),
-  _GamificationOperation(tab: 'Streaks', title: 'Streak retten', body: 'Kulanzaktion oder Freeze fuer unterbrochene Streak vorbereiten.', method: 'POST', endpoint: ApiContract.gamificationStreakRescue(1), icon: Icons.health_and_safety_outlined, action: 'Retten', color: AirmiusColors.green),
+  _GamificationOperation(tab: 'Streaks', title: 'Streak retten', body: 'Kulanzaktion oder Freeze für unterbrochene Streak vorbereiten.', method: 'POST', endpoint: ApiContract.gamificationStreakRescue(1), icon: Icons.health_and_safety_outlined, action: 'Retten', color: AirmiusColors.green),
   _GamificationOperation(tab: 'Leaderboard', title: 'Leaderboard laden', body: 'Ranking nur mit Opt-in, Profilfreigabe und Altersfreigabe anzeigen.', method: 'GET', endpoint: ApiContract.gamificationLeaderboard, icon: Icons.leaderboard_outlined, action: 'Leaderboard', color: AirmiusColors.blue),
   _GamificationOperation(tab: 'Leaderboard', title: 'Leaderboard Opt-out', body: 'User aus Ranking entfernen und Sichtbarkeit sofort aktualisieren.', method: 'POST', endpoint: ApiContract.gamificationLeaderboardOptOut, icon: Icons.visibility_off_outlined, action: 'Opt-out', color: AirmiusColors.red, danger: true),
 ];

@@ -41,7 +41,7 @@ class _NavigationMenuParitySuiteScreenState extends State<NavigationMenuParitySu
             onPressed: () => openUiAction(
               context,
               title: 'Header Suche',
-              body: 'Personen, Vereine, Teams, Dateien, Kurse, Events und Marketplace-Objekte werden spaeter ueber Laravel API gesucht.',
+              body: 'Personen, Vereine, Teams, Dateien, Kurse, Events und Marketplace-Objekte werden später über Laravel API gesucht.',
               status: 'Search',
               icon: Icons.search_outlined,
             ),
@@ -81,7 +81,7 @@ class _NavigationMenuParitySuiteScreenState extends State<NavigationMenuParitySu
                 onOpen: () => openUiAction(
                   context,
                   title: 'Globale Suche',
-                  body: 'Header-Suche zeigt spaeter Vorschlaege fuer Personen, Teams, Vereine, Dateien, Events, Kurse und Produkte.',
+                  body: 'Header-Suche zeigt später Vorschläge für Personen, Teams, Vereine, Dateien, Events, Kurse und Produkte.',
                   status: 'Header',
                   icon: Icons.manage_search_outlined,
                 ),
@@ -109,7 +109,7 @@ class _NavigationMenuParitySuiteScreenState extends State<NavigationMenuParitySu
                 _MenuGroupCard(group: group, compactMode: _compactMode),
                 const SizedBox(height: 12),
               ],
-              if (visibleGroups.isEmpty) const EmptyPanel('Keine Menuebereiche fuer diese Rolle sichtbar.'),
+              if (visibleGroups.isEmpty) const EmptyPanel('Keine Menübereiche für diese Rolle sichtbar.'),
               const SizedBox(height: 4),
               _NavigationChecklist(
                 onOpen: () => openUiAction(
@@ -156,7 +156,7 @@ class _Hero extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Flutter bekommt dieselbe Logik fuer Logo, Header-Suche, Workspace, Rollen, Modulgruppen, Bottom Navigation, Badges und mobile Drawer-Struktur.',
+            'Flutter bekommt dieselbe Logik für Logo, Header-Suche, Workspace, Rollen, Modulgruppen, Bottom Navigation, Badges und mobile Drawer-Struktur.',
             style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
@@ -226,7 +226,7 @@ class _ContextPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Rollen- und Workspace-Kontext',
-      subtitle: 'So entscheidet die App spaeter, welche Module im Menue sichtbar sind.',
+      subtitle: 'So entscheidet die App später, welche Module im Menue sichtbar sind.',
       children: [
         const Eyebrow('Rolle'),
         const SizedBox(height: 8),
@@ -387,13 +387,13 @@ class _MenuGroupCard extends StatelessWidget {
             ...group.items.map((item) => _MenuLine(label: item, color: group.color)),
           const SizedBox(height: 14),
           AirmiusButton(
-            label: '${group.title} oeffnen',
+            label: '${group.title} öffnen',
             icon: group.icon,
             secondary: true,
             onPressed: () => openUiAction(
               context,
               title: group.title,
-              body: 'Navigationsgruppe ${group.title}: ${group.items.join(', ')}. Spaeter verbunden mit Laravel-Routen, Rollen und Deep Links.',
+              body: 'Navigationsgruppe ${group.title}: ${group.items.join(', ')}. Später verbunden mit Laravel-Routen, Rollen und Deep Links.',
               status: 'Navigation',
               icon: group.icon,
             ),
@@ -470,14 +470,14 @@ class _NavigationChecklist extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Navigation-Paritaet',
-      subtitle: 'Was von der mobilen Web-App uebernommen wird.',
+      subtitle: 'Was von der mobilen Web-App übernommen wird.',
       children: [
         const _CheckLine('Airmius-Logo, dunkler Header, Suchfeld und Benachrichtigungen bleiben sichtbar.'),
-        const _CheckLine('Sidebar/Drawer-Gruppen werden als mobile Karten und spaeter als Drawer-Struktur abgebildet.'),
-        const _CheckLine('Bottom Navigation bleibt auf die haeufigsten Mobile-Aktionen reduziert.'),
+        const _CheckLine('Sidebar/Drawer-Gruppen werden als mobile Karten und später als Drawer-Struktur abgebildet.'),
+        const _CheckLine('Bottom Navigation bleibt auf die häufigsten Mobile-Aktionen reduziert.'),
         const _CheckLine('Rollen und Workspaces steuern Sichtbarkeit, Badges, Deep Links und Empty States.'),
         const SizedBox(height: 12),
-        AirmiusButton(label: 'Navigation pruefen', icon: Icons.fact_check_outlined, onPressed: onOpen),
+        AirmiusButton(label: 'Navigation prüfen', icon: Icons.fact_check_outlined, onPressed: onOpen),
       ],
     );
   }
@@ -603,8 +603,8 @@ const _groups = <_MenuGroup>[
   ),
   _MenuGroup(
     title: 'Gesundheit',
-    body: 'Ernaehrung, Wasser, Wohlbefinden und persoenliche Auswertung.',
-    items: ['Ernaehrung', 'Wasser', 'Wellbeing', 'Routen'],
+    body: 'Ernährung, Wasser, Wohlbefinden und persoenliche Auswertung.',
+    items: ['Ernährung', 'Wasser', 'Wellbeing', 'Routen'],
     icon: Icons.favorite_border_outlined,
     color: AirmiusColors.green,
     roles: ['Player', 'Trainer', 'Guardian'],

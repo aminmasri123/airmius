@@ -10,6 +10,28 @@ class TeamResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $viewer = $request->user();
+        $viewerIsMember = $viewer
+            ? ($this->relationLoaded('users')
+                ? $this->users->contains('id', $viewer->id)
+                : $this->users()->where('users.id', $viewer->id)->exists())
+            : false;
+        $viewerIsClubMember = $viewer && $this->club_id
+            ? ($this->relationLoaded('club') && $this->club?->relationLoaded('users')
+                ? $this->club->users->contains('id', $viewer->id)
+                : $this->club?->users()->where('users.id', $viewer->id)->exists())
+            : false;
+        $pendingJoinRequest = $viewer
+            ? ($this->relationLoaded('joinRequests')
+                ? $this->joinRequests->firstWhere('user_id', $viewer->id)
+                : $this->joinRequests()->where('user_id', $viewer->id)->where('status', 'pending')->first())
+            : null;
+        $viewerPendingJoinRequestId = $this->getAttribute('viewer_pending_join_request_id') ?? ($pendingJoinRequest?->status === 'pending' ? $pendingJoinRequest->id : null);
+        $canRequestJoin = $this->getAttribute('can_request_join');
+        if ($canRequestJoin === null) {
+            $canRequestJoin = $viewerIsClubMember && ! $viewerIsMember && ! $viewerPendingJoinRequestId;
+        }
+
         return [
             'id' => $this->id,
             'club_id' => $this->club_id,
@@ -24,6 +46,9 @@ class TeamResource extends JsonResource
             'cover_image_url' => UploadStorage::url($this->cover_image),
             'can_manage' => (bool) ($request->user()?->can('update', $this->resource) ?? false),
             'can_delete' => (bool) ($request->user()?->can('delete', $this->resource) ?? false),
+            'viewer_is_member' => $viewerIsMember,
+            'viewer_pending_join_request_id' => $viewerPendingJoinRequestId,
+            'can_request_join' => (bool) $canRequestJoin,
             'membership' => $this->pivot ? [
                 'role' => $this->pivot->role ?? null,
             ] : null,

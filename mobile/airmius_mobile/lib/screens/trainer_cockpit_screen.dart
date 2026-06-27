@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -29,7 +29,7 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
             const SizedBox(height: 8),
             const Text('3 Aktionen brauchen deine Aufmerksamkeit.', style: TextStyle(color: AirmiusColors.text, fontSize: 23, fontWeight: FontWeight.w900)),
             const SizedBox(height: 8),
-            const Text('Feedback beantworten, ueberfaellige Einheiten pruefen und Risiko-Athleten frueh erkennen.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+            const Text('Feedback beantworten, überfaellige Einheiten prüfen und Risiko-Athleten frueh erkennen.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
             const SizedBox(height: 14),
             Wrap(spacing: 8, runSpacing: 8, children: ['Heute', 'Woche', 'Athleten', 'Feedback'].map((item) {
               return ChoiceChip(
@@ -48,21 +48,21 @@ class _TrainerCockpitScreenState extends State<TrainerCockpitScreen> {
           const SizedBox(height: 14),
           const _CoachAction(icon: Icons.rate_review_outlined, title: 'Feedback beantworten', body: '2 Trainingseinheiten warten auf Trainerfeedback.', status: '2 offen', color: AirmiusColors.amber),
           const SizedBox(height: 12),
-          const _CoachAction(icon: Icons.warning_amber_outlined, title: 'Risiko-Athleten pruefen', body: 'Hohe Belastung, wenig Schlaf oder verpasste Einheiten erkennen.', status: '1 Risiko', color: AirmiusColors.red),
+          const _CoachAction(icon: Icons.warning_amber_outlined, title: 'Risiko-Athleten prüfen', body: 'Hohe Belastung, wenig Schlaf oder verpasste Einheiten erkennen.', status: '1 Risiko', color: AirmiusColors.red),
           const SizedBox(height: 12),
-          const _CoachAction(icon: Icons.calendar_month_outlined, title: 'Wochenplan freigeben', body: 'Plan fuer Laufgruppe pruefen und fuer Teams sichtbar machen.', status: 'Entwurf', color: AirmiusColors.blue),
+          const _CoachAction(icon: Icons.calendar_month_outlined, title: 'Wochenplan freigeben', body: 'Plan für Laufgruppe prüfen und für Teams sichtbar machen.', status: 'Entwurf', color: AirmiusColors.blue),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: const [
-            Eyebrow('Athletenuebersicht'),
+            Eyebrow('Athletenübersicht'),
             SizedBox(height: 10),
             _AthleteLine(name: 'ZBB Konto', meta: '4/5 Einheiten - stabil', readiness: '92%'),
-            _AthleteLine(name: 'Amir Masri', meta: '2 Einheiten offen - Rueckfrage', readiness: '68%'),
+            _AthleteLine(name: 'Amir Masri', meta: '2 Einheiten offen - Rückfrage', readiness: '68%'),
             _AthleteLine(name: 'Junior Mitglied', meta: 'Guardian-Freigabe aktiv', readiness: '74%'),
           ])),
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [
-            AirmiusButton(label: 'Plan erstellen', icon: Icons.add_task_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CoachActionDetailScreen(title: 'Plan erstellen', body: 'Neuen Wochenplan fuer Team oder Athleten vorbereiten.', status: 'Entwurf', icon: Icons.add_task_outlined)))),
-            AirmiusButton(label: 'Feedback senden', icon: Icons.send_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CoachActionDetailScreen(title: 'Feedback senden', body: 'Coach-Feedback fuer offene Trainingslogs schreiben.', status: 'Feedback', icon: Icons.send_outlined)))),
+            AirmiusButton(label: 'Plan erstellen', icon: Icons.add_task_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CoachActionDetailScreen(title: 'Plan erstellen', body: 'Neuen Wochenplan für Team oder Athleten vorbereiten.', status: 'Entwurf', icon: Icons.add_task_outlined)))),
+            AirmiusButton(label: 'Feedback senden', icon: Icons.send_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CoachActionDetailScreen(title: 'Feedback senden', body: 'Coach-Feedback für offene Trainingslogs schreiben.', status: 'Feedback', icon: Icons.send_outlined)))),
             AirmiusButton(label: 'Coach Operations', icon: Icons.tune_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TrainingOperationsScreen()))),
           ]),
         ]),

@@ -31,13 +31,13 @@ class _AuthGuardStatusSuiteScreenState extends State<AuthGuardStatusSuiteScreen>
     ),
     _GuardStep(
       area: 'Account',
-      title: 'E-Mail bestaetigen',
+      title: 'E-Mail bestätigen',
       route: 'Auth/VerifyEmail',
       status: 'Verifizierung',
       body: 'Verify-Mail erneut senden, Tokenstatus zeigen, Countdown darstellen und User nach Erfolg in den richtigen Bereich leiten.',
       icon: Icons.mark_email_read_outlined,
       primary: 'Link erneut senden',
-      secondary: 'Status pruefen',
+      secondary: 'Status prüfen',
     ),
     _GuardStep(
       area: 'Account',
@@ -52,12 +52,12 @@ class _AuthGuardStatusSuiteScreenState extends State<AuthGuardStatusSuiteScreen>
     ),
     _GuardStep(
       area: 'Security',
-      title: 'Passwort bestaetigen',
+      title: 'Passwort bestätigen',
       route: 'Auth/ConfirmPassword',
       status: 'Sensitive Aktion',
-      body: 'Vor kritischen Aktionen wie Konto loeschen, API Token oder Zahlungsdaten eine kompakte Passwortbestaetigung anzeigen.',
+      body: 'Vor kritischen Aktionen wie Konto löschen, API Token oder Zahlungsdaten eine kompakte Passwortbestätigung anzeigen.',
       icon: Icons.lock_outline,
-      primary: 'Bestaetigen',
+      primary: 'Bestätigen',
       secondary: 'Abbrechen',
     ),
     _GuardStep(
@@ -65,9 +65,9 @@ class _AuthGuardStatusSuiteScreenState extends State<AuthGuardStatusSuiteScreen>
       title: 'Zwei-Faktor Challenge',
       route: 'Auth/TwoFactorChallenge',
       status: '2FA',
-      body: 'Authenticator-Code, Recovery-Code, Fehlerzustand, Rate-Limit und Geraet merken als native Mobile-Karte uebernehmen.',
+      body: 'Authenticator-Code, Recovery-Code, Fehlerzustand, Rate-Limit und Gerät merken als native Mobile-Karte übernehmen.',
       icon: Icons.security_outlined,
-      primary: 'Code pruefen',
+      primary: 'Code prüfen',
       secondary: 'Recovery nutzen',
     ),
     _GuardStep(
@@ -97,17 +97,17 @@ class _AuthGuardStatusSuiteScreenState extends State<AuthGuardStatusSuiteScreen>
       status: 'Elternportal',
       body: 'Guardian-Code, Kinderliste, Zustimmung, Ablehnung und Ablaufdatum in einer mobil lesbaren Entscheidungskarte abbilden.',
       icon: Icons.verified_user_outlined,
-      primary: 'Code pruefen',
-      secondary: 'Kinderdaten oeffnen',
+      primary: 'Code prüfen',
+      secondary: 'Kinderdaten öffnen',
     ),
     _GuardStep(
       area: 'System',
       title: 'Forbidden / Kein Zugriff',
       route: 'Errors/Forbidden',
       status: '403',
-      body: 'Fehlende Rolle, falscher Workspace, Club-Kontext oder Altersfreigabe mit Rueckweg und Support-Aktion anzeigen.',
+      body: 'Fehlende Rolle, falscher Workspace, Club-Kontext oder Altersfreigabe mit Rückweg und Support-Aktion anzeigen.',
       icon: Icons.gpp_maybe_outlined,
-      primary: 'Zurueck zum Dashboard',
+      primary: 'Zurück zum Dashboard',
       secondary: 'Zugriff anfragen',
     ),
     _GuardStep(
@@ -115,10 +115,10 @@ class _AuthGuardStatusSuiteScreenState extends State<AuthGuardStatusSuiteScreen>
       title: 'Maintenance',
       route: 'Maintenance',
       status: 'Wartung',
-      body: 'Wartungsbanner, voraussichtliche Dauer, Status-Link und Offline-Hinweis fuer App-User abbilden.',
+      body: 'Wartungsbanner, voraussichtliche Dauer, Status-Link und Offline-Hinweis für App-User abbilden.',
       icon: Icons.construction_outlined,
       primary: 'Status ansehen',
-      secondary: 'Spaeter erinnern',
+      secondary: 'Später erinnern',
     ),
   ];
 
@@ -181,7 +181,7 @@ class _AuthGuardStatusSuiteScreenState extends State<AuthGuardStatusSuiteScreen>
                               onSecondary: () => openUiAction(
                                 context,
                                 title: step.secondary,
-                                body: 'Detailansicht fuer ${step.route}: Formularstatus, API-Fehler, Weiterleitung und Audit-Hinweis anzeigen.',
+                                body: 'Detailansicht für ${step.route}: Formularstatus, API-Fehler, Weiterleitung und Audit-Hinweis anzeigen.',
                                 status: 'Guard Detail',
                                 icon: Icons.manage_search_outlined,
                               ),
@@ -193,8 +193,8 @@ class _AuthGuardStatusSuiteScreenState extends State<AuthGuardStatusSuiteScreen>
                           active: _active,
                           onOpen: () => openUiAction(
                             context,
-                            title: 'Guard Flow pruefen',
-                            body: 'Alle Auth-, Guardian-, Error- und Systemzustaende als mobile UI-Paritaet pruefen. Backend-API wird spaeter verbunden.',
+                            title: 'Guard Flow prüfen',
+                            body: 'Alle Auth-, Guardian-, Error- und Systemzustaende als mobile UI-Paritaet prüfen. Backend-API wird später verbunden.',
                             status: 'UI Parity',
                             icon: Icons.fact_check_outlined,
                           ),
@@ -251,7 +251,7 @@ class _Hero extends StatelessWidget {
             runSpacing: 8,
             children: [
               _Metric(label: 'Guard Pages', value: '10'),
-              _Metric(label: '2FA Geraet', value: rememberDevice ? 'Merken' : 'Einmalig'),
+              _Metric(label: '2FA Gerät', value: rememberDevice ? 'Merken' : 'Einmalig'),
               _Metric(label: 'Guardian', value: guardianRequired ? 'Gate aktiv' : 'Optional'),
               _Metric(label: 'System', value: maintenanceBanner ? 'Wartung' : 'Normal'),
             ],
@@ -323,10 +323,10 @@ class _SwitchPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Mobile Guard Simulation',
-      subtitle: 'Diese Schalter zeigen spaeter API-Zustaende aus Laravel und machen die App-Flows testbar.',
+      subtitle: 'Diese Schalter zeigen später API-Zustaende aus Laravel und machen die App-Flows testbar.',
       children: [
         _SwitchLine(
-          title: 'Geraet bei 2FA merken',
+          title: 'Gerät bei 2FA merken',
           subtitle: 'Zeigt Recovery- und Trusted-Device-Hinweise.',
           value: rememberDevice,
           onChanged: onRememberChanged,
@@ -465,13 +465,13 @@ class _ChecklistPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      title: 'Paritaets-Check fuer $active',
-      subtitle: 'Was diese Suite fuer die Web-zu-Mobile-Konvertierung absichert.',
+      title: 'Paritaets-Check für $active',
+      subtitle: 'Was diese Suite für die Web-zu-Mobile-Konvertierung absichert.',
       children: [
         const _CheckLine('Jede Web-Zustandsseite hat einen nativen Mobile-Zustand.'),
         const _CheckLine('Jeder Zustand hat Primary-CTA, Secondary-CTA, Status und Route-Hinweis.'),
-        const _CheckLine('Fehler, gesperrte Bereiche und Guardian-Gates bleiben fuer User verstaendlich.'),
-        const _CheckLine('Backend kommt spaeter ueber Laravel API; UI-Intent ist bereits vorbereitet.'),
+        const _CheckLine('Fehler, gesperrte Bereiche und Guardian-Gates bleiben für User verstaendlich.'),
+        const _CheckLine('Backend kommt später über Laravel API; UI-Intent ist bereits vorbereitet.'),
         const SizedBox(height: 12),
         AirmiusButton(label: 'Guard-Flow markieren', icon: Icons.fact_check_outlined, onPressed: onOpen),
       ],

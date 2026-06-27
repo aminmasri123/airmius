@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -45,7 +45,7 @@ class _ClubPolicyDocumentsScreenState extends State<ClubPolicyDocumentsScreen> {
                   const SizedBox(height: 14),
                   const Text('Vereine entscheiden, was gezeigt wird und welche Dokumente Pflicht sind.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
                   const SizedBox(height: 8),
-                  const Text('Dokumente koennen als Link oder Upload gepflegt werden. Uploads werden spaeter in den Dateimanager uebergeben und mit Zweck, Sichtbarkeit, Version und Mitgliedsantrag verknuepft.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+                  const Text('Dokumente können als Link oder Upload gepflegt werden. Uploads werden später in den Dateimanager übergeben und mit Zweck, Sichtbarkeit, Version und Mitgliedsantrag verknuepft.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
                   const SizedBox(height: 14),
                   Row(children: const [Expanded(child: MetricCard(value: '6', label: 'Dokumente')), SizedBox(width: 10), Expanded(child: MetricCard(value: '4', label: 'Sichtbar')), SizedBox(width: 10), Expanded(child: MetricCard(value: 'Upload', label: 'Dateien'))]),
                   const SizedBox(height: 14),
@@ -116,14 +116,14 @@ class _VisibilityPanel extends StatelessWidget {
           children: [
             const Eyebrow('Sichtbarkeit & Pflicht'),
             const SizedBox(height: 8),
-            const Text('Diese Schalter bilden ab, was der Verein spaeter selbst einstellen kann: sichtbar im Profil, sichtbar im Antrag, Download erlaubt oder als Upload verpflichtend.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+            const Text('Diese Schalter bilden ab, was der Verein später selbst einstellen kann: sichtbar im Profil, sichtbar im Antrag, Download erlaubt oder als Upload verpflichtend.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
             const SizedBox(height: 10),
             _PolicySwitch(icon: Icons.privacy_tip_outlined, title: 'Datenschutz im Antrag anzeigen', body: 'Nutzer sehen Datenschutzdokumente vor dem Absenden der Mitgliedsanfrage.', value: privacyVisible, onChanged: onPrivacy, color: AirmiusColors.green),
-            _PolicySwitch(icon: Icons.rule_folder_outlined, title: 'Vereinsregeln sichtbar', body: 'Regeln koennen im Vereinsprofil, Antrag oder nur intern sichtbar sein.', value: rulesVisible, onChanged: onRules, color: AirmiusColors.blue),
+            _PolicySwitch(icon: Icons.rule_folder_outlined, title: 'Vereinsregeln sichtbar', body: 'Regeln können im Vereinsprofil, Antrag oder nur intern sichtbar sein.', value: rulesVisible, onChanged: onRules, color: AirmiusColors.blue),
             _PolicySwitch(icon: Icons.receipt_long_outlined, title: 'Beitragsordnung anzeigen', body: 'Zahlrhythmus, Zahlmethode, Aufnahmegebuehr und Beitrag werden transparent gezeigt.', value: feesVisible, onChanged: onFees, color: AirmiusColors.amber),
-            _PolicySwitch(icon: Icons.upload_file_outlined, title: 'Upload fuer Antrag verpflichtend', body: 'Zum Beispiel Passfoto, Ausweis, Bescheinigung, SEPA-Mandat oder unterschriebene Ordnung.', value: requiresUpload, onChanged: onUpload, color: AirmiusColors.green),
-            _PolicySwitch(icon: Icons.download_outlined, title: 'Mitglieder duerfen herunterladen', body: 'Dokumente koennen spaeter fuer Mitglieder downloadbar sein oder nur als Lesedokument angezeigt werden.', value: memberCanDownload, onChanged: onDownload, color: AirmiusColors.blue),
-            _PolicySwitch(icon: Icons.public_outlined, title: 'Regeln oeffentlich zeigen', body: 'Public-Sichtbarkeit fuer Vereinsprofil und Gastseite, getrennt von internem Mitgliederbereich.', value: publicCanSeeRules, onChanged: onPublicRules, color: AirmiusColors.amber),
+            _PolicySwitch(icon: Icons.upload_file_outlined, title: 'Upload für Antrag verpflichtend', body: 'Zum Beispiel Passfoto, Ausweis, Bescheinigung, SEPA-Mandat oder unterschriebene Ordnung.', value: requiresUpload, onChanged: onUpload, color: AirmiusColors.green),
+            _PolicySwitch(icon: Icons.download_outlined, title: 'Mitglieder dürfen herunterladen', body: 'Dokumente können später für Mitglieder downloadbar sein oder nur als Lesedokument angezeigt werden.', value: memberCanDownload, onChanged: onDownload, color: AirmiusColors.blue),
+            _PolicySwitch(icon: Icons.public_outlined, title: 'Regeln öffentlich zeigen', body: 'Public-Sichtbarkeit für Vereinsprofil und Gastseite, getrennt von internem Mitgliederbereich.', value: publicCanSeeRules, onChanged: onPublicRules, color: AirmiusColors.amber),
           ],
         ),
       );
@@ -151,7 +151,7 @@ class _ClubDocumentCard extends StatelessWidget {
           ]),
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: [
-            AirmiusButton(label: 'Upload', icon: Icons.upload_file_outlined, onPressed: () => openUiAction(context, title: '${document.title} hochladen', body: 'Datei auswaehlen, Zweck ${document.area}, Sichtbarkeit ${document.visibility}, Version und Dateimanager-Verknuepfung speichern.', status: 'Upload', icon: Icons.upload_file_outlined)),
+            AirmiusButton(label: 'Upload', icon: Icons.upload_file_outlined, onPressed: () => openUiAction(context, title: '${document.title} hochladen', body: 'Datei auswählen, Zweck ${document.area}, Sichtbarkeit ${document.visibility}, Version und Dateimanager-Verknuepfung speichern.', status: 'Upload', icon: Icons.upload_file_outlined)),
             AirmiusButton(label: 'Dateimanager', icon: Icons.folder_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FileOperationsScreen()))),
             AirmiusButton(label: 'Antrag', icon: Icons.assignment_ind_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MembershipOperationsScreen()))),
           ]),
@@ -170,11 +170,11 @@ class _PolicyActionsPanel extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const Eyebrow('Policy Workflow'),
           const SizedBox(height: 8),
-          Text('Aktueller Bereich: $tab. Spaeter speichert Laravel pro Verein Dokumentzweck, Pflichtstatus, Sichtbarkeit, Version, Link/Upload und ob Nutzer vor Absenden zustimmen muessen.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+          Text('Aktueller Bereich: $tab. Später speichert Laravel pro Verein Dokumentzweck, Pflichtstatus, Sichtbarkeit, Version, Link/Upload und ob Nutzer vor Absenden zustimmen müssen.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: [
-            AirmiusButton(label: 'Regeln speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Dokumentregeln speichern', body: 'Sichtbarkeit, Pflichtfelder, Downloadrechte, Beitragsregeln und Dokumentversionen fuer den Verein speichern.', status: 'Club Policy', icon: Icons.save_outlined)),
-            AirmiusButton(label: 'Version veroeffentlichen', icon: Icons.publish_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Version veroeffentlichen', body: 'Neue Dokumentversion aktivieren, Mitglieder informieren und Antrag-Consent aktualisieren.', status: 'Version', icon: Icons.publish_outlined)),
+            AirmiusButton(label: 'Regeln speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Dokumentregeln speichern', body: 'Sichtbarkeit, Pflichtfelder, Downloadrechte, Beitragsregeln und Dokumentversionen für den Verein speichern.', status: 'Club Policy', icon: Icons.save_outlined)),
+            AirmiusButton(label: 'Version veröffentlichen', icon: Icons.publish_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Version veröffentlichen', body: 'Neue Dokumentversion aktivieren, Mitglieder informieren und Antrag-Consent aktualisieren.', status: 'Version', icon: Icons.publish_outlined)),
           ]),
         ]),
       );
@@ -217,14 +217,14 @@ class _ClubDocument {
 const _tabs = ['Dokumente', 'Regeln', 'Beitrag', 'Consent', 'Upload'];
 
 const _documents = <_ClubDocument>[
-  _ClubDocument(area: 'Dokumente', title: 'Datenschutzerklaerung Verein', body: 'Vereinsbezogene Datenschutzhinweise fuer Mitgliedsantrag, Profil, Kommunikation, Fotos und Zahlungen.', source: 'Upload/Link', visibility: 'Antrag', icon: Icons.privacy_tip_outlined, color: AirmiusColors.green),
+  _ClubDocument(area: 'Dokumente', title: 'Datenschutzerklaerung Verein', body: 'Vereinsbezogene Datenschutzhinweise für Mitgliedsantrag, Profil, Kommunikation, Fotos und Zahlungen.', source: 'Upload/Link', visibility: 'Antrag', icon: Icons.privacy_tip_outlined, color: AirmiusColors.green),
   _ClubDocument(area: 'Dokumente', title: 'Satzung / Vereinsordnung', body: 'Grundregeln, Mitgliedspflichten, Rechte, Kuedigung, interne Kommunikation und Verhaltensregeln.', source: 'Upload', visibility: 'Mitglieder', icon: Icons.rule_folder_outlined, color: AirmiusColors.blue),
-  _ClubDocument(area: 'Regeln', title: 'Trainings- und Hallenordnung', body: 'Regeln fuer Training, Anwesenheit, Ausruestung, Sicherheit, Medien und Minderjaehrige.', source: 'Dateimanager', visibility: 'Team', icon: Icons.sports_outlined, color: AirmiusColors.green),
+  _ClubDocument(area: 'Regeln', title: 'Trainings- und Hallenordnung', body: 'Regeln für Training, Anwesenheit, Ausruestung, Sicherheit, Medien und Minderjaehrige.', source: 'Dateimanager', visibility: 'Team', icon: Icons.sports_outlined, color: AirmiusColors.green),
   _ClubDocument(area: 'Regeln', title: 'Medien- und Fotoregeln', body: 'Foto-/Video-Einwilligung, Guardian Consent, Widerruf, Sichtbarkeit und Moderation.', source: 'Upload/Link', visibility: 'Antrag', icon: Icons.photo_camera_outlined, color: AirmiusColors.amber),
-  _ClubDocument(area: 'Beitrag', title: 'Beitragsordnung', body: 'Monatlich, jaehrlich, 4 Monate, 6 Monate, Barzahlung, Ueberweisung, SEPA, Aufnahmegebuehr und Familienrabatt.', source: 'Upload', visibility: 'Oeffentlich', icon: Icons.receipt_long_outlined, color: AirmiusColors.amber),
-  _ClubDocument(area: 'Beitrag', title: 'SEPA-Lastschriftmandat', body: 'Optionales oder verpflichtendes Formular fuer Zahlungsdaten, Mandatsreferenz und Einzugserlaubnis.', source: 'Upload', visibility: 'Antrag', icon: Icons.account_balance_outlined, color: AirmiusColors.blue),
-  _ClubDocument(area: 'Consent', title: 'Jugendschutz / Guardian Consent', body: 'Elternfreigaben fuer Minderjaehrige, Fahrgemeinschaft, Fotos, Chat, Events und Maturity-Gates.', source: 'Dateimanager', visibility: 'Guardian', icon: Icons.family_restroom_outlined, color: AirmiusColors.green),
-  _ClubDocument(area: 'Consent', title: 'Widerruf & Rueckzug', body: 'Hinweise zum Rueckzug einer Mitgliedsanfrage, Widerruf von Einwilligungen und Kontakt zum Verein.', source: 'Link', visibility: 'Antrag', icon: Icons.undo_outlined, color: AirmiusColors.red),
-  _ClubDocument(area: 'Upload', title: 'Passfoto / Profilbild', body: 'Optionaler Upload fuer Mitgliedsausweis, Teamprofil oder Vereinsverwaltung.', source: 'Upload', visibility: 'Intern', icon: Icons.badge_outlined, color: AirmiusColors.blue),
+  _ClubDocument(area: 'Beitrag', title: 'Beitragsordnung', body: 'Monatlich, jaehrlich, 4 Monate, 6 Monate, Barzahlung, Überweisung, SEPA, Aufnahmegebuehr und Familienrabatt.', source: 'Upload', visibility: 'Öffentlich', icon: Icons.receipt_long_outlined, color: AirmiusColors.amber),
+  _ClubDocument(area: 'Beitrag', title: 'SEPA-Lastschriftmandat', body: 'Optionales oder verpflichtendes Formular für Zahlungsdaten, Mandatsreferenz und Einzugserlaubnis.', source: 'Upload', visibility: 'Antrag', icon: Icons.account_balance_outlined, color: AirmiusColors.blue),
+  _ClubDocument(area: 'Consent', title: 'Jugendschutz / Guardian Consent', body: 'Elternfreigaben für Minderjaehrige, Fahrgemeinschaft, Fotos, Chat, Events und Maturity-Gates.', source: 'Dateimanager', visibility: 'Guardian', icon: Icons.family_restroom_outlined, color: AirmiusColors.green),
+  _ClubDocument(area: 'Consent', title: 'Widerruf & Rückzug', body: 'Hinweise zum Rückzug einer Mitgliedsanfrage, Widerruf von Einwilligungen und Kontakt zum Verein.', source: 'Link', visibility: 'Antrag', icon: Icons.undo_outlined, color: AirmiusColors.red),
+  _ClubDocument(area: 'Upload', title: 'Passfoto / Profilbild', body: 'Optionaler Upload für Mitgliedsausweis, Teamprofil oder Vereinsverwaltung.', source: 'Upload', visibility: 'Intern', icon: Icons.badge_outlined, color: AirmiusColors.blue),
   _ClubDocument(area: 'Upload', title: 'Nachweis / Bescheinigung', body: 'Schueler-, Studenten-, Gesundheits-, Lizenz- oder Trainerbescheinigung als Pflicht- oder Optionalfeld.', source: 'Upload', visibility: 'Admin', icon: Icons.verified_outlined, color: AirmiusColors.green),
 ];

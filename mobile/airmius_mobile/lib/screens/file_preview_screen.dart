@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -41,14 +41,14 @@ class _FilePreviewScreenState extends State<FilePreviewScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Verknuepfung'),
             SwitchListTile(value: _requiredForApplication, onChanged: (value) => setState(() => _requiredForApplication = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Pflichtdokument im Mitgliedsantrag', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Wird im Antrag angezeigt und muss akzeptiert werden.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _visibleOnClubProfile, onChanged: (value) => setState(() => _visibleOnClubProfile = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Auf Clubprofil sichtbar', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Sichtbar fuer Mitglieder oder Besucher je nach Regel.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _visibleOnClubProfile, onChanged: (value) => setState(() => _visibleOnClubProfile = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Auf Clubprofil sichtbar', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Sichtbar für Mitglieder oder Besucher je nach Regel.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Eyebrow('Freigabe & Rechte'),
             SizedBox(height: 10),
             _FileActionLine(icon: Icons.link_outlined, title: 'Share-Link', body: 'Ablaufdatum, Zugriff und Empfaenger verwalten.', status: 'Aktiv'),
-            _FileActionLine(icon: Icons.download_outlined, title: 'Download', body: 'Datei herunterladen oder spaeter offline verfuegbar machen.', status: 'PDF'),
+            _FileActionLine(icon: Icons.download_outlined, title: 'Download', body: 'Datei herunterladen oder später offline verfuegbar machen.', status: 'PDF'),
             _FileActionLine(icon: Icons.history_outlined, title: 'Versionen', body: 'Dokumentversionen und Audit Trail vorbereiten.', status: 'v1'),
           ])),
           const SizedBox(height: 14),

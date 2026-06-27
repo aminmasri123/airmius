@@ -29,8 +29,14 @@ class Team extends Model
             return $query;
         }
 
-        return $query->whereHas('users', function ($q) use ($user) {
-            $q->where('user_id', $user->id);
+        return $query->where(function ($query) use ($user) {
+            $query
+                ->whereHas('users', function ($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                })
+                ->orWhereHas('club.users', function ($q) use ($user) {
+                    $q->where('users.id', $user->id);
+                });
         });
     }
 

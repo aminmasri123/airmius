@@ -29,7 +29,7 @@ class _SupportTicketServiceCenterSuiteScreenState extends State<SupportTicketSer
       ),
       const _TicketRow(
         title: 'Dokument fehlt im Antrag',
-        status: 'Rueckfrage',
+        status: 'Rückfrage',
         body: 'Support kann erklaeren, welches Dokument fehlt und ob Upload oder Consent benoetigt wird.',
         meta: 'Dokumente & Consent',
         color: AirmiusColors.amber,
@@ -38,7 +38,7 @@ class _SupportTicketServiceCenterSuiteScreenState extends State<SupportTicketSer
         title: 'Beitrag falsch angezeigt',
         status: 'Prüfung',
         body: 'Zahlungsrhythmus, Beitragsgruppe, Rechnung und Vereinsregel werden im Ticket zusammengefuehrt.',
-        meta: 'Beitraege & Zahlung',
+        meta: 'Beiträge & Zahlung',
         color: AirmiusColors.green,
       ),
     ];
@@ -57,7 +57,7 @@ class _SupportTicketServiceCenterSuiteScreenState extends State<SupportTicketSer
                 const SectionLabel('HILFE & SUPPORT'),
                 const SizedBox(height: 8),
                 const Text(
-                  'User, Vereine und Admins brauchen eine mobile Supportstrecke: Ticket erstellen, Thema waehlen, Dateien anhaengen, Verlauf sehen und bei Bedarf eskalieren.',
+                  'User, Vereine und Admins brauchen eine mobile Supportstrecke: Ticket erstellen, Thema wählen, Dateien anhaengen, Verlauf sehen und bei Bedarf eskalieren.',
                   style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 16),
@@ -109,7 +109,7 @@ class _SupportTicketServiceCenterSuiteScreenState extends State<SupportTicketSer
                 const SectionLabel('VORSCHAU'),
                 const SizedBox(height: 8),
                 Text(
-                  'Aktuelles Thema: $topic. Die spaetere API kann Ticketstatus, Bearbeiter, Verein, Plattformteam, Dateien, Nachrichten und SLA-Zeiten verbinden.',
+                  'Aktuelles Thema: $topic. Die spätere API kann Ticketstatus, Bearbeiter, Verein, Plattformteam, Dateien, Nachrichten und SLA-Zeiten verbinden.',
                   style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),
@@ -119,7 +119,7 @@ class _SupportTicketServiceCenterSuiteScreenState extends State<SupportTicketSer
                   onPressed: () => openUiAction(
                     context,
                     title: 'Ticket erstellen',
-                    body: 'Diese UI bereitet Supporttickets mit Thema, Anhang, Vereinsadmin, Plattformeskalation und Verlauf fuer die spaetere Laravel-API vor.',
+                    body: 'Diese UI bereitet Supporttickets mit Thema, Anhang, Vereinsadmin, Plattformeskalation und Verlauf für die spätere Laravel-API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.support_agent_outlined,
                   ),
@@ -220,7 +220,7 @@ class _TicketCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Antwort senden',
-                  body: 'Ticketantworten koennen spaeter Nachrichten, Dateien, interne Notizen und Statuswechsel enthalten.',
+                  body: 'Ticketantworten können später Nachrichten, Dateien, interne Notizen und Statuswechsel enthalten.',
                   status: 'UI vorbereitet',
                   icon: Icons.reply_outlined,
                 ),
@@ -232,7 +232,7 @@ class _TicketCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Ticketverlauf',
-                  body: 'Der Verlauf zeigt spaeter Useraktionen, Vereinsantworten, Plattformentscheidungen, Dateien und Statuswechsel.',
+                  body: 'Der Verlauf zeigt später Useraktionen, Vereinsantworten, Plattformentscheidungen, Dateien und Statuswechsel.',
                   status: 'UI vorbereitet',
                   icon: Icons.timeline_outlined,
                 ),
@@ -244,7 +244,7 @@ class _TicketCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Ticket eskalieren',
-                  body: 'Eskalationen koennen spaeter an Vereinsadmins oder Plattform-Support weitergeleitet werden.',
+                  body: 'Eskalationen können später an Vereinsadmins oder Plattform-Support weitergeleitet werden.',
                   status: 'UI vorbereitet',
                   icon: Icons.priority_high_outlined,
                 ),

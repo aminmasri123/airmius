@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -21,7 +21,7 @@ class _SportMapCenterScreenState extends State<SportMapCenterScreen> {
       appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Sportkarte', style: TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
         title: 'Sportkarte',
-        subtitle: 'Routen, Tracks, Orte und Vorschlaege',
+        subtitle: 'Routen, Tracks, Orte und Vorschläge',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -71,7 +71,7 @@ class _SportMapCenterScreenState extends State<SportMapCenterScreen> {
             const SizedBox(height: 14),
             Wrap(spacing: 10, runSpacing: 10, children: [
               AirmiusButton(label: 'Route planen', icon: Icons.add_location_alt_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RouteDetailScreen(title: 'Neue Route planen', body: 'Start, Wegpunkte, Ziel, Sichtbarkeit und Teamfreigabe festlegen.', status: 'Neu', icon: Icons.add_location_alt_outlined)))),
-              AirmiusButton(label: 'Live Track starten', icon: Icons.gps_fixed, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RouteDetailScreen(title: 'Live Track', body: 'GPS-Rechte pruefen, Team teilen und Track sicher starten.', status: 'Live', icon: Icons.gps_fixed, mode: 'live')))),
+              AirmiusButton(label: 'Live Track starten', icon: Icons.gps_fixed, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RouteDetailScreen(title: 'Live Track', body: 'GPS-Rechte prüfen, Team teilen und Track sicher starten.', status: 'Live', icon: Icons.gps_fixed, mode: 'live')))),
               AirmiusButton(label: 'Map Operations', icon: Icons.tune_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => WellbeingOperationsScreen()))),
             ]),
             const SizedBox(height: 14),
@@ -124,7 +124,7 @@ class _MapItem {
 }
 
 const _routes = [
-  _MapItem(title: 'Saar Runde', body: '8.4 km - flach - oeffentlich', status: 'Route', icon: Icons.route_outlined),
+  _MapItem(title: 'Saar Runde', body: '8.4 km - flach - öffentlich', status: 'Route', icon: Icons.route_outlined),
   _MapItem(title: 'Wald Intervall', body: '5.2 km - Trail - Team intern', status: 'Team', icon: Icons.forest_outlined),
 ];
 
@@ -135,5 +135,5 @@ const _tracks = [
 
 const _places = [
   _MapItem(title: 'Sportplatz Kleinblittersdorf', body: 'Trainingsort - Verein', status: 'Ort', icon: Icons.place_outlined),
-  _MapItem(title: 'Saarbruecken Treffpunkt', body: 'Lauftreff - oeffentlich', status: 'Public', icon: Icons.location_city_outlined),
+  _MapItem(title: 'Saarbrücken Treffpunkt', body: 'Lauftreff - öffentlich', status: 'Public', icon: Icons.location_city_outlined),
 ];

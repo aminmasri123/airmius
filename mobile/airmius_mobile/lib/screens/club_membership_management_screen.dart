@@ -1,6 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
+import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
+import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
 import 'membership_operations_screen.dart';
 import 'ui_action_result_screen.dart';
@@ -15,6 +17,7 @@ class ClubMembershipManagementScreen extends StatefulWidget {
 class _ClubMembershipManagementScreenState extends State<ClubMembershipManagementScreen> {
   String _filter = 'Alle';
   String _period = 'Juni 2026';
+  Future<bool>? _accessFuture;
 
   final List<_MemberEntry> _members = const [
     _MemberEntry(name: 'ZBB Konto', email: 'zbb.bop.it@gmail.com', type: 'Aktiv', number: 'ZBB-0001', balance: '0,00 EUR', sepa: true),
@@ -30,7 +33,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
 
   final List<_BankEntry> _bankEntries = const [
     _BankEntry(title: 'Banktransaktion erkannt', detail: '12,00 EUR von Amir Masri - Zuordnung vorgeschlagen'),
-    _BankEntry(title: 'Ruecklastschrift pruefen', detail: 'SEPA Mandat Junior Mitglied braucht Bestaetigung'),
+    _BankEntry(title: 'Rücklastschrift prüfen', detail: 'SEPA Mandat Junior Mitglied braucht Bestätigung'),
   ];
 
   int get _activeMembersCount => _members.where((member) => member.type != 'Extern').length;
@@ -58,15 +61,74 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _accessFuture ??= _canManageAnyClub();
+  }
+
+  Future<bool> _canManageAnyClub() async {
+    final services = AirmiusServicesScope.of(context);
+    final page = await services.repositories.clubs.searchClubs(mine: true);
+    return page.items.map(ClubSummary.fromAirmiusClub).any((club) => club.canManage);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _accessFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: AirmiusColors.bg,
+            body: PageFrame(
+              title: 'Mitglieder & Beiträge',
+              subtitle: 'Berechtigungen werden geprüft',
+              child: AirmiusPanel(child: Center(child: Padding(padding: EdgeInsets.all(18), child: CircularProgressIndicator(color: AirmiusColors.blue)))),
+            ),
+          );
+        }
+
+        if (snapshot.hasError || snapshot.data != true) {
+          return Scaffold(
+            backgroundColor: AirmiusColors.bg,
+            appBar: AppBar(
+              backgroundColor: AirmiusColors.header,
+              surfaceTintColor: Colors.transparent,
+              title: const Text('Mitglieder & Beiträge', style: TextStyle(fontWeight: FontWeight.w900)),
+            ),
+            body: PageFrame(
+              title: 'Keine Berechtigung',
+              subtitle: 'Nur Vereinsadmins, Manager oder Finanzrollen dürfen diese Daten sehen',
+              child: AirmiusPanel(
+                borderColor: AirmiusColors.red.withValues(alpha: .45),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Icon(Icons.lock_outline, color: AirmiusColors.muted, size: 34),
+                    const SizedBox(height: 12),
+                    const Text('Mitglieder, Beiträge und Rechnungen sind Verwaltungsdaten.', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 8),
+                    Text(
+                      snapshot.hasError ? 'Die Berechtigung konnte nicht geprüft werden: ${snapshot.error}' : 'Deine Rolle ist für diese Verwaltungsseite nicht freigeschaltet.',
+                      style: const TextStyle(color: AirmiusColors.muted, height: 1.4),
+                    ),
+                    const SizedBox(height: 12),
+                    AirmiusButton(label: 'Erneut prüfen', icon: Icons.refresh_outlined, secondary: true, onPressed: () => setState(() => _accessFuture = _canManageAnyClub())),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AirmiusColors.header,
         surfaceTintColor: Colors.transparent,
-        title: const Text('Mitglieder & Beitraege', style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text('Mitglieder & Beiträge', style: TextStyle(fontWeight: FontWeight.w900)),
       ),
       body: PageFrame(
-        title: 'Mitglieder & Beitraege',
+        title: 'Mitglieder & Beiträge',
         subtitle: 'Mitgliederdaten, Rechnungen, Zahlungen, SEPA, DATEV und Import',
         trailing: const StatusPill('Admin'),
         child: Column(
@@ -76,10 +138,10 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
             const SizedBox(height: 14),
             _MembershipKpiGrid(
               cards: [
-                _MembershipKpi(title: 'Aktive Mitglieder', value: '$_activeMembersCount', detail: 'von ${_members.length} verknuepften Personen'),
+                _MembershipKpi(title: 'Aktive Mitglieder', value: '$_activeMembersCount', detail: 'von ${_members.length} verknüpften Personen'),
                 _MembershipKpi(title: 'Offen', value: _openInvoiceTotal, detail: '$_openInvoicesCount offene Rechnung(en)'),
                 _MembershipKpi(title: 'SEPA bereit', value: '$_sepaReadyMembersCount', detail: 'Mandate mit IBAN und Referenz'),
-                _MembershipKpi(title: 'Wiederkehrende Beitraege', value: _recurringContributionTotal, detail: 'Summe aktiver Beitragssaetze'),
+                _MembershipKpi(title: 'Wiederkehrende Beiträge', value: _recurringContributionTotal, detail: 'Summe aktiver Beitragssätze'),
               ],
             ),
             const SizedBox(height: 14),
@@ -128,9 +190,9 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                     spacing: 10,
                     runSpacing: 10,
                     children: [
-                      AirmiusButton(label: 'Einladung senden', icon: Icons.mark_email_read_outlined, onPressed: () => openUiAction(context, title: 'Einladung senden', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.mark_email_read_outlined)),
-                      AirmiusButton(label: 'CSV Vorlage', icon: Icons.table_view_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'CSV Vorlage', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.table_view_outlined)),
-                      AirmiusButton(label: 'Extern anlegen', icon: Icons.person_add_alt_1_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Extern anlegen', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.person_add_alt_1_outlined)),
+                      AirmiusButton(label: 'Einladung senden', icon: Icons.mark_email_read_outlined, onPressed: () => openUiAction(context, title: 'Einladung senden', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.mark_email_read_outlined)),
+                      AirmiusButton(label: 'CSV Vorlage', icon: Icons.table_view_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'CSV Vorlage', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.table_view_outlined)),
+                      AirmiusButton(label: 'Extern anlegen', icon: Icons.person_add_alt_1_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Extern anlegen', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.person_add_alt_1_outlined)),
                     ],
                   ),
                 ],
@@ -163,8 +225,8 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                     spacing: 10,
                     runSpacing: 10,
                     children: [
-                      AirmiusButton(label: 'Zahlung erfassen', icon: Icons.payments_outlined, onPressed: () => openUiAction(context, title: 'Zahlung erfassen', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.payments_outlined)),
-                      AirmiusButton(label: 'Mahnung vorbereiten', icon: Icons.notification_important_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Mahnung vorbereiten', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.notification_important_outlined)),
+                      AirmiusButton(label: 'Zahlung erfassen', icon: Icons.payments_outlined, onPressed: () => openUiAction(context, title: 'Zahlung erfassen', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.payments_outlined)),
+                      AirmiusButton(label: 'Mahnung vorbereiten', icon: Icons.notification_important_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Mahnung vorbereiten', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.notification_important_outlined)),
                     ],
                   ),
                 ],
@@ -184,8 +246,8 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                     spacing: 10,
                     runSpacing: 10,
                     children: [
-                      AirmiusButton(label: 'Bankdatei importieren', icon: Icons.cloud_upload_outlined, onPressed: () => openUiAction(context, title: 'Bankdatei importieren', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.cloud_upload_outlined)),
-                      AirmiusButton(label: 'Zuordnung bestaetigen', icon: Icons.task_alt_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Zuordnung bestaetigen', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.task_alt_outlined)),
+                      AirmiusButton(label: 'Bankdatei importieren', icon: Icons.cloud_upload_outlined, onPressed: () => openUiAction(context, title: 'Bankdatei importieren', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.cloud_upload_outlined)),
+                      AirmiusButton(label: 'Zuordnung bestätigen', icon: Icons.task_alt_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Zuordnung bestätigen', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.task_alt_outlined)),
                     ],
                   ),
                 ],
@@ -198,16 +260,16 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                 children: [
                   const Eyebrow('SEPA, DATEV & Regeln'),
                   const SizedBox(height: 12),
-                  const _ExportTile(icon: Icons.account_balance_wallet_outlined, title: 'SEPA Sammellauf', subtitle: 'Mandate pruefen, Lastschriftlauf vorbereiten und Export erzeugen.', status: 'Bereit'),
-                  const _ExportTile(icon: Icons.fact_check_outlined, title: 'DATEV Export', subtitle: 'Rechnungen, Zahlungen und Buchungssaetze fuer Steuerberatung vorbereiten.', status: 'Konfigurierbar'),
-                  const _ExportTile(icon: Icons.rule_folder_outlined, title: 'Beitragsregeln', subtitle: 'Monatlich, alle 4 Monate, halbjaehrlich oder jaehrlich pro Mitgliedschaftstyp.', status: 'Aktiv'),
+                  const _ExportTile(icon: Icons.account_balance_wallet_outlined, title: 'SEPA Sammellauf', subtitle: 'Mandate prüfen, Lastschriftlauf vorbereiten und Export erzeugen.', status: 'Bereit'),
+                  const _ExportTile(icon: Icons.fact_check_outlined, title: 'DATEV Export', subtitle: 'Rechnungen, Zahlungen und Buchungssätze für Steuerberatung vorbereiten.', status: 'Konfigurierbar'),
+                  const _ExportTile(icon: Icons.rule_folder_outlined, title: 'Beitragsregeln', subtitle: 'Monatlich, alle 4 Monate, halbjährlich oder jährlich pro Mitgliedschaftstyp.', status: 'Aktiv'),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 10,
                     runSpacing: 10,
                     children: [
-                      AirmiusButton(label: 'DATEV export', icon: Icons.ios_share_outlined, onPressed: () => openUiAction(context, title: 'DATEV export', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.ios_share_outlined)),
-                      AirmiusButton(label: 'Regeln bearbeiten', icon: Icons.tune_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Regeln bearbeiten', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.tune_outlined)),
+                      AirmiusButton(label: 'DATEV export', icon: Icons.ios_share_outlined, onPressed: () => openUiAction(context, title: 'DATEV export', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.ios_share_outlined)),
+                      AirmiusButton(label: 'Regeln bearbeiten', icon: Icons.tune_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Regeln bearbeiten', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.tune_outlined)),
                     ],
                   ),
                 ],
@@ -217,6 +279,8 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
           ],
         ),
       ),
+        );
+      },
     );
   }
 }
@@ -236,12 +300,12 @@ class _ClubMembershipHeader extends StatelessWidget {
           const Eyebrow('VEREINSBEREICH'),
           const SizedBox(height: 8),
           const Text(
-            'Mitglieder & Beitraege',
+            'Mitglieder & Beiträge',
             style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
           const Text(
-            'Mitgliederdaten, Beitragssaetze, Rechnungen, SEPA, DATEV und Import wie in der Web-App als native Flutter-Ansicht.',
+            'Mitgliederdaten, Beitragssätze, Rechnungen, SEPA, DATEV und Import wie in der Web-App als native Flutter-Ansicht.',
             style: TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 16),
@@ -255,7 +319,7 @@ class _ClubMembershipHeader extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Mitglied importieren',
-                  body: 'Import-Workflow fuer bestehende Vereinsmitglieder, CSV und externe Mitglieder.',
+                  body: 'Import-Workflow für bestehende Vereinsmitglieder, CSV und externe Mitglieder.',
                   status: 'Import',
                   icon: Icons.upload_file_outlined,
                 ),
@@ -267,7 +331,7 @@ class _ClubMembershipHeader extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Rechnung erstellen',
-                  body: 'Native Vorbereitung fuer Mitgliedsbeitrag, Faelligkeit, Zahlungsstatus und Erinnerung.',
+                  body: 'Native Vorbereitung für Mitgliedsbeitrag, Fälligkeit, Zahlungsstatus und Erinnerung.',
                   status: 'Rechnung',
                   icon: Icons.receipt_long_outlined,
                 ),
@@ -279,7 +343,7 @@ class _ClubMembershipHeader extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'SEPA export',
-                  body: 'SEPA-Mandate pruefen und Export fuer Sammellauf vorbereiten.',
+                  body: 'SEPA-Mandate prüfen und Export für Sammellauf vorbereiten.',
                   status: 'SEPA',
                   icon: Icons.account_balance_outlined,
                 ),
@@ -431,7 +495,7 @@ class _MemberCard extends StatelessWidget {
               runSpacing: 8,
               children: [
                 StatusPill(member.number, color: AirmiusColors.muted),
-                StatusPill(member.sepa ? 'SEPA Mandat' : 'Ueberweisung', color: member.sepa ? AirmiusColors.green : AirmiusColors.amber),
+                StatusPill(member.sepa ? 'SEPA Mandat' : 'Überweisung', color: member.sepa ? AirmiusColors.green : AirmiusColors.amber),
                 StatusPill(member.balance == '0,00 EUR' ? 'Ausgeglichen' : 'Offen ${member.balance}', color: member.balance == '0,00 EUR' ? AirmiusColors.green : AirmiusColors.red),
               ],
             ),

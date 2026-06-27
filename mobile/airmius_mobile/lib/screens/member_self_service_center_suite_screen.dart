@@ -29,22 +29,22 @@ class _MemberSelfServiceCenterSuiteScreenState extends State<MemberSelfServiceCe
       const _MembershipRow(
         club: 'Airmius Running Club',
         status: 'Anfrage offen',
-        body: 'Antrag wurde gesendet. User kann Status sehen, Dokumente ergaenzen oder Anfrage zurueckziehen.',
+        body: 'Antrag wurde gesendet. User kann Status sehen, Dokumente ergaenzen oder Anfrage zurückziehen.',
         meta: 'Laufgruppe',
         color: AirmiusColors.blue,
       ),
       const _MembershipRow(
         club: 'Tennis Zentrum West',
-        status: 'Rueckfrage',
+        status: 'Rückfrage',
         body: 'Verein benoetigt eine Dokumentfreigabe. Aufgabe wird in der mobilen Mitgliedszentrale angezeigt.',
-        meta: 'Sportdaten pruefen',
+        meta: 'Sportdaten prüfen',
         color: AirmiusColors.amber,
       ),
     ];
 
     return PageFrame(
       title: 'Meine Mitgliedschaften',
-      subtitle: 'Karte, Beitraege, Dokumente und Aufgaben',
+      subtitle: 'Karte, Beiträge, Dokumente und Aufgaben',
       actions: const [AirmiusLogoMark(size: 34)],
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
@@ -97,7 +97,7 @@ class _MemberSelfServiceCenterSuiteScreenState extends State<MemberSelfServiceCe
                 const SectionLabel('NAECHSTE AUFGABEN'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Die spaetere API kann hier offene Dokumente, Rueckfragen, Zahlungsinformationen, Vereinsnachrichten, Event-Einladungen und Support-Tickets pro Mitgliedschaft anzeigen.',
+                  'Die spätere API kann hier offene Dokumente, Rückfragen, Zahlungsinformationen, Vereinsnachrichten, Event-Einladungen und Support-Tickets pro Mitgliedschaft anzeigen.',
                   style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),
@@ -108,7 +108,7 @@ class _MemberSelfServiceCenterSuiteScreenState extends State<MemberSelfServiceCe
                     StatusPill('Dokument fehlt', color: AirmiusColors.amber),
                     StatusPill('Beitrag offen', color: AirmiusColors.blue),
                     StatusPill('Event Einladung', color: AirmiusColors.green),
-                    StatusPill('Rueckfrage', color: AirmiusColors.pink),
+                    StatusPill('Rückfrage', color: AirmiusColors.pink),
                   ],
                 ),
               ],
@@ -207,19 +207,19 @@ class _MembershipCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Digitale Mitgliedskarte',
-                  body: 'Diese UI bereitet Mitgliedskarte, QR-Code, Status, Rolle und Sichtbarkeit fuer die spaetere API vor.',
+                  body: 'Diese UI bereitet Mitgliedskarte, QR-Code, Status, Rolle und Sichtbarkeit für die spätere API vor.',
                   status: 'UI vorbereitet',
                   icon: Icons.qr_code_2_outlined,
                 ),
               ),
               AirmiusButton(
-                label: 'Beitraege',
+                label: 'Beiträge',
                 icon: Icons.receipt_long_outlined,
                 secondary: true,
                 onPressed: () => openUiAction(
                   context,
-                  title: 'Beitraege anzeigen',
-                  body: 'Mitglieder sehen spaeter Beitrag, Zahlungsrhythmus, offene Zahlungen, SEPA-Status und Rechnungen.',
+                  title: 'Beiträge anzeigen',
+                  body: 'Mitglieder sehen später Beitrag, Zahlungsrhythmus, offene Zahlungen, SEPA-Status und Rechnungen.',
                   status: 'UI vorbereitet',
                   icon: Icons.receipt_long_outlined,
                 ),
@@ -231,7 +231,7 @@ class _MembershipCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Dokumente anzeigen',
-                  body: 'Dokumentpflichten, Consent, Nachweise und Rueckfragen werden spaeter pro Mitgliedschaft sichtbar.',
+                  body: 'Dokumentpflichten, Consent, Nachweise und Rückfragen werden später pro Mitgliedschaft sichtbar.',
                   status: 'UI vorbereitet',
                   icon: Icons.folder_copy_outlined,
                 ),

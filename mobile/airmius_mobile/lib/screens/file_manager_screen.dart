@@ -27,7 +27,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
   bool _loading = true;
   bool _runningAction = false;
   bool _loadedOnce = false;
-  String _fileName = 'Datei waehlen';
+  String _fileName = 'Datei wählen';
   String? _error;
   String? _success;
   PlatformFile? _pickedFile;
@@ -78,7 +78,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
         title: const Text('Dateien', style: TextStyle(fontWeight: FontWeight.w900)),
         actions: [
           IconButton(
-            tooltip: 'Share-Link oeffnen',
+            tooltip: 'Share-Link öffnen',
             icon: const Icon(Icons.link_outlined),
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SharedFileAccessScreen())),
           ),
@@ -239,14 +239,14 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
   void _submitUpload() {
     final file = _pickedFile;
     if (file == null) {
-      setState(() => _error = 'Bitte zuerst eine Datei waehlen.');
+      setState(() => _error = 'Bitte zuerst eine Datei wählen.');
       return;
     }
 
     _runAction(() async {
       await _uploadFile(file);
       _pickedFile = null;
-      _fileName = 'Datei waehlen';
+      _fileName = 'Datei wählen';
       _showActions = false;
       _success = 'Datei hochgeladen.';
       await _loadWorkspace();
@@ -271,7 +271,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     } else if (file.path != null && file.path!.trim().isNotEmpty) {
       request.files.add(await http.MultipartFile.fromPath('file', file.path!, filename: file.name, contentType: _contentTypeFor(file)));
     } else {
-      throw const AirmiusApiException(statusCode: 0, body: 'Die ausgewaehlte Datei konnte nicht gelesen werden.', path: '/api/v1/uploads');
+      throw const AirmiusApiException(statusCode: 0, body: 'Die ausgewählte Datei konnte nicht gelesen werden.', path: '/api/v1/uploads');
     }
 
     final response = await http.Response.fromStream(await request.send());
@@ -327,7 +327,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     if (folder.id == null) return;
     _runAction(() async {
       await AirmiusServicesScope.of(context).repositories.files.deleteFolder(folder.id!);
-      _success = 'Ordner geloescht.';
+      _success = 'Ordner gelöscht.';
       await _loadWorkspace();
     });
   }
@@ -347,7 +347,7 @@ class _FileManagerScreenState extends State<FileManagerScreen> {
     if (file.id == null) return;
     _runAction(() async {
       await AirmiusServicesScope.of(context).repositories.files.deleteFile(file.id!);
-      _success = 'Datei geloescht.';
+      _success = 'Datei gelöscht.';
       await _loadWorkspace();
     });
   }
@@ -557,7 +557,7 @@ class _FileBrowserCard extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: onBack,
                       icon: const Icon(Icons.arrow_back),
-                      label: const Text('Zurueck'),
+                      label: const Text('Zurück'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AirmiusColors.text,
                         side: const BorderSide(color: AirmiusColors.border),
@@ -644,7 +644,7 @@ class _ActionsPanel extends StatelessWidget {
                 const SizedBox(height: 10),
                 _InputLikeButton(label: fileName, icon: Icons.attach_file, onTap: onPickFile),
                 const SizedBox(height: 8),
-                _PrimaryBlockButton(label: 'Hochladen', enabled: fileName != 'Datei waehlen', onTap: onUpload),
+                _PrimaryBlockButton(label: 'Hochladen', enabled: fileName != 'Datei wählen', onTap: onUpload),
               ],
             ),
           ),
@@ -765,7 +765,7 @@ class _FolderRow extends StatelessWidget {
           ),
           _SmallIcon(icon: Icons.share_outlined, onTap: onShare, semanticLabel: 'Ordner freigeben'),
           _SmallIcon(icon: Icons.edit_outlined, onTap: onRename, semanticLabel: 'Ordner umbenennen'),
-          _SmallIcon(icon: Icons.delete_outline, onTap: onDelete, semanticLabel: 'Ordner loeschen'),
+          _SmallIcon(icon: Icons.delete_outline, onTap: onDelete, semanticLabel: 'Ordner löschen'),
         ],
       ),
     );
@@ -813,7 +813,7 @@ class _FileRow extends StatelessWidget {
               _SmallIcon(icon: Icons.share_outlined, onTap: onShare, semanticLabel: 'Datei freigeben'),
               _SmallIcon(icon: Icons.edit_outlined, onTap: onRename, semanticLabel: 'Datei umbenennen'),
               _SmallIcon(icon: Icons.download_outlined, onTap: onOpen, semanticLabel: 'Datei herunterladen'),
-              _SmallIcon(icon: Icons.delete_outline, onTap: onDelete, semanticLabel: 'Datei loeschen'),
+              _SmallIcon(icon: Icons.delete_outline, onTap: onDelete, semanticLabel: 'Datei löschen'),
             ],
           ),
         ],

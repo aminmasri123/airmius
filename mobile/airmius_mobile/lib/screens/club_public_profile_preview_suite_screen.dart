@@ -41,7 +41,7 @@ class _ClubPublicProfilePreviewSuiteScreenState extends State<ClubPublicProfileP
                 SizedBox(width: 10),
                 Expanded(child: MetricCard(value: '0', label: 'Teams')),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: '0', label: 'Beitraege')),
+                Expanded(child: MetricCard(value: '0', label: 'Beiträge')),
               ],
             ),
             const SizedBox(height: 14),
@@ -59,7 +59,7 @@ class _ClubPublicProfilePreviewSuiteScreenState extends State<ClubPublicProfileP
                   ),
                   _VisibilityToggle(
                     title: 'Teams anzeigen',
-                    body: 'Teamlisten bleiben optional, damit Vereine Jugend-, Trainer- oder interne Teams schuetzen koennen.',
+                    body: 'Teamlisten bleiben optional, damit Vereine Jugend-, Trainer- oder interne Teams schuetzen können.',
                     value: _showTeams,
                     onChanged: (value) => setState(() => _showTeams = value),
                   ),
@@ -71,7 +71,7 @@ class _ClubPublicProfilePreviewSuiteScreenState extends State<ClubPublicProfileP
                   ),
                   _VisibilityToggle(
                     title: 'Dokumente anzeigen',
-                    body: 'Datenschutz, Satzung, Beitragsordnung und Regeln koennen sichtbar oder nur im Antrag verknuepft sein.',
+                    body: 'Datenschutz, Satzung, Beitragsordnung und Regeln können sichtbar oder nur im Antrag verknuepft sein.',
                     value: _showDocuments,
                     onChanged: (value) => setState(() => _showDocuments = value),
                     last: true,
@@ -98,7 +98,7 @@ class _ClubPublicProfilePreviewSuiteScreenState extends State<ClubPublicProfileP
                 icon: Icons.rule_folder_outlined,
                 rows: [
                   _InfoRow(label: 'Datenschutz', value: 'Version 2026.1'),
-                  _InfoRow(label: 'Satzung', value: 'Im Antrag bestaetigen'),
+                  _InfoRow(label: 'Satzung', value: 'Im Antrag bestätigen'),
                   _InfoRow(label: 'Beitragsordnung', value: 'Upload oder Link'),
                 ],
               ),
@@ -143,13 +143,13 @@ class _ClubPublicProfilePreviewSuiteScreenState extends State<ClubPublicProfileP
                   const SizedBox(height: 6),
                   Text(
                     _requestSent
-                        ? 'Der User sieht den Status und kann die Anfrage direkt zurueckziehen, solange der Verein noch nicht entschieden hat.'
-                        : 'Der CTA fuehrt zum dynamischen Formular mit Vereinsfeldern, Dokumenten, Zahlungsdaten und Datenschutzbestaetigung.',
+                        ? 'Der User sieht den Status und kann die Anfrage direkt zurückziehen, solange der Verein noch nicht entschieden hat.'
+                        : 'Der CTA fuehrt zum dynamischen Formular mit Vereinsfeldern, Dokumenten, Zahlungsdaten und Datenschutzbestätigung.',
                     style: const TextStyle(color: AirmiusColors.muted, height: 1.38),
                   ),
                   const SizedBox(height: 12),
                   AirmiusButton(
-                    label: _requestSent ? 'Anfrage zurueckziehen' : 'Mitgliedschaft anfragen',
+                    label: _requestSent ? 'Anfrage zurückziehen' : 'Mitgliedschaft anfragen',
                     icon: _requestSent ? Icons.undo_outlined : Icons.assignment_add,
                     secondary: _requestSent,
                     onPressed: () => setState(() => _requestSent = !_requestSent),

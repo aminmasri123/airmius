@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -16,7 +16,7 @@ class ClubCockpitScreen extends StatefulWidget {
 }
 
 class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
-  String _filter = 'Uebersicht';
+  String _filter = 'Übersicht';
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +24,7 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
       appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Vereins-Cockpit', style: TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
         title: 'Vereins-Cockpit',
-        subtitle: 'Profil, Teams, Mitglieder, Beitraege, Dokumente und Sichtbarkeit fuer Vereinsadmins',
+        subtitle: 'Profil, Teams, Mitglieder, Beiträge, Dokumente und Sichtbarkeit für Vereinsadmins',
         trailing: const StatusPill('ZBB'),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           AirmiusPanel(
@@ -32,11 +32,11 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               const Eyebrow('Vereinsbereich'),
               const SizedBox(height: 8),
-              const Text('Alles Wichtige fuer den Verein an einem mobilen Ort.', style: TextStyle(color: AirmiusColors.text, fontSize: 23, fontWeight: FontWeight.w900)),
+              const Text('Alles Wichtige für den Verein an einem mobilen Ort.', style: TextStyle(color: AirmiusColors.text, fontSize: 23, fontWeight: FontWeight.w900)),
               const SizedBox(height: 8),
-              const Text('Das Cockpit verbindet Vereinsprofil, Teams, Rollen, Mitgliedsanfragen, Dateien, Beitraege und Sichtbarkeit wie in der Web-App.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+              const Text('Das Cockpit verbindet Vereinsprofil, Teams, Rollen, Mitgliedsanfragen, Dateien, Beiträge und Sichtbarkeit wie in der Web-App.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
               const SizedBox(height: 14),
-              Wrap(spacing: 8, runSpacing: 8, children: ['Uebersicht', 'Mitglieder', 'Teams', 'Dokumente', 'Sichtbarkeit'].map((item) => ChoiceChip(
+              Wrap(spacing: 8, runSpacing: 8, children: ['Übersicht', 'Mitglieder', 'Teams', 'Dokumente', 'Sichtbarkeit'].map((item) => ChoiceChip(
                 selected: _filter == item,
                 label: Text(item),
                 onSelected: (_) => setState(() => _filter = item),
@@ -50,7 +50,7 @@ class _ClubCockpitScreenState extends State<ClubCockpitScreen> {
           const SizedBox(height: 14),
           Row(children: const [Expanded(child: MetricCard(value: '1', label: 'Anfrage')), SizedBox(width: 10), Expanded(child: MetricCard(value: '3', label: 'Dokumente')), SizedBox(width: 10), Expanded(child: MetricCard(value: '82%', label: 'Profil'))]),
           const SizedBox(height: 14),
-          _CockpitAction(icon: Icons.assignment_ind_outlined, title: 'Mitgliedschaftsanfragen', body: 'Antraege pruefen, Formularfelder vergleichen, Nachricht senden und annehmen.', status: '1 offen', color: AirmiusColors.green, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubMembershipAdminScreen()))),
+          _CockpitAction(icon: Icons.assignment_ind_outlined, title: 'Mitgliedschaftsanfragen', body: 'Antraege prüfen, Formularfelder vergleichen, Nachricht senden und annehmen.', status: '1 offen', color: AirmiusColors.green, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubMembershipAdminScreen()))),
           const SizedBox(height: 12),
           _CockpitAction(icon: Icons.groups_2_outlined, title: 'Teams & Rollen', body: 'Teams, Trainer, Captain, Einladungen und Zugriffsrechte verwalten.', status: '11 Teams', color: AirmiusColors.blue, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeamDetailScreen(title: 'Teams & Rollen', mode: 'Rollen')))),
           const SizedBox(height: 12),

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -31,7 +31,7 @@ class _ProfileAccountFormsScreenState extends State<ProfileAccountFormsScreen> {
       title: 'Passwort aktualisieren',
       area: 'Security',
       status: 'Sicher',
-      body: 'Aktuelles Passwort, neues Passwort, Bestaetigung und Sicherheitsfeedback als mobile Form.',
+      body: 'Aktuelles Passwort, neues Passwort, Bestätigung und Sicherheitsfeedback als mobile Form.',
       icon: Icons.password_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -39,7 +39,7 @@ class _ProfileAccountFormsScreenState extends State<ProfileAccountFormsScreen> {
       title: 'Zwei-Faktor Authentifizierung',
       area: 'Security',
       status: '2FA',
-      body: '2FA aktivieren, QR-Code-Hinweis, Recovery-Codes und Statusanzeige fuer den Accountschutz.',
+      body: '2FA aktivieren, QR-Code-Hinweis, Recovery-Codes und Statusanzeige für den Accountschutz.',
       icon: Icons.phonelink_lock_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -47,15 +47,15 @@ class _ProfileAccountFormsScreenState extends State<ProfileAccountFormsScreen> {
       title: 'Andere Browser-Sessions',
       area: 'Security',
       status: 'Sessions',
-      body: 'Geraete und Sessions ansehen, abmelden und verdÃ¤chtige Logins erkennen.',
+      body: 'Geräte und Sessions ansehen, abmelden und verdächtige Logins erkennen.',
       icon: Icons.devices_other_outlined,
       color: Color(0xFFB084FF),
     ),
     _ProfileForm(
-      title: 'Konto loeschen',
+      title: 'Konto löschen',
       area: 'Danger',
       status: 'Kritisch',
-      body: 'Warnhinweise, Passwortbestaetigung, Datenfolgen und Supportpfad vor endgueltiger Loeschung.',
+      body: 'Warnhinweise, Passwortbestätigung, Datenfolgen und Supportpfad vor endgültiger Löschung.',
       icon: Icons.delete_forever_outlined,
       color: Color(0xFFFF6B6B),
     ),
@@ -116,7 +116,7 @@ class _ProfileAccountFormsScreenState extends State<ProfileAccountFormsScreen> {
                       onSave: () => openUiAction(
                         context,
                         title: 'Profil speichern',
-                        message: 'Die mobile Formularstruktur ist bereit; Laravel speichert spaeter Profil- und Security-Daten.',
+                        message: 'Die mobile Formularstruktur ist bereit; Laravel speichert später Profil- und Security-Daten.',
                       ),
                       onDataRights: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => DataRightsRequestScreen()),
@@ -200,7 +200,7 @@ class _Hero extends StatelessWidget {
           Text('Account-Formulare', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
           SizedBox(height: 8),
           Text(
-            'Native Mobile-UI fuer Profilinformationen, Passwort, Zwei-Faktor, Sessions und Konto-Loeschung.',
+            'Native Mobile-UI für Profilinformationen, Passwort, Zwei-Faktor, Sessions und Konto-Löschung.',
             style: TextStyle(color: Color(0xFFAFC0D8), height: 1.45, fontWeight: FontWeight.w600),
           ),
         ],
@@ -353,7 +353,7 @@ class _ActionPanel extends StatelessWidget {
         children: [
           _ActionButton(icon: Icons.save_outlined, label: 'Profil speichern', onTap: onSave),
           const SizedBox(height: 10),
-          _ActionButton(icon: Icons.privacy_tip_outlined, label: 'Datenrechte oeffnen', onTap: onDataRights),
+          _ActionButton(icon: Icons.privacy_tip_outlined, label: 'Datenrechte öffnen', onTap: onDataRights),
           const SizedBox(height: 10),
           _ActionButton(icon: Icons.support_agent_outlined, label: 'Support kontaktieren', onTap: onSupport),
         ],

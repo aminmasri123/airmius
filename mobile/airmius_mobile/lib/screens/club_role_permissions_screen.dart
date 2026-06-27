@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -41,7 +41,7 @@ class _ClubRolePermissionsScreenState extends State<ClubRolePermissionsScreen> {
     ),
     _RoleCardData(
       title: 'Trainer',
-      subtitle: 'Pflegt Training, Anwesenheit, Teamchat und Teilnehmerlisten fuer eigene Teams.',
+      subtitle: 'Pflegt Training, Anwesenheit, Teamchat und Teilnehmerlisten für eigene Teams.',
       people: '4 Personen',
       status: 'Teamzugriff',
       icon: Icons.sports_outlined,
@@ -50,22 +50,22 @@ class _ClubRolePermissionsScreenState extends State<ClubRolePermissionsScreen> {
     ),
     _RoleCardData(
       title: 'Finanzrolle',
-      subtitle: 'Sieht Beitraege, Zahlungsstatus, SEPA-Hinweise und Exportfunktionen.',
+      subtitle: 'Sieht Beiträge, Zahlungsstatus, SEPA-Hinweise und Exportfunktionen.',
       people: '1 Person',
       status: 'Sensibel',
       icon: Icons.account_balance_wallet_outlined,
       color: AirmiusColors.red,
-      permissions: ['Beitraege', 'Zahlungen', 'Export', 'Mahnung'],
+      permissions: ['Beiträge', 'Zahlungen', 'Export', 'Mahnung'],
     ),
   ];
 
   final List<_PermissionRow> _matrix = const [
-    _PermissionRow(area: 'Mitgliedsanfragen', owner: 'Admin', rule: 'Annehmen, ablehnen, Rueckfragen senden', risk: 'Mittel'),
+    _PermissionRow(area: 'Mitgliedsanfragen', owner: 'Admin', rule: 'Annehmen, ablehnen, Rückfragen senden', risk: 'Mittel'),
     _PermissionRow(area: 'Vereinsdokumente', owner: 'Inhaber', rule: 'Upload, Version, Sichtbarkeit und Pflichtdokument', risk: 'Hoch'),
     _PermissionRow(area: 'Beitragsregeln', owner: 'Inhaber + Finanzen', rule: 'Preis, Intervall, Zahlmethode und Dokumentverknuepfung', risk: 'Hoch'),
     _PermissionRow(area: 'Teams & Rollen', owner: 'Admin', rule: 'Kader, Trainer, Teambeitritt und Chatfreigabe', risk: 'Mittel'),
     _PermissionRow(area: 'Events & Training', owner: 'Trainer', rule: 'Termin, Teilnehmer, Warteliste und Anwesenheit', risk: 'Niedrig'),
-    _PermissionRow(area: 'Oeffentliche Sichtbarkeit', owner: 'Admin', rule: 'Profilfelder, Kontakt, Beitraege und Suche', risk: 'Mittel'),
+    _PermissionRow(area: 'Öffentliche Sichtbarkeit', owner: 'Admin', rule: 'Profilfelder, Kontakt, Beiträge und Suche', risk: 'Mittel'),
   ];
 
   @override
@@ -95,10 +95,10 @@ class _ClubRolePermissionsScreenState extends State<ClubRolePermissionsScreen> {
                           title: 'Sicherheitsregeln',
                           child: Column(
                             children: [
-                              _SwitchRow(title: 'Strenge Freigaben', subtitle: 'Sensible Aenderungen brauchen Inhaberfreigabe.', value: _strictApprovals, onChanged: (value) => setState(() => _strictApprovals = value)),
-                              _SwitchRow(title: 'Vier-Augen-Prinzip Finanzen', subtitle: 'Beitraege, SEPA und Zahlungsexport brauchen zweite Rolle.', value: _twoPersonFinance, onChanged: (value) => setState(() => _twoPersonFinance = value)),
-                              _SwitchRow(title: 'Trainer duerfen einchecken', subtitle: 'Trainer sehen nur eigene Teams und Anwesenheit.', value: _trainerCanCheckIn, onChanged: (value) => setState(() => _trainerCanCheckIn = value)),
-                              _SwitchRow(title: 'Dokumente pruefen', subtitle: 'Datenschutz, Regeln und Pflichtdateien werden versioniert.', value: _documentReview, onChanged: (value) => setState(() => _documentReview = value)),
+                              _SwitchRow(title: 'Strenge Freigaben', subtitle: 'Sensible Änderungen brauchen Inhaberfreigabe.', value: _strictApprovals, onChanged: (value) => setState(() => _strictApprovals = value)),
+                              _SwitchRow(title: 'Vier-Augen-Prinzip Finanzen', subtitle: 'Beiträge, SEPA und Zahlungsexport brauchen zweite Rolle.', value: _twoPersonFinance, onChanged: (value) => setState(() => _twoPersonFinance = value)),
+                              _SwitchRow(title: 'Trainer dürfen einchecken', subtitle: 'Trainer sehen nur eigene Teams und Anwesenheit.', value: _trainerCanCheckIn, onChanged: (value) => setState(() => _trainerCanCheckIn = value)),
+                              _SwitchRow(title: 'Dokumente prüfen', subtitle: 'Datenschutz, Regeln und Pflichtdateien werden versioniert.', value: _documentReview, onChanged: (value) => setState(() => _documentReview = value)),
                             ],
                           ),
                         ),

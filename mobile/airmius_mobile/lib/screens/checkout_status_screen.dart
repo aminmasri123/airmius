@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'marketplace_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
@@ -42,7 +42,7 @@ class _CheckoutStatusScreenState extends State<CheckoutStatusScreen> {
       appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: Text('${widget.flow} Checkout', style: const TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
         title: _title,
-        subtitle: 'Checkout-Ergebnis, Rechnung, Banktransfer, Benachrichtigung und Rueckkehr in die App',
+        subtitle: 'Checkout-Ergebnis, Rechnung, Banktransfer, Benachrichtigung und Rückkehr in die App',
         trailing: StatusPill(widget.status, color: color),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           AirmiusPanel(gradient: true, borderColor: color.withValues(alpha: 0.45), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -71,14 +71,14 @@ class _CheckoutStatusScreenState extends State<CheckoutStatusScreen> {
               SizedBox(height: 10),
               _StatusLine(icon: Icons.account_balance_outlined, title: 'Empfaenger', body: 'Airmius Payments / Vereinsanbieter', status: 'Bank'),
               _StatusLine(icon: Icons.numbers_outlined, title: 'Verwendungszweck', body: 'AIR-2026-004 bitte exakt angeben.', status: 'Pflicht'),
-              _StatusLine(icon: Icons.sync_alt_outlined, title: 'Automatische Zuordnung', body: 'Zahlung wird spaeter per API oder Bankimport abgeglichen.', status: 'Abgleich'),
+              _StatusLine(icon: Icons.sync_alt_outlined, title: 'Automatische Zuordnung', body: 'Zahlung wird später per API oder Bankimport abgeglichen.', status: 'Abgleich'),
             ]))
           else
             AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               const Eyebrow('Naechste Schritte'),
               const SizedBox(height: 10),
               _StatusLine(icon: _success ? Icons.receipt_long_outlined : Icons.refresh_outlined, title: _success ? 'Rechnung bereit' : 'Checkout erneut starten', body: _success ? 'PDF, E-Mail und Bestellstatus vorbereiten.' : 'Abgebrochener Checkout kann aus Warenkorb oder Plan erneut gestartet werden.', status: _success ? 'PDF' : 'Retry'),
-              const _StatusLine(icon: Icons.history_outlined, title: 'Statushistorie', body: 'Provider-Referenz, Zeitstempel und Audit werden spaeter serverseitig gespeichert.', status: 'Audit'),
+              const _StatusLine(icon: Icons.history_outlined, title: 'Statushistorie', body: 'Provider-Referenz, Zeitstempel und Audit werden später serverseitig gespeichert.', status: 'Audit'),
             ])),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -90,7 +90,7 @@ class _CheckoutStatusScreenState extends State<CheckoutStatusScreen> {
           Wrap(spacing: 10, runSpacing: 10, children: [
             AirmiusButton(label: _cancel ? 'Checkout erneut starten' : 'Status speichern', icon: _cancel ? Icons.refresh_outlined : Icons.check_circle_outline, onPressed: () => openUiAction(context, title: _cancel ? 'Checkout erneut starten' : 'Checkoutstatus speichern', body: 'Checkout-Status, Provider-Referenz, Rechnung und UI-Refresh vorbereiten.', status: widget.status, icon: _cancel ? Icons.refresh_outlined : Icons.check_circle_outline)),
             AirmiusButton(label: 'Rechnung / Beleg', icon: Icons.receipt_long_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Rechnung / Beleg', body: 'PDF, E-Mail-Versand, Download und Buchungsverlauf vorbereiten.', status: 'PDF', icon: Icons.receipt_long_outlined)),
-            if (_bank) AirmiusButton(label: 'Bankdaten kopieren', icon: Icons.content_copy_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Bankdaten kopieren', body: 'IBAN, Betrag und Verwendungszweck fuer Banktransfer kopieren.', status: 'Bank', icon: Icons.content_copy_outlined)),
+            if (_bank) AirmiusButton(label: 'Bankdaten kopieren', icon: Icons.content_copy_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Bankdaten kopieren', body: 'IBAN, Betrag und Verwendungszweck für Banktransfer kopieren.', status: 'Bank', icon: Icons.content_copy_outlined)),
           ]),
         ]),
       ),

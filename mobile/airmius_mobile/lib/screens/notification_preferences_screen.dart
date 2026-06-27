@@ -15,7 +15,7 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
   final Map<String, bool> _channels = {
     'Push-Benachrichtigungen': true,
     'E-Mail-Erinnerungen': true,
-    'Chat-Erwaehnungen': true,
+    'Chat-Erwähnungen': true,
     'Vereinsanfragen': true,
     'Zahlungen & Rechnungen': true,
     'Marketing & Sponsoren': false,
@@ -71,7 +71,7 @@ class _NotificationPreferencesScreenState extends State<NotificationPreferencesS
             const _PriorityLine(icon: Icons.done_all_outlined, title: 'Bulk-Aktionen', body: 'Alle als gelesen markieren, archivieren oder nach Typ filtern.', status: 'Bereit'),
           ])),
           const SizedBox(height: 14),
-          AirmiusButton(label: 'Einstellungen speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Einstellungen speichern', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.save_outlined)),
+          AirmiusButton(label: 'Einstellungen speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Einstellungen speichern', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.save_outlined)),
         ]),
       ),
     );

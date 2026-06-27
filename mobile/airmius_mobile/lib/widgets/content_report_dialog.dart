@@ -43,7 +43,7 @@ Future<ContentReportDraft?> showContentReportDialog(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    'Warum soll dieser Inhalt geprueft werden?',
+                    'Warum soll dieser Inhalt geprüft werden?',
                     style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800, height: 1.35),
                   ),
                   const SizedBox(height: 14),

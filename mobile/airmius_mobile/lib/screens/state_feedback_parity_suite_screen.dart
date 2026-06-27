@@ -44,7 +44,7 @@ class _StateFeedbackParitySuiteScreenState extends State<StateFeedbackParitySuit
     _FeedbackPattern(
       state: 'Error',
       title: 'API-Fehler',
-      body: 'Fehler zeigen lesbare Ursache, Retry, Supportweg, API-Code, Cache-Hinweis und sichere Ruecknavigation.',
+      body: 'Fehler zeigen lesbare Ursache, Retry, Supportweg, API-Code, Cache-Hinweis und sichere Rücknavigation.',
       status: 'Error',
       icon: Icons.error_outline,
       primary: 'Erneut versuchen',
@@ -54,7 +54,7 @@ class _StateFeedbackParitySuiteScreenState extends State<StateFeedbackParitySuit
     _FeedbackPattern(
       state: 'Success',
       title: 'Erfolgreiche Aktion',
-      body: 'Speichern, Senden, Upload, Checkout oder Entscheidung bestaetigt die Aktion und zeigt die naechste sinnvolle Route.',
+      body: 'Speichern, Senden, Upload, Checkout oder Entscheidung bestätigt die Aktion und zeigt die naechste sinnvolle Route.',
       status: 'Success',
       icon: Icons.task_alt_outlined,
       primary: 'Weiter',
@@ -68,7 +68,7 @@ class _StateFeedbackParitySuiteScreenState extends State<StateFeedbackParitySuit
       status: '403',
       icon: Icons.lock_outline,
       primary: 'Zugriff anfragen',
-      secondary: 'Zurueck',
+      secondary: 'Zurück',
       color: AirmiusColors.amber,
     ),
     _FeedbackPattern(
@@ -77,7 +77,7 @@ class _StateFeedbackParitySuiteScreenState extends State<StateFeedbackParitySuit
       body: 'Login, Suche, Chat, Upload oder Admin-Aktionen zeigen Cooldown, verbleibende Zeit und sichere Alternative.',
       status: 'Limit',
       icon: Icons.timer_outlined,
-      primary: 'Spaeter erneut',
+      primary: 'Später erneut',
       secondary: 'Warum?',
       color: AirmiusColors.red,
     ),
@@ -140,7 +140,7 @@ class _StateFeedbackParitySuiteScreenState extends State<StateFeedbackParitySuit
                 _FeedbackPatternCard(pattern: pattern, module: _module, showRetry: _showRetry),
                 const SizedBox(height: 12),
               ],
-              if (_visiblePatterns.isEmpty) const EmptyPanel('Kein Feedback-Muster fuer diesen Zustand sichtbar.'),
+              if (_visiblePatterns.isEmpty) const EmptyPanel('Kein Feedback-Muster für diesen Zustand sichtbar.'),
               const SizedBox(height: 4),
               _Checklist(
                 onOpen: () => openUiAction(
@@ -187,7 +187,7 @@ class _Hero extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Flutter bekommt wiederverwendbare Zustandsmuster fuer Ladezeiten, leere Listen, Fehler, Erfolg, fehlende Rechte, Rate Limits, Validierung und API-Retry.',
+            'Flutter bekommt wiederverwendbare Zustandsmuster für Ladezeiten, leere Listen, Fehler, Erfolg, fehlende Rechte, Rate Limits, Validierung und API-Retry.',
             style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
@@ -313,7 +313,7 @@ class _StatePreview extends StatelessWidget {
                   children: [
                     Text('$module · $state', style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 5),
-                    Text(showApiCode ? 'API: ${_apiCodeForState(state)}' : 'Lesbare Statusmeldung fuer User', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+                    Text(showApiCode ? 'API: ${_apiCodeForState(state)}' : 'Lesbare Statusmeldung für User', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
                   ],
                 ),
               ),
@@ -331,7 +331,7 @@ class _StatePreview extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
-              if (showRetry) AirmiusButton(label: 'Erneut versuchen', icon: Icons.refresh_outlined, onPressed: () => openUiAction(context, title: 'Retry $module', body: 'Retry fuer $module im Zustand $state mit API-Code ${_apiCodeForState(state)}.', status: state, icon: Icons.refresh_outlined)),
+              if (showRetry) AirmiusButton(label: 'Erneut versuchen', icon: Icons.refresh_outlined, onPressed: () => openUiAction(context, title: 'Retry $module', body: 'Retry für $module im Zustand $state mit API-Code ${_apiCodeForState(state)}.', status: state, icon: Icons.refresh_outlined)),
               AirmiusButton(label: 'Details', icon: Icons.info_outline, secondary: true, onPressed: () => openUiAction(context, title: '$module Details', body: 'Zustand $state, API-Code ${_apiCodeForState(state)}, Cache, Permission, Validation und naechste Aktion.', status: 'Details', icon: Icons.info_outline)),
             ],
           ),
@@ -451,7 +451,7 @@ class _FeedbackPatternCard extends StatelessWidget {
                   onPressed: () => openUiAction(
                     context,
                     title: pattern.secondary,
-                    body: 'Retry, Support, Cache, API-Code und naechste Aktion fuer ${pattern.title} in $module.',
+                    body: 'Retry, Support, Cache, API-Code und naechste Aktion für ${pattern.title} in $module.',
                     status: 'Feedback',
                     icon: Icons.refresh_outlined,
                   ),
@@ -473,7 +473,7 @@ class _Checklist extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'State-Paritaet',
-      subtitle: 'Was fuer jeden mobilen Screen gelten soll.',
+      subtitle: 'Was für jeden mobilen Screen gelten soll.',
       children: [
         const _CheckLine('Jede Liste, jedes Formular und jedes Detail hat Loading, Empty, Error und Success.'),
         const _CheckLine('API-Fehler werden lesbar erklaert und behalten optional technischen Code.'),
@@ -617,18 +617,18 @@ String _apiCodeForState(String state) {
 
 String _messageForState(String state) {
   if (state == 'Success') return 'Die Aktion wurde erfolgreich vorbereitet und die naechste sinnvolle Route ist sichtbar.';
-  if (state == 'Error') return 'Etwas hat nicht funktioniert. Die App zeigt Ursache, Retry, Supportweg und sicheren Rueckweg.';
-  if (state == 'Unauthorized') return 'Du hast fuer diesen Bereich aktuell keine Berechtigung oder brauchst eine Freigabe.';
+  if (state == 'Error') return 'Etwas hat nicht funktioniert. Die App zeigt Ursache, Retry, Supportweg und sicheren Rückweg.';
+  if (state == 'Unauthorized') return 'Du hast für diesen Bereich aktuell keine Berechtigung oder brauchst eine Freigabe.';
   if (state == 'Rate Limit') return 'Diese Aktion wurde zu oft ausgefuehrt. Die App zeigt Cooldown und Alternative.';
   if (state == 'Empty') return 'Hier gibt es noch keine Eintraege. Die App erklaert den Zustand und bietet eine erste Aktion.';
   return 'Die Daten werden geladen.';
 }
 
 String _hintForState(String state) {
-  if (state == 'Success') return 'Naechster Schritt: Detail oeffnen, Liste aktualisieren oder weiterarbeiten.';
+  if (state == 'Success') return 'Naechster Schritt: Detail öffnen, Liste aktualisieren oder weiterarbeiten.';
   if (state == 'Error') return 'Naechster Schritt: Retry, Cache nutzen oder Support kontaktieren.';
-  if (state == 'Unauthorized') return 'Naechster Schritt: Rolle wechseln, Zugriff anfragen oder Guardian-Freigabe pruefen.';
-  if (state == 'Rate Limit') return 'Naechster Schritt: warten, Entwurf speichern oder spaeter erneut senden.';
-  if (state == 'Empty') return 'Naechster Schritt: erstellen, Filter zuruecksetzen oder Einladung senden.';
+  if (state == 'Unauthorized') return 'Naechster Schritt: Rolle wechseln, Zugriff anfragen oder Guardian-Freigabe prüfen.';
+  if (state == 'Rate Limit') return 'Naechster Schritt: warten, Entwurf speichern oder später erneut senden.';
+  if (state == 'Empty') return 'Naechster Schritt: erstellen, Filter zurücksetzen oder Einladung senden.';
   return 'Naechster Schritt: Skeleton bleibt stabil, bis API-Daten da sind.';
 }

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_api_models.dart';
 import '../core/airmius_services_scope.dart';
@@ -31,7 +31,7 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
   };
 
   String _cycle = 'Monatlich';
-  String _payment = 'Ueberweisung';
+  String _payment = 'Überweisung';
   late Future<AirmiusPage<AirmiusClubMembershipRequest>> _requestsFuture;
   bool _reviewing = false;
 
@@ -74,7 +74,7 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
                   SizedBox(height: 8),
                   Text('ZBB', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900)),
                   SizedBox(height: 6),
-                  Text('Hier verwaltet der Verein, welche Daten Mitglieder im Antrag ausfuellen muessen und welche Dokumente gelten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  Text('Hier verwaltet der Verein, welche Daten Mitglieder im Antrag ausfuellen müssen und welche Dokumente gelten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                 ],
               ),
             ),
@@ -177,7 +177,7 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
                       value: entry.value,
                       onChanged: (value) => setState(() => _fields[entry.key] = value),
                       title: Text(entry.key, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                      subtitle: Text(entry.value ? 'Wird im Formular angezeigt' : 'Ist fuer Antragsteller ausgeblendet', style: const TextStyle(color: AirmiusColors.muted)),
+                      subtitle: Text(entry.value ? 'Wird im Formular angezeigt' : 'Ist für Antragsteller ausgeblendet', style: const TextStyle(color: AirmiusColors.muted)),
                       activeColor: AirmiusColors.blue,
                       contentPadding: EdgeInsets.zero,
                     ),
@@ -203,7 +203,7 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
                     value: _payment,
                     dropdownColor: AirmiusColors.cardSoft,
                     decoration: const InputDecoration(labelText: 'Zahlmethode'),
-                    items: const ['Ueberweisung', 'Bar', 'SEPA-Lastschrift'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
+                    items: const ['Überweisung', 'Bar', 'SEPA-Lastschrift'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
                     onChanged: (value) => setState(() => _payment = value ?? _payment),
                   ),
                   const SizedBox(height: 12),
@@ -225,7 +225,7 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            AirmiusButton(label: 'Einstellungen speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Einstellungen speichern', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.save_outlined)),
+            AirmiusButton(label: 'Einstellungen speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Einstellungen speichern', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.save_outlined)),
             const SizedBox(height: 10),
             AirmiusButton(label: 'Membership Operations', icon: Icons.tune_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MembershipOperationsScreen()))),
           ],
@@ -311,7 +311,7 @@ class _RequestCard extends StatelessWidget {
     return switch (status) {
       'approved' => 'Angenommen',
       'declined' => 'Abgelehnt',
-      'withdrawn' => 'Zurueckgezogen',
+      'withdrawn' => 'Zurückgezogen',
       _ => 'Offen',
     };
   }

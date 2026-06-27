@@ -30,7 +30,7 @@ class _LaravelApiEndpointMappingSuiteScreenState extends State<LaravelApiEndpoin
       ),
       body: PageFrame(
         title: 'Laravel API Endpoint Mapping',
-        subtitle: 'Mobile UI-Matrix fuer Web-Routen, Flutter-Screens, API-Methoden, Payloads und Fehlerzustaende.',
+        subtitle: 'Mobile UI-Matrix für Web-Routen, Flutter-Screens, API-Methoden, Payloads und Fehlerzustaende.',
         trailing: const StatusPill('Laravel v1', color: AirmiusColors.blue),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -111,7 +111,7 @@ class _LaravelApiEndpointMappingSuiteScreenState extends State<LaravelApiEndpoin
                   _ContractToggle(
                     icon: Icons.cloud_off_outlined,
                     title: 'Offline Queue',
-                    body: 'Antraege, Chat, Uploads und Form-Drafts koennen spaeter in eine Retry-Queue gelegt werden.',
+                    body: 'Antraege, Chat, Uploads und Form-Drafts können später in eine Retry-Queue gelegt werden.',
                     value: _offlineQueue,
                     onChanged: (value) => setState(() => _offlineQueue = value),
                     last: true,
@@ -131,9 +131,9 @@ class _LaravelApiEndpointMappingSuiteScreenState extends State<LaravelApiEndpoin
                 children: [
                   const Eyebrow('BINDING NEXT STEP'),
                   const SizedBox(height: 8),
-                  const Text('Wenn Laravel spaeter API-Routen liefert, werden diese UI-Karten zu echten Client-Services, Repository-Methoden und Ladezustaenden.', style: TextStyle(color: AirmiusColors.muted, height: 1.38)),
+                  const Text('Wenn Laravel später API-Routen liefert, werden diese UI-Karten zu echten Client-Services, Repository-Methoden und Ladezustaenden.', style: TextStyle(color: AirmiusColors.muted, height: 1.38)),
                   const SizedBox(height: 12),
-                  AirmiusButton(label: 'API-Client spaeter anbinden', icon: Icons.api_outlined, onPressed: () {}),
+                  AirmiusButton(label: 'API-Client später anbinden', icon: Icons.api_outlined, onPressed: () {}),
                 ],
               ),
             ),
@@ -159,17 +159,17 @@ class _Endpoint {
 const _endpoints = [
   _Endpoint(area: 'Auth', method: 'POST', path: '/api/v1/login', screen: 'Login + Session', status: 'Prepared', body: 'E-Mail, Passwort, 2FA, Token Restore und Device Session.', color: AirmiusColors.blue),
   _Endpoint(area: 'Auth', method: 'GET', path: '/api/v1/me', screen: 'Profile Shell', status: 'Prepared', body: 'User, Rollen, Workspaces, Sprache und Profile Completion.', color: AirmiusColors.green),
-  _Endpoint(area: 'Club', method: 'GET', path: '/api/v1/clubs', screen: 'Vereine & Suche', status: 'Mapped', body: 'Oeffentliche Vereine, Suchfilter, Status-Pills und Beitritts-CTA.', color: AirmiusColors.blue),
+  _Endpoint(area: 'Club', method: 'GET', path: '/api/v1/clubs', screen: 'Vereine & Suche', status: 'Mapped', body: 'Öffentliche Vereine, Suchfilter, Status-Pills und Beitritts-CTA.', color: AirmiusColors.blue),
   _Endpoint(area: 'Club', method: 'GET', path: '/api/v1/clubs/{id}', screen: 'Club Public Preview', status: 'Mapped', body: 'Hero, Teams, Admins, Dokumente, Kontakt, Sichtbarkeit und Mitgliederzahlen.', color: AirmiusColors.green),
-  _Endpoint(area: 'Club', method: 'PATCH', path: '/api/v1/clubs/{id}/visibility', screen: 'Vereinssichtbarkeit', status: 'Mapped', body: 'Schalter fuer Profilbereiche, Dokumente, Mitglieder, Teams und Antragsschalter.', color: AirmiusColors.amber),
+  _Endpoint(area: 'Club', method: 'PATCH', path: '/api/v1/clubs/{id}/visibility', screen: 'Vereinssichtbarkeit', status: 'Mapped', body: 'Schalter für Profilbereiche, Dokumente, Mitglieder, Teams und Antragsschalter.', color: AirmiusColors.amber),
   _Endpoint(area: 'Membership', method: 'POST', path: '/api/v1/clubs/{id}/applications', screen: 'Mitgliedsantrag', status: 'Mapped', body: 'Dynamisches Formular, Dokumente, Zahlungsdaten, Datenschutz und Fehlertexte.', color: AirmiusColors.green),
-  _Endpoint(area: 'Membership', method: 'DELETE', path: '/api/v1/applications/{id}', screen: 'Anfrage zurueckziehen', status: 'Mapped', body: 'Rueckzug vor Admin-Entscheidung mit Status-Update und Benachrichtigung.', color: AirmiusColors.amber),
+  _Endpoint(area: 'Membership', method: 'DELETE', path: '/api/v1/applications/{id}', screen: 'Anfrage zurückziehen', status: 'Mapped', body: 'Rückzug vor Admin-Entscheidung mit Status-Update und Benachrichtigung.', color: AirmiusColors.amber),
   _Endpoint(area: 'Files', method: 'POST', path: '/api/v1/clubs/{id}/files', screen: 'Dateimanager Upload', status: 'Mapped', body: 'Datenschutz, Satzung, Beitragsordnung, Teamdateien und Formularanhang.', color: AirmiusColors.blue),
   _Endpoint(area: 'Files', method: 'GET', path: '/api/v1/files/{id}', screen: 'Dokument Preview', status: 'Prepared', body: 'Version, Zweck, Consent-Pflicht, Download und Sichtbarkeit.', color: AirmiusColors.green),
   _Endpoint(area: 'Social', method: 'GET', path: '/api/v1/feed', screen: 'Feed & Community', status: 'Prepared', body: 'Posts, Medien, Kommentare, Reaktionen, Reports und Moderation.', color: AirmiusColors.blue),
   _Endpoint(area: 'Social', method: 'POST', path: '/api/v1/messages', screen: 'Nachrichten', status: 'Prepared', body: 'Private Chats, Vereinsadmin-Kanal, Teamchat und Dateien.', color: AirmiusColors.green),
   _Endpoint(area: 'Commerce', method: 'GET', path: '/api/v1/marketplace/products', screen: 'Marketplace', status: 'Prepared', body: 'Produkte, Clubshop, Sponsorangebote, Warenkorb und Checkout.', color: AirmiusColors.blue),
-  _Endpoint(area: 'Commerce', method: 'POST', path: '/api/v1/orders', screen: 'Order Flow', status: 'Prepared', body: 'Bestellung, Zahlung, Abholung, Versand, Rueckgabe und Rechnungen.', color: AirmiusColors.amber),
+  _Endpoint(area: 'Commerce', method: 'POST', path: '/api/v1/orders', screen: 'Order Flow', status: 'Prepared', body: 'Bestellung, Zahlung, Abholung, Versand, Rückgabe und Rechnungen.', color: AirmiusColors.amber),
   _Endpoint(area: 'Admin', method: 'GET', path: '/api/v1/admin/moderation', screen: 'Moderation Queue', status: 'Prepared', body: 'Reports, Verifizierungen, Datenschutzanfragen, Eskalationen und Audit.', color: AirmiusColors.amber),
   _Endpoint(area: 'Admin', method: 'PATCH', path: '/api/v1/admin/users/{id}', screen: 'User Management', status: 'Prepared', body: 'Statuswechsel, Rollen, Sperren, Entsperren und Admin-Notizen.', color: AirmiusColors.blue),
 ];

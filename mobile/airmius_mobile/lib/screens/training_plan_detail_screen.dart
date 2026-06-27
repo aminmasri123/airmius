@@ -113,8 +113,8 @@ class _TrainingPlanDetailScreenState extends State<TrainingPlanDetailScreen> {
                     onChanged: (value) => setState(() => _publishToAthletes = value),
                     activeColor: AirmiusColors.blue,
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Sichtbar fuer Athleten', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                    subtitle: const Text('Plan erscheint in App, Kalender und Wochenuebersicht.', style: TextStyle(color: AirmiusColors.muted)),
+                    title: const Text('Sichtbar für Athleten', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                    subtitle: const Text('Plan erscheint in App, Kalender und Wochenübersicht.', style: TextStyle(color: AirmiusColors.muted)),
                   ),
                   SwitchListTile(
                     value: _requireLog,
@@ -122,7 +122,7 @@ class _TrainingPlanDetailScreenState extends State<TrainingPlanDetailScreen> {
                     activeColor: AirmiusColors.blue,
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Log nach Einheit verlangen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                    subtitle: const Text('Athleten werden nach Abschluss an die Rueckmeldung erinnert.', style: TextStyle(color: AirmiusColors.muted)),
+                    subtitle: const Text('Athleten werden nach Abschluss an die Rückmeldung erinnert.', style: TextStyle(color: AirmiusColors.muted)),
                   ),
                   const SizedBox(height: 8),
                   Wrap(spacing: 8, runSpacing: 8, children: const [StatusPill('Team U18'), StatusPill('Coach sichtbar'), StatusPill('PDF-Regel verknuepft')]),
@@ -137,7 +137,7 @@ class _TrainingPlanDetailScreenState extends State<TrainingPlanDetailScreen> {
                 children: [
                   Eyebrow('Dokumente & Regeln'),
                   SizedBox(height: 8),
-                  Text('Verknuepfte Dateien aus dem Vereins-Dateimanager: Datenschutz, Trainingsordnung und Einverstaendnis fuer Minderjaehrige.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  Text('Verknuepfte Dateien aus dem Vereins-Dateimanager: Datenschutz, Trainingsordnung und Einverstaendnis für Minderjaehrige.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                 ],
               ),
             ),

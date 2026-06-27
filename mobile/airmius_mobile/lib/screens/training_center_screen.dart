@@ -579,7 +579,7 @@ class _AdvancedFilters extends StatelessWidget {
             runSpacing: 8,
             alignment: WrapAlignment.end,
             children: [
-              AirmiusButton(label: 'Zuruecksetzen', icon: Icons.restart_alt, onPressed: onReset, secondary: true),
+              AirmiusButton(label: 'Zurücksetzen', icon: Icons.restart_alt, onPressed: onReset, secondary: true),
               AirmiusButton(label: 'Filter anwenden', icon: Icons.check, onPressed: onApply),
             ],
           ),
@@ -744,7 +744,7 @@ class _CalendarView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Eyebrow('Ausgewaehlter Tag'),
+              const Eyebrow('Ausgewählter Tag'),
               const SizedBox(height: 4),
               Text(_dateLabel(selectedDate), style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
               const SizedBox(height: 12),
@@ -861,7 +861,7 @@ class _EventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
-    final owner = event.clubName ?? event.teamName ?? 'Oeffentlicher Bereich';
+    final owner = event.clubName ?? event.teamName ?? 'Öffentlicher Bereich';
     return AirmiusPanel(
       onTap: () => _openEvent(context, event),
       child: Row(
@@ -1062,8 +1062,8 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
   String? get _validationMessage {
     if (_step == 1) {
       if (_titleController.text.trim().isEmpty) return 'Bitte gib einen Titel ein.';
-      if (_visibility == 'organization' && _clubId == null) return 'Bitte waehle einen Verein aus.';
-      if (_visibility == 'private' && _teamId == null) return 'Bitte waehle ein Team aus.';
+      if (_visibility == 'organization' && _clubId == null) return 'Bitte wähle einen Verein aus.';
+      if (_visibility == 'private' && _teamId == null) return 'Bitte wähle ein Team aus.';
     }
     if (_step == 2) {
       if (_end != null && _end!.isBefore(_start)) return 'Das Ende darf nicht vor dem Start liegen.';
@@ -1147,7 +1147,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
       children: [
         const Text('Basisdaten', style: TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900)),
         const SizedBox(height: 4),
-        const Text('Was fuer ein Event moechtest du erstellen?', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+        const Text('Was für ein Event moechtest du erstellen?', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
         const SizedBox(height: 16),
         TextFormField(
           controller: _titleController,
@@ -1237,7 +1237,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
         const SizedBox(height: 12),
         AirmiusButton(label: _end == null ? 'Ende optional' : 'Ende: ${_dateLabel(_end!)} ${_time(_end!)}', icon: Icons.update, onPressed: _pickEnd, secondary: true),
         const SizedBox(height: 10),
-        const Text('Zeitzone: UTC fuer die API, Anzeige lokal in der App.', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
+        const Text('Zeitzone: UTC für die API, Anzeige lokal in der App.', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
       ],
     );
   }
@@ -1267,7 +1267,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
           onChanged: _visibility == 'private' && _teamId != null ? (value) => setState(() => _usesPenaltyCatalog = value) : null,
           activeColor: AirmiusColors.blue,
           title: const Text('Mit Strafkatalog arbeiten', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-          subtitle: const Text('Teamkasse: Strafen koennen im Event an anwesende Spieler vergeben werden.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+          subtitle: const Text('Teamkasse: Strafen können im Event an anwesende Spieler vergeben werden.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
         ),
         const SizedBox(height: 12),
         TextFormField(
@@ -1292,7 +1292,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Pruefen', style: TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900)),
+        const Text('Prüfen', style: TextStyle(color: AirmiusColors.text, fontSize: 17, fontWeight: FontWeight.w900)),
         const SizedBox(height: 4),
         const Text('Kontrolliere deine Angaben vor dem Speichern.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
         const SizedBox(height: 16),
@@ -1309,7 +1309,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
               _ReviewLine(label: 'Start', value: '${_dateLabel(_start)} ${_time(_start)}'),
               _ReviewLine(label: 'Ende', value: _end == null ? '-' : '${_dateLabel(_end!)} ${_time(_end!)}'),
               _ReviewLine(label: 'Teilnehmerlimit', value: maxParticipants),
-              _ReviewLine(label: 'Strafkatalog', value: _usesPenaltyCatalog ? 'Aktiv fuer dieses Team-Event' : 'Nicht aktiv'),
+              _ReviewLine(label: 'Strafkatalog', value: _usesPenaltyCatalog ? 'Aktiv für dieses Team-Event' : 'Nicht aktiv'),
               _ReviewLine(label: 'Ort', value: _locationController.text.trim().isEmpty ? '-' : _locationController.text.trim()),
               _ReviewLine(label: 'Notizen', value: _notesController.text.trim().isEmpty ? '-' : _notesController.text.trim()),
             ],
@@ -1361,7 +1361,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                     const SizedBox(width: 8),
                     _stepButton(3, 'Details'),
                     const SizedBox(width: 8),
-                    _stepButton(4, 'Pruefen'),
+                    _stepButton(4, 'Prüfen'),
                   ],
                 ),
               ),
@@ -1391,7 +1391,7 @@ class _CreateEventDialogState extends State<_CreateEventDialog> {
                     ],
                     Row(
                       children: [
-                        Expanded(child: AirmiusButton(label: 'Zurueck', icon: Icons.chevron_left, onPressed: _step == 1 ? null : _previousStep, secondary: true)),
+                        Expanded(child: AirmiusButton(label: 'Zurück', icon: Icons.chevron_left, onPressed: _step == 1 ? null : _previousStep, secondary: true)),
                         const SizedBox(width: 10),
                         Expanded(
                           child: AirmiusButton(
@@ -1496,7 +1496,7 @@ class _EmptyEvents extends StatelessWidget {
             runSpacing: 8,
             alignment: WrapAlignment.center,
             children: [
-              AirmiusButton(label: 'Filter zuruecksetzen', icon: Icons.restart_alt, onPressed: onReset, secondary: true),
+              AirmiusButton(label: 'Filter zurücksetzen', icon: Icons.restart_alt, onPressed: onReset, secondary: true),
               AirmiusButton(label: 'Event erstellen', icon: Icons.add, onPressed: onCreate),
             ],
           ),
@@ -1609,13 +1609,13 @@ String _typeLabel(String value) => switch (value) {
       'training' => 'Training',
       'match' => 'Spiel',
       'meeting' => 'Meeting',
-      'public' => 'Oeffentlich',
+      'public' => 'Öffentlich',
       _ => value,
     };
 
 String _visibilityLabel(String value) => switch (value) {
       'private' => 'Nur Team',
       'organization' => 'Verein',
-      'public' => 'Oeffentlich',
+      'public' => 'Öffentlich',
       _ => value,
     };

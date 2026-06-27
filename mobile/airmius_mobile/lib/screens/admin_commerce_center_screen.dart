@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -23,10 +23,10 @@ class _AdminCommerceCenterScreenState extends State<AdminCommerceCenterScreen> {
 
   final List<_CommerceAdminItem> _items = const [
     _CommerceAdminItem(title: 'Offene Bestellung', area: 'Bestellungen', body: 'Marketplace-Bestellung mit Zahlung, Rechnung, Banktransfer und Supportstatus.', status: 'Offen', meta: '129 EUR', icon: Icons.receipt_long_outlined, color: AirmiusColors.blue),
-    _CommerceAdminItem(title: 'Produkt pruefen', area: 'Produkte', body: 'Produktdaten, Preis, Sichtbarkeit, Anbieter, Medien und Freigabe pruefen.', status: 'Review', meta: 'Provider', icon: Icons.inventory_2_outlined, color: AirmiusColors.green),
+    _CommerceAdminItem(title: 'Produkt prüfen', area: 'Produkte', body: 'Produktdaten, Preis, Sichtbarkeit, Anbieter, Medien und Freigabe prüfen.', status: 'Review', meta: 'Provider', icon: Icons.inventory_2_outlined, color: AirmiusColors.green),
     _CommerceAdminItem(title: 'Provider Anfrage', area: 'Provider', body: 'Anbieterprofil, Verifizierung, Produkte, Auszahlung und Kontaktfreigabe.', status: 'Neu', meta: 'Partner', icon: Icons.storefront_outlined, color: AirmiusColors.amber),
-    _CommerceAdminItem(title: 'Banktransfer zuordnen', area: 'Banktransfer', body: 'Ueberweisung, Referenz, Betrag, Rechnung und manuelle Zuordnung.', status: 'Pruefen', meta: '89 EUR', icon: Icons.account_balance_outlined, color: AirmiusColors.blueDeep),
-    _CommerceAdminItem(title: 'Refund Fall', area: 'Refunds', body: 'Rueckerstattung, Storno, Supportticket, Zahlungsstatus und Auditnotiz.', status: 'Sensibel', meta: 'Refund', icon: Icons.undo_outlined, color: AirmiusColors.red),
+    _CommerceAdminItem(title: 'Banktransfer zuordnen', area: 'Banktransfer', body: 'Überweisung, Referenz, Betrag, Rechnung und manuelle Zuordnung.', status: 'Prüfen', meta: '89 EUR', icon: Icons.account_balance_outlined, color: AirmiusColors.blueDeep),
+    _CommerceAdminItem(title: 'Refund Fall', area: 'Refunds', body: 'Rückerstattung, Storno, Supportticket, Zahlungsstatus und Auditnotiz.', status: 'Sensibel', meta: 'Refund', icon: Icons.undo_outlined, color: AirmiusColors.red),
   ];
 
   List<_CommerceAdminItem> get _visibleItems => _items.where((item) => _section == 'Alle' || item.area == _section).toList();
@@ -62,8 +62,8 @@ class _AdminCommerceCenterScreenState extends State<AdminCommerceCenterScreen> {
                               _SwitchRow(title: 'Bestellungen anzeigen', subtitle: 'Orders, Status, Zahlung, Rechnung und Support.', value: _showOrders, onChanged: (value) => setState(() => _showOrders = value)),
                               _SwitchRow(title: 'Produkte anzeigen', subtitle: 'Produktfreigabe, Preis, Medien und Sichtbarkeit.', value: _showProducts, onChanged: (value) => setState(() => _showProducts = value)),
                               _SwitchRow(title: 'Provider anzeigen', subtitle: 'Anbieter, Verifizierung, Auszahlung und Kontakt.', value: _showProviders, onChanged: (value) => setState(() => _showProviders = value)),
-                              _SwitchRow(title: 'Banktransfer anzeigen', subtitle: 'Ueberweisung, Referenz und manuelle Zuordnung.', value: _showBankTransfers, onChanged: (value) => setState(() => _showBankTransfers = value)),
-                              _SwitchRow(title: 'Refunds anzeigen', subtitle: 'Rueckerstattung, Storno und Auditnotiz.', value: _showRefunds, onChanged: (value) => setState(() => _showRefunds = value)),
+                              _SwitchRow(title: 'Banktransfer anzeigen', subtitle: 'Überweisung, Referenz und manuelle Zuordnung.', value: _showBankTransfers, onChanged: (value) => setState(() => _showBankTransfers = value)),
+                              _SwitchRow(title: 'Refunds anzeigen', subtitle: 'Rückerstattung, Storno und Auditnotiz.', value: _showRefunds, onChanged: (value) => setState(() => _showRefunds = value)),
                             ],
                           ),
                         ),
@@ -72,7 +72,7 @@ class _AdminCommerceCenterScreenState extends State<AdminCommerceCenterScreen> {
                           _CommerceCard(item: item, onOpen: () => _toast('${item.title}: Admin-Detail vorbereitet')),
                           const SizedBox(height: 12),
                         ],
-                        if (items.isEmpty) const EmptyPanel('Keine Commerce-Eintraege fuer diesen Bereich gefunden.'),
+                        if (items.isEmpty) const EmptyPanel('Keine Commerce-Eintraege für diesen Bereich gefunden.'),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Admin-Aktionen',

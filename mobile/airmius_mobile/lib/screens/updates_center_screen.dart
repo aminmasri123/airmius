@@ -174,7 +174,7 @@ class _RequestsPanel extends StatelessWidget {
                         onPressed: onWithdrawClub == null
                             ? null
                             : () async {
-                                final ok = await confirmDanger(context, 'Anfrage zurueckziehen', 'Moechtest du deine Anfrage bei ${club.name} wirklich zurueckziehen?');
+                                final ok = await confirmDanger(context, 'Anfrage zurückziehen', 'Moechtest du deine Anfrage bei ${club.name} wirklich zurückziehen?');
                                 if (ok) onWithdrawClub!(club);
                               },
                       ),

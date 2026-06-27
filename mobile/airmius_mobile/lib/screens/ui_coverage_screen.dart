@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../models/module_definition.dart';
@@ -15,7 +15,7 @@ class UiCoverageScreen extends StatelessWidget {
       appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('UI Coverage', style: TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
         title: 'UI Coverage',
-        subtitle: 'Modulabdeckung, Operations-Center und spaetere API-Anbindung',
+        subtitle: 'Modulabdeckung, Operations-Center und spätere API-Anbindung',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -26,11 +26,11 @@ class UiCoverageScreen extends StatelessWidget {
                 children: [
                   const Eyebrow('Flutter-Abdeckung'),
                   const SizedBox(height: 8),
-                  const Text('Diese Ansicht fasst zusammen, welche Web-App-Module als native mobile UI vorbereitet sind. Backend kommt spaeter ueber Laravel API.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+                  const Text('Diese Ansicht fasst zusammen, welche Web-App-Module als native mobile UI vorbereitet sind. Backend kommt später über Laravel API.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
                   const SizedBox(height: 14),
                   Row(children: const [Expanded(child: MetricCard(value: '31', label: 'Module')), SizedBox(width: 10), Expanded(child: MetricCard(value: '25', label: 'Ops')), SizedBox(width: 10), Expanded(child: MetricCard(value: 'DE/EN/FR/AR', label: 'Lang'))]),
                   const SizedBox(height: 14),
-                  AirmiusButton(label: 'Operations Hub oeffnen', icon: Icons.hub_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OperationsHubScreen()))),
+                  AirmiusButton(label: 'Operations Hub öffnen', icon: Icons.hub_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OperationsHubScreen()))),
                 ],
               ),
             ),
@@ -69,7 +69,7 @@ class _CoverageLine extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(module.subtitle, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
                 const SizedBox(height: 9),
-                Wrap(spacing: 8, runSpacing: 8, children: [StatusPill(status.label, color: status.color), StatusPill(status.ops), StatusPill('API spaeter')]),
+                Wrap(spacing: 8, runSpacing: 8, children: [StatusPill(status.label, color: status.color), StatusPill(status.ops), StatusPill('API später')]),
               ],
             ),
           ),
@@ -81,7 +81,7 @@ class _CoverageLine extends StatelessWidget {
 
 _CoverageStatus _status(String title) {
   const opsReady = {
-    'Arbeitsbereiche', 'Vereins-Cockpit', 'Vereine & Teams', 'Teams', 'Rollen & Rechte', 'Sportarten', 'Feed', 'Events', 'Events & Training', 'Trainer-Cockpit', 'Ernaehrung', 'Sportkarte', 'Freunde', 'Nachrichten', 'Fahrgemeinschaften', 'Dateien', 'Badges', 'Gamification-Regeln', 'Kurse', 'Marketplace', 'Commerce', 'Sponsoren', 'Medienrichtlinien', 'Blog & Medien', 'Nutzer', 'Abos & Rechnungen', 'Eltern & Jugendschutz', 'Altersfreigaben', 'Outfit-Abos', 'Einstellungen', 'Admin',
+    'Arbeitsbereiche', 'Vereins-Cockpit', 'Vereine & Teams', 'Teams', 'Rollen & Rechte', 'Sportarten', 'Feed', 'Events', 'Events & Training', 'Trainer-Cockpit', 'Ernährung', 'Sportkarte', 'Freunde', 'Nachrichten', 'Fahrgemeinschaften', 'Dateien', 'Badges', 'Gamification-Regeln', 'Kurse', 'Marketplace', 'Commerce', 'Sponsoren', 'Medienrichtlinien', 'Blog & Medien', 'Nutzer', 'Abos & Rechnungen', 'Eltern & Jugendschutz', 'Altersfreigaben', 'Outfit-Abos', 'Einstellungen', 'Admin',
   };
   if (opsReady.contains(title)) return const _CoverageStatus('Native UI bereit', 'Ops verknuepft', AirmiusColors.green);
   return const _CoverageStatus('UI vorhanden', 'Review', AirmiusColors.amber);

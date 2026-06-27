@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -24,9 +24,9 @@ class _PrivacyConsentCenterScreenState extends State<PrivacyConsentCenterScreen>
 
   final List<_ConsentItem> _items = const [
     _ConsentItem(title: 'Datenschutz', body: 'Verarbeitung von Profil-, Kontakt-, Vereins- und Mitgliedschaftsdaten.', status: 'Aktiv', owner: 'Airmius + Verein', icon: Icons.privacy_tip_outlined, color: AirmiusColors.blue),
-    _ConsentItem(title: 'Vereinsregeln', body: 'Regeln, Satzung, Verhalten, Trainingsordnung und Vereinsbeitraege.', status: 'Akzeptiert', owner: 'ZBB', icon: Icons.gavel_outlined, color: AirmiusColors.green),
+    _ConsentItem(title: 'Vereinsregeln', body: 'Regeln, Satzung, Verhalten, Trainingsordnung und Vereinsbeiträge.', status: 'Akzeptiert', owner: 'ZBB', icon: Icons.gavel_outlined, color: AirmiusColors.green),
     _ConsentItem(title: 'Zahlungsdaten', body: 'Zahlmethode, Beitragsintervall, SEPA-Hinweis und Zahlungsstatus.', status: 'Erforderlich', owner: 'Vereinsfinanzen', icon: Icons.payments_outlined, color: AirmiusColors.amber),
-    _ConsentItem(title: 'Medienfreigabe', body: 'Fotos, Videos, Teambeitraege und oeffentliche Vereinsbeitraege.', status: 'Optional', owner: 'Verein', icon: Icons.photo_camera_outlined, color: AirmiusColors.blueDeep),
+    _ConsentItem(title: 'Medienfreigabe', body: 'Fotos, Videos, Teambeiträge und öffentliche Vereinsbeiträge.', status: 'Optional', owner: 'Verein', icon: Icons.photo_camera_outlined, color: AirmiusColors.blueDeep),
     _ConsentItem(title: 'Minderjaehrige', body: 'Erziehungsberechtigte, Notfallkontakt, Einwilligung und altersabhaengige Pflichtfelder.', status: 'Pflichtfall', owner: 'Guardian', icon: Icons.family_restroom_outlined, color: AirmiusColors.red),
   ];
 
@@ -54,10 +54,10 @@ class _PrivacyConsentCenterScreenState extends State<PrivacyConsentCenterScreen>
                           title: 'Meine Zustimmungen',
                           child: Column(
                             children: [
-                              _SwitchRow(title: 'Datenschutz akzeptiert', subtitle: 'Basis fuer Konto, Mitgliedschaft und Vereinsfunktionen.', value: _privacyConsent, onChanged: (value) => setState(() => _privacyConsent = value)),
+                              _SwitchRow(title: 'Datenschutz akzeptiert', subtitle: 'Basis für Konto, Mitgliedschaft und Vereinsfunktionen.', value: _privacyConsent, onChanged: (value) => setState(() => _privacyConsent = value)),
                               _SwitchRow(title: 'Vereinsregeln akzeptiert', subtitle: 'Regeln und Dokumente des Vereins sind mit dem Antrag verbunden.', value: _clubRulesConsent, onChanged: (value) => setState(() => _clubRulesConsent = value)),
-                              _SwitchRow(title: 'Zahlungsdaten erlaubt', subtitle: 'Beitraege, Zahlungsart und Intervall duerfen verarbeitet werden.', value: _paymentConsent, onChanged: (value) => setState(() => _paymentConsent = value)),
-                              _SwitchRow(title: 'Medienfreigabe', subtitle: 'Fotos, Videos und oeffentliche Vereinsbeitraege optional erlauben.', value: _mediaConsent, onChanged: (value) => setState(() => _mediaConsent = value)),
+                              _SwitchRow(title: 'Zahlungsdaten erlaubt', subtitle: 'Beiträge, Zahlungsart und Intervall dürfen verarbeitet werden.', value: _paymentConsent, onChanged: (value) => setState(() => _paymentConsent = value)),
+                              _SwitchRow(title: 'Medienfreigabe', subtitle: 'Fotos, Videos und öffentliche Vereinsbeiträge optional erlauben.', value: _mediaConsent, onChanged: (value) => setState(() => _mediaConsent = value)),
                               _SwitchRow(title: 'Erziehungsberechtigten-Einwilligung', subtitle: 'Pflicht bei minderjaehrigen Mitgliedern und Jugendteams.', value: _guardianConsent, onChanged: (value) => setState(() => _guardianConsent = value)),
                               _SwitchRow(title: 'Marketing & Updates', subtitle: 'Optionale Hinweise zu Angeboten, Sponsoren und Vereinsaktionen.', value: _marketingConsent, onChanged: (value) => setState(() => _marketingConsent = value)),
                             ],
@@ -77,7 +77,7 @@ class _PrivacyConsentCenterScreenState extends State<PrivacyConsentCenterScreen>
                               AirmiusButton(label: 'Vereinsdokumente', icon: Icons.policy_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubPolicyDocumentsScreen()))),
                               AirmiusButton(label: 'Mitgliedsantrag', icon: Icons.assignment_add, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MembershipApplicationFormScreen()))),
                               AirmiusButton(label: 'Datenrechte', icon: Icons.manage_accounts_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DataRightsRequestScreen()))),
-                              AirmiusButton(label: 'Rueckfrage', icon: Icons.forum_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationChatOperationsScreen(initialTab: 'Chat')))),
+                              AirmiusButton(label: 'Rückfrage', icon: Icons.forum_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationChatOperationsScreen(initialTab: 'Chat')))),
                             ],
                           ),
                         ),

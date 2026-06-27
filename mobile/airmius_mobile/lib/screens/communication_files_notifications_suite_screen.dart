@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -18,11 +18,11 @@ class _CommunicationFilesNotificationsSuiteScreenState extends State<Communicati
   bool _showNotifications = true;
 
   final List<_SuiteItem> _items = const [
-    _SuiteItem('Chat Uebersicht', 'Messaging', 'Inbox', 'Konversationen, Teams, Vereine, ungelesene Nachrichten und schnelle Suche.', Icons.forum_outlined, Color(0xFF5BA7FF)),
-    _SuiteItem('Chat Detail', 'Messaging', 'Thread', 'Nachrichtenverlauf, Antworten, Attachments, Status, Lesebestaetigung und Aktionen.', Icons.chat_bubble_outline, Color(0xFF2EE59D)),
+    _SuiteItem('Chat Übersicht', 'Messaging', 'Inbox', 'Konversationen, Teams, Vereine, ungelesene Nachrichten und schnelle Suche.', Icons.forum_outlined, Color(0xFF5BA7FF)),
+    _SuiteItem('Chat Detail', 'Messaging', 'Thread', 'Nachrichtenverlauf, Antworten, Attachments, Status, Lesebestätigung und Aktionen.', Icons.chat_bubble_outline, Color(0xFF2EE59D)),
     _SuiteItem('Neue Konversation', 'Messaging', 'Create', 'Empfaenger suchen, Betreff, Text, Dateianhaenge und Datenschutz-Hinweise.', Icons.add_comment_outlined, Color(0xFFF8B84E)),
     _SuiteItem('Benachrichtigungen', 'Notifications', 'Center', 'Systemmeldungen, Vereinsupdates, Anfragen, Zahlungsstatus und Aktivitaeten.', Icons.notifications_active_outlined, Color(0xFFB084FF)),
-    _SuiteItem('Notification Detail', 'Notifications', 'Detail', 'Detailansicht fuer einzelne Meldungen mit Ziel, Status, Kontext und Aktion.', Icons.notification_important_outlined, Color(0xFFFF6B6B)),
+    _SuiteItem('Notification Detail', 'Notifications', 'Detail', 'Detailansicht für einzelne Meldungen mit Ziel, Status, Kontext und Aktion.', Icons.notification_important_outlined, Color(0xFFFF6B6B)),
     _SuiteItem('Notification Preferences', 'Notifications', 'Prefs', 'Push, E-Mail, Vereinsupdates, Marketing, Sicherheit und Ruhezeiten.', Icons.tune_outlined, Color(0xFF5BA7FF)),
     _SuiteItem('Dateimanager', 'Files', 'Files', 'Vereinsdateien, Ordner, Uploads, Rechte, verknuepfte Dokumente und Sichtbarkeit.', Icons.folder_copy_outlined, Color(0xFF2EE59D)),
     _SuiteItem('Datei Vorschau', 'Files', 'Preview', 'Dokumentvorschau, Metadaten, Download, Freigabe, Verknuepfung und Zugriff.', Icons.visibility_outlined, Color(0xFFF8B84E)),
@@ -49,7 +49,7 @@ class _CommunicationFilesNotificationsSuiteScreenState extends State<Communicati
                     const _Hero(
                       eyebrow: 'COMMUNICATION',
                       title: 'Chat, Dateien & Updates',
-                      subtitle: 'Native Mobile-UI fuer Konversationen, Nachrichten, Notifications, Dateimanager, Vorschau und Shared Access.',
+                      subtitle: 'Native Mobile-UI für Konversationen, Nachrichten, Notifications, Dateimanager, Vorschau und Shared Access.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -82,7 +82,7 @@ class _CommunicationFilesNotificationsSuiteScreenState extends State<Communicati
                       firstLabel: 'Nachricht starten',
                       secondIcon: Icons.upload_file_outlined,
                       secondLabel: 'Datei hochladen',
-                      onFirst: () => openUiAction(context, title: 'Neue Nachricht', body: 'Messaging ist als mobile UI vorbereitet; API-Anbindung folgt ueber Laravel.', status: 'UI bereit', icon: Icons.info_outline),
+                      onFirst: () => openUiAction(context, title: 'Neue Nachricht', body: 'Messaging ist als mobile UI vorbereitet; API-Anbindung folgt über Laravel.', status: 'UI bereit', icon: Icons.info_outline),
                       onSecond: () => openUiAction(context, title: 'Datei hochladen', body: 'Upload- und Dateimanager-UI sind vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
                       onSupport: () => _openSupport(context),
                     ),

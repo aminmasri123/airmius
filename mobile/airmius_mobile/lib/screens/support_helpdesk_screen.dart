@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -20,12 +20,12 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
   bool _notifyByChat = true;
 
   final _subject = TextEditingController(text: 'Problem mit Mitgliedsanfrage');
-  final _message = TextEditingController(text: 'Ich brauche Hilfe beim Vereinsbeitritt oder beim Zurueckziehen einer Anfrage.');
+  final _message = TextEditingController(text: 'Ich brauche Hilfe beim Vereinsbeitritt oder beim Zurückziehen einer Anfrage.');
 
   final List<_TicketItem> _tickets = const [
     _TicketItem(title: 'Mitgliedsanfrage haengt', body: 'User sieht Anfrage gesendet, aber keine weiteren Details.', status: 'Offen', owner: 'Support', icon: Icons.assignment_turned_in_outlined, color: AirmiusColors.blue),
     _TicketItem(title: 'Dokument kann nicht geladen werden', body: 'Vereinsdokument ist verknuepft, Upload oder Vorschau fehlt.', status: 'In Prüfung', owner: 'Dateien', icon: Icons.folder_copy_outlined, color: AirmiusColors.green),
-    _TicketItem(title: 'Zahlungsintervall unklar', body: 'Verein moechte monatlich, 4 Monate, 6 Monate oder jaehrlich anbieten.', status: 'Rueckfrage', owner: 'Finanzen', icon: Icons.payments_outlined, color: AirmiusColors.amber),
+    _TicketItem(title: 'Zahlungsintervall unklar', body: 'Verein moechte monatlich, 4 Monate, 6 Monate oder jaehrlich anbieten.', status: 'Rückfrage', owner: 'Finanzen', icon: Icons.payments_outlined, color: AirmiusColors.amber),
   ];
 
   @override
@@ -51,7 +51,7 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const PageTitle(title: 'Support & Helpdesk', subtitle: 'Tickets, Rueckfragen, Fehler, Vereinsanliegen, Prioritaet, Geraetedaten und Supportchat.'),
+                        const PageTitle(title: 'Support & Helpdesk', subtitle: 'Tickets, Rückfragen, Fehler, Vereinsanliegen, Prioritaet, Gerätedaten und Supportchat.'),
                         const SizedBox(height: 16),
                         _SupportHero(onSubmit: _submit),
                         const SizedBox(height: 16),
@@ -74,9 +74,9 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
                           title: 'Support-Optionen',
                           child: Column(
                             children: [
-                              _SwitchRow(title: 'Geraetedaten mitsenden', subtitle: 'Plattform, App-Version und technische Hinweise fuer Diagnose.', value: _includeDevice, onChanged: (value) => setState(() => _includeDevice = value)),
-                              _SwitchRow(title: 'Screenshot anhaengen', subtitle: 'Screenshot-Upload ist als UI fuer spaetere API vorbereitet.', value: _includeScreenshot, onChanged: (value) => setState(() => _includeScreenshot = value)),
-                              _SwitchRow(title: 'Antwort per Chat', subtitle: 'Support-Rueckfragen sollen im Airmius Chat erscheinen.', value: _notifyByChat, onChanged: (value) => setState(() => _notifyByChat = value)),
+                              _SwitchRow(title: 'Gerätedaten mitsenden', subtitle: 'Plattform, App-Version und technische Hinweise für Diagnose.', value: _includeDevice, onChanged: (value) => setState(() => _includeDevice = value)),
+                              _SwitchRow(title: 'Screenshot anhaengen', subtitle: 'Screenshot-Upload ist als UI für spätere API vorbereitet.', value: _includeScreenshot, onChanged: (value) => setState(() => _includeScreenshot = value)),
+                              _SwitchRow(title: 'Antwort per Chat', subtitle: 'Support-Rückfragen sollen im Airmius Chat erscheinen.', value: _notifyByChat, onChanged: (value) => setState(() => _notifyByChat = value)),
                             ],
                           ),
                         ),
@@ -144,7 +144,7 @@ class _SupportHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Support ist Teil der Plattform-UI: User, Vereinsadmins und Trainer koennen Fehler, Fragen und Rueckfragen strukturiert erfassen.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          const Text('Support ist Teil der Plattform-UI: User, Vereinsadmins und Trainer können Fehler, Fragen und Rückfragen strukturiert erfassen.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           const Row(children: [Expanded(child: MetricCard(value: '5', label: 'Kategorien')), SizedBox(width: 10), Expanded(child: MetricCard(value: '3', label: 'Tickets')), SizedBox(width: 10), Expanded(child: MetricCard(value: '1', label: 'Chat'))]),
         ],

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -22,7 +22,7 @@ class _GuestSponsorsGamificationScreenState extends State<GuestSponsorsGamificat
 
   final List<_SponsorGameItem> _items = const [
     _SponsorGameItem(title: 'Sponsor Sichtbarkeit', area: 'Sponsoren', body: 'Public Sponsor Landing mit Partnerprofil, Vereinsreichweite und Kampagnen-CTA.', status: 'Sponsor', meta: 'Partner', icon: Icons.handshake_outlined, color: AirmiusColors.blue),
-    _SponsorGameItem(title: 'Badge Challenge', area: 'Gamification', body: 'Badges, Punkte, Regeln und Fortschritt fuer Sport- und Vereinsaktionen.', status: 'Badge', meta: '250 Punkte', icon: Icons.military_tech_outlined, color: AirmiusColors.green),
+    _SponsorGameItem(title: 'Badge Challenge', area: 'Gamification', body: 'Badges, Punkte, Regeln und Fortschritt für Sport- und Vereinsaktionen.', status: 'Badge', meta: '250 Punkte', icon: Icons.military_tech_outlined, color: AirmiusColors.green),
     _SponsorGameItem(title: 'Vereins-Challenge', area: 'Gamification', body: 'Teamziele, Training, Events, Rangliste und Belohnungen als Public-Teaser.', status: 'Challenge', meta: '7 Tage', icon: Icons.emoji_events_outlined, color: AirmiusColors.amber),
     _SponsorGameItem(title: 'Reward Partner', area: 'Sponsoren', body: 'Sponsor-Rewards, Gutscheine, Marketplace-Verknuepfung und Reporting.', status: 'Reward', meta: 'Local', icon: Icons.card_giftcard_outlined, color: AirmiusColors.red),
   ];
@@ -58,7 +58,7 @@ class _GuestSponsorsGamificationScreenState extends State<GuestSponsorsGamificat
                           child: Column(
                             children: [
                               _SwitchRow(title: 'Sponsoren anzeigen', subtitle: 'Guest Sponsors mit Paketen, Partnerprofilen und Kampagnen.', value: _showSponsors, onChanged: (value) => setState(() => _showSponsors = value)),
-                              _SwitchRow(title: 'Badges anzeigen', subtitle: 'Gamification-Badges, Fortschritt und oeffentliche Motivation.', value: _showBadges, onChanged: (value) => setState(() => _showBadges = value)),
+                              _SwitchRow(title: 'Badges anzeigen', subtitle: 'Gamification-Badges, Fortschritt und öffentliche Motivation.', value: _showBadges, onChanged: (value) => setState(() => _showBadges = value)),
                               _SwitchRow(title: 'Challenges anzeigen', subtitle: 'Sport- und Vereins-Challenges als Public Growth Flow.', value: _showChallenges, onChanged: (value) => setState(() => _showChallenges = value)),
                               _SwitchRow(title: 'Rewards anzeigen', subtitle: 'Belohnungen, Gutscheine, Marketplace und Sponsorvorteile.', value: _showRewards, onChanged: (value) => setState(() => _showRewards = value)),
                             ],
@@ -69,7 +69,7 @@ class _GuestSponsorsGamificationScreenState extends State<GuestSponsorsGamificat
                           _SponsorGameCard(item: item, onOpen: () => _toast('${item.title}: Detail vorbereitet')),
                           const SizedBox(height: 12),
                         ],
-                        if (items.isEmpty) const EmptyPanel('Keine Eintraege fuer diesen Bereich gefunden.'),
+                        if (items.isEmpty) const EmptyPanel('Keine Eintraege für diesen Bereich gefunden.'),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Aktionen',

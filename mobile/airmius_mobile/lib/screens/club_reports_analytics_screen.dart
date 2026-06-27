@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -28,16 +28,16 @@ class _ClubReportsAnalyticsScreenState extends State<ClubReportsAnalyticsScreen>
       trend: 'Wachstum',
       icon: Icons.trending_up_outlined,
       color: AirmiusColors.green,
-      points: ['Neue Mitglieder: 8', 'Offene Anfragen: 5', 'Rueckzug: 1'],
+      points: ['Neue Mitglieder: 8', 'Offene Anfragen: 5', 'Rückzug: 1'],
     ),
     _ReportCardData(
-      title: 'Beitraege & Zahlungen',
-      subtitle: 'Zahlstatus, Intervall, offene Beitraege, Barzahlung, Ueberweisung und SEPA.',
+      title: 'Beiträge & Zahlungen',
+      subtitle: 'Zahlstatus, Intervall, offene Beiträge, Barzahlung, Überweisung und SEPA.',
       value: '93%',
       trend: 'Bezahlt',
       icon: Icons.account_balance_wallet_outlined,
       color: AirmiusColors.blue,
-      points: ['Offen: 4', 'Bar: 7', 'Ueberweisung: 31'],
+      points: ['Offen: 4', 'Bar: 7', 'Überweisung: 31'],
     ),
     _ReportCardData(
       title: 'Anwesenheit',
@@ -50,7 +50,7 @@ class _ClubReportsAnalyticsScreenState extends State<ClubReportsAnalyticsScreen>
     ),
     _ReportCardData(
       title: 'Vereinsaktivitaet',
-      subtitle: 'Beitraege, Kommentare, Chat-Aktivitaet, Dateien und sichtbare Inhalte.',
+      subtitle: 'Beiträge, Kommentare, Chat-Aktivitaet, Dateien und sichtbare Inhalte.',
       value: '42',
       trend: 'Aktionen',
       icon: Icons.insights_outlined,
@@ -88,10 +88,10 @@ class _ClubReportsAnalyticsScreenState extends State<ClubReportsAnalyticsScreen>
                           title: 'Berichtsinhalt',
                           child: Column(
                             children: [
-                              _SwitchRow(title: 'Finanzen einbeziehen', subtitle: 'Beitraege, Zahlstatus, Zahlungsart und offene Posten.', value: _includeFinance, onChanged: (value) => setState(() => _includeFinance = value)),
+                              _SwitchRow(title: 'Finanzen einbeziehen', subtitle: 'Beiträge, Zahlstatus, Zahlungsart und offene Posten.', value: _includeFinance, onChanged: (value) => setState(() => _includeFinance = value)),
                               _SwitchRow(title: 'Anwesenheit einbeziehen', subtitle: 'Training, Events, Warteliste, Check-ins und No-Shows.', value: _includeAttendance, onChanged: (value) => setState(() => _includeAttendance = value)),
-                              _SwitchRow(title: 'Mitgliedsanfragen einbeziehen', subtitle: 'Offene, angenommene, abgelehnte und zurueckgezogene Anfragen.', value: _includeRequests, onChanged: (value) => setState(() => _includeRequests = value)),
-                              _SwitchRow(title: 'Export vorbereiten', subtitle: 'CSV, PDF und Vorstandszusammenfassung fuer die API vormerken.', value: _includeExports, onChanged: (value) => setState(() => _includeExports = value)),
+                              _SwitchRow(title: 'Mitgliedsanfragen einbeziehen', subtitle: 'Offene, angenommene, abgelehnte und zurückgezogene Anfragen.', value: _includeRequests, onChanged: (value) => setState(() => _includeRequests = value)),
+                              _SwitchRow(title: 'Export vorbereiten', subtitle: 'CSV, PDF und Vorstandszusammenfassung für die API vormerken.', value: _includeExports, onChanged: (value) => setState(() => _includeExports = value)),
                             ],
                           ),
                         ),
@@ -157,7 +157,7 @@ class _ReportsHero extends StatelessWidget {
                   children: [
                     Eyebrow('VEREINSREPORTING'),
                     SizedBox(height: 4),
-                    Text('Auswertungen fuer Vorstand und Admins', style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900)),
+                    Text('Auswertungen für Vorstand und Admins', style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900)),
                   ],
                 ),
               ),
@@ -165,7 +165,7 @@ class _ReportsHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Die mobile App bereitet Reports fuer Mitglieder, Finanzen, Anwesenheit und Aktivitaet vor, damit Vereine nicht im Blindflug arbeiten.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          const Text('Die mobile App bereitet Reports für Mitglieder, Finanzen, Anwesenheit und Aktivitaet vor, damit Vereine nicht im Blindflug arbeiten.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           const Row(
             children: [

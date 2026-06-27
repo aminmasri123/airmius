@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -46,7 +46,7 @@ class _ClubMemberDirectoryScreenState extends State<ClubMemberDirectoryScreen> {
             const SizedBox(height: 14),
             const Text('Web-Tabellen werden mobil zu klaren Mitgliederkarten.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
             const SizedBox(height: 8),
-            const Text('Vereinsadmins koennen Mitglieder suchen, Status sehen, Rollen wechseln, Zahlungen pruefen, Dokumente oeffnen, externe Mitglieder importieren und Massenaktionen vorbereiten.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+            const Text('Vereinsadmins können Mitglieder suchen, Status sehen, Rollen wechseln, Zahlungen prüfen, Dokumente öffnen, externe Mitglieder importieren und Massenaktionen vorbereiten.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
             const SizedBox(height: 14),
             Row(children: const [Expanded(child: MetricCard(value: '128', label: 'Mitglieder')), SizedBox(width: 10), Expanded(child: MetricCard(value: '7', label: 'Offen')), SizedBox(width: 10), Expanded(child: MetricCard(value: '4', label: 'Rollen'))]),
             const SizedBox(height: 14),
@@ -85,12 +85,12 @@ class _DirectoryControls extends StatelessWidget {
   Widget build(BuildContext context) => AirmiusPanel(borderColor: AirmiusColors.blue.withValues(alpha: .44), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     const Eyebrow('Ansicht & Aktionen'),
     const SizedBox(height: 8),
-    const Text('Diese Schalter ersetzen Tabellenfilter aus der Web-App. Spaeter werden sie serverseitig mit Pagination, Rollenrechten und Export verbunden.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+    const Text('Diese Schalter ersetzen Tabellenfilter aus der Web-App. Später werden sie serverseitig mit Pagination, Rollenrechten und Export verbunden.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
     const SizedBox(height: 10),
     _DirectorySwitch(icon: Icons.person_add_alt_outlined, title: 'Externe Mitglieder anzeigen', body: 'Importierte Kontakte, Warteliste oder Papiermitglieder in derselben mobilen Liste zeigen.', value: showExternal, onChanged: onExternal, color: AirmiusColors.green),
     _DirectorySwitch(icon: Icons.receipt_long_outlined, title: 'Zahlstatus anzeigen', body: 'Offen, bezahlt, Mahnung, Barzahlung oder SEPA direkt auf der Mitgliederkarte anzeigen.', value: showPaymentStatus, onChanged: onPayment, color: AirmiusColors.amber),
     _DirectorySwitch(icon: Icons.admin_panel_settings_outlined, title: 'Rollen anzeigen', body: 'Mitglied, Trainer, Admin, Captain, Guardian oder Gastrolle sichtbar machen.', value: showRoles, onChanged: onRoles, color: AirmiusColors.blue),
-    _DirectorySwitch(icon: Icons.checklist_outlined, title: 'Massenaktionen aktivieren', body: 'Mehrere Mitglieder fuer Export, Mahnung, Rollenwechsel oder Nachricht markieren.', value: bulkMode, onChanged: onBulk, color: AirmiusColors.green),
+    _DirectorySwitch(icon: Icons.checklist_outlined, title: 'Massenaktionen aktivieren', body: 'Mehrere Mitglieder für Export, Mahnung, Rollenwechsel oder Nachricht markieren.', value: bulkMode, onChanged: onBulk, color: AirmiusColors.green),
   ]));
 }
 
@@ -120,10 +120,10 @@ class _MemberCard extends StatelessWidget {
     _MemberMeta(member: member),
     const SizedBox(height: 12),
     Wrap(spacing: 8, runSpacing: 8, children: [
-      AirmiusButton(label: 'Profil', icon: Icons.person_outline, onPressed: () => openUiAction(context, title: '${member.name} oeffnen', body: 'Mitgliedsprofil, Rollen, Zahlstatus, Dokumente, Teams, Guardian und Audit anzeigen.', status: member.status, icon: Icons.person_outline)),
+      AirmiusButton(label: 'Profil', icon: Icons.person_outline, onPressed: () => openUiAction(context, title: '${member.name} öffnen', body: 'Mitgliedsprofil, Rollen, Zahlstatus, Dokumente, Teams, Guardian und Audit anzeigen.', status: member.status, icon: Icons.person_outline)),
       AirmiusButton(label: 'Rolle', icon: Icons.admin_panel_settings_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AccessOperationsScreen()))),
       AirmiusButton(label: 'Zahlung', icon: Icons.receipt_long_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BillingOperationsScreen()))),
-      AirmiusButton(label: 'Status', icon: Icons.swap_horiz_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Mitgliedsstatus aendern', body: '${member.name}: aktiv, pausiert, ausgetreten, gesperrt oder Warteliste setzen und Benachrichtigung vorbereiten.', status: 'Status', icon: Icons.swap_horiz_outlined)),
+      AirmiusButton(label: 'Status', icon: Icons.swap_horiz_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Mitgliedsstatus ändern', body: '${member.name}: aktiv, pausiert, ausgetreten, gesperrt oder Warteliste setzen und Benachrichtigung vorbereiten.', status: 'Status', icon: Icons.swap_horiz_outlined)),
     ]),
   ]));
 }
@@ -161,10 +161,10 @@ class _DirectoryWorkflowPanel extends StatelessWidget {
   Widget build(BuildContext context) => AirmiusPanel(borderColor: AirmiusColors.green.withValues(alpha: .44), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     const Eyebrow('Mitglieder-Workflow'),
     const SizedBox(height: 8),
-    Text('Aktueller Filter: $tab. Spaeter verbindet Laravel diese UI mit Mitglieder-Pagination, Import, Rollen, Zahlstatus, Dokumenten, Teamzuweisung und Audit.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+    Text('Aktueller Filter: $tab. Später verbindet Laravel diese UI mit Mitglieder-Pagination, Import, Rollen, Zahlstatus, Dokumenten, Teamzuweisung und Audit.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
     const SizedBox(height: 12),
     Wrap(spacing: 8, runSpacing: 8, children: [
-      AirmiusButton(label: 'Importieren', icon: Icons.upload_file_outlined, onPressed: () => openUiAction(context, title: 'Mitglieder importieren', body: 'CSV/Excel-Import, externe Mitglieder, Dublettenpruefung, Rollen und Zahlungsstatus fuer Laravel vorbereiten.', status: 'Import', icon: Icons.upload_file_outlined)),
+      AirmiusButton(label: 'Importieren', icon: Icons.upload_file_outlined, onPressed: () => openUiAction(context, title: 'Mitglieder importieren', body: 'CSV/Excel-Import, externe Mitglieder, Dublettenprüfung, Rollen und Zahlungsstatus für Laravel vorbereiten.', status: 'Import', icon: Icons.upload_file_outlined)),
       AirmiusButton(label: 'Anfragen', icon: Icons.inbox_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubRequestInboxScreen()))),
       AirmiusButton(label: 'Regeln', icon: Icons.payments_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubContributionRulesScreen()))),
       AirmiusButton(label: 'Membership Ops', icon: Icons.assignment_ind_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MembershipOperationsScreen()))),
@@ -211,5 +211,5 @@ const _members = <_ClubMember>[
   _ClubMember(status: 'Pausiert', name: 'Jonas Weber', email: 'jonas@example.com', number: 'ZBB-0031', type: 'Standard', team: 'Herren', role: 'Captain', payment: 'Offen', documents: 'OK', external: false, color: AirmiusColors.amber, paymentColor: AirmiusColors.amber),
   _ClubMember(status: 'Warteliste', name: 'Ali Hassan', email: 'ali@example.com', number: 'WL-0012', type: 'Probemonat', team: 'Warteliste', role: 'Gast', payment: 'Nicht faellig', documents: 'Fehlt', external: true, color: AirmiusColors.blue, paymentColor: AirmiusColors.muted),
   _ClubMember(status: 'Ausgetreten', name: 'Laura Schmidt', email: 'laura@example.com', number: 'ZBB-0022', type: 'Standard', team: 'Archiv', role: 'Ehemalig', payment: 'Abgeschlossen', documents: 'Archiv', external: false, color: AirmiusColors.muted, paymentColor: AirmiusColors.green),
-  _ClubMember(status: 'Gesperrt', name: 'Test Account', email: 'test@example.com', number: 'ZBB-0099', type: 'Unklar', team: 'Keine', role: 'Gesperrt', payment: 'Pruefen', documents: 'Pruefen', external: true, color: AirmiusColors.red, paymentColor: AirmiusColors.red),
+  _ClubMember(status: 'Gesperrt', name: 'Test Account', email: 'test@example.com', number: 'ZBB-0099', type: 'Unklar', team: 'Keine', role: 'Gesperrt', payment: 'Prüfen', documents: 'Prüfen', external: true, color: AirmiusColors.red, paymentColor: AirmiusColors.red),
 ];

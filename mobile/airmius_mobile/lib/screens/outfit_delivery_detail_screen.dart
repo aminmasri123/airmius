@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -49,13 +49,13 @@ class _OutfitDeliveryDetailScreenState extends State<OutfitDeliveryDetailScreen>
             SizedBox(height: 10),
             _OutfitLine(icon: Icons.inventory_2_outlined, title: 'Paket vorbereitet', body: 'Artikel, Groesse, Stil und Vereinsfarben zusammengestellt.', status: 'Done'),
             _OutfitLine(icon: Icons.local_shipping_outlined, title: 'Versand', body: 'Tracking, Adresse und Lieferfenster als UI vorbereitet.', status: 'Aktiv'),
-            _OutfitLine(icon: Icons.assignment_return_outlined, title: 'Rueckgabe', body: 'Problem, Rueckgabe oder Austausch als Supportfall melden.', status: 'Optional'),
+            _OutfitLine(icon: Icons.assignment_return_outlined, title: 'Rückgabe', body: 'Problem, Rückgabe oder Austausch als Supportfall melden.', status: 'Optional'),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Supportfall'),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: _issue, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Problemtyp'), items: const ['Groesse', 'Qualitaet', 'Versand', 'Rueckgabe', 'Sonstiges'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _issue = value ?? _issue)),
+            DropdownButtonFormField<String>(value: _issue, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Problemtyp'), items: const ['Groesse', 'Qualitaet', 'Versand', 'Rückgabe', 'Sonstiges'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _issue = value ?? _issue)),
             const SizedBox(height: 12),
             const AirmiusTextField(label: 'Beschreibung', hint: 'Was ist passiert?', maxLines: 3),
             SwitchListTile(value: _pauseNext, onChanged: (value) => setState(() => _pauseNext = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Naechste Lieferung pausieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Abo bleibt aktiv, naechste Box wird ausgesetzt.', style: TextStyle(color: AirmiusColors.muted))),
@@ -64,7 +64,7 @@ class _OutfitDeliveryDetailScreenState extends State<OutfitDeliveryDetailScreen>
           Wrap(spacing: 10, runSpacing: 10, children: [
             AirmiusButton(label: support ? 'Support senden' : 'Tracking ansehen', icon: support ? Icons.support_agent_outlined : Icons.local_shipping_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: support ? 'Support senden' : 'Tracking ansehen', body: support ? 'Supportfall, Nachricht und betroffene Lieferung vorbereiten.' : 'Trackingstatus, Paketdienst und Lieferhistorie anzeigen.', status: support ? 'Support' : 'Tracking', icon: support ? Icons.support_agent_outlined : Icons.local_shipping_outlined)))),
             AirmiusButton(label: 'Adresse bearbeiten', icon: Icons.edit_location_alt_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Adresse bearbeiten', body: 'Lieferadresse, Kontakt und naechste Lieferung aktualisieren.', status: 'Adresse', icon: Icons.edit_location_alt_outlined)))),
-            AirmiusButton(label: 'Abo kuendigen', icon: Icons.cancel_outlined, danger: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Outfit-Abo kuendigen', body: 'Kuendigung aus der Lieferdetailansicht vorbereiten.', status: 'Kuendigung', icon: Icons.cancel_outlined)))),
+            AirmiusButton(label: 'Abo kündigen', icon: Icons.cancel_outlined, danger: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Outfit-Abo kündigen', body: 'Kündigung aus der Lieferdetailansicht vorbereiten.', status: 'Kündigung', icon: Icons.cancel_outlined)))),
           ]),
         ]),
       ),

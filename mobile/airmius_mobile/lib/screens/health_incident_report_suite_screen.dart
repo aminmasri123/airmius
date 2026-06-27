@@ -30,7 +30,7 @@ class _HealthIncidentReportSuiteScreenState extends State<HealthIncidentReportSu
       const _IncidentRow(
         title: 'Notfallkontakt informiert',
         status: 'Erledigt',
-        body: 'Guardian oder Notfallkontakt wurde informiert; Verlauf bleibt fuer berechtigte Rollen sichtbar.',
+        body: 'Guardian oder Notfallkontakt wurde informiert; Verlauf bleibt für berechtigte Rollen sichtbar.',
         icon: Icons.family_restroom_outlined,
         color: AirmiusColors.green,
       ),
@@ -64,7 +64,7 @@ class _HealthIncidentReportSuiteScreenState extends State<HealthIncidentReportSu
                 const SectionLabel('SAFETY FLOW'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Vereine brauchen mobil eine sichere Strecke fuer Verletzungen, Gesundheitshinweise, Notfallkontakte, Guardian-Infos, Dokumentation und Eskalation.',
+                  'Vereine brauchen mobil eine sichere Strecke für Verletzungen, Gesundheitshinweise, Notfallkontakte, Guardian-Infos, Dokumentation und Eskalation.',
                   style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 16),
@@ -125,7 +125,7 @@ class _HealthIncidentReportSuiteScreenState extends State<HealthIncidentReportSu
                 const SectionLabel('VORSCHAU'),
                 const SizedBox(height: 8),
                 Text(
-                  'Aktueller Kontext: $incidentType. Spaeter verbindet die API Vorfall, Training/Event, Team, Rollenrechte, Guardian, Notfallkontakt, Dokumente und Audit-Verlauf.',
+                  'Aktueller Kontext: $incidentType. Später verbindet die API Vorfall, Training/Event, Team, Rollenrechte, Guardian, Notfallkontakt, Dokumente und Audit-Verlauf.',
                   style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),
@@ -135,7 +135,7 @@ class _HealthIncidentReportSuiteScreenState extends State<HealthIncidentReportSu
                   onPressed: () => openUiAction(
                     context,
                     title: 'Vorfall erfassen',
-                    body: 'Diese UI bereitet Vorfallmeldungen, Gesundheitshinweise, Guardian-Benachrichtigung, Dokumentation und Eskalation fuer die spaetere Laravel-API vor.',
+                    body: 'Diese UI bereitet Vorfallmeldungen, Gesundheitshinweise, Guardian-Benachrichtigung, Dokumentation und Eskalation für die spätere Laravel-API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.report_outlined,
                   ),

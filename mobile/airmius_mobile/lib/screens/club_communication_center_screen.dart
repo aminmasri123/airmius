@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -25,10 +25,10 @@ class _ClubCommunicationCenterScreenState extends State<ClubCommunicationCenterS
 
   final List<_MessagePlan> _plans = const [
     _MessagePlan(channel: 'Push', title: 'Training faellt aus', target: 'Team U16 Jugend', body: 'Sofortige Push-Info mit Ersatztermin, Trainerhinweis und Lesestatus.', status: 'Entwurf', metric: '18 Empfaenger', icon: Icons.notifications_active_outlined, color: AirmiusColors.blue),
-    _MessagePlan(channel: 'Chat', title: 'Rueckfrage Mitgliedsantrag', target: 'Vereinsadmin + Antragsteller', body: 'Rueckfrage-Thread zu fehlenden Daten, Dokumenten oder Zahlungsart.', status: 'Offen', metric: '2 Antworten', icon: Icons.forum_outlined, color: AirmiusColors.green),
-    _MessagePlan(channel: 'E-Mail', title: 'Beitragsinformation', target: 'Aktive Mitglieder', body: 'Vorlage fuer Beitrag, Intervall, Zahlmethode, Datenschutz und Vereinsregeln.', status: 'Freigabe', metric: '31 Empfaenger', icon: Icons.alternate_email_outlined, color: AirmiusColors.amber),
-    _MessagePlan(channel: 'Feed', title: 'Saisonstart Beitrag', target: 'Oeffentliches Vereinsprofil', body: 'Sichtbarer Vereinsbeitrag mit Bild, Kommentarfreigabe und Moderation.', status: 'Geplant', metric: 'Mo 09:00', icon: Icons.dynamic_feed_outlined, color: AirmiusColors.blueDeep),
-    _MessagePlan(channel: 'Teams', title: 'Teaminterne Info', target: 'Herren Aktiv', body: 'Nur fuer Teammitglieder sichtbar, mit Trainerrolle und Antwortsteuerung.', status: 'Privat', metric: '24 Mitglieder', icon: Icons.groups_2_outlined, color: AirmiusColors.red),
+    _MessagePlan(channel: 'Chat', title: 'Rückfrage Mitgliedsantrag', target: 'Vereinsadmin + Antragsteller', body: 'Rückfrage-Thread zu fehlenden Daten, Dokumenten oder Zahlungsart.', status: 'Offen', metric: '2 Antworten', icon: Icons.forum_outlined, color: AirmiusColors.green),
+    _MessagePlan(channel: 'E-Mail', title: 'Beitragsinformation', target: 'Aktive Mitglieder', body: 'Vorlage für Beitrag, Intervall, Zahlmethode, Datenschutz und Vereinsregeln.', status: 'Freigabe', metric: '31 Empfaenger', icon: Icons.alternate_email_outlined, color: AirmiusColors.amber),
+    _MessagePlan(channel: 'Feed', title: 'Saisonstart Beitrag', target: 'Öffentliches Vereinsprofil', body: 'Sichtbarer Vereinsbeitrag mit Bild, Kommentarfreigabe und Moderation.', status: 'Geplant', metric: 'Mo 09:00', icon: Icons.dynamic_feed_outlined, color: AirmiusColors.blueDeep),
+    _MessagePlan(channel: 'Teams', title: 'Teaminterne Info', target: 'Herren Aktiv', body: 'Nur für Teammitglieder sichtbar, mit Trainerrolle und Antwortsteuerung.', status: 'Privat', metric: '24 Mitglieder', icon: Icons.groups_2_outlined, color: AirmiusColors.red),
   ];
 
   List<_MessagePlan> get _visiblePlans => _plans.where((plan) => _channel == 'Alle' || plan.channel == _channel).toList();
@@ -61,10 +61,10 @@ class _ClubCommunicationCenterScreenState extends State<ClubCommunicationCenterS
                           title: 'Kommunikationsregeln',
                           child: Column(
                             children: [
-                              _SwitchRow(title: 'Push aktiv', subtitle: 'Schnelle Infos fuer Training, Events, Anfragen und Zahlungen.', value: _pushEnabled, onChanged: (value) => setState(() => _pushEnabled = value)),
+                              _SwitchRow(title: 'Push aktiv', subtitle: 'Schnelle Infos für Training, Events, Anfragen und Zahlungen.', value: _pushEnabled, onChanged: (value) => setState(() => _pushEnabled = value)),
                               _SwitchRow(title: 'E-Mail aktiv', subtitle: 'Formelle Vereinsinfos, Datenschutz, Regeln und Zahlungsdaten.', value: _emailEnabled, onChanged: (value) => setState(() => _emailEnabled = value)),
-                              _SwitchRow(title: 'Chat aktiv', subtitle: 'Rueckfragen und Teamkommunikation direkt in der App.', value: _chatEnabled, onChanged: (value) => setState(() => _chatEnabled = value)),
-                              _SwitchRow(title: 'Freigabe erforderlich', subtitle: 'Oeffentliche Vereinsbeitraege brauchen Adminfreigabe.', value: _approvalRequired, onChanged: (value) => setState(() => _approvalRequired = value)),
+                              _SwitchRow(title: 'Chat aktiv', subtitle: 'Rückfragen und Teamkommunikation direkt in der App.', value: _chatEnabled, onChanged: (value) => setState(() => _chatEnabled = value)),
+                              _SwitchRow(title: 'Freigabe erforderlich', subtitle: 'Öffentliche Vereinsbeiträge brauchen Adminfreigabe.', value: _approvalRequired, onChanged: (value) => setState(() => _approvalRequired = value)),
                             ],
                           ),
                         ),
@@ -73,7 +73,7 @@ class _ClubCommunicationCenterScreenState extends State<ClubCommunicationCenterS
                           _MessageCard(plan: plan, onAction: _handleAction),
                           const SizedBox(height: 12),
                         ],
-                        if (visiblePlans.isEmpty) const EmptyPanel('Keine Kommunikation fuer diesen Kanal gefunden.'),
+                        if (visiblePlans.isEmpty) const EmptyPanel('Keine Kommunikation für diesen Kanal gefunden.'),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Verknuepfte Bereiche',
@@ -143,7 +143,7 @@ class _CommunicationHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Vereine brauchen unterschiedliche Kanaele: schnelle Pushes, sichere Rueckfragen, formelle E-Mails und sichtbare Vereinsbeitraege.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          const Text('Vereine brauchen unterschiedliche Kanaele: schnelle Pushes, sichere Rückfragen, formelle E-Mails und sichtbare Vereinsbeiträge.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           const Row(children: [Expanded(child: MetricCard(value: '5', label: 'Kanaele')), SizedBox(width: 10), Expanded(child: MetricCard(value: '31', label: 'Empfaenger')), SizedBox(width: 10), Expanded(child: MetricCard(value: '4', label: 'Vorlagen'))]),
         ],

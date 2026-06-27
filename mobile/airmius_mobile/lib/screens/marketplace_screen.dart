@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'marketplace_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
@@ -169,13 +169,13 @@ class _OrdersPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Eyebrow('Bestellungen & Rueckgaben'),
+          const Eyebrow('Bestellungen & Rückgaben'),
           const SizedBox(height: 10),
           const _ShopLine(icon: Icons.receipt_long_outlined, title: 'Bestellung #A-1024', body: 'Bezahlt - Versand wird vorbereitet', trailing: 'Aktiv'),
-          const _ShopLine(icon: Icons.assignment_return_outlined, title: 'Rueckgabe #R-88', body: 'Rueckgabeanfrage wird geprueft', trailing: 'Offen'),
+          const _ShopLine(icon: Icons.assignment_return_outlined, title: 'Rückgabe #R-88', body: 'Rückgabeanfrage wird geprüft', trailing: 'Offen'),
           const SizedBox(height: 12),
           Wrap(spacing: 10, runSpacing: 10, children: [
-            AirmiusButton(label: 'Rueckgabe anfragen', icon: Icons.assignment_return_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Rueckgabe anfragen', body: 'Return-Request, Grund, Fotos, Frist und Supportstatus vorbereiten.', status: 'Retour', icon: Icons.assignment_return_outlined)),
+            AirmiusButton(label: 'Rückgabe anfragen', icon: Icons.assignment_return_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Rückgabe anfragen', body: 'Return-Request, Grund, Fotos, Frist und Supportstatus vorbereiten.', status: 'Retour', icon: Icons.assignment_return_outlined)),
             AirmiusButton(label: 'Problem melden', icon: Icons.report_outlined, danger: true, onPressed: () => openUiAction(context, title: 'Bestellproblem melden', body: 'Order-Issue, Nachricht, Anhang und Anbieterantwort vorbereiten.', status: 'Support', icon: Icons.report_outlined)),
           ]),
         ],
@@ -247,6 +247,6 @@ class _Product {
 const _products = [
   _Product(title: 'Airmius Teamshirt', provider: 'Airmius Shop', description: 'Vereinskleidung mit Varianten und Bestand.', category: 'Kleidung', price: '29,90', icon: Icons.checkroom_outlined),
   _Product(title: 'Trainingspaket Starter', provider: 'Airmius Running Club', description: 'Plan, Video und Coach-Feedback.', category: 'Service', price: '49,00', icon: Icons.fitness_center),
-  _Product(title: 'Vereinsball Set', provider: 'Tennis Zentrum West', description: '12 Trainingsbaelle fuer Teams.', category: 'Ausrüstung', price: '39,90', icon: Icons.sports_tennis),
+  _Product(title: 'Vereinsball Set', provider: 'Tennis Zentrum West', description: '12 Trainingsbaelle für Teams.', category: 'Ausrüstung', price: '39,90', icon: Icons.sports_tennis),
 ];
 

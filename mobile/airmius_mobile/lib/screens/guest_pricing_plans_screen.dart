@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -58,18 +58,18 @@ class _GuestPricingPlansScreenState extends State<GuestPricingPlansScreen> {
                           child: Column(
                             children: [
                               _SwitchRow(title: 'Monatlich anzeigen', subtitle: 'Monatliche Preise und Abo-Optionen anzeigen.', value: _monthly, onChanged: (value) => setState(() => _monthly = value)),
-                              _SwitchRow(title: 'Banktransfer erlauben', subtitle: 'Ueberweisung als Checkout- und Subscription-Zahlart vorbereiten.', value: _bankTransfer, onChanged: (value) => setState(() => _bankTransfer = value)),
-                              _SwitchRow(title: 'Testphase anzeigen', subtitle: 'Probezeit, Demo und Onboarding fuer Vereine sichtbar machen.', value: _trial, onChanged: (value) => setState(() => _trial = value)),
+                              _SwitchRow(title: 'Banktransfer erlauben', subtitle: 'Überweisung als Checkout- und Subscription-Zahlart vorbereiten.', value: _bankTransfer, onChanged: (value) => setState(() => _bankTransfer = value)),
+                              _SwitchRow(title: 'Testphase anzeigen', subtitle: 'Probezeit, Demo und Onboarding für Vereine sichtbar machen.', value: _trial, onChanged: (value) => setState(() => _trial = value)),
                               _SwitchRow(title: 'Sponsorenoption anzeigen', subtitle: 'Partner- und Ads-Pakete mit Public Growth verbinden.', value: _sponsorOption, onChanged: (value) => setState(() => _sponsorOption = value)),
                             ],
                           ),
                         ),
                         const SizedBox(height: 16),
                         for (final plan in plans) ...[
-                          _PlanCard(plan: plan, onSelect: () => _toast('${plan.title}: Plan auswaehlen vorbereitet')),
+                          _PlanCard(plan: plan, onSelect: () => _toast('${plan.title}: Plan auswählen vorbereitet')),
                           const SizedBox(height: 12),
                         ],
-                        if (plans.isEmpty) const EmptyPanel('Keine Plaene fuer diese Zielgruppe gefunden.'),
+                        if (plans.isEmpty) const EmptyPanel('Keine Plaene für diese Zielgruppe gefunden.'),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Checkout & Hilfe',
@@ -121,7 +121,7 @@ class _PricingHero extends StatelessWidget {
             children: [
               const AirmiusLogo(size: 42),
               const SizedBox(width: 12),
-              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Eyebrow('PRICING'), SizedBox(height: 4), Text('Plaene fuer Nutzer, Vereine und Partner', style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900))])),
+              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Eyebrow('PRICING'), SizedBox(height: 4), Text('Plaene für Nutzer, Vereine und Partner', style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900))])),
               AirmiusButton(label: 'Starten', icon: Icons.rocket_launch_outlined, onPressed: onStart),
             ],
           ),

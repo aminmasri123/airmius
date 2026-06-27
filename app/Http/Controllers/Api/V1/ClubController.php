@@ -432,19 +432,7 @@ class ClubController extends Controller
             'subscription' => $subscription,
             'capabilities' => $this->planFeatures->capabilities($club),
             'teams' => TeamResource::collection($club->teams)->resolve($request),
-            'pending_team_join_requests' => $club->teams
-                ->flatMap(fn (Team $team) => $team->joinRequests->map(fn (TeamJoinRequest $joinRequest) => [
-                    'id' => $joinRequest->id,
-                    'team' => [
-                        'id' => $team->id,
-                        'name' => $team->name,
-                    ],
-                    'user' => $joinRequest->user,
-                    'created_at' => $joinRequest->created_at?->toJSON(),
-                ]))
-                ->values(),
         ];
-        $base['pending_requests'] = $base['pending_team_join_requests'];
 
         if (! $canManageMembership) {
             $membershipRequests = ClubMembershipRequest::query()
@@ -461,6 +449,18 @@ class ClubController extends Controller
                 'club_requests' => ClubMembershipRequestResource::collection($membershipRequests)->resolve($request),
             ];
         }
+
+        $pendingTeamJoinRequests = $club->teams
+            ->flatMap(fn (Team $team) => $team->joinRequests->map(fn (TeamJoinRequest $joinRequest) => [
+                'id' => $joinRequest->id,
+                'team' => [
+                    'id' => $team->id,
+                    'name' => $team->name,
+                ],
+                'user' => $joinRequest->user,
+                'created_at' => $joinRequest->created_at?->toJSON(),
+            ]))
+            ->values();
 
         $club->loadMissing([
             'users' => fn ($query) => $query
@@ -509,6 +509,8 @@ class ClubController extends Controller
             'membership_statuses' => ['active', 'non_member', 'pending', 'paused', 'former'],
             'contribution_intervals' => ['none', 'monthly', 'quarterly', 'four_monthly', 'semi_yearly', 'yearly', 'once'],
             'team_roles' => Team::ROLES,
+            'pending_team_join_requests' => $pendingTeamJoinRequests,
+            'pending_requests' => $pendingTeamJoinRequests,
             'settings' => [
                 'sepa_creditor_id' => $club->sepa_creditor_id,
                 'sepa_account_holder' => $club->sepa_account_holder,
@@ -606,7 +608,7 @@ class ClubController extends Controller
                 'active_members_count' => $club->users->filter(fn (User $member) => ($member->pivot?->membership_status ?? 'active') === 'active')->count(),
                 'linked_people_count' => $club->users->count(),
                 'pending_membership_requests_count' => $membershipRequests->count(),
-                'pending_team_join_requests_count' => collect($base['pending_team_join_requests'])->count(),
+                'pending_team_join_requests_count' => $pendingTeamJoinRequests->count(),
                 'open_invoice_amount' => (float) $invoices->where('status', '!=', 'paid')->sum('amount'),
                 'open_invoices_count' => $invoices->where('status', '!=', 'paid')->count(),
                 'sepa_ready_members_count' => $club->users->filter(fn (User $member) => (bool) ($member->pivot?->sepa_mandate_active ?? false))->count(),

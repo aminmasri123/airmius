@@ -390,7 +390,7 @@ class AirmiusPostUploadService {
     if (bytes == null || bytes.isEmpty) {
       throw AirmiusApiException(
         statusCode: 0,
-        body: 'Die ausgewaehlte Datei konnte von Flutter nicht gelesen werden. Bitte waehle das Bild erneut aus.',
+        body: 'Die ausgewählte Datei konnte von Flutter nicht gelesen werden. Bitte wähle das Bild erneut aus.',
         path: request.url.path,
       );
     }

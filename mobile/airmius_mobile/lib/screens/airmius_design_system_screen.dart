@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -80,7 +80,7 @@ class _PreviewCluster extends StatelessWidget {
             const SizedBox(height: 12),
             _MockClubHero(),
             const SizedBox(height: 12),
-            Row(children: const [Expanded(child: MetricCard(value: '1', label: 'Mitglieder')), SizedBox(width: 10), Expanded(child: MetricCard(value: '0', label: 'Teams')), SizedBox(width: 10), Expanded(child: MetricCard(value: '0', label: 'Beitraege'))]),
+            Row(children: const [Expanded(child: MetricCard(value: '1', label: 'Mitglieder')), SizedBox(width: 10), Expanded(child: MetricCard(value: '0', label: 'Teams')), SizedBox(width: 10), Expanded(child: MetricCard(value: '0', label: 'Beiträge'))]),
             const SizedBox(height: 12),
             _MockForm(),
             const SizedBox(height: 12),
@@ -194,11 +194,11 @@ const _areas = ['Alle', 'Layout', 'Form', 'Data', 'Action', 'State'];
 
 const _patterns = <_DesignPattern>[
   _DesignPattern(area: 'Layout', title: 'Header wie mobile Web-App', body: 'Dunkle Topbar, Logo, Seitentitel, globale Suche, Chat, Notification und User-Bubble bleiben als Airmius-Muster erhalten.', status: 'Standard', icon: Icons.web_asset_outlined, color: AirmiusColors.blue),
-  _DesignPattern(area: 'Layout', title: 'Drawer und Bottom Navigation', body: 'Desktop-Web-Sidebar wird mobil als Drawer plus Bottom-Navigation mit Home, Vereine, Updates und Profil uebersetzt.', status: 'Mobile', icon: Icons.space_dashboard_outlined, color: AirmiusColors.green),
-  _DesignPattern(area: 'Layout', title: 'Club Hero und Panels', body: 'Vereinsprofile behalten den grossen Verlauf, Avatar, Metriken, Admin-/Mitglieder-Panels und responsive Kartenstruktur.', status: 'Brand', icon: Icons.groups_2_outlined, color: AirmiusColors.blue),
-  _DesignPattern(area: 'Form', title: 'Mitgliedsantrag und Formulare', body: 'Mehrspaltige Webformulare werden mobil in klare Sections mit Pflichtfeldern, Dokumenten, Zahlweise und Consent uebersetzt.', status: 'Ready', icon: Icons.assignment_ind_outlined, color: AirmiusColors.green),
-  _DesignPattern(area: 'Form', title: 'Uploads und Dateimanager', body: 'Link-only Webdokumente bekommen native Upload-Zeilen, Zweck-Pills, Dateimanager-Status und spaetere API-Uebergabe.', status: 'Ready', icon: Icons.folder_outlined, color: AirmiusColors.amber),
+  _DesignPattern(area: 'Layout', title: 'Drawer und Bottom Navigation', body: 'Desktop-Web-Sidebar wird mobil als Drawer plus Bottom-Navigation mit Home, Vereine, Updates und Profil übersetzt.', status: 'Mobile', icon: Icons.space_dashboard_outlined, color: AirmiusColors.green),
+  _DesignPattern(area: 'Layout', title: 'Club Hero und Panels', body: 'Vereinsprofile behalten den großen Verlauf, Avatar, Metriken, Admin-/Mitglieder-Panels und responsive Kartenstruktur.', status: 'Brand', icon: Icons.groups_2_outlined, color: AirmiusColors.blue),
+  _DesignPattern(area: 'Form', title: 'Mitgliedsantrag und Formulare', body: 'Mehrspaltige Webformulare werden mobil in klare Sections mit Pflichtfeldern, Dokumenten, Zahlweise und Consent übersetzt.', status: 'Ready', icon: Icons.assignment_ind_outlined, color: AirmiusColors.green),
+  _DesignPattern(area: 'Form', title: 'Uploads und Dateimanager', body: 'Link-only Webdokumente bekommen native Upload-Zeilen, Zweck-Pills, Dateimanager-Status und spätere API-Übergabe.', status: 'Ready', icon: Icons.folder_outlined, color: AirmiusColors.amber),
   _DesignPattern(area: 'Data', title: 'Tabellen als mobile Listen', body: 'Admin-, Mitglieder-, Order- und Billing-Tabellen werden als stapelbare Karten mit Status, Metriken und Detailnavigation dargestellt.', status: 'Native', icon: Icons.view_agenda_outlined, color: AirmiusColors.blue),
-  _DesignPattern(area: 'Action', title: 'Buttons und kritische Aktionen', body: 'Primaere Aktionen, sekundare Aktionen, Rueckzug, Loeschen, Sperren und Melden nutzen einheitliche Airmius-Buttons und Danger-Flows.', status: 'Consistent', icon: Icons.touch_app_outlined, color: AirmiusColors.red),
-  _DesignPattern(area: 'State', title: 'Modal, Empty, Loading, Error', body: 'Modal-Layer, Empty Panels, API-Hinweise, Erfolgsmeldungen und spaetere Loading/Error/Retry-Zustaende folgen dem dunklen Web-App-Stil.', status: 'Prepared', icon: Icons.layers_outlined, color: AirmiusColors.amber),
+  _DesignPattern(area: 'Action', title: 'Buttons und kritische Aktionen', body: 'Primaere Aktionen, sekundare Aktionen, Rückzug, Löschen, Sperren und Melden nutzen einheitliche Airmius-Buttons und Danger-Flows.', status: 'Consistent', icon: Icons.touch_app_outlined, color: AirmiusColors.red),
+  _DesignPattern(area: 'State', title: 'Modal, Empty, Loading, Error', body: 'Modal-Layer, Empty Panels, API-Hinweise, Erfolgsmeldungen und spätere Loading/Error/Retry-Zustaende folgen dem dunklen Web-App-Stil.', status: 'Prepared', icon: Icons.layers_outlined, color: AirmiusColors.amber),
 ];

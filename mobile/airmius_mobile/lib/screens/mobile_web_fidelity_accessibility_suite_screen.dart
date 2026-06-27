@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -23,7 +23,7 @@ class _MobileWebFidelityAccessibilitySuiteScreenState extends State<MobileWebFid
     _FidelityItem('Bottom Navigation', 'Navigation', 'Mobile', 'Home, Vereine, Updates, Profil und modulbasierte Schnellnavigation wie eine echte App.', Icons.space_dashboard_outlined, Color(0xFFF8B84E)),
     _FidelityItem('Cards & Lists', 'Design', 'Cards', 'Vereinskarten, Profilkarten, Metriken, Statuschips und leere Listen mit gleicher visueller Sprache.', Icons.view_agenda_outlined, Color(0xFFB084FF)),
     _FidelityItem('Modal & Scroll UX', 'Design', 'Modal', 'Fullscreen-Overlay, Airmius-Scrollbar, breite Desktop-Modals, mobile Bottom-Sheets und lesbarer Text.', Icons.open_in_full_outlined, Color(0xFFFF6B6B)),
-    _FidelityItem('Forms & Touch Targets', 'Access', 'Input', 'Felder, Selects, Date-Inputs, Uploads, Pflichtmarkierungen, grosse Touch-Zonen und klare Fehler.', Icons.touch_app_outlined, Color(0xFF5BA7FF)),
+    _FidelityItem('Forms & Touch Targets', 'Access', 'Input', 'Felder, Selects, Date-Inputs, Uploads, Pflichtmarkierungen, große Touch-Zonen und klare Fehler.', Icons.touch_app_outlined, Color(0xFF5BA7FF)),
     _FidelityItem('Accessibility Contrast', 'Access', 'A11y', 'Kontrast, Textgroesse, Fokus, Semantik, Screenreader-Labels und Fehlermeldungen ohne Farbzwang.', Icons.accessibility_new_outlined, Color(0xFF2EE59D)),
     _FidelityItem('Responsive Fidelity', 'Access', 'Device', 'Phone, Tablet, Web-Debug und Desktop-Breiten sollen gleiche Informationshierarchie behalten.', Icons.devices_outlined, Color(0xFFF8B84E)),
   ];
@@ -48,7 +48,7 @@ class _MobileWebFidelityAccessibilitySuiteScreenState extends State<MobileWebFid
                     const _Hero(
                       eyebrow: 'MOBILE WEB FIDELITY',
                       title: 'Design, Navigation & Accessibility',
-                      subtitle: 'Native Kontroll-UI fuer mobile Web-Nahe, Airmius-Design, Suche, Modals, Scroll, Touch Targets und Accessibility.',
+                      subtitle: 'Native Kontroll-UI für mobile Web-Nahe, Airmius-Design, Suche, Modals, Scroll, Touch Targets und Accessibility.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -81,7 +81,7 @@ class _MobileWebFidelityAccessibilitySuiteScreenState extends State<MobileWebFid
                       firstLabel: 'Design-Gate',
                       secondIcon: Icons.accessibility_new_outlined,
                       secondLabel: 'Accessibility-Gate',
-                      onFirst: () => openUiAction(context, title: 'Design-Gate', body: 'Visueller Vergleich mit der mobilen Web-App bleibt als offener Pruefschritt dokumentiert.', status: 'UI bereit', icon: Icons.info_outline),
+                      onFirst: () => openUiAction(context, title: 'Design-Gate', body: 'Visueller Vergleich mit der mobilen Web-App bleibt als offener Prüfschritt dokumentiert.', status: 'UI bereit', icon: Icons.info_outline),
                       onSecond: () => openUiAction(context, title: 'Accessibility-Gate', body: 'Kontrast, Touch Targets und Semantik sind als Kontrollpunkte vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
                       onSupport: () => _openSupport(context),
                     ),

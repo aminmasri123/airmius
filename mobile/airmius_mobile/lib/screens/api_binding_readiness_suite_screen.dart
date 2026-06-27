@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -18,14 +18,14 @@ class _ApiBindingReadinessSuiteScreenState extends State<ApiBindingReadinessSuit
   bool _showSecurity = true;
 
   final List<_ApiItem> _items = const [
-    _ApiItem('Auth Contract', 'Security', 'Token', 'Login, Register, 2FA, Verify, Logout, User-Context und Session-Refresh fuer Laravel Sanctum/API.', Icons.login_outlined, Color(0xFF5BA7FF)),
+    _ApiItem('Auth Contract', 'Security', 'Token', 'Login, Register, 2FA, Verify, Logout, User-Context und Session-Refresh für Laravel Sanctum/API.', Icons.login_outlined, Color(0xFF5BA7FF)),
     _ApiItem('Role & Permission Contract', 'Security', 'Rollen', 'Vereinsrollen, Adminrechte, Teamrechte, Guardianrechte und sichtbare Aktionen pro Screen.', Icons.admin_panel_settings_outlined, Color(0xFF2EE59D)),
     _ApiItem('Club & Membership Contract', 'Contracts', 'Club', 'Clubs, Teams, Mitgliedsantrag, Anfrage-Inbox, Formfelder, Dokumente, Beitragsregeln und Statuswechsel.', Icons.apartment_outlined, Color(0xFFF8B84E)),
     _ApiItem('Commerce & Finance Contract', 'Contracts', 'Money', 'Produkte, Cart, Checkout, Banktransfer, Billing, Member Finance, Club Finance und Zahlungsabgleich.', Icons.receipt_long_outlined, Color(0xFFB084FF)),
     _ApiItem('Content & Social Contract', 'Contracts', 'Feed', 'Feed, Posts, Kommentare, Likes, Blog, Learning, Search, Friends und Notifications.', Icons.dynamic_feed_outlined, Color(0xFF5BA7FF)),
     _ApiItem('File Upload Contract', 'Contracts', 'Files', 'Dateimanager, Vereinsdokumente, Uploads, Preview, Shared Access und Datenschutzverknuepfung.', Icons.upload_file_outlined, Color(0xFFFF6B6B)),
     _ApiItem('App State Model', 'State', 'State', 'Auth-State, Userprofil, aktive Rolle, aktiver Verein, Sprache, Theme, API-Status und Cache.', Icons.account_tree_outlined, Color(0xFF2EE59D)),
-    _ApiItem('Optimistic UI', 'State', 'UX', 'Anfragen senden/zurueckziehen, Likes, Kommentare, Uploads und Formularspeicherung mit Pending-Status.', Icons.pending_actions_outlined, Color(0xFFF8B84E)),
+    _ApiItem('Optimistic UI', 'State', 'UX', 'Anfragen senden/zurückziehen, Likes, Kommentare, Uploads und Formularspeicherung mit Pending-Status.', Icons.pending_actions_outlined, Color(0xFFF8B84E)),
     _ApiItem('Error Mapping', 'State', 'Errors', 'Laravel Validation, 401, 403, 404, 409, 422, 500, Rate Limit und Retry-Verhalten pro UI-Suite.', Icons.error_outline, Color(0xFFFF6B6B)),
   ];
 
@@ -49,7 +49,7 @@ class _ApiBindingReadinessSuiteScreenState extends State<ApiBindingReadinessSuit
                     const _Hero(
                       eyebrow: 'API BINDING',
                       title: 'Laravel API Readiness',
-                      subtitle: 'Native Kontroll-UI fuer API-Vertraege, Auth-State, Rollen, Datenbindung, Uploads, Fehler und Optimistic UI.',
+                      subtitle: 'Native Kontroll-UI für API-Verträge, Auth-State, Rollen, Datenbindung, Uploads, Fehler und Optimistic UI.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -79,10 +79,10 @@ class _ApiBindingReadinessSuiteScreenState extends State<ApiBindingReadinessSuit
                     ],
                     _ActionPanel(
                       firstIcon: Icons.cloud_sync_outlined,
-                      firstLabel: 'API Contract pruefen',
+                      firstLabel: 'API Contract prüfen',
                       secondIcon: Icons.error_outline,
                       secondLabel: 'Error Mapping',
-                      onFirst: () => openUiAction(context, title: 'API Contract', body: 'Die API-Vertrags-UI ist vorbereitet; echte Endpunkte werden spaeter angebunden.', status: 'UI bereit', icon: Icons.info_outline),
+                      onFirst: () => openUiAction(context, title: 'API Contract', body: 'Die API-Vertrags-UI ist vorbereitet; echte Endpunkte werden später angebunden.', status: 'UI bereit', icon: Icons.info_outline),
                       onSecond: () => openUiAction(context, title: 'Error Mapping', body: 'Laravel-Fehlercodes und UI-Zustaende sind als Mapping vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
                       onSupport: () => _openSupport(context),
                     ),

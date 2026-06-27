@@ -7,13 +7,16 @@ use App\Http\Resources\Api\V1\TeamResource;
 use App\Models\Club;
 use App\Models\Event;
 use App\Models\Team;
+use App\Models\TeamJoinRequest;
 use App\Models\User;
 use App\Services\PlanFeatureService;
+use App\Support\AppNotification;
 use App\Support\ClubRoles;
 use App\Support\Roles;
 use App\Support\TeamRoles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class TeamController extends Controller
 {
@@ -22,7 +25,7 @@ class TeamController extends Controller
     public function index(Request $request)
     {
         $teams = Team::visibleTo($request->user())
-            ->with(['club'])
+            ->with(['club', 'users', 'joinRequests'])
             ->withCount(['users', 'events'])
             ->orderBy('name')
             ->paginate($this->perPage($request));
@@ -37,7 +40,7 @@ class TeamController extends Controller
             404
         );
 
-        $team->loadMissing(['club', 'users'])->loadCount(['users', 'events']);
+        $team->loadMissing(['club.users', 'users', 'joinRequests'])->loadCount(['users', 'events']);
         $team->setAttribute(
             'attendance_stats',
             $this->canViewTrainingAttendanceStats($request->user(), $team)
@@ -46,6 +49,63 @@ class TeamController extends Controller
         );
 
         return new TeamResource($team);
+    }
+
+    public function requestJoin(Request $request, Team $team)
+    {
+        $this->authorize('view', $team);
+
+        $team->loadMissing(['club.users', 'users']);
+
+        if (! $team->club?->users->contains('id', $request->user()->id)) {
+            throw ValidationException::withMessages([
+                'team' => 'Du musst Mitglied im Verein sein, bevor du einem Team beitreten kannst.',
+            ]);
+        }
+
+        if ($team->users->contains('id', $request->user()->id)) {
+            throw ValidationException::withMessages([
+                'team' => 'Du bist bereits im Team.',
+            ]);
+        }
+
+        $existingRequest = TeamJoinRequest::query()
+            ->where('team_id', $team->id)
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if ($existingRequest?->status === 'pending') {
+            throw ValidationException::withMessages([
+                'team' => 'Deine Beitrittsanfrage wartet bereits auf Freigabe.',
+            ]);
+        }
+
+        $joinRequest = TeamJoinRequest::updateOrCreate(
+            ['team_id' => $team->id, 'user_id' => $request->user()->id],
+            ['status' => 'pending', 'responded_at' => null],
+        );
+
+        $team->club->users
+            ->filter(fn (User $member) => filled(array_intersect($member->pivot?->roles ?: [$member->pivot?->role], ['owner', 'admin', 'manager'])))
+            ->each(fn (User $member) => AppNotification::send($member, 'team.join_request', [
+                'title' => 'Neue Team-Anfrage',
+                'body' => $request->user()->name.' möchte '.$team->name.' beitreten.',
+                'url' => route('auth.club-memberships.index'),
+                'team_id' => $team->id,
+                'club_id' => $team->club_id,
+                'join_request_id' => $joinRequest->id,
+            ]));
+
+        $freshTeam = $team->fresh()
+            ->load(['club.users', 'users', 'joinRequests'])
+            ->loadCount(['users', 'events']);
+        $freshTeam->setAttribute('viewer_pending_join_request_id', $joinRequest->id);
+        $freshTeam->setAttribute('can_request_join', false);
+
+        return (new TeamResource($freshTeam))
+            ->additional(['message' => 'Beitrittsanfrage gesendet.'])
+            ->response()
+            ->setStatusCode(201);
     }
 
     public function store(Request $request)

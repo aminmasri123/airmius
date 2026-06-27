@@ -30,12 +30,12 @@ class _LocationMapFacilitySuiteScreenState extends State<LocationMapFacilitySuit
       const _PlaceRow(
         title: 'ZBB Clubhaus',
         status: 'Verein',
-        body: 'Vereinsadresse, Kontakt, Abholung fuer Clubshop und Treffpunkt fuer Veranstaltungen.',
+        body: 'Vereinsadresse, Kontakt, Abholung für Clubshop und Treffpunkt für Veranstaltungen.',
         icon: Icons.home_work_outlined,
         color: AirmiusColors.green,
       ),
       const _PlaceRow(
-        title: 'Auswaertsspiel Saarbruecken',
+        title: 'Auswaertsspiel Saarbrücken',
         status: 'Route',
         body: 'Zielort mit Fahrgemeinschaft, freien Plaetzen, Treffpunkt und Abfahrtszeit.',
         icon: Icons.route_outlined,
@@ -64,7 +64,7 @@ class _LocationMapFacilitySuiteScreenState extends State<LocationMapFacilitySuit
                 const SectionLabel('LOCATION CENTER'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Die mobile App braucht Orte fuer Vereinsprofile, Training, Events, Fahrgemeinschaften, Abholung und sichere Standortfreigabe.',
+                  'Die mobile App braucht Orte für Vereinsprofile, Training, Events, Fahrgemeinschaften, Abholung und sichere Standortfreigabe.',
                   style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 16),
@@ -106,7 +106,7 @@ class _LocationMapFacilitySuiteScreenState extends State<LocationMapFacilitySuit
               children: [
                 const SectionLabel('REGELN'),
                 const SizedBox(height: 8),
-                _LocationSwitch(title: 'Adresse oeffentlich anzeigen', value: showPublicAddress, color: AirmiusColors.blue, onChanged: (value) => setState(() => showPublicAddress = value)),
+                _LocationSwitch(title: 'Adresse öffentlich anzeigen', value: showPublicAddress, color: AirmiusColors.blue, onChanged: (value) => setState(() => showPublicAddress = value)),
                 _LocationSwitch(title: 'Routenplanung aktivieren', value: enableRoutePlanning, color: AirmiusColors.green, onChanged: (value) => setState(() => enableRoutePlanning = value)),
                 _LocationSwitch(title: 'Abholpunkte anzeigen', value: pickupPoints, color: AirmiusColors.amber, onChanged: (value) => setState(() => pickupPoints = value)),
                 _LocationSwitch(title: 'Standort datenschutzsicher', value: privacySafeLocation, color: AirmiusColors.pink, onChanged: (value) => setState(() => privacySafeLocation = value)),
@@ -125,7 +125,7 @@ class _LocationMapFacilitySuiteScreenState extends State<LocationMapFacilitySuit
                 const SectionLabel('VORSCHAU'),
                 const SizedBox(height: 8),
                 Text(
-                  'Aktueller Kontext: $contextType. Spaeter verbindet die API Ort, Verein, Team, Event, Abholung, Fahrgemeinschaft, Sichtbarkeit und Benachrichtigung.',
+                  'Aktueller Kontext: $contextType. Später verbindet die API Ort, Verein, Team, Event, Abholung, Fahrgemeinschaft, Sichtbarkeit und Benachrichtigung.',
                   style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),
@@ -135,7 +135,7 @@ class _LocationMapFacilitySuiteScreenState extends State<LocationMapFacilitySuit
                   onPressed: () => openUiAction(
                     context,
                     title: 'Route vorbereiten',
-                    body: 'Diese UI bereitet Karten, Routen, Treffpunkte, Abholung, Fahrgemeinschaften und Standortfreigaben fuer die spaetere Laravel-API vor.',
+                    body: 'Diese UI bereitet Karten, Routen, Treffpunkte, Abholung, Fahrgemeinschaften und Standortfreigaben für die spätere Laravel-API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.map_outlined,
                   ),
@@ -233,8 +233,8 @@ class _PlaceCard extends StatelessWidget {
                 icon: Icons.map_outlined,
                 onPressed: () => openUiAction(
                   context,
-                  title: 'Karte oeffnen',
-                  body: 'Kartenansicht, Adresse, Treffpunkt und externe Navigation werden fuer die spaetere API vorbereitet.',
+                  title: 'Karte öffnen',
+                  body: 'Kartenansicht, Adresse, Treffpunkt und externe Navigation werden für die spätere API vorbereitet.',
                   status: 'UI vorbereitet',
                   icon: Icons.map_outlined,
                 ),
@@ -258,7 +258,7 @@ class _PlaceCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Ort teilen',
-                  body: 'Standorte koennen spaeter rollen- und datenschutzsicher mit Teams, Events oder Mitgliedern geteilt werden.',
+                  body: 'Standorte können später rollen- und datenschutzsicher mit Teams, Events oder Mitgliedern geteilt werden.',
                   status: 'UI vorbereitet',
                   icon: Icons.share_location_outlined,
                 ),

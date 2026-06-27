@@ -9,11 +9,11 @@ class ReleaseEvidenceCenterScreen extends StatelessWidget {
   static const _items = [
     _EvidenceItem('Flutter Analyze', 'flutter analyze', 'Terminal/CI-Log mit erfolgreichem Exit-Code.', 'Pending', Icons.manage_search_outlined, AirmiusColors.blue),
     _EvidenceItem('Android AAB', 'flutter build appbundle --release', 'Pfad zu app-release.aab plus Build-Log.', 'Pending', Icons.android_outlined, AirmiusColors.green),
-    _EvidenceItem('Android APK', 'flutter build apk --release', 'Pfad zu app-release.apk fuer Device-Smoke.', 'Pending', Icons.phone_android_outlined, AirmiusColors.green),
+    _EvidenceItem('Android APK', 'flutter build apk --release', 'Pfad zu app-release.apk für Device-Smoke.', 'Pending', Icons.phone_android_outlined, AirmiusColors.green),
     _EvidenceItem('iOS IPA', 'flutter build ipa --release', 'IPA/Archive und TestFlight-faehiger Upload-Nachweis.', 'Pending', Icons.phone_iphone_outlined, AirmiusColors.blue),
-    _EvidenceItem('Domain Verification', 'curl /.well-known/...', 'HTTP-Header und gueltige JSON-Dateien ohne Redirect.', 'Pending', Icons.domain_verification_outlined, AirmiusColors.amber),
+    _EvidenceItem('Domain Verification', 'curl /.well-known/...', 'HTTP-Header und gültige JSON-Dateien ohne Redirect.', 'Pending', Icons.domain_verification_outlined, AirmiusColors.amber),
     _EvidenceItem('Screenshots', 'Capture Plan', 'Finale Android/iOS Screenshot-Ordner aus release-equivalenter App.', 'Pending', Icons.photo_library_outlined, AirmiusColors.blue),
-    _EvidenceItem('Real API QA', 'Smoke Routes', 'Login, Clubs, Antrag, Rueckzug, Notifications, Events, Files, Finance.', 'Pending', Icons.api_outlined, AirmiusColors.green),
+    _EvidenceItem('Real API QA', 'Smoke Routes', 'Login, Clubs, Antrag, Rückzug, Notifications, Events, Files, Finance.', 'Pending', Icons.api_outlined, AirmiusColors.green),
     _EvidenceItem('Legal & Localization', 'Owner Sign-off', 'Privacy-Freigabe und DE/EN/FR/AR QA inklusive Arabic RTL.', 'Pending', Icons.gavel_outlined, AirmiusColors.amber),
   ];
 
@@ -46,7 +46,7 @@ class ReleaseEvidenceCenterScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Dieses Center entspricht dem Evidence-Template und zeigt, welche Logs, Artefakte, Screenshots und Freigaben fuer den finalen Go/No-Go gebraucht werden.',
+                    'Dieses Center entspricht dem Evidence-Template und zeigt, welche Logs, Artefakte, Screenshots und Freigaben für den finalen Go/No-Go gebraucht werden.',
                     style: TextStyle(color: AirmiusColors.muted, height: 1.42),
                   ),
                   const SizedBox(height: 14),

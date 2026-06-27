@@ -191,27 +191,55 @@ class _ScrollableNotifications extends StatelessWidget {
   }
 }
 
-class _NotificationLine extends StatelessWidget {
+class _NotificationLine extends StatefulWidget {
   const _NotificationLine({required this.item, required this.onChanged});
 
   final AirmiusNotification item;
   final VoidCallback onChanged;
 
   @override
-  Widget build(BuildContext context) {
-    final scope = AirmiusScope.of(context);
-    return InkWell(
-      onTap: () => Navigator.push(
+  State<_NotificationLine> createState() => _NotificationLineState();
+}
+
+class _NotificationLineState extends State<_NotificationLine> {
+  bool _opening = false;
+
+  Future<void> _openNotification() async {
+    if (_opening) return;
+    setState(() => _opening = true);
+    try {
+      var notification = widget.item;
+      if (widget.item.unread) {
+        await AirmiusServicesScope.of(context).repositories.notifications.markAsRead(widget.item.id);
+        notification = widget.item.copyWith(unread: false);
+        widget.onChanged();
+      }
+      if (!mounted) return;
+      await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => NotificationDetailScreen(
-            notification: item,
-            typeLabel: _labelForType(scope, item.type),
-            icon: _iconForType(item.type),
-            onChanged: onChanged,
+            notification: notification,
+            typeLabel: _labelForType(AirmiusScope.of(context), notification.type),
+            icon: _iconForType(notification.type),
+            onChanged: widget.onChanged,
           ),
         ),
-      ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AirmiusScope.of(context).t('notifications.error'))));
+    } finally {
+      if (mounted) setState(() => _opening = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = AirmiusScope.of(context);
+    final item = widget.item;
+    return InkWell(
+      onTap: _openNotification,
       borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.all(12),

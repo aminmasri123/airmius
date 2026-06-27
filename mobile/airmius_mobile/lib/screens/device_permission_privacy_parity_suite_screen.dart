@@ -23,7 +23,7 @@ class _DevicePermissionPrivacyParitySuiteScreenState extends State<DevicePermiss
   static const _flows = <_PermissionFlow>[
     _PermissionFlow(
       permission: 'Standort',
-      title: 'Standort fuer Sportkarte und Events',
+      title: 'Standort für Sportkarte und Events',
       body: 'Sportkarte, Routen, Treffpunkte, Fahrgemeinschaften, Vereinsadresse und Public-Orte brauchen klare Standort-Zweckbindung.',
       purpose: 'Karte, Route, Treffpunkt und Navigation',
       fallback: 'Ort manuell suchen oder Treffpunkt als Text anzeigen.',
@@ -32,35 +32,35 @@ class _DevicePermissionPrivacyParitySuiteScreenState extends State<DevicePermiss
     ),
     _PermissionFlow(
       permission: 'Kamera',
-      title: 'Kamera fuer Uploads und Scans',
-      body: 'Mitgliedsantrag-Anlagen, Vereinsdokumente, Profilbilder, Trainingsnachweise und Produktbilder koennen direkt aufgenommen werden.',
+      title: 'Kamera für Uploads und Scans',
+      body: 'Mitgliedsantrag-Anlagen, Vereinsdokumente, Profilbilder, Trainingsnachweise und Produktbilder können direkt aufgenommen werden.',
       purpose: 'Foto, Scan, Nachweis und Profilbild',
-      fallback: 'Datei aus Galerie oder Dateimanager waehlen.',
+      fallback: 'Datei aus Galerie oder Dateimanager wählen.',
       icon: Icons.photo_camera_outlined,
       color: AirmiusColors.blue,
     ),
     _PermissionFlow(
       permission: 'Dateien',
-      title: 'Dateizugriff fuer Dokumente',
+      title: 'Dateizugriff für Dokumente',
       body: 'Vereinsregeln, Datenschutz, SEPA, Chat-Anhaenge, Kursmaterial und Belege brauchen sicheren Dateiimport.',
       purpose: 'Dokumente hochladen und verknuepfen',
-      fallback: 'Link eintragen oder spaeter hochladen.',
+      fallback: 'Link eintragen oder später hochladen.',
       icon: Icons.folder_outlined,
       color: AirmiusColors.amber,
     ),
     _PermissionFlow(
       permission: 'Fotos',
-      title: 'Fotos fuer Medien und Profil',
+      title: 'Fotos für Medien und Profil',
       body: 'Profilbild, Club-Logo, Blogmedien, Marketplace-Galerie und Trainingsbilder werden mit Vorschau und Datenschutzstatus gefuehrt.',
-      purpose: 'Medien aus Galerie auswaehlen',
+      purpose: 'Medien aus Galerie auswählen',
       fallback: 'Standardavatar oder bestehendes Bild behalten.',
       icon: Icons.photo_library_outlined,
       color: AirmiusColors.blue,
     ),
     _PermissionFlow(
       permission: 'Push',
-      title: 'Push fuer wichtige Updates',
-      body: 'Mitgliedschaftsanfragen, Rueckzuege, Chat, Events, Zahlungen, Moderation und Guardian-Freigaben werden direkt zugestellt.',
+      title: 'Push für wichtige Updates',
+      body: 'Mitgliedschaftsanfragen, Rückzuege, Chat, Events, Zahlungen, Moderation und Guardian-Freigaben werden direkt zugestellt.',
       purpose: 'Benachrichtigungen und Deep Links',
       fallback: 'In-App Inbox und E-Mail-Fallback verwenden.',
       icon: Icons.notifications_none_outlined,
@@ -68,9 +68,9 @@ class _DevicePermissionPrivacyParitySuiteScreenState extends State<DevicePermiss
     ),
     _PermissionFlow(
       permission: 'Biometrie',
-      title: 'Biometrie fuer sensible Aktionen',
-      body: 'Zahlungen, API-Token, Kontoaktionen, Adminentscheidungen und Datenschutzexport koennen spaeter extra geschuetzt werden.',
-      purpose: 'Sensible Aktionen sicher bestaetigen',
+      title: 'Biometrie für sensible Aktionen',
+      body: 'Zahlungen, API-Token, Kontoaktionen, Adminentscheidungen und Datenschutzexport können später extra geschuetzt werden.',
+      purpose: 'Sensible Aktionen sicher bestätigen',
       fallback: 'Passwort oder 2FA-Code verwenden.',
       icon: Icons.fingerprint,
       color: AirmiusColors.amber,
@@ -133,7 +133,7 @@ class _DevicePermissionPrivacyParitySuiteScreenState extends State<DevicePermiss
                 _PermissionFlowCard(flow: flow, status: _status, storeReadyCopy: _storeReadyCopy),
                 const SizedBox(height: 12),
               ],
-              if (_visibleFlows.isEmpty) const EmptyPanel('Keine Permission-Flows fuer diese Auswahl sichtbar.'),
+              if (_visibleFlows.isEmpty) const EmptyPanel('Keine Permission-Flows für diese Auswahl sichtbar.'),
               const SizedBox(height: 4),
               _Checklist(
                 onOpen: () => openUiAction(
@@ -261,7 +261,7 @@ class _RulesPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Permission-Regeln',
-      subtitle: 'Diese Regeln sorgen dafuer, dass Berechtigungen transparent und app-store-tauglich erklaert werden.',
+      subtitle: 'Diese Regeln sorgen dafür, dass Berechtigungen transparent und app-store-tauglich erklaert werden.',
       children: [
         _SwitchLine(title: 'Zweckbindung anzeigen', value: showPurpose, onChanged: onPurpose),
         _SwitchLine(title: 'Fallback-Aktion anbieten', value: showFallback, onChanged: onFallback),
@@ -317,7 +317,7 @@ class _PermissionStatusPreview extends StatelessWidget {
             runSpacing: 10,
             children: [
               AirmiusButton(
-                label: status == 'Verweigert' ? 'Einstellungen oeffnen' : 'Berechtigung fragen',
+                label: status == 'Verweigert' ? 'Einstellungen öffnen' : 'Berechtigung fragen',
                 icon: _iconForPermission(permission),
                 onPressed: () => openUiAction(
                   context,
@@ -334,7 +334,7 @@ class _PermissionStatusPreview extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: '$permission Datenschutz',
-                  body: 'Zweckbindung, Widerruf, Datensparsamkeit, Guardian-Regeln und Store-Beschreibung fuer $permission.',
+                  body: 'Zweckbindung, Widerruf, Datensparsamkeit, Guardian-Regeln und Store-Beschreibung für $permission.',
                   status: 'Privacy',
                   icon: Icons.privacy_tip_outlined,
                 ),
@@ -405,7 +405,7 @@ class _PermissionFlowCard extends StatelessWidget {
             runSpacing: 10,
             children: [
               AirmiusButton(
-                label: 'Flow oeffnen',
+                label: 'Flow öffnen',
                 icon: flow.icon,
                 onPressed: () => openUiAction(
                   context,
@@ -449,7 +449,7 @@ class _Checklist extends StatelessWidget {
         const _CheckLine('Jede Berechtigung hat Zweckbindung, Datenschutztext, Status und Fallback.'),
         const _CheckLine('Standort, Kamera, Dateien, Fotos, Push und Biometrie werden getrennt erklaert.'),
         const _CheckLine('Verweigert, einmalig erlaubt und noch nicht gefragt sind eigene mobile Zustaende.'),
-        const _CheckLine('Store-ready Begruendungen helfen spaeter bei Android/iOS Review und User-Vertrauen.'),
+        const _CheckLine('Store-ready Begruendungen helfen später bei Android/iOS Review und User-Vertrauen.'),
         const SizedBox(height: 12),
         AirmiusButton(label: 'Permission-Paritaet markieren', icon: Icons.fact_check_outlined, onPressed: onOpen),
       ],
@@ -571,15 +571,15 @@ IconData _iconForPermission(String permission) {
 String _purposeForPermission(String permission) {
   if (permission == 'Kamera') return 'Damit du Fotos, Scans und Nachweise direkt in Airmius aufnehmen kannst.';
   if (permission == 'Dateien') return 'Damit du Dokumente, Belege und Anlagen sicher hochladen kannst.';
-  if (permission == 'Fotos') return 'Damit du Profilbilder, Club-Logos und Medien aus deiner Galerie waehlen kannst.';
+  if (permission == 'Fotos') return 'Damit du Profilbilder, Club-Logos und Medien aus deiner Galerie wählen kannst.';
   if (permission == 'Push') return 'Damit du wichtige Updates, Anfragen, Chat und Zahlungen nicht verpasst.';
-  if (permission == 'Biometrie') return 'Damit sensible Aktionen spaeter bequem und sicher bestaetigt werden koennen.';
-  return 'Damit Karten, Routen, Treffpunkte und Standortvorschlaege in Airmius funktionieren.';
+  if (permission == 'Biometrie') return 'Damit sensible Aktionen später bequem und sicher bestätigt werden können.';
+  return 'Damit Karten, Routen, Treffpunkte und Standortvorschläge in Airmius funktionieren.';
 }
 
 String _fallbackForPermission(String permission) {
-  if (permission == 'Kamera') return 'Alternative: Datei oder Bild aus Galerie waehlen.';
-  if (permission == 'Dateien') return 'Alternative: Link eintragen oder Upload spaeter nachholen.';
+  if (permission == 'Kamera') return 'Alternative: Datei oder Bild aus Galerie wählen.';
+  if (permission == 'Dateien') return 'Alternative: Link eintragen oder Upload später nachholen.';
   if (permission == 'Fotos') return 'Alternative: Standardbild behalten oder Kamera nutzen.';
   if (permission == 'Push') return 'Alternative: In-App Inbox und E-Mail-Benachrichtigungen nutzen.';
   if (permission == 'Biometrie') return 'Alternative: Passwort oder 2FA-Code verwenden.';

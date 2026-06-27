@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/api_contract.dart';
 import '../core/airmius_theme.dart';
@@ -95,16 +95,16 @@ class _TrustOperation {
 const _tabs = ['Verifizierung', 'Moderation', 'Reports', 'Inaktivitaet', 'Contracts', 'Alle'];
 
 final _operations = <_TrustOperation>[
-  _TrustOperation(tab: 'Verifizierung', title: 'Club-Verifizierungen laden', body: 'Offene Vereinspruefungen mit Dokumenten, Admins und Profilstatus laden.', method: 'GET', endpoint: ApiContract.adminClubVerifications, icon: Icons.verified_user_outlined, action: 'Laden', color: AirmiusColors.blue),
+  _TrustOperation(tab: 'Verifizierung', title: 'Club-Verifizierungen laden', body: 'Offene Vereinsprüfungen mit Dokumenten, Admins und Profilstatus laden.', method: 'GET', endpoint: ApiContract.adminClubVerifications, icon: Icons.verified_user_outlined, action: 'Laden', color: AirmiusColors.blue),
   _TrustOperation(tab: 'Verifizierung', title: 'Verein genehmigen', body: 'Verein verifizieren, Badge setzen und Admins informieren.', method: 'PUT', endpoint: ApiContract.adminClubVerificationApprove(1), icon: Icons.check_circle_outline, action: 'Genehmigen', color: AirmiusColors.green),
-  _TrustOperation(tab: 'Verifizierung', title: 'Verein ablehnen', body: 'Verifizierung ablehnen, Begruendung speichern und Nachreichung ermoeglichen.', method: 'PUT', endpoint: ApiContract.adminClubVerificationReject(1), icon: Icons.cancel_outlined, action: 'Ablehnen', color: AirmiusColors.red, danger: true),
+  _TrustOperation(tab: 'Verifizierung', title: 'Verein ablehnen', body: 'Verifizierung ablehnen, Begruendung speichern und Nachreichung ermöglichen.', method: 'PUT', endpoint: ApiContract.adminClubVerificationReject(1), icon: Icons.cancel_outlined, action: 'Ablehnen', color: AirmiusColors.red, danger: true),
   _TrustOperation(tab: 'Moderation', title: 'Moderation laden', body: 'Flags, Reports, Content-Faelle und Eskalationen laden.', method: 'GET', endpoint: ApiContract.adminModeration, icon: Icons.gpp_maybe_outlined, action: 'Moderation', color: AirmiusColors.blue),
   _TrustOperation(tab: 'Moderation', title: 'Flag aktualisieren', body: 'Moderationsflag bewerten, Status setzen und Autor informieren.', method: 'PUT', endpoint: ApiContract.adminModerationFlag(1), icon: Icons.flag_outlined, action: 'Flag', color: AirmiusColors.amber),
-  _TrustOperation(tab: 'Reports', title: 'Report aktualisieren', body: 'Nutzerreport pruefen, Entscheidung speichern und Fall schliessen.', method: 'PUT', endpoint: ApiContract.adminModerationReport(1), icon: Icons.report_outlined, action: 'Report', color: AirmiusColors.amber),
+  _TrustOperation(tab: 'Reports', title: 'Report aktualisieren', body: 'Nutzerreport prüfen, Entscheidung speichern und Fall schließen.', method: 'PUT', endpoint: ApiContract.adminModerationReport(1), icon: Icons.report_outlined, action: 'Report', color: AirmiusColors.amber),
   _TrustOperation(tab: 'Reports', title: 'Support Report erstellen', body: 'Manuellen Safety- oder Datenschutzreport aus Supportfall anlegen.', method: 'POST', endpoint: ApiContract.supportReports, icon: Icons.support_agent_outlined, action: 'Erstellen', color: AirmiusColors.red, danger: true),
-  _TrustOperation(tab: 'Inaktivitaet', title: 'Inaktive Nutzer laden', body: 'Redirect-/Adminbereich fuer Inaktivitaetsnotizen und Statuspruefung abbilden.', method: 'GET', endpoint: ApiContract.adminInactiveUsers, icon: Icons.person_off_outlined, action: 'Laden', color: AirmiusColors.blue),
+  _TrustOperation(tab: 'Inaktivitaet', title: 'Inaktive Nutzer laden', body: 'Redirect-/Adminbereich für Inaktivitaetsnotizen und Statusprüfung abbilden.', method: 'GET', endpoint: ApiContract.adminInactiveUsers, icon: Icons.person_off_outlined, action: 'Laden', color: AirmiusColors.blue),
   _TrustOperation(tab: 'Inaktivitaet', title: 'Inaktivitaetsnotiz speichern', body: 'Hinweis, Frist, Kontaktversuch und naechste Aktion speichern.', method: 'PUT', endpoint: ApiContract.adminInactiveUserNote(1), icon: Icons.edit_note_outlined, action: 'Notiz', color: AirmiusColors.amber),
-  _TrustOperation(tab: 'Contracts', title: 'Operating Contracts laden', body: 'Betriebsvertraege, Status, Verein, Laufzeit und Kosten laden.', method: 'GET', endpoint: ApiContract.adminOperatingContracts, icon: Icons.assignment_outlined, action: 'Contracts', color: AirmiusColors.blue),
+  _TrustOperation(tab: 'Contracts', title: 'Operating Contracts laden', body: 'Betriebsverträge, Status, Verein, Laufzeit und Kosten laden.', method: 'GET', endpoint: ApiContract.adminOperatingContracts, icon: Icons.assignment_outlined, action: 'Contracts', color: AirmiusColors.blue),
   _TrustOperation(tab: 'Contracts', title: 'Operating Contract speichern', body: 'Vertrag, Leistungen, Status und Laufzeit speichern.', method: 'POST', endpoint: ApiContract.adminOperatingContracts, icon: Icons.save_outlined, action: 'Speichern', color: AirmiusColors.green),
-  _TrustOperation(tab: 'Contracts', title: 'Operating Contract loeschen', body: 'Vertrag entfernen oder archivieren und Auditgrund speichern.', method: 'DELETE', endpoint: ApiContract.adminOperatingContract(1), icon: Icons.delete_outline, action: 'Loeschen', color: AirmiusColors.red, danger: true),
+  _TrustOperation(tab: 'Contracts', title: 'Operating Contract löschen', body: 'Vertrag entfernen oder archivieren und Auditgrund speichern.', method: 'DELETE', endpoint: ApiContract.adminOperatingContract(1), icon: Icons.delete_outline, action: 'Löschen', color: AirmiusColors.red, danger: true),
 ];

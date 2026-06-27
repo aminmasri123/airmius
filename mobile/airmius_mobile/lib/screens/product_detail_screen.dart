@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'marketplace_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
@@ -57,9 +57,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Eyebrow('Anbieter & Fulfillment'),
             SizedBox(height: 10),
-            _InfoLine(icon: Icons.storefront_outlined, title: 'Airmius Shop', body: 'Verifizierter Anbieter mit Rueckgabeprozess und Rechnung.'),
-            _InfoLine(icon: Icons.local_shipping_outlined, title: 'Versand', body: 'Standardversand, Abholung beim Verein spaeter per API moeglich.'),
-            _InfoLine(icon: Icons.assignment_return_outlined, title: 'Rueckgabe', body: 'Retourenstatus, Frist und Supportfall als native UI vorbereitet.'),
+            _InfoLine(icon: Icons.storefront_outlined, title: 'Airmius Shop', body: 'Verifizierter Anbieter mit Rückgabeprozess und Rechnung.'),
+            _InfoLine(icon: Icons.local_shipping_outlined, title: 'Versand', body: 'Standardversand, Abholung beim Verein später per API möglich.'),
+            _InfoLine(icon: Icons.assignment_return_outlined, title: 'Rückgabe', body: 'Retourenstatus, Frist und Supportfall als native UI vorbereitet.'),
           ])),
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [

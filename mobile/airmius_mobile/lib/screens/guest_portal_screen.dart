@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'guest_blog_content_screen.dart';
@@ -26,7 +26,7 @@ class GuestPortalScreen extends StatelessWidget {
       ),
       body: PageFrame(
         title: 'Airmius',
-        subtitle: 'Oeffentliche Web-App-Bereiche als native Mobile-UI',
+        subtitle: 'Öffentliche Web-App-Bereiche als native Mobile-UI',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -39,9 +39,9 @@ class GuestPortalScreen extends StatelessWidget {
                   SizedBox(height: 18),
                   Eyebrow('Gastseite'),
                   SizedBox(height: 8),
-                  Text('Vereine, Kurse, Marketplace, Preise, Jobs und Wissen fuer Sportorganisationen.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.12)),
+                  Text('Vereine, Kurse, Marketplace, Preise, Jobs und Wissen für Sportorganisationen.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.12)),
                   SizedBox(height: 10),
-                  Text('Dieser Bereich bildet die oeffentliche mobile Web-App nativ ab und bleibt spaeter mit Laravel-Inhalten verbunden.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+                  Text('Dieser Bereich bildet die öffentliche mobile Web-App nativ ab und bleibt später mit Laravel-Inhalten verbunden.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
                 ],
               ),
             ),
@@ -50,7 +50,7 @@ class GuestPortalScreen extends StatelessWidget {
               spacing: 10,
               runSpacing: 10,
               children: [
-                AirmiusButton(label: 'Vereine entdecken', icon: Icons.groups_outlined, onPressed: () => _open(context, 'Vereine', 'Oeffentliche Vereinsliste mit Suche und Beitrittsmoeglichkeit.', Icons.groups_outlined, 'Public')),
+                AirmiusButton(label: 'Vereine entdecken', icon: Icons.groups_outlined, onPressed: () => _open(context, 'Vereine', 'Öffentliche Vereinsliste mit Suche und Beitrittsmöglichkeit.', Icons.groups_outlined, 'Public')),
                 AirmiusButton(label: 'Funktionen', icon: Icons.apps_outlined, secondary: true, onPressed: () => _openScreen(context, const PublicGrowthGuestPagesScreen())),
                 AirmiusButton(label: 'Preise ansehen', icon: Icons.sell_outlined, secondary: true, onPressed: () => _openScreen(context, const GuestPricingPlansScreen())),
                 AirmiusButton(label: 'Kontakt', icon: Icons.support_agent_outlined, secondary: true, onPressed: () => _openScreen(context, const SupportHelpdeskScreen())),
@@ -200,15 +200,15 @@ class _PublicItem {
 }
 
 const _primaryItems = [
-  _PublicItem(title: 'Funktionen', body: 'Oeffentliche Funktionen und Bereiche der Gastseite im Ueberblick.', icon: Icons.apps_outlined),
-  _PublicItem(title: 'Vereine', body: 'Vereine suchen, oeffentliche Profile ansehen und Beitritt starten.', icon: Icons.groups_outlined),
+  _PublicItem(title: 'Funktionen', body: 'Öffentliche Funktionen und Bereiche der Gastseite im Überblick.', icon: Icons.apps_outlined),
+  _PublicItem(title: 'Vereine', body: 'Vereine suchen, öffentliche Profile ansehen und Beitritt starten.', icon: Icons.groups_outlined),
   _PublicItem(title: 'Marketplace', body: 'Produkte, Anbieter, Warenkorb und Bestellungen entdecken.', icon: Icons.storefront_outlined),
-  _PublicItem(title: 'E-Learning', body: 'Kurse, Zertifikate und Lerninhalte fuer Sportorganisationen.', icon: Icons.school_outlined),
-  _PublicItem(title: 'Blog', body: 'Praxiswissen, Updates und Ideen fuer digitale Sportorganisation.', icon: Icons.article_outlined),
-  _PublicItem(title: 'Jobs', body: 'Organisationen koennen Stellen und Engagement-Moeglichkeiten zeigen.', icon: Icons.work_outline),
-  _PublicItem(title: 'Sponsoren', body: 'Partner, Sponsoring und Sichtbarkeit fuer Vereine.', icon: Icons.handshake_outlined),
+  _PublicItem(title: 'E-Learning', body: 'Kurse, Zertifikate und Lerninhalte für Sportorganisationen.', icon: Icons.school_outlined),
+  _PublicItem(title: 'Blog', body: 'Praxiswissen, Updates und Ideen für digitale Sportorganisation.', icon: Icons.article_outlined),
+  _PublicItem(title: 'Jobs', body: 'Organisationen können Stellen und Engagement-Möglichkeiten zeigen.', icon: Icons.work_outline),
+  _PublicItem(title: 'Sponsoren', body: 'Partner, Sponsoring und Sichtbarkeit für Vereine.', icon: Icons.handshake_outlined),
   _PublicItem(title: 'Gamification', body: 'Badges, Motivation, Fortschritt und Vereinsaktivitaet.', icon: Icons.workspace_premium_outlined),
-  _PublicItem(title: 'Werbeagentur', body: 'Websites, Kampagnen und digitale Praesenz fuer Vereine.', icon: Icons.campaign_outlined),
+  _PublicItem(title: 'Werbeagentur', body: 'Websites, Kampagnen und digitale Praesenz für Vereine.', icon: Icons.campaign_outlined),
   _PublicItem(title: 'Top-Inhalte', body: 'Kuratierte Inhalte aus Blog, Kursen, Marketplace, Vereinen und Sponsoring.', icon: Icons.auto_awesome_outlined),
 ];
 
@@ -216,10 +216,10 @@ const _legalItems = [
   _PublicItem(title: 'Impressum', body: 'Anbieterkennzeichnung und Kontaktinformationen.', icon: Icons.badge_outlined),
   _PublicItem(title: 'Datenschutz', body: 'Datenschutzerklaerung, Rechte und Verarbeitung.', icon: Icons.privacy_tip_outlined),
   _PublicItem(title: 'AGB', body: 'Allgemeine Geschaeftsbedingungen.', icon: Icons.gavel_outlined),
-  _PublicItem(title: 'Community-Richtlinien', body: 'Regeln fuer Verhalten, Inhalte und Sicherheit.', icon: Icons.diversity_3_outlined),
+  _PublicItem(title: 'Community-Richtlinien', body: 'Regeln für Verhalten, Inhalte und Sicherheit.', icon: Icons.diversity_3_outlined),
   _PublicItem(title: 'Jugendschutz', body: 'Schutz minderjaehriger Nutzer und Erziehungsberechtigte.', icon: Icons.family_restroom_outlined),
   _PublicItem(title: 'Cookies', body: 'Cookie-Hinweise und Tracking-Einstellungen.', icon: Icons.cookie_outlined),
-  _PublicItem(title: 'Widerruf', body: 'Widerrufsrecht und Rueckabwicklung.', icon: Icons.assignment_return_outlined),
+  _PublicItem(title: 'Widerruf', body: 'Widerrufsrecht und Rückabwicklung.', icon: Icons.assignment_return_outlined),
   _PublicItem(title: 'Kontakt & Melden', body: 'Kontaktformular, Meldungen und Support.', icon: Icons.report_outlined),
 ];
 

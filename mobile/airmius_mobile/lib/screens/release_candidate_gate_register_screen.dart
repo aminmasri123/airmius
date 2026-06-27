@@ -75,7 +75,7 @@ class ReleaseCandidateGateRegisterScreen extends StatelessWidget {
                     onPressed: () => openUiAction(
                       context,
                       title: 'Release Candidate Gates',
-                      body: 'Analyze, Builds, Signing, Domain Verification, Screenshots, API-QA, Legal und Localization QA muessen mit Evidence abgeschlossen werden.',
+                      body: 'Analyze, Builds, Signing, Domain Verification, Screenshots, API-QA, Legal und Localization QA müssen mit Evidence abgeschlossen werden.',
                       status: 'RC Audit',
                       icon: Icons.fact_check_outlined,
                     ),

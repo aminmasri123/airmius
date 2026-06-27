@@ -45,7 +45,7 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
       MaterialPageRoute(
         builder: (_) => UiActionResultScreen(
           title: 'Chat starten',
-          body: 'Konversation erstellen, Teilnehmer pruefen und erste Nachricht senden.',
+          body: 'Konversation erstellen, Teilnehmer prüfen und erste Nachricht senden.',
           status: 'Chat',
           icon: Icons.chat_bubble_outline,
         ),
@@ -98,7 +98,7 @@ class _NewConversationScreenState extends State<NewConversationScreen> {
                             ),
                           ),
                           IconButton(
-                            tooltip: 'Schliessen',
+                            tooltip: 'Schließen',
                             onPressed: () => Navigator.pop(context),
                             icon: const Icon(Icons.close, color: AirmiusColors.muted, size: 26),
                           ),

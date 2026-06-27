@@ -35,7 +35,7 @@ class _AccessOperationsScreenState extends State<AccessOperationsScreen> {
                 children: [
                   const Eyebrow('Rechteverwaltung'),
                   const SizedBox(height: 8),
-                  const Text('Mobile Umsetzung der Web-App-Admin-Routen fuer Mitglieder, Rollen, Permissions und Inaktivitaetsnotizen. So bleibt Rechteverwaltung auch in der App nachvollziehbar.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  const Text('Mobile Umsetzung der Web-App-Admin-Routen für Mitglieder, Rollen, Permissions und Inaktivitaetsnotizen. So bleibt Rechteverwaltung auch in der App nachvollziehbar.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 8,
@@ -64,7 +64,7 @@ class _AccessOperationsScreenState extends State<AccessOperationsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Eyebrow('Sicherheitsregeln'),
-                  SwitchListTile(value: _auditRequired, onChanged: (value) => setState(() => _auditRequired = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Audit verpflichtend', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Rollen-, Rechte- und Mitglieder-Aenderungen werden spaeter protokolliert.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _auditRequired, onChanged: (value) => setState(() => _auditRequired = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Audit verpflichtend', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Rollen-, Rechte- und Mitglieder-Änderungen werden später protokolliert.', style: TextStyle(color: AirmiusColors.muted))),
                   SwitchListTile(value: _notifyUser, onChanged: (value) => setState(() => _notifyUser = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Betroffene informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('User oder Admins erhalten eine Nachricht nach Rollen-/Statuswechsel.', style: TextStyle(color: AirmiusColors.muted))),
                 ],
               ),
@@ -118,7 +118,7 @@ class _AccessOperationCard extends StatelessWidget {
             runSpacing: 10,
             children: [
               AirmiusButton(label: item.action, icon: item.icon, danger: item.danger, secondary: !item.danger, onPressed: () => _run(context, item)),
-              AirmiusButton(label: 'Audit', icon: Icons.history_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Access Audit', body: 'Audit, Bearbeiter, vorheriger Wert, neuer Wert und Rechtegrund fuer ${item.title} anzeigen.', status: 'Audit', icon: Icons.history_outlined)),
+              AirmiusButton(label: 'Audit', icon: Icons.history_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Access Audit', body: 'Audit, Bearbeiter, vorheriger Wert, neuer Wert und Rechtegrund für ${item.title} anzeigen.', status: 'Audit', icon: Icons.history_outlined)),
             ],
           ),
         ],
@@ -129,7 +129,7 @@ class _AccessOperationCard extends StatelessWidget {
   void _run(BuildContext context, _AccessOperation item) {
     final action = () => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
     if (item.danger) {
-      confirmDanger(context, '${item.action}?', 'Diese Aktion beeinflusst Zugriff, Rollen oder Nutzerstatus und wird spaeter mit Audit gespeichert.', item.action, action);
+      confirmDanger(context, '${item.action}?', 'Diese Aktion beeinflusst Zugriff, Rollen oder Nutzerstatus und wird später mit Audit gespeichert.', item.action, action);
       return;
     }
     action();
@@ -151,14 +151,14 @@ class _AccessOperation {
 const _items = [
   _AccessOperation(tab: 'Rollen', title: 'Rolle erstellen', body: 'Neue Rolle mit Name, Scope, Beschreibung und Basisrechten anlegen.', status: 'Create', icon: Icons.add_moderator_outlined, action: 'Rolle speichern'),
   _AccessOperation(tab: 'Rollen', title: 'Rolle bearbeiten', body: 'Rollenname, Rechte, Sicherheitsgates und Sichtbarkeit aktualisieren.', status: 'Update', icon: Icons.admin_panel_settings_outlined, action: 'Rolle aktualisieren'),
-  _AccessOperation(tab: 'Rollen', title: 'Rolle loeschen', body: 'Rolle entfernen oder Mitglieder vorher auf Ersatzrolle verschieben.', status: 'Delete', icon: Icons.delete_outline, action: 'Rolle loeschen', danger: true),
+  _AccessOperation(tab: 'Rollen', title: 'Rolle löschen', body: 'Rolle entfernen oder Mitglieder vorher auf Ersatzrolle verschieben.', status: 'Delete', icon: Icons.delete_outline, action: 'Rolle löschen', danger: true),
   _AccessOperation(tab: 'Permissions', title: 'Permission anlegen', body: 'Neues Recht mit Key, Modul, Beschreibung und Sicherheitsklasse erstellen.', status: 'Permission', icon: Icons.key_outlined, action: 'Permission speichern'),
-  _AccessOperation(tab: 'Permissions', title: 'Permission-Matrix pruefen', body: 'Lesen, erstellen, bearbeiten, freigeben, exportieren und moderieren pro Rolle vergleichen.', status: 'Matrix', icon: Icons.grid_on_outlined, action: 'Matrix pruefen'),
+  _AccessOperation(tab: 'Permissions', title: 'Permission-Matrix prüfen', body: 'Lesen, erstellen, bearbeiten, freigeben, exportieren und moderieren pro Rolle vergleichen.', status: 'Matrix', icon: Icons.grid_on_outlined, action: 'Matrix prüfen'),
   _AccessOperation(tab: 'Mitglieder', title: 'Mitglied erstellen', body: 'Admin legt Nutzer/Mitglied mit Profil, Rolle, Verein und Status an.', status: 'Create', icon: Icons.person_add_alt_1_outlined, action: 'Mitglied speichern'),
   _AccessOperation(tab: 'Mitglieder', title: 'Mitglied bearbeiten', body: 'Profil, Rolle, Status, Verifizierung und Verbindungskontext aktualisieren.', status: 'Update', icon: Icons.manage_accounts_outlined, action: 'Mitglied aktualisieren'),
   _AccessOperation(tab: 'Mitglieder', title: 'Inaktivitaetsnotiz senden', body: 'Hinweis an inaktiven Nutzer mit Frist, Kontext und Reaktivierungslink senden.', status: 'Notice', icon: Icons.mark_email_read_outlined, action: 'Notiz senden'),
-  _AccessOperation(tab: 'Mitglieder', title: 'Mitglied loeschen', body: 'Nutzer entfernen, Datenschutzstatus pruefen und Auditgrund speichern.', status: 'Delete', icon: Icons.delete_forever_outlined, action: 'Mitglied loeschen', danger: true),
+  _AccessOperation(tab: 'Mitglieder', title: 'Mitglied löschen', body: 'Nutzer entfernen, Datenschutzstatus prüfen und Auditgrund speichern.', status: 'Delete', icon: Icons.delete_forever_outlined, action: 'Mitglied löschen', danger: true),
   _AccessOperation(tab: 'Einladungen', title: 'Workspace-Einladung erstellen', body: 'Einladung mit Rolle, Verein, Team, Ablaufdatum und Token vorbereiten.', status: 'Invite', icon: Icons.send_outlined, action: 'Einladung senden'),
-  _AccessOperation(tab: 'Einladungen', title: 'Einladung annehmen', body: 'Token pruefen, Rolle aktivieren und Workspace sichtbar machen.', status: 'Accept', icon: Icons.check_circle_outline, action: 'Einladung annehmen'),
+  _AccessOperation(tab: 'Einladungen', title: 'Einladung annehmen', body: 'Token prüfen, Rolle aktivieren und Workspace sichtbar machen.', status: 'Accept', icon: Icons.check_circle_outline, action: 'Einladung annehmen'),
   _AccessOperation(tab: 'Einladungen', title: 'Einladung ablehnen', body: 'Token ablehnen, Absender informieren und Invite archivieren.', status: 'Decline', icon: Icons.cancel_outlined, action: 'Einladung ablehnen', danger: true),
 ];

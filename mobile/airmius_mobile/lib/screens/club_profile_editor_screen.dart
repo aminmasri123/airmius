@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -50,7 +50,7 @@ class _ClubProfileEditorScreenState extends State<ClubProfileEditorScreen> {
                   const SizedBox(height: 14),
                   const Text('Das Vereinsprofil soll mobil genauso vertraut wirken wie in der Web-App.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
                   const SizedBox(height: 8),
-                  const Text('Admins pflegen Stammdaten, Medien, Kontakt, Adresse, Sportarten, Sichtbarkeit und Verifizierung in klaren mobilen Sections. Laravel speichert spaeter jede Section als Vereinsprofil-Update.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+                  const Text('Admins pflegen Stammdaten, Medien, Kontakt, Adresse, Sportarten, Sichtbarkeit und Verifizierung in klaren mobilen Sections. Laravel speichert später jede Section als Vereinsprofil-Update.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
                   const SizedBox(height: 14),
                   Row(children: [Expanded(child: MetricCard(value: '$completion/7', label: 'Status')), const SizedBox(width: 10), const Expanded(child: MetricCard(value: 'ZBB', label: 'Verein')), const SizedBox(width: 10), Expanded(child: MetricCard(value: _profilePublic ? 'Public' : 'Privat', label: 'Sichtbar'))]),
                   const SizedBox(height: 14),
@@ -154,15 +154,15 @@ class _ClubProfileSwitches extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const Eyebrow('Profil-Schalter'),
           const SizedBox(height: 8),
-          const Text('Diese mobilen Schalter bilden die wichtigsten Web-App-Profiloptionen ab. Spaeter kommen echte Uploads, Validierung und Rollenrechte dazu.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+          const Text('Diese mobilen Schalter bilden die wichtigsten Web-App-Profiloptionen ab. Später kommen echte Uploads, Validierung und Rollenrechte dazu.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
           const SizedBox(height: 10),
           _ProfileSwitch(icon: Icons.verified_outlined, title: 'Verifizierungsstatus anzeigen', body: 'Verifizierte Vereine werden in Suche, Profil und Public-Bereichen hervorgehoben.', value: verified, onChanged: onVerified, color: AirmiusColors.green),
-          _ProfileSwitch(icon: Icons.public_outlined, title: 'Profil oeffentlich', body: 'Clubseite erscheint auf Gastseite, Suche und Public Discovery.', value: profilePublic, onChanged: onPublic, color: AirmiusColors.blue),
-          _ProfileSwitch(icon: Icons.contact_mail_outlined, title: 'Kontaktformular aktiv', body: 'Nutzer koennen Kontakt aufnehmen, ohne E-Mail direkt zu sehen.', value: contactForm, onChanged: onContact, color: AirmiusColors.green),
+          _ProfileSwitch(icon: Icons.public_outlined, title: 'Profil öffentlich', body: 'Clubseite erscheint auf Gastseite, Suche und Public Discovery.', value: profilePublic, onChanged: onPublic, color: AirmiusColors.blue),
+          _ProfileSwitch(icon: Icons.contact_mail_outlined, title: 'Kontaktformular aktiv', body: 'Nutzer können Kontakt aufnehmen, ohne E-Mail direkt zu sehen.', value: contactForm, onChanged: onContact, color: AirmiusColors.green),
           _ProfileSwitch(icon: Icons.location_on_outlined, title: 'Adresse anzeigen', body: 'Vollstaendige Adresse oder nur Ort/Region im Profil zeigen.', value: showAddress, onChanged: onAddress, color: AirmiusColors.amber),
-          _ProfileSwitch(icon: Icons.assignment_ind_outlined, title: 'Mitgliedschaftsanfragen aktiv', body: 'Button fuer Beitrittsanfrage anzeigen und mit Formularschema verbinden.', value: acceptsRequests, onChanged: onRequests, color: AirmiusColors.blue),
+          _ProfileSwitch(icon: Icons.assignment_ind_outlined, title: 'Mitgliedschaftsanfragen aktiv', body: 'Button für Beitrittsanfrage anzeigen und mit Formularschema verbinden.', value: acceptsRequests, onChanged: onRequests, color: AirmiusColors.blue),
           _ProfileSwitch(icon: Icons.image_outlined, title: 'Logo hochgeladen', body: 'Vereinslogo in Profil, Suche, Teamkarten und Rechnungen nutzen.', value: logoUploaded, onChanged: onLogo, color: AirmiusColors.green),
-          _ProfileSwitch(icon: Icons.panorama_outlined, title: 'Banner hochgeladen', body: 'Hero-Bild im Web-App-Stil fuer Clubprofil und Public Preview.', value: bannerUploaded, onChanged: onBanner, color: AirmiusColors.amber),
+          _ProfileSwitch(icon: Icons.panorama_outlined, title: 'Banner hochgeladen', body: 'Hero-Bild im Web-App-Stil für Clubprofil und Public Preview.', value: bannerUploaded, onChanged: onBanner, color: AirmiusColors.amber),
         ]),
       );
 }
@@ -189,7 +189,7 @@ class _ClubProfileSectionCard extends StatelessWidget {
           ]),
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: [
-            AirmiusButton(label: 'Bearbeiten', icon: Icons.edit_outlined, onPressed: () => openUiAction(context, title: '${section.title} bearbeiten', body: 'Mobile Formularsection fuer ${section.title}: speichern, validieren, Rollenrechte pruefen und Public Preview aktualisieren.', status: 'Profil', icon: Icons.edit_outlined)),
+            AirmiusButton(label: 'Bearbeiten', icon: Icons.edit_outlined, onPressed: () => openUiAction(context, title: '${section.title} bearbeiten', body: 'Mobile Formularsection für ${section.title}: speichern, validieren, Rollenrechte prüfen und Public Preview aktualisieren.', status: 'Profil', icon: Icons.edit_outlined)),
             if (section.area == 'Medien') AirmiusButton(label: 'Dateien', icon: Icons.folder_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FileOperationsScreen()))),
             if (section.area == 'Sport') AirmiusButton(label: 'Sportarten', icon: Icons.sports_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SportsOperationsScreen()))),
           ]),
@@ -208,7 +208,7 @@ class _ClubProfileWorkflow extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const Eyebrow('Profil-Workflow'),
           const SizedBox(height: 8),
-          Text('Aktuelle Section: $tab. Spaeter speichert Laravel Stammdaten, Medien, Kontakt, Adresse, Sportarten, Social Links, Sichtbarkeit und Verifizierungsstatus pro Verein.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+          Text('Aktuelle Section: $tab. Später speichert Laravel Stammdaten, Medien, Kontakt, Adresse, Sportarten, Social Links, Sichtbarkeit und Verifizierungsstatus pro Verein.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: [
             AirmiusButton(label: 'Profil speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Vereinsprofil speichern', body: 'Alle sichtbaren Profilsections speichern, Public Preview aktualisieren und Admin-Audit vormerken.', status: 'Club Profile', icon: Icons.save_outlined)),
@@ -259,16 +259,16 @@ const _tabs = ['Profil', 'Medien', 'Kontakt', 'Adresse', 'Sport', 'Social', 'Tru
 const _sections = <_ProfileSection>[
   _ProfileSection(area: 'Profil', title: 'Stammdaten', body: 'Vereinsname, Kurzname, Beschreibung, Gruendungsjahr, Vereinsnummer und interne Notiz.', status: 'Pflicht', owner: 'Admin', icon: Icons.badge_outlined, color: AirmiusColors.blue),
   _ProfileSection(area: 'Profil', title: 'Vereinsbeschreibung', body: 'Public-Beschreibung, Zielgruppe, Trainingsangebot, Aufnahmehinweise und Vereinswerte.', status: 'Public', owner: 'Club', icon: Icons.description_outlined, color: AirmiusColors.green),
-  _ProfileSection(area: 'Medien', title: 'Logo', body: 'Logo hochladen, zuschneiden und fuer Suche, Profil, Teams, Rechnungen und Dokumente nutzen.', status: 'Upload', owner: 'Files', icon: Icons.image_outlined, color: AirmiusColors.green),
-  _ProfileSection(area: 'Medien', title: 'Banner / Hero', body: 'Headerbild fuer Clubprofil mit Web-App-Gradient-Fallback und mobiler Preview.', status: 'Optional', owner: 'Files', icon: Icons.panorama_outlined, color: AirmiusColors.amber),
+  _ProfileSection(area: 'Medien', title: 'Logo', body: 'Logo hochladen, zuschneiden und für Suche, Profil, Teams, Rechnungen und Dokumente nutzen.', status: 'Upload', owner: 'Files', icon: Icons.image_outlined, color: AirmiusColors.green),
+  _ProfileSection(area: 'Medien', title: 'Banner / Hero', body: 'Headerbild für Clubprofil mit Web-App-Gradient-Fallback und mobiler Preview.', status: 'Optional', owner: 'Files', icon: Icons.panorama_outlined, color: AirmiusColors.amber),
   _ProfileSection(area: 'Kontakt', title: 'Kontaktformular', body: 'Kontaktart, E-Mail, Telefon, Ansprechpartner und Sichtbarkeit pro Rolle steuern.', status: 'Sichtbar', owner: 'Privacy', icon: Icons.contact_mail_outlined, color: AirmiusColors.blue),
-  _ProfileSection(area: 'Kontakt', title: 'Admin-Kontakte', body: 'Vereinsadmins, Rollen, oeffentliche Anzeige, interne Notizen und Chat-Einstieg.', status: 'Rollen', owner: 'Access', icon: Icons.admin_panel_settings_outlined, color: AirmiusColors.green),
-  _ProfileSection(area: 'Adresse', title: 'Vereinsadresse', body: 'Land, Strasse, Hausnummer, PLZ, Stadt, Region und Sichtbarkeit.', status: 'Ort', owner: 'Club', icon: Icons.location_on_outlined, color: AirmiusColors.amber),
-  _ProfileSection(area: 'Adresse', title: 'Trainingsorte', body: 'Sportorte, Hallen, Plaetze, Treffpunkte und Karte fuer Public oder Mitglieder.', status: 'Map', owner: 'Sportkarte', icon: Icons.map_outlined, color: AirmiusColors.blue),
+  _ProfileSection(area: 'Kontakt', title: 'Admin-Kontakte', body: 'Vereinsadmins, Rollen, öffentliche Anzeige, interne Notizen und Chat-Einstieg.', status: 'Rollen', owner: 'Access', icon: Icons.admin_panel_settings_outlined, color: AirmiusColors.green),
+  _ProfileSection(area: 'Adresse', title: 'Vereinsadresse', body: 'Land, Straße, Hausnummer, PLZ, Stadt, Region und Sichtbarkeit.', status: 'Ort', owner: 'Club', icon: Icons.location_on_outlined, color: AirmiusColors.amber),
+  _ProfileSection(area: 'Adresse', title: 'Trainingsorte', body: 'Sportorte, Hallen, Plaetze, Treffpunkte und Karte für Public oder Mitglieder.', status: 'Map', owner: 'Sportkarte', icon: Icons.map_outlined, color: AirmiusColors.blue),
   _ProfileSection(area: 'Sport', title: 'Sportarten', body: 'Hauptsportarten, Disziplinen, Altersgruppen, Teams und Trainingsangebote.', status: 'Sport', owner: 'Club', icon: Icons.sports_outlined, color: AirmiusColors.green),
   _ProfileSection(area: 'Sport', title: 'Aufnahmebedingungen', body: 'Mindestalter, Vorerfahrung, Probetraining, Lizenznummer und erforderliche Dokumente.', status: 'Antrag', owner: 'Membership', icon: Icons.assignment_ind_outlined, color: AirmiusColors.amber),
   _ProfileSection(area: 'Social', title: 'Social Links', body: 'Website, Instagram, Facebook, YouTube, TikTok, Vereinsnewsletter und externe Links.', status: 'Links', owner: 'Public', icon: Icons.link_outlined, color: AirmiusColors.blue),
   _ProfileSection(area: 'Social', title: 'Sponsoren Preview', body: 'Sponsorlogos, aktive Kampagnen und Public-Sponsorbereich im Vereinsprofil anzeigen.', status: 'Ads', owner: 'Sponsors', icon: Icons.handshake_outlined, color: AirmiusColors.green),
-  _ProfileSection(area: 'Trust', title: 'Club-Verifizierung', body: 'Nachweis, Registerdaten, Adminpruefung, Status, Ablehnungsgrund und Public Badge.', status: 'Trust', owner: 'Admin', icon: Icons.verified_user_outlined, color: AirmiusColors.green),
+  _ProfileSection(area: 'Trust', title: 'Club-Verifizierung', body: 'Nachweis, Registerdaten, Adminprüfung, Status, Ablehnungsgrund und Public Badge.', status: 'Trust', owner: 'Admin', icon: Icons.verified_user_outlined, color: AirmiusColors.green),
   _ProfileSection(area: 'Trust', title: 'Profil-Audit', body: 'Letzte Bearbeitung, verantwortlicher Admin, Versionen, Datenschutzstatus und Review-Hinweise.', status: 'Audit', owner: 'System', icon: Icons.history_outlined, color: AirmiusColors.amber),
 ];

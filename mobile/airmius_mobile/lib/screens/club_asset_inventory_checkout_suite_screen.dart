@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -9,17 +9,17 @@ class ClubAssetInventoryCheckoutSuiteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final assets = [
-      _AssetItem('Trikotsatz U17', 'Ausgeliehen', 'Team U17, Rueckgabe 18.06.2026', AirmiusColors.amber, Icons.checkroom_outlined),
+      _AssetItem('Trikotsatz U17', 'Ausgeliehen', 'Team U17, Rückgabe 18.06.2026', AirmiusColors.amber, Icons.checkroom_outlined),
       _AssetItem('Hallen-Schluessel', 'Kritisch', 'Trainer Max, Signatur erforderlich', AirmiusColors.red, Icons.vpn_key_outlined),
       _AssetItem('Erste-Hilfe-Koffer', 'Verfuegbar', 'Sporthalle West, Prüfung faellig', AirmiusColors.green, Icons.medical_services_outlined),
       _AssetItem('Beamer Vereinsheim', 'Reserviert', 'Vorstandssitzung, 20:00 Uhr', AirmiusColors.blue, Icons.videocam_outlined),
     ];
 
     final actions = [
-      _ActionItem('Ausleihe starten', 'Mitglied, Team, Zeitraum, Zustand, Kaution und Rueckgabehinweis erfassen.'),
-      _ActionItem('Rueckgabe pruefen', 'Zustand, Schaden, Foto, Gebuehr, Kommentar und Verantwortliche dokumentieren.'),
-      _ActionItem('QR-Code scannen', 'Material direkt aufrufen, Status aendern, Standort pruefen und Historie sehen.'),
-      _ActionItem('Wartung planen', 'Prueffrist, Reparatur, Ersatzbeschaffung und Admin-Benachrichtigung anlegen.'),
+      _ActionItem('Ausleihe starten', 'Mitglied, Team, Zeitraum, Zustand, Kaution und Rückgabehinweis erfassen.'),
+      _ActionItem('Rückgabe prüfen', 'Zustand, Schaden, Foto, Gebuehr, Kommentar und Verantwortliche dokumentieren.'),
+      _ActionItem('QR-Code scannen', 'Material direkt aufrufen, Status ändern, Standort prüfen und Historie sehen.'),
+      _ActionItem('Wartung planen', 'Prüffrist, Reparatur, Ersatzbeschaffung und Admin-Benachrichtigung anlegen.'),
     ];
 
     return Scaffold(
@@ -31,7 +31,7 @@ class ClubAssetInventoryCheckoutSuiteScreen extends StatelessWidget {
       ),
       body: PageFrame(
         title: 'Inventar & Ausleihe',
-        subtitle: 'Vereinsmaterial, Schluessel, Trikots, Geraete, QR-Codes, Rueckgabe und Audit als mobile Vereins-UI.',
+        subtitle: 'Vereinsmaterial, Schluessel, Trikots, Geräte, QR-Codes, Rückgabe und Audit als mobile Vereins-UI.',
         trailing: const StatusPill('Material', color: AirmiusColors.green),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -45,7 +45,7 @@ class ClubAssetInventoryCheckoutSuiteScreen extends StatelessWidget {
                   SizedBox(height: 10),
                   Text('Vereinsmaterial bekommt einen klaren mobilen Prozess.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
                   SizedBox(height: 8),
-                  Text('Inventar, Ausleihe, Rueckgabe, Zustand, Fotos, QR-Codes und Verantwortliche werden so vorbereitet, dass der Verein spaeter alles im Dateimanager und Audit nachvollziehen kann.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
+                  Text('Inventar, Ausleihe, Rückgabe, Zustand, Fotos, QR-Codes und Verantwortliche werden so vorbereitet, dass der Verein später alles im Dateimanager und Audit nachvollziehen kann.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
                 ],
               ),
             ),
@@ -116,7 +116,7 @@ class ClubAssetInventoryCheckoutSuiteScreen extends StatelessWidget {
                   Eyebrow('API READY'),
                   SizedBox(height: 10),
                   _ApiLine(label: 'asset', value: 'Name, Kategorie, Standort, Team, Zustand, Seriennummer, QR-Code'),
-                  _ApiLine(label: 'checkout', value: 'Ausleiher, Zeitraum, Verantwortliche, Kaution, Unterschrift, Rueckgabe'),
+                  _ApiLine(label: 'checkout', value: 'Ausleiher, Zeitraum, Verantwortliche, Kaution, Unterschrift, Rückgabe'),
                   _ApiLine(label: 'evidence', value: 'Fotos, Dateien, Schadensbericht, Rechnung, Wartungsnachweis'),
                   _ApiLine(label: 'audit', value: 'Statuswechsel, Besitzer, Adminaktion, Erinnerung, Eskalation'),
                 ],

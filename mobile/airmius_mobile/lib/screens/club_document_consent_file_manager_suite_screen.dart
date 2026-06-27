@@ -22,7 +22,7 @@ class _ClubDocumentConsentFileManagerSuiteScreenState extends State<ClubDocument
       const _ClubDocument(
         title: 'Datenschutzerklaerung',
         category: 'Pflicht',
-        body: 'Muss vor dem Absenden des Mitgliedschaftsantrags gelesen und bestaetigt werden.',
+        body: 'Muss vor dem Absenden des Mitgliedschaftsantrags gelesen und bestätigt werden.',
         version: 'v2.1',
         icon: Icons.privacy_tip_outlined,
         color: AirmiusColors.blue,
@@ -46,7 +46,7 @@ class _ClubDocumentConsentFileManagerSuiteScreenState extends State<ClubDocument
       const _ClubDocument(
         title: 'Gesundheitsnachweis',
         category: 'Upload',
-        body: 'User koennen spaeter eigene Nachweise hochladen; Verein sieht Status und Gueltigkeit.',
+        body: 'User können später eigene Nachweise hochladen; Verein sieht Status und Gültigkeit.',
         version: 'optional',
         icon: Icons.health_and_safety_outlined,
         color: AirmiusColors.pink,
@@ -67,7 +67,7 @@ class _ClubDocumentConsentFileManagerSuiteScreenState extends State<ClubDocument
                 const SectionLabel('DATEIMANAGER'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Vereine koennen Dokumente nicht nur verlinken, sondern mobil hochladen, kategorisieren, versionieren und mit Mitgliedschaftsantraegen oder Zustimmungspflichten verbinden.',
+                  'Vereine können Dokumente nicht nur verlinken, sondern mobil hochladen, kategorisieren, versionieren und mit Mitgliedschaftsantraegen oder Zustimmungspflichten verbinden.',
                   style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 16),
@@ -91,7 +91,7 @@ class _ClubDocumentConsentFileManagerSuiteScreenState extends State<ClubDocument
                 const SizedBox(height: 8),
                 _ConsentSwitch(
                   title: 'Zustimmung im Antrag verlangen',
-                  body: 'User muss Dokumente aktiv bestaetigen, bevor die Anfrage gesendet werden kann.',
+                  body: 'User muss Dokumente aktiv bestätigen, bevor die Anfrage gesendet werden kann.',
                   value: requireConsent,
                   color: AirmiusColors.blue,
                   onChanged: (value) => setState(() => requireConsent = value),
@@ -105,14 +105,14 @@ class _ClubDocumentConsentFileManagerSuiteScreenState extends State<ClubDocument
                 ),
                 _ConsentSwitch(
                   title: 'Automatisch im Dateimanager speichern',
-                  body: 'Upload wird spaeter in Vereinsordner, Kategorie und Sichtbarkeit eingeordnet.',
+                  body: 'Upload wird später in Vereinsordner, Kategorie und Sichtbarkeit eingeordnet.',
                   value: autoFileManager,
                   color: AirmiusColors.amber,
                   onChanged: (value) => setState(() => autoFileManager = value),
                 ),
                 _ConsentSwitch(
                   title: 'Versionen behalten',
-                  body: 'Aenderungen an Satzung, Datenschutz oder Beitragsordnung bleiben historisch nachvollziehbar.',
+                  body: 'Änderungen an Satzung, Datenschutz oder Beitragsordnung bleiben historisch nachvollziehbar.',
                   value: versionHistory,
                   color: AirmiusColors.pink,
                   onChanged: (value) => setState(() => versionHistory = value),
@@ -132,7 +132,7 @@ class _ClubDocumentConsentFileManagerSuiteScreenState extends State<ClubDocument
                 const SectionLabel('UPLOAD-FLOW'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Der spaetere API-Flow: Datei auswaehlen, Kategorie bestimmen, Sichtbarkeit setzen, Consent-Pflicht aktivieren, Version speichern und Vereinsadmins informieren.',
+                  'Der spätere API-Flow: Datei auswählen, Kategorie bestimmen, Sichtbarkeit setzen, Consent-Pflicht aktivieren, Version speichern und Vereinsadmins informieren.',
                   style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),
@@ -142,7 +142,7 @@ class _ClubDocumentConsentFileManagerSuiteScreenState extends State<ClubDocument
                   onPressed: () => openUiAction(
                     context,
                     title: 'Dokument hochladen',
-                    body: 'Diese UI bereitet Upload, Dateimanager-Zuordnung, Consent-Pflicht, Versionierung und Admin-Benachrichtigung fuer Vereinsdokumente vor.',
+                    body: 'Diese UI bereitet Upload, Dateimanager-Zuordnung, Consent-Pflicht, Versionierung und Admin-Benachrichtigung für Vereinsdokumente vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.upload_file_outlined,
                   ),

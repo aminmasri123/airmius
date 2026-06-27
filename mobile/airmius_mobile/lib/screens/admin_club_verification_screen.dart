@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -21,9 +21,9 @@ class _AdminClubVerificationScreenState extends State<AdminClubVerificationScree
   bool _showPublicProfile = true;
 
   final List<_VerificationItem> _items = const [
-    _VerificationItem(title: 'ZBB', body: 'Vereinsprofil, Adminrolle, Adresse und Dokumente pruefen.', status: 'Offen', owner: 'verein airmius', icon: Icons.apartment_outlined, color: AirmiusColors.blue),
-    _VerificationItem(title: 'Airmius Running Club', body: 'Oeffentlicher Verein mit Sichtbarkeit, Teams und Kontaktfreigabe.', status: 'Rueckfrage', owner: 'Admin Ops', icon: Icons.directions_run_outlined, color: AirmiusColors.amber),
-    _VerificationItem(title: 'Tennis Zentrum West', body: 'Nachweis, Vereinsdaten, Beitragsordnung und Impressumsangaben vorhanden.', status: 'Geprueft', owner: 'Trust Team', icon: Icons.sports_tennis_outlined, color: AirmiusColors.green),
+    _VerificationItem(title: 'ZBB', body: 'Vereinsprofil, Adminrolle, Adresse und Dokumente prüfen.', status: 'Offen', owner: 'verein airmius', icon: Icons.apartment_outlined, color: AirmiusColors.blue),
+    _VerificationItem(title: 'Airmius Running Club', body: 'Öffentlicher Verein mit Sichtbarkeit, Teams und Kontaktfreigabe.', status: 'Rückfrage', owner: 'Admin Ops', icon: Icons.directions_run_outlined, color: AirmiusColors.amber),
+    _VerificationItem(title: 'Tennis Zentrum West', body: 'Nachweis, Vereinsdaten, Beitragsordnung und Impressumsangaben vorhanden.', status: 'Geprüft', owner: 'Trust Team', icon: Icons.sports_tennis_outlined, color: AirmiusColors.green),
     _VerificationItem(title: 'Neue Vereinsanfrage', body: 'Admin muss Inhaber, Dokumente, Standort und Regelwerke verifizieren.', status: 'Risiko', owner: 'Moderation', icon: Icons.warning_amber_outlined, color: AirmiusColors.red),
   ];
 
@@ -47,20 +47,20 @@ class _AdminClubVerificationScreenState extends State<AdminClubVerificationScree
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const PageTitle(title: 'Admin Vereinsverifizierungen', subtitle: 'Vereine, Inhaber, Dokumente, Sichtbarkeit, Risiko, Rueckfragen und Freigabe.'),
+                        const PageTitle(title: 'Admin Vereinsverifizierungen', subtitle: 'Vereine, Inhaber, Dokumente, Sichtbarkeit, Risiko, Rückfragen und Freigabe.'),
                         const SizedBox(height: 16),
                         _VerificationHero(onApprove: () => _toast('Verifizierung freigeben vorbereitet')),
                         const SizedBox(height: 16),
-                        _ChoicePanel(title: 'Status', value: _status, values: const ['Alle', 'Offen', 'Rueckfrage', 'Geprueft', 'Risiko'], onChanged: (value) => setState(() => _status = value)),
+                        _ChoicePanel(title: 'Status', value: _status, values: const ['Alle', 'Offen', 'Rückfrage', 'Geprüft', 'Risiko'], onChanged: (value) => setState(() => _status = value)),
                         const SizedBox(height: 16),
                         AirmiusPanel(
-                          title: 'Pruefregeln',
+                          title: 'Prüfregeln',
                           child: Column(
                             children: [
-                              _SwitchRow(title: 'Dokumente pruefen', subtitle: 'Vereinsregeln, Datenschutz, Beitragsordnung und Nachweise.', value: _showDocuments, onChanged: (value) => setState(() => _showDocuments = value)),
-                              _SwitchRow(title: 'Inhaber pruefen', subtitle: 'Adminrolle, Kontakt, Identitaet und Verantwortlichkeit.', value: _showOwnerCheck, onChanged: (value) => setState(() => _showOwnerCheck = value)),
+                              _SwitchRow(title: 'Dokumente prüfen', subtitle: 'Vereinsregeln, Datenschutz, Beitragsordnung und Nachweise.', value: _showDocuments, onChanged: (value) => setState(() => _showDocuments = value)),
+                              _SwitchRow(title: 'Inhaber prüfen', subtitle: 'Adminrolle, Kontakt, Identitaet und Verantwortlichkeit.', value: _showOwnerCheck, onChanged: (value) => setState(() => _showOwnerCheck = value)),
                               _SwitchRow(title: 'Risikonotizen zeigen', subtitle: 'Moderation, falsche Daten, Spam oder Missbrauch erkennen.', value: _showRiskNotes, onChanged: (value) => setState(() => _showRiskNotes = value)),
-                              _SwitchRow(title: 'Oeffentliches Profil pruefen', subtitle: 'Sichtbarkeit, Kontakt, Adresse, Teams und Clubseite kontrollieren.', value: _showPublicProfile, onChanged: (value) => setState(() => _showPublicProfile = value)),
+                              _SwitchRow(title: 'Öffentliches Profil prüfen', subtitle: 'Sichtbarkeit, Kontakt, Adresse, Teams und Clubseite kontrollieren.', value: _showPublicProfile, onChanged: (value) => setState(() => _showPublicProfile = value)),
                             ],
                           ),
                         ),
@@ -69,7 +69,7 @@ class _AdminClubVerificationScreenState extends State<AdminClubVerificationScree
                           _VerificationCard(item: item, onOpen: () => _toast('${item.title}: Verifizierungsdetail vorbereitet')),
                           const SizedBox(height: 12),
                         ],
-                        if (visibleItems.isEmpty) const EmptyPanel('Keine Vereinsverifizierung fuer diesen Status gefunden.'),
+                        if (visibleItems.isEmpty) const EmptyPanel('Keine Vereinsverifizierung für diesen Status gefunden.'),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Admin-Aktionen',
@@ -78,7 +78,7 @@ class _AdminClubVerificationScreenState extends State<AdminClubVerificationScree
                             runSpacing: 10,
                             children: [
                               AirmiusButton(label: 'Freigeben', icon: Icons.verified_outlined, onPressed: () => _toast('Verein freigeben vorbereitet')),
-                              AirmiusButton(label: 'Rueckfrage', icon: Icons.forum_outlined, secondary: true, onPressed: () => _toast('Rueckfrage an Verein vorbereitet')),
+                              AirmiusButton(label: 'Rückfrage', icon: Icons.forum_outlined, secondary: true, onPressed: () => _toast('Rückfrage an Verein vorbereitet')),
                               AirmiusButton(label: 'Vereinsprofil', icon: Icons.edit_note_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubProfileEditorScreen()))),
                               AirmiusButton(label: 'Rollen', icon: Icons.admin_panel_settings_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubRolePermissionsScreen()))),
                               AirmiusButton(label: 'System Admin', icon: Icons.hub_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SystemAdminOperationsScreen()))),
@@ -128,7 +128,7 @@ class _VerificationHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Admin-UI fuer ClubVerifications: Vereine werden anhand von Inhaber, Dokumenten, Profil, Sichtbarkeit und Risiko mobil geprueft.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          const Text('Admin-UI für ClubVerifications: Vereine werden anhand von Inhaber, Dokumenten, Profil, Sichtbarkeit und Risiko mobil geprüft.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           const Row(children: [Expanded(child: MetricCard(value: '4', label: 'Vereine')), SizedBox(width: 10), Expanded(child: MetricCard(value: '3', label: 'Offen')), SizedBox(width: 10), Expanded(child: MetricCard(value: '1', label: 'Risiko'))]),
         ],

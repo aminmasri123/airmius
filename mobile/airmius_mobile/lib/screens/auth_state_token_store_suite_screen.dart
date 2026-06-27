@@ -16,10 +16,10 @@ class AuthStateTokenStoreSuiteScreen extends StatelessWidget {
     ];
 
     final gates = [
-      _GateItem('Secure Storage anschliessen', 'Aktuell ist der Store abstrahiert; echte native Speicherung folgt mit Package und Build-Freigabe.'),
+      _GateItem('Secure Storage anschließen', 'Aktuell ist der Store abstrahiert; echte native Speicherung folgt mit Package und Build-Freigabe.'),
       _GateItem('Auth-Provider in App verdrahten', 'AirmiusAuthState muss in main.dart/App-Shell bereitgestellt werden.'),
       _GateItem('Guards auf Screens anwenden', 'Private Bereiche, Vereinsadmin, Trainer und Plattformadmin bekommen Rollen-/Status-Gates.'),
-      _GateItem('Token Refresh definieren', 'Laravel-Strategie fuer Refresh, Logout, 401, Sessionablauf und Device-Sperre finalisieren.'),
+      _GateItem('Token Refresh definieren', 'Laravel-Strategie für Refresh, Logout, 401, Sessionablauf und Device-Sperre finalisieren.'),
     ];
 
     return Scaffold(
@@ -31,7 +31,7 @@ class AuthStateTokenStoreSuiteScreen extends StatelessWidget {
       ),
       body: PageFrame(
         title: 'Auth State',
-        subtitle: 'Session, persistenter TokenStore, Restore, Login, Logout, User Refresh, Locale und Auth-Phasen fuer echte API-Daten.',
+        subtitle: 'Session, persistenter TokenStore, Restore, Login, Logout, User Refresh, Locale und Auth-Phasen für echte API-Daten.',
         trailing: const StatusPill('60% API Rest', color: AirmiusColors.amber),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -43,9 +43,9 @@ class AuthStateTokenStoreSuiteScreen extends StatelessWidget {
                 children: const [
                   Eyebrow('SESSION CORE'),
                   SizedBox(height: 10),
-                  Text('Die App braucht ein Gedaechtnis fuer Login und User.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
+                  Text('Die App braucht ein Gedaechtnis für Login und User.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
                   SizedBox(height: 8),
-                  Text('AirmiusAuthState kapselt Token, User, Locale, Restore, Refresh und Logout. Damit werden API-Client und Repositories spaeter kontrolliert in die App-Shell eingebunden.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
+                  Text('AirmiusAuthState kapselt Token, User, Locale, Restore, Refresh und Logout. Damit werden API-Client und Repositories später kontrolliert in die App-Shell eingebunden.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
                 ],
               ),
             ),

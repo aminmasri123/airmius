@@ -45,10 +45,10 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Portion & Korrektur'),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: _portion, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Portion'), items: const ['Klein', 'Normal', 'Gross', 'Eigene Menge'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _portion = value ?? _portion)),
+            DropdownButtonFormField<String>(value: _portion, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Portion'), items: const ['Klein', 'Normal', 'Groß', 'Eigene Menge'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _portion = value ?? _portion)),
             const SizedBox(height: 12),
             const AirmiusTextField(label: 'Notiz oder Korrektur', hint: 'z.B. ohne Sauce, mehr Reis, weniger Oel...'),
-            SwitchListTile(value: _saveTemplate, onChanged: (value) => setState(() => _saveTemplate = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Als Vorlage speichern', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Spaeter schneller erfassen.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _saveTemplate, onChanged: (value) => setState(() => _saveTemplate = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Als Vorlage speichern', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Später schneller erfassen.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -62,8 +62,8 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
           ])),
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [
-            AirmiusButton(label: 'Speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Speichern', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.save_outlined)),
-            AirmiusButton(label: isPhoto ? 'Neu analysieren' : isBarcode ? 'Barcode erneut' : 'Loeschen', icon: isPhoto ? Icons.camera_alt_outlined : isBarcode ? Icons.qr_code_scanner_outlined : Icons.delete_outline, secondary: true, onPressed: () => openUiAction(context, title: isPhoto ? 'Neu analysieren' : isBarcode ? 'Barcode erneut' : 'Loeschen', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: isPhoto ? Icons.camera_alt_outlined : isBarcode ? Icons.qr_code_scanner_outlined : Icons.delete_outline)),
+            AirmiusButton(label: 'Speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Speichern', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.save_outlined)),
+            AirmiusButton(label: isPhoto ? 'Neu analysieren' : isBarcode ? 'Barcode erneut' : 'Löschen', icon: isPhoto ? Icons.camera_alt_outlined : isBarcode ? Icons.qr_code_scanner_outlined : Icons.delete_outline, secondary: true, onPressed: () => openUiAction(context, title: isPhoto ? 'Neu analysieren' : isBarcode ? 'Barcode erneut' : 'Löschen', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: isPhoto ? Icons.camera_alt_outlined : isBarcode ? Icons.qr_code_scanner_outlined : Icons.delete_outline)),
           ]),
         ]),
       ),

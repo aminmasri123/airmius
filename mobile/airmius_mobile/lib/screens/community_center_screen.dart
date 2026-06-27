@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -71,9 +71,9 @@ class _CommunityCenterScreenState extends State<CommunityCenterScreen> {
             const SizedBox(height: 4),
             Wrap(spacing: 10, runSpacing: 10, children: [
               AirmiusButton(label: 'Einladungslink erstellen', icon: Icons.link_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Einladungslink erstellen', body: 'Freundschaftslink, Ablaufdatum, Sichtbarkeit und Missbrauchsschutz vorbereiten.', status: 'Invite', icon: Icons.link_outlined)))),
-              AirmiusButton(label: 'Token annehmen', icon: Icons.mark_email_read_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Freundschaftstoken annehmen', body: 'Invitation-Token aus Link pruefen, Kontakt bestaetigen und Sichtbarkeit anwenden.', status: 'Token', icon: Icons.mark_email_read_outlined)))),
+              AirmiusButton(label: 'Token annehmen', icon: Icons.mark_email_read_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Freundschaftstoken annehmen', body: 'Invitation-Token aus Link prüfen, Kontakt bestätigen und Sichtbarkeit anwenden.', status: 'Token', icon: Icons.mark_email_read_outlined)))),
               AirmiusButton(label: 'Safety Ops', icon: Icons.health_and_safety_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SafetyCommunityOperationsScreen()))),
-              AirmiusButton(label: 'Freund entfernen', icon: Icons.person_remove_outlined, danger: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Freund entfernen', body: 'Kontakt entfernen, gemeinsame Sichtbarkeit aktualisieren und Chat-Kontext pruefen.', status: 'Remove', icon: Icons.person_remove_outlined)))),
+              AirmiusButton(label: 'Freund entfernen', icon: Icons.person_remove_outlined, danger: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Freund entfernen', body: 'Kontakt entfernen, gemeinsame Sichtbarkeit aktualisieren und Chat-Kontext prüfen.', status: 'Remove', icon: Icons.person_remove_outlined)))),
             ]),
           ],
         ),
@@ -109,7 +109,7 @@ class _PersonCard extends StatelessWidget {
                 if (person.status == 'Offen') ...[
                   const SizedBox(height: 10),
                   Wrap(spacing: 10, runSpacing: 10, children: [
-                    AirmiusButton(label: 'Annehmen', icon: Icons.check_circle_outline, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Freundschaft annehmen', body: '${person.name} als Kontakt bestaetigen und gemeinsame Vereine sichtbar machen.', status: 'Freund', icon: Icons.check_circle_outline)))),
+                    AirmiusButton(label: 'Annehmen', icon: Icons.check_circle_outline, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Freundschaft annehmen', body: '${person.name} als Kontakt bestätigen und gemeinsame Vereine sichtbar machen.', status: 'Freund', icon: Icons.check_circle_outline)))),
                     AirmiusButton(label: 'Ablehnen', icon: Icons.close_outlined, danger: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Freundschaft ablehnen', body: 'Anfrage von ${person.name} ablehnen und optional ausblenden.', status: 'Abgelehnt', icon: Icons.close_outlined)))),
                   ]),
                 ],
@@ -136,7 +136,7 @@ const _people = [
   _Person(name: 'Max Mustermann', body: 'Gemeinsamer Verein: Airmius Running Club', status: 'Offen', context: 'Verein'),
   _Person(name: 'verein airmius', body: 'Admin-Kontakt und Vereinsmanagement', status: 'Freund', context: 'Admin'),
   _Person(name: 'Trainer Team', body: 'Gemeinsames Training und Eventchat', status: 'Freund', context: 'Team'),
-  _Person(name: 'Tennis Kontakt', body: 'Empfohlen ueber Tennis Zentrum West', status: 'Empfehlung', context: 'Match'),
+  _Person(name: 'Tennis Kontakt', body: 'Empfohlen über Tennis Zentrum West', status: 'Empfehlung', context: 'Match'),
 ];
 
 

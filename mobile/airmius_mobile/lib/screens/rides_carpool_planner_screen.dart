@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -21,8 +21,8 @@ class _RidesCarpoolPlannerScreenState extends State<RidesCarpoolPlannerScreen> {
 
   final List<_RideItem> _items = const [
     _RideItem(title: 'Zum Freitagstraining', area: 'Offen', body: 'Fahrt zum Lauftraining mit Treffpunkt, Uhrzeit und zwei freien Plaetzen.', status: '2 Plaetze', meta: 'Kleinblittersdorf - 18:00', icon: Icons.directions_car_outlined, color: AirmiusColors.blue),
-    _RideItem(title: 'Event Saisonauftakt', area: 'Gebucht', body: 'Mitfahrt fuer Vereins-Event, Fahrer bestaetigt und Chat vorbereitet.', status: 'Gebucht', meta: 'Sa 15.06 - 15:15', icon: Icons.event_available_outlined, color: AirmiusColors.green),
-    _RideItem(title: 'Rueckfahrt Halle West', area: 'Suche', body: 'User sucht Mitfahrgelegenheit nach Training oder Event.', status: 'Suche', meta: 'Halle West - 21:00', icon: Icons.transfer_within_a_station_outlined, color: AirmiusColors.amber),
+    _RideItem(title: 'Event Saisonauftakt', area: 'Gebucht', body: 'Mitfahrt für Vereins-Event, Fahrer bestätigt und Chat vorbereitet.', status: 'Gebucht', meta: 'Sa 15.06 - 15:15', icon: Icons.event_available_outlined, color: AirmiusColors.green),
+    _RideItem(title: 'Rückfahrt Halle West', area: 'Suche', body: 'User sucht Mitfahrgelegenheit nach Training oder Event.', status: 'Suche', meta: 'Halle West - 21:00', icon: Icons.transfer_within_a_station_outlined, color: AirmiusColors.amber),
     _RideItem(title: 'Fahrt storniert', area: 'Storniert', body: 'Stornierung mit Hinweis, Ersatzsuche und Supportoption.', status: 'Storniert', meta: 'Support', icon: Icons.cancel_outlined, color: AirmiusColors.red),
   ];
 
@@ -57,7 +57,7 @@ class _RidesCarpoolPlannerScreenState extends State<RidesCarpoolPlannerScreen> {
                           child: Column(
                             children: [
                               _SwitchRow(title: 'Fahrer anzeigen', subtitle: 'Fahrerprofil, Kontaktfreigabe und Fahrzeughinweis sichtbar machen.', value: _showDriver, onChanged: (value) => setState(() => _showDriver = value)),
-                              _SwitchRow(title: 'Mitfahrer anzeigen', subtitle: 'Freie Plaetze, Anfragen und bestaetigte Mitfahrer anzeigen.', value: _showPassengers, onChanged: (value) => setState(() => _showPassengers = value)),
+                              _SwitchRow(title: 'Mitfahrer anzeigen', subtitle: 'Freie Plaetze, Anfragen und bestätigte Mitfahrer anzeigen.', value: _showPassengers, onChanged: (value) => setState(() => _showPassengers = value)),
                               _SwitchRow(title: 'Kostenhinweis anzeigen', subtitle: 'Kostenbeteiligung, Vereinshinweis und Fairnessregel vorbereiten.', value: _showCosts, onChanged: (value) => setState(() => _showCosts = value)),
                               _SwitchRow(title: 'Sicherheit anzeigen', subtitle: 'Notfallkontakt, Melden, Stornieren und Chatkontext sichtbar machen.', value: _showSafety, onChanged: (value) => setState(() => _showSafety = value)),
                             ],
@@ -68,7 +68,7 @@ class _RidesCarpoolPlannerScreenState extends State<RidesCarpoolPlannerScreen> {
                           _RideCard(item: item, onOpen: () => _toast('${item.title}: Fahrt-Detail vorbereitet')),
                           const SizedBox(height: 12),
                         ],
-                        if (items.isEmpty) const EmptyPanel('Keine Fahrten fuer diesen Status gefunden.'),
+                        if (items.isEmpty) const EmptyPanel('Keine Fahrten für diesen Status gefunden.'),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Aktionen',

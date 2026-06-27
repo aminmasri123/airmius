@@ -30,7 +30,7 @@ class _InvitationAccessLinkSuiteScreenState extends State<InvitationAccessLinkSu
       ),
       body: PageFrame(
         title: 'Invitation Access Links',
-        subtitle: 'Mobile UI fuer Einladungen, QR-Codes, Zugangslinks, Rollenbindung, Ablauf, Widerruf und Annahmestatus.',
+        subtitle: 'Mobile UI für Einladungen, QR-Codes, Zugangslinks, Rollenbindung, Ablauf, Widerruf und Annahmestatus.',
         trailing: const StatusPill('Invite flow', color: AirmiusColors.blue),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -43,7 +43,7 @@ class _InvitationAccessLinkSuiteScreenState extends State<InvitationAccessLinkSu
                   const Eyebrow('ACCESS LINKS'),
                   const SizedBox(height: 8),
                   const Text(
-                    'Vereine koennen Menschen gezielt einladen.',
+                    'Vereine können Menschen gezielt einladen.',
                     style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08),
                   ),
                   const SizedBox(height: 8),
@@ -97,21 +97,21 @@ class _InvitationAccessLinkSuiteScreenState extends State<InvitationAccessLinkSu
                   _InviteToggle(
                     icon: Icons.qr_code_2_outlined,
                     title: 'QR-Code Beitritt',
-                    body: 'Trainer oder Vereinsadmins koennen vor Ort QR-Codes fuer Team, Event oder Mitgliedschaft zeigen.',
+                    body: 'Trainer oder Vereinsadmins können vor Ort QR-Codes für Team, Event oder Mitgliedschaft zeigen.',
                     enabled: _qrInvite,
                     onChanged: (value) => setState(() => _qrInvite = value),
                   ),
                   _InviteToggle(
                     icon: Icons.admin_panel_settings_outlined,
                     title: 'Rollenbindung',
-                    body: 'Links koennen nur fuer Mitglied, Trainer, Guardian, Sponsor oder externe Kontakte gelten.',
+                    body: 'Links können nur für Mitglied, Trainer, Guardian, Sponsor oder externe Kontakte gelten.',
                     enabled: _roleBound,
                     onChanged: (value) => setState(() => _roleBound = value),
                   ),
                   _InviteToggle(
                     icon: Icons.timer_outlined,
                     title: 'Ablauf & Widerruf',
-                    body: 'Einladungen laufen automatisch ab und koennen jederzeit vom Verein widerrufen werden.',
+                    body: 'Einladungen laufen automatisch ab und können jederzeit vom Verein widerrufen werden.',
                     enabled: _expiry,
                     onChanged: (value) => setState(() => _expiry = value),
                     last: true,
@@ -195,12 +195,12 @@ class _Invite {
 }
 
 const _invites = [
-  _Invite(target: 'Mitglied', title: 'Max Mustermann', body: 'Mitgliedschaftseinladung fuer ZBB, Link laeuft in 3 Tagen ab.', status: 'Offen', icon: Icons.person_add_alt_1_outlined, color: AirmiusColors.blue),
+  _Invite(target: 'Mitglied', title: 'Max Mustermann', body: 'Mitgliedschaftseinladung für ZBB, Link läuft in 3 Tagen ab.', status: 'Offen', icon: Icons.person_add_alt_1_outlined, color: AirmiusColors.blue),
   _Invite(target: 'Trainer', title: 'Coach Einladung', body: 'Trainerrolle mit Teamzugriff, Kader und Anwesenheitsrechten.', status: 'Akzeptiert', icon: Icons.sports_outlined, color: AirmiusColors.green),
-  _Invite(target: 'Guardian', title: 'Elternfreigabe', body: 'Guardian-Link fuer Minderjaehrigenprofil und Consent-Prüfung.', status: 'Wartet', icon: Icons.family_restroom_outlined, color: AirmiusColors.amber),
-  _Invite(target: 'Team', title: 'U16 Team QR', body: 'QR-Code fuer Teambeitritt nach Training, nur fuer Vereinsmitglieder.', status: 'Aktiv', icon: Icons.groups_2_outlined, color: AirmiusColors.green),
-  _Invite(target: 'Sponsor', title: 'Sponsor Workspace', body: 'Einladung fuer Kampagnen, Placements und Reporting-Zugriff.', status: 'Offen', icon: Icons.campaign_outlined, color: AirmiusColors.blue),
-  _Invite(target: 'Extern', title: 'Externer Kontakt', body: 'Kontakt ohne volles Mitgliedskonto fuer Kommunikation und Dokumentfreigabe.', status: 'Begrenzt', icon: Icons.link_outlined, color: AirmiusColors.amber),
+  _Invite(target: 'Guardian', title: 'Elternfreigabe', body: 'Guardian-Link für Minderjaehrigenprofil und Consent-Prüfung.', status: 'Wartet', icon: Icons.family_restroom_outlined, color: AirmiusColors.amber),
+  _Invite(target: 'Team', title: 'U16 Team QR', body: 'QR-Code für Teambeitritt nach Training, nur für Vereinsmitglieder.', status: 'Aktiv', icon: Icons.groups_2_outlined, color: AirmiusColors.green),
+  _Invite(target: 'Sponsor', title: 'Sponsor Workspace', body: 'Einladung für Kampagnen, Placements und Reporting-Zugriff.', status: 'Offen', icon: Icons.campaign_outlined, color: AirmiusColors.blue),
+  _Invite(target: 'Extern', title: 'Externer Kontakt', body: 'Kontakt ohne volles Mitgliedskonto für Kommunikation und Dokumentfreigabe.', status: 'Begrenzt', icon: Icons.link_outlined, color: AirmiusColors.amber),
 ];
 
 class _InviteCard extends StatelessWidget {

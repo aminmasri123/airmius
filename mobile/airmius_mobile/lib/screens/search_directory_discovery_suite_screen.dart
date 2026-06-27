@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -20,11 +20,11 @@ class _SearchDirectoryDiscoverySuiteScreenState extends State<SearchDirectoryDis
   final List<_SuiteItem> _items = const [
     _SuiteItem('Globale Suche', 'Search', 'Global', 'Suche nach Personen, Vereinen, Teams, Kursen, Events, Orten und Inhalten.', Icons.search_outlined, Color(0xFF5BA7FF)),
     _SuiteItem('Suchergebnisse', 'Search', 'Results', 'Tabs, Filter, leere Zustaende, Trefferkarten, direkte Navigation und Kontextaktionen.', Icons.manage_search_outlined, Color(0xFF2EE59D)),
-    _SuiteItem('Vereinsverzeichnis', 'Directories', 'Clubs', 'Vereine suchen, Ort, Mitgliederzahl, Sichtbarkeit, Profilstatus und Beitrittsmoeglichkeit.', Icons.apartment_outlined, Color(0xFFF8B84E)),
+    _SuiteItem('Vereinsverzeichnis', 'Directories', 'Clubs', 'Vereine suchen, Ort, Mitgliederzahl, Sichtbarkeit, Profilstatus und Beitrittsmöglichkeit.', Icons.apartment_outlined, Color(0xFFF8B84E)),
     _SuiteItem('Teamverzeichnis', 'Directories', 'Teams', 'Teams finden, Sportart, Verein, Trainer, Mitglieder, Events und Teamprofil.', Icons.groups_2_outlined, Color(0xFFB084FF)),
     _SuiteItem('Nutzerverzeichnis', 'Directories', 'Users', 'Nutzerlisten, Rollen, Vereine, Profile, Adminstatus und sichtbare Kontaktdaten.', Icons.people_outline, Color(0xFFFF6B6B)),
     _SuiteItem('User Profil Detail', 'Profiles', 'User', 'Profil, Badges, Teams, Freundschaft, Kontakt, Aktivitaeten und Datenschutzstatus.', Icons.account_circle_outlined, Color(0xFF5BA7FF)),
-    _SuiteItem('Club Profil Detail', 'Profiles', 'Club', 'Vereinsprofil, Teams, Admins, Mitglieder, Beitraege, Dokumente und Antrag-CTA.', Icons.business_outlined, Color(0xFF2EE59D)),
+    _SuiteItem('Club Profil Detail', 'Profiles', 'Club', 'Vereinsprofil, Teams, Admins, Mitglieder, Beiträge, Dokumente und Antrag-CTA.', Icons.business_outlined, Color(0xFF2EE59D)),
     _SuiteItem('Team Profil Detail', 'Profiles', 'Team', 'Teamprofil, Trainer, Mitglieder, Termine, Rollen, Sichtbarkeit und Vereinskontext.', Icons.diversity_3_outlined, Color(0xFFF8B84E)),
   ];
 
@@ -48,7 +48,7 @@ class _SearchDirectoryDiscoverySuiteScreenState extends State<SearchDirectoryDis
                     const _Hero(
                       eyebrow: 'DISCOVERY',
                       title: 'Suche & Verzeichnisse',
-                      subtitle: 'Native Mobile-UI fuer globale Suche, Verzeichnisse, Ergebnisfilter und Profil-Discovery.',
+                      subtitle: 'Native Mobile-UI für globale Suche, Verzeichnisse, Ergebnisfilter und Profil-Discovery.',
                     ),
                     const SizedBox(height: 18),
                     Row(

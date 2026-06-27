@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -36,7 +36,7 @@ class _BillingOperationsScreenState extends State<BillingOperationsScreen> {
                 children: [
                   const Eyebrow('Admin-Billing'),
                   const SizedBox(height: 8),
-                  const Text('Mobile Verwaltungsoberflaeche fuer klassische Rechnungen, Subscription-Invoices, Banktransfer, Providerkosten und Zahlungsstatus.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  const Text('Mobile Verwaltungsoberflaeche für klassische Rechnungen, Subscription-Invoices, Banktransfer, Providerkosten und Zahlungsstatus.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 8,
@@ -66,7 +66,7 @@ class _BillingOperationsScreenState extends State<BillingOperationsScreen> {
                 children: [
                   const Eyebrow('Buchhaltungsregeln'),
                   SwitchListTile(value: _notify, onChanged: (value) => setState(() => _notify = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Benachrichtigung senden', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('User, Verein oder Anbieter nach Zahlungsstatus informieren.', style: TextStyle(color: AirmiusColors.muted))),
-                  SwitchListTile(value: _datev, onChanged: (value) => setState(() => _datev = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('DATEV/Audit vorbereiten', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Statuswechsel und Rechnungsdaten fuer Buchhaltung vormerken.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _datev, onChanged: (value) => setState(() => _datev = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('DATEV/Audit vorbereiten', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Statuswechsel und Rechnungsdaten für Buchhaltung vormerken.', style: TextStyle(color: AirmiusColors.muted))),
                 ],
               ),
             ),
@@ -120,7 +120,7 @@ class _BillingOperationCard extends StatelessWidget {
                   runSpacing: 10,
                   children: [
                     AirmiusButton(label: item.action, icon: item.icon, danger: item.danger, secondary: !item.danger, onPressed: () => _run(context, item)),
-                    AirmiusButton(label: 'Audit anzeigen', icon: Icons.history_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Billing Audit', body: 'Audit, Statuswechsel, Bearbeiter, Beleg und Providerreferenz fuer ${item.title} anzeigen.', status: 'Audit', icon: Icons.history_outlined)),
+                    AirmiusButton(label: 'Audit anzeigen', icon: Icons.history_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Billing Audit', body: 'Audit, Statuswechsel, Bearbeiter, Beleg und Providerreferenz für ${item.title} anzeigen.', status: 'Audit', icon: Icons.history_outlined)),
                   ],
                 ),
               ],
@@ -134,7 +134,7 @@ class _BillingOperationCard extends StatelessWidget {
   void _run(BuildContext context, _BillingOperation item) {
     final action = () => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
     if (item.danger) {
-      confirmDanger(context, '${item.action}?', 'Diese Billing-Aktion veraendert Zahlstatus, Abo oder Rechnung. Spaeter wird sie mit Audit protokolliert.', item.action, action);
+      confirmDanger(context, '${item.action}?', 'Diese Billing-Aktion verändert Zahlstatus, Abo oder Rechnung. Später wird sie mit Audit protokolliert.', item.action, action);
       return;
     }
     action();
@@ -155,16 +155,16 @@ class _BillingOperation {
 
 const _items = [
   _BillingOperation(tab: 'Zahlungen', title: 'Admin-Zahlung erfassen', body: 'Manuelle Zahlung mit Betrag, Methode, Referenz und Rechnung verbinden.', status: 'Payment', icon: Icons.payments_outlined, action: 'Zahlung speichern'),
-  _BillingOperation(tab: 'Zahlungen', title: 'Banktransfer als bezahlt markieren', body: 'Subscription-Checkout oder Invoice nach Ueberweisung ausgleichen.', status: 'Mark paid', icon: Icons.account_balance_outlined, action: 'Als bezahlt markieren'),
-  _BillingOperation(tab: 'Zahlungen', title: 'Zahlung loeschen', body: 'Fehlerhafte Zahlung entfernen und Audit-Hinweis hinterlegen.', status: 'Delete', icon: Icons.delete_outline, action: 'Zahlung loeschen', danger: true),
+  _BillingOperation(tab: 'Zahlungen', title: 'Banktransfer als bezahlt markieren', body: 'Subscription-Checkout oder Invoice nach Überweisung ausgleichen.', status: 'Mark paid', icon: Icons.account_balance_outlined, action: 'Als bezahlt markieren'),
+  _BillingOperation(tab: 'Zahlungen', title: 'Zahlung löschen', body: 'Fehlerhafte Zahlung entfernen und Audit-Hinweis hinterlegen.', status: 'Delete', icon: Icons.delete_outline, action: 'Zahlung löschen', danger: true),
   _BillingOperation(tab: 'Invoices', title: 'Rechnung erstellen', body: 'Admin-Invoice mit Empfaenger, Positionen, Steuer, Faelligkeit und PDF vorbereiten.', status: 'Invoice', icon: Icons.receipt_long_outlined, action: 'Rechnung erstellen'),
-  _BillingOperation(tab: 'Invoices', title: 'Rechnungsstatus aktualisieren', body: 'Offen, bezahlt, ueberfaellig, storniert oder archiviert setzen.', status: 'Status', icon: Icons.edit_note_outlined, action: 'Status setzen'),
-  _BillingOperation(tab: 'Invoices', title: 'Rechnung downloaden', body: 'PDF fuer Subscription- oder Admin-Rechnung laden und teilen.', status: 'PDF', icon: Icons.picture_as_pdf_outlined, action: 'PDF laden'),
-  _BillingOperation(tab: 'Invoices', title: 'Rechnung entfernen', body: 'Fehlerhafte Admin-Rechnung mit Beleggrund loeschen.', status: 'Delete', icon: Icons.delete_forever_outlined, action: 'Rechnung loeschen', danger: true),
+  _BillingOperation(tab: 'Invoices', title: 'Rechnungsstatus aktualisieren', body: 'Offen, bezahlt, überfaellig, storniert oder archiviert setzen.', status: 'Status', icon: Icons.edit_note_outlined, action: 'Status setzen'),
+  _BillingOperation(tab: 'Invoices', title: 'Rechnung downloaden', body: 'PDF für Subscription- oder Admin-Rechnung laden und teilen.', status: 'PDF', icon: Icons.picture_as_pdf_outlined, action: 'PDF laden'),
+  _BillingOperation(tab: 'Invoices', title: 'Rechnung entfernen', body: 'Fehlerhafte Admin-Rechnung mit Beleggrund löschen.', status: 'Delete', icon: Icons.delete_forever_outlined, action: 'Rechnung löschen', danger: true),
   _BillingOperation(tab: 'Abos', title: 'Club-Abo zuweisen', body: 'Verein einem Plan zuordnen, Laufzeit und Zahlungsart setzen.', status: 'Club', icon: Icons.apartment_outlined, action: 'Club-Abo speichern'),
-  _BillingOperation(tab: 'Abos', title: 'User-Abo zuweisen', body: 'User-Plan, Preis, Trial und VerlÃ¤ngerung verwalten.', status: 'User', icon: Icons.person_outline, action: 'User-Abo speichern'),
+  _BillingOperation(tab: 'Abos', title: 'User-Abo zuweisen', body: 'User-Plan, Preis, Trial und Verlängerung verwalten.', status: 'User', icon: Icons.person_outline, action: 'User-Abo speichern'),
   _BillingOperation(tab: 'Abos', title: 'Abo erneuern', body: 'Club- oder User-Subscription verlaengern und Rechnung vorbereiten.', status: 'Renew', icon: Icons.autorenew_outlined, action: 'Abo erneuern'),
-  _BillingOperation(tab: 'Abos', title: 'Abo kuendigen', body: 'Kuendigung vormerken, Zugang pruefen und Abschlussdatum setzen.', status: 'Cancel', icon: Icons.cancel_outlined, action: 'Abo kuendigen', danger: true),
+  _BillingOperation(tab: 'Abos', title: 'Abo kündigen', body: 'Kündigung vormerken, Zugang prüfen und Abschlussdatum setzen.', status: 'Cancel', icon: Icons.cancel_outlined, action: 'Abo kündigen', danger: true),
   _BillingOperation(tab: 'Provider', title: 'Providerkosten erfassen', body: 'Stripe, PayPal, Storage, Mail oder externe Kosten dokumentieren.', status: 'Costs', icon: Icons.account_balance_wallet_outlined, action: 'Kosten speichern'),
-  _BillingOperation(tab: 'Provider', title: 'Provider-Referenz pruefen', body: 'Transaktions-ID, Checkout-ID, Webhook und Payment-Provider zuordnen.', status: 'Provider', icon: Icons.manage_search_outlined, action: 'Referenz pruefen'),
+  _BillingOperation(tab: 'Provider', title: 'Provider-Referenz prüfen', body: 'Transaktions-ID, Checkout-ID, Webhook und Payment-Provider zuordnen.', status: 'Provider', icon: Icons.manage_search_outlined, action: 'Referenz prüfen'),
 ];

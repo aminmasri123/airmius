@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -41,7 +41,7 @@ class _ClubTeamAdminScreenState extends State<ClubTeamAdminScreen> {
             const SizedBox(height: 14),
             const Text('Vereine verwalten Teams mobil wie in der Web-App, nur handlicher.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
             const SizedBox(height: 8),
-            const Text('Diese UI verbindet Teamprofile, Kader, Trainer, Captain, Einladungen, Join-Requests, Kalender, Teamdateien und Chatrechte. Laravel synchronisiert spaeter Rollen und Teamkontext.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+            const Text('Diese UI verbindet Teamprofile, Kader, Trainer, Captain, Einladungen, Join-Requests, Kalender, Teamdateien und Chatrechte. Laravel synchronisiert später Rollen und Teamkontext.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
             const SizedBox(height: 14),
             Row(children: const [Expanded(child: MetricCard(value: '6', label: 'Teams')), SizedBox(width: 10), Expanded(child: MetricCard(value: '42', label: 'Kader')), SizedBox(width: 10), Expanded(child: MetricCard(value: '5', label: 'Anfragen'))]),
             const SizedBox(height: 14),
@@ -77,12 +77,12 @@ class _TeamAdminControls extends StatelessWidget {
   Widget build(BuildContext context) => AirmiusPanel(borderColor: AirmiusColors.green.withValues(alpha: .44), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     const Eyebrow('Team-Schalter'),
     const SizedBox(height: 8),
-    const Text('Diese Schalter spiegeln Web-App-Funktionen mobil: Join-Requests, Einladungen, Teamkalender und Chatrechte koennen pro Verein gesteuert werden.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+    const Text('Diese Schalter spiegeln Web-App-Funktionen mobil: Join-Requests, Einladungen, Teamkalender und Chatrechte können pro Verein gesteuert werden.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
     const SizedBox(height: 10),
-    _TeamSwitch(icon: Icons.how_to_reg_outlined, title: 'Join-Requests anzeigen', body: 'Beitrittsanfragen fuer Teams mit Status und Adminentscheidung anzeigen.', value: showJoinRequests, onChanged: onJoinRequests, color: AirmiusColors.green),
+    _TeamSwitch(icon: Icons.how_to_reg_outlined, title: 'Join-Requests anzeigen', body: 'Beitrittsanfragen für Teams mit Status und Adminentscheidung anzeigen.', value: showJoinRequests, onChanged: onJoinRequests, color: AirmiusColors.green),
     _TeamSwitch(icon: Icons.mail_outline, title: 'Einladungen anzeigen', body: 'Offene Team-Einladungen, Tokens und Ablaufdatum mobil sichtbar machen.', value: showInvitations, onChanged: onInvitations, color: AirmiusColors.blue),
     _TeamSwitch(icon: Icons.event_available_outlined, title: 'Teamkalender anzeigen', body: 'Events, Training, Anwesenheit und Erinnerungen im Teamkontext zeigen.', value: showCalendar, onChanged: onCalendar, color: AirmiusColors.amber),
-    _TeamSwitch(icon: Icons.forum_outlined, title: 'Chatrechte synchronisieren', body: 'Teamrolle steuert spaeter automatisch Teamchat-Zugriff und Benachrichtigungen.', value: syncChatRights, onChanged: onChatRights, color: AirmiusColors.green),
+    _TeamSwitch(icon: Icons.forum_outlined, title: 'Chatrechte synchronisieren', body: 'Teamrolle steuert später automatisch Teamchat-Zugriff und Benachrichtigungen.', value: syncChatRights, onChanged: onChatRights, color: AirmiusColors.green),
   ]));
 }
 
@@ -114,7 +114,7 @@ class _TeamAdminCard extends StatelessWidget {
     Wrap(spacing: 8, runSpacing: 8, children: [
       AirmiusButton(label: 'Kader', icon: Icons.people_outline, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubMemberDirectoryScreen()))),
       AirmiusButton(label: 'Rollen', icon: Icons.admin_panel_settings_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AccessOperationsScreen()))),
-      if (showJoinRequests) AirmiusButton(label: 'Join-Requests', icon: Icons.how_to_reg_outlined, secondary: true, onPressed: () => openUiAction(context, title: '${team.name} Join-Requests', body: 'Team-Beitrittsanfragen pruefen, annehmen, ablehnen und Nutzer benachrichtigen.', status: 'Join', icon: Icons.how_to_reg_outlined)),
+      if (showJoinRequests) AirmiusButton(label: 'Join-Requests', icon: Icons.how_to_reg_outlined, secondary: true, onPressed: () => openUiAction(context, title: '${team.name} Join-Requests', body: 'Team-Beitrittsanfragen prüfen, annehmen, ablehnen und Nutzer benachrichtigen.', status: 'Join', icon: Icons.how_to_reg_outlined)),
       if (showInvitations) AirmiusButton(label: 'Einladen', icon: Icons.mail_outline, secondary: true, onPressed: () => openUiAction(context, title: '${team.name} Einladung', body: 'Team-Einladung mit Rolle, Ablaufdatum, Nachricht und Token vorbereiten.', status: 'Einladung', icon: Icons.mail_outline)),
       if (showCalendar) AirmiusButton(label: 'Kalender', icon: Icons.event_available_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TrainingOperationsScreen()))),
       AirmiusButton(label: 'Dateien', icon: Icons.folder_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FileOperationsScreen()))),
@@ -156,7 +156,7 @@ class _TeamWorkflowPanel extends StatelessWidget {
   Widget build(BuildContext context) => AirmiusPanel(borderColor: AirmiusColors.blue.withValues(alpha: .44), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     const Eyebrow('Team-Workflow'),
     const SizedBox(height: 8),
-    Text('Aktueller Bereich: $tab. Spaeter verbindet Laravel diese UI mit Teamprofilen, Kader, Rollen, Einladungen, Join-Requests, Kalender, Dateien und Chatrechten.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+    Text('Aktueller Bereich: $tab. Später verbindet Laravel diese UI mit Teamprofilen, Kader, Rollen, Einladungen, Join-Requests, Kalender, Dateien und Chatrechten.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
     const SizedBox(height: 12),
     Wrap(spacing: 8, runSpacing: 8, children: [
       AirmiusButton(label: 'Team Operations', icon: Icons.groups_2_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeamOperationsScreen()))),
@@ -201,6 +201,6 @@ const _teams = <_ClubTeam>[
   _ClubTeam(area: 'Teams', name: 'Herren Aktiv', body: 'Aktives Team mit Kalender, Training, Captain und Teamchat.', members: 18, status: 'Aktiv', coach: 'verein airmius', captain: 'Jonas Weber', nextEvent: 'Training Freitag', files: '3 Dateien', icon: Icons.groups_2_outlined, color: AirmiusColors.green),
   _ClubTeam(area: 'Jugend', name: 'U16 Jugend', body: 'Jugendteam mit Guardian-Gates, Elternfreigabe und eingeschraenktem Chat.', members: 14, status: 'Guardian', coach: 'Mina Coach', captain: 'Noch offen', nextEvent: 'Turnier Samstag', files: 'Consent Pflicht', icon: Icons.family_restroom_outlined, color: AirmiusColors.blue),
   _ClubTeam(area: 'Training', name: 'Laufgruppe', body: 'Offene Trainingsgruppe mit Routen, Events und Anwesenheit.', members: 9, status: 'Offen', coach: 'Trainer Team', captain: 'Ali Hassan', nextEvent: 'Route 5km', files: 'Route GPX', icon: Icons.directions_run_outlined, color: AirmiusColors.amber),
-  _ClubTeam(area: 'Anfragen', name: 'Probetraining', body: 'Team fuer neue Interessenten mit Join-Requests und Probemonat.', members: 5, status: '5 Anfragen', coach: 'Admin', captain: 'Nicht gesetzt', nextEvent: 'Probetraining Mittwoch', files: 'Infoblatt', icon: Icons.how_to_reg_outlined, color: AirmiusColors.green),
+  _ClubTeam(area: 'Anfragen', name: 'Probetraining', body: 'Team für neue Interessenten mit Join-Requests und Probemonat.', members: 5, status: '5 Anfragen', coach: 'Admin', captain: 'Nicht gesetzt', nextEvent: 'Probetraining Mittwoch', files: 'Infoblatt', icon: Icons.how_to_reg_outlined, color: AirmiusColors.green),
   _ClubTeam(area: 'Archiv', name: 'Saison 2025', body: 'Archiviertes Team mit Historie, Dateien und abgeschlossenen Events.', members: 22, status: 'Archiv', coach: 'Archiv', captain: 'Archiv', nextEvent: 'Keine', files: '12 Dateien', icon: Icons.archive_outlined, color: AirmiusColors.muted),
 ];

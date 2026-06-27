@@ -9,17 +9,17 @@ class ApiDataModelRepositorySuiteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final models = [
-      _ModelItem('User', 'Auth', 'id, name, email, role, avatarUrl und spaetere Workspace-/Permission-Daten.', AirmiusColors.blue, Icons.person_outline),
+      _ModelItem('User', 'Auth', 'id, name, email, role, avatarUrl und spätere Workspace-/Permission-Daten.', AirmiusColors.blue, Icons.person_outline),
       _ModelItem('Club', 'Verein', 'Name, Stadt, Mitgliederzahl, Logo, Banner und Antragsschalter.', AirmiusColors.green, Icons.apartment_outlined),
-      _ModelItem('MembershipApplication', 'Forms', 'Status, Club, eingereicht, zurueckgezogen und dynamische Payloads.', AirmiusColors.amber, Icons.assignment_ind_outlined),
+      _ModelItem('MembershipApplication', 'Forms', 'Status, Club, eingereicht, zurückgezogen und dynamische Payloads.', AirmiusColors.amber, Icons.assignment_ind_outlined),
       _ModelItem('Files, Events, Invoices', 'Core', 'Upload-Assets, Kalenderdaten und Rechnungen mit Pagination-Vertrag.', AirmiusColors.pink, Icons.hub_outlined),
     ];
 
     final repositories = [
       _RepoItem('AirmiusAuthRepository', 'Login und aktueller Nutzer als klares Interface.'),
-      _RepoItem('AirmiusClubRepository', 'Vereinssuche, Clubdetail und Pagination fuer mobile Listen.'),
-      _RepoItem('AirmiusMembershipRepository', 'Mitgliedsantrag senden und zurueckziehen als typed Flow.'),
-      _RepoItem('AirmiusFile/Event/Billing Repositories', 'Upload Intent, Events und Rechnungen spaeter API-sicher anbinden.'),
+      _RepoItem('AirmiusClubRepository', 'Vereinssuche, Clubdetail und Pagination für mobile Listen.'),
+      _RepoItem('AirmiusMembershipRepository', 'Mitgliedsantrag senden und zurückziehen als typed Flow.'),
+      _RepoItem('AirmiusFile/Event/Billing Repositories', 'Upload Intent, Events und Rechnungen später API-sicher anbinden.'),
     ];
 
     return Scaffold(
@@ -31,7 +31,7 @@ class ApiDataModelRepositorySuiteScreen extends StatelessWidget {
       ),
       body: PageFrame(
         title: 'API Datenmodelle',
-        subtitle: 'Typed Models, Pagination, Repository-Vertraege und Laravel Response-Mapping fuer echte Daten statt Mock-UI.',
+        subtitle: 'Typed Models, Pagination, Repository-Verträge und Laravel Response-Mapping für echte Daten statt Mock-UI.',
         trailing: const StatusPill('64% API Rest', color: AirmiusColors.amber),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -45,7 +45,7 @@ class ApiDataModelRepositorySuiteScreen extends StatelessWidget {
                   SizedBox(height: 10),
                   Text('Flutter braucht stabile Datenformen, bevor echte Screens sauber laufen.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
                   SizedBox(height: 8),
-                  Text('Die neuen Models und Repository-Vertraege definieren, wie Laravel-Responses in der App ankommen: User, Vereine, Mitgliedsantraege, Dateien, Events, Rechnungen und Pagination.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
+                  Text('Die neuen Models und Repository-Verträge definieren, wie Laravel-Responses in der App ankommen: User, Vereine, Mitgliedsanträge, Dateien, Events, Rechnungen und Pagination.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
                 ],
               ),
             ),

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'public_location_submission_screen.dart';
@@ -48,7 +48,7 @@ class _PublicInterestScreenState extends State<PublicInterestScreen> {
       appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: Text(widget.topic, style: const TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
         title: '${widget.topic} Anfrage',
-        subtitle: 'Public Lead, Kontakt, Interesse, Datenschutz und spaetere Laravel-API-Anbindung',
+        subtitle: 'Public Lead, Kontakt, Interesse, Datenschutz und spätere Laravel-API-Anbindung',
         trailing: StatusPill(widget.kind),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           AirmiusPanel(gradient: true, child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -59,7 +59,7 @@ class _PublicInterestScreenState extends State<PublicInterestScreen> {
               const SizedBox(height: 6),
               Text('Interesse an ${widget.topic}', style: const TextStyle(color: AirmiusColors.text, fontSize: 23, fontWeight: FontWeight.w900)),
               const SizedBox(height: 8),
-              const Text('Dieser Flow bereitet oeffentliche Kontaktformulare, Leads, Bewerbungen, Sponsor-Anfragen und Checkout-Interesse nativ vor.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+              const Text('Dieser Flow bereitet öffentliche Kontaktformulare, Leads, Bewerbungen, Sponsor-Anfragen und Checkout-Interesse nativ vor.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
             ])),
           ])),
           const SizedBox(height: 14),
@@ -70,7 +70,7 @@ class _PublicInterestScreenState extends State<PublicInterestScreen> {
             const SizedBox(height: 10),
             const AirmiusTextField(label: 'E-Mail', hint: 'kontakt@example.com'),
             const SizedBox(height: 10),
-            DropdownButtonFormField<String>(value: _contactType, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Kontaktart'), items: const ['E-Mail', 'Telefon', 'Rueckruf', 'Demo-Termin'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _contactType = value ?? _contactType)),
+            DropdownButtonFormField<String>(value: _contactType, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Kontaktart'), items: const ['E-Mail', 'Telefon', 'Rückruf', 'Demo-Termin'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _contactType = value ?? _contactType)),
           ])),
           const SizedBox(height: 14),
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -96,7 +96,7 @@ class _PublicInterestScreenState extends State<PublicInterestScreen> {
             AirmiusButton(label: 'Standort vorschlagen', icon: Icons.add_location_alt_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PublicLocationSubmissionScreen()))),
           ])),
           const SizedBox(height: 14),
-          AirmiusButton(label: 'Anfrage senden', icon: Icons.send_outlined, onPressed: _privacyAccepted ? () => openUiAction(context, title: '${widget.topic} Anfrage senden', body: 'Public Lead, Kontaktart $_contactType, Datenschutzprotokoll und spaetere Laravel-Bearbeitung vorbereiten.', status: widget.kind, icon: Icons.send_outlined) : null),
+          AirmiusButton(label: 'Anfrage senden', icon: Icons.send_outlined, onPressed: _privacyAccepted ? () => openUiAction(context, title: '${widget.topic} Anfrage senden', body: 'Public Lead, Kontaktart $_contactType, Datenschutzprotokoll und spätere Laravel-Bearbeitung vorbereiten.', status: widget.kind, icon: Icons.send_outlined) : null),
         ]),
       ),
     );

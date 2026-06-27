@@ -221,7 +221,7 @@ class _SettingsCenterScreenState extends State<SettingsCenterScreen> {
           _SettingLine(
             icon: Icons.privacy_tip_outlined,
             title: 'Datenschutz',
-            body: 'Einwilligungen, Datenexport, Sichtbarkeit und Konto loeschen.',
+            body: 'Einwilligungen, Datenexport, Sichtbarkeit und Konto löschen.',
             status: 'Sicher',
             color: AirmiusColors.green,
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsDetailScreen(section: 'Datenschutz', status: 'Sicher'))),
@@ -229,7 +229,7 @@ class _SettingsCenterScreenState extends State<SettingsCenterScreen> {
           const SizedBox(height: 12),
           _SettingLine(
             icon: Icons.language_outlined,
-            title: 'Sprache & Uebersetzungen',
+            title: 'Sprache & Übersetzungen',
             body: 'Deutsch, Englisch, Franzoesisch, Arabisch, RTL und API-Synchronisierung.',
             status: '4',
             color: AirmiusColors.blue,
@@ -382,7 +382,7 @@ class _SettingsCenterScreenState extends State<SettingsCenterScreen> {
                     AirmiusButton(label: 'Service Container', icon: Icons.settings_ethernet_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ServiceContainerTransportSuiteScreen()))),
                     AirmiusButton(label: 'HTTP Transport', icon: Icons.cloud_sync_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => HttpTransportReleaseSuiteScreen()))),
                     AirmiusButton(label: 'Store Konfiguration', icon: Icons.app_settings_alt_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => StoreReleaseConfigurationSuiteScreen()))),
-              AirmiusButton(label: 'Betrieb pruefen', icon: Icons.monitor_heart_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PlatformOperationsScreen()))),
+              AirmiusButton(label: 'Betrieb prüfen', icon: Icons.monitor_heart_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PlatformOperationsScreen()))),
               AirmiusButton(label: 'System Admin', icon: Icons.settings_suggest_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SystemAdminOperationsScreen()))),
               ],
             ),

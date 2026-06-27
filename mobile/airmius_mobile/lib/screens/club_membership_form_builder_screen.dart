@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -24,14 +24,14 @@ class _ClubMembershipFormBuilderScreenState extends State<ClubMembershipFormBuil
   bool _allowWithdraw = true;
 
   String _interval = 'Monatlich';
-  String _payment = 'Ueberweisung';
+  String _payment = 'Überweisung';
 
   final List<_FieldGroup> _groups = const [
     _FieldGroup(title: 'Personendaten', body: 'Vorname, Nachname, Geburtsdatum, Geschlecht, Sprache und Profilname.', status: 'Pflicht', icon: Icons.person_outline, color: AirmiusColors.blue),
     _FieldGroup(title: 'Kontaktdaten', body: 'E-Mail, Telefon, Notfallkontakt, Elternkontakt und Kommunikationsfreigabe.', status: 'Pflicht', icon: Icons.contact_mail_outlined, color: AirmiusColors.green),
-    _FieldGroup(title: 'Wohndaten', body: 'Land, Strasse, Hausnummer, PLZ, Stadt, Bundesland und Rechnungsadresse.', status: 'Pflicht', icon: Icons.home_outlined, color: AirmiusColors.amber),
+    _FieldGroup(title: 'Wohndaten', body: 'Land, Straße, Hausnummer, PLZ, Stadt, Bundesland und Rechnungsadresse.', status: 'Pflicht', icon: Icons.home_outlined, color: AirmiusColors.amber),
     _FieldGroup(title: 'Sportdaten', body: 'Lizenznummer, Teamwunsch, Trainingsgruppe, Spielklasse und Erfahrung.', status: 'Optional', icon: Icons.sports_outlined, color: AirmiusColors.blueDeep),
-    _FieldGroup(title: 'Zahlungsdaten', body: 'Bar, Ueberweisung, SEPA, IBAN, BIC, Zahlername und Zahlungsintervall.', status: 'Konfigurierbar', icon: Icons.payments_outlined, color: AirmiusColors.red),
+    _FieldGroup(title: 'Zahlungsdaten', body: 'Bar, Überweisung, SEPA, IBAN, BIC, Zahlername und Zahlungsintervall.', status: 'Konfigurierbar', icon: Icons.payments_outlined, color: AirmiusColors.red),
     _FieldGroup(title: 'Dokumente', body: 'Datenschutz, Vereinsregeln, Beitragsordnung, SEPA-Mandat und Minderjaehrigenformular.', status: 'Verknuepft', icon: Icons.folder_copy_outlined, color: AirmiusColors.blue),
   ];
 
@@ -51,7 +51,7 @@ class _ClubMembershipFormBuilderScreenState extends State<ClubMembershipFormBuil
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const PageTitle(title: 'Mitgliedsantrag konfigurieren', subtitle: 'Felder, Pflichtdaten, Zahlungsarten, Intervalle, Dokumente und Rueckzugsmoeglichkeit je Verein.'),
+                        const PageTitle(title: 'Mitgliedsantrag konfigurieren', subtitle: 'Felder, Pflichtdaten, Zahlungsarten, Intervalle, Dokumente und Rückzugsmöglichkeit je Verein.'),
                         const SizedBox(height: 16),
                         _FormBuilderHero(onPreview: () => _toast('Antragsvorschau vorbereitet')),
                         const SizedBox(height: 16),
@@ -59,14 +59,14 @@ class _ClubMembershipFormBuilderScreenState extends State<ClubMembershipFormBuil
                           title: 'Feldgruppen',
                           child: Column(
                             children: [
-                              _SwitchRow(title: 'Personendaten verlangen', subtitle: 'Basisdaten fuer Mitgliedschaft und Identitaet.', value: _personalRequired, onChanged: (value) => setState(() => _personalRequired = value)),
-                              _SwitchRow(title: 'Wohndaten verlangen', subtitle: 'Adresse fuer Verein, Rechnung und regionale Zuordnung.', value: _addressRequired, onChanged: (value) => setState(() => _addressRequired = value)),
+                              _SwitchRow(title: 'Personendaten verlangen', subtitle: 'Basisdaten für Mitgliedschaft und Identitaet.', value: _personalRequired, onChanged: (value) => setState(() => _personalRequired = value)),
+                              _SwitchRow(title: 'Wohndaten verlangen', subtitle: 'Adresse für Verein, Rechnung und regionale Zuordnung.', value: _addressRequired, onChanged: (value) => setState(() => _addressRequired = value)),
                               _SwitchRow(title: 'Kontaktdaten verlangen', subtitle: 'E-Mail, Telefon und Notfallkontakt.', value: _contactRequired, onChanged: (value) => setState(() => _contactRequired = value)),
                               _SwitchRow(title: 'Erziehungsberechtigte verlangen', subtitle: 'Automatisch relevant bei minderjaehrigen Antragstellern.', value: _guardianRequired, onChanged: (value) => setState(() => _guardianRequired = value)),
                               _SwitchRow(title: 'Sportdaten abfragen', subtitle: 'Lizenznummer, Teamwunsch, Trainingsgruppe und Erfahrung.', value: _sportRequired, onChanged: (value) => setState(() => _sportRequired = value)),
-                              _SwitchRow(title: 'Zahlungsdaten verlangen', subtitle: 'Bar, Ueberweisung, SEPA und Zahlerdaten.', value: _paymentRequired, onChanged: (value) => setState(() => _paymentRequired = value)),
+                              _SwitchRow(title: 'Zahlungsdaten verlangen', subtitle: 'Bar, Überweisung, SEPA und Zahlerdaten.', value: _paymentRequired, onChanged: (value) => setState(() => _paymentRequired = value)),
                               _SwitchRow(title: 'Pflichtdokumente anzeigen', subtitle: 'Datenschutz, Regeln, Beitrag und SEPA mit Antrag verknuepfen.', value: _documentsRequired, onChanged: (value) => setState(() => _documentsRequired = value)),
-                              _SwitchRow(title: 'Rueckzug erlauben', subtitle: 'User koennen versehentlich gesendete Anfragen zurueckziehen.', value: _allowWithdraw, onChanged: (value) => setState(() => _allowWithdraw = value)),
+                              _SwitchRow(title: 'Rückzug erlauben', subtitle: 'User können versehentlich gesendete Anfragen zurückziehen.', value: _allowWithdraw, onChanged: (value) => setState(() => _allowWithdraw = value)),
                             ],
                           ),
                         ),
@@ -138,7 +138,7 @@ class _FormBuilderHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Die App bildet den Mitgliedsantrag als konfigurierbaren Formularbaukasten ab: Pflichtfelder, optionale Felder, Zahlungsregeln, Dokumente und Rueckzug.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          const Text('Die App bildet den Mitgliedsantrag als konfigurierbaren Formularbaukasten ab: Pflichtfelder, optionale Felder, Zahlungsregeln, Dokumente und Rückzug.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           const Row(children: [Expanded(child: MetricCard(value: '8', label: 'Gruppen')), SizedBox(width: 10), Expanded(child: MetricCard(value: '31', label: 'Felder')), SizedBox(width: 10), Expanded(child: MetricCard(value: '4', label: 'Intervalle'))]),
         ],
@@ -156,7 +156,7 @@ class _PaymentRules extends StatelessWidget {
   final ValueChanged<String> onPayment;
 
   static const intervals = ['Monatlich', '4 Monate', '6 Monate', 'Jaehrlich'];
-  static const payments = ['Ueberweisung', 'Bar', 'SEPA', 'Keine Zahlung'];
+  static const payments = ['Überweisung', 'Bar', 'SEPA', 'Keine Zahlung'];
 
   @override
   Widget build(BuildContext context) {

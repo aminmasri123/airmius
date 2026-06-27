@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'learning_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
@@ -56,14 +56,14 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Eyebrow('Aktuelle Lektion'),
             SizedBox(height: 10),
-            _LessonLine(icon: Icons.video_library_outlined, title: 'Video ansehen', body: 'Kapitel, Fortschritt und Wiedergabestatus werden spaeter gespeichert.', status: '12:40'),
+            _LessonLine(icon: Icons.video_library_outlined, title: 'Video ansehen', body: 'Kapitel, Fortschritt und Wiedergabestatus werden später gespeichert.', status: '12:40'),
             _LessonLine(icon: Icons.quiz_outlined, title: 'Quiz bestehen', body: 'Fragen, Versuche, Bewertung und Ergebnisanzeige.', status: '5 Fragen'),
             _LessonLine(icon: Icons.assignment_turned_in_outlined, title: 'Aufgabe abgeben', body: 'Text, Datei, Kommentar und Trainerfeedback vorbereiten.', status: 'Offen'),
           ])),
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [
             AirmiusButton(label: 'Als erledigt markieren', icon: Icons.check_circle_outline, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Lektion erledigt', body: '${widget.title} als abgeschlossen markieren und Fortschritt aktualisieren.', status: 'Fortschritt', icon: Icons.check_circle_outline)))),
-            AirmiusButton(label: 'Zertifikat', icon: Icons.verified_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Zertifikat', body: 'Zertifikat fuer ${widget.title} anzeigen, herunterladen oder teilen.', status: 'PDF', icon: Icons.verified_outlined)))),
+            AirmiusButton(label: 'Zertifikat', icon: Icons.verified_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Zertifikat', body: 'Zertifikat für ${widget.title} anzeigen, herunterladen oder teilen.', status: 'PDF', icon: Icons.verified_outlined)))),
           ]),
         ]),
       ),

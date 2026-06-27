@@ -56,7 +56,7 @@ class LocalizationCenterScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Eyebrow('Moduluebersetzungen'),
+                  const Eyebrow('Modulübersetzungen'),
                   const SizedBox(height: 10),
                   for (final module in appModules.take(12)) ...[
                     _TranslationLine(source: module.title, translated: scope.copy(module.title)),
@@ -72,14 +72,14 @@ class LocalizationCenterScreen extends StatelessWidget {
                 children: [
                   const Eyebrow('API-Synchronisierung'),
                   const SizedBox(height: 8),
-                  const Text('Die App speichert spaeter Sprache, Textrichtung, Benachrichtigungssprache und Public-Content-Locale ueber Laravel.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  const Text('Die App speichert später Sprache, Textrichtung, Benachrichtigungssprache und Public-Content-Locale über Laravel.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 10,
                     runSpacing: 10,
                     children: [
                       AirmiusButton(label: 'Sprache speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Sprache speichern', body: 'Aktuelle Sprache im Profil speichern und Public-/App-Inhalte neu laden.', status: scope.language.code, icon: Icons.save_outlined)),
-                      AirmiusButton(label: 'Uebersetzungen pruefen', icon: Icons.fact_check_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Uebersetzungen pruefen', body: 'Fehlende Detailtexte pro Modul sammeln, damit die Mobile-App vollstaendig lokalisiert werden kann.', status: 'L10n', icon: Icons.fact_check_outlined)),
+                      AirmiusButton(label: 'Übersetzungen prüfen', icon: Icons.fact_check_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Übersetzungen prüfen', body: 'Fehlende Detailtexte pro Modul sammeln, damit die Mobile-App vollstaendig lokalisiert werden kann.', status: 'L10n', icon: Icons.fact_check_outlined)),
                     ],
                   ),
                 ],

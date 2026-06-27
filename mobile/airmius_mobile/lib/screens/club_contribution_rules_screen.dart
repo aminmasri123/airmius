@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -18,7 +18,7 @@ class ClubContributionRulesScreen extends StatefulWidget {
 class _ClubContributionRulesScreenState extends State<ClubContributionRulesScreen> {
   late String _tab = widget.initialTab;
   String _frequency = 'Monatlich';
-  String _method = 'Ueberweisung';
+  String _method = 'Überweisung';
   bool _cashAllowed = true;
   bool _bankTransferAllowed = true;
   bool _sepaAllowed = false;
@@ -49,9 +49,9 @@ class _ClubContributionRulesScreenState extends State<ClubContributionRulesScree
                   const SizedBox(height: 14),
                   const Text('Jeder Verein entscheidet selbst, wie Mitglieder bezahlen.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
                   const SizedBox(height: 8),
-                  const Text('Diese UI bildet Beitragsarten, Zahlungsrhythmen, Zahlungsmethoden, Rechnungen, Mahnungen und Ausnahmen mobil ab. Laravel speichert spaeter die Regeln pro Verein und Mitgliedschaftstyp.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+                  const Text('Diese UI bildet Beitragsarten, Zahlungsrhythmen, Zahlungsmethoden, Rechnungen, Mahnungen und Ausnahmen mobil ab. Laravel speichert später die Regeln pro Verein und Mitgliedschaftstyp.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
                   const SizedBox(height: 14),
-                  Row(children: [Expanded(child: MetricCard(value: _frequency, label: 'Rhythmus')), const SizedBox(width: 10), Expanded(child: MetricCard(value: _method, label: 'Methode')), const SizedBox(width: 10), const Expanded(child: MetricCard(value: 'API', label: 'Spaeter'))]),
+                  Row(children: [Expanded(child: MetricCard(value: _frequency, label: 'Rhythmus')), const SizedBox(width: 10), Expanded(child: MetricCard(value: _method, label: 'Methode')), const SizedBox(width: 10), const Expanded(child: MetricCard(value: 'API', label: 'Später'))]),
                   const SizedBox(height: 14),
                   Wrap(spacing: 8, runSpacing: 8, children: [
                     for (final tab in _tabs)
@@ -132,14 +132,14 @@ class _RuleBuilderPanel extends StatelessWidget {
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(value: frequency, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Zahlungsrhythmus'), items: const ['Monatlich', 'Alle 4 Monate', 'Halbjaehrlich', 'Jaehrlich', 'Einmalig'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: onFrequency),
           const SizedBox(height: 12),
-          DropdownButtonFormField<String>(value: method, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Standard-Zahlmethode'), items: const ['Ueberweisung', 'Bar', 'SEPA', 'Online Checkout', 'Kostenlos'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: onMethod),
+          DropdownButtonFormField<String>(value: method, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Standard-Zahlmethode'), items: const ['Überweisung', 'Bar', 'SEPA', 'Online Checkout', 'Kostenlos'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: onMethod),
           const SizedBox(height: 10),
-          _RuleSwitch(icon: Icons.payments_outlined, title: 'Barzahlung erlauben', body: 'Verein kann Barzahlung fuer Mitglieder oder bestimmte Typen aktivieren.', value: cashAllowed, onChanged: onCash, color: AirmiusColors.green),
-          _RuleSwitch(icon: Icons.account_balance_outlined, title: 'Ueberweisung erlauben', body: 'Mitglieder erhalten spaeter Zahlungsdaten, Verwendungszweck und Fälligkeitsdatum.', value: bankTransferAllowed, onChanged: onBank, color: AirmiusColors.blue),
+          _RuleSwitch(icon: Icons.payments_outlined, title: 'Barzahlung erlauben', body: 'Verein kann Barzahlung für Mitglieder oder bestimmte Typen aktivieren.', value: cashAllowed, onChanged: onCash, color: AirmiusColors.green),
+          _RuleSwitch(icon: Icons.account_balance_outlined, title: 'Überweisung erlauben', body: 'Mitglieder erhalten später Zahlungsdaten, Verwendungszweck und Fälligkeitsdatum.', value: bankTransferAllowed, onChanged: onBank, color: AirmiusColors.blue),
           _RuleSwitch(icon: Icons.fact_check_outlined, title: 'SEPA erlauben', body: 'SEPA-Mandat kann als Pflichtdokument mit Mitgliedsantrag verknuepft werden.', value: sepaAllowed, onChanged: onSepa, color: AirmiusColors.amber),
           _RuleSwitch(icon: Icons.receipt_long_outlined, title: 'Rechnung automatisch erstellen', body: 'Nach Annahme der Mitgliedschaft wird die erste Rechnung oder Zahlungsaufgabe erzeugt.', value: invoiceAutoCreate, onChanged: onInvoice, color: AirmiusColors.green),
-          _RuleSwitch(icon: Icons.notifications_active_outlined, title: 'Mahnung / Erinnerung aktivieren', body: 'Offene Zahlungen koennen Push, E-Mail oder Adminhinweis ausloesen.', value: remindersEnabled, onChanged: onReminder, color: AirmiusColors.blue),
-          _RuleSwitch(icon: Icons.family_restroom_outlined, title: 'Familienrabatt', body: 'Rabattregeln fuer Geschwister, Familien oder Haushalte koennen spaeter hinterlegt werden.', value: familyDiscount, onChanged: onFamily, color: AirmiusColors.amber),
+          _RuleSwitch(icon: Icons.notifications_active_outlined, title: 'Mahnung / Erinnerung aktivieren', body: 'Offene Zahlungen können Push, E-Mail oder Adminhinweis ausloesen.', value: remindersEnabled, onChanged: onReminder, color: AirmiusColors.blue),
+          _RuleSwitch(icon: Icons.family_restroom_outlined, title: 'Familienrabatt', body: 'Rabattregeln für Geschwister, Familien oder Haushalte können später hinterlegt werden.', value: familyDiscount, onChanged: onFamily, color: AirmiusColors.amber),
           _RuleSwitch(icon: Icons.calendar_month_outlined, title: 'Probemonat', body: 'Mitgliedschaft kann mit kostenfreiem oder reduziertem Einstieg starten.', value: trialMonth, onChanged: onTrial, color: AirmiusColors.green),
         ]),
       );
@@ -167,7 +167,7 @@ class _ContributionRuleCard extends StatelessWidget {
           ]),
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: [
-            AirmiusButton(label: 'Regel bearbeiten', icon: Icons.edit_outlined, onPressed: () => openUiAction(context, title: '${rule.title} bearbeiten', body: 'Beitrag, Rhythmus, Methode, Faelligkeit, Rabatte, Rechnung und Sichtbarkeit fuer diesen Mitgliedschaftstyp bearbeiten.', status: 'Beitragsregel', icon: Icons.edit_outlined)),
+            AirmiusButton(label: 'Regel bearbeiten', icon: Icons.edit_outlined, onPressed: () => openUiAction(context, title: '${rule.title} bearbeiten', body: 'Beitrag, Rhythmus, Methode, Faelligkeit, Rabatte, Rechnung und Sichtbarkeit für diesen Mitgliedschaftstyp bearbeiten.', status: 'Beitragsregel', icon: Icons.edit_outlined)),
             AirmiusButton(label: 'Billing', icon: Icons.receipt_long_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BillingOperationsScreen()))),
             AirmiusButton(label: 'Mitgliedschaft', icon: Icons.assignment_ind_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MembershipOperationsScreen()))),
           ]),
@@ -187,10 +187,10 @@ class _ContributionWorkflowPanel extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const Eyebrow('Mitgliedschafts-Workflow'),
           const SizedBox(height: 8),
-          Text('Aktuelle Regel: $frequency per $method. Spaeter erzeugt Laravel daraus Mitgliedschaftsstatus, Zahlungsaufgabe, Rechnung, Mahnung, Dokumentpflicht und Admin-Audit.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+          Text('Aktuelle Regel: $frequency per $method. Später erzeugt Laravel daraus Mitgliedschaftsstatus, Zahlungsaufgabe, Rechnung, Mahnung, Dokumentpflicht und Admin-Audit.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: [
-            AirmiusButton(label: 'Regeln speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Beitragsregeln speichern', body: 'Zahlungsrhythmus $frequency, Methode $method, Rabatte, Rechnung, Mahnungen und Dokumentpflicht fuer Verein speichern.', status: 'Beitragsregeln', icon: Icons.save_outlined)),
+            AirmiusButton(label: 'Regeln speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Beitragsregeln speichern', body: 'Zahlungsrhythmus $frequency, Methode $method, Rabatte, Rechnung, Mahnungen und Dokumentpflicht für Verein speichern.', status: 'Beitragsregeln', icon: Icons.save_outlined)),
             AirmiusButton(label: 'Dokumente', icon: Icons.rule_folder_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubPolicyDocumentsScreen(initialTab: 'Beitrag')))),
           ]),
         ]),
@@ -234,15 +234,15 @@ class _ContributionRule {
 const _tabs = ['Regeln', 'Typen', 'Zahlung', 'Rabatte', 'Mahnungen'];
 
 const _rules = <_ContributionRule>[
-  _ContributionRule(area: 'Regeln', title: 'Standard-Mitgliedschaft', body: 'Grundbeitrag fuer normale Mitglieder mit monatlicher, halbjaehrlicher oder jaehrlicher Zahlung.', status: 'Aktiv', amount: '25 EUR', icon: Icons.person_outline, color: AirmiusColors.green),
+  _ContributionRule(area: 'Regeln', title: 'Standard-Mitgliedschaft', body: 'Grundbeitrag für normale Mitglieder mit monatlicher, halbjaehrlicher oder jaehrlicher Zahlung.', status: 'Aktiv', amount: '25 EUR', icon: Icons.person_outline, color: AirmiusColors.green),
   _ContributionRule(area: 'Regeln', title: 'Aufnahmegebuehr', body: 'Einmalige Gebuehr beim Beitritt, optional nach Annahme der Mitgliedschaft automatisch faellig.', status: 'Optional', amount: '15 EUR', icon: Icons.add_card_outlined, color: AirmiusColors.amber),
   _ContributionRule(area: 'Typen', title: 'Jugend / Minderjaehrige', body: 'Reduzierter Beitrag mit Guardian Consent, Elternkontakt und optionaler SEPA-Pflicht.', status: 'Guardian', amount: '12 EUR', icon: Icons.family_restroom_outlined, color: AirmiusColors.blue),
-  _ContributionRule(area: 'Typen', title: 'Trainer / Ehrenamt', body: 'Sonderstatus fuer Trainer, Admins oder Ehrenamtliche mit reduziertem oder kostenlosem Beitrag.', status: 'Sonderregel', amount: '0 EUR', icon: Icons.sports_outlined, color: AirmiusColors.green),
-  _ContributionRule(area: 'Zahlung', title: 'Bankueberweisung', body: 'IBAN, BIC, Verwendungszweck, Faelligkeit und manueller Admin-Abgleich.', status: 'Erlaubt', amount: 'Manual', icon: Icons.account_balance_outlined, color: AirmiusColors.blue),
+  _ContributionRule(area: 'Typen', title: 'Trainer / Ehrenamt', body: 'Sonderstatus für Trainer, Admins oder Ehrenamtliche mit reduziertem oder kostenlosem Beitrag.', status: 'Sonderregel', amount: '0 EUR', icon: Icons.sports_outlined, color: AirmiusColors.green),
+  _ContributionRule(area: 'Zahlung', title: 'Banküberweisung', body: 'IBAN, BIC, Verwendungszweck, Faelligkeit und manueller Admin-Abgleich.', status: 'Erlaubt', amount: 'Manual', icon: Icons.account_balance_outlined, color: AirmiusColors.blue),
   _ContributionRule(area: 'Zahlung', title: 'Barzahlung', body: 'Barzahlung mit Adminnotiz, Quittung, Zahlungsdatum und optionalem Beleg.', status: 'Erlaubt', amount: 'Cash', icon: Icons.payments_outlined, color: AirmiusColors.green),
-  _ContributionRule(area: 'Zahlung', title: 'SEPA-Mandat', body: 'SEPA als Dokumentpflicht im Antrag, Mandatsreferenz und spaeterer Einzug.', status: 'Vorbereitet', amount: 'SEPA', icon: Icons.fact_check_outlined, color: AirmiusColors.amber),
-  _ContributionRule(area: 'Rabatte', title: 'Familienrabatt', body: 'Rabatt fuer weitere Mitglieder im selben Haushalt oder fuer Geschwister.', status: 'Optional', amount: '-20%', icon: Icons.diversity_1_outlined, color: AirmiusColors.green),
-  _ContributionRule(area: 'Rabatte', title: 'Probemonat', body: 'Kostenloser oder reduzierter Einstiegsmonat mit automatischem Uebergang in regulaeren Beitrag.', status: 'Optional', amount: '1 Monat', icon: Icons.calendar_month_outlined, color: AirmiusColors.blue),
+  _ContributionRule(area: 'Zahlung', title: 'SEPA-Mandat', body: 'SEPA als Dokumentpflicht im Antrag, Mandatsreferenz und späterer Einzug.', status: 'Vorbereitet', amount: 'SEPA', icon: Icons.fact_check_outlined, color: AirmiusColors.amber),
+  _ContributionRule(area: 'Rabatte', title: 'Familienrabatt', body: 'Rabatt für weitere Mitglieder im selben Haushalt oder für Geschwister.', status: 'Optional', amount: '-20%', icon: Icons.diversity_1_outlined, color: AirmiusColors.green),
+  _ContributionRule(area: 'Rabatte', title: 'Probemonat', body: 'Kostenloser oder reduzierter Einstiegsmonat mit automatischem Übergang in regulaeren Beitrag.', status: 'Optional', amount: '1 Monat', icon: Icons.calendar_month_outlined, color: AirmiusColors.blue),
   _ContributionRule(area: 'Mahnungen', title: 'Zahlungserinnerung', body: 'Push, E-Mail oder Adminhinweis bei offenen Zahlungen nach Faelligkeit.', status: 'Aktiv', amount: '7 Tage', icon: Icons.notifications_active_outlined, color: AirmiusColors.amber),
   _ContributionRule(area: 'Mahnungen', title: 'Mitgliedschaft pausieren', body: 'Admin kann bei Zahlungsverzug Status, Teamrechte und Kommunikation steuern.', status: 'Admin', amount: 'Status', icon: Icons.pause_circle_outline, color: AirmiusColors.red),
 ];

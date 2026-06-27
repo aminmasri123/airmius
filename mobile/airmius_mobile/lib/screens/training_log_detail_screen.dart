@@ -165,7 +165,7 @@ class _TrainingLogDetailScreenState extends State<TrainingLogDetailScreen> {
               ),
             ),
             const SizedBox(height: 14),
-            AirmiusButton(label: 'Log speichern', icon: Icons.check_circle_outline, onPressed: () => openUiAction(context, title: 'Log speichern', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.check_circle_outline)),
+            AirmiusButton(label: 'Log speichern', icon: Icons.check_circle_outline, onPressed: () => openUiAction(context, title: 'Log speichern', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.check_circle_outline)),
           ],
         ),
       ),

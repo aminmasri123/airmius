@@ -9,14 +9,14 @@ class ClubSurveyPollVotingSuiteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pollTypes = [
-      _PollType('Mitgliederfeedback', 'Anonym moeglich', 'Zufriedenheit, Trainingszeiten, Vereinsleben', AirmiusColors.blue, Icons.rate_review_outlined),
+      _PollType('Mitgliederfeedback', 'Anonym möglich', 'Zufriedenheit, Trainingszeiten, Vereinsleben', AirmiusColors.blue, Icons.rate_review_outlined),
       _PollType('Event-Abstimmung', 'Schnell', 'Terminfindung, Helferbedarf, Essensauswahl', AirmiusColors.green, Icons.event_available_outlined),
       _PollType('Vereinsentscheidung', 'Verbindlich', 'Quorum, Stimmberechtigung, Ergebnisprotokoll', AirmiusColors.amber, Icons.how_to_vote_outlined),
-      _PollType('Team-Check', 'Trainer', 'Belastung, Verfuegbarkeit, Stimmung, Rueckmeldung', AirmiusColors.pink, Icons.groups_2_outlined),
+      _PollType('Team-Check', 'Trainer', 'Belastung, Verfuegbarkeit, Stimmung, Rückmeldung', AirmiusColors.pink, Icons.groups_2_outlined),
     ];
 
     final workflow = [
-      _WorkflowStep('1', 'Zielgruppe waehlen', 'Verein, Team, Rolle, Mitgliederstatus oder eingeladene Kontakte.'),
+      _WorkflowStep('1', 'Zielgruppe wählen', 'Verein, Team, Rolle, Mitgliederstatus oder eingeladene Kontakte.'),
       _WorkflowStep('2', 'Fragen konfigurieren', 'Single Choice, Multiple Choice, Skala, Freitext, Datei und Pflichtfeld.'),
       _WorkflowStep('3', 'Regeln setzen', 'Anonymitaet, Laufzeit, Quorum, Mehrfachantworten, Guardian-Freigabe und Sichtbarkeit.'),
       _WorkflowStep('4', 'Auswerten', 'Ergebnis, Export, Kommentar, Entscheidung, Aufgabe und Benachrichtigung.'),
@@ -43,9 +43,9 @@ class ClubSurveyPollVotingSuiteScreen extends StatelessWidget {
                 children: const [
                   Eyebrow('CLUB SURVEY SUITE'),
                   SizedBox(height: 10),
-                  Text('Vereine koennen Mitglieder wirklich einbeziehen.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
+                  Text('Vereine können Mitglieder wirklich einbeziehen.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
                   SizedBox(height: 8),
-                  Text('Die mobile App bildet Umfragen, Abstimmungen und Feedback so ab, dass Vereinsadmins spaeter mit Rollenrechten, Benachrichtigungen, Export und Audit arbeiten koennen.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
+                  Text('Die mobile App bildet Umfragen, Abstimmungen und Feedback so ab, dass Vereinsadmins später mit Rollenrechten, Benachrichtigungen, Export und Audit arbeiten können.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
                 ],
               ),
             ),

@@ -28,7 +28,7 @@ class _SubscriptionEntitlementFeatureGateSuiteScreenState extends State<Subscrip
       ),
       body: PageFrame(
         title: 'Subscription Entitlement Feature Gates',
-        subtitle: 'Mobile UI fuer Tarife, Vereinslimits, Rollenrechte, Modulzugriff, Upgrade-Hinweise und API-ready Entitlements.',
+        subtitle: 'Mobile UI für Tarife, Vereinslimits, Rollenrechte, Modulzugriff, Upgrade-Hinweise und API-ready Entitlements.',
         trailing: const StatusPill('Entitlements', color: AirmiusColors.amber),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -46,7 +46,7 @@ class _SubscriptionEntitlementFeatureGateSuiteScreenState extends State<Subscrip
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Die Flutter-App bereitet Feature-Gates so vor, dass Vereine, Mitglieder, Sponsoren und Admins spaeter klare Limits, Upgrades und gesperrte Module sehen.',
+                    'Die Flutter-App bereitet Feature-Gates so vor, dass Vereine, Mitglieder, Sponsoren und Admins später klare Limits, Upgrades und gesperrte Module sehen.',
                     style: TextStyle(color: AirmiusColors.muted, height: 1.42),
                   ),
                   const SizedBox(height: 14),
@@ -85,7 +85,7 @@ class _SubscriptionEntitlementFeatureGateSuiteScreenState extends State<Subscrip
                 children: [
                   Row(children: [const Expanded(child: Eyebrow('AKTIVER PLAN')), StatusPill(_plan, color: AirmiusColors.blue)]),
                   const SizedBox(height: 12),
-                  _LimitCard(title: 'Mitgliederlimit', value: _plan == 'Free' ? '25' : _plan == 'Verein Pro' ? '250' : 'Unbegrenzt', body: 'Wird fuer Mitgliederverwaltung, Einladungen und Import/Export angezeigt.'),
+                  _LimitCard(title: 'Mitgliederlimit', value: _plan == 'Free' ? '25' : _plan == 'Verein Pro' ? '250' : 'Unbegrenzt', body: 'Wird für Mitgliederverwaltung, Einladungen und Import/Export angezeigt.'),
                   const SizedBox(height: 10),
                   _LimitCard(title: 'Teams', value: _plan == 'Free' ? '2' : _plan == 'Verein Pro' ? '12' : 'Unbegrenzt', body: 'Steuert Teamverwaltung, Kader, Rollen und Teamdateien.'),
                   const SizedBox(height: 10),
@@ -110,7 +110,7 @@ class _SubscriptionEntitlementFeatureGateSuiteScreenState extends State<Subscrip
                   _GateToggle(
                     icon: Icons.account_balance_wallet_outlined,
                     title: 'Vereinsfinanzen',
-                    body: 'Beitraege, Rechnungen, Zahlungsstatus, Mahnungen, SEPA und Quittungen.',
+                    body: 'Beiträge, Rechnungen, Zahlungsstatus, Mahnungen, SEPA und Quittungen.',
                     enabled: _financeModule,
                     onChanged: (value) => setState(() => _financeModule = value),
                   ),

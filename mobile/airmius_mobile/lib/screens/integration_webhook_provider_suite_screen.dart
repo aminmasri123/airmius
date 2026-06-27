@@ -30,7 +30,7 @@ class _IntegrationWebhookProviderSuiteScreenState extends State<IntegrationWebho
       ),
       body: PageFrame(
         title: 'Integration Webhook Provider Center',
-        subtitle: 'Mobile UI fuer Mail, Push, Payments, Storage, Maps, Providerstatus, Webhooks, Secrets und Retry-Logs.',
+        subtitle: 'Mobile UI für Mail, Push, Payments, Storage, Maps, Providerstatus, Webhooks, Secrets und Retry-Logs.',
         trailing: const StatusPill('Ops', color: AirmiusColors.blue),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -48,7 +48,7 @@ class _IntegrationWebhookProviderSuiteScreenState extends State<IntegrationWebho
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Die App bereitet Status, Konfiguration und Fehlerbehandlung fuer Provider vor, die spaeter Laravel-API, Jobs und Webhooks verbinden.',
+                    'Die App bereitet Status, Konfiguration und Fehlerbehandlung für Provider vor, die später Laravel-API, Jobs und Webhooks verbinden.',
                     style: TextStyle(color: AirmiusColors.muted, height: 1.42),
                   ),
                   const SizedBox(height: 14),
@@ -90,7 +90,7 @@ class _IntegrationWebhookProviderSuiteScreenState extends State<IntegrationWebho
                   _OpsToggle(
                     icon: Icons.webhook_outlined,
                     title: 'Webhook-Zustellung',
-                    body: 'Provider-Events fuer Zahlung, Upload, E-Mail, Push und Moderation werden als Zustellstatus angezeigt.',
+                    body: 'Provider-Events für Zahlung, Upload, E-Mail, Push und Moderation werden als Zustellstatus angezeigt.',
                     value: _webhooks,
                     onChanged: (value) => setState(() => _webhooks = value),
                   ),
@@ -135,7 +135,7 @@ class _IntegrationWebhookProviderSuiteScreenState extends State<IntegrationWebho
                   const _WebhookLine(method: 'POST', path: '/webhooks/mail/bounced', status: 'Retry 2', color: AirmiusColors.amber),
                   const _WebhookLine(method: 'POST', path: '/webhooks/storage/scanned', status: 'Queued', color: AirmiusColors.blue),
                   const SizedBox(height: 10),
-                  AirmiusButton(label: 'Webhook spaeter erneut senden', icon: Icons.replay_outlined, onPressed: () {}),
+                  AirmiusButton(label: 'Webhook später erneut senden', icon: Icons.replay_outlined, onPressed: () {}),
                 ],
               ),
             ),
@@ -146,7 +146,7 @@ class _IntegrationWebhookProviderSuiteScreenState extends State<IntegrationWebho
                 children: [
                   const Eyebrow('LARAVEL BINDING'),
                   const SizedBox(height: 8),
-                  const Text('Spaeter verbindet diese UI Provider-Konfigurationen mit Laravel Jobs, Queues, Events, Notifications und gesicherten Admin-Routen.', style: TextStyle(color: AirmiusColors.muted, height: 1.38)),
+                  const Text('Später verbindet diese UI Provider-Konfigurationen mit Laravel Jobs, Queues, Events, Notifications und gesicherten Admin-Routen.', style: TextStyle(color: AirmiusColors.muted, height: 1.38)),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
@@ -180,16 +180,16 @@ class _Provider {
 
 const _providers = [
   _Provider(area: 'Mail', name: 'Transactional Mail', body: 'Verifizierung, Passwort, Mitgliedsantrag, Admin-Info, Rechnungen und Support-Mails.', status: 'Ready', icon: Icons.mail_outline, color: AirmiusColors.blue),
-  _Provider(area: 'Mail', name: 'Mail Bounce Monitor', body: 'Bounces, Beschwerden, Zustellfehler und erneute Verifikation fuer Userkontakte.', status: 'Retry', icon: Icons.mark_email_unread_outlined, color: AirmiusColors.amber),
+  _Provider(area: 'Mail', name: 'Mail Bounce Monitor', body: 'Bounces, Beschwerden, Zustellfehler und erneute Verifikation für Userkontakte.', status: 'Retry', icon: Icons.mark_email_unread_outlined, color: AirmiusColors.amber),
   _Provider(area: 'Push', name: 'Mobile Push', body: 'Mitgliedsanfrage, Chat, Event-Erinnerung, Zahlung, Moderation und Deep Links.', status: 'Prepared', icon: Icons.notifications_active_outlined, color: AirmiusColors.green),
   _Provider(area: 'Push', name: 'Quiet Hours', body: 'Ruhezeiten, Digest, Themenkanal, Opt-in und Device Token Management.', status: 'Prepared', icon: Icons.notifications_paused_outlined, color: AirmiusColors.blue),
-  _Provider(area: 'Payments', name: 'Payment Provider', body: 'Beitraege, Checkout, Rechnungen, Banktransfer, Refunds und Zahlungsstatus.', status: 'Mapped', icon: Icons.payments_outlined, color: AirmiusColors.green),
-  _Provider(area: 'Payments', name: 'SEPA Mandates', body: 'Mandat, IBAN-Prüfung, Zahlungsrhythmus, Ruecklastschrift und Audit.', status: 'Mapped', icon: Icons.account_balance_outlined, color: AirmiusColors.amber),
+  _Provider(area: 'Payments', name: 'Payment Provider', body: 'Beiträge, Checkout, Rechnungen, Banktransfer, Refunds und Zahlungsstatus.', status: 'Mapped', icon: Icons.payments_outlined, color: AirmiusColors.green),
+  _Provider(area: 'Payments', name: 'SEPA Mandates', body: 'Mandat, IBAN-Prüfung, Zahlungsrhythmus, Rücklastschrift und Audit.', status: 'Mapped', icon: Icons.account_balance_outlined, color: AirmiusColors.amber),
   _Provider(area: 'Storage', name: 'File Storage', body: 'Vereinsdokumente, Chat-Anhaenge, Produktbilder, Reports und Upload-Scans.', status: 'Ready', icon: Icons.folder_copy_outlined, color: AirmiusColors.blue),
-  _Provider(area: 'Storage', name: 'Virus Scan', body: 'Upload-Prüfung, Quarantaene, Freigabe, Loeschung und Admin-Hinweis.', status: 'Queued', icon: Icons.security_outlined, color: AirmiusColors.amber),
+  _Provider(area: 'Storage', name: 'Virus Scan', body: 'Upload-Prüfung, Quarantaene, Freigabe, Löschung und Admin-Hinweis.', status: 'Queued', icon: Icons.security_outlined, color: AirmiusColors.amber),
   _Provider(area: 'Maps', name: 'Map Provider', body: 'Sportkarte, Vereinsorte, Events, Fahrgemeinschaften, Routen und Standortfreigaben.', status: 'Prepared', icon: Icons.map_outlined, color: AirmiusColors.green),
   _Provider(area: 'Maps', name: 'Geocoding', body: 'Adresse, Trainingsort, Treffpunkt, PLZ-Suche und Radiusfilter.', status: 'Prepared', icon: Icons.location_on_outlined, color: AirmiusColors.blue),
-  _Provider(area: 'AI', name: 'Coach Assist', body: 'Trainingshinweise, Content-Vorschlaege, Moderationshilfe und Lernfeedback.', status: 'Optional', icon: Icons.auto_awesome_outlined, color: AirmiusColors.amber),
+  _Provider(area: 'AI', name: 'Coach Assist', body: 'Trainingshinweise, Content-Vorschläge, Moderationshilfe und Lernfeedback.', status: 'Optional', icon: Icons.auto_awesome_outlined, color: AirmiusColors.amber),
   _Provider(area: 'AI', name: 'Document Assist', body: 'OCR, Dokumentklassifikation, Datenschutz-Hinweise und Formularvorbefuellung.', status: 'Optional', icon: Icons.document_scanner_outlined, color: AirmiusColors.blue),
 ];
 

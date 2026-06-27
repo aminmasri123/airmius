@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -22,7 +22,7 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
       title: 'Loading States',
       area: 'States',
       status: 'UI',
-      body: 'Skeletons, Spinner, Pull-to-refresh, erste Datenladung und sanfte App-Uebergaenge fuer API-Views.',
+      body: 'Skeletons, Spinner, Pull-to-refresh, erste Datenladung und sanfte App-Übergaenge für API-Views.',
       icon: Icons.hourglass_top_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -30,7 +30,7 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
       title: 'Empty States',
       area: 'States',
       status: 'Leer',
-      body: 'Leere Vereinslisten, keine Teams, keine Dateien, keine Beitraege, keine Rechnungen und hilfreiche CTA-Hinweise.',
+      body: 'Leere Vereinslisten, keine Teams, keine Dateien, keine Beiträge, keine Rechnungen und hilfreiche CTA-Hinweise.',
       icon: Icons.inbox_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -38,7 +38,7 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
       title: 'Success States',
       area: 'States',
       status: 'Erfolg',
-      body: 'Gesendet, gespeichert, beantragt, hochgeladen, bezahlt, beigetreten und widerrufen als klare Mobile-Rueckmeldung.',
+      body: 'Gesendet, gespeichert, beantragt, hochgeladen, bezahlt, beigetreten und widerrufen als klare Mobile-Rückmeldung.',
       icon: Icons.check_circle_outline,
       color: Color(0xFFF8B84E),
     ),
@@ -54,7 +54,7 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
       title: 'Upload UI',
       area: 'Forms',
       status: 'Upload',
-      body: 'Datei auswaehlen, Dateiname, Groesse, Fortschritt, Uploadfehler und Dateimanager-Verknuepfung.',
+      body: 'Datei auswählen, Dateiname, Groesse, Fortschritt, Uploadfehler und Dateimanager-Verknuepfung.',
       icon: Icons.upload_file_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -62,7 +62,7 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
       title: 'Confirm Modals',
       area: 'Forms',
       status: 'Modal',
-      body: 'Anfrage zurueckziehen, Konto loeschen, Zahlung bestaetigen, Datei entfernen und kritische Aktionen.',
+      body: 'Anfrage zurückziehen, Konto löschen, Zahlung bestätigen, Datei entfernen und kritische Aktionen.',
       icon: Icons.warning_amber_outlined,
       color: Color(0xFFFF6B6B),
     ),
@@ -78,7 +78,7 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
       title: 'Permission Errors',
       area: 'Errors',
       status: '403',
-      body: 'Kein Zugriff, Rolle fehlt, Verein gesperrt, Team privat und sichere Ruecknavigation.',
+      body: 'Kein Zugriff, Rolle fehlt, Verein gesperrt, Team privat und sichere Rücknavigation.',
       icon: Icons.lock_outline,
       color: Color(0xFFF8B84E),
     ),
@@ -112,7 +112,7 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
                     const _Hero(
                       eyebrow: 'MOBILE STATES',
                       title: 'Zustaende, Formulare & Fehler',
-                      subtitle: 'Native UI-Kontrollsuite fuer Loading, Empty, Success, Dynamic Forms, Uploads, Modals, Validierung, Rechte und Offline-Retry.',
+                      subtitle: 'Native UI-Kontrollsuite für Loading, Empty, Success, Dynamic Forms, Uploads, Modals, Validierung, Rechte und Offline-Retry.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -142,11 +142,11 @@ class _MobileStateFormErrorSuiteScreenState extends State<MobileStateFormErrorSu
                     ],
                     _ActionPanel(
                       firstIcon: Icons.format_list_bulleted_outlined,
-                      firstLabel: 'Form-State pruefen',
+                      firstLabel: 'Form-State prüfen',
                       secondIcon: Icons.wifi_off_outlined,
-                      secondLabel: 'Retry-State pruefen',
+                      secondLabel: 'Retry-State prüfen',
                       onFirst: () => openUiAction(context, title: 'Form-State', body: 'Dynamische Formular- und Validierungszustaende sind als UI-Pattern vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
-                      onSecond: () => openUiAction(context, title: 'Offline Retry', body: 'Offline-, Fehler- und Retry-Zustaende sind fuer API-Anbindung vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
+                      onSecond: () => openUiAction(context, title: 'Offline Retry', body: 'Offline-, Fehler- und Retry-Zustaende sind für API-Anbindung vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
                       onSupport: () => _openSupport(context),
                     ),
                   ],

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -18,14 +18,14 @@ class _FinanceBillingMemberPaymentSuiteScreenState extends State<FinanceBillingM
   bool _showMemberFinance = true;
 
   final List<_SuiteItem> _items = const [
-    _SuiteItem('Billing Uebersicht', 'Billing', 'Index', 'Rechnungen, Zahlungsstatus, Plaene, offene Betraege und Verlauf als mobile UI.', Icons.receipt_long_outlined, Color(0xFF5BA7FF)),
+    _SuiteItem('Billing Übersicht', 'Billing', 'Index', 'Rechnungen, Zahlungsstatus, Plaene, offene Betraege und Verlauf als mobile UI.', Icons.receipt_long_outlined, Color(0xFF5BA7FF)),
     _SuiteItem('Billing Detail', 'Billing', 'Detail', 'Rechnung, Positionen, Steuer, Zahlungsart, PDF-Hinweis, Support und Status.', Icons.request_quote_outlined, Color(0xFF2EE59D)),
-    _SuiteItem('Checkout Status', 'Billing', 'Status', 'Zahlung erfolgreich, ausstehend, fehlgeschlagen, Banktransfer und Rueckkehrpfade.', Icons.task_alt_outlined, Color(0xFFF8B84E)),
-    _SuiteItem('Club Finance Cockpit', 'ClubFinance', 'Verein', 'Vereinseinnahmen, Beitraege, Zahlungsrhythmus, Mahnungen und Exporte.', Icons.account_balance_wallet_outlined, Color(0xFFB084FF)),
+    _SuiteItem('Checkout Status', 'Billing', 'Status', 'Zahlung erfolgreich, ausstehend, fehlgeschlagen, Banktransfer und Rückkehrpfade.', Icons.task_alt_outlined, Color(0xFFF8B84E)),
+    _SuiteItem('Club Finance Cockpit', 'ClubFinance', 'Verein', 'Vereinseinnahmen, Beiträge, Zahlungsrhythmus, Mahnungen und Exporte.', Icons.account_balance_wallet_outlined, Color(0xFFB084FF)),
     _SuiteItem('Mitglied Finanzen', 'MemberFinance', 'Member', 'Mitgliedsbeitrag, Zahlungsart, IBAN-Hinweise, Barzahlung und offene Forderungen.', Icons.account_circle_outlined, Color(0xFFFF6B6B)),
     _SuiteItem('Finance Record Detail', 'MemberFinance', 'Record', 'Einzelner Zahlungseintrag mit Betrag, Faelligkeit, Status, Notiz und Beleg.', Icons.description_outlined, Color(0xFF5BA7FF)),
-    _SuiteItem('Beitragszyklen', 'ClubFinance', 'Rules', 'Monatlich, viermonatlich, halbjaehrlich, jaehrlich, Sonderbeitraege und Vereinsregeln.', Icons.calendar_month_outlined, Color(0xFF2EE59D)),
-    _SuiteItem('Zahlungsabgleich', 'Billing', 'Match', 'Referenznummer, Banktransfer, manuelle Freigabe, Rueckfragen und Admin-Audit.', Icons.compare_arrows_outlined, Color(0xFFF8B84E)),
+    _SuiteItem('Beitragszyklen', 'ClubFinance', 'Rules', 'Monatlich, viermonatlich, halbjaehrlich, jaehrlich, Sonderbeiträge und Vereinsregeln.', Icons.calendar_month_outlined, Color(0xFF2EE59D)),
+    _SuiteItem('Zahlungsabgleich', 'Billing', 'Match', 'Referenznummer, Banktransfer, manuelle Freigabe, Rückfragen und Admin-Audit.', Icons.compare_arrows_outlined, Color(0xFFF8B84E)),
   ];
 
   List<_SuiteItem> get _visible => _filter == 'Alle' ? _items : _items.where((item) => item.area == _filter).toList();
@@ -47,8 +47,8 @@ class _FinanceBillingMemberPaymentSuiteScreenState extends State<FinanceBillingM
                     const SizedBox(height: 18),
                     const _Hero(
                       eyebrow: 'FINANCE FLOW',
-                      title: 'Billing & Mitgliedsbeitraege',
-                      subtitle: 'Native Mobile-UI fuer Billing, Checkout Status, Club Finance, Member Finance, Beitragszyklen und Zahlungsabgleich.',
+                      title: 'Billing & Mitgliedsbeiträge',
+                      subtitle: 'Native Mobile-UI für Billing, Checkout Status, Club Finance, Member Finance, Beitragszyklen und Zahlungsabgleich.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -80,9 +80,9 @@ class _FinanceBillingMemberPaymentSuiteScreenState extends State<FinanceBillingM
                       firstIcon: Icons.receipt_long_outlined,
                       firstLabel: 'Rechnung ansehen',
                       secondIcon: Icons.price_check_outlined,
-                      secondLabel: 'Beitrag pruefen',
+                      secondLabel: 'Beitrag prüfen',
                       onFirst: () => openUiAction(context, title: 'Billing', body: 'Billing- und Checkout-Status-UI sind vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
-                      onSecond: () => openUiAction(context, title: 'Mitgliedsbeitrag', body: 'Member- und Club-Finance-UI sind fuer API-Daten vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
+                      onSecond: () => openUiAction(context, title: 'Mitgliedsbeitrag', body: 'Member- und Club-Finance-UI sind für API-Daten vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
                       onSupport: () => _openSupport(context),
                     ),
                   ],

@@ -30,7 +30,7 @@ class _SystemJobQueueMonitorSuiteScreenState extends State<SystemJobQueueMonitor
       ),
       body: PageFrame(
         title: 'System Job Queue Monitor',
-        subtitle: 'Mobile Betriebs-UI fuer E-Mails, Push, Upload-Scans, Importe, Exporte, Zahlungen, Webhooks und Retry-Queues.',
+        subtitle: 'Mobile Betriebs-UI für E-Mails, Push, Upload-Scans, Importe, Exporte, Zahlungen, Webhooks und Retry-Queues.',
         trailing: const StatusPill('Queue Ops', color: AirmiusColors.amber),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -43,12 +43,12 @@ class _SystemJobQueueMonitorSuiteScreenState extends State<SystemJobQueueMonitor
                   const Eyebrow('BACKGROUND JOBS'),
                   const SizedBox(height: 8),
                   const Text(
-                    'Alles, was im Hintergrund laeuft, bekommt Kontrolle.',
+                    'Alles, was im Hintergrund läuft, bekommt Kontrolle.',
                     style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08),
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Diese Ansicht bereitet die mobile Admin-UI fuer Laravel Queues, Jobs, Retry, Dead Letter, Wartung und Betriebsalarme vor.',
+                    'Diese Ansicht bereitet die mobile Admin-UI für Laravel Queues, Jobs, Retry, Dead Letter, Wartung und Betriebsalarme vor.',
                     style: TextStyle(color: AirmiusColors.muted, height: 1.42),
                   ),
                   const SizedBox(height: 14),
@@ -90,28 +90,28 @@ class _SystemJobQueueMonitorSuiteScreenState extends State<SystemJobQueueMonitor
                   _QueueToggle(
                     icon: Icons.replay_outlined,
                     title: 'Automatischer Retry',
-                    body: 'Fehlgeschlagene Jobs werden mit Backoff erneut gestartet, ohne dass Admins sofort eingreifen muessen.',
+                    body: 'Fehlgeschlagene Jobs werden mit Backoff erneut gestartet, ohne dass Admins sofort eingreifen müssen.',
                     enabled: _autoRetry,
                     onChanged: (value) => setState(() => _autoRetry = value),
                   ),
                   _QueueToggle(
                     icon: Icons.error_outline,
                     title: 'Dead Letter Queue',
-                    body: 'Nicht reparierbare Jobs bleiben sichtbar, auditierbar und koennen gezielt erneut ausgefuehrt werden.',
+                    body: 'Nicht reparierbare Jobs bleiben sichtbar, auditierbar und können gezielt erneut ausgefuehrt werden.',
                     enabled: _deadLetter,
                     onChanged: (value) => setState(() => _deadLetter = value),
                   ),
                   _QueueToggle(
                     icon: Icons.notifications_active_outlined,
                     title: 'Admin Alerts',
-                    body: 'Kritische Queue-Probleme loesen In-App, E-Mail oder Push-Hinweise fuer Admins aus.',
+                    body: 'Kritische Queue-Probleme loesen In-App, E-Mail oder Push-Hinweise für Admins aus.',
                     enabled: _adminAlerts,
                     onChanged: (value) => setState(() => _adminAlerts = value),
                   ),
                   _QueueToggle(
                     icon: Icons.construction_outlined,
                     title: 'Wartungsmodus',
-                    body: 'Nichtkritische Jobs koennen pausiert werden, waehrend Login, Sicherheit und Zahlungsstatus weiterlaufen.',
+                    body: 'Nichtkritische Jobs können pausiert werden, während Login, Sicherheit und Zahlungsstatus weiterlaufen.',
                     enabled: _maintenanceMode,
                     onChanged: (value) => setState(() => _maintenanceMode = value),
                     last: true,
@@ -131,7 +131,7 @@ class _SystemJobQueueMonitorSuiteScreenState extends State<SystemJobQueueMonitor
                 children: [
                   const Eyebrow('ADMIN AKTIONEN'),
                   const SizedBox(height: 8),
-                  const Text('Spaeter koennen berechtigte Admins Jobs erneut ausfuehren, pausieren, exportieren, als geloest markieren oder an Provider-Logs springen.', style: TextStyle(color: AirmiusColors.muted, height: 1.38)),
+                  const Text('Später können berechtigte Admins Jobs erneut ausfuehren, pausieren, exportieren, als geloest markieren oder an Provider-Logs springen.', style: TextStyle(color: AirmiusColors.muted, height: 1.38)),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
@@ -143,7 +143,7 @@ class _SystemJobQueueMonitorSuiteScreenState extends State<SystemJobQueueMonitor
                     ],
                   ),
                   const SizedBox(height: 12),
-                  AirmiusButton(label: 'Fehlgeschlagene Jobs pruefen', icon: Icons.fact_check_outlined, onPressed: () {}),
+                  AirmiusButton(label: 'Fehlgeschlagene Jobs prüfen', icon: Icons.fact_check_outlined, onPressed: () {}),
                 ],
               ),
             ),
@@ -167,12 +167,12 @@ class _JobEntry {
 }
 
 const _jobs = [
-  _JobEntry(queue: 'Mail', title: 'Mitgliedsanfrage Admin-Mail', body: 'Benachrichtigt Vereinsadmins ueber neue Antraege, Rueckzuege und Rueckfragen.', status: 'Running', time: 'vor 2 Min.', icon: Icons.mail_outline, color: AirmiusColors.blue),
-  _JobEntry(queue: 'Files', title: 'Dokument Upload Scan', body: 'Prueft Datenschutz, Satzung, Beitragsordnung und Formularanhaenge vor Freigabe.', status: 'Queued', time: 'vor 4 Min.', icon: Icons.document_scanner_outlined, color: AirmiusColors.amber),
-  _JobEntry(queue: 'Payments', title: 'Beitragsstatus Sync', body: 'Synchronisiert offene Beitraege, Rechnungen, Mahnungen und Zahlungsbestaetigungen.', status: 'OK', time: 'vor 8 Min.', icon: Icons.receipt_long_outlined, color: AirmiusColors.green),
-  _JobEntry(queue: 'Webhooks', title: 'Payment Webhook Retry', body: 'Wiederholt fehlgeschlagene Provider-Events mit Backoff und Signaturpruefung.', status: 'Retry 2', time: 'vor 12 Min.', icon: Icons.webhook_outlined, color: AirmiusColors.amber),
-  _JobEntry(queue: 'Imports', title: 'Mitglieder CSV Import', body: 'Fuehrt Mapping, Dublettenpruefung, Einladungen und Audit-Notizen aus.', status: 'Failed', time: 'vor 18 Min.', icon: Icons.import_export_outlined, color: AirmiusColors.red),
-  _JobEntry(queue: 'Push', title: 'Training Reminder Push', body: 'Sendet Erinnerungen fuer Events, Fahrgemeinschaften und Teamtermine.', status: 'Scheduled', time: '15:30', icon: Icons.notifications_none_outlined, color: AirmiusColors.blue),
+  _JobEntry(queue: 'Mail', title: 'Mitgliedsanfrage Admin-Mail', body: 'Benachrichtigt Vereinsadmins über neue Antraege, Rückzuege und Rückfragen.', status: 'Running', time: 'vor 2 Min.', icon: Icons.mail_outline, color: AirmiusColors.blue),
+  _JobEntry(queue: 'Files', title: 'Dokument Upload Scan', body: 'Prüft Datenschutz, Satzung, Beitragsordnung und Formularanhaenge vor Freigabe.', status: 'Queued', time: 'vor 4 Min.', icon: Icons.document_scanner_outlined, color: AirmiusColors.amber),
+  _JobEntry(queue: 'Payments', title: 'Beitragsstatus Sync', body: 'Synchronisiert offene Beiträge, Rechnungen, Mahnungen und Zahlungsbestätigungen.', status: 'OK', time: 'vor 8 Min.', icon: Icons.receipt_long_outlined, color: AirmiusColors.green),
+  _JobEntry(queue: 'Webhooks', title: 'Payment Webhook Retry', body: 'Wiederholt fehlgeschlagene Provider-Events mit Backoff und Signaturprüfung.', status: 'Retry 2', time: 'vor 12 Min.', icon: Icons.webhook_outlined, color: AirmiusColors.amber),
+  _JobEntry(queue: 'Imports', title: 'Mitglieder CSV Import', body: 'Fuehrt Mapping, Dublettenprüfung, Einladungen und Audit-Notizen aus.', status: 'Failed', time: 'vor 18 Min.', icon: Icons.import_export_outlined, color: AirmiusColors.red),
+  _JobEntry(queue: 'Push', title: 'Training Reminder Push', body: 'Sendet Erinnerungen für Events, Fahrgemeinschaften und Teamtermine.', status: 'Scheduled', time: '15:30', icon: Icons.notifications_none_outlined, color: AirmiusColors.blue),
 ];
 
 class _JobCard extends StatelessWidget {

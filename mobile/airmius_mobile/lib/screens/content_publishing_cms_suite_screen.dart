@@ -42,7 +42,7 @@ class _ContentPublishingCmsSuiteScreenState extends State<ContentPublishingCmsSu
         color: AirmiusColors.green,
       ),
       const _ContentRow(
-        title: 'Oeffentlicher Blogartikel',
+        title: 'Öffentlicher Blogartikel',
         status: 'Public',
         body: 'Gastseiten-Inhalt mit SEO, Autor, Kategorie, Sichtbarkeit und Vorschau.',
         icon: Icons.public_outlined,
@@ -64,7 +64,7 @@ class _ContentPublishingCmsSuiteScreenState extends State<ContentPublishingCmsSu
                 const SectionLabel('CMS FLOW'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Vereine und Plattformadmins brauchen eine mobile Redaktionsstrecke fuer Blog, Vereinsnews, Newsletter, Sponsorinhalte, Vorschau und Freigaben.',
+                  'Vereine und Plattformadmins brauchen eine mobile Redaktionsstrecke für Blog, Vereinsnews, Newsletter, Sponsorinhalte, Vorschau und Freigaben.',
                   style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 16),
@@ -125,7 +125,7 @@ class _ContentPublishingCmsSuiteScreenState extends State<ContentPublishingCmsSu
                 const SectionLabel('VORSCHAU'),
                 const SizedBox(height: 8),
                 Text(
-                  'Aktueller Kanal: $channel. Spaeter verbindet die API Entwurf, Vorschau, SEO, Medien, Freigabe, Newsletter, Push und Ausspielungsstatus.',
+                  'Aktueller Kanal: $channel. Später verbindet die API Entwurf, Vorschau, SEO, Medien, Freigabe, Newsletter, Push und Ausspielungsstatus.',
                   style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),
@@ -135,7 +135,7 @@ class _ContentPublishingCmsSuiteScreenState extends State<ContentPublishingCmsSu
                   onPressed: () => openUiAction(
                     context,
                     title: 'Inhalt vorbereiten',
-                    body: 'Diese UI bereitet CMS-Entwuerfe, Vorschau, Medien, Freigaben, Newsletter und oeffentliche Ausspielung fuer die spaetere Laravel-API vor.',
+                    body: 'Diese UI bereitet CMS-Entwürfe, Vorschau, Medien, Freigaben, Newsletter und öffentliche Ausspielung für die spätere Laravel-API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.edit_note_outlined,
                   ),
@@ -234,7 +234,7 @@ class _ContentCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Vorschau',
-                  body: 'Vorschau, Medien, SEO, Zielgruppe und Ausspielungsstatus werden fuer die spaetere API vorbereitet.',
+                  body: 'Vorschau, Medien, SEO, Zielgruppe und Ausspielungsstatus werden für die spätere API vorbereitet.',
                   status: 'UI vorbereitet',
                   icon: Icons.preview_outlined,
                 ),
@@ -246,7 +246,7 @@ class _ContentCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Freigabe',
-                  body: 'Freigaben koennen spaeter Verein, Plattformadmin, Sponsorreview und Audit-Verlauf verbinden.',
+                  body: 'Freigaben können später Verein, Plattformadmin, Sponsorreview und Audit-Verlauf verbinden.',
                   status: 'UI vorbereitet',
                   icon: Icons.verified_user_outlined,
                 ),
@@ -258,7 +258,7 @@ class _ContentCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Inhalt senden',
-                  body: 'Newsletter, Push, Feed-Hinweis und oeffentliche Veroeffentlichung werden als Publishing-Flow vorbereitet.',
+                  body: 'Newsletter, Push, Feed-Hinweis und öffentliche Veröffentlichung werden als Publishing-Flow vorbereitet.',
                   status: 'UI vorbereitet',
                   icon: Icons.send_outlined,
                 ),

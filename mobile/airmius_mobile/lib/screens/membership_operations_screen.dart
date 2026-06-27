@@ -23,7 +23,7 @@ class _MembershipOperationsScreenState extends State<MembershipOperationsScreen>
       appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Membership Operations', style: TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
         title: 'Membership Operations',
-        subtitle: 'Anfragen, Rueckzug, Feldschema, Dokumentpflicht, Mitgliedsnummer, Status und Rollen',
+        subtitle: 'Anfragen, Rückzug, Feldschema, Dokumentpflicht, Mitgliedsnummer, Status und Rollen',
         trailing: StatusPill(_tab),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -35,7 +35,7 @@ class _MembershipOperationsScreenState extends State<MembershipOperationsScreen>
                 children: [
                   const Eyebrow('Vereinsmitgliedschaft'),
                   const SizedBox(height: 8),
-                  const Text('Diese Ansicht buendelt die mobilen Admin-Flows rund um Vereinsbeitritt: Antrag pruefen, Datenfelder steuern, Dokumente verlangen, Zahlung vorbereiten und Mitgliedschaft aktivieren.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  const Text('Diese Ansicht buendelt die mobilen Admin-Flows rund um Vereinsbeitritt: Antrag prüfen, Datenfelder steuern, Dokumente verlangen, Zahlung vorbereiten und Mitgliedschaft aktivieren.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 8,
@@ -64,7 +64,7 @@ class _MembershipOperationsScreenState extends State<MembershipOperationsScreen>
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Eyebrow('Vereinsregeln'),
-                  SwitchListTile(value: _requireDocuments, onChanged: (value) => setState(() => _requireDocuments = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Dokumentbestaetigung erforderlich', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Datenschutz, Beitragsordnung und Vereinsregeln muessen vor Antrag bestaetigt werden.', style: TextStyle(color: AirmiusColors.muted))),
+                  SwitchListTile(value: _requireDocuments, onChanged: (value) => setState(() => _requireDocuments = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Dokumentbestätigung erforderlich', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Datenschutz, Beitragsordnung und Vereinsregeln müssen vor Antrag bestätigt werden.', style: TextStyle(color: AirmiusColors.muted))),
                   SwitchListTile(value: _autoMemberNumber, onChanged: (value) => setState(() => _autoMemberNumber = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Mitgliedsnummer automatisch', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Nach Annahme wird eine Vereinsnummer vorbereitet.', style: TextStyle(color: AirmiusColors.muted))),
                 ],
               ),
@@ -118,7 +118,7 @@ class _MembershipOperationCard extends StatelessWidget {
             runSpacing: 10,
             children: [
               AirmiusButton(label: item.action, icon: item.icon, danger: item.danger, secondary: !item.danger, onPressed: () => _run(context, item)),
-              AirmiusButton(label: 'Antragsdaten', icon: Icons.assignment_ind_outlined, secondary: true, onPressed: () => openUiAction(context, title: '${item.title} Daten', body: 'Personendaten, Wohndaten, Kontaktdaten, Zahlmethode, Dokumente und Audit fuer ${item.title} anzeigen.', status: 'Application', icon: Icons.assignment_ind_outlined)),
+              AirmiusButton(label: 'Antragsdaten', icon: Icons.assignment_ind_outlined, secondary: true, onPressed: () => openUiAction(context, title: '${item.title} Daten', body: 'Personendaten, Wohndaten, Kontaktdaten, Zahlmethode, Dokumente und Audit für ${item.title} anzeigen.', status: 'Application', icon: Icons.assignment_ind_outlined)),
             ],
           ),
         ],
@@ -129,7 +129,7 @@ class _MembershipOperationCard extends StatelessWidget {
   void _run(BuildContext context, _MembershipOperation item) {
     final action = () => openUiAction(context, title: item.action, body: '${item.action}: ${item.body}', status: item.status, icon: item.icon);
     if (item.danger) {
-      confirmDanger(context, '${item.action}?', 'Diese Aktion veraendert Antrag, Mitgliedschaft oder Zahlstatus und wird spaeter auditiert.', item.action, action);
+      confirmDanger(context, '${item.action}?', 'Diese Aktion verändert Antrag, Mitgliedschaft oder Zahlstatus und wird später auditiert.', item.action, action);
       return;
     }
     action();
@@ -149,17 +149,17 @@ class _MembershipOperation {
 }
 
 const _items = [
-  _MembershipOperation(tab: 'Anfragen', title: 'Antrag pruefen', body: 'Antragsdaten, Formularfelder, Dokumente, Zahlung und Guardian-Regeln anzeigen.', status: 'Review', icon: Icons.assignment_ind_outlined, action: 'Antrag pruefen'),
+  _MembershipOperation(tab: 'Anfragen', title: 'Antrag prüfen', body: 'Antragsdaten, Formularfelder, Dokumente, Zahlung und Guardian-Regeln anzeigen.', status: 'Review', icon: Icons.assignment_ind_outlined, action: 'Antrag prüfen'),
   _MembershipOperation(tab: 'Anfragen', title: 'Antrag annehmen', body: 'User als Mitglied aktivieren, Nummer vergeben, Rolle setzen und Verein informieren.', status: 'Accept', icon: Icons.check_circle_outline, action: 'Annehmen'),
   _MembershipOperation(tab: 'Anfragen', title: 'Antrag ablehnen', body: 'Antrag ablehnen, Grund speichern und User benachrichtigen.', status: 'Reject', icon: Icons.cancel_outlined, action: 'Ablehnen', danger: true),
-  _MembershipOperation(tab: 'Anfragen', title: 'Antrag zurueckziehen', body: 'User-seitigen Rueckzug verarbeiten und offene Nachfrage entfernen.', status: 'Withdraw', icon: Icons.undo_outlined, action: 'Zurueckziehen', danger: true),
-  _MembershipOperation(tab: 'Schema', title: 'Formularschema speichern', body: 'Pflicht/optional/ausgeblendet fuer Personendaten, Wohnort, Kontakt, Zahlung, Notfall und Sportdaten setzen.', status: 'Schema', icon: Icons.format_list_bulleted_outlined, action: 'Schema speichern'),
+  _MembershipOperation(tab: 'Anfragen', title: 'Antrag zurückziehen', body: 'User-seitigen Rückzug verarbeiten und offene Nachfrage entfernen.', status: 'Withdraw', icon: Icons.undo_outlined, action: 'Zurückziehen', danger: true),
+  _MembershipOperation(tab: 'Schema', title: 'Formularschema speichern', body: 'Pflicht/optional/ausgeblendet für Personendaten, Wohnort, Kontakt, Zahlung, Notfall und Sportdaten setzen.', status: 'Schema', icon: Icons.format_list_bulleted_outlined, action: 'Schema speichern'),
   _MembershipOperation(tab: 'Schema', title: 'Mitgliedschaftstyp konfigurieren', body: 'Allgemein, Jugend, Familie, Passiv, Extern oder Teammitgliedschaft mit eigenen Feldern definieren.', status: 'Type', icon: Icons.category_outlined, action: 'Typ speichern'),
   _MembershipOperation(tab: 'Dokumente', title: 'Dokument verknuepfen', body: 'Datenschutz, Beitragsordnung, SEPA, Vereinsregeln oder Uploadpflicht mit Antrag verbinden.', status: 'Docs', icon: Icons.description_outlined, action: 'Dokument verknuepfen'),
   _MembershipOperation(tab: 'Dokumente', title: 'Uploadpflicht setzen', body: 'Ausweis, Lizenz, SEPA-Mandat, Nachweis oder eigenes Vereinsdokument verlangen.', status: 'Upload', icon: Icons.upload_file_outlined, action: 'Uploadpflicht speichern'),
   _MembershipOperation(tab: 'Status', title: 'Mitgliedsnummer vergeben', body: 'Automatische oder manuelle Vereinsnummer mit Prefix und Audit erzeugen.', status: 'Number', icon: Icons.confirmation_number_outlined, action: 'Nummer vergeben'),
   _MembershipOperation(tab: 'Status', title: 'Mitgliedsstatus wechseln', body: 'Aktiv, pausiert, ausgetreten, extern, Jugend oder gesperrt setzen.', status: 'Status', icon: Icons.manage_accounts_outlined, action: 'Status setzen'),
   _MembershipOperation(tab: 'Status', title: 'Rolle nach Annahme setzen', body: 'Mitglied, Spieler, Trainer, Captain oder Vereinsadmin nach Beitritt zuweisen.', status: 'Role', icon: Icons.admin_panel_settings_outlined, action: 'Rolle setzen'),
-  _MembershipOperation(tab: 'Zahlung', title: 'Beitragsregel anwenden', body: 'Monatlich, alle 4 Monate, halbjaehrlich oder jaehrlich mit Methode Ueberweisung/Bar/SEPA setzen.', status: 'Fee', icon: Icons.payments_outlined, action: 'Beitrag setzen'),
+  _MembershipOperation(tab: 'Zahlung', title: 'Beitragsregel anwenden', body: 'Monatlich, alle 4 Monate, halbjaehrlich oder jaehrlich mit Methode Überweisung/Bar/SEPA setzen.', status: 'Fee', icon: Icons.payments_outlined, action: 'Beitrag setzen'),
   _MembershipOperation(tab: 'Zahlung', title: 'Erstrechnung vorbereiten', body: 'Ersten Beitrag, Zeitraum, Faelligkeit und Zahlungsziel nach Annahme erzeugen.', status: 'Invoice', icon: Icons.receipt_long_outlined, action: 'Rechnung vorbereiten'),
 ];

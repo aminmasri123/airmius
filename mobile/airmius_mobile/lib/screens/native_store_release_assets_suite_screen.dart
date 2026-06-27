@@ -28,7 +28,7 @@ class _NativeStoreReleaseAssetsSuiteScreenState extends State<NativeStoreRelease
       ),
       body: PageFrame(
         title: 'Native Store Release Assets',
-        subtitle: 'App-Icon, Splash, Screenshots, Store-Texte, Datenschutz und Release-Gates fuer Play Store und App Store.',
+        subtitle: 'App-Icon, Splash, Screenshots, Store-Texte, Datenschutz und Release-Gates für Play Store und App Store.',
         trailing: const StatusPill('Store prep', color: AirmiusColors.amber),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -100,7 +100,7 @@ class _NativeStoreReleaseAssetsSuiteScreenState extends State<NativeStoreRelease
                   _AssetToggle(
                     icon: Icons.phone_android_outlined,
                     title: 'Splash Screen',
-                    body: 'Kurzer nativer Start mit Airmius-Logo, dunklem Hintergrund und sauberem Uebergang zur App-Shell.',
+                    body: 'Kurzer nativer Start mit Airmius-Logo, dunklem Hintergrund und sauberem Übergang zur App-Shell.',
                     value: _splashReady,
                     onChanged: (value) => setState(() => _splashReady = value),
                   ),
@@ -114,7 +114,7 @@ class _NativeStoreReleaseAssetsSuiteScreenState extends State<NativeStoreRelease
                   _AssetToggle(
                     icon: Icons.privacy_tip_outlined,
                     title: 'Datenschutzangaben',
-                    body: 'Datenkategorien, Zweckbindung, Konto-Loeschung, Minderjaehrige, Standort, Kamera, Dateien und Push.',
+                    body: 'Datenkategorien, Zweckbindung, Konto-Löschung, Minderjaehrige, Standort, Kamera, Dateien und Push.',
                     value: _privacyReady,
                     onChanged: (value) => setState(() => _privacyReady = value),
                     last: true,
@@ -131,7 +131,7 @@ class _NativeStoreReleaseAssetsSuiteScreenState extends State<NativeStoreRelease
                   const SizedBox(height: 10),
                   const _StoreCopy(title: 'Kurzbeschreibung', body: 'Airmius verbindet Vereine, Mitglieder, Teams, Training, Dateien, Kommunikation und digitale Mitgliedschaft in einer App.'),
                   const _StoreCopy(title: 'Hauptnutzen', body: 'Verein finden, Mitgliedschaft beantragen, Teams organisieren, Nachrichten erhalten, Dokumente teilen und Zahlungen im Blick behalten.'),
-                  const _StoreCopy(title: 'Review-Hinweis', body: 'Die App ist native Flutter-UI, keine reine WebView. Laravel wird spaeter per API angebunden.'),
+                  const _StoreCopy(title: 'Review-Hinweis', body: 'Die App ist native Flutter-UI, keine reine WebView. Laravel wird später per API angebunden.'),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -155,10 +155,10 @@ class _NativeStoreReleaseAssetsSuiteScreenState extends State<NativeStoreRelease
                   const Eyebrow('RELEASE GATES'),
                   const SizedBox(height: 12),
                   const _GateLine(icon: Icons.check_circle_outline, title: 'Mobile Web-App-Optik', body: 'Header, Panels, Buttons, Suche, Bottom-Navigation und Vereinsmodule bleiben im Airmius-Stil.'),
-                  const _GateLine(icon: Icons.api_outlined, title: 'API-Vertrag vorbereitet', body: 'Alle Store-relevanten Flows bleiben UI-only und koennen spaeter sauber mit Laravel verbunden werden.'),
+                  const _GateLine(icon: Icons.api_outlined, title: 'API-Vertrag vorbereitet', body: 'Alle Store-relevanten Flows bleiben UI-only und können später sauber mit Laravel verbunden werden.'),
                   const _GateLine(icon: Icons.verified_outlined, title: 'Review-Readiness', body: 'Vor Einreichung fehlen noch echte Builds, Signierung, Datenschutzformular, Screenshots und Device-QA.'),
                   const SizedBox(height: 10),
-                  AirmiusButton(label: 'Release spaeter mit Build-Daten pruefen', icon: Icons.fact_check_outlined, onPressed: () {}),
+                  AirmiusButton(label: 'Release später mit Build-Daten prüfen', icon: Icons.fact_check_outlined, onPressed: () {}),
                 ],
               ),
             ),

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../core/api_contract.dart';
@@ -14,7 +14,7 @@ class ApiConnectionScreen extends StatelessWidget {
       appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('API Connection', style: TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
         title: 'API Connection',
-        subtitle: 'Laravel-Kontrakt fuer die native Flutter-App',
+        subtitle: 'Laravel-Kontrakt für die native Flutter-App',
         trailing: const StatusPill('API'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -28,7 +28,7 @@ class ApiConnectionScreen extends StatelessWidget {
                   const SizedBox(height: 14),
                   const Text('Die Webversion wird nicht geraten, sondern systematisch angebunden.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
                   const SizedBox(height: 8),
-                  const Text('Diese Uebersicht ordnet die wichtigsten Laravel-Routen den nativen Flutter-Modulen zu. Spaeter wird daraus der echte API-Client mit Token, Loading, Error, Retry und Offline-State.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+                  const Text('Diese Übersicht ordnet die wichtigsten Laravel-Routen den nativen Flutter-Modulen zu. Später wird daraus der echte API-Client mit Token, Loading, Error, Retry und Offline-State.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
                   const SizedBox(height: 14),
                   AirmiusPanel(
                     padding: const EdgeInsets.all(12),
@@ -54,7 +54,7 @@ class ApiConnectionScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   const Text('Wenn die UI final genug ist, verbinden wir diese Gruppen mit einem AirmiusApiClient: Auth-Token, Request-Queue, Fehlertexte, Refresh, Uploads und Rollenrechte.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                   const SizedBox(height: 12),
-                  AirmiusButton(label: 'API Client vormerken', icon: Icons.api_outlined, onPressed: () => openUiAction(context, title: 'API Client vormerken', body: 'AirmiusApiClient fuer Laravel v1 mit Auth, Uploads, Pagination, Mutationen, Fehlerstatus und Offline/Retry vorbereiten.', status: 'API', icon: Icons.api_outlined)),
+                  AirmiusButton(label: 'API Client vormerken', icon: Icons.api_outlined, onPressed: () => openUiAction(context, title: 'API Client vormerken', body: 'AirmiusApiClient für Laravel v1 mit Auth, Uploads, Pagination, Mutationen, Fehlerstatus und Offline/Retry vorbereiten.', status: 'API', icon: Icons.api_outlined)),
                 ],
               ),
             ),
@@ -135,9 +135,9 @@ class _EndpointGroup {
 }
 
 final _groups = <_EndpointGroup>[
-  _EndpointGroup(title: 'Auth & Konto', body: 'Login, Registrierung, 2FA, E-Mail-Verifizierung, Sprache, Profil, Export und Kontoloeschung.', status: 'Core', icon: Icons.manage_accounts_outlined, color: AirmiusColors.blue, endpoints: [AirmiusApiContract.login, AirmiusApiContract.register, AirmiusApiContract.twoFactor, AirmiusApiContract.me, AirmiusApiContract.language]),
+  _EndpointGroup(title: 'Auth & Konto', body: 'Login, Registrierung, 2FA, E-Mail-Verifizierung, Sprache, Profil, Export und Kontolöschung.', status: 'Core', icon: Icons.manage_accounts_outlined, color: AirmiusColors.blue, endpoints: [AirmiusApiContract.login, AirmiusApiContract.register, AirmiusApiContract.twoFactor, AirmiusApiContract.me, AirmiusApiContract.language]),
   _EndpointGroup(title: 'Suche & Workspaces', body: 'Globale Suche, Autocomplete, Arbeitsbereiche, Kontextwechsel und Feature-Meta.', status: 'Core', icon: Icons.manage_search_outlined, color: AirmiusColors.blue, endpoints: [AirmiusApiContract.globalSearch, AirmiusApiContract.workspaces, AirmiusApiContract.meta]),
-  _EndpointGroup(title: 'Vereine & Mitgliedschaft', body: 'Clubprofil, Mitglieder, Antraege, Formularschema, Beitrag, Dokumente und Rueckzug.', status: 'Verein', icon: Icons.groups_2_outlined, color: AirmiusColors.green, endpoints: [AirmiusApiContract.clubs, AirmiusApiContract.clubMembershipRequests(26), AirmiusApiContract.clubMembershipFormSchema(26), AirmiusApiContract.clubMembershipDocuments(26), AirmiusApiContract.clubMembershipRequestWithdraw(26, 1)]),
+  _EndpointGroup(title: 'Vereine & Mitgliedschaft', body: 'Clubprofil, Mitglieder, Antraege, Formularschema, Beitrag, Dokumente und Rückzug.', status: 'Verein', icon: Icons.groups_2_outlined, color: AirmiusColors.green, endpoints: [AirmiusApiContract.clubs, AirmiusApiContract.clubMembershipRequests(26), AirmiusApiContract.clubMembershipFormSchema(26), AirmiusApiContract.clubMembershipDocuments(26), AirmiusApiContract.clubMembershipRequestWithdraw(26, 1)]),
   _EndpointGroup(title: 'Teams & Events', body: 'Kader, Einladungen, Join-Requests, Strafkatalog, Teamdateien, Events, Teilnahme, Warteliste und Anwesenheit.', status: 'Team', icon: Icons.diversity_3_outlined, color: AirmiusColors.green, endpoints: [AirmiusApiContract.teams, AirmiusApiContract.teamMembers(1), AirmiusApiContract.teamInvitations(1), AirmiusApiContract.teamPenalties(1), AirmiusApiContract.teamPenaltyRules(1), AirmiusApiContract.teamPenaltyFees(1), AirmiusApiContract.events, AirmiusApiContract.eventJoin(1)]),
   _EndpointGroup(title: 'Dateien & Uploads', body: 'Upload, Dateimanager, Vereinsdokumente, Teamdateien, Share-Links und Mitgliedsantrag-Dateien.', status: 'Files', icon: Icons.folder_outlined, color: AirmiusColors.amber, endpoints: [AirmiusApiContract.uploads, AirmiusApiContract.files, AirmiusApiContract.folders, AirmiusApiContract.sharedFiles, AirmiusApiContract.clubDocuments(26)]),
   _EndpointGroup(title: 'Chat & Benachrichtigungen', body: 'Notifications, Preferences, Konversationen, Nachrichten, Reaktionen, Typing, Mute und Einladungen.', status: 'Inbox', icon: Icons.forum_outlined, color: AirmiusColors.blue, endpoints: [AirmiusApiContract.notifications, AirmiusApiContract.notificationPreferences, AirmiusApiContract.conversations, AirmiusApiContract.conversationMessages(1), AirmiusApiContract.messagesRead()]),

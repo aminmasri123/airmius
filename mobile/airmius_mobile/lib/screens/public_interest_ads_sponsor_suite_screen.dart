@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -18,13 +18,13 @@ class _PublicInterestAdsSponsorSuiteScreenState extends State<PublicInterestAdsS
   bool _showSponsors = true;
 
   final List<_SuiteItem> _items = const [
-    _SuiteItem('Interesse anmelden', 'Leads', 'Lead', 'Oeffentliche Anfrage fuer Nutzer, Vereine, Anbieter oder Partner mit Kontaktstatus.', Icons.waving_hand_outlined, Color(0xFF5BA7FF)),
-    _SuiteItem('Standort vorschlagen', 'Leads', 'Location', 'Sportort, Verein, Adresse, Ansprechpartner, Pruefstatus und lokale Einordnung.', Icons.add_location_alt_outlined, Color(0xFF2EE59D)),
-    _SuiteItem('Verein empfehlen', 'Leads', 'Club', 'Vereinsvorschlag, Kontakt, Sportarten, Region und spaetere Admin-Prüfung.', Icons.apartment_outlined, Color(0xFFF8B84E)),
-    _SuiteItem('Werbeagentur Landing', 'Ads', 'Public', 'Oeffentliche Ads-Seite mit Leistungen, Zielgruppen, Formaten und Kontaktanfrage.', Icons.campaign_outlined, Color(0xFFB084FF)),
+    _SuiteItem('Interesse anmelden', 'Leads', 'Lead', 'Öffentliche Anfrage für Nutzer, Vereine, Anbieter oder Partner mit Kontaktstatus.', Icons.waving_hand_outlined, Color(0xFF5BA7FF)),
+    _SuiteItem('Standort vorschlagen', 'Leads', 'Location', 'Sportort, Verein, Adresse, Ansprechpartner, Prüfstatus und lokale Einordnung.', Icons.add_location_alt_outlined, Color(0xFF2EE59D)),
+    _SuiteItem('Verein empfehlen', 'Leads', 'Club', 'Vereinsvorschlag, Kontakt, Sportarten, Region und spätere Admin-Prüfung.', Icons.apartment_outlined, Color(0xFFF8B84E)),
+    _SuiteItem('Werbeagentur Landing', 'Ads', 'Public', 'Öffentliche Ads-Seite mit Leistungen, Zielgruppen, Formaten und Kontaktanfrage.', Icons.campaign_outlined, Color(0xFFB084FF)),
     _SuiteItem('Ad Campaigns', 'Ads', 'Campaign', 'Kampagnen, Budget, Zielgruppe, Zeitraum, Status, Vorschau und Freigabe.', Icons.ads_click, Color(0xFFFF6B6B)),
     _SuiteItem('Sponsor Ads', 'Ads', 'Sponsor', 'Sponsor-Anzeigen, Platzierungen, Vereine, Laufzeit, Reporting und Ansprechpartner.', Icons.trending_up_outlined, Color(0xFF5BA7FF)),
-    _SuiteItem('Sponsoren Uebersicht', 'Sponsors', 'Index', 'Sponsorenliste, Partnerkarten, Vereinsbezug, Benefits und Kontaktstatus.', Icons.handshake_outlined, Color(0xFF2EE59D)),
+    _SuiteItem('Sponsoren Übersicht', 'Sponsors', 'Index', 'Sponsorenliste, Partnerkarten, Vereinsbezug, Benefits und Kontaktstatus.', Icons.handshake_outlined, Color(0xFF2EE59D)),
     _SuiteItem('Sponsor Detail', 'Sponsors', 'Detail', 'Sponsorprofil, Kampagnen, Dokumente, Kontakt, Status und Aktivitaetsverlauf.', Icons.business_center_outlined, Color(0xFFF8B84E)),
   ];
 
@@ -48,7 +48,7 @@ class _PublicInterestAdsSponsorSuiteScreenState extends State<PublicInterestAdsS
                     const _Hero(
                       eyebrow: 'PUBLIC GROWTH',
                       title: 'Interesse, Ads & Sponsoren',
-                      subtitle: 'Native Mobile-UI fuer Leads, Standortvorschlaege, Werbeagentur, Kampagnen, Sponsor Ads und Sponsorprofile.',
+                      subtitle: 'Native Mobile-UI für Leads, Standortvorschläge, Werbeagentur, Kampagnen, Sponsor Ads und Sponsorprofile.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -81,7 +81,7 @@ class _PublicInterestAdsSponsorSuiteScreenState extends State<PublicInterestAdsS
                       firstLabel: 'Interesse senden',
                       secondIcon: Icons.campaign_outlined,
                       secondLabel: 'Kampagne planen',
-                      onFirst: () => openUiAction(context, title: 'Interesse', body: 'Lead- und Standort-UI sind vorbereitet; API-Anbindung folgt spaeter.', status: 'UI bereit', icon: Icons.info_outline),
+                      onFirst: () => openUiAction(context, title: 'Interesse', body: 'Lead- und Standort-UI sind vorbereitet; API-Anbindung folgt später.', status: 'UI bereit', icon: Icons.info_outline),
                       onSecond: () => openUiAction(context, title: 'Ads', body: 'Ads- und Sponsor-Strecken sind als mobile UI vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
                       onSupport: () => _openSupport(context),
                     ),

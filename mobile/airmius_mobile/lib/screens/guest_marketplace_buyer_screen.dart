@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -21,8 +21,8 @@ class _GuestMarketplaceBuyerScreenState extends State<GuestMarketplaceBuyerScree
 
   final List<_MarketItem> _items = const [
     _MarketItem(title: 'Airmius Starter Paket', area: 'Produkte', body: 'Digitales Vereinspaket mit Onboarding, Checkliste und Dokumentvorlagen.', status: 'Produkt', price: '49 EUR', icon: Icons.shopping_bag_outlined, color: AirmiusColors.blue),
-    _MarketItem(title: 'Provider Profil', area: 'Provider', body: 'Anbieterprofil mit Leistungen, Kontakt, Bewertungen und Produktuebersicht.', status: 'Anbieter', price: 'Verifiziert', icon: Icons.storefront_outlined, color: AirmiusColors.green),
-    _MarketItem(title: 'Wishlist', area: 'Wishlist', body: 'Gespeicherte Produkte, Favoriten, Vergleich und spaeter kaufen.', status: 'Merkliste', price: '3 Items', icon: Icons.favorite_border_outlined, color: AirmiusColors.red),
+    _MarketItem(title: 'Provider Profil', area: 'Provider', body: 'Anbieterprofil mit Leistungen, Kontakt, Bewertungen und Produktübersicht.', status: 'Anbieter', price: 'Verifiziert', icon: Icons.storefront_outlined, color: AirmiusColors.green),
+    _MarketItem(title: 'Wishlist', area: 'Wishlist', body: 'Gespeicherte Produkte, Favoriten, Vergleich und später kaufen.', status: 'Merkliste', price: '3 Items', icon: Icons.favorite_border_outlined, color: AirmiusColors.red),
     _MarketItem(title: 'Order Status', area: 'Bestellungen', body: 'Bestellstatus, Banktransfer, Zahlungshinweis, Rechnung und Supportkontakt.', status: 'Offen', price: '129 EUR', icon: Icons.local_shipping_outlined, color: AirmiusColors.amber),
   ];
 
@@ -61,7 +61,7 @@ class _GuestMarketplaceBuyerScreenState extends State<GuestMarketplaceBuyerScree
                               _SwitchRow(title: 'Provider anzeigen', subtitle: 'Guest MarketplaceProviderShow als mobiles Anbieterprofil vorbereiten.', value: _showProviders, onChanged: (value) => setState(() => _showProviders = value)),
                               _SwitchRow(title: 'Wishlist anzeigen', subtitle: 'Guest MarketplaceWishlist mit Favoriten und Merkliste abbilden.', value: _showWishlist, onChanged: (value) => setState(() => _showWishlist = value)),
                               _SwitchRow(title: 'Bestellstatus anzeigen', subtitle: 'Guest MarketplaceOrderStatus mit Zahlung und Rechnung vorbereiten.', value: _showOrders, onChanged: (value) => setState(() => _showOrders = value)),
-                              _SwitchRow(title: 'Banktransfer erlauben', subtitle: 'MarketplaceBankTransfer mit Ueberweisungshinweis abbilden.', value: _showBankTransfer, onChanged: (value) => setState(() => _showBankTransfer = value)),
+                              _SwitchRow(title: 'Banktransfer erlauben', subtitle: 'MarketplaceBankTransfer mit Überweisungshinweis abbilden.', value: _showBankTransfer, onChanged: (value) => setState(() => _showBankTransfer = value)),
                             ],
                           ),
                         ),
@@ -70,7 +70,7 @@ class _GuestMarketplaceBuyerScreenState extends State<GuestMarketplaceBuyerScree
                           _MarketCard(item: item, onOpen: () => _toast('${item.title}: Detail vorbereitet')),
                           const SizedBox(height: 12),
                         ],
-                        if (items.isEmpty) const EmptyPanel('Keine Marketplace-Elemente fuer diesen Bereich gefunden.'),
+                        if (items.isEmpty) const EmptyPanel('Keine Marketplace-Elemente für diesen Bereich gefunden.'),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Aktionen',
@@ -123,7 +123,7 @@ class _MarketplaceHero extends StatelessWidget {
               const AirmiusLogo(size: 42),
               const SizedBox(width: 12),
               const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Eyebrow('GUEST MARKETPLACE'), SizedBox(height: 4), Text('Kaufen, merken, Status verfolgen', style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900))])),
-              AirmiusButton(label: 'Oeffnen', icon: Icons.storefront_outlined, onPressed: onOpen),
+              AirmiusButton(label: 'Öffnen', icon: Icons.storefront_outlined, onPressed: onOpen),
             ],
           ),
           const SizedBox(height: 14),

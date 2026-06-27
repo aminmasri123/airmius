@@ -96,9 +96,9 @@ class ModuleScreen extends StatelessWidget {
               children: [
                 const Eyebrow('API-Anbindung'),
                 const SizedBox(height: 8),
-                const Text('Dieser Screen ist als native UI vorbereitet. Die echten Daten werden spaeter aus Laravel /api/v1 geladen und Aktionen werden dort gespeichert.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                const Text('Dieser Screen ist als native UI vorbereitet. Die echten Daten werden später aus Laravel /api/v1 geladen und Aktionen werden dort gespeichert.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                 const SizedBox(height: 12),
-                AirmiusButton(label: 'Aktualisieren', icon: Icons.refresh_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Aktualisieren', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.refresh_outlined)),
+                AirmiusButton(label: 'Aktualisieren', icon: Icons.refresh_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Aktualisieren', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.refresh_outlined)),
               ],
             ),
           ),
@@ -110,8 +110,8 @@ class ModuleScreen extends StatelessWidget {
   String _bodyFor(String action, AirmiusScope scope) {
     if (action.contains('hochladen')) return 'Upload-UI ist vorbereitet und wird mit File Picker plus Laravel Upload-API verbunden.';
     if (action.contains('suchen') || action.contains('Suche')) return 'Suchfelder und Ergebnislisten folgen dem mobilen Web-App-Muster.';
-    if (action.contains('senden')) return 'Formular- und Statuslogik wird spaeter ueber API gespeichert.';
-    return 'Native Oberflaeche fuer diese Funktion, passend zur Web-App-Struktur.';
+    if (action.contains('senden')) return 'Formular- und Statuslogik wird später über API gespeichert.';
+    return 'Native Oberflaeche für diese Funktion, passend zur Web-App-Struktur.';
   }
 }
 
@@ -189,7 +189,7 @@ class _RequestsPanel extends StatelessWidget {
                       Text('${club.city} - ${scope.t('sent')}', style: const TextStyle(color: AirmiusColors.muted, fontSize: 12)),
                       const SizedBox(height: 10),
                       AirmiusButton(label: scope.t('withdraw'), icon: Icons.undo_outlined, danger: true, onPressed: onWithdrawClub == null ? null : () async {
-                        final ok = await confirmDanger(context, 'Anfrage zurueckziehen', 'Moechtest du deine Anfrage bei ${club.name} wirklich zurueckziehen?');
+                        final ok = await confirmDanger(context, 'Anfrage zurückziehen', 'Moechtest du deine Anfrage bei ${club.name} wirklich zurückziehen?');
                         if (ok) onWithdrawClub!(club);
                       }),
                     ],

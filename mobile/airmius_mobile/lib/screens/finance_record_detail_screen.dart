@@ -18,7 +18,7 @@ class FinanceRecordDetailScreen extends StatefulWidget {
 
 class _FinanceRecordDetailScreenState extends State<FinanceRecordDetailScreen> {
   String _rhythm = 'Monatlich';
-  String _method = 'Ueberweisung';
+  String _method = 'Überweisung';
   bool _matched = false;
   bool _sepa = false;
   bool _datev = true;
@@ -45,7 +45,7 @@ class _FinanceRecordDetailScreenState extends State<FinanceRecordDetailScreen> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(value: _rhythm, dropdownColor: AirmiusColors.card, decoration: _fieldDecoration('Zahlrhythmus'), items: const ['Monatlich', '4 Monate', '6 Monate', 'Jaehrlich'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _rhythm = value ?? _rhythm)),
             const SizedBox(height: 10),
-            DropdownButtonFormField<String>(value: _method, dropdownColor: AirmiusColors.card, decoration: _fieldDecoration('Zahlmethode'), items: const ['Ueberweisung', 'Bar', 'SEPA', 'Extern'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _method = value ?? _method)),
+            DropdownButtonFormField<String>(value: _method, dropdownColor: AirmiusColors.card, decoration: _fieldDecoration('Zahlmethode'), items: const ['Überweisung', 'Bar', 'SEPA', 'Extern'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _method = value ?? _method)),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -59,12 +59,12 @@ class _FinanceRecordDetailScreenState extends State<FinanceRecordDetailScreen> {
           AirmiusPanel(borderColor: AirmiusColors.amber.withValues(alpha: 0.55), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Eyebrow('Audit & Dokumente'),
             SizedBox(height: 8),
-            Text('Rechnung, Zahlung, SEPA-Mandat, DATEV Export und manuelle Aenderungen werden spaeter per Laravel protokolliert.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+            Text('Rechnung, Zahlung, SEPA-Mandat, DATEV Export und manuelle Änderungen werden später per Laravel protokolliert.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
             SizedBox(height: 10),
             Wrap(spacing: 8, runSpacing: 8, children: [StatusPill('Audit'), StatusPill('PDF'), StatusPill('Export')]),
           ])),
           const SizedBox(height: 14),
-          AirmiusButton(label: 'Finanzdetail speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Finanzdetail speichern', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.save_outlined)),
+          AirmiusButton(label: 'Finanzdetail speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Finanzdetail speichern', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.save_outlined)),
         ]),
       ),
     );

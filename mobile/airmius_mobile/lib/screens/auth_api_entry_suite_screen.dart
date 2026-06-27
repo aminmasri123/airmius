@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -22,7 +22,7 @@ class _AuthApiEntrySuiteScreenState extends State<AuthApiEntrySuiteScreen> {
     _SuiteItem('Login', 'Auth', 'Sign in', 'E-Mail, Passwort, Remember, 2FA-Einstieg, Fehlermeldungen und Passwort-Reset-Link.', Icons.login_outlined, Color(0xFF2EE59D)),
     _SuiteItem('Register', 'Auth', 'Account', 'Registrierung mit Name, E-Mail, Rolle, Passwort, Consent und Weiterleitung ins Profil.', Icons.person_add_alt_1_outlined, Color(0xFFF8B84E)),
     _SuiteItem('Dashboard Entry', 'Entry', 'Home', 'Mobile Start-Dashboard mit Schnellzugriffen, Modulen, Statuskarten und User-Kontext.', Icons.dashboard_outlined, Color(0xFFB084FF)),
-    _SuiteItem('API Index', 'Api', 'Docs', 'API-Uebersicht, Tokenstatus, Endpunkte, Integrationshinweise und Developer-Zugang.', Icons.integration_instructions_outlined, Color(0xFF5BA7FF)),
+    _SuiteItem('API Index', 'Api', 'Docs', 'API-Übersicht, Tokenstatus, Endpunkte, Integrationshinweise und Developer-Zugang.', Icons.integration_instructions_outlined, Color(0xFF5BA7FF)),
     _SuiteItem('API Token Manager', 'Api', 'Tokens', 'Token erstellen, benennen, Scope anzeigen, kopieren, widerrufen und Sicherheitsstatus.', Icons.vpn_key_outlined, Color(0xFFFF6B6B)),
     _SuiteItem('API Connection', 'Api', 'Health', 'Verbindungsstatus, Base URL, Auth-State, Latenz, Fehlerhinweise und API-Bereitschaft.', Icons.sync_alt_outlined, Color(0xFF2EE59D)),
   ];
@@ -47,7 +47,7 @@ class _AuthApiEntrySuiteScreenState extends State<AuthApiEntrySuiteScreen> {
                     const _Hero(
                       eyebrow: 'AUTH & API',
                       title: 'Einstieg, Login & Tokens',
-                      subtitle: 'Native Mobile-UI fuer Welcome, Login, Register, Dashboard Entry, API Index, Token Manager und API Connection.',
+                      subtitle: 'Native Mobile-UI für Welcome, Login, Register, Dashboard Entry, API Index, Token Manager und API Connection.',
                     ),
                     const SizedBox(height: 18),
                     Row(

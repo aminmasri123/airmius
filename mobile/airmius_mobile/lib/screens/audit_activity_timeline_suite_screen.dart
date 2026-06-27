@@ -30,7 +30,7 @@ class _AuditActivityTimelineSuiteScreenState extends State<AuditActivityTimeline
       ),
       body: PageFrame(
         title: 'Audit Activity Timeline',
-        subtitle: 'Mobile Web-App-UI fuer Aktivitaeten, Sicherheitsereignisse, Vereinsaktionen, Exporte und Admin-Audit.',
+        subtitle: 'Mobile Web-App-UI für Aktivitaeten, Sicherheitsereignisse, Vereinsaktionen, Exporte und Admin-Audit.',
         trailing: const StatusPill('Audit', color: AirmiusColors.amber),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -48,7 +48,7 @@ class _AuditActivityTimelineSuiteScreenState extends State<AuditActivityTimeline
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Die Flutter-App bereitet eine klare Timeline fuer Mitgliedsantraege, Vereinsdaten, Dokumente, Zahlungen, Rollen, Moderation und Sicherheitsereignisse vor.',
+                    'Die Flutter-App bereitet eine klare Timeline für Mitgliedsanträge, Vereinsdaten, Dokumente, Zahlungen, Rollen, Moderation und Sicherheitsereignisse vor.',
                     style: TextStyle(color: AirmiusColors.muted, height: 1.42),
                   ),
                   const SizedBox(height: 14),
@@ -96,15 +96,15 @@ class _AuditActivityTimelineSuiteScreenState extends State<AuditActivityTimeline
                   ),
                   _LogToggle(
                     icon: Icons.assignment_ind_outlined,
-                    title: 'Mitgliedsantraege',
-                    body: 'Anfrage gesendet, Rueckzug, Rueckfrage, Entscheidung, Teamzuweisung und Onboarding.',
+                    title: 'Mitgliedsanträge',
+                    body: 'Anfrage gesendet, Rückzug, Rückfrage, Entscheidung, Teamzuweisung und Onboarding.',
                     enabled: _memberEvents,
                     onChanged: (value) => setState(() => _memberEvents = value),
                   ),
                   _LogToggle(
                     icon: Icons.receipt_long_outlined,
                     title: 'Finanzen',
-                    body: 'Beitraege, Rechnungen, Zahlungsstatus, Mahnungen, SEPA und Rueckerstattungen.',
+                    body: 'Beiträge, Rechnungen, Zahlungsstatus, Mahnungen, SEPA und Rückerstattungen.',
                     enabled: _financeEvents,
                     onChanged: (value) => setState(() => _financeEvents = value),
                   ),
@@ -131,7 +131,7 @@ class _AuditActivityTimelineSuiteScreenState extends State<AuditActivityTimeline
                 children: [
                   const Eyebrow('EXPORT & AUFBEWAHRUNG'),
                   const SizedBox(height: 8),
-                  const Text('Auditdaten koennen spaeter nach Rolle exportiert, zeitlich begrenzt aufbewahrt und fuer Datenschutz- oder Vereinsnachweise gefiltert werden.', style: TextStyle(color: AirmiusColors.muted, height: 1.38)),
+                  const Text('Auditdaten können später nach Rolle exportiert, zeitlich begrenzt aufbewahrt und für Datenschutz- oder Vereinsnachweise gefiltert werden.', style: TextStyle(color: AirmiusColors.muted, height: 1.38)),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
@@ -167,12 +167,12 @@ class _AuditEvent {
 }
 
 const _events = [
-  _AuditEvent(area: 'Verein', title: 'Sichtbarkeit geaendert', actor: 'verein airmius', time: '09:12', body: 'Kontaktbereich und Dokumente wurden fuer das oeffentliche Vereinsprofil aktiviert.', icon: Icons.visibility_outlined, color: AirmiusColors.blue),
-  _AuditEvent(area: 'Mitglied', title: 'Mitgliedsanfrage gesendet', actor: 'ZBB Konto', time: '09:28', body: 'Dynamisches Formular wurde mit Personendaten, Wohndaten und Datenschutzbestaetigung eingereicht.', icon: Icons.assignment_add, color: AirmiusColors.green),
-  _AuditEvent(area: 'Mitglied', title: 'Anfrage zurueckgezogen', actor: 'ZBB Konto', time: '09:43', body: 'Der Antrag wurde vor der Admin-Entscheidung zurueckgezogen und im Vereins-Postfach markiert.', icon: Icons.undo_outlined, color: AirmiusColors.amber),
-  _AuditEvent(area: 'Finanzen', title: 'Beitragsregel aktualisiert', actor: 'Club Admin', time: '10:05', body: 'Zahlungsrhythmus wurde auf monatlich gesetzt, Barzahlung und Ueberweisung bleiben erlaubt.', icon: Icons.receipt_long_outlined, color: AirmiusColors.amber),
-  _AuditEvent(area: 'Security', title: '2FA bestaetigt', actor: 'ZBB Konto', time: '10:22', body: 'Sensible Kontoaktion wurde mit zweitem Faktor bestaetigt.', icon: Icons.security_outlined, color: AirmiusColors.green),
-  _AuditEvent(area: 'Admin', title: 'Moderationsfall geschlossen', actor: 'Platform Admin', time: '11:01', body: 'Meldung wurde geprueft, Entscheidung dokumentiert und Audit-Hinweis gespeichert.', icon: Icons.admin_panel_settings_outlined, color: AirmiusColors.blue),
+  _AuditEvent(area: 'Verein', title: 'Sichtbarkeit geändert', actor: 'verein airmius', time: '09:12', body: 'Kontaktbereich und Dokumente wurden für das öffentliche Vereinsprofil aktiviert.', icon: Icons.visibility_outlined, color: AirmiusColors.blue),
+  _AuditEvent(area: 'Mitglied', title: 'Mitgliedsanfrage gesendet', actor: 'ZBB Konto', time: '09:28', body: 'Dynamisches Formular wurde mit Personendaten, Wohndaten und Datenschutzbestätigung eingereicht.', icon: Icons.assignment_add, color: AirmiusColors.green),
+  _AuditEvent(area: 'Mitglied', title: 'Anfrage zurückgezogen', actor: 'ZBB Konto', time: '09:43', body: 'Der Antrag wurde vor der Admin-Entscheidung zurückgezogen und im Vereins-Postfach markiert.', icon: Icons.undo_outlined, color: AirmiusColors.amber),
+  _AuditEvent(area: 'Finanzen', title: 'Beitragsregel aktualisiert', actor: 'Club Admin', time: '10:05', body: 'Zahlungsrhythmus wurde auf monatlich gesetzt, Barzahlung und Überweisung bleiben erlaubt.', icon: Icons.receipt_long_outlined, color: AirmiusColors.amber),
+  _AuditEvent(area: 'Security', title: '2FA bestätigt', actor: 'ZBB Konto', time: '10:22', body: 'Sensible Kontoaktion wurde mit zweitem Faktor bestätigt.', icon: Icons.security_outlined, color: AirmiusColors.green),
+  _AuditEvent(area: 'Admin', title: 'Moderationsfall geschlossen', actor: 'Platform Admin', time: '11:01', body: 'Meldung wurde geprüft, Entscheidung dokumentiert und Audit-Hinweis gespeichert.', icon: Icons.admin_panel_settings_outlined, color: AirmiusColors.blue),
 ];
 
 class _EventCard extends StatelessWidget {

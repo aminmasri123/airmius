@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -20,7 +20,7 @@ class _GuestBlogContentScreenState extends State<GuestBlogContentScreen> {
   bool _showSharing = true;
 
   final List<_BlogItem> _items = const [
-    _BlogItem(title: 'Vereine digital organisieren', category: 'Vereine', body: 'Mitgliedsantraege, Dokumente, Rollen, Zahlungen und Kommunikation im Alltag.', status: 'Top', meta: '6 min', icon: Icons.article_outlined, color: AirmiusColors.blue),
+    _BlogItem(title: 'Vereine digital organisieren', category: 'Vereine', body: 'Mitgliedsanträge, Dokumente, Rollen, Zahlungen und Kommunikation im Alltag.', status: 'Top', meta: '6 min', icon: Icons.article_outlined, color: AirmiusColors.blue),
     _BlogItem(title: 'Training und Anwesenheit', category: 'Training', body: 'Events, Trainings, Wartelisten, Check-ins und Teamkommunikation mobil planen.', status: 'Guide', meta: '8 min', icon: Icons.fitness_center_outlined, color: AirmiusColors.green),
     _BlogItem(title: 'Sponsoring im Sport', category: 'Sponsoren', body: 'Wie lokale Partner Vereine, Teams, Inhalte und Kampagnen sichtbar machen.', status: 'Partner', meta: '5 min', icon: Icons.handshake_outlined, color: AirmiusColors.amber),
     _BlogItem(title: 'Sicherheit und Datenschutz', category: 'Privacy', body: 'Einwilligungen, Minderjaehrige, Datenrechte und Moderation transparent gestalten.', status: 'Wichtig', meta: '7 min', icon: Icons.privacy_tip_outlined, color: AirmiusColors.red),
@@ -56,10 +56,10 @@ class _GuestBlogContentScreenState extends State<GuestBlogContentScreen> {
                           title: 'Content-Optionen',
                           child: Column(
                             children: [
-                              _SwitchRow(title: 'Top-Inhalte anzeigen', subtitle: 'Featured Blogposts und oeffentliche Highlights sichtbar machen.', value: _showFeatured, onChanged: (value) => setState(() => _showFeatured = value)),
-                              _SwitchRow(title: 'Kategorien anzeigen', subtitle: 'Blog/Categories als mobile Filter- und Uebersichts-UI abbilden.', value: _showCategories, onChanged: (value) => setState(() => _showCategories = value)),
+                              _SwitchRow(title: 'Top-Inhalte anzeigen', subtitle: 'Featured Blogposts und öffentliche Highlights sichtbar machen.', value: _showFeatured, onChanged: (value) => setState(() => _showFeatured = value)),
+                              _SwitchRow(title: 'Kategorien anzeigen', subtitle: 'Blog/Categories als mobile Filter- und Übersichts-UI abbilden.', value: _showCategories, onChanged: (value) => setState(() => _showCategories = value)),
                               _SwitchRow(title: 'Autoren anzeigen', subtitle: 'Autor, Rolle, Verein oder Plattformkontext anzeigen.', value: _showAuthors, onChanged: (value) => setState(() => _showAuthors = value)),
-                              _SwitchRow(title: 'Teilen erlauben', subtitle: 'Public Sharing fuer Blog, Top-Inhalte und Landingpages vorbereiten.', value: _showSharing, onChanged: (value) => setState(() => _showSharing = value)),
+                              _SwitchRow(title: 'Teilen erlauben', subtitle: 'Public Sharing für Blog, Top-Inhalte und Landingpages vorbereiten.', value: _showSharing, onChanged: (value) => setState(() => _showSharing = value)),
                             ],
                           ),
                         ),
@@ -68,7 +68,7 @@ class _GuestBlogContentScreenState extends State<GuestBlogContentScreen> {
                           _BlogCard(item: item, onOpen: () => _toast('${item.title}: Blogdetail vorbereitet')),
                           const SizedBox(height: 12),
                         ],
-                        if (items.isEmpty) const EmptyPanel('Keine Blogbeitraege fuer diese Kategorie gefunden.'),
+                        if (items.isEmpty) const EmptyPanel('Keine Blogbeiträge für diese Kategorie gefunden.'),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Public Aktionen',
@@ -76,7 +76,7 @@ class _GuestBlogContentScreenState extends State<GuestBlogContentScreen> {
                             spacing: 10,
                             runSpacing: 10,
                             children: [
-                              AirmiusButton(label: 'Beitrag oeffnen', icon: Icons.open_in_new_outlined, onPressed: () => _toast('Blogdetail vorbereitet')),
+                              AirmiusButton(label: 'Beitrag öffnen', icon: Icons.open_in_new_outlined, onPressed: () => _toast('Blogdetail vorbereitet')),
                               AirmiusButton(label: 'Public Growth', icon: Icons.public_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PublicGrowthOperationsScreen()))),
                               AirmiusButton(label: 'Support', icon: Icons.support_agent_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()))),
                             ],

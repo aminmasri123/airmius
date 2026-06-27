@@ -61,7 +61,7 @@ class AirmiusReleaseBlockers {
     AirmiusReleaseBlocker(
       title: 'Real API QA',
       owner: 'Backend',
-      requiredEvidence: 'Staging/Production API Smoke Test fuer Kernfluesse',
+      requiredEvidence: 'Staging/Production API Smoke Test für Kernfluesse',
       status: 'Flutter-Vertrag vorbereitet',
     ),
     AirmiusReleaseBlocker(
@@ -73,25 +73,25 @@ class AirmiusReleaseBlockers {
     AirmiusReleaseBlocker(
       title: 'Localization Visual QA',
       owner: 'Product',
-      requiredEvidence: 'DE/EN/FR/AR Kernflows visuell geprueft, inklusive AR RTL',
+      requiredEvidence: 'DE/EN/FR/AR Kernflows visuell geprüft, inklusive AR RTL',
       status: 'Matrix vorbereitet',
     ),
     AirmiusReleaseBlocker(
       title: 'Logo & Theme Parity QA',
       owner: 'Design',
-      requiredEvidence: 'Normal nutzt dunkles Logo, Dunkel nutzt weisses Logo, System folgt der Geraete-Helligkeit nach Neustart',
+      requiredEvidence: 'Normal nutzt dunkles Logo, Dunkel nutzt weisses Logo, System folgt der Geräte-Helligkeit nach Neustart',
       status: 'Screenshot-Evidence offen',
     ),
     AirmiusReleaseBlocker(
       title: 'Logo Theme Asset Mapping',
       owner: 'Design',
-      requiredEvidence: 'Statischer Check bestaetigt Logo-Dateien und Normal/Dunkel/System-Mapping',
+      requiredEvidence: 'Statischer Check bestätigt Logo-Dateien und Normal/Dunkel/System-Mapping',
       status: 'Evidence-Log offen',
     ),
     AirmiusReleaseBlocker(
       title: 'Secure Token Storage QA',
       owner: 'Mobile',
-      requiredEvidence: 'Session Restore und Logout auf Android/iOS mit Secure Storage geprueft',
+      requiredEvidence: 'Session Restore und Logout auf Android/iOS mit Secure Storage geprüft',
       status: 'Implementierung vorbereitet',
     ),
     AirmiusReleaseBlocker(
@@ -127,7 +127,7 @@ class AirmiusReleaseBlockers {
     AirmiusReleaseBlocker(
       title: 'Release Configuration Check',
       owner: 'Mobile',
-      requiredEvidence: 'HTTPS API, HTTP-Transport, kein Localhost und Secure-Storage-Voraussetzungen geprueft',
+      requiredEvidence: 'HTTPS API, HTTP-Transport, kein Localhost und Secure-Storage-Voraussetzungen geprüft',
       status: 'Skript vorbereitet',
     ),
     AirmiusReleaseBlocker(

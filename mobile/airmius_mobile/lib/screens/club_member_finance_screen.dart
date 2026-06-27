@@ -36,9 +36,9 @@ class _ClubMemberFinanceScreenState extends State<ClubMemberFinanceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Mitglieder & Beitraege', style: TextStyle(fontWeight: FontWeight.w900))),
+      appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Mitglieder & Beiträge', style: TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
-        title: 'Mitglieder & Beitraege',
+        title: 'Mitglieder & Beiträge',
         subtitle: 'Mitglieder, externe Kontakte, Rechnungen, Zahlungen, SEPA und DATEV',
         child: FutureBuilder<List<AirmiusInvoice>>(
           future: _invoicesFuture,
@@ -71,7 +71,7 @@ class _ClubMemberFinanceScreenState extends State<ClubMemberFinanceScreen> {
               AirmiusPanel(gradient: true, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 const Eyebrow('Vereinsverwaltung'),
                 const SizedBox(height: 8),
-                const Text('Nach Annahme einer Anfrage verwaltet der Verein Mitgliedsnummer, Beitraege, Rechnungen und Zahlungsausgleich.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                const Text('Nach Annahme einer Anfrage verwaltet der Verein Mitgliedsnummer, Beiträge, Rechnungen und Zahlungsausgleich.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                 const SizedBox(height: 14),
                 Wrap(spacing: 8, runSpacing: 8, children: [
                   for (final tab in const ['Mitglieder', 'Rechnungen', 'Zahlungen', 'Exporte'])
@@ -131,7 +131,7 @@ class _MembersPanel extends StatelessWidget {
         Wrap(spacing: 10, runSpacing: 10, children: [
           AirmiusButton(label: 'CSV importieren', icon: Icons.upload_file_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FinanceRecordDetailScreen(title: 'CSV importieren', body: 'Mitgliederimport, externe Kontakte und Mitgliedsnummern.', trailing: 'Import', icon: Icons.upload_file_outlined)))),
           AirmiusButton(label: 'E-Mail-Mitglied', icon: Icons.mark_email_read_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FinanceRecordDetailScreen(title: 'E-Mail-Mitglied', body: 'Externes Mitglied per E-Mail einladen.', trailing: 'Einladung', icon: Icons.mark_email_read_outlined)))),
-          AirmiusButton(label: 'Mitgliedsnummer', icon: Icons.numbers_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FinanceRecordDetailScreen(title: 'Mitgliedsnummer', body: 'Mitgliedsnummern generieren und Regeln pruefen.', trailing: 'Nummer', icon: Icons.numbers_outlined)))),
+          AirmiusButton(label: 'Mitgliedsnummer', icon: Icons.numbers_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FinanceRecordDetailScreen(title: 'Mitgliedsnummer', body: 'Mitgliedsnummern generieren und Regeln prüfen.', trailing: 'Nummer', icon: Icons.numbers_outlined)))),
         ]),
       ])),
     ]);
@@ -194,7 +194,7 @@ class _PaymentsPanel extends StatelessWidget {
         const SizedBox(height: 12),
         Wrap(spacing: 10, runSpacing: 10, children: [
           AirmiusButton(label: 'Import Bankdatei', icon: Icons.upload_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FinanceRecordDetailScreen(title: 'Import Bankdatei', body: 'Banktransaktionen importieren und abgleichen.', trailing: 'Import', icon: Icons.upload_outlined)))),
-          AirmiusButton(label: 'Transaktion bestaetigen', icon: Icons.check_circle_outline, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FinanceRecordDetailScreen(title: 'Transaktion bestaetigen', body: 'Zahlung einem Mitglied oder Rechnung zuordnen.', trailing: 'Match', icon: Icons.check_circle_outline)))),
+          AirmiusButton(label: 'Transaktion bestätigen', icon: Icons.check_circle_outline, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FinanceRecordDetailScreen(title: 'Transaktion bestätigen', body: 'Zahlung einem Mitglied oder Rechnung zuordnen.', trailing: 'Match', icon: Icons.check_circle_outline)))),
         ]),
       ])),
     ]);
@@ -210,15 +210,15 @@ class _ExportsPanel extends StatelessWidget {
       const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Eyebrow('SEPA & DATEV'),
         SizedBox(height: 10),
-        _FinanceLine(icon: Icons.sync_alt_outlined, title: 'SEPA-Lastschrift Export', body: 'Faellige Mitgliedsbeitraege als SEPA-Datei vorbereiten', trailing: 'SEPA'),
+        _FinanceLine(icon: Icons.sync_alt_outlined, title: 'SEPA-Lastschrift Export', body: 'Faellige Mitgliedsbeiträge als SEPA-Datei vorbereiten', trailing: 'SEPA'),
         SizedBox(height: 10),
-        _FinanceLine(icon: Icons.dataset_outlined, title: 'DATEV Export', body: 'Rechnungen und Zahlungen fuer Buchhaltung exportieren', trailing: 'DATEV'),
+        _FinanceLine(icon: Icons.dataset_outlined, title: 'DATEV Export', body: 'Rechnungen und Zahlungen für Buchhaltung exportieren', trailing: 'DATEV'),
       ])),
       AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         const Eyebrow('Export-Aktionen'),
         const SizedBox(height: 12),
         Wrap(spacing: 10, runSpacing: 10, children: [
-          AirmiusButton(label: 'SEPA exportieren', icon: Icons.file_download_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FinanceRecordDetailScreen(title: 'SEPA exportieren', body: 'Lastschriftdatei vorbereiten und pruefen.', trailing: 'SEPA', icon: Icons.file_download_outlined)))),
+          AirmiusButton(label: 'SEPA exportieren', icon: Icons.file_download_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FinanceRecordDetailScreen(title: 'SEPA exportieren', body: 'Lastschriftdatei vorbereiten und prüfen.', trailing: 'SEPA', icon: Icons.file_download_outlined)))),
           AirmiusButton(label: 'DATEV exportieren', icon: Icons.file_download_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FinanceRecordDetailScreen(title: 'DATEV exportieren', body: 'Buchhaltungsexport vorbereiten.', trailing: 'DATEV', icon: Icons.file_download_outlined)))),
         ]),
       ])),
@@ -290,5 +290,5 @@ String _statusLabel(String status) {
 const _members = [
   _Member(name: 'ZBB Konto', body: 'Mitglied #0001 - Monatsbeitrag - Anfrage angenommen', status: 'Aktiv'),
   _Member(name: 'Externes Mitglied', body: 'Per E-Mail importiert - Einladung offen', status: 'Einladung'),
-  _Member(name: 'Junior Mitglied', body: 'Guardian Consent erforderlich', status: 'Pruefen'),
+  _Member(name: 'Junior Mitglied', body: 'Guardian Consent erforderlich', status: 'Prüfen'),
 ];

@@ -16,10 +16,10 @@ class TrainingPlanPeriodizationSuiteScreen extends StatelessWidget {
     ];
 
     final checks = [
-      _CheckItem('Coach-Freigabe', 'Trainer prueft Plan, Belastung, Ziele und Teamfreigabe.'),
+      _CheckItem('Coach-Freigabe', 'Trainer prüft Plan, Belastung, Ziele und Teamfreigabe.'),
       _CheckItem('Athletendaten', 'Alter, Leistungslevel, Verletzungen, Ziele, Verfuegbarkeit und Datenschutz.'),
       _CheckItem('Kalender-Sync', 'Trainings, Events, Abwesenheiten und Erinnerungen werden verbunden.'),
-      _CheckItem('Fortschritt', 'Logs, RPE, Notizen, Messwerte, Badges und Anpassungsvorschlaege.'),
+      _CheckItem('Fortschritt', 'Logs, RPE, Notizen, Messwerte, Badges und Anpassungsvorschläge.'),
     ];
 
     return Scaffold(
@@ -45,7 +45,7 @@ class TrainingPlanPeriodizationSuiteScreen extends StatelessWidget {
                   SizedBox(height: 10),
                   Text('Trainer planen nicht nur Termine, sondern Entwicklung.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
                   SizedBox(height: 8),
-                  Text('Diese mobile Ansicht bildet Trainingszyklen, Belastung, Freigaben, Kalender-Sync, Fortschritt und sichere Anpassungen fuer Teams und Sportler ab.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
+                  Text('Diese mobile Ansicht bildet Trainingszyklen, Belastung, Freigaben, Kalender-Sync, Fortschritt und sichere Anpassungen für Teams und Sportler ab.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
                 ],
               ),
             ),

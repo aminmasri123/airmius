@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -24,7 +24,7 @@ class _AdminPlatformSettingsScreenState extends State<AdminPlatformSettingsScree
 
   final List<_SettingItem> _items = const [
     _SettingItem(title: 'Registrierung', body: 'Neue User, Vereine, Guardian-Konten und Profilabschluss steuern.', status: 'Offen', icon: Icons.person_add_outlined, color: AirmiusColors.blue),
-    _SettingItem(title: 'Vereinsbeitritt', body: 'Mitgliedsanfragen, Pflichtfelder, Dokumente und RueckzugsmÃ¶glichkeit global erlauben.', status: 'Aktiv', icon: Icons.card_membership_outlined, color: AirmiusColors.green),
+    _SettingItem(title: 'Vereinsbeitritt', body: 'Mitgliedsanfragen, Pflichtfelder, Dokumente und Rückzugsmöglichkeit global erlauben.', status: 'Aktiv', icon: Icons.card_membership_outlined, color: AirmiusColors.green),
     _SettingItem(title: 'Wartungsmodus', body: 'Maintenance-Seite, Statushinweis, Support und technische Sperrung vorbereiten.', status: 'Aus', icon: Icons.construction_outlined, color: AirmiusColors.amber),
     _SettingItem(title: 'API & Tokens', body: 'Laravel API, Scopes, Tokenrotation, Webhooks und Feature-Flags verwalten.', status: 'Aktiv', icon: Icons.api_outlined, color: AirmiusColors.blueDeep),
     _SettingItem(title: 'Moderation', body: 'Melden, Sperren, Trust & Safety, Adminfreigaben und Risiko-Regeln steuern.', status: 'Streng', icon: Icons.shield_outlined, color: AirmiusColors.red),
@@ -55,7 +55,7 @@ class _AdminPlatformSettingsScreenState extends State<AdminPlatformSettingsScree
                           child: Column(
                             children: [
                               _SwitchRow(title: 'Registrierung offen', subtitle: 'Login/Register, Profilabschluss und E-Mail-Verifizierung erlauben.', value: _registrationOpen, onChanged: (value) => setState(() => _registrationOpen = value)),
-                              _SwitchRow(title: 'Vereinsanfragen offen', subtitle: 'User duerfen Vereinen beitreten und Mitgliedsantraege senden.', value: _clubApplicationsOpen, onChanged: (value) => setState(() => _clubApplicationsOpen = value)),
+                              _SwitchRow(title: 'Vereinsanfragen offen', subtitle: 'User dürfen Vereinen beitreten und Mitgliedsanträge senden.', value: _clubApplicationsOpen, onChanged: (value) => setState(() => _clubApplicationsOpen = value)),
                               _SwitchRow(title: 'Wartungsmodus', subtitle: 'Maintenance-Seite aktivieren und App-Zugriff begrenzen.', value: _maintenanceMode, onChanged: (value) => setState(() => _maintenanceMode = value)),
                               _SwitchRow(title: 'API aktiv', subtitle: 'Laravel API, Tokens, Webhooks und mobile Syncs erlauben.', value: _apiEnabled, onChanged: (value) => setState(() => _apiEnabled = value)),
                               _SwitchRow(title: 'Public Pages aktiv', subtitle: 'Guest-Seiten, Pricing, Marketplace, Blog und Landingpages anzeigen.', value: _publicPagesEnabled, onChanged: (value) => setState(() => _publicPagesEnabled = value)),

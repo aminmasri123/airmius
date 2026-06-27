@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -22,7 +22,7 @@ class _StoreDeviceQaReadinessSuiteScreenState extends State<StoreDeviceQaReadine
       title: 'App Logo & Splash',
       area: 'Store',
       status: 'Brand',
-      body: 'Airmius-Logo, App-Icon, Splash-Screen, Launch-Hintergrund und konsistente Markenwirkung fuer Android/iOS.',
+      body: 'Airmius-Logo, App-Icon, Splash-Screen, Launch-Hintergrund und konsistente Markenwirkung für Android/iOS.',
       icon: Icons.auto_awesome_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -46,7 +46,7 @@ class _StoreDeviceQaReadinessSuiteScreenState extends State<StoreDeviceQaReadine
       title: 'Android Device Matrix',
       area: 'Device',
       status: 'Android',
-      body: 'Kleine Phones, grosse Phones, Tablets, Chrome-Web-Debug, Tastaturverhalten und Scrollbereiche.',
+      body: 'Kleine Phones, große Phones, Tablets, Chrome-Web-Debug, Tastaturverhalten und Scrollbereiche.',
       icon: Icons.android_outlined,
       color: Color(0xFFB084FF),
     ),
@@ -54,7 +54,7 @@ class _StoreDeviceQaReadinessSuiteScreenState extends State<StoreDeviceQaReadine
       title: 'iOS Device Matrix',
       area: 'Device',
       status: 'iOS',
-      body: 'SafeArea, Notch, Dynamic Island, iPhone SE, grosse iPhones, iPad, Tastatur und native Scroll-Erwartungen.',
+      body: 'SafeArea, Notch, Dynamic Island, iPhone SE, große iPhones, iPad, Tastatur und native Scroll-Erwartungen.',
       icon: Icons.phone_iphone_outlined,
       color: Color(0xFFFF6B6B),
     ),
@@ -62,7 +62,7 @@ class _StoreDeviceQaReadinessSuiteScreenState extends State<StoreDeviceQaReadine
       title: 'Navigation Smoke Test',
       area: 'QA',
       status: 'Nav',
-      body: 'Jede Suite muss aus Hub, Release und Settings erreichbar sein und sauber zurueck navigieren.',
+      body: 'Jede Suite muss aus Hub, Release und Settings erreichbar sein und sauber zurück navigieren.',
       icon: Icons.alt_route_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -70,7 +70,7 @@ class _StoreDeviceQaReadinessSuiteScreenState extends State<StoreDeviceQaReadine
       title: 'Form Smoke Test',
       area: 'QA',
       status: 'Forms',
-      body: 'Mitgliedsantrag, Profil, Login, Checkout, Upload, Search und Dynamic Forms muessen mobile Eingaben tragen.',
+      body: 'Mitgliedsantrag, Profil, Login, Checkout, Upload, Search und Dynamic Forms müssen mobile Eingaben tragen.',
       icon: Icons.fact_check_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -112,7 +112,7 @@ class _StoreDeviceQaReadinessSuiteScreenState extends State<StoreDeviceQaReadine
                     const _Hero(
                       eyebrow: 'STORE & DEVICE QA',
                       title: 'App-Readiness',
-                      subtitle: 'Native Kontroll-UI fuer Store-Daten, Logo/Splash, Berechtigungen, Device-Matrix, Navigation-Smoke, Form-Smoke und Visual QA.',
+                      subtitle: 'Native Kontroll-UI für Store-Daten, Logo/Splash, Berechtigungen, Device-Matrix, Navigation-Smoke, Form-Smoke und Visual QA.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -144,7 +144,7 @@ class _StoreDeviceQaReadinessSuiteScreenState extends State<StoreDeviceQaReadine
                       firstIcon: Icons.playlist_add_check_outlined,
                       firstLabel: 'Smoke-Test planen',
                       secondIcon: Icons.rocket_launch_outlined,
-                      secondLabel: 'Store-Gate pruefen',
+                      secondLabel: 'Store-Gate prüfen',
                       onFirst: () => openUiAction(context, title: 'Smoke-Test', body: 'Navigation, Forms und Visual QA sind als manuelle Checkliste vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
                       onSecond: () => openUiAction(context, title: 'Store-Gate', body: 'Store-Daten, Datenschutz und Permissions bleiben als naechste App-Readiness-Gates sichtbar.', status: 'UI bereit', icon: Icons.info_outline),
                       onSupport: () => _openSupport(context),

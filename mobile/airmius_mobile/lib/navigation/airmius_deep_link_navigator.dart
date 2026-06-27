@@ -34,10 +34,10 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.membershipApplication => AirmiusDeepLinkedTargetScreen(
           target: target,
           title: 'Mitgliedschaftsanfrage',
-          body: 'Die App hat eine konkrete Mitgliedschaftsanfrage erkannt und oeffnet danach den passenden Statusbereich.',
+          body: 'Die App hat eine konkrete Mitgliedschaftsanfrage erkannt und öffnet danach den passenden Statusbereich.',
           icon: Icons.assignment_ind_outlined,
           color: AirmiusColors.green,
-          actionLabel: 'Anfragestatus oeffnen',
+          actionLabel: 'Anfragestatus öffnen',
           actionScreen: const MembershipRequestStatusScreen(),
         ),
       AirmiusDeepLinkTargetType.event => AirmiusDeepLinkedTargetScreen(
@@ -46,7 +46,7 @@ class AirmiusDeepLinkNavigator {
           body: 'Die App hat einen Event-Link erkannt und fuehrt dich danach in den Trainings- und Eventbereich.',
           icon: Icons.event_available_outlined,
           color: AirmiusColors.green,
-          actionLabel: 'Eventbereich oeffnen',
+          actionLabel: 'Eventbereich öffnen',
           actionScreen: const TrainingCenterScreen(),
         ),
       AirmiusDeepLinkTargetType.message => AirmiusDeepLinkedTargetScreen(
@@ -55,7 +55,7 @@ class AirmiusDeepLinkNavigator {
           body: 'Die App hat eine Konversation erkannt und zeigt zuerst den sicheren Routing-Kontext.',
           icon: Icons.forum_outlined,
           color: AirmiusColors.blue,
-          actionLabel: 'Nachrichten oeffnen',
+          actionLabel: 'Nachrichten öffnen',
           actionScreen: const ConversationsCenterScreen(),
         ),
       AirmiusDeepLinkTargetType.notification => AirmiusDeepLinkedTargetScreen(
@@ -64,7 +64,7 @@ class AirmiusDeepLinkNavigator {
           body: 'Die App hat eine konkrete Benachrichtigung erkannt und leitet danach in die Notification-Zentrale.',
           icon: Icons.notifications_active_outlined,
           color: AirmiusColors.blue,
-          actionLabel: 'Benachrichtigungen oeffnen',
+          actionLabel: 'Benachrichtigungen öffnen',
           actionScreen: const NotificationsCenterScreen(),
         ),
       AirmiusDeepLinkTargetType.profile => AirmiusDeepLinkedTargetScreen(
@@ -73,7 +73,7 @@ class AirmiusDeepLinkNavigator {
           body: 'Die App hat einen Profilbereich erkannt und kann nach Auth-Prüfung direkt in dein Profil wechseln.',
           icon: Icons.person_outline,
           color: AirmiusColors.amber,
-          actionLabel: 'Profil oeffnen',
+          actionLabel: 'Profil öffnen',
           actionScreen: const ProfileScreen(),
         ),
       AirmiusDeepLinkTargetType.unknown => AirmiusDeepLinkFallbackScreen(target: target),
@@ -132,7 +132,7 @@ class _AirmiusDeepLinkedClubProfileScreenState extends State<AirmiusDeepLinkedCl
             ),
             body: const PageFrame(
               title: 'Verein wird geladen',
-              subtitle: 'Der Deep Link oeffnet das konkrete Vereinsprofil.',
+              subtitle: 'Der Deep Link öffnet das konkrete Vereinsprofil.',
               child: AirmiusPanel(
                 child: Center(
                   child: Padding(
@@ -258,7 +258,7 @@ class AirmiusDeepLinkedTargetScreen extends StatelessWidget {
                   _DeepLinkAuditLine(label: 'Pfad', value: target.path.isEmpty ? '-' : target.path),
                   _DeepLinkAuditLine(label: 'Typ', value: target.analyticsName),
                   _DeepLinkAuditLine(label: 'Ziel', value: AirmiusDeepLinkNavigator.destinationLabel(target)),
-                  _DeepLinkAuditLine(label: 'Schutz', value: target.requiresAuth ? 'Login / Session erforderlich' : 'Oeffentlich erreichbar'),
+                  _DeepLinkAuditLine(label: 'Schutz', value: target.requiresAuth ? 'Login / Session erforderlich' : 'Öffentlich erreichbar'),
                 ],
               ),
             ),
@@ -403,7 +403,7 @@ class AirmiusDeepLinkFallbackScreen extends StatelessWidget {
         title: const Text('Deep Link', style: TextStyle(fontWeight: FontWeight.w900)),
       ),
       body: PageFrame(
-        title: 'Link konnte nicht geoeffnet werden',
+        title: 'Link konnte nicht geöffnet werden',
         subtitle: 'Die App hat den Link erkannt, aber kein sicheres Ziel gefunden.',
         child: AirmiusPanel(
           borderColor: AirmiusColors.amber.withValues(alpha: .55),
@@ -415,7 +415,7 @@ class AirmiusDeepLinkFallbackScreen extends StatelessWidget {
               Text(target.path.isEmpty ? 'Unbekannter Link' : target.path, style: const TextStyle(color: AirmiusColors.text, fontSize: 20, fontWeight: FontWeight.w900)),
               const SizedBox(height: 8),
               const Text(
-                'Spaeter kann hier erklaert werden, ob der Link abgelaufen ist, eine Rolle fehlt, der Workspace gewechselt werden muss oder das Ziel nicht mehr existiert.',
+                'Später kann hier erklaert werden, ob der Link abgelaufen ist, eine Rolle fehlt, der Workspace gewechselt werden muss oder das Ziel nicht mehr existiert.',
                 style: TextStyle(color: AirmiusColors.muted, height: 1.42),
               ),
               const SizedBox(height: 12),

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -18,13 +18,13 @@ class _LearningStudioCourseSuiteScreenState extends State<LearningStudioCourseSu
   bool _showPublic = true;
 
   final List<_CourseItem> _items = const [
-    _CourseItem('Meine Kurse', 'Learner', 'MyCourses', 'Kursliste, Fortschritt, Lektionen, Zertifikate und naechste Schritte fuer Nutzer.', Icons.school_outlined, Color(0xFF5BA7FF)),
+    _CourseItem('Meine Kurse', 'Learner', 'MyCourses', 'Kursliste, Fortschritt, Lektionen, Zertifikate und naechste Schritte für Nutzer.', Icons.school_outlined, Color(0xFF5BA7FF)),
     _CourseItem('Kursdetails', 'Learner', 'Show', 'Mobile Kursseite mit Modulstruktur, Lernstatus, Dauer, Trainer und CTA.', Icons.menu_book_outlined, Color(0xFF2EE59D)),
     _CourseItem('Lesson Detail', 'Learner', 'Lesson', 'Lektion mit Inhalt, Video-Hinweis, Dateien, Quizstatus und Abschlussaktion.', Icons.play_lesson_outlined, Color(0xFFF8B84E)),
-    _CourseItem('Learning Studio', 'Studio', 'Creator', 'Erstellerbereich fuer Kurse, Module, Lektionen, Veroeffentlichung und Qualitaetsstatus.', Icons.video_settings_outlined, Color(0xFFB084FF)),
-    _CourseItem('Kurs veroeffentlichen', 'Studio', 'Publish', 'Freigabe-Workflow, Sichtbarkeit, Preis, Zielgruppe, Medien und Zertifikatsoptionen.', Icons.publish_outlined, Color(0xFFFF6B6B)),
-    _CourseItem('Gast E-Learning', 'Public', 'Guest', 'Oeffentliche Lernseite mit Kursvorschau, Kategorien, Benefits und Login-CTA.', Icons.public_outlined, Color(0xFF5BA7FF)),
-    _CourseItem('Zertifikat pruefen', 'Public', 'Verify', 'Zertifikatscode, Name, Kurs, Aussteller, Gueltigkeit und sichere Pruefansicht.', Icons.verified_outlined, Color(0xFF2EE59D)),
+    _CourseItem('Learning Studio', 'Studio', 'Creator', 'Erstellerbereich für Kurse, Module, Lektionen, Veröffentlichung und Qualitaetsstatus.', Icons.video_settings_outlined, Color(0xFFB084FF)),
+    _CourseItem('Kurs veröffentlichen', 'Studio', 'Publish', 'Freigabe-Workflow, Sichtbarkeit, Preis, Zielgruppe, Medien und Zertifikatsoptionen.', Icons.publish_outlined, Color(0xFFFF6B6B)),
+    _CourseItem('Gast E-Learning', 'Public', 'Guest', 'Öffentliche Lernseite mit Kursvorschau, Kategorien, Benefits und Login-CTA.', Icons.public_outlined, Color(0xFF5BA7FF)),
+    _CourseItem('Zertifikat prüfen', 'Public', 'Verify', 'Zertifikatscode, Name, Kurs, Aussteller, Gültigkeit und sichere Prüfansicht.', Icons.verified_outlined, Color(0xFF2EE59D)),
   ];
 
   List<_CourseItem> get _visible {
@@ -50,7 +50,7 @@ class _LearningStudioCourseSuiteScreenState extends State<LearningStudioCourseSu
                     const _Hero(
                       eyebrow: 'LEARNING SUITE',
                       title: 'Kurse & Studio',
-                      subtitle: 'Native Mobile-UI fuer MyCourses, Kursdetails, Lektionen, Studio, Public Learning und Zertifikatspruefung.',
+                      subtitle: 'Native Mobile-UI für MyCourses, Kursdetails, Lektionen, Studio, Public Learning und Zertifikatsprüfung.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -82,9 +82,9 @@ class _LearningStudioCourseSuiteScreenState extends State<LearningStudioCourseSu
                       primaryIcon: Icons.play_circle_outline,
                       primaryLabel: 'Kurs starten',
                       secondaryIcon: Icons.verified_outlined,
-                      secondaryLabel: 'Zertifikat pruefen',
-                      onPrimary: () => openUiAction(context, title: 'Kurs starten', body: 'Die Kurs-UI ist vorbereitet; Lernfortschritt kommt spaeter ueber Laravel.', status: 'UI bereit', icon: Icons.info_outline),
-                      onSecondary: () => openUiAction(context, title: 'Zertifikat pruefen', body: 'Die mobile Pruefansicht ist fuer API-Zertifikate vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
+                      secondaryLabel: 'Zertifikat prüfen',
+                      onPrimary: () => openUiAction(context, title: 'Kurs starten', body: 'Die Kurs-UI ist vorbereitet; Lernfortschritt kommt später über Laravel.', status: 'UI bereit', icon: Icons.info_outline),
+                      onSecondary: () => openUiAction(context, title: 'Zertifikat prüfen', body: 'Die mobile Prüfansicht ist für API-Zertifikate vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
                       onSupport: () => _openSupport(context),
                     ),
                   ],

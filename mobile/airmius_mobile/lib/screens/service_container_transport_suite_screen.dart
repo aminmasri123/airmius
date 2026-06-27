@@ -11,13 +11,13 @@ class ServiceContainerTransportSuiteScreen extends StatelessWidget {
     final layers = [
       _LayerItem('Environment', 'Base URL', 'API-Base-URL, Locale, Offline Queue und Timeout werden zentral definiert.', AirmiusColors.blue, Icons.settings_outlined),
       _LayerItem('Service Container', 'App Core', 'AuthState, TokenStore, ClientFactory und RepositoryBundle werden zusammengefuehrt.', AirmiusColors.green, Icons.hub_outlined),
-      _LayerItem('Queued Transport', 'Retry/Offline', 'Requests koennen bei Offline-Zustand gesammelt und spaeter geflusht werden.', AirmiusColors.amber, Icons.sync_outlined),
-      _LayerItem('Static Transport', 'Dev/Test', 'Mockbare Responses fuer lokale Screens, Demos und spaetere Contract-Tests.', AirmiusColors.pink, Icons.bug_report_outlined),
+      _LayerItem('Queued Transport', 'Retry/Offline', 'Requests können bei Offline-Zustand gesammelt und später geflusht werden.', AirmiusColors.amber, Icons.sync_outlined),
+      _LayerItem('Static Transport', 'Dev/Test', 'Mockbare Responses für lokale Screens, Demos und spätere Contract-Tests.', AirmiusColors.pink, Icons.bug_report_outlined),
     ];
 
     final gates = [
-      _GateItem('Echten HTTP Transport bauen', 'Package/http oder Dio anschliessen, ohne die Repository-Schicht neu zu schreiben.'),
-      _GateItem('Secure Storage haerten', 'Persistenten TokenStore spaeter durch Flutter Secure Storage, Keychain oder Android Keystore absichern.'),
+      _GateItem('Echten HTTP Transport bauen', 'Package/http oder Dio anschließen, ohne die Repository-Schicht neu zu schreiben.'),
+      _GateItem('Secure Storage haerten', 'Persistenten TokenStore später durch Flutter Secure Storage, Keychain oder Android Keystore absichern.'),
       _GateItem('App-Shell verdrahten', 'ServiceContainer in main.dart bereitstellen und AuthState in Navigation/Guards nutzen.'),
       _GateItem('Screens umstellen', 'Clubsuche, Clubdetail, Mitgliedsantrag, Dateien und Billing auf Repositories migrieren.'),
     ];
@@ -45,7 +45,7 @@ class ServiceContainerTransportSuiteScreen extends StatelessWidget {
                   SizedBox(height: 10),
                   Text('Jetzt bekommt die App eine zentrale technische Schaltstelle.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
                   SizedBox(height: 8),
-                  Text('Der Service Container verbindet Umgebung, Auth, API-Client, Repositories und Transport. Das ist die Stelle, an der spaeter echter HTTP-Transport und Secure Storage eingesteckt werden.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
+                  Text('Der Service Container verbindet Umgebung, Auth, API-Client, Repositories und Transport. Das ist die Stelle, an der später echter HTTP-Transport und Secure Storage eingesteckt werden.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
                 ],
               ),
             ),

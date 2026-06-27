@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -26,17 +26,17 @@ class _MaturityMediaGuidelinesScreenState extends State<MaturityMediaGuidelinesS
       area: 'Jugend',
       status: 'Pflicht',
       meta: 'Consent',
-      description: 'Altersstufen, Erziehungsberechtigte, Einwilligungen und geschuetzte Funktionen fuer Jugendliche.',
+      description: 'Altersstufen, Erziehungsberechtigte, Einwilligungen und geschuetzte Funktionen für Jugendliche.',
       icon: Icons.family_restroom_outlined,
       color: Color(0xFF5BA7FF),
-      details: ['Alter pruefen', 'Guardian-Daten', 'Freigaben', 'Sichtbarkeit'],
+      details: ['Alter prüfen', 'Guardian-Daten', 'Freigaben', 'Sichtbarkeit'],
     ),
     _GuidelineItem(
       title: 'Medienfreigaben',
       area: 'Medien',
       status: 'Optional',
       meta: 'Fotos/Videos',
-      description: 'Regeln fuer Bilder, Videos, Profilmedien, Vereinsbeitraege und widerrufbare Medienzustimmungen.',
+      description: 'Regeln für Bilder, Videos, Profilmedien, Vereinsbeiträge und widerrufbare Medienzustimmungen.',
       icon: Icons.photo_camera_back_outlined,
       color: Color(0xFF2EE59D),
       details: ['Foto erlaubt', 'Video erlaubt', 'Widerruf', 'Dokumente'],
@@ -46,7 +46,7 @@ class _MaturityMediaGuidelinesScreenState extends State<MaturityMediaGuidelinesS
       area: 'Community',
       status: 'Regeln',
       meta: 'Safety',
-      description: 'Verhaltenskodex, Meldefunktionen, Moderationswege und klare Hinweise fuer sichere Vereinsraeume.',
+      description: 'Verhaltenskodex, Meldefunktionen, Moderationswege und klare Hinweise für sichere Vereinsraeume.',
       icon: Icons.shield_outlined,
       color: Color(0xFFF8B84E),
       details: ['Kodex', 'Melden', 'Moderation', 'Sanktionen'],
@@ -56,10 +56,10 @@ class _MaturityMediaGuidelinesScreenState extends State<MaturityMediaGuidelinesS
       area: 'Maturity',
       status: 'Audit',
       meta: 'Club',
-      description: 'Mobile Uebersicht, ob ein Verein rechtlich, organisatorisch und medial startklar ist.',
+      description: 'Mobile Übersicht, ob ein Verein rechtlich, organisatorisch und medial startklar ist.',
       icon: Icons.verified_user_outlined,
       color: Color(0xFFFF6B6B),
-      details: ['Profil', 'Datenschutz', 'Beitraege', 'Dokumente'],
+      details: ['Profil', 'Datenschutz', 'Beiträge', 'Dokumente'],
     ),
   ];
 
@@ -86,7 +86,7 @@ class _MaturityMediaGuidelinesScreenState extends State<MaturityMediaGuidelinesS
                     const _PageIntro(
                       eyebrow: 'SAFETY & GUIDELINES',
                       title: 'Maturity & Medien',
-                      subtitle: 'Mobile Regeln fuer Alter, Medienfreigaben, Datenschutz, Moderation und Vereinsreife.',
+                      subtitle: 'Mobile Regeln für Alter, Medienfreigaben, Datenschutz, Moderation und Vereinsreife.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -316,7 +316,7 @@ class _SettingsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Panel(
-      title: 'Regeln, die Vereine steuern koennen',
+      title: 'Regeln, die Vereine steuern können',
       child: Column(
         children: [
           _SwitchLine(label: 'Altersregeln anzeigen', value: showAgeRules, onChanged: onAgeRules),

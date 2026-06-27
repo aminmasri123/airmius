@@ -23,7 +23,7 @@ class _ApiStateEmptyErrorSuiteScreenState extends State<ApiStateEmptyErrorSuiteS
       const _ApiStateRow(
         title: 'Loading',
         status: 'Skeleton',
-        body: 'Listen, Karten, Clubprofile und Formulare zeigen waehrend API-Ladevorgaengen ruhige Skeleton-Zustaende.',
+        body: 'Listen, Karten, Clubprofile und Formulare zeigen während API-Ladevorgaengen ruhige Skeleton-Zustaende.',
         icon: Icons.hourglass_empty_outlined,
         color: AirmiusColors.blue,
       ),
@@ -64,7 +64,7 @@ class _ApiStateEmptyErrorSuiteScreenState extends State<ApiStateEmptyErrorSuiteS
                 const SectionLabel('API UX'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Wenn Laravel spaeter angebunden wird, braucht jede mobile Seite klare Zustaende: Laden, leer, Fehler, Retry, Offline, Cache und Synchronisation.',
+                  'Wenn Laravel später angebunden wird, braucht jede mobile Seite klare Zustaende: Laden, leer, Fehler, Retry, Offline, Cache und Synchronisation.',
                   style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 16),
@@ -125,7 +125,7 @@ class _ApiStateEmptyErrorSuiteScreenState extends State<ApiStateEmptyErrorSuiteS
                 const SectionLabel('AKTUELLE VORSCHAU'),
                 const SizedBox(height: 8),
                 Text(
-                  'Aktueller Zustand: $state. Spaeter verbindet die API jeden Screen mit Success, Loading, Empty, Error, Retry, Offline und Cache-Status.',
+                  'Aktueller Zustand: $state. Später verbindet die API jeden Screen mit Success, Loading, Empty, Error, Retry, Offline und Cache-Status.',
                   style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),
@@ -135,7 +135,7 @@ class _ApiStateEmptyErrorSuiteScreenState extends State<ApiStateEmptyErrorSuiteS
                   onPressed: () => openUiAction(
                     context,
                     title: 'API-State testen',
-                    body: 'Diese UI bereitet Lade-, Leer-, Fehler-, Retry-, Offline- und Cache-Zustaende fuer die spaetere Laravel-API vor.',
+                    body: 'Diese UI bereitet Lade-, Leer-, Fehler-, Retry-, Offline- und Cache-Zustaende für die spätere Laravel-API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.sync_problem_outlined,
                   ),

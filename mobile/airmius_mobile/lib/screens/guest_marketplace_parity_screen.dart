@@ -425,7 +425,7 @@ class _SnapshotHeroCard extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7), decoration: BoxDecoration(color: Colors.black.withOpacity(.32), borderRadius: BorderRadius.circular(999)), child: Text(offer.id == 1 ? 'AIRMIUS MARKETPLACE' : offer.badge.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900))),
           const SizedBox(height: 10),
-          Text(offer.id == 1 ? 'Sport Deals fuer Training und Team' : offer.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, height: 1.15)),
+          Text(offer.id == 1 ? 'Sport Deals für Training und Team' : offer.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, height: 1.15)),
           const SizedBox(height: 8),
           Text(offer.badge, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
           const Spacer(),
@@ -626,7 +626,7 @@ class _Hero extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
                 StatusPill('AIRMIUS MARKETPLACE', color: Colors.white),
                 const SizedBox(height: 14),
-                const Text('Sport Deals fuer Training und Team', style: TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w900, height: 1.05)),
+                const Text('Sport Deals für Training und Team', style: TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w900, height: 1.05)),
                 const SizedBox(height: 10),
                 Text(offer.title, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 8),
@@ -816,7 +816,7 @@ class _StoresAndEssentials extends StatelessWidget {
     return LayoutBuilder(builder: (context, constraints) {
       final wide = constraints.maxWidth > 840;
       return Flex(direction: wide ? Axis.horizontal : Axis.vertical, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Expanded(flex: wide ? 2 : 0, child: AirmiusPanel(title: 'Essentials fuer Vereine', child: Wrap(spacing: 10, runSpacing: 10, children: [for (final offer in offers) SizedBox(width: 165, child: _MiniOffer(offer: offer, onTap: () => onOpen(offer)))]))),
+        Expanded(flex: wide ? 2 : 0, child: AirmiusPanel(title: 'Essentials für Vereine', child: Wrap(spacing: 10, runSpacing: 10, children: [for (final offer in offers) SizedBox(width: 165, child: _MiniOffer(offer: offer, onTap: () => onOpen(offer)))]))),
         if (wide) const SizedBox(width: 14) else const SizedBox(height: 14),
         Expanded(child: AirmiusPanel(title: 'Official Stores', child: Wrap(spacing: 10, runSpacing: 10, children: [for (final store in _stores) SizedBox(width: 150, child: _InfoTile(item: store, compact: true))]))),
       ]);
@@ -859,7 +859,7 @@ class _GroupedOffers extends StatelessWidget {
           }),
           const SizedBox(height: 16),
         ],
-        if (offers.isEmpty) const EmptyPanel('Keine Treffer. Filter zuruecksetzen oder eine andere Kategorie waehlen.'),
+        if (offers.isEmpty) const EmptyPanel('Keine Treffer. Filter zurücksetzen oder eine andere Kategorie wählen.'),
       ]),
     );
   }
@@ -1050,12 +1050,12 @@ IconData _segmentIcon(String segment) => switch (segment) {
 };
 
 const _categories = [_Opt('', 'Alle'), _Opt('product', 'Produkte'), _Opt('outfit_subscription', 'Outfit-Abos'), _Opt('course', 'Kurse'), _Opt('camp', 'Camps'), _Opt('service', 'Services')];
-const _segments = [_Opt('', 'Alle Bereiche'), _Opt('shoes', 'Schuhe'), _Opt('apparel', 'Bekleidung'), _Opt('equipment', 'Equipment'), _Opt('recovery', 'Recovery'), _Opt('analysis', 'Analyse'), _Opt('nutrition', 'Ernaehrung'), _Opt('plans', 'Plaene & Kurse'), _Opt('camps', 'Camps'), _Opt('team', 'Team & Verein')];
+const _segments = [_Opt('', 'Alle Bereiche'), _Opt('shoes', 'Schuhe'), _Opt('apparel', 'Bekleidung'), _Opt('equipment', 'Equipment'), _Opt('recovery', 'Recovery'), _Opt('analysis', 'Analyse'), _Opt('nutrition', 'Ernährung'), _Opt('plans', 'Plaene & Kurse'), _Opt('camps', 'Camps'), _Opt('team', 'Team & Verein')];
 const _availability = [_Opt('', 'Alle Verfuegbarkeiten'), _Opt('available', 'Sofort verfuegbar'), _Opt('shippable', 'Versandartikel'), _Opt('digital', 'Digital / Termin')];
 const _sorts = [_Opt('recommended', 'Empfohlen'), _Opt('newest', 'Neueste'), _Opt('price_asc', 'Preis aufsteigend'), _Opt('price_desc', 'Preis absteigend')];
 const _quick = [_Quick('Aktuell', 'Heute beliebt', Icons.bolt_outlined, category: '', query: ''), _Quick('Produkte', 'Equipment', Icons.shopping_bag_outlined, category: 'product'), _Quick('Kurse', 'Online & vor Ort', Icons.video_library_outlined, category: 'course', segment: 'plans'), _Quick('Camps', 'Events & Training', Icons.event_available_outlined, category: 'camp', segment: 'camps'), _Quick('Services', 'Analyse & Beratung', Icons.handshake_outlined, category: 'service', segment: 'analysis'), _Quick('Outfit-Abo', 'Sportkleidung', Icons.checkroom_outlined, category: 'outfit_subscription', segment: 'apparel')];
 const _sports = [_Quick('Running', 'Lauf', Icons.directions_run_outlined, query: 'lauf'), _Quick('Fussball', 'Team', Icons.sports_soccer_outlined, query: 'fussball'), _Quick('Fitness', 'Gym', Icons.fitness_center_outlined, query: 'fitness'), _Quick('Teamsport', 'Verein', Icons.groups_outlined, query: 'team'), _Quick('Recovery', 'Regeneration', Icons.favorite_border_outlined, segment: 'recovery'), _Quick('Camps', 'Training', Icons.event_available_outlined, category: 'camp', segment: 'camps'), _Quick('Kurse', 'Lernen', Icons.video_library_outlined, category: 'course', segment: 'plans'), _Quick('Services', 'Analyse', Icons.handshake_outlined, category: 'service', segment: 'analysis')];
-const _trust = [_Info('Gastkauf moeglich', 'Direkt bestellen, Konto optional.', Icons.person_add_alt_1_outlined, AirmiusColors.blue), _Info('Preis transparent', 'Brutto, netto, Steuer und Versand.', Icons.receipt_long_outlined, AirmiusColors.green), _Info('Anbieter sichtbar', 'Verein, Trainer oder Shop klar erkennbar.', Icons.store_mall_directory_outlined, AirmiusColors.amber), _Info('Bestellstatus', 'Updates und Belege per E-Mail.', Icons.mark_email_read_outlined, AirmiusColors.red)];
+const _trust = [_Info('Gastkauf möglich', 'Direkt bestellen, Konto optional.', Icons.person_add_alt_1_outlined, AirmiusColors.blue), _Info('Preis transparent', 'Brutto, netto, Steuer und Versand.', Icons.receipt_long_outlined, AirmiusColors.green), _Info('Anbieter sichtbar', 'Verein, Trainer oder Shop klar erkennbar.', Icons.store_mall_directory_outlined, AirmiusColors.amber), _Info('Bestellstatus', 'Updates und Belege per E-Mail.', Icons.mark_email_read_outlined, AirmiusColors.red)];
 const _stores = [_Info('Airmius Teamsport', 'Teamwear', Icons.checkroom_outlined, AirmiusColors.blue), _Info('RunLab', 'Running', Icons.directions_run_outlined, AirmiusColors.green), _Info('Club Gear', 'Vereine', Icons.shield_outlined, AirmiusColors.amber), _Info('Recovery Pro', 'Recovery', Icons.favorite_border_outlined, AirmiusColors.red), _Info('Coach Campus', 'Kurse', Icons.school_outlined, AirmiusColors.blue), _Info('FitMarket', 'Fitness', Icons.fitness_center_outlined, AirmiusColors.green)];
 const _locations = [_Info('Airmius Teamsport Hub', 'Abholstation, Retouren und Support in DE.', Icons.location_on_outlined, AirmiusColors.green, 'Pickup'), _Info('Coach Campus Online', 'Digitale Kurse, Plaene und Zertifikate.', Icons.public_outlined, AirmiusColors.blue, 'Digital'), _Info('Club Gear Partner', 'Lokale Vereinsausstattung mit Anbieterprofil.', Icons.storefront_outlined, AirmiusColors.amber, 'Partner')];
 const _demoOffers = [
@@ -1063,10 +1063,10 @@ const _demoOffers = [
   _Offer(2, 'Boxen Pro Analyse Paket Strike Junior', 'Umfangreiche Analyse mit Auswertung, Feedbackgespraech und priorisiertem Trainingsplan.', 'service', 'analysis', 'digital', 'Service', 'Airmius Marketplace', 'AM', 11930, Icons.sports_mma_outlined, AirmiusColors.blue, 94, 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?auto=format&fit=crop&w=1200&q=80', true),
   _Offer(3, 'Handball Pro Analyse Paket Arena Elite', 'Umfangreiche Analyse mit Auswertung, Feedbackgespraech und priorisiertem Trainingsplan.', 'service', 'analysis', 'digital', 'Service', 'Airmius Marketplace', 'AM', 24650, Icons.sports_handball_outlined, AirmiusColors.green, 91, 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80', true),
   _Offer(4, 'Volleyball Pro Analyse Paket Block Pro', 'Umfangreiche Analyse mit Auswertung, Feedbackgespraech und priorisiertem Trainingsplan.', 'service', 'analysis', 'digital', 'Service', 'Airmius Marketplace', 'AM', 19880, Icons.sports_volleyball_outlined, AirmiusColors.amber, 90, 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?auto=format&fit=crop&w=1200&q=80'),
-  _Offer(5, 'Running Performance Schuh Runner Pro', 'Leichter Trainingsschuh mit stabiler Daempfung fuer Technik, Tempo und Grundlageneinheiten.', 'product', 'shoes', 'available', 'Deal', 'RunLab', 'RL', 11240, Icons.directions_run_outlined, AirmiusColors.red, 89, 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?auto=format&fit=crop&w=1200&q=80', true),
+  _Offer(5, 'Running Performance Schuh Runner Pro', 'Leichter Trainingsschuh mit stabiler Daempfung für Technik, Tempo und Grundlageneinheiten.', 'product', 'shoes', 'available', 'Deal', 'RunLab', 'RL', 11240, Icons.directions_run_outlined, AirmiusColors.red, 89, 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?auto=format&fit=crop&w=1200&q=80', true),
   _Offer(6, 'Fussball Feriencamp Pitch Elite', 'Mehrtaegiges Camp mit Technik, Koordination, Spielformen und Team-Challenges.', 'camp', 'camps', 'digital', 'Camp', 'MatchDay', 'MD', 19990, Icons.sports_soccer_outlined, AirmiusColors.green, 86, 'https://images.unsplash.com/photo-1526232761682-d26e03ac148e?auto=format&fit=crop&w=1200&q=80'),
-  _Offer(7, 'Basketball Skills Clinic Court Team', 'Intensiver Tagesworkshop fuer Grundlagen, Detailtechnik und spielnahe Anwendung.', 'camp', 'camps', 'digital', 'Camp', 'Coach Campus', 'CC', 10670, Icons.sports_basketball_outlined, AirmiusColors.amber, 84, 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1200&q=80', true),
-  _Offer(8, 'Yoga Mobility fuer Sportler Flow Club', 'Digitaler Kurs mit Uebungsreihen, Korrekturpunkten und praktischen Wochenaufgaben.', 'course', 'plans', 'digital', 'Online-Kurs', 'Coach Campus', 'CC', 5900, Icons.self_improvement_outlined, AirmiusColors.green, 82, 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=1200&q=80'),
-  _Offer(9, 'Fitness Recovery Bundle Power Pro', 'Regenerationspaket fuer Muskelpflege, Mobility und aktive Erholung nach dem Training.', 'product', 'recovery', 'available', 'Neu', 'Recovery Pro', 'RP', 4360, Icons.fitness_center_outlined, AirmiusColors.blue, 80, 'https://images.unsplash.com/photo-1599058917765-a780eda07a3e?auto=format&fit=crop&w=1200&q=80', true),
-  _Offer(10, 'Tennis Trainer Fortbildung Ace Digital', 'Fortbildung fuer Trainer mit Methodik, Belastungssteuerung und praktischen Uebungsformaten.', 'course', 'plans', 'digital', 'Kurs', 'Coach Campus', 'CC', 8390, Icons.sports_tennis_outlined, AirmiusColors.green, 78, 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=1200&q=80', true),
+  _Offer(7, 'Basketball Skills Clinic Court Team', 'Intensiver Tagesworkshop für Grundlagen, Detailtechnik und spielnahe Anwendung.', 'camp', 'camps', 'digital', 'Camp', 'Coach Campus', 'CC', 10670, Icons.sports_basketball_outlined, AirmiusColors.amber, 84, 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1200&q=80', true),
+  _Offer(8, 'Yoga Mobility für Sportler Flow Club', 'Digitaler Kurs mit Uebungsreihen, Korrekturpunkten und praktischen Wochenaufgaben.', 'course', 'plans', 'digital', 'Online-Kurs', 'Coach Campus', 'CC', 5900, Icons.self_improvement_outlined, AirmiusColors.green, 82, 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=1200&q=80'),
+  _Offer(9, 'Fitness Recovery Bundle Power Pro', 'Regenerationspaket für Muskelpflege, Mobility und aktive Erholung nach dem Training.', 'product', 'recovery', 'available', 'Neu', 'Recovery Pro', 'RP', 4360, Icons.fitness_center_outlined, AirmiusColors.blue, 80, 'https://images.unsplash.com/photo-1599058917765-a780eda07a3e?auto=format&fit=crop&w=1200&q=80', true),
+  _Offer(10, 'Tennis Trainer Fortbildung Ace Digital', 'Fortbildung für Trainer mit Methodik, Belastungssteuerung und praktischen Uebungsformaten.', 'course', 'plans', 'digital', 'Kurs', 'Coach Campus', 'CC', 8390, Icons.sports_tennis_outlined, AirmiusColors.green, 78, 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&w=1200&q=80', true),
 ];

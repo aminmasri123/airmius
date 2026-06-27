@@ -94,12 +94,12 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
     setState(() => _registerError = null);
 
     if (_passwordController.text != _passwordConfirmationController.text) {
-      setState(() => _registerError = 'Passwort und Bestaetigung stimmen nicht ueberein.');
+      setState(() => _registerError = 'Passwort und Bestätigung stimmen nicht überein.');
       return;
     }
 
     if (_gender.isEmpty) {
-      setState(() => _registerError = 'Bitte waehle dein Geschlecht aus.');
+      setState(() => _registerError = 'Bitte wähle dein Geschlecht aus.');
       return;
     }
 
@@ -198,7 +198,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
       'E-Mail' => _emailVerify(),
       'Profil' => _profileCompletion(),
       'Gesperrt' => _suspended(),
-      'Loeschen' => _deleteAccount(),
+      'Löschen' => _deleteAccount(),
       _ => _register(),
     };
   }
@@ -224,7 +224,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: AirmiusTextField(label: 'Strasse', hint: 'Optional', icon: Icons.home_outlined, controller: _streetController)),
+              Expanded(child: AirmiusTextField(label: 'Straße', hint: 'Optional', icon: Icons.home_outlined, controller: _streetController)),
               const SizedBox(width: 10),
               SizedBox(width: 110, child: AirmiusTextField(label: 'Nr.', hint: '12a', controller: _houseNumberController)),
             ],
@@ -245,7 +245,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
               Expanded(child: AirmiusTextField(label: 'Geburtsdatum', hint: 'JJJJ-MM-TT', icon: Icons.cake_outlined, controller: _birthDateController, keyboardType: TextInputType.datetime)),
               const SizedBox(width: 10),
               IconButton.filledTonal(
-                tooltip: 'Datum waehlen',
+                tooltip: 'Datum wählen',
                 onPressed: _pickBirthDate,
                 icon: const Icon(Icons.calendar_month_outlined),
               ),
@@ -277,7 +277,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
           const SizedBox(height: 12),
           AirmiusTextField(label: 'Passwort', hint: 'Sicheres Passwort', icon: Icons.lock_outline, controller: _passwordController, obscureText: true),
           const SizedBox(height: 12),
-          AirmiusTextField(label: 'Passwort bestaetigen', hint: 'Passwort wiederholen', icon: Icons.lock_reset_outlined, controller: _passwordConfirmationController, obscureText: true),
+          AirmiusTextField(label: 'Passwort bestätigen', hint: 'Passwort wiederholen', icon: Icons.lock_reset_outlined, controller: _passwordConfirmationController, obscureText: true),
           const SizedBox(height: 12),
           CheckboxListTile(
             value: _terms,
@@ -337,7 +337,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
           SizedBox(height: 12),
           _AuthAction(label: 'Reset-Link senden', icon: Icons.mark_email_read_outlined),
           SizedBox(height: 16),
-          Eyebrow('Passwort zuruecksetzen'),
+          Eyebrow('Passwort zurücksetzen'),
           SizedBox(height: 12),
           AirmiusTextField(label: 'Code / Token', hint: 'Aus der E-Mail'),
           SizedBox(height: 12),
@@ -373,9 +373,9 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
         children: [
           Eyebrow('E-Mail verifizieren'),
           SizedBox(height: 8),
-          Text('Bitte bestaetige deine E-Mail-Adresse. Bei Bedarf kann eine neue Mail versendet werden.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+          Text('Bitte bestätige deine E-Mail-Adresse. Bei Bedarf kann eine neue Mail versendet werden.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
           SizedBox(height: 12),
-          _AuthStatusLine(icon: Icons.mail_outline, title: 'zbb.bop.it@gmail.com', body: 'Wartet auf Bestaetigung', status: 'Offen'),
+          _AuthStatusLine(icon: Icons.mail_outline, title: 'zbb.bop.it@gmail.com', body: 'Wartet auf Bestätigung', status: 'Offen'),
           SizedBox(height: 12),
           _AuthAction(label: 'Verifizierungslink erneut senden', icon: Icons.send_outlined),
         ],
@@ -392,9 +392,9 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
           SizedBox(height: 12),
           _AuthStatusLine(icon: Icons.person_outline, title: 'Personendaten', body: 'Name, Geburtsdatum und Profilbild', status: '80%'),
           _AuthStatusLine(icon: Icons.directions_run, title: 'Sportprofil', body: 'Sportarten, Level, Ziele und Skills', status: 'Offen'),
-          _AuthStatusLine(icon: Icons.privacy_tip_outlined, title: 'Sichtbarkeit', body: 'Profil, Vereine und Kontakte', status: 'Pruefen'),
+          _AuthStatusLine(icon: Icons.privacy_tip_outlined, title: 'Sichtbarkeit', body: 'Profil, Vereine und Kontakte', status: 'Prüfen'),
           SizedBox(height: 12),
-          _AuthAction(label: 'Profil abschliessen', icon: Icons.task_alt_outlined),
+          _AuthAction(label: 'Profil abschließen', icon: Icons.task_alt_outlined),
         ],
       ),
     );
@@ -410,7 +410,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
           SizedBox(height: 8),
           Text('Der Zugriff kann durch Moderation, fehlende Verifizierung oder Sicherheitsregeln eingeschraenkt sein.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
           SizedBox(height: 12),
-          _AuthStatusLine(icon: Icons.report_outlined, title: 'Status', body: 'Support kann Details pruefen.', status: 'Gesperrt'),
+          _AuthStatusLine(icon: Icons.report_outlined, title: 'Status', body: 'Support kann Details prüfen.', status: 'Gesperrt'),
           SizedBox(height: 12),
           _AuthAction(label: 'Support kontaktieren', icon: Icons.support_agent_outlined),
         ],
@@ -431,11 +431,11 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
           AirmiusTextField(label: 'Löschcode', hint: 'Code aus der E-Mail', icon: Icons.password_outlined),
           SizedBox(height: 12),
           _AuthStatusLine(icon: Icons.download_outlined, title: 'Datenexport', body: 'Profil, Mitgliedschaften, Zahlungen und Medien vor Löschung exportieren.', status: 'Empfohlen'),
-          _AuthStatusLine(icon: Icons.warning_amber_outlined, title: 'Endgueltige Löschung', body: 'Konto wird erst nach API-Bestätigung final gelöscht.', status: 'Kritisch'),
+          _AuthStatusLine(icon: Icons.warning_amber_outlined, title: 'Endgültige Löschung', body: 'Konto wird erst nach API-Bestätigung final gelöscht.', status: 'Kritisch'),
           SizedBox(height: 12),
           _AuthAction(label: 'Löschcode senden', icon: Icons.mark_email_read_outlined),
           SizedBox(height: 10),
-          _AuthAction(label: 'Konto endgueltig löschen', icon: Icons.delete_forever_outlined),
+          _AuthAction(label: 'Konto endgültig löschen', icon: Icons.delete_forever_outlined),
         ],
       ),
     );
@@ -451,7 +451,7 @@ class _AuthAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AirmiusButton(label: label, icon: icon, onPressed: onPressed ?? () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: label, body: 'Auth-Aktion fuer $label vorbereiten und spaeter mit Laravel Auth/API verbinden.', status: 'Auth', icon: icon))));
+    return AirmiusButton(label: label, icon: icon, onPressed: onPressed ?? () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: label, body: 'Auth-Aktion für $label vorbereiten und später mit Laravel Auth/API verbinden.', status: 'Auth', icon: icon))));
   }
 }
 

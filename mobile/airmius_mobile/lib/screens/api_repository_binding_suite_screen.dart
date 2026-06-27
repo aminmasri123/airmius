@@ -9,17 +9,17 @@ class ApiRepositoryBindingSuiteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final repos = [
-      _RepoBinding('Auth Repository', 'User', 'Login und aktueller Nutzer laufen ueber typed AirmiusUser.', AirmiusColors.blue, Icons.lock_outline),
+      _RepoBinding('Auth Repository', 'User', 'Login und aktueller Nutzer laufen über typed AirmiusUser.', AirmiusColors.blue, Icons.lock_outline),
       _RepoBinding('Club Repository', 'Club', 'Vereinssuche und Clubdetail werden auf AirmiusClub gemappt.', AirmiusColors.green, Icons.apartment_outlined),
-      _RepoBinding('Membership Repository', 'Application', 'Mitgliedsantrag senden liefert ClubMembershipRequest, Zurueckziehen nutzt die club-scoped Web-Route.', AirmiusColors.amber, Icons.assignment_ind_outlined),
-      _RepoBinding('Files, Events, Billing', 'Page<T>', 'Upload-Intent, Events und Rechnungen haben klare Repository-Vertraege.', AirmiusColors.pink, Icons.hub_outlined),
+      _RepoBinding('Membership Repository', 'Application', 'Mitgliedsantrag senden liefert ClubMembershipRequest, Zurückziehen nutzt die club-scoped Web-Route.', AirmiusColors.amber, Icons.assignment_ind_outlined),
+      _RepoBinding('Files, Events, Billing', 'Page<T>', 'Upload-Intent, Events und Rechnungen haben klare Repository-Verträge.', AirmiusColors.pink, Icons.hub_outlined),
     ];
 
     final next = [
-      _NextGate('HTTP Transport', 'Echten Transport fuer mobile/web faehige Requests, Timeouts, Retry und Fehler-Mapping anschliessen.'),
+      _NextGate('HTTP Transport', 'Echten Transport für mobile/web faehige Requests, Timeouts, Retry und Fehler-Mapping anschließen.'),
       _NextGate('Provider/State Layer', 'RepositoryBundle in App-State, Auth-State, Cache und Screens einspeisen.'),
       _NextGate('Screen Migration', 'Clubs, Suche, Mitgliedsantrag, Notifications, Events und Billing von Mock auf Repository umstellen.'),
-      _NextGate('Contract Tests', 'Laravel Response-Formate mit typed Models und Error-States pruefen.'),
+      _NextGate('Contract Tests', 'Laravel Response-Formate mit typed Models und Error-States prüfen.'),
     ];
 
     return Scaffold(
@@ -31,7 +31,7 @@ class ApiRepositoryBindingSuiteScreen extends StatelessWidget {
       ),
       body: PageFrame(
         title: 'API Repositories',
-        subtitle: 'Repository-Implementierungen verbinden API-Client, typed Models, Pagination und spaetere Screens.',
+        subtitle: 'Repository-Implementierungen verbinden API-Client, typed Models, Pagination und spätere Screens.',
         trailing: const StatusPill('62% API Rest', color: AirmiusColors.amber),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -45,7 +45,7 @@ class ApiRepositoryBindingSuiteScreen extends StatelessWidget {
                   SizedBox(height: 10),
                   Text('Die App bekommt eine echte Daten-Schicht.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
                   SizedBox(height: 8),
-                  Text('Repositories kapseln Laravel-Requests und liefern typisierte Objekte. Damit koennen UI-Screens spaeter sauber von Mock-Daten auf echte API-Daten wechseln.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
+                  Text('Repositories kapseln Laravel-Requests und liefern typisierte Objekte. Damit können UI-Screens später sauber von Mock-Daten auf echte API-Daten wechseln.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
                 ],
               ),
             ),

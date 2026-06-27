@@ -30,7 +30,7 @@ class _FacilityBookingResourceSchedulerSuiteScreenState extends State<FacilityBo
       ),
       body: PageFrame(
         title: 'Facility Booking Resource Scheduler',
-        subtitle: 'Mobile UI fuer Plaetze, Hallen, Raeume, Geraete, Buchungen, Konflikte, Wartung und Rollenrechte.',
+        subtitle: 'Mobile UI für Plaetze, Hallen, Raeume, Geräte, Buchungen, Konflikte, Wartung und Rollenrechte.',
         trailing: const StatusPill('Scheduler', color: AirmiusColors.green),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -48,14 +48,14 @@ class _FacilityBookingResourceSchedulerSuiteScreenState extends State<FacilityBo
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Die App bereitet Buchungen fuer Plaetze, Hallen, Raeume, Geraete und Trainingsfenster mit Konfliktpruefung und Rollenrechten vor.',
+                    'Die App bereitet Buchungen für Plaetze, Hallen, Raeume, Geräte und Trainingsfenster mit Konfliktprüfung und Rollenrechten vor.',
                     style: TextStyle(color: AirmiusColors.muted, height: 1.42),
                   ),
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: ['Alle', 'Plaetze', 'Hallen', 'Raeume', 'Geraete', 'Training', 'Wartung'].map((item) {
+                    children: ['Alle', 'Plaetze', 'Hallen', 'Raeume', 'Geräte', 'Training', 'Wartung'].map((item) {
                       return ChoiceChip(
                         selected: _resourceType == item,
                         label: Text(item),
@@ -89,8 +89,8 @@ class _FacilityBookingResourceSchedulerSuiteScreenState extends State<FacilityBo
                   const SizedBox(height: 12),
                   _BookingToggle(
                     icon: Icons.event_busy_outlined,
-                    title: 'Konfliktpruefung',
-                    body: 'Doppelte Buchungen, Teamtermine, Sperrzeiten und Trainerverfuegbarkeit werden vor dem Speichern geprueft.',
+                    title: 'Konfliktprüfung',
+                    body: 'Doppelte Buchungen, Teamtermine, Sperrzeiten und Trainerverfuegbarkeit werden vor dem Speichern geprüft.',
                     enabled: _conflictCheck,
                     onChanged: (value) => setState(() => _conflictCheck = value),
                   ),
@@ -104,14 +104,14 @@ class _FacilityBookingResourceSchedulerSuiteScreenState extends State<FacilityBo
                   _BookingToggle(
                     icon: Icons.build_outlined,
                     title: 'Wartungszeiten',
-                    body: 'Plaetze, Raeume oder Geraete koennen fuer Pflege, Reparatur oder externe Nutzung blockiert werden.',
+                    body: 'Plaetze, Raeume oder Geräte können für Pflege, Reparatur oder externe Nutzung blockiert werden.',
                     enabled: _maintenanceBlocks,
                     onChanged: (value) => setState(() => _maintenanceBlocks = value),
                   ),
                   _BookingToggle(
                     icon: Icons.payments_outlined,
                     title: 'Zahlungspflichtige Slots',
-                    body: 'Optionale Gebuehren fuer externe Gaeste, Court-Buchungen oder Sondernutzung koennen spaeter angebunden werden.',
+                    body: 'Optionale Gebuehren für externe Gäste, Court-Buchungen oder Sondernutzung können später angebunden werden.',
                     enabled: _paymentRequired,
                     onChanged: (value) => setState(() => _paymentRequired = value),
                     last: true,
@@ -181,12 +181,12 @@ class _Resource {
 
 const _resources = [
   _Resource(type: 'Plaetze', title: 'Court 1', body: 'Tennisplatz mit Flutlicht, heute 18:00 durch U16 Training belegt.', status: 'Belegt', icon: Icons.sports_tennis, color: AirmiusColors.amber),
-  _Resource(type: 'Plaetze', title: 'Court 2', body: 'Freier Slot um 18:30, buchbar fuer Mitglieder und Trainer.', status: 'Frei', icon: Icons.sports_tennis, color: AirmiusColors.green),
-  _Resource(type: 'Hallen', title: 'Halle B', body: 'Mehrzweckhalle fuer Training, Events und Vereinsversammlungen.', status: '19:00 frei', icon: Icons.location_on_outlined, color: AirmiusColors.blue),
+  _Resource(type: 'Plaetze', title: 'Court 2', body: 'Freier Slot um 18:30, buchbar für Mitglieder und Trainer.', status: 'Frei', icon: Icons.sports_tennis, color: AirmiusColors.green),
+  _Resource(type: 'Hallen', title: 'Halle B', body: 'Mehrzweckhalle für Training, Events und Vereinsversammlungen.', status: '19:00 frei', icon: Icons.location_on_outlined, color: AirmiusColors.blue),
   _Resource(type: 'Raeume', title: 'Besprechungsraum', body: 'Vorstand, Trainermeeting, Elternabend oder Sponsorentermin.', status: 'Review', icon: Icons.meeting_room_outlined, color: AirmiusColors.blue),
-  _Resource(type: 'Geraete', title: 'Timing-System', body: 'Geraet fuer Wettkampf und Training, Rueckgabe mit Checkliste.', status: 'Ausgabe', icon: Icons.inventory_2_outlined, color: AirmiusColors.green),
+  _Resource(type: 'Geräte', title: 'Timing-System', body: 'Gerät für Wettkampf und Training, Rückgabe mit Checkliste.', status: 'Ausgabe', icon: Icons.inventory_2_outlined, color: AirmiusColors.green),
   _Resource(type: 'Training', title: 'U16 Trainingsslot', body: 'Serientermin mit Coach, Team, Check-in und Anwesenheitsliste.', status: 'Serie', icon: Icons.event_available_outlined, color: AirmiusColors.green),
-  _Resource(type: 'Wartung', title: 'Court Pflege', body: 'Blockierter Zeitraum fuer Reinigung, Reparatur oder Saisonvorbereitung.', status: 'Block', icon: Icons.build_outlined, color: AirmiusColors.amber),
+  _Resource(type: 'Wartung', title: 'Court Pflege', body: 'Blockierter Zeitraum für Reinigung, Reparatur oder Saisonvorbereitung.', status: 'Block', icon: Icons.build_outlined, color: AirmiusColors.amber),
 ];
 
 class _ResourceCard extends StatelessWidget {

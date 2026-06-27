@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'legal_support_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
@@ -34,7 +34,7 @@ class _LegalDocumentScreenState extends State<LegalDocumentScreen> {
           AirmiusPanel(gradient: true, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Legal Center'),
             const SizedBox(height: 8),
-            const Text('Die Public-Web-Routen fuer Rechtstexte werden als native App-Ansichten mit Version, Download, Kontakt und Meldung vorbereitet.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+            const Text('Die Public-Web-Routen für Rechtstexte werden als native App-Ansichten mit Version, Download, Kontakt und Meldung vorbereitet.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
             const SizedBox(height: 14),
             Wrap(spacing: 8, runSpacing: 8, children: [
               for (final document in const ['Impressum', 'Datenschutz', 'AGB', 'Community', 'Jugendschutz', 'Cookies', 'Widerruf', 'Kontakt & Melden'])
@@ -63,21 +63,21 @@ class _LegalDocumentScreenState extends State<LegalDocumentScreen> {
             const SizedBox(height: 10),
             Text(_bodyFor(_document), style: const TextStyle(color: AirmiusColors.muted, height: 1.42)),
             const SizedBox(height: 12),
-            const _LegalLine(icon: Icons.description_outlined, title: 'Abschnittsstruktur', body: 'Ueberschriften, Stand, Verantwortliche und Kontakt werden spaeter aus Laravel geladen.', status: 'Content'),
-            const _LegalLine(icon: Icons.history_outlined, title: 'Version & Audit', body: 'Aenderungsdatum, Version und Akzeptanzprotokoll sind vorbereitet.', status: 'Audit'),
-            const _LegalLine(icon: Icons.language_outlined, title: 'Mehrsprachig', body: 'DE, EN, FR und AR koennen pro Rechtstext lokalisiert werden.', status: 'i18n'),
+            const _LegalLine(icon: Icons.description_outlined, title: 'Abschnittsstruktur', body: 'Überschriften, Stand, Verantwortliche und Kontakt werden später aus Laravel geladen.', status: 'Content'),
+            const _LegalLine(icon: Icons.history_outlined, title: 'Version & Audit', body: 'Änderungsdatum, Version und Akzeptanzprotokoll sind vorbereitet.', status: 'Audit'),
+            const _LegalLine(icon: Icons.language_outlined, title: 'Mehrsprachig', body: 'DE, EN, FR und AR können pro Rechtstext lokalisiert werden.', status: 'i18n'),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Akzeptanz & Version'),
-            SwitchListTile(value: _showVersion, onChanged: (value) => setState(() => _showVersion = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Versionshinweis anzeigen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Zeigt Stand und Aenderungsdatum in der App.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _accepted, onChanged: (value) => setState(() => _accepted = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Zur Kenntnis genommen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Akzeptanz wird spaeter serverseitig protokolliert.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _showVersion, onChanged: (value) => setState(() => _showVersion = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Versionshinweis anzeigen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Zeigt Stand und Änderungsdatum in der App.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _accepted, onChanged: (value) => setState(() => _accepted = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Zur Kenntnis genommen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Akzeptanz wird später serverseitig protokolliert.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [
-            AirmiusButton(label: 'PDF herunterladen', icon: Icons.picture_as_pdf_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Legal PDF herunterladen', body: '$_document als PDF exportieren, Sprache und Version beruecksichtigen.', status: 'PDF', icon: Icons.picture_as_pdf_outlined)),
+            AirmiusButton(label: 'PDF herunterladen', icon: Icons.picture_as_pdf_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Legal PDF herunterladen', body: '$_document als PDF exportieren, Sprache und Version berücksichtigen.', status: 'PDF', icon: Icons.picture_as_pdf_outlined)),
             AirmiusButton(label: 'Kontakt & Melden', icon: Icons.report_outlined, onPressed: () => openUiAction(context, title: 'Kontakt & Melden', body: 'Rechtliche Anfrage, Meldung, Datenschutzkontakt oder Supportfall vorbereiten.', status: 'Legal', icon: Icons.report_outlined)),
-            AirmiusButton(label: 'Akzeptanz speichern', icon: Icons.check_circle_outline, onPressed: _accepted ? () => openUiAction(context, title: 'Akzeptanz speichern', body: 'Akzeptanz fuer $_document mit Version, Sprache und Zeitstempel speichern.', status: 'Akzeptiert', icon: Icons.check_circle_outline) : null),
+            AirmiusButton(label: 'Akzeptanz speichern', icon: Icons.check_circle_outline, onPressed: _accepted ? () => openUiAction(context, title: 'Akzeptanz speichern', body: 'Akzeptanz für $_document mit Version, Sprache und Zeitstempel speichern.', status: 'Akzeptiert', icon: Icons.check_circle_outline) : null),
           ]),
         ]),
       ),
@@ -91,8 +91,8 @@ class _LegalDocumentScreenState extends State<LegalDocumentScreen> {
       'AGB' => 'Nutzungsbedingungen, Plattformregeln, Commerce, Abos, Zahlungen und Verantwortlichkeiten.',
       'Community' => 'Verhaltensregeln, Meldungen, Moderation, Sperren, Schutz von Minderjaehrigen und Fairness.',
       'Jugendschutz' => 'Guardian Consent, Altersfreigaben, Medien, Fahrgemeinschaften und sichere Kommunikation.',
-      'Cookies' => 'Cookie- und Tracking-Hinweise fuer Web, App, Analytics und Marketplace-Interessen.',
-      'Widerruf' => 'Widerrufsrecht, Rueckgaben, digitale Inhalte, Abos, Marketplace-Bestellungen und Fristen.',
+      'Cookies' => 'Cookie- und Tracking-Hinweise für Web, App, Analytics und Marketplace-Interessen.',
+      'Widerruf' => 'Widerrufsrecht, Rückgaben, digitale Inhalte, Abos, Marketplace-Bestellungen und Fristen.',
       _ => 'Kontaktwege, Meldungen, Datenschutzanfragen, Missbrauchsmeldungen und Supportprozesse.',
     };
   }

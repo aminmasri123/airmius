@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -22,10 +22,10 @@ class _GuestLearningCertificateScreenState extends State<GuestLearningCertificat
   final _certificateCode = TextEditingController(text: 'AIR-2026-ZBB');
 
   final List<_LearningItem> _items = const [
-    _LearningItem(title: 'Vereinsadmin Grundlagen', category: 'Vereine', body: 'Mitgliedsantraege, Rollen, Dokumente, Beitragsregeln und Verifizierung verstehen.', status: 'Kurs', meta: '8 Lektionen', icon: Icons.school_outlined, color: AirmiusColors.blue),
+    _LearningItem(title: 'Vereinsadmin Grundlagen', category: 'Vereine', body: 'Mitgliedsanträge, Rollen, Dokumente, Beitragsregeln und Verifizierung verstehen.', status: 'Kurs', meta: '8 Lektionen', icon: Icons.school_outlined, color: AirmiusColors.blue),
     _LearningItem(title: 'Trainer Safety Basics', category: 'Trainer', body: 'Anwesenheit, Minderjaehrige, Notfallkontakt, Medienfreigabe und Teamkommunikation.', status: 'Kurs', meta: 'Zertifikat', icon: Icons.sports_outlined, color: AirmiusColors.green),
-    _LearningItem(title: 'Airmius Zertifikat pruefen', category: 'Zertifikate', body: 'LearningCertificateVerify mit Code, Gueltigkeit, Kurs und Inhaberstatus.', status: 'Verify', meta: 'AIR-2026', icon: Icons.verified_outlined, color: AirmiusColors.amber),
-    _LearningItem(title: 'Public Course Show', category: 'Kurse', body: 'Oeffentliche Kursdetailseite mit Beschreibung, Nutzen, Lektionen und Start-CTA.', status: 'Public', meta: 'Preview', icon: Icons.menu_book_outlined, color: AirmiusColors.red),
+    _LearningItem(title: 'Airmius Zertifikat prüfen', category: 'Zertifikate', body: 'LearningCertificateVerify mit Code, Gültigkeit, Kurs und Inhaberstatus.', status: 'Verify', meta: 'AIR-2026', icon: Icons.verified_outlined, color: AirmiusColors.amber),
+    _LearningItem(title: 'Public Course Show', category: 'Kurse', body: 'Öffentliche Kursdetailseite mit Beschreibung, Nutzen, Lektionen und Start-CTA.', status: 'Public', meta: 'Preview', icon: Icons.menu_book_outlined, color: AirmiusColors.red),
   ];
 
   List<_LearningItem> get _visibleItems => _items.where((item) => _category == 'Alle' || item.category == _category).toList();
@@ -54,7 +54,7 @@ class _GuestLearningCertificateScreenState extends State<GuestLearningCertificat
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const PageTitle(title: 'E-Learning & Zertifikate', subtitle: 'Guest E-Learning, Kursdetail, Zertifikatspruefung, Vorschau und Kursstart als mobile Public-UI.'),
+                        const PageTitle(title: 'E-Learning & Zertifikate', subtitle: 'Guest E-Learning, Kursdetail, Zertifikatsprüfung, Vorschau und Kursstart als mobile Public-UI.'),
                         const SizedBox(height: 16),
                         _LearningHero(onStart: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LearningScreen()))),
                         const SizedBox(height: 16),
@@ -64,21 +64,21 @@ class _GuestLearningCertificateScreenState extends State<GuestLearningCertificat
                           title: 'Public Learning Optionen',
                           child: Column(
                             children: [
-                              _SwitchRow(title: 'Kurse anzeigen', subtitle: 'Guest E-Learning und Kursuebersicht mobil vorbereiten.', value: _showCourses, onChanged: (value) => setState(() => _showCourses = value)),
-                              _SwitchRow(title: 'Zertifikate anzeigen', subtitle: 'Zertifikate, Gueltigkeit und Inhaberstatus sichtbar machen.', value: _showCertificates, onChanged: (value) => setState(() => _showCertificates = value)),
+                              _SwitchRow(title: 'Kurse anzeigen', subtitle: 'Guest E-Learning und Kursübersicht mobil vorbereiten.', value: _showCourses, onChanged: (value) => setState(() => _showCourses = value)),
+                              _SwitchRow(title: 'Zertifikate anzeigen', subtitle: 'Zertifikate, Gültigkeit und Inhaberstatus sichtbar machen.', value: _showCertificates, onChanged: (value) => setState(() => _showCertificates = value)),
                               _SwitchRow(title: 'Vorschau erlauben', subtitle: 'Public Course Show mit Preview und Start-CTA.', value: _showPreview, onChanged: (value) => setState(() => _showPreview = value)),
-                              _SwitchRow(title: 'Oeffentliche Prüfung erlauben', subtitle: 'LearningCertificateVerify mit Code und Ergebnis vorbereiten.', value: _showPublicVerify, onChanged: (value) => setState(() => _showPublicVerify = value)),
+                              _SwitchRow(title: 'Öffentliche Prüfung erlauben', subtitle: 'LearningCertificateVerify mit Code und Ergebnis vorbereiten.', value: _showPublicVerify, onChanged: (value) => setState(() => _showPublicVerify = value)),
                             ],
                           ),
                         ),
                         const SizedBox(height: 16),
                         AirmiusPanel(
-                          title: 'Zertifikat pruefen',
+                          title: 'Zertifikat prüfen',
                           child: Column(
                             children: [
                               AirmiusTextField(label: 'Zertifikatscode', controller: _certificateCode),
                               const SizedBox(height: 10),
-                              Align(alignment: Alignment.centerRight, child: AirmiusButton(label: 'Pruefen', icon: Icons.verified_outlined, secondary: true, onPressed: () => _toast('Zertifikat pruefen vorbereitet'))),
+                              Align(alignment: Alignment.centerRight, child: AirmiusButton(label: 'Prüfen', icon: Icons.verified_outlined, secondary: true, onPressed: () => _toast('Zertifikat prüfen vorbereitet'))),
                             ],
                           ),
                         ),
@@ -87,7 +87,7 @@ class _GuestLearningCertificateScreenState extends State<GuestLearningCertificat
                           _LearningCard(item: item, onOpen: () => _toast('${item.title}: Detail vorbereitet')),
                           const SizedBox(height: 12),
                         ],
-                        if (items.isEmpty) const EmptyPanel('Keine Kurse fuer diese Kategorie gefunden.'),
+                        if (items.isEmpty) const EmptyPanel('Keine Kurse für diese Kategorie gefunden.'),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Aktionen',
@@ -96,7 +96,7 @@ class _GuestLearningCertificateScreenState extends State<GuestLearningCertificat
                             runSpacing: 10,
                             children: [
                               AirmiusButton(label: 'Lernen starten', icon: Icons.school_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LearningScreen()))),
-                              AirmiusButton(label: 'Zertifikat pruefen', icon: Icons.verified_outlined, secondary: true, onPressed: () => _toast('Zertifikat pruefen vorbereitet')),
+                              AirmiusButton(label: 'Zertifikat prüfen', icon: Icons.verified_outlined, secondary: true, onPressed: () => _toast('Zertifikat prüfen vorbereitet')),
                               AirmiusButton(label: 'Support', icon: Icons.support_agent_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SupportHelpdeskScreen()))),
                             ],
                           ),
@@ -144,7 +144,7 @@ class _LearningHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Die Guest-Learning-Webseiten werden als mobile UI abgebildet: E-Learning, Course Show, Zertifikatspruefung und Kursstart.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          const Text('Die Guest-Learning-Webseiten werden als mobile UI abgebildet: E-Learning, Course Show, Zertifikatsprüfung und Kursstart.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           const Row(children: [Expanded(child: MetricCard(value: '4', label: 'Inhalte')), SizedBox(width: 10), Expanded(child: MetricCard(value: '1', label: 'Verify')), SizedBox(width: 10), Expanded(child: MetricCard(value: '8', label: 'Lektionen'))]),
         ],

@@ -24,21 +24,21 @@ class _SponsorCampaignManagementSuiteScreenState extends State<SponsorCampaignMa
         title: 'Sommerlauf Sponsor',
         status: 'Aktiv',
         budget: '350 EUR',
-        body: 'Sponsorhinweis fuer Event, Feed und Vereinsseite mit Budget, Laufzeit und Zielgruppe.',
+        body: 'Sponsorhinweis für Event, Feed und Vereinsseite mit Budget, Laufzeit und Zielgruppe.',
         color: AirmiusColors.green,
       ),
       const _CampaignRow(
         title: 'Trikotpartner Angebot',
         status: 'Freigabe',
         budget: '900 EUR',
-        body: 'Creative, Logo, Clubbezug und Sichtbarkeit muessen durch Verein oder Plattform geprueft werden.',
+        body: 'Creative, Logo, Clubbezug und Sichtbarkeit müssen durch Verein oder Plattform geprüft werden.',
         color: AirmiusColors.amber,
       ),
       const _CampaignRow(
         title: 'Marketplace Gutschein',
         status: 'Geplant',
         budget: 'Code',
-        body: 'Digitales Sponsorangebot mit Einloesecode, Gueltigkeit, Tracking und Benachrichtigung.',
+        body: 'Digitales Sponsorangebot mit Einloesecode, Gültigkeit, Tracking und Benachrichtigung.',
         color: AirmiusColors.blue,
       ),
     ];
@@ -57,7 +57,7 @@ class _SponsorCampaignManagementSuiteScreenState extends State<SponsorCampaignMa
                 const SectionLabel('SPONSOR OPS'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Sponsoren und Vereine brauchen eine mobile Kampagnen-UI: Anzeige anlegen, Platzierung waehlen, Budget steuern, Creative pruefen und Freigaben verfolgen.',
+                  'Sponsoren und Vereine brauchen eine mobile Kampagnen-UI: Anzeige anlegen, Platzierung wählen, Budget steuern, Creative prüfen und Freigaben verfolgen.',
                   style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 16),
@@ -118,7 +118,7 @@ class _SponsorCampaignManagementSuiteScreenState extends State<SponsorCampaignMa
                 const SectionLabel('VORSCHAU'),
                 const SizedBox(height: 8),
                 Text(
-                  'Aktuelle Platzierung: $placement. Spaeter verbindet die API Sponsor, Verein, Kampagne, Budget, Creative, Freigabe, Ausspielung und Reporting.',
+                  'Aktuelle Platzierung: $placement. Später verbindet die API Sponsor, Verein, Kampagne, Budget, Creative, Freigabe, Ausspielung und Reporting.',
                   style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),
@@ -128,7 +128,7 @@ class _SponsorCampaignManagementSuiteScreenState extends State<SponsorCampaignMa
                   onPressed: () => openUiAction(
                     context,
                     title: 'Kampagne vorbereiten',
-                    body: 'Diese UI bereitet Sponsor-Kampagnen, Budgets, Creatives, Placements, Freigaben und Reporting fuer die spaetere Laravel-API vor.',
+                    body: 'Diese UI bereitet Sponsor-Kampagnen, Budgets, Creatives, Placements, Freigaben und Reporting für die spätere Laravel-API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.campaign_outlined,
                   ),
@@ -228,8 +228,8 @@ class _CampaignCard extends StatelessWidget {
                 icon: Icons.image_outlined,
                 onPressed: () => openUiAction(
                   context,
-                  title: 'Creative pruefen',
-                  body: 'Creatives koennen spaeter Bild, Text, Link, Alt-Text, Zielgruppe und Freigabestatus enthalten.',
+                  title: 'Creative prüfen',
+                  body: 'Creatives können später Bild, Text, Link, Alt-Text, Zielgruppe und Freigabestatus enthalten.',
                   status: 'UI vorbereitet',
                   icon: Icons.image_outlined,
                 ),
@@ -241,7 +241,7 @@ class _CampaignCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Budget steuern',
-                  body: 'Budget, Laufzeit, Ausspielung, Ausgaben und Limits werden fuer die spaetere API vorbereitet.',
+                  body: 'Budget, Laufzeit, Ausspielung, Ausgaben und Limits werden für die spätere API vorbereitet.',
                   status: 'UI vorbereitet',
                   icon: Icons.account_balance_wallet_outlined,
                 ),
@@ -253,7 +253,7 @@ class _CampaignCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Freigabe',
-                  body: 'Verein oder Plattform kann Kampagnen spaeter freigeben, ablehnen, pausieren oder zurueckfragen.',
+                  body: 'Verein oder Plattform kann Kampagnen später freigeben, ablehnen, pausieren oder zurückfragen.',
                   status: 'UI vorbereitet',
                   icon: Icons.verified_user_outlined,
                 ),

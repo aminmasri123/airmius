@@ -49,8 +49,8 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Sichtbarkeit & Sicherheit'),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: _permission, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Sichtbarkeit'), items: const ['Privat', 'Team intern', 'Verein', 'Oeffentlich'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _permission = value ?? _permission)),
-            SwitchListTile(value: _shareWithTeam, onChanged: (value) => setState(() => _shareWithTeam = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Mit Team teilen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Route, Track oder Live-Standort fuer Team sichtbar machen.', style: TextStyle(color: AirmiusColors.muted))),
+            DropdownButtonFormField<String>(value: _permission, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Sichtbarkeit'), items: const ['Privat', 'Team intern', 'Verein', 'Öffentlich'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _permission = value ?? _permission)),
+            SwitchListTile(value: _shareWithTeam, onChanged: (value) => setState(() => _shareWithTeam = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Mit Team teilen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Route, Track oder Live-Standort für Team sichtbar machen.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -58,12 +58,12 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
             SizedBox(height: 10),
             _RouteLine(icon: Icons.flag_outlined, title: 'Start', body: 'Sportplatz Kleinblittersdorf', status: 'Start'),
             _RouteLine(icon: Icons.route_outlined, title: 'Wegpunkt', body: 'Saarpromenade - flacher Abschnitt', status: 'km 4'),
-            _RouteLine(icon: Icons.place_outlined, title: 'Ziel', body: 'Rueckkehr zum Sportplatz', status: 'Ziel'),
+            _RouteLine(icon: Icons.place_outlined, title: 'Ziel', body: 'Rückkehr zum Sportplatz', status: 'Ziel'),
           ])),
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [
-            AirmiusButton(label: isLive ? 'Live Track starten' : 'Route starten', icon: Icons.play_arrow_outlined, onPressed: () => openUiAction(context, title: isLive ? 'Live Track starten' : 'Route starten', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.play_arrow_outlined)),
-            AirmiusButton(label: 'Route bearbeiten', icon: Icons.edit_location_alt_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Route bearbeiten', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.edit_location_alt_outlined)),
+            AirmiusButton(label: isLive ? 'Live Track starten' : 'Route starten', icon: Icons.play_arrow_outlined, onPressed: () => openUiAction(context, title: isLive ? 'Live Track starten' : 'Route starten', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.play_arrow_outlined)),
+            AirmiusButton(label: 'Route bearbeiten', icon: Icons.edit_location_alt_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Route bearbeiten', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.edit_location_alt_outlined)),
           ]),
         ]),
       ),

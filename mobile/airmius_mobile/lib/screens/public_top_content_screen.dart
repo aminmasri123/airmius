@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'public_growth_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
@@ -37,7 +37,7 @@ class _PublicTopContentScreenState extends State<PublicTopContentScreen> {
                 children: const [
                   Eyebrow('Entdecken'),
                   SizedBox(height: 8),
-                  Text('Die mobile App bildet die oeffentliche Web-App auch fuer Besucher ab: Inhalte finden, Vertrauen aufbauen und danach registrieren oder Interesse senden.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  Text('Die mobile App bildet die öffentliche Web-App auch für Besucher ab: Inhalte finden, Vertrauen aufbauen und danach registrieren oder Interesse senden.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                 ],
               ),
             ),
@@ -115,8 +115,8 @@ class _TopContentItem {
 
 const _items = [
   _TopContentItem(title: 'Digitale Mitgliedschaftsanfrage', body: 'Wie Vereine Anfragen, Formulare, Dokumente und Zahlrhythmen mobil verwalten.', type: 'Blog', meta: 'Beliebt', icon: Icons.article_outlined),
-  _TopContentItem(title: 'Trainer-Onboarding', body: 'Kurs mit Zertifikat, Lektionen und Fortschritt fuer Trainer und Vereinsadmins.', type: 'Kurs', meta: 'Zertifikat', icon: Icons.school_outlined),
-  _TopContentItem(title: 'Airmius Running Club', body: 'Oeffentliches Vereinsprofil mit Teams, sichtbaren Beitraegen und Beitritt.', type: 'Verein', meta: 'Verifiziert', icon: Icons.groups_outlined),
+  _TopContentItem(title: 'Trainer-Onboarding', body: 'Kurs mit Zertifikat, Lektionen und Fortschritt für Trainer und Vereinsadmins.', type: 'Kurs', meta: 'Zertifikat', icon: Icons.school_outlined),
+  _TopContentItem(title: 'Airmius Running Club', body: 'Öffentliches Vereinsprofil mit Teams, sichtbaren Beiträgen und Beitritt.', type: 'Verein', meta: 'Verifiziert', icon: Icons.groups_outlined),
   _TopContentItem(title: 'Starterpaket Verein', body: 'Marketplace-Angebot mit Varianten, Anbieterprofil und Gast-Checkout.', type: 'Shop', meta: 'Neu', icon: Icons.storefront_outlined),
   _TopContentItem(title: 'Sponsor Sichtbarkeit', body: 'Sponsoring-Kachel mit Kampagne, Kontaktanfrage und Reporting.', type: 'Sponsor', meta: 'Aktiv', icon: Icons.handshake_outlined),
 ];

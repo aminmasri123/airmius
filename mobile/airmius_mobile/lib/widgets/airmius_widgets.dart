@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_l10n.dart';
 import '../core/airmius_theme.dart';
@@ -481,7 +481,7 @@ class _OpenUiActionResultScreenState extends State<_OpenUiActionResultScreen> {
                           children: [
                             StatusPill(widget.status),
                             const StatusPill('UI bereit'),
-                            const StatusPill('API spaeter'),
+                            const StatusPill('API später'),
                           ],
                         ),
                       ],
@@ -525,6 +525,7 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
     super.key,
     required this.title,
     this.onSearch,
+    this.onLogoTap,
     this.onMessages,
     this.onNotifications,
     this.notificationCount = 0,
@@ -536,6 +537,7 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   final String title;
+  final VoidCallback? onLogoTap;
   final VoidCallback? onSearch;
   final VoidCallback? onMessages;
   final VoidCallback? onNotifications;
@@ -565,12 +567,13 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       titleSpacing: 0,
-      title: Row(
-        children: [
-          const AirmiusLogo(compact: true),
-          const SizedBox(width: 10),
-          Expanded(child: Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900))),
-        ],
+      title: InkWell(
+        onTap: onLogoTap,
+        borderRadius: BorderRadius.circular(8),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: AirmiusLogo(compact: true),
+        ),
       ),
       actions: [
         IconButton(
@@ -1234,7 +1237,7 @@ class AirmiusThemeChooser extends StatelessWidget {
           const Text('Design', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
           const SizedBox(height: 6),
           const Text(
-            'Logo und Theme folgen dem Airmius-Prinzip fuer Dunkel, Normal und System.',
+            'Logo und Theme folgen dem Airmius-Prinzip für Dunkel, Normal und System.',
             style: TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.35),
           ),
           const SizedBox(height: 10),
@@ -1283,7 +1286,7 @@ Future<bool> confirmDanger(
   BuildContext context, [
   String? legacyTitle,
   String? legacyMessage,
-  String confirmLabel = 'Zurueckziehen',
+  String confirmLabel = 'Zurückziehen',
   VoidCallback? onConfirm,
 ]) async {
   final resolvedTitle = (legacyTitle ?? '').trim();

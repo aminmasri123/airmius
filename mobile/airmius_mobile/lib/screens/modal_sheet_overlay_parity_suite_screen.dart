@@ -22,13 +22,13 @@ class _ModalSheetOverlayParitySuiteScreenState extends State<ModalSheetOverlayPa
 
   static const _patterns = <_OverlayPattern>[
     _OverlayPattern(
-      title: 'Anfrage zurueckziehen',
+      title: 'Anfrage zurückziehen',
       source: 'Club Profile / Membership Request Status',
-      body: 'Bestaetigungsdialog mit Vereinsname, Konsequenz, Rueckzug-CTA, Abbrechen und gut lesbarem Kontrast.',
+      body: 'Bestätigungsdialog mit Vereinsname, Konsequenz, Rückzug-CTA, Abbrechen und gut lesbarem Kontrast.',
       status: 'Confirm',
       icon: Icons.undo_outlined,
-      primary: 'Rueckzug zeigen',
-      secondary: 'Kontrast pruefen',
+      primary: 'Rückzug zeigen',
+      secondary: 'Kontrast prüfen',
       color: AirmiusColors.red,
     ),
     _OverlayPattern(
@@ -47,7 +47,7 @@ class _ModalSheetOverlayParitySuiteScreenState extends State<ModalSheetOverlayPa
       body: 'Filterspalten aus der Web-App werden als Bottom-Sheet mit Chips, Suche, Reset, Anwenden und aktivem Filterzaehler abgebildet.',
       status: 'Filter Sheet',
       icon: Icons.filter_alt_outlined,
-      primary: 'Filter oeffnen',
+      primary: 'Filter öffnen',
       secondary: 'Reset',
       color: AirmiusColors.green,
     ),
@@ -64,7 +64,7 @@ class _ModalSheetOverlayParitySuiteScreenState extends State<ModalSheetOverlayPa
     _OverlayPattern(
       title: 'Zahlungsdialog',
       source: 'Checkout / BankTransfer / Member Payments',
-      body: 'Bankdaten, IBAN, Verwendungszweck, Betrag, Rechnung und Zahlung bestaetigen als mobile Dialog-/Sheet-Kombination.',
+      body: 'Bankdaten, IBAN, Verwendungszweck, Betrag, Rechnung und Zahlung bestätigen als mobile Dialog-/Sheet-Kombination.',
       status: 'Payment',
       icon: Icons.payments_outlined,
       primary: 'Zahlung',
@@ -74,10 +74,10 @@ class _ModalSheetOverlayParitySuiteScreenState extends State<ModalSheetOverlayPa
     _OverlayPattern(
       title: 'Danger Action',
       source: 'Admin Moderation / User / Club',
-      body: 'Sperren, loeschen, ablehnen oder entfernen braucht Grund, Audit, Bestaetigungstext und klare rote Aktion.',
+      body: 'Sperren, löschen, ablehnen oder entfernen braucht Grund, Audit, Bestätigungstext und klare rote Aktion.',
       status: 'Danger',
       icon: Icons.warning_amber_outlined,
-      primary: 'Bestaetigen',
+      primary: 'Bestätigen',
       secondary: 'Audit',
       color: AirmiusColors.red,
     ),
@@ -203,12 +203,12 @@ class _Hero extends StatelessWidget {
           const Eyebrow('MODALS & SHEETS'),
           const SizedBox(height: 8),
           const Text(
-            'Mobile Overlays duerfen nicht wie gequetschte Web-Modals wirken.',
+            'Mobile Overlays dürfen nicht wie gequetschte Web-Modals wirken.',
             style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
           const Text(
-            'Flutter bekommt klare Regeln fuer Dialoge, Bottom-Sheets, Drawer, Fullscreen-Formulare, Scrollbereiche, Sticky Actions, Danger-Confirmations und Ergebnis-Overlays.',
+            'Flutter bekommt klare Regeln für Dialoge, Bottom-Sheets, Drawer, Fullscreen-Formulare, Scrollbereiche, Sticky Actions, Danger-Confirmations und Ergebnis-Overlays.',
             style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
@@ -295,7 +295,7 @@ class _RulesPanel extends StatelessWidget {
       children: [
         _SwitchLine(title: 'Lange Formulare mobil fullscreen', value: fullScreenOnMobile, onChanged: onFullScreen),
         _SwitchLine(title: 'Aktionen unten sticky halten', value: stickyActions, onChanged: onSticky),
-        _SwitchLine(title: 'Danger-Aktionen mit Pflichtbestaetigung', value: dangerConfirm, onChanged: onDanger),
+        _SwitchLine(title: 'Danger-Aktionen mit Pflichtbestätigung', value: dangerConfirm, onChanged: onDanger),
       ],
     );
   }
@@ -349,7 +349,7 @@ class _OverlayPreview extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Beispielinhalt mit eigenem Scrollbereich, lesbarem Kontrast, klarer Schliessen-Aktion und festen Buttons am unteren Rand.',
+            'Beispielinhalt mit eigenem Scrollbereich, lesbarem Kontrast, klarer Schließen-Aktion und festen Buttons am unteren Rand.',
             style: TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 14),
@@ -358,7 +358,7 @@ class _OverlayPreview extends StatelessWidget {
             runSpacing: 10,
             children: [
               AirmiusButton(
-                label: 'Overlay oeffnen',
+                label: 'Overlay öffnen',
                 icon: Icons.open_in_full_outlined,
                 onPressed: () => openUiAction(
                   context,
@@ -375,7 +375,7 @@ class _OverlayPreview extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Overlay abbrechen',
-                  body: 'Abbrechen, Schliessen, Back-Button und Dirty-State-Schutz werden als mobile Overlay-Regeln vorbereitet.',
+                  body: 'Abbrechen, Schließen, Back-Button und Dirty-State-Schutz werden als mobile Overlay-Regeln vorbereitet.',
                   status: 'Cancel',
                   icon: Icons.close_outlined,
                 ),
@@ -453,7 +453,7 @@ class _PatternCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: pattern.secondary,
-                  body: 'Overlay-Regeln, Scrollbereich, Back-Button, Sticky CTA, Accessibility und API-Fehler fuer ${pattern.title}.',
+                  body: 'Overlay-Regeln, Scrollbereich, Back-Button, Sticky CTA, Accessibility und API-Fehler für ${pattern.title}.',
                   status: 'Overlay Detail',
                   icon: Icons.tune_outlined,
                 ),
@@ -475,11 +475,11 @@ class _Checklist extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Overlay-Paritaet',
-      subtitle: 'Was aus Web-Modals mobil uebernommen wird.',
+      subtitle: 'Was aus Web-Modals mobil übernommen wird.',
       children: [
         const _CheckLine('Lange Modals werden mobil fullscreen und bekommen eigenen Scrollbereich.'),
         const _CheckLine('Buttons bleiben sichtbar und werden bei langen Formularen sticky unten gefuehrt.'),
-        const _CheckLine('Danger-Aktionen brauchen klare Warnung, Grund, Bestaetigung und Audit-Hinweis.'),
+        const _CheckLine('Danger-Aktionen brauchen klare Warnung, Grund, Bestätigung und Audit-Hinweis.'),
         const _CheckLine('Filter, Preview, Drawer und Ergebnisdialoge folgen einem gemeinsamen Airmius-Muster.'),
         const SizedBox(height: 12),
         AirmiusButton(label: 'Overlay-Paritaet markieren', icon: Icons.fact_check_outlined, onPressed: onOpen),

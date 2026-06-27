@@ -30,7 +30,7 @@ class _VolunteerShiftTaskPlannerSuiteScreenState extends State<VolunteerShiftTas
       ),
       body: PageFrame(
         title: 'Volunteer Shift Task Planner',
-        subtitle: 'Mobile UI fuer Helferlisten, Schichten, Aufgaben, Erinnerungen, Rollenregeln und Nachweise bei Events und Vereinsbetrieb.',
+        subtitle: 'Mobile UI für Helferlisten, Schichten, Aufgaben, Erinnerungen, Rollenregeln und Nachweise bei Events und Vereinsbetrieb.',
         trailing: const StatusPill('Volunteer', color: AirmiusColors.green),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -48,7 +48,7 @@ class _VolunteerShiftTaskPlannerSuiteScreenState extends State<VolunteerShiftTas
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Die App bereitet Helferschichten, Aufgaben, Zusagen, Erinnerungen und Nachweise fuer Events, Training, Fahrdienste und Vereinsfeste vor.',
+                    'Die App bereitet Helferschichten, Aufgaben, Zusagen, Erinnerungen und Nachweise für Events, Training, Fahrdienste und Vereinsfeste vor.',
                     style: TextStyle(color: AirmiusColors.muted, height: 1.42),
                   ),
                   const SizedBox(height: 14),
@@ -90,28 +90,28 @@ class _VolunteerShiftTaskPlannerSuiteScreenState extends State<VolunteerShiftTas
                   _VolunteerToggle(
                     icon: Icons.person_add_alt_1_outlined,
                     title: 'Selbst eintragen',
-                    body: 'Mitglieder koennen sich fuer passende Schichten eintragen, absagen oder Ersatz vorschlagen.',
+                    body: 'Mitglieder können sich für passende Schichten eintragen, absagen oder Ersatz vorschlagen.',
                     enabled: _selfSignup,
                     onChanged: (value) => setState(() => _selfSignup = value),
                   ),
                   _VolunteerToggle(
                     icon: Icons.schedule_outlined,
                     title: 'Schichtgrenzen',
-                    body: 'Maximale Personen, Altersregeln, Rollenrechte und Zeitueberschneidungen werden vor dem Speichern geprueft.',
+                    body: 'Maximale Personen, Altersregeln, Rollenrechte und Zeitüberschneidungen werden vor dem Speichern geprüft.',
                     enabled: _shiftLimits,
                     onChanged: (value) => setState(() => _shiftLimits = value),
                   ),
                   _VolunteerToggle(
                     icon: Icons.notifications_active_outlined,
                     title: 'Erinnerungen',
-                    body: 'Helfer bekommen Push, E-Mail oder In-App-Hinweise vor ihrer Schicht und bei Aenderungen.',
+                    body: 'Helfer bekommen Push, E-Mail oder In-App-Hinweise vor ihrer Schicht und bei Änderungen.',
                     enabled: _reminders,
                     onChanged: (value) => setState(() => _reminders = value),
                   ),
                   _VolunteerToggle(
                     icon: Icons.fact_check_outlined,
                     title: 'Nachweis erforderlich',
-                    body: 'Optional koennen erledigte Aufgaben durch Trainer, Admin oder Check-in bestaetigt werden.',
+                    body: 'Optional können erledigte Aufgaben durch Trainer, Admin oder Check-in bestätigt werden.',
                     enabled: _proofRequired,
                     onChanged: (value) => setState(() => _proofRequired = value),
                     last: true,
@@ -131,7 +131,7 @@ class _VolunteerShiftTaskPlannerSuiteScreenState extends State<VolunteerShiftTas
                 children: [
                   const Eyebrow('OFFENE SCHICHTEN'),
                   const SizedBox(height: 8),
-                  const Text('Sommerfest hat noch drei offene Aufgaben: Kasse 16:00, Abbau 20:00 und Fahrdienst Rueckweg. Vereinsadmin kann gezielt erinnern.', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, height: 1.38)),
+                  const Text('Sommerfest hat noch drei offene Aufgaben: Kasse 16:00, Abbau 20:00 und Fahrdienst Rückweg. Vereinsadmin kann gezielt erinnern.', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, height: 1.38)),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
@@ -180,11 +180,11 @@ class _VolunteerTask {
 }
 
 const _tasks = [
-  _VolunteerTask(scope: 'Event', title: 'Sommerfest Kasse', body: 'Zwei Helfer fuer 16:00 bis 18:00, Kassenwart darf bestaetigen.', status: '1/2', icon: Icons.point_of_sale_outlined, color: AirmiusColors.amber),
-  _VolunteerTask(scope: 'Event', title: 'Einlass & QR Check', body: 'Mitgliedskarten scannen, Gaesteliste pruefen und Rueckfragen an Admin senden.', status: 'Besetzt', icon: Icons.qr_code_2_outlined, color: AirmiusColors.green),
+  _VolunteerTask(scope: 'Event', title: 'Sommerfest Kasse', body: 'Zwei Helfer für 16:00 bis 18:00, Kassenwart darf bestätigen.', status: '1/2', icon: Icons.point_of_sale_outlined, color: AirmiusColors.amber),
+  _VolunteerTask(scope: 'Event', title: 'Einlass & QR Check', body: 'Mitgliedskarten scannen, Gästeliste prüfen und Rückfragen an Admin senden.', status: 'Besetzt', icon: Icons.qr_code_2_outlined, color: AirmiusColors.green),
   _VolunteerTask(scope: 'Training', title: 'Material vorbereiten', body: 'Baelle, Leibchen, Timing-System und Check-in-Liste vor Training bereitstellen.', status: 'Offen', icon: Icons.inventory_2_outlined, color: AirmiusColors.blue),
-  _VolunteerTask(scope: 'Fahrdienst', title: 'Rueckfahrt Auswaertsspiel', body: 'Fahrgemeinschaft fuer drei Mitglieder mit Guardian-Freigabe.', status: '2 Plaetze', icon: Icons.directions_car_outlined, color: AirmiusColors.green),
-  _VolunteerTask(scope: 'Kasse', title: 'Belegnachweis', body: 'Kassenaufgabe erfordert kurze Bestaetigung und optionalen Beleg-Upload.', status: 'Proof', icon: Icons.receipt_long_outlined, color: AirmiusColors.amber),
+  _VolunteerTask(scope: 'Fahrdienst', title: 'Rückfahrt Auswaertsspiel', body: 'Fahrgemeinschaft für drei Mitglieder mit Guardian-Freigabe.', status: '2 Plaetze', icon: Icons.directions_car_outlined, color: AirmiusColors.green),
+  _VolunteerTask(scope: 'Kasse', title: 'Belegnachweis', body: 'Kassenaufgabe erfordert kurze Bestätigung und optionalen Beleg-Upload.', status: 'Proof', icon: Icons.receipt_long_outlined, color: AirmiusColors.amber),
   _VolunteerTask(scope: 'Aufbau', title: 'Zelte & Tische', body: 'Aufbau ab 12:00, mindestens vier Helfer, keine Altersbeschraenkung.', status: '3/4', icon: Icons.handyman_outlined, color: AirmiusColors.blue),
   _VolunteerTask(scope: 'Abbau', title: 'Abbau nach Event', body: '20:00 bis 21:00, Erinnerung an alle offenen Helfer aktiv.', status: 'Offen', icon: Icons.task_alt_outlined, color: AirmiusColors.amber),
 ];

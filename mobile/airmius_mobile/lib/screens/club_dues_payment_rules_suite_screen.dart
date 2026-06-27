@@ -12,7 +12,7 @@ class ClubDuesPaymentRulesSuiteScreen extends StatefulWidget {
 
 class _ClubDuesPaymentRulesSuiteScreenState extends State<ClubDuesPaymentRulesSuiteScreen> {
   String cycle = 'Jaehrlich';
-  String method = 'Ueberweisung';
+  String method = 'Überweisung';
   bool showPublicFees = true;
   bool requireSepaMandate = false;
   bool allowCash = true;
@@ -21,9 +21,9 @@ class _ClubDuesPaymentRulesSuiteScreenState extends State<ClubDuesPaymentRulesSu
   @override
   Widget build(BuildContext context) {
     final plans = [
-      const _DuesPlan(name: 'Erwachsene', price: '120 EUR', rhythm: 'Jaehrlich', body: 'Standardbeitrag fuer aktive Mitglieder ab 18 Jahren.', color: AirmiusColors.blue),
+      const _DuesPlan(name: 'Erwachsene', price: '120 EUR', rhythm: 'Jaehrlich', body: 'Standardbeitrag für aktive Mitglieder ab 18 Jahren.', color: AirmiusColors.blue),
       const _DuesPlan(name: 'Jugend', price: '60 EUR', rhythm: 'Jaehrlich', body: 'Reduzierter Beitrag mit optionaler Guardian-Zustimmung.', color: AirmiusColors.green),
-      const _DuesPlan(name: 'Foerdermitglied', price: 'frei', rhythm: 'Flexibel', body: 'Frei waehlbarer Foerderbetrag mit Vereinsfreigabe.', color: AirmiusColors.amber),
+      const _DuesPlan(name: 'Foerdermitglied', price: 'frei', rhythm: 'Flexibel', body: 'Frei wählbarer Foerderbetrag mit Vereinsfreigabe.', color: AirmiusColors.amber),
     ];
 
     return PageFrame(
@@ -40,7 +40,7 @@ class _ClubDuesPaymentRulesSuiteScreenState extends State<ClubDuesPaymentRulesSu
                 const SectionLabel('VEREINSBEITRAEGE'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Vereine koennen mobil festlegen, welche Beitragsgruppen gelten, wie oft gezahlt wird, welche Zahlarten erlaubt sind und welche Dokumente mit den Regeln verknuepft werden.',
+                  'Vereine können mobil festlegen, welche Beitragsgruppen gelten, wie oft gezahlt wird, welche Zahlarten erlaubt sind und welche Dokumente mit den Regeln verknuepft werden.',
                   style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 16),
@@ -75,7 +75,7 @@ class _ClubDuesPaymentRulesSuiteScreenState extends State<ClubDuesPaymentRulesSu
                 const SizedBox(height: 14),
                 SegmentedButton<String>(
                   segments: const [
-                    ButtonSegment(value: 'Ueberweisung', label: Text('Ueberweisung')),
+                    ButtonSegment(value: 'Überweisung', label: Text('Überweisung')),
                     ButtonSegment(value: 'Bar', label: Text('Bar')),
                     ButtonSegment(value: 'SEPA', label: Text('SEPA')),
                   ],
@@ -97,7 +97,7 @@ class _ClubDuesPaymentRulesSuiteScreenState extends State<ClubDuesPaymentRulesSu
                 const SectionLabel('OPTIONEN'),
                 const SizedBox(height: 8),
                 _OptionSwitch(
-                  title: 'Beitraege oeffentlich anzeigen',
+                  title: 'Beiträge öffentlich anzeigen',
                   body: 'User sehen vor dem Antrag, welche Beitragsgruppen der Verein anbietet.',
                   value: showPublicFees,
                   color: AirmiusColors.blue,
@@ -112,14 +112,14 @@ class _ClubDuesPaymentRulesSuiteScreenState extends State<ClubDuesPaymentRulesSu
                 ),
                 _OptionSwitch(
                   title: 'Barzahlung erlauben',
-                  body: 'Verein kann Barzahlung fuer bestimmte Gruppen oder Sonderfaelle zulassen.',
+                  body: 'Verein kann Barzahlung für bestimmte Gruppen oder Sonderfaelle zulassen.',
                   value: allowCash,
                   color: AirmiusColors.amber,
                   onChanged: (value) => setState(() => allowCash = value),
                 ),
                 _OptionSwitch(
                   title: 'Beitragsordnung verknuepfen',
-                  body: 'PDF oder Link wird spaeter im Vereins-Dateimanager gespeichert und im Antrag bestaetigt.',
+                  body: 'PDF oder Link wird später im Vereins-Dateimanager gespeichert und im Antrag bestätigt.',
                   value: attachFeeRules,
                   color: AirmiusColors.pink,
                   onChanged: (value) => setState(() => attachFeeRules = value),
@@ -135,17 +135,17 @@ class _ClubDuesPaymentRulesSuiteScreenState extends State<ClubDuesPaymentRulesSu
                 const SectionLabel('VORSCHAU'),
                 const SizedBox(height: 8),
                 Text(
-                  'Standard: $cycle per $method. Sichtbare Beitraege und Dokumentpflichten werden spaeter direkt in den Mitgliedschaftsantrag uebernommen.',
+                  'Standard: $cycle per $method. Sichtbare Beiträge und Dokumentpflichten werden später direkt in den Mitgliedschaftsantrag übernommen.',
                   style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),
                 AirmiusButton(
-                  label: 'Beitragsregel pruefen',
+                  label: 'Beitragsregel prüfen',
                   icon: Icons.receipt_long_outlined,
                   onPressed: () => openUiAction(
                     context,
                     title: 'Beitragsregel',
-                    body: 'Diese mobile UI bereitet Beitragsgruppen, Zahlungszyklen, Zahlungsarten, SEPA, Barzahlung und Dokumentverknuepfung fuer die spaetere API vor.',
+                    body: 'Diese mobile UI bereitet Beitragsgruppen, Zahlungszyklen, Zahlungsarten, SEPA, Barzahlung und Dokumentverknuepfung für die spätere API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.receipt_long_outlined,
                   ),

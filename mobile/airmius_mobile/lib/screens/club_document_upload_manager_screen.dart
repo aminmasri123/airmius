@@ -23,12 +23,12 @@ class _ClubDocumentUploadManagerScreenState extends State<ClubDocumentUploadMana
   bool _uploading = false;
   String? _lastUploadIntent;
 
-  static const _folders = ['Alle', 'Datenschutz', 'Regeln', 'Beitraege', 'SEPA', 'Formulare'];
+  static const _folders = ['Alle', 'Datenschutz', 'Regeln', 'Beiträge', 'SEPA', 'Formulare'];
 
   final List<_DocumentItem> _documents = const [
     _DocumentItem(folder: 'Datenschutz', title: 'Datenschutzerklaerung', type: 'PDF', status: 'Pflicht', linked: 'Mitgliedsantrag', icon: Icons.privacy_tip_outlined, color: AirmiusColors.blue),
     _DocumentItem(folder: 'Regeln', title: 'Vereinsordnung', type: 'PDF', status: 'Sichtbar', linked: 'Clubseite', icon: Icons.gavel_outlined, color: AirmiusColors.green),
-    _DocumentItem(folder: 'Beitraege', title: 'Beitragsordnung 2026', type: 'PDF', status: 'Verknuepft', linked: 'Beitragsregeln', icon: Icons.receipt_long_outlined, color: AirmiusColors.amber),
+    _DocumentItem(folder: 'Beiträge', title: 'Beitragsordnung 2026', type: 'PDF', status: 'Verknuepft', linked: 'Beitragsregeln', icon: Icons.receipt_long_outlined, color: AirmiusColors.amber),
     _DocumentItem(folder: 'SEPA', title: 'SEPA-Lastschriftmandat', type: 'PDF', status: 'Privat', linked: 'Zahlungsdaten', icon: Icons.account_balance_outlined, color: AirmiusColors.blueDeep),
     _DocumentItem(folder: 'Formulare', title: 'Einwilligung Minderjaehrige', type: 'DOCX', status: 'Review', linked: 'Erziehungsberechtigte', icon: Icons.description_outlined, color: AirmiusColors.red),
   ];
@@ -69,8 +69,8 @@ class _ClubDocumentUploadManagerScreenState extends State<ClubDocumentUploadMana
                             children: [
                               _SwitchRow(title: 'In Dateimanager verschieben', subtitle: 'Uploads landen automatisch im Vereins-Dateimanager.', value: _moveToFileManager, onChanged: (value) => setState(() => _moveToFileManager = value)),
                               _SwitchRow(title: 'Versionierung erzwingen', subtitle: 'Neue Dateien ersetzen alte Regeln nicht heimlich.', value: _requireVersion, onChanged: (value) => setState(() => _requireVersion = value)),
-                              _SwitchRow(title: 'Mit Beitragsregeln verknuepfen', subtitle: 'Beitragsordnung und SEPA koennen direkt am Beitrag haengen.', value: _linkToRules, onChanged: (value) => setState(() => _linkToRules = value)),
-                              _SwitchRow(title: 'Fuer Mitglieder sichtbar', subtitle: 'Verein entscheidet, welche Dateien im Antrag oder Profil sichtbar sind.', value: _memberVisible, onChanged: (value) => setState(() => _memberVisible = value)),
+                              _SwitchRow(title: 'Mit Beitragsregeln verknuepfen', subtitle: 'Beitragsordnung und SEPA können direkt am Beitrag haengen.', value: _linkToRules, onChanged: (value) => setState(() => _linkToRules = value)),
+                              _SwitchRow(title: 'Für Mitglieder sichtbar', subtitle: 'Verein entscheidet, welche Dateien im Antrag oder Profil sichtbar sind.', value: _memberVisible, onChanged: (value) => setState(() => _memberVisible = value)),
                             ],
                           ),
                         ),
@@ -79,7 +79,7 @@ class _ClubDocumentUploadManagerScreenState extends State<ClubDocumentUploadMana
                           _DocumentCard(document: document, onAction: _handleAction),
                           const SizedBox(height: 12),
                         ],
-                        if (visibleDocuments.isEmpty) const EmptyPanel('Keine Dateien fuer diesen Ordner gefunden.'),
+                        if (visibleDocuments.isEmpty) const EmptyPanel('Keine Dateien für diesen Ordner gefunden.'),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Direkte Verknuepfungen',
@@ -90,7 +90,7 @@ class _ClubDocumentUploadManagerScreenState extends State<ClubDocumentUploadMana
                               AirmiusButton(label: 'Dateimanager', icon: Icons.folder_copy_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FileOperationsScreen()))),
                               AirmiusButton(label: 'Vereinsdokumente', icon: Icons.policy_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubPolicyDocumentsScreen()))),
                               AirmiusButton(label: 'Beitragsregeln', icon: Icons.receipt_long_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubContributionRulesScreen()))),
-                              AirmiusButton(label: 'Upload pruefen', icon: Icons.cloud_upload_outlined, secondary: true, onPressed: () => _requestUploadIntent(fileName: 'upload-pruefung.pdf', mimeType: 'application/pdf')),
+                              AirmiusButton(label: 'Upload prüfen', icon: Icons.cloud_upload_outlined, secondary: true, onPressed: () => _requestUploadIntent(fileName: 'upload-prüfung.pdf', mimeType: 'application/pdf')),
                             ],
                           ),
                         ),
@@ -168,7 +168,7 @@ class _UploadHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Vereine koennen Dateien nicht nur als Link hinterlegen, sondern als Upload im Dateimanager speichern und systematisch mit Regeln verbinden.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          const Text('Vereine können Dateien nicht nur als Link hinterlegen, sondern als Upload im Dateimanager speichern und systematisch mit Regeln verbinden.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           const Row(children: [Expanded(child: MetricCard(value: '5', label: 'Ordner')), SizedBox(width: 10), Expanded(child: MetricCard(value: '12', label: 'Dateien')), SizedBox(width: 10), Expanded(child: MetricCard(value: '4', label: 'Links'))]),
           if (lastUploadIntent != null) ...[

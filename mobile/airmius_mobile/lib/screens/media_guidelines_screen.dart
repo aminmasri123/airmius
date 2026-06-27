@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -26,9 +26,9 @@ class _MediaGuidelinesScreenState extends State<MediaGuidelinesScreen> {
           AirmiusPanel(gradient: true, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Medien & Datenschutz'),
             const SizedBox(height: 8),
-            const Text('Fotos und Videos sicher veroeffentlichen.', style: TextStyle(color: AirmiusColors.text, fontSize: 23, fontWeight: FontWeight.w900)),
+            const Text('Fotos und Videos sicher veröffentlichen.', style: TextStyle(color: AirmiusColors.text, fontSize: 23, fontWeight: FontWeight.w900)),
             const SizedBox(height: 8),
-            const Text('Diese UI bildet Regeln fuer Uploads, Minderjaehrige, Bildrechte, Sichtbarkeit und Freigaben ab.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+            const Text('Diese UI bildet Regeln für Uploads, Minderjaehrige, Bildrechte, Sichtbarkeit und Freigaben ab.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
             const SizedBox(height: 14),
             Wrap(spacing: 8, runSpacing: 8, children: ['Verein', 'Team', 'Event', 'Public'].map((item) => ChoiceChip(
               selected: _scope == item,
@@ -41,17 +41,17 @@ class _MediaGuidelinesScreenState extends State<MediaGuidelinesScreen> {
             )).toList()),
           ])),
           const SizedBox(height: 14),
-          const _GuidelineLine(icon: Icons.photo_library_outlined, title: 'Upload-Regeln', body: 'Dateitypen, Groessen, Rechtehinweis und sensible Inhalte vor Upload pruefen.', status: 'Aktiv', color: AirmiusColors.blue),
+          const _GuidelineLine(icon: Icons.photo_library_outlined, title: 'Upload-Regeln', body: 'Dateitypen, Groessen, Rechtehinweis und sensible Inhalte vor Upload prüfen.', status: 'Aktiv', color: AirmiusColors.blue),
           const SizedBox(height: 12),
           const _GuidelineLine(icon: Icons.family_restroom_outlined, title: 'Guardian Consent', body: 'Medien mit Minderjaehrigen nur mit passender Zustimmung sichtbar machen.', status: 'Jugendschutz', color: AirmiusColors.amber),
           const SizedBox(height: 12),
-          const _GuidelineLine(icon: Icons.visibility_outlined, title: 'Sichtbarkeit', body: 'Public, Verein, Team oder nur Admins fuer jedes Medium einstellen.', status: 'Regel', color: AirmiusColors.green),
+          const _GuidelineLine(icon: Icons.visibility_outlined, title: 'Sichtbarkeit', body: 'Public, Verein, Team oder nur Admins für jedes Medium einstellen.', status: 'Regel', color: AirmiusColors.green),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Moderation'),
             const SizedBox(height: 12),
             Wrap(spacing: 10, runSpacing: 10, children: [
-              AirmiusButton(label: 'Freigabe pruefen', icon: Icons.fact_check_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Medienfreigabe pruefen', body: 'Bildrechte, Guardian Consent, Sichtbarkeit und Upload-Regeln pruefen.', status: 'Review', icon: Icons.fact_check_outlined)))),
+              AirmiusButton(label: 'Freigabe prüfen', icon: Icons.fact_check_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Medienfreigabe prüfen', body: 'Bildrechte, Guardian Consent, Sichtbarkeit und Upload-Regeln prüfen.', status: 'Review', icon: Icons.fact_check_outlined)))),
               AirmiusButton(label: 'Regel bearbeiten', icon: Icons.tune_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Medienregel bearbeiten', body: 'Dateitypen, Rechtehinweise, Sichtbarkeit und Moderation konfigurieren.', status: 'Regel', icon: Icons.tune_outlined)))),
               AirmiusButton(label: 'Meldung ansehen', icon: Icons.report_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Medienmeldung ansehen', body: 'Report, betroffene Datei, Moderatornotiz und Entscheidung vorbereiten.', status: 'Meldung', icon: Icons.report_outlined)))),
             ]),

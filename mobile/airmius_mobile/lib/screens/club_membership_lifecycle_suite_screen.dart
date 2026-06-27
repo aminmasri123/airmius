@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -18,15 +18,15 @@ class _ClubMembershipLifecycleSuiteScreenState extends State<ClubMembershipLifec
   bool _showDocuments = true;
 
   final List<_SuiteItem> _items = const [
-    _SuiteItem('Vereinsprofil', 'Club', 'Profil', 'Mobile Vereinsseite mit Hero, Teams, Admins, Mitgliederzahl, Beitraegen und Anfrage-CTA.', Icons.apartment_outlined, Color(0xFF5BA7FF)),
-    _SuiteItem('Club Cockpit', 'Club', 'Admin', 'Vereins-Dashboard fuer Admins mit Aufgaben, Anfragen, Teams, Rollen, Finanzen und Dokumenten.', Icons.dashboard_customize_outlined, Color(0xFF2EE59D)),
+    _SuiteItem('Vereinsprofil', 'Club', 'Profil', 'Mobile Vereinsseite mit Hero, Teams, Admins, Mitgliederzahl, Beiträgen und Anfrage-CTA.', Icons.apartment_outlined, Color(0xFF5BA7FF)),
+    _SuiteItem('Club Cockpit', 'Club', 'Admin', 'Vereins-Dashboard für Admins mit Aufgaben, Anfragen, Teams, Rollen, Finanzen und Dokumenten.', Icons.dashboard_customize_outlined, Color(0xFF2EE59D)),
     _SuiteItem('Teams Verwaltung', 'Club', 'Teams', 'Teams, Profile, Rollen, Trainer, Mitglieder und Sichtbarkeit als mobile Admin-UI.', Icons.groups_2_outlined, Color(0xFFF8B84E)),
     _SuiteItem('Mitgliedsantrag', 'Membership', 'Form', 'Individuelles Formular mit Personendaten, Adresse, Kontakt, Zahlung, Guardian und Vereinsfeldern.', Icons.assignment_outlined, Color(0xFFB084FF)),
-    _SuiteItem('Anfrage Inbox', 'Membership', 'Inbox', 'Neue Mitgliedsanfragen, Status, Rueckfragen, Annahme, Ablehnung und Widerruf.', Icons.move_to_inbox_outlined, Color(0xFFFF6B6B)),
+    _SuiteItem('Anfrage Inbox', 'Membership', 'Inbox', 'Neue Mitgliedsanfragen, Status, Rückfragen, Annahme, Ablehnung und Widerruf.', Icons.move_to_inbox_outlined, Color(0xFFFF6B6B)),
     _SuiteItem('Form Builder', 'Membership', 'Builder', 'Vereine konfigurieren Pflichtfelder, optionale Felder, Sichtbarkeit und Zahlungsregeln.', Icons.format_list_bulleted_outlined, Color(0xFF5BA7FF)),
-    _SuiteItem('Beitragsregeln', 'Membership', 'Rules', 'Monatlich, vierteljaehrlich, halbjaehrlich, jaehrlich, Bar, Ueberweisung und Dokumentverknuepfung.', Icons.price_check_outlined, Color(0xFF2EE59D)),
+    _SuiteItem('Beitragsregeln', 'Membership', 'Rules', 'Monatlich, vierteljaehrlich, halbjaehrlich, jaehrlich, Bar, Überweisung und Dokumentverknuepfung.', Icons.price_check_outlined, Color(0xFF2EE59D)),
     _SuiteItem('Vereinsdokumente', 'Documents', 'Files', 'Datenschutz, Regeln, Satzung, Upload, Dateimanager-Verknuepfung und Mitgliedsantrag-Anhaenge.', Icons.folder_shared_outlined, Color(0xFFF8B84E)),
-    _SuiteItem('Sichtbarkeit & Rollen', 'Documents', 'Access', 'Was Mitglieder, Gaeste, Teams und Admins sehen duerfen; Rollenmatrix und Audit-Hinweise.', Icons.visibility_outlined, Color(0xFFB084FF)),
+    _SuiteItem('Sichtbarkeit & Rollen', 'Documents', 'Access', 'Was Mitglieder, Gäste, Teams und Admins sehen dürfen; Rollenmatrix und Audit-Hinweise.', Icons.visibility_outlined, Color(0xFFB084FF)),
   ];
 
   List<_SuiteItem> get _visible => _filter == 'Alle' ? _items : _items.where((item) => item.area == _filter).toList();
@@ -49,7 +49,7 @@ class _ClubMembershipLifecycleSuiteScreenState extends State<ClubMembershipLifec
                     const _Hero(
                       eyebrow: 'CLUB LIFECYCLE',
                       title: 'Verein & Mitgliedschaft',
-                      subtitle: 'Native Mobile-UI fuer Vereinsprofil, Cockpit, Teams, Mitgliedsantrag, Inbox, Formbuilder, Beitragsregeln und Dokumente.',
+                      subtitle: 'Native Mobile-UI für Vereinsprofil, Cockpit, Teams, Mitgliedsantrag, Inbox, Formbuilder, Beitragsregeln und Dokumente.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -82,7 +82,7 @@ class _ClubMembershipLifecycleSuiteScreenState extends State<ClubMembershipLifec
                       firstLabel: 'Mitgliedsantrag starten',
                       secondIcon: Icons.format_list_bulleted_outlined,
                       secondLabel: 'Formular konfigurieren',
-                      onFirst: () => openUiAction(context, title: 'Mitgliedsantrag', body: 'Die mobile Vereinsbeitritts-UI ist vorbereitet; API-Anbindung folgt ueber Laravel.', status: 'UI bereit', icon: Icons.info_outline),
+                      onFirst: () => openUiAction(context, title: 'Mitgliedsantrag', body: 'Die mobile Vereinsbeitritts-UI ist vorbereitet; API-Anbindung folgt über Laravel.', status: 'UI bereit', icon: Icons.info_outline),
                       onSecond: () => openUiAction(context, title: 'Form Builder', body: 'Vereinsindividuelle Felder und Dokumente sind als UI vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
                       onSupport: () => _openSupport(context),
                     ),

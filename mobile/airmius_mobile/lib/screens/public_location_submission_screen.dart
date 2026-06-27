@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'legal_support_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
@@ -26,13 +26,13 @@ class _PublicLocationSubmissionScreenState extends State<PublicLocationSubmissio
       appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Standort vorschlagen', style: TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
         title: 'Standort vorschlagen',
-        subtitle: 'Public Kontaktformular fuer Vereine, Sportorte, Anbieter und Hinweise',
+        subtitle: 'Public Kontaktformular für Vereine, Sportorte, Anbieter und Hinweise',
         trailing: StatusPill(_type),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           AirmiusPanel(gradient: true, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Public Standort'),
             const SizedBox(height: 8),
-            const Text('Die Web-App erlaubt oeffentliche Standort-/Kontaktanlage. Die Mobile-App bereitet daraus einen moderierten Einreichungsflow vor.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+            const Text('Die Web-App erlaubt öffentliche Standort-/Kontaktanlage. Die Mobile-App bereitet daraus einen moderierten Einreichungsflow vor.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
             const SizedBox(height: 14),
             Wrap(spacing: 8, runSpacing: 8, children: [
               for (final type in const ['Verein', 'Sportort', 'Anbieter', 'Korrektur'])
@@ -61,7 +61,7 @@ class _PublicLocationSubmissionScreenState extends State<PublicLocationSubmissio
             SizedBox(height: 12),
             AirmiusTextField(label: 'Name', hint: 'Verein, Sportplatz oder Anbieter', icon: Icons.place_outlined),
             SizedBox(height: 10),
-            AirmiusTextField(label: 'Adresse', hint: 'Strasse, PLZ, Stadt', icon: Icons.location_on_outlined),
+            AirmiusTextField(label: 'Adresse', hint: 'Straße, PLZ, Stadt', icon: Icons.location_on_outlined),
             SizedBox(height: 10),
             AirmiusTextField(label: 'Beschreibung', hint: 'Warum soll dieser Standort aufgenommen werden?', icon: Icons.notes_outlined, maxLines: 3),
           ])),
@@ -76,8 +76,8 @@ class _PublicLocationSubmissionScreenState extends State<PublicLocationSubmissio
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Sichtbarkeit & Datenschutz'),
-            SwitchListTile(value: _publicVisible, onChanged: (value) => setState(() => _publicVisible = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Oeffentlich sichtbar vorschlagen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Nach Moderation kann der Standort in Sportkarte/Public-Bereich erscheinen.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _privacy, onChanged: (value) => setState(() => _privacy = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Datenschutz akzeptiert', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Kontakt darf fuer Rueckfragen verarbeitet werden.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _publicVisible, onChanged: (value) => setState(() => _publicVisible = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Öffentlich sichtbar vorschlagen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Nach Moderation kann der Standort in Sportkarte/Public-Bereich erscheinen.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _privacy, onChanged: (value) => setState(() => _privacy = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Datenschutz akzeptiert', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Kontakt darf für Rückfragen verarbeitet werden.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [

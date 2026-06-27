@@ -30,7 +30,7 @@ class _DigitalMemberCardCheckinSuiteScreenState extends State<DigitalMemberCardC
       ),
       body: PageFrame(
         title: 'Digital Member Card Check-in',
-        subtitle: 'Mobile UI fuer digitale Mitgliedskarte, QR-Verifikation, Training-Check-in, Offline-Prüfung und Datenschutz.',
+        subtitle: 'Mobile UI für digitale Mitgliedskarte, QR-Verifikation, Training-Check-in, Offline-Prüfung und Datenschutz.',
         trailing: const StatusPill('Native value', color: AirmiusColors.green),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -92,7 +92,7 @@ class _DigitalMemberCardCheckinSuiteScreenState extends State<DigitalMemberCardC
                   _CardToggle(
                     icon: Icons.qr_code_2_outlined,
                     title: 'QR-Verifikation',
-                    body: 'Trainer und Vereinsadmins koennen die Karte scannen und erhalten nur freigegebene Minimaldaten.',
+                    body: 'Trainer und Vereinsadmins können die Karte scannen und erhalten nur freigegebene Minimaldaten.',
                     enabled: _qrEnabled,
                     onChanged: (value) => setState(() => _qrEnabled = value),
                   ),
@@ -106,7 +106,7 @@ class _DigitalMemberCardCheckinSuiteScreenState extends State<DigitalMemberCardC
                   _CardToggle(
                     icon: Icons.event_available_outlined,
                     title: 'Event-Check-in',
-                    body: 'Trainings, Events, Kurse und Wettkaempfe koennen Anwesenheit direkt aus der Karte erfassen.',
+                    body: 'Trainings, Events, Kurse und Wettkaempfe können Anwesenheit direkt aus der Karte erfassen.',
                     enabled: _eventCheckin,
                     onChanged: (value) => setState(() => _eventCheckin = value),
                   ),
@@ -133,7 +133,7 @@ class _DigitalMemberCardCheckinSuiteScreenState extends State<DigitalMemberCardC
                 children: [
                   const Eyebrow('CHECK-IN RESULT'),
                   const SizedBox(height: 8),
-                  const Text('ZBB Konto wurde erfolgreich fuer Training U16 verifiziert. Status: Mitglied aktiv. Zahlungsstatus: intern verborgen.', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, height: 1.38)),
+                  const Text('ZBB Konto wurde erfolgreich für Training U16 verifiziert. Status: Mitglied aktiv. Zahlungsstatus: intern verborgen.', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, height: 1.38)),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
@@ -211,7 +211,7 @@ class _MemberCardPreview extends StatelessWidget {
                     children: [
                       Text('ZBB Konto', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
                       SizedBox(height: 5),
-                      Text('ZBB · Mitglied aktiv\nGueltig bis 31.12.2026', style: TextStyle(color: Colors.white70, height: 1.35, fontWeight: FontWeight.w700)),
+                      Text('ZBB · Mitglied aktiv\nGültig bis 31.12.2026', style: TextStyle(color: Colors.white70, height: 1.35, fontWeight: FontWeight.w700)),
                     ],
                   ),
                 ),
@@ -242,10 +242,10 @@ class _CardMode {
 }
 
 const _cards = [
-  _CardMode(mode: 'Mitgliedskarte', title: 'Aktive Vereinsmitgliedschaft', body: 'Zeigt Verein, Rolle, Status, Gueltigkeit und QR-Token fuer berechtigte Scans.', status: 'Aktiv', icon: Icons.badge_outlined, color: AirmiusColors.green),
-  _CardMode(mode: 'Check-in', title: 'Training Check-in', body: 'Mitglied kann sich bei Training, Kurs oder Event anmelden und Anwesenheit bestaetigen.', status: 'Bereit', icon: Icons.event_available_outlined, color: AirmiusColors.blue),
+  _CardMode(mode: 'Mitgliedskarte', title: 'Aktive Vereinsmitgliedschaft', body: 'Zeigt Verein, Rolle, Status, Gültigkeit und QR-Token für berechtigte Scans.', status: 'Aktiv', icon: Icons.badge_outlined, color: AirmiusColors.green),
+  _CardMode(mode: 'Check-in', title: 'Training Check-in', body: 'Mitglied kann sich bei Training, Kurs oder Event anmelden und Anwesenheit bestätigen.', status: 'Bereit', icon: Icons.event_available_outlined, color: AirmiusColors.blue),
   _CardMode(mode: 'Trainer Scan', title: 'Trainer Verifikation', body: 'Trainer scannt QR und sieht nur minimalen Status plus passende Teamrolle.', status: 'Minimal', icon: Icons.verified_user_outlined, color: AirmiusColors.green),
-  _CardMode(mode: 'Offline', title: 'Offline Token', body: 'Kurzlebiger Token erlaubt Hallen-Check-in ohne stabile Verbindung und synchronisiert spaeter.', status: 'Expires', icon: Icons.wifi_off_outlined, color: AirmiusColors.amber),
+  _CardMode(mode: 'Offline', title: 'Offline Token', body: 'Kurzlebiger Token erlaubt Hallen-Check-in ohne stabile Verbindung und synchronisiert später.', status: 'Expires', icon: Icons.wifi_off_outlined, color: AirmiusColors.amber),
   _CardMode(mode: 'Historie', title: 'Check-in Verlauf', body: 'User und Verein sehen Teilnahmeverlauf rollenbasiert und datenschutzkonform.', status: 'Audit', icon: Icons.history_outlined, color: AirmiusColors.blue),
 ];
 

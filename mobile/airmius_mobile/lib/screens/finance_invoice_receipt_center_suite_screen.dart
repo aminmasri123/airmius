@@ -24,21 +24,21 @@ class _FinanceInvoiceReceiptCenterSuiteScreenState extends State<FinanceInvoiceR
         title: 'Jahresbeitrag ZBB',
         status: 'Offen',
         amount: '120 EUR',
-        body: 'Faellig am 01.07.2026. Zahlungsart: Ueberweisung. Beitragsordnung ist verknuepft.',
+        body: 'Faellig am 01.07.2026. Zahlungsart: Überweisung. Beitragsordnung ist verknuepft.',
         color: AirmiusColors.blue,
       ),
       const _InvoiceRow(
         title: 'Jugendbeitrag U18',
         status: 'Bezahlt',
         amount: '60 EUR',
-        body: 'Quittung verfuegbar. Guardian-Kontakt und SEPA-Status werden spaeter per API geladen.',
+        body: 'Quittung verfuegbar. Guardian-Kontakt und SEPA-Status werden später per API geladen.',
         color: AirmiusColors.green,
       ),
       const _InvoiceRow(
         title: 'Korrektur Beitragsgruppe',
-        status: 'Rueckerstattung',
+        status: 'Rückerstattung',
         amount: '20 EUR',
-        body: 'Rueckerstattung wegen Beitragswechsel. Verein und Mitglied sehen Verlauf und Status.',
+        body: 'Rückerstattung wegen Beitragswechsel. Verein und Mitglied sehen Verlauf und Status.',
         color: AirmiusColors.amber,
       ),
     ];
@@ -47,7 +47,7 @@ class _FinanceInvoiceReceiptCenterSuiteScreenState extends State<FinanceInvoiceR
 
     return PageFrame(
       title: 'Rechnungen & Quittungen',
-      subtitle: 'Beitraege, Zahlstatus und Rueckerstattung',
+      subtitle: 'Beiträge, Zahlstatus und Rückerstattung',
       actions: const [AirmiusLogoMark(size: 34)],
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
@@ -59,7 +59,7 @@ class _FinanceInvoiceReceiptCenterSuiteScreenState extends State<FinanceInvoiceR
                 const SectionLabel('FINANCE CENTER'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Mitglieder und Vereine brauchen eine mobile Finanzuebersicht: offene Beitraege, Rechnungen, Quittungen, Zahlungsstatus, Mahnhinweise und Rueckerstattungen.',
+                  'Mitglieder und Vereine brauchen eine mobile Finanzübersicht: offene Beiträge, Rechnungen, Quittungen, Zahlungsstatus, Mahnhinweise und Rückerstattungen.',
                   style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 16),
@@ -86,7 +86,7 @@ class _FinanceInvoiceReceiptCenterSuiteScreenState extends State<FinanceInvoiceR
                     ButtonSegment(value: 'Alle', label: Text('Alle')),
                     ButtonSegment(value: 'Offen', label: Text('Offen')),
                     ButtonSegment(value: 'Bezahlt', label: Text('Bezahlt')),
-                    ButtonSegment(value: 'Rueckerstattung', label: Text('Refund')),
+                    ButtonSegment(value: 'Rückerstattung', label: Text('Refund')),
                   ],
                   selected: {filter},
                   onSelectionChanged: (value) => setState(() => filter = value.first),
@@ -103,14 +103,14 @@ class _FinanceInvoiceReceiptCenterSuiteScreenState extends State<FinanceInvoiceR
                 const SizedBox(height: 8),
                 _FinanceSwitch(title: 'Quittungen anzeigen', value: showReceipts, color: AirmiusColors.green, onChanged: (value) => setState(() => showReceipts = value)),
                 _FinanceSwitch(title: 'Zahlung erneut versuchen', value: allowRetry, color: AirmiusColors.blue, onChanged: (value) => setState(() => allowRetry = value)),
-                _FinanceSwitch(title: 'Rueckerstattungen anzeigen', value: showRefunds, color: AirmiusColors.amber, onChanged: (value) => setState(() => showRefunds = value)),
+                _FinanceSwitch(title: 'Rückerstattungen anzeigen', value: showRefunds, color: AirmiusColors.amber, onChanged: (value) => setState(() => showRefunds = value)),
                 _FinanceSwitch(title: 'Faelligkeit erinnern', value: notifyOnDue, color: AirmiusColors.pink, onChanged: (value) => setState(() => notifyOnDue = value)),
               ],
             ),
           ),
           const SizedBox(height: 14),
           if (filtered.isEmpty)
-            const EmptyPanel('Keine Belege fuer diesen Filter.')
+            const EmptyPanel('Keine Belege für diesen Filter.')
           else
             for (final invoice in filtered) ...[
               _InvoiceCard(invoice: invoice),
@@ -209,7 +209,7 @@ class _InvoiceCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Quittung anzeigen',
-                  body: 'Diese UI bereitet PDF-Quittungen, Rechnungsdetails und Zahlungsstatus fuer die spaetere Laravel-Finance-API vor.',
+                  body: 'Diese UI bereitet PDF-Quittungen, Rechnungsdetails und Zahlungsstatus für die spätere Laravel-Finance-API vor.',
                   status: 'UI vorbereitet',
                   icon: Icons.picture_as_pdf_outlined,
                 ),
@@ -221,7 +221,7 @@ class _InvoiceCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Zahlung starten',
-                  body: 'Zahlungsart, offener Betrag, SEPA, Ueberweisung, Barzahlung und Retry-Status werden spaeter per API gesteuert.',
+                  body: 'Zahlungsart, offener Betrag, SEPA, Überweisung, Barzahlung und Retry-Status werden später per API gesteuert.',
                   status: 'UI vorbereitet',
                   icon: Icons.payments_outlined,
                 ),
@@ -233,7 +233,7 @@ class _InvoiceCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Finanzverlauf',
-                  body: 'Der Verlauf zeigt spaeter Rechnungen, Zahlungen, Mahnungen, Rueckerstattungen und Vereinsentscheidungen.',
+                  body: 'Der Verlauf zeigt später Rechnungen, Zahlungen, Mahnungen, Rückerstattungen und Vereinsentscheidungen.',
                   status: 'UI vorbereitet',
                   icon: Icons.timeline_outlined,
                 ),

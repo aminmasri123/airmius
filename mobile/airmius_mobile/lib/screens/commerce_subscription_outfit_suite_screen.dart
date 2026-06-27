@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -22,10 +22,10 @@ class _CommerceSubscriptionOutfitSuiteScreenState extends State<CommerceSubscrip
     _SuiteItem('Produkt Detail', 'Commerce', 'Detail', 'Galerie, Varianten, Beschreibung, Anbieter, Bestand, Merken und In-den-Warenkorb.', Icons.inventory_2_outlined, Color(0xFF2EE59D)),
     _SuiteItem('Warenkorb', 'Commerce', 'Cart', 'Positionen, Menge, Zwischensumme, Gutscheine, Versandhinweise und Checkout-CTA.', Icons.shopping_cart_outlined, Color(0xFFF8B84E)),
     _SuiteItem('Checkout & Status', 'Commerce', 'Checkout', 'Lieferdaten, Zahlungsart, Banktransfer, Bestellstatus, Rechnung und Support.', Icons.receipt_long_outlined, Color(0xFFB084FF)),
-    _SuiteItem('Subscriptions', 'Subscriptions', 'Plans', 'Plaene, Laufzeit, Upgrade, Downgrade, Kuendigung, Rechnung und Banktransfer.', Icons.workspace_premium_outlined, Color(0xFF5BA7FF)),
+    _SuiteItem('Subscriptions', 'Subscriptions', 'Plans', 'Plaene, Laufzeit, Upgrade, Downgrade, Kündigung, Rechnung und Banktransfer.', Icons.workspace_premium_outlined, Color(0xFF5BA7FF)),
     _SuiteItem('Abo Banktransfer', 'Subscriptions', 'Payment', 'Referenz, Betrag, Zeitraum, Freischaltungsstatus und Zahlungsnachweis.', Icons.account_balance_outlined, Color(0xFF2EE59D)),
     _SuiteItem('Outfit Subscriptions', 'Outfits', 'Outfit', 'Vereinskleidung, Groessen, Varianten, Lieferstatus, Abo-Paket und Wechsel.', Icons.checkroom_outlined, Color(0xFFFF6B6B)),
-    _SuiteItem('Outfit Lieferung', 'Outfits', 'Delivery', 'Adresse, Tracking, Abholung, Rueckfrage, Status und Vereinspaket.', Icons.local_shipping_outlined, Color(0xFFF8B84E)),
+    _SuiteItem('Outfit Lieferung', 'Outfits', 'Delivery', 'Adresse, Tracking, Abholung, Rückfrage, Status und Vereinspaket.', Icons.local_shipping_outlined, Color(0xFFF8B84E)),
   ];
 
   List<_SuiteItem> get _visible => _filter == 'Alle' ? _items : _items.where((item) => item.area == _filter).toList();
@@ -48,7 +48,7 @@ class _CommerceSubscriptionOutfitSuiteScreenState extends State<CommerceSubscrip
                     const _Hero(
                       eyebrow: 'COMMERCE FLOW',
                       title: 'Shop, Abo & Outfit',
-                      subtitle: 'Native Mobile-UI fuer Commerce, Produktdetails, Warenkorb, Checkout, Subscriptions, Banktransfer und Outfit-Lieferung.',
+                      subtitle: 'Native Mobile-UI für Commerce, Produktdetails, Warenkorb, Checkout, Subscriptions, Banktransfer und Outfit-Lieferung.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -81,7 +81,7 @@ class _CommerceSubscriptionOutfitSuiteScreenState extends State<CommerceSubscrip
                       firstLabel: 'Checkout Vorschau',
                       secondIcon: Icons.workspace_premium_outlined,
                       secondLabel: 'Abo verwalten',
-                      onFirst: () => openUiAction(context, title: 'Checkout', body: 'Die mobile Commerce-UI ist vorbereitet; Produkt- und Zahlungsdaten kommen spaeter per API.', status: 'UI bereit', icon: Icons.info_outline),
+                      onFirst: () => openUiAction(context, title: 'Checkout', body: 'Die mobile Commerce-UI ist vorbereitet; Produkt- und Zahlungsdaten kommen später per API.', status: 'UI bereit', icon: Icons.info_outline),
                       onSecond: () => openUiAction(context, title: 'Subscription', body: 'Abo- und Outfit-Strecken sind als UI vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
                       onSupport: () => _openSupport(context),
                     ),

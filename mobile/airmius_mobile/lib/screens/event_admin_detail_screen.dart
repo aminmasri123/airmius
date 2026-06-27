@@ -44,7 +44,7 @@ class _EventAdminDetailScreenState extends State<EventAdminDetailScreen> {
             const Eyebrow('Sichtbarkeit'),
             const SizedBox(height: 10),
             Wrap(spacing: 8, runSpacing: 8, children: [
-              for (final item in const ['Privat', 'Team', 'Verein', 'Oeffentlich'])
+              for (final item in const ['Privat', 'Team', 'Verein', 'Öffentlich'])
                 ChoiceChip(
                   selected: _visibility == item,
                   label: Text(item),
@@ -56,23 +56,23 @@ class _EventAdminDetailScreenState extends State<EventAdminDetailScreen> {
                 ),
             ]),
             const SizedBox(height: 8),
-            SwitchListTile(value: _waitlist, onChanged: (value) => setState(() => _waitlist = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Warteliste aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Teilnehmer koennen nachruecken.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _waitlist, onChanged: (value) => setState(() => _waitlist = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Warteliste aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Teilnehmer können nachrücken.', style: TextStyle(color: AirmiusColors.muted))),
             SwitchListTile(value: _eventChat, onChanged: (value) => setState(() => _eventChat = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Eventchat aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Chat bleibt mit Termin und Teilnehmern verknuepft.', style: TextStyle(color: AirmiusColors.muted))),
             SwitchListTile(value: _reminder, onChanged: (value) => setState(() => _reminder = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Erinnerungen senden', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Push vor Eventbeginn vorbereiten.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _cancellationAllowed, onChanged: (value) => setState(() => _cancellationAllowed = value), activeColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Absage erlauben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Teilnehmer duerfen Status aendern.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _cancellationAllowed, onChanged: (value) => setState(() => _cancellationAllowed = value), activeColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Absage erlauben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Teilnehmer dürfen Status ändern.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(borderColor: AirmiusColors.green.withValues(alpha: 0.45), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Eyebrow('Teilnehmer & Warteliste'),
             SizedBox(height: 8),
-            Text('18 Zusagen, 3 offen, 2 Warteliste. Massenaktionen und Reminder werden spaeter ueber die Laravel-API ausgefuehrt.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+            Text('18 Zusagen, 3 offen, 2 Warteliste. Massenaktionen und Reminder werden später über die Laravel-API ausgefuehrt.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
             SizedBox(height: 10),
             Wrap(spacing: 8, runSpacing: 8, children: [StatusPill('Teilnehmer'), StatusPill('Warteliste'), StatusPill('Reminder')]),
           ])),
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [
-            AirmiusButton(label: 'Event speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Event speichern', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.save_outlined)),
-            AirmiusButton(label: 'Reminder senden', icon: Icons.notifications_active_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Reminder senden', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.notifications_active_outlined)),
+            AirmiusButton(label: 'Event speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Event speichern', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.save_outlined)),
+            AirmiusButton(label: 'Reminder senden', icon: Icons.notifications_active_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Reminder senden', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.notifications_active_outlined)),
           ]),
         ]),
       ),

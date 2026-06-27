@@ -30,7 +30,7 @@ class _CrossModuleApprovalWorkflowSuiteScreenState extends State<CrossModuleAppr
       ),
       body: PageFrame(
         title: 'Cross Module Approval Workflow',
-        subtitle: 'Mobile UI fuer Freigaben, Rueckfragen, Entscheidungen, Eskalation und Audit ueber Mitgliedschaft, Dateien, Zahlungen, Content und Admin.',
+        subtitle: 'Mobile UI für Freigaben, Rückfragen, Entscheidungen, Eskalation und Audit über Mitgliedschaft, Dateien, Zahlungen, Content und Admin.',
         trailing: const StatusPill('Approval', color: AirmiusColors.amber),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -48,7 +48,7 @@ class _CrossModuleApprovalWorkflowSuiteScreenState extends State<CrossModuleAppr
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Die App bereitet eine gemeinsame Freigabezentrale fuer Vereinsadmins, Trainer, Kassenwarte und Plattformadmins vor.',
+                    'Die App bereitet eine gemeinsame Freigabezentrale für Vereinsadmins, Trainer, Kassenwarte und Plattformadmins vor.',
                     style: TextStyle(color: AirmiusColors.muted, height: 1.42),
                   ),
                   const SizedBox(height: 14),
@@ -75,7 +75,7 @@ class _CrossModuleApprovalWorkflowSuiteScreenState extends State<CrossModuleAppr
               children: const [
                 Expanded(child: MetricCard(value: '12', label: 'Offen')),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: '4', label: 'Rueckfrage')),
+                Expanded(child: MetricCard(value: '4', label: 'Rückfrage')),
                 SizedBox(width: 10),
                 Expanded(child: MetricCard(value: '2', label: 'Eilig')),
               ],
@@ -90,21 +90,21 @@ class _CrossModuleApprovalWorkflowSuiteScreenState extends State<CrossModuleAppr
                   _ApprovalToggle(
                     icon: Icons.verified_user_outlined,
                     title: 'Zwei-Stufen-Freigabe',
-                    body: 'Sensible Aktionen wie Rollenwechsel, Refunds oder Dokumentfreigaben koennen zwei Entscheider verlangen.',
+                    body: 'Sensible Aktionen wie Rollenwechsel, Refunds oder Dokumentfreigaben können zwei Entscheider verlangen.',
                     enabled: _twoStepApproval,
                     onChanged: (value) => setState(() => _twoStepApproval = value),
                   ),
                   _ApprovalToggle(
                     icon: Icons.mode_comment_outlined,
                     title: 'Kommentarpflicht',
-                    body: 'Ablehnung, Rueckfrage und Eskalation bekommen einen kurzen Grund fuer Antragsteller und Audit.',
+                    body: 'Ablehnung, Rückfrage und Eskalation bekommen einen kurzen Grund für Antragsteller und Audit.',
                     enabled: _commentRequired,
                     onChanged: (value) => setState(() => _commentRequired = value),
                   ),
                   _ApprovalToggle(
                     icon: Icons.priority_high_outlined,
                     title: 'Eskalation',
-                    body: 'Ueberfaellige oder kritische Freigaben koennen an Vorstand, Kassenwart oder Plattformadmin gehen.',
+                    body: 'Überfaellige oder kritische Freigaben können an Vorstand, Kassenwart oder Plattformadmin gehen.',
                     enabled: _escalation,
                     onChanged: (value) => setState(() => _escalation = value),
                   ),
@@ -131,14 +131,14 @@ class _CrossModuleApprovalWorkflowSuiteScreenState extends State<CrossModuleAppr
                 children: [
                   const Eyebrow('ENTSCHEIDUNG'),
                   const SizedBox(height: 8),
-                  const Text('Admins koennen mobil annehmen, ablehnen, Rueckfrage senden, delegieren oder spaeter erinnern. Die App zeigt immer, welche Daten betroffen sind.', style: TextStyle(color: AirmiusColors.muted, height: 1.38)),
+                  const Text('Admins können mobil annehmen, ablehnen, Rückfrage senden, delegieren oder später erinnern. Die App zeigt immer, welche Daten betroffen sind.', style: TextStyle(color: AirmiusColors.muted, height: 1.38)),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: const [
                       StatusPill('Annehmen', color: AirmiusColors.green),
-                      StatusPill('Rueckfrage', color: AirmiusColors.blue),
+                      StatusPill('Rückfrage', color: AirmiusColors.blue),
                       StatusPill('Ablehnen', color: AirmiusColors.amber),
                       StatusPill('Delegieren', color: AirmiusColors.blue),
                     ],
@@ -182,11 +182,11 @@ class _Approval {
 
 const _approvals = [
   _Approval(queue: 'Mitgliedschaft', title: 'ZBB Mitgliedsantrag', body: 'Personendaten, Dokumente, Beitrag und Consent sind bereit zur Admin-Entscheidung.', status: 'Neu', icon: Icons.assignment_ind_outlined, color: AirmiusColors.green),
-  _Approval(queue: 'Mitgliedschaft', title: 'Rueckfrage beantworten', body: 'Antragsteller hat fehlende Lizenznummer nachgereicht.', status: 'Rueckfrage', icon: Icons.question_answer_outlined, color: AirmiusColors.blue),
+  _Approval(queue: 'Mitgliedschaft', title: 'Rückfrage beantworten', body: 'Antragsteller hat fehlende Lizenznummer nachgereicht.', status: 'Rückfrage', icon: Icons.question_answer_outlined, color: AirmiusColors.blue),
   _Approval(queue: 'Dateien', title: 'Beitragsordnung freigeben', body: 'Neue Dokumentversion soll im Mitgliedsantrag als Pflichtdokument sichtbar werden.', status: 'Version', icon: Icons.folder_copy_outlined, color: AirmiusColors.blue),
-  _Approval(queue: 'Finanzen', title: 'Refund pruefen', body: 'Rueckerstattung fuer doppelte Beitragszahlung benoetigt Kassenwart-Freigabe.', status: 'Eilig', icon: Icons.payments_outlined, color: AirmiusColors.amber),
-  _Approval(queue: 'Content', title: 'Vereinsnews pruefen', body: 'Beitrag mit Medienfreigabe und Sponsorhinweis wartet auf Moderation.', status: 'Review', icon: Icons.article_outlined, color: AirmiusColors.blue),
-  _Approval(queue: 'Events', title: 'Event veroeffentlichen', body: 'Trainingstermin mit Fahrgemeinschaft, Check-in und Guardian-Hinweis wartet.', status: 'Planung', icon: Icons.event_available_outlined, color: AirmiusColors.green),
+  _Approval(queue: 'Finanzen', title: 'Refund prüfen', body: 'Rückerstattung für doppelte Beitragszahlung benoetigt Kassenwart-Freigabe.', status: 'Eilig', icon: Icons.payments_outlined, color: AirmiusColors.amber),
+  _Approval(queue: 'Content', title: 'Vereinsnews prüfen', body: 'Beitrag mit Medienfreigabe und Sponsorhinweis wartet auf Moderation.', status: 'Review', icon: Icons.article_outlined, color: AirmiusColors.blue),
+  _Approval(queue: 'Events', title: 'Event veröffentlichen', body: 'Trainingstermin mit Fahrgemeinschaft, Check-in und Guardian-Hinweis wartet.', status: 'Planung', icon: Icons.event_available_outlined, color: AirmiusColors.green),
   _Approval(queue: 'Admin', title: 'Rollenwechsel', body: 'Mitglied soll Vereinsadmin-Rechte erhalten; Zwei-Stufen-Freigabe aktiv.', status: '2-Step', icon: Icons.admin_panel_settings_outlined, color: AirmiusColors.amber),
 ];
 

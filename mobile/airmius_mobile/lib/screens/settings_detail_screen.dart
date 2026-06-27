@@ -103,12 +103,12 @@ class _SettingsDetailScreenState extends State<SettingsDetailScreen> {
           AirmiusPanel(borderColor: AirmiusColors.red.withValues(alpha: 0.45), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Kontoaktion'),
             const SizedBox(height: 8),
-            SwitchListTile(value: _deleteRequested, onChanged: (value) => setState(() => _deleteRequested = value), activeColor: AirmiusColors.red, contentPadding: EdgeInsets.zero, title: const Text('Kontolöschung anfragen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Erst nach Warnung, Frist und API-Bestaetigung final.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _deleteRequested, onChanged: (value) => setState(() => _deleteRequested = value), activeColor: AirmiusColors.red, contentPadding: EdgeInsets.zero, title: const Text('Kontolöschung anfragen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Erst nach Warnung, Frist und API-Bestätigung final.', style: TextStyle(color: AirmiusColors.muted))),
             const SizedBox(height: 10),
             if (_deleteRequested) ...[
               const Text('Fordere zuerst einen Löschcode an. Bei Passwort-Login gib dein Passwort ein, bei Social Login deine Konto-E-Mail.', style: TextStyle(color: AirmiusColors.muted, height: 1.35, fontWeight: FontWeight.w700)),
               const SizedBox(height: 10),
-              AirmiusTextField(label: 'Passwort oder E-Mail', hint: 'Zur Identitaetsbestaetigung', icon: Icons.lock_outline, controller: _deletePasswordController, obscureText: true),
+              AirmiusTextField(label: 'Passwort oder E-Mail', hint: 'Zur Identitaetsbestätigung', icon: Icons.lock_outline, controller: _deletePasswordController, obscureText: true),
               const SizedBox(height: 10),
               AirmiusButton(label: _deletionCodeRequested ? 'Löschcode erneut senden' : 'Löschcode senden', icon: Icons.mark_email_read_outlined, danger: true, onPressed: _deletingAccount ? null : _requestDeletionCode),
               if (_deletionCodeRequested) ...[
@@ -120,7 +120,7 @@ class _SettingsDetailScreenState extends State<SettingsDetailScreen> {
             ],
           ])),
           const SizedBox(height: 14),
-          AirmiusButton(label: 'Einstellungen speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Einstellungen speichern', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.save_outlined)),
+          AirmiusButton(label: 'Einstellungen speichern', icon: Icons.save_outlined, onPressed: () => openUiAction(context, title: 'Einstellungen speichern', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.save_outlined)),
         ]),
       ),
     );
@@ -161,7 +161,7 @@ class _SettingsDetailScreenState extends State<SettingsDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AirmiusColors.card,
-        title: const Text('Konto endgueltig löschen?', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+        title: const Text('Konto endgültig löschen?', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
         content: const Text('Diese Aktion löscht dein Konto dauerhaft. Danach wirst du aus der Flutter-App abgemeldet.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Abbrechen')),

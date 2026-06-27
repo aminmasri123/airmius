@@ -346,7 +346,7 @@ class _TrainingEventDetailScreenState extends State<TrainingEventDetailScreen> {
                       runSpacing: 8,
                       children: [
                         _AttendanceChip(value: 'yes', selected: _selectedStatus == 'yes', label: scope.t('events.yes'), color: AirmiusColors.green, onTap: () => _respond('yes')),
-                        _AttendanceChip(value: 'late', selected: _selectedStatus == 'late', label: 'Verspaetet', color: AirmiusColors.blue, onTap: () => _respond('late')),
+                        _AttendanceChip(value: 'late', selected: _selectedStatus == 'late', label: 'Verspätet', color: AirmiusColors.blue, onTap: () => _respond('late')),
                         _AttendanceChip(value: 'maybe', selected: _selectedStatus == 'maybe', label: scope.t('events.maybe'), color: AirmiusColors.amber, onTap: () => _respond('maybe')),
                         _AttendanceChip(value: 'no', selected: _selectedStatus == 'no', label: scope.t('events.no'), color: AirmiusColors.red, onTap: () => _respond('no')),
                       ],
@@ -569,7 +569,7 @@ class _EventPenaltyPanel extends StatelessWidget {
               dropdownColor: AirmiusColors.card,
               items: [
                 for (final participant in participants)
-                  DropdownMenuItem(value: participant.id, child: Text('${participant.name} (${participant.status == 'late' ? 'verspaetet' : 'dabei'})')),
+                  DropdownMenuItem(value: participant.id, child: Text('${participant.name} (${participant.status == 'late' ? 'verspätet' : 'dabei'})')),
               ],
               onChanged: loading ? null : onUserChanged,
             ),

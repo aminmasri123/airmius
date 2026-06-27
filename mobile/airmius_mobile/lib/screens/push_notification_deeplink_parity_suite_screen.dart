@@ -25,7 +25,7 @@ class _PushNotificationDeeplinkParitySuiteScreenState extends State<PushNotifica
       route: 'Mitgliedsantrag',
       title: 'Neue Mitgliedschaftsanfrage',
       source: 'ClubRequestInbox',
-      body: 'Verein wird informiert, wenn ein User eine Anfrage sendet, Dokumente hochlaedt oder die Anfrage zurueckzieht.',
+      body: 'Verein wird informiert, wenn ein User eine Anfrage sendet, Dokumente hochlaedt oder die Anfrage zurückzieht.',
       status: 'Club Admin',
       icon: Icons.assignment_ind_outlined,
       primary: 'Zur Inbox',
@@ -39,7 +39,7 @@ class _PushNotificationDeeplinkParitySuiteScreenState extends State<PushNotifica
       body: 'Deep Link fuehrt direkt zur Konversation, zeigt Lesestatus, Mute-Regel, Teilnehmer und Attachment-Hinweis.',
       status: 'Message',
       icon: Icons.forum_outlined,
-      primary: 'Chat oeffnen',
+      primary: 'Chat öffnen',
       secondary: 'Mute',
       color: AirmiusColors.blue,
     ),
@@ -69,7 +69,7 @@ class _PushNotificationDeeplinkParitySuiteScreenState extends State<PushNotifica
       route: 'Moderation',
       title: 'Moderationsfall eskaliert',
       source: 'Admin/Moderation',
-      body: 'Admin-Push springt zu Report, Entscheidung, Audit, Sperre, Meldungsgrund und Rueckmeldung.',
+      body: 'Admin-Push springt zu Report, Entscheidung, Audit, Sperre, Meldungsgrund und Rückmeldung.',
       status: 'Admin',
       icon: Icons.flag_outlined,
       primary: 'Case',
@@ -146,7 +146,7 @@ class _PushNotificationDeeplinkParitySuiteScreenState extends State<PushNotifica
                 onOpen: () => openUiAction(
                   context,
                   title: 'Notification Routing',
-                  body: 'Kanal $_channel, Ziel $_route, Permission $_permissionGranted, Quiet Hours $_quietHours und App Badge $_badgeCount als mobile Notification-UI pruefen.',
+                  body: 'Kanal $_channel, Ziel $_route, Permission $_permissionGranted, Quiet Hours $_quietHours und App Badge $_badgeCount als mobile Notification-UI prüfen.',
                   status: 'Routing',
                   icon: Icons.notifications_none_outlined,
                 ),
@@ -156,7 +156,7 @@ class _PushNotificationDeeplinkParitySuiteScreenState extends State<PushNotifica
                 _NotificationCard(notification: notification, channel: _channel, quietHours: _quietHours),
                 const SizedBox(height: 12),
               ],
-              if (_visibleNotifications.isEmpty) const EmptyPanel('Keine Benachrichtigung fuer dieses Ziel sichtbar.'),
+              if (_visibleNotifications.isEmpty) const EmptyPanel('Keine Benachrichtigung für dieses Ziel sichtbar.'),
               const SizedBox(height: 4),
               _Checklist(
                 onOpen: () => openUiAction(
@@ -198,12 +198,12 @@ class _Hero extends StatelessWidget {
           const Eyebrow('PUSH & DEEP LINKS'),
           const SizedBox(height: 8),
           const Text(
-            'Benachrichtigungen muessen direkt zur richtigen Aktion fuehren.',
+            'Benachrichtigungen müssen direkt zur richtigen Aktion fuehren.',
             style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
           const Text(
-            'Flutter bereitet Push, In-App Inbox, E-Mail-Fallback, Chat, App-Badges, Ruhezeiten und Deep-Link-Ziele so vor, dass Laravel spaeter nur noch echte Events liefern muss.',
+            'Flutter bereitet Push, In-App Inbox, E-Mail-Fallback, Chat, App-Badges, Ruhezeiten und Deep-Link-Ziele so vor, dass Laravel später nur noch echte Events liefern muss.',
             style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
@@ -244,7 +244,7 @@ class _PermissionPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Mobile Notification-Regeln',
-      subtitle: 'Diese Flags werden spaeter durch Android/iOS Permission, User Settings und Laravel Events gesteuert.',
+      subtitle: 'Diese Flags werden später durch Android/iOS Permission, User Settings und Laravel Events gesteuert.',
       children: [
         _SwitchLine(title: 'Push-Berechtigung aktiv', value: permissionGranted, onChanged: onPermission),
         _SwitchLine(title: 'Ruhezeiten beachten', value: quietHours, onChanged: onQuiet),
@@ -335,7 +335,7 @@ class _InboxPreview extends StatelessWidget {
                 const SizedBox(height: 5),
                 Text(quietHours ? 'Wird gesammelt und nach Ruhezeit angezeigt.' : 'Wird sofort zugestellt und routed zum Zielscreen.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 12),
-                AirmiusButton(label: 'Routing pruefen', icon: Icons.open_in_new, secondary: true, onPressed: onOpen),
+                AirmiusButton(label: 'Routing prüfen', icon: Icons.open_in_new, secondary: true, onPressed: onOpen),
               ],
             ),
           ),
@@ -415,7 +415,7 @@ class _NotificationCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: notification.secondary,
-                  body: 'Deep Link, Permission, Badge, Mute, Audit und Fallback fuer ${notification.title}.',
+                  body: 'Deep Link, Permission, Badge, Mute, Audit und Fallback für ${notification.title}.',
                   status: 'Deep Link',
                   icon: Icons.link_outlined,
                 ),
@@ -442,7 +442,7 @@ class _Checklist extends StatelessWidget {
         const _CheckLine('Push, In-App, E-Mail und Chat nutzen ein gemeinsames Routing-Muster.'),
         const _CheckLine('Jede Notification fuehrt direkt zum passenden Screen und zeigt Fallbacks.'),
         const _CheckLine('Ruhezeiten, Mute, App-Badges und Permission-Status bleiben sichtbar.'),
-        const _CheckLine('Vereine werden ueber Antraege, Rueckzuege und Dokumente informiert.'),
+        const _CheckLine('Vereine werden über Antraege, Rückzuege und Dokumente informiert.'),
         const SizedBox(height: 12),
         AirmiusButton(label: 'Notification-Paritaet markieren', icon: Icons.fact_check_outlined, onPressed: onOpen),
       ],

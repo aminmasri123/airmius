@@ -279,7 +279,7 @@ class _ProfileHero extends StatelessWidget {
                             children: [
                               Icon(Icons.visibility_outlined, color: AirmiusColors.blue),
                               SizedBox(width: 10),
-                              Expanded(child: Text('Profilvorschau, Sichtbarkeit und oeffentliche Karte oeffnen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700, height: 1.35))),
+                              Expanded(child: Text('Profilvorschau, Sichtbarkeit und öffentliche Karte öffnen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700, height: 1.35))),
                               Icon(Icons.chevron_right, color: AirmiusColors.muted),
                             ],
                           ),
@@ -376,7 +376,7 @@ class _ProfileStatsGrid extends StatelessWidget {
     final stats = [
       if (user.followersCount != null) ('${user.followersCount}', 'Follower'),
       if (user.followingCount != null) ('${user.followingCount}', 'Folgt'),
-      if (user.postsCount != null) ('${user.postsCount}', 'Beitraege'),
+      if (user.postsCount != null) ('${user.postsCount}', 'Beiträge'),
       if (user.gamification != null) ('${user.gamification!.level}', 'Level'),
       if (user.gamification != null) ('${user.gamification!.earnedToday}', 'Heute XP'),
     ];
@@ -552,7 +552,7 @@ class _OverviewSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const _SectionHeader(title: 'Profil', subtitle: 'Bio, Sportarten und oeffentliche Einordnung.'),
+              const _SectionHeader(title: 'Profil', subtitle: 'Bio, Sportarten und öffentliche Einordnung.'),
               const SizedBox(height: 14),
               Container(
                 padding: const EdgeInsets.all(14),
@@ -751,14 +751,14 @@ class _PostsSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _SectionHeader(title: 'Beitraege', subtitle: 'Eigene Posts, Reaktionen und Community-Aktivitaet.'),
+          const _SectionHeader(title: 'Beiträge', subtitle: 'Eigene Posts, Reaktionen und Community-Aktivitaet.'),
           const SizedBox(height: 12),
           if (user.postsCount == null)
             const _EmptyProfileState(icon: Icons.dynamic_feed_outlined, text: 'Beitragsdaten wurden noch nicht geladen.')
           else
-            _InfoRow(icon: Icons.dynamic_feed_outlined, title: 'Feed-Beitraege', body: '${user.postsCount} sichtbare Beitraege.'),
+            _InfoRow(icon: Icons.dynamic_feed_outlined, title: 'Feed-Beiträge', body: '${user.postsCount} sichtbare Beiträge.'),
           const SizedBox(height: 12),
-          AirmiusButton(label: 'Feed oeffnen', icon: Icons.dynamic_feed_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FeedCenterScreen()))),
+          AirmiusButton(label: 'Feed öffnen', icon: Icons.dynamic_feed_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FeedCenterScreen()))),
         ],
       ),
     );
@@ -957,9 +957,9 @@ class _ProfileTab {
 }
 
 const _tabs = [
-  _ProfileTab(key: 'overview', label: 'Uebersicht', icon: Icons.dashboard_outlined),
+  _ProfileTab(key: 'overview', label: 'Übersicht', icon: Icons.dashboard_outlined),
   _ProfileTab(key: 'sports', label: 'Sport', icon: Icons.sports_outlined),
-  _ProfileTab(key: 'posts', label: 'Beitraege', icon: Icons.dynamic_feed_outlined),
+  _ProfileTab(key: 'posts', label: 'Beiträge', icon: Icons.dynamic_feed_outlined),
   _ProfileTab(key: 'network', label: 'Netzwerk', icon: Icons.people_alt_outlined),
   _ProfileTab(key: 'recommendations', label: 'Empfehlungen', icon: Icons.workspace_premium_outlined),
 ];
@@ -975,7 +975,7 @@ String _roleLabel(String role) {
 
 String _visibilityLabel(String? visibility) {
   return switch ((visibility ?? 'public').toLowerCase()) {
-    'public' => 'Oeffentliches Profil',
+    'public' => 'Öffentliches Profil',
     'members' => 'Nur Mitglieder',
     'friends' => 'Nur Kontakte',
     'private' => 'Privates Profil',

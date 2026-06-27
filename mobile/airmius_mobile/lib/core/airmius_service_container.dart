@@ -94,11 +94,11 @@ class AirmiusQueuedTransport implements AirmiusApiTransport {
 
     final text = error?.toString() ?? '';
     if (text.contains('ProgressEvent') || text.contains('[object')) {
-      return 'Die API ist nicht erreichbar. Bitte pruefe AIRMIUS_API_BASE_URL, CORS und ob Laravel/XAMPP laeuft.';
+      return 'Die API ist nicht erreichbar. Bitte prüfe AIRMIUS_API_BASE_URL, CORS und ob Laravel/XAMPP läuft.';
     }
 
     if (text.isEmpty) {
-      return 'Die API ist nicht erreichbar. Bitte pruefe die Verbindung zum Server.';
+      return 'Die API ist nicht erreichbar. Bitte prüfe die Verbindung zum Server.';
     }
 
     return text;

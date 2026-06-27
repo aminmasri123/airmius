@@ -149,11 +149,11 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     try {
       await AirmiusServicesScope.of(context).clientForSession(AirmiusServicesScope.of(context).authState.session).deleteMessage(message.id);
       if (!mounted) return;
-      _showActionResult('Nachricht geloescht.');
+      _showActionResult('Nachricht gelöscht.');
       _reload();
     } catch (_) {
       if (!mounted) return;
-      _showActionResult('Nachricht konnte nicht geloescht werden.');
+      _showActionResult('Nachricht konnte nicht gelöscht werden.');
     }
   }
 
@@ -289,7 +289,7 @@ class _ConversationHeader extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            tooltip: 'Zurueck',
+            tooltip: 'Zurück',
             onPressed: () => Navigator.pop(context),
             icon: const Icon(Icons.arrow_back, color: AirmiusColors.text),
           ),
@@ -555,7 +555,7 @@ class _ChatBubble extends StatelessWidget {
               children: [
                 Container(width: 38, height: 4, decoration: BoxDecoration(color: AirmiusColors.borderStrong, borderRadius: BorderRadius.circular(99))),
                 const SizedBox(height: 16),
-                const Text('Reaktion auswaehlen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                const Text('Reaktion auswählen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 14),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -614,12 +614,12 @@ class _ChatBubble extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 14),
-                _SheetAction(icon: Icons.visibility_off_outlined, label: 'Nur fuer mich ausblenden', onTap: () {
+                _SheetAction(icon: Icons.visibility_off_outlined, label: 'Nur für mich ausblenden', onTap: () {
                   Navigator.pop(context);
                   onHide(message);
                 }),
                 if (isMine)
-                  _SheetAction(icon: Icons.delete_outline, label: 'Nachricht loeschen', danger: true, onTap: () {
+                  _SheetAction(icon: Icons.delete_outline, label: 'Nachricht löschen', danger: true, onTap: () {
                     Navigator.pop(context);
                     onDelete(message);
                   })

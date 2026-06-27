@@ -28,14 +28,14 @@ class _InputKeyboardAccessibilityParitySuiteScreenState extends State<InputKeybo
       inputType: 'Text + Datum',
       icon: Icons.person_outline,
       status: 'Required',
-      primary: 'Felder pruefen',
+      primary: 'Felder prüfen',
       secondary: 'Fokus',
       color: AirmiusColors.blue,
     ),
     _InputFieldPattern(
       group: 'Mitgliedsantrag',
       title: 'Adresse und Kontakt',
-      body: 'Land, Strasse, Hausnummer, PLZ, Stadt, Bundesland, E-Mail und Telefon mit passenden Tastaturen und Validierung.',
+      body: 'Land, Straße, Hausnummer, PLZ, Stadt, Bundesland, E-Mail und Telefon mit passenden Tastaturen und Validierung.',
       inputType: 'Adresse',
       icon: Icons.home_outlined,
       status: 'Validated',
@@ -46,7 +46,7 @@ class _InputKeyboardAccessibilityParitySuiteScreenState extends State<InputKeybo
     _InputFieldPattern(
       group: 'Account',
       title: 'Login und Registrierung',
-      body: 'E-Mail, Passwort, Passwort bestaetigen, 2FA-Code, Recovery-Code und Fehlermeldungen mit sicherem Fokus.',
+      body: 'E-Mail, Passwort, Passwort bestätigen, 2FA-Code, Recovery-Code und Fehlermeldungen mit sicherem Fokus.',
       inputType: 'E-Mail + Passwort',
       icon: Icons.lock_outline,
       status: 'Secure',
@@ -68,7 +68,7 @@ class _InputKeyboardAccessibilityParitySuiteScreenState extends State<InputKeybo
     _InputFieldPattern(
       group: 'Zahlung',
       title: 'IBAN und Zahlungsdaten',
-      body: 'IBAN, BIC, Kontoinhaber, Beitrag, Zahlungsrhythmus, Barzahlung und Ueberweisung mit Formatierung und Fehlertext.',
+      body: 'IBAN, BIC, Kontoinhaber, Beitrag, Zahlungsrhythmus, Barzahlung und Überweisung mit Formatierung und Fehlertext.',
       inputType: 'Bank',
       icon: Icons.payments_outlined,
       status: 'Payment',
@@ -90,7 +90,7 @@ class _InputKeyboardAccessibilityParitySuiteScreenState extends State<InputKeybo
     _InputFieldPattern(
       group: 'Club Admin',
       title: 'Mitgliedschaftsformular konfigurieren',
-      body: 'Vereine waehlen Pflichtfelder, optionale Felder, Uploadpflicht, Datenschutztexte und Zahlungsfelder als Admin-Form.',
+      body: 'Vereine wählen Pflichtfelder, optionale Felder, Uploadpflicht, Datenschutztexte und Zahlungsfelder als Admin-Form.',
       inputType: 'Builder',
       icon: Icons.format_list_bulleted_outlined,
       status: 'Admin',
@@ -183,7 +183,7 @@ class _InputKeyboardAccessibilityParitySuiteScreenState extends State<InputKeybo
                 _InputFieldCard(field: field, showValidation: _showValidation),
                 const SizedBox(height: 12),
               ],
-              if (_visibleFields.isEmpty) const EmptyPanel('Keine Eingabemuster fuer diesen Bereich sichtbar.'),
+              if (_visibleFields.isEmpty) const EmptyPanel('Keine Eingabemuster für diesen Bereich sichtbar.'),
               const SizedBox(height: 4),
               _Checklist(
                 onOpen: () => openUiAction(
@@ -225,12 +225,12 @@ class _Hero extends StatelessWidget {
           const Eyebrow('INPUT UX'),
           const SizedBox(height: 8),
           const Text(
-            'Formulare muessen sich auf dem Handy leicht anfuehlen.',
+            'Formulare müssen sich auf dem Handy leicht anfuehlen.',
             style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
           const Text(
-            'Flutter uebersetzt Web-Formulare in mobile Eingaben mit passender Tastatur, Masken, Pflichtfeldern, Fokus, Autofill, Fehlertext und Accessibility.',
+            'Flutter übersetzt Web-Formulare in mobile Eingaben mit passender Tastatur, Masken, Pflichtfeldern, Fokus, Autofill, Fehlertext und Accessibility.',
             style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
@@ -316,7 +316,7 @@ class _RulesPanel extends StatelessWidget {
       subtitle: 'Diese Regeln machen Web-Formulare als Flutter-Eingaben ergonomisch.',
       children: [
         _SwitchLine(title: 'Validierung direkt am Feld anzeigen', value: showValidation, onChanged: onValidation),
-        _SwitchLine(title: 'Grosse Touch Targets verwenden', value: largeTouchTargets, onChanged: onTouch),
+        _SwitchLine(title: 'Große Touch Targets verwenden', value: largeTouchTargets, onChanged: onTouch),
         _SwitchLine(title: 'Screenreader-Hinweise vorbereiten', value: screenReaderHints, onChanged: onScreenReader),
       ],
     );
@@ -361,7 +361,7 @@ class _InputPreview extends StatelessWidget {
               labelText: _labelForKeyboard(keyboard),
               hintText: _hintForKeyboard(keyboard),
               suffixIcon: Icon(_iconForKeyboard(keyboard), color: color),
-              errorText: validation ? null : 'Dieses Feld braucht eine gueltige Eingabe.',
+              errorText: validation ? null : 'Dieses Feld braucht eine gültige Eingabe.',
               helperText: screenReaderHints ? 'Screenreader: ${_labelForKeyboard(keyboard)}, Pflichtfeld, ${_hintForKeyboard(keyboard)}' : null,
             ),
           ),
@@ -388,7 +388,7 @@ class _InputPreview extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Accessibility Check',
-                  body: 'Label, Hint, Error, Fokusreihenfolge, Touch Target, Kontrast, Autofill und Screenreader fuer $keyboard pruefen.',
+                  body: 'Label, Hint, Error, Fokusreihenfolge, Touch Target, Kontrast, Autofill und Screenreader für $keyboard prüfen.',
                   status: 'A11y',
                   icon: Icons.accessibility_new_outlined,
                 ),
@@ -473,7 +473,7 @@ class _InputFieldCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: field.secondary,
-                  body: 'Keyboard, Maske, Fokus, Autofill, Screenreader, Pflichtfeld und API-Fehler fuer ${field.title}.',
+                  body: 'Keyboard, Maske, Fokus, Autofill, Screenreader, Pflichtfeld und API-Fehler für ${field.title}.',
                   status: 'Input Detail',
                   icon: Icons.tune_outlined,
                 ),
@@ -495,7 +495,7 @@ class _Checklist extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Input-/Accessibility-Paritaet',
-      subtitle: 'Was aus Web-Formularen mobil uebersetzt wird.',
+      subtitle: 'Was aus Web-Formularen mobil übersetzt wird.',
       children: [
         const _CheckLine('Jedes Feld bekommt passende Tastatur, Label, Hint, Fehlertext und Fokusverhalten.'),
         const _CheckLine('Pflichtfelder, optionale Felder, Uploads und API-Fehler bleiben direkt im Formular sichtbar.'),

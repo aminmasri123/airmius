@@ -173,7 +173,7 @@ class _DashboardHero extends StatelessWidget {
                                   children: [
                                     Text('Widgets', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
                                     SizedBox(height: 2),
-                                    Text('Waehle aus, was sichtbar ist.', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
+                                    Text('Wähle aus, was sichtbar ist.', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
                                   ],
                                 ),
                               ),
@@ -250,7 +250,7 @@ class _QuickActions extends StatelessWidget {
     final actions = [
       _QuickAction(title: 'Training', subtitle: 'Dokumentieren', icon: Icons.assignment_turned_in_outlined, color: AirmiusColors.blue, onTap: () => onOpenModule(_module('Events & Training'))),
       _QuickAction(title: 'Route', subtitle: 'Planen', icon: Icons.route_outlined, color: AirmiusColors.green, onTap: () => onOpenModule(_module('Sportkarte'))),
-      _QuickAction(title: 'Ernaehrung', subtitle: 'Eintragen', icon: Icons.restaurant_menu_outlined, color: AirmiusColors.amber, onTap: () => onOpenModule(_module('Ernaehrung'))),
+      _QuickAction(title: 'Ernährung', subtitle: 'Eintragen', icon: Icons.restaurant_menu_outlined, color: AirmiusColors.amber, onTap: () => onOpenModule(_module('Ernährung'))),
       _QuickAction(title: 'Feed', subtitle: 'Posten', icon: Icons.dynamic_feed_outlined, color: AirmiusColors.pink, onTap: () => onOpenTab(AppTab.feed)),
     ];
 
@@ -371,7 +371,7 @@ class _DashboardWidgets extends StatelessWidget {
           const SizedBox(height: 14),
         ],
         if (visibleWidgets.contains('nutrition')) ...[
-          _CompactWidget(title: 'Ernaehrung', eyebrow: 'Heute', action: 'Oeffnen', icon: Icons.restaurant_menu_outlined, color: AirmiusColors.amber, metrics: const [('1840', 'kcal'), ('120 g', 'Protein'), ('3', 'Mahlzeiten')], onOpen: () => onOpenModule(_module('Ernaehrung'))),
+          _CompactWidget(title: 'Ernährung', eyebrow: 'Heute', action: 'Öffnen', icon: Icons.restaurant_menu_outlined, color: AirmiusColors.amber, metrics: const [('1840', 'kcal'), ('120 g', 'Protein'), ('3', 'Mahlzeiten')], onOpen: () => onOpenModule(_module('Ernährung'))),
           const SizedBox(height: 14),
         ],
         if (visibleWidgets.contains('events')) ...[
@@ -387,7 +387,7 @@ class _DashboardWidgets extends StatelessWidget {
           const SizedBox(height: 14),
         ],
         if (visibleWidgets.contains('notifications')) ...[
-          _ListWidget(title: 'Inbox', eyebrow: '3 ungelesen', action: 'Oeffnen', icon: Icons.notifications_outlined, color: AirmiusColors.amber, lines: const ['Neue Reaktion auf deinen Beitrag', 'Vereinsanfrage wartet', 'Trainingserinnerung fuer heute'], onOpen: () => onOpenTab(AppTab.updates)),
+          _ListWidget(title: 'Inbox', eyebrow: '3 ungelesen', action: 'Öffnen', icon: Icons.notifications_outlined, color: AirmiusColors.amber, lines: const ['Neue Reaktion auf deinen Beitrag', 'Vereinsanfrage wartet', 'Trainingserinnerung für heute'], onOpen: () => onOpenTab(AppTab.updates)),
         ],
       ],
     );
@@ -407,7 +407,7 @@ class _TrainingWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _WidgetHeader(eyebrow: 'Wochenuebersicht', title: 'Training', action: 'Oeffnen', icon: Icons.running_with_errors_outlined, color: AirmiusColors.blue, onOpen: onOpen),
+          _WidgetHeader(eyebrow: 'Wochenübersicht', title: 'Training', action: 'Öffnen', icon: Icons.running_with_errors_outlined, color: AirmiusColors.blue, onOpen: onOpen),
           const SizedBox(height: 18),
           SizedBox(
             height: 150,
@@ -468,7 +468,7 @@ class _FocusWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = [
       _FocusItem(title: 'Training dokumentieren', body: 'Heute offen', meta: 'Jetzt', icon: Icons.assignment_turned_in_outlined, onTap: () => onOpenModule(_module('Events & Training'))),
-      _FocusItem(title: 'Feed pruefen', body: 'Kommentare & Reaktionen', meta: '3 neu', icon: Icons.dynamic_feed_outlined, onTap: () => onOpenTab(AppTab.feed)),
+      _FocusItem(title: 'Feed prüfen', body: 'Kommentare & Reaktionen', meta: '3 neu', icon: Icons.dynamic_feed_outlined, onTap: () => onOpenTab(AppTab.feed)),
       _FocusItem(title: 'Verein ansehen', body: 'Anfrage und Profil', meta: 'Offen', icon: Icons.groups_outlined, onTap: () => onOpenTab(AppTab.clubs)),
     ];
     return AirmiusPanel(
@@ -702,7 +702,7 @@ class _FocusItem {
 const _dashboardWidgets = [
   _DashboardWidgetDef(key: 'training', label: 'Training', icon: Icons.directions_run_outlined),
   _DashboardWidgetDef(key: 'focus', label: 'Heute wichtig', icon: Icons.bolt_outlined),
-  _DashboardWidgetDef(key: 'nutrition', label: 'Ernaehrung', icon: Icons.restaurant_menu_outlined),
+  _DashboardWidgetDef(key: 'nutrition', label: 'Ernährung', icon: Icons.restaurant_menu_outlined),
   _DashboardWidgetDef(key: 'events', label: 'Termine', icon: Icons.calendar_month_outlined),
   _DashboardWidgetDef(key: 'sport_map', label: 'Sportkarte', icon: Icons.map_outlined),
   _DashboardWidgetDef(key: 'files', label: 'Dateien', icon: Icons.folder_outlined),

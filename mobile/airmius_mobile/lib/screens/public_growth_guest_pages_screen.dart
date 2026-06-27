@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -22,7 +22,7 @@ class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScr
       title: 'Vereine entdecken',
       area: 'Discovery',
       status: 'Public',
-      body: 'Oeffentliche Vereinsliste mit Suche, Ort, Mitgliederzahl, Profilzugang und Beitrittsmoeglichkeit.',
+      body: 'Öffentliche Vereinsliste mit Suche, Ort, Mitgliederzahl, Profilzugang und Beitrittsmöglichkeit.',
       icon: Icons.groups_3_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -30,7 +30,7 @@ class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScr
       title: 'Pricing',
       area: 'Business',
       status: 'Plaene',
-      body: 'Mobile Preisuebersicht fuer Vereine, Anbieter und Nutzer mit Leistungsumfang und CTA.',
+      body: 'Mobile Preisübersicht für Vereine, Anbieter und Nutzer mit Leistungsumfang und CTA.',
       icon: Icons.sell_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -46,7 +46,7 @@ class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScr
       title: 'Werbeagentur',
       area: 'Business',
       status: 'Ads',
-      body: 'Oeffentliche Landingpage fuer Werbekunden, Sponsoring, Kampagnen und Kontaktanfrage.',
+      body: 'Öffentliche Landingpage für Werbekunden, Sponsoring, Kampagnen und Kontaktanfrage.',
       icon: Icons.campaign_outlined,
       color: Color(0xFFFF6B6B),
     ),
@@ -62,7 +62,7 @@ class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScr
       title: 'Top-Inhalte',
       area: 'Content',
       status: 'Feed',
-      body: 'Oeffentliche Highlights aus Blog, Vereinen, Events, Gamification und Community.',
+      body: 'Öffentliche Highlights aus Blog, Vereinen, Events, Gamification und Community.',
       icon: Icons.auto_awesome_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -70,7 +70,7 @@ class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScr
       title: 'E-Learning & Zertifikate',
       area: 'Content',
       status: 'Lernen',
-      body: 'Gastseiten fuer Kurse, Kursdetails und Zertifikatspruefung als mobile Lernstrecke.',
+      body: 'Gastseiten für Kurse, Kursdetails und Zertifikatsprüfung als mobile Lernstrecke.',
       icon: Icons.school_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -78,7 +78,7 @@ class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScr
       title: 'Gamification',
       area: 'Content',
       status: 'Badges',
-      body: 'Oeffentliche Gamification-Erklaerung mit Badges, Punkten, Challenges und Vereinsmotivation.',
+      body: 'Öffentliche Gamification-Erklaerung mit Badges, Punkten, Challenges und Vereinsmotivation.',
       icon: Icons.emoji_events_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -138,13 +138,13 @@ class _PublicGrowthGuestPagesScreenState extends State<PublicGrowthGuestPagesScr
                     _ActionPanel(
                       onExplore: () => openUiAction(
                         context,
-                        title: 'Guest-Seite oeffnen',
-                        message: 'Die mobile Guest-UI ist vorbereitet; Inhalte werden spaeter per API/CMS geladen.',
+                        title: 'Guest-Seite öffnen',
+                        message: 'Die mobile Guest-UI ist vorbereitet; Inhalte werden später per API/CMS geladen.',
                       ),
                       onContact: () => openUiAction(
                         context,
                         title: 'Kontaktanfrage',
-                        message: 'Hier wird spaeter das Kontaktformular fuer Jobs, Ads, Sponsoren und Vereine angebunden.',
+                        message: 'Hier wird später das Kontaktformular für Jobs, Ads, Sponsoren und Vereine angebunden.',
                       ),
                       onSupport: () => _openSupport(context),
                     ),
@@ -225,7 +225,7 @@ class _Hero extends StatelessWidget {
           Text('Guest-Seiten', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
           SizedBox(height: 8),
           Text(
-            'Native Mobile-UI fuer Vereine, Pricing, Jobs, Werbeagentur, Sponsoren, Top-Inhalte, E-Learning und Gamification.',
+            'Native Mobile-UI für Vereine, Pricing, Jobs, Werbeagentur, Sponsoren, Top-Inhalte, E-Learning und Gamification.',
             style: TextStyle(color: Color(0xFFAFC0D8), height: 1.45, fontWeight: FontWeight.w600),
           ),
         ],
@@ -376,7 +376,7 @@ class _ActionPanel extends StatelessWidget {
       title: 'Schnellaktionen',
       child: Column(
         children: [
-          _ActionButton(icon: Icons.travel_explore_outlined, label: 'Guest-Bereich oeffnen', onTap: onExplore),
+          _ActionButton(icon: Icons.travel_explore_outlined, label: 'Guest-Bereich öffnen', onTap: onExplore),
           const SizedBox(height: 10),
           _ActionButton(icon: Icons.mail_outline, label: 'Kontaktanfrage starten', onTap: onContact),
           const SizedBox(height: 10),

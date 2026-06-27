@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -31,15 +31,15 @@ class _ClubFinanceCockpitScreenState extends State<ClubFinanceCockpitScreen> {
       appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Vereinsfinanzen', style: TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
         title: 'Vereinsfinanzen',
-        subtitle: 'Beitraege, Rechnungen, Zahlungen, Bankabgleich, SEPA, Mahnungen und Exporte',
+        subtitle: 'Beiträge, Rechnungen, Zahlungen, Bankabgleich, SEPA, Mahnungen und Exporte',
         trailing: const StatusPill('Finance', color: AirmiusColors.amber),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           AirmiusPanel(gradient: true, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const AirmiusLogo(),
             const SizedBox(height: 14),
-            const Text('Vereinsbeitraege brauchen ein eigenes mobiles Cockpit.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
+            const Text('Vereinsbeiträge brauchen ein eigenes mobiles Cockpit.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
             const SizedBox(height: 8),
-            const Text('Diese UI verbindet Beitragsregeln, Mitglieder, Rechnungen, Zahlungen, Banktransfer, SEPA, Mahnungen, DATEV und Export. Laravel liefert spaeter echte Posten, Status und Belege.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+            const Text('Diese UI verbindet Beitragsregeln, Mitglieder, Rechnungen, Zahlungen, Banktransfer, SEPA, Mahnungen, DATEV und Export. Laravel liefert später echte Posten, Status und Belege.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
             const SizedBox(height: 14),
             Row(children: const [Expanded(child: MetricCard(value: '2.840 EUR', label: 'Offen')), SizedBox(width: 10), Expanded(child: MetricCard(value: '18', label: 'Posten')), SizedBox(width: 10), Expanded(child: MetricCard(value: 'SEPA', label: 'Naechster Lauf'))]),
             const SizedBox(height: 14),
@@ -49,8 +49,8 @@ class _ClubFinanceCockpitScreenState extends State<ClubFinanceCockpitScreen> {
           _FinanceControls(showBankTransfers: _showBankTransfers, showSepa: _showSepa, showReminders: _showReminders, showExports: _showExports, onBank: (value) => setState(() => _showBankTransfers = value), onSepa: (value) => setState(() => _showSepa = value), onReminders: (value) => setState(() => _showReminders = value), onExports: (value) => setState(() => _showExports = value)),
           const SizedBox(height: 16),
           for (final entry in entries) ...[
-            if ((_showBankTransfers || entry.method != 'Ueberweisung') && (_showSepa || entry.method != 'SEPA')) _FinanceEntryCard(entry: entry, showReminders: _showReminders, showExports: _showExports),
-            if ((_showBankTransfers || entry.method != 'Ueberweisung') && (_showSepa || entry.method != 'SEPA')) const SizedBox(height: 12),
+            if ((_showBankTransfers || entry.method != 'Überweisung') && (_showSepa || entry.method != 'SEPA')) _FinanceEntryCard(entry: entry, showReminders: _showReminders, showExports: _showExports),
+            if ((_showBankTransfers || entry.method != 'Überweisung') && (_showSepa || entry.method != 'SEPA')) const SizedBox(height: 12),
           ],
           if (entries.isEmpty) const EmptyPanel('Keine Finanzposten gefunden.'),
           _FinanceWorkflowPanel(tab: _tab),
@@ -76,9 +76,9 @@ class _FinanceControls extends StatelessWidget {
   Widget build(BuildContext context) => AirmiusPanel(borderColor: AirmiusColors.amber.withValues(alpha: .44), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     const Eyebrow('Finanz-Filter'),
     const SizedBox(height: 8),
-    const Text('Diese Schalter bilden Web-Tabellenfilter mobil ab. Spaeter kommen Zeitraum, Mitgliedschaftstyp, Zahlungsanbieter, Belegstatus und Rollenrechte dazu.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+    const Text('Diese Schalter bilden Web-Tabellenfilter mobil ab. Später kommen Zeitraum, Mitgliedschaftstyp, Zahlungsanbieter, Belegstatus und Rollenrechte dazu.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
     const SizedBox(height: 10),
-    _FinanceSwitch(icon: Icons.account_balance_outlined, title: 'Banktransfer anzeigen', body: 'Manuelle Ueberweisungen mit Verwendungszweck und Abgleichstatus zeigen.', value: showBankTransfers, onChanged: onBank, color: AirmiusColors.blue),
+    _FinanceSwitch(icon: Icons.account_balance_outlined, title: 'Banktransfer anzeigen', body: 'Manuelle Überweisungen mit Verwendungszweck und Abgleichstatus zeigen.', value: showBankTransfers, onChanged: onBank, color: AirmiusColors.blue),
     _FinanceSwitch(icon: Icons.fact_check_outlined, title: 'SEPA anzeigen', body: 'Mandate, naechster Lauf, fehlende Mandate und SEPA-Status sichtbar machen.', value: showSepa, onChanged: onSepa, color: AirmiusColors.green),
     _FinanceSwitch(icon: Icons.notifications_active_outlined, title: 'Mahnungen anzeigen', body: 'Zahlungserinnerungen, Eskalation und Push/E-Mail-Hinweise vorbereiten.', value: showReminders, onChanged: onReminders, color: AirmiusColors.amber),
     _FinanceSwitch(icon: Icons.file_download_outlined, title: 'Exporte anzeigen', body: 'PDF, CSV, DATEV, SEPA-Datei und Monatsabschluss-Aktionen zeigen.', value: showExports, onChanged: onExports, color: AirmiusColors.green),
@@ -109,10 +109,10 @@ class _FinanceEntryCard extends StatelessWidget {
     _FinanceMeta(entry: entry),
     const SizedBox(height: 12),
     Wrap(spacing: 8, runSpacing: 8, children: [
-      AirmiusButton(label: 'Pruefen', icon: Icons.fact_check_outlined, onPressed: () => openUiAction(context, title: '${entry.title} pruefen', body: 'Finanzposten, Mitglied, Rechnung, Zahlmethode, Beleg, Bankabgleich und Audit anzeigen.', status: entry.status, icon: Icons.fact_check_outlined)),
+      AirmiusButton(label: 'Prüfen', icon: Icons.fact_check_outlined, onPressed: () => openUiAction(context, title: '${entry.title} prüfen', body: 'Finanzposten, Mitglied, Rechnung, Zahlmethode, Beleg, Bankabgleich und Audit anzeigen.', status: entry.status, icon: Icons.fact_check_outlined)),
       AirmiusButton(label: 'Als bezahlt', icon: Icons.check_circle_outline, secondary: true, onPressed: entry.status == 'Bezahlt' ? null : () => openUiAction(context, title: 'Zahlung markieren', body: '${entry.title} als bezahlt markieren, Mitglied informieren, Rechnung aktualisieren und Audit-Eintrag erzeugen.', status: 'Bezahlt', icon: Icons.check_circle_outline)),
       if (showReminders) AirmiusButton(label: 'Mahnung', icon: Icons.notifications_active_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationChatOperationsScreen(initialTab: 'Push')))),
-      if (showExports) AirmiusButton(label: 'Export', icon: Icons.file_download_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Export vorbereiten', body: 'PDF, CSV, DATEV oder SEPA-Datei fuer diesen Finanzposten vorbereiten.', status: 'Export', icon: Icons.file_download_outlined)),
+      if (showExports) AirmiusButton(label: 'Export', icon: Icons.file_download_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Export vorbereiten', body: 'PDF, CSV, DATEV oder SEPA-Datei für diesen Finanzposten vorbereiten.', status: 'Export', icon: Icons.file_download_outlined)),
     ]),
   ]));
 }
@@ -150,13 +150,13 @@ class _FinanceWorkflowPanel extends StatelessWidget {
   Widget build(BuildContext context) => AirmiusPanel(borderColor: AirmiusColors.green.withValues(alpha: .44), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     const Eyebrow('Finanz-Workflow'),
     const SizedBox(height: 8),
-    Text('Aktueller Filter: $tab. Spaeter verbindet Laravel diese UI mit Rechnungen, Zahlungen, SEPA-Mandaten, Bankabgleich, Mahnungen, Exporten und DATEV.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+    Text('Aktueller Filter: $tab. Später verbindet Laravel diese UI mit Rechnungen, Zahlungen, SEPA-Mandaten, Bankabgleich, Mahnungen, Exporten und DATEV.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
     const SizedBox(height: 12),
     Wrap(spacing: 8, runSpacing: 8, children: [
       AirmiusButton(label: 'Billing Ops', icon: Icons.receipt_long_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BillingOperationsScreen()))),
       AirmiusButton(label: 'Mitglieder', icon: Icons.people_outline, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubMemberDirectoryScreen()))),
       AirmiusButton(label: 'Beitragsregeln', icon: Icons.payments_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ClubContributionRulesScreen()))),
-      AirmiusButton(label: 'Monatsabschluss', icon: Icons.event_available_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Monatsabschluss vorbereiten', body: 'Offene Posten, bezahlte Rechnungen, Bankabgleich, SEPA, DATEV und Export fuer den Vereinsmonat zusammenstellen.', status: 'Abschluss', icon: Icons.event_available_outlined)),
+      AirmiusButton(label: 'Monatsabschluss', icon: Icons.event_available_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Monatsabschluss vorbereiten', body: 'Offene Posten, bezahlte Rechnungen, Bankabgleich, SEPA, DATEV und Export für den Vereinsmonat zusammenstellen.', status: 'Abschluss', icon: Icons.event_available_outlined)),
     ]),
   ]));
 }
@@ -194,9 +194,9 @@ class _FinanceEntry {
 const _tabs = ['Alle', 'Offen', 'Bezahlt', 'Mahnung', 'SEPA', 'Export'];
 
 const _entries = <_FinanceEntry>[
-  _FinanceEntry(status: 'Offen', title: 'Jahresbeitrag 2026', member: 'ZBB Konto', body: 'Jaehrlicher Mitgliedsbeitrag per Ueberweisung, Verwendungszweck fehlt noch im Bankabgleich.', method: 'Ueberweisung', amount: '120 EUR', due: '15.06.2026', invoice: 'INV-2026-0042', reconciliation: 'Nicht gefunden', icon: Icons.account_balance_outlined, color: AirmiusColors.amber),
-  _FinanceEntry(status: 'SEPA', title: 'SEPA Lauf Juni', member: 'Mina Becker', body: 'Jugendbeitrag mit Guardian Consent und gueltigem SEPA-Mandat.', method: 'SEPA', amount: '12 EUR', due: '01.06.2026', invoice: 'SEPA-2026-06', reconciliation: 'Mandat OK', icon: Icons.fact_check_outlined, color: AirmiusColors.blue),
-  _FinanceEntry(status: 'Mahnung', title: 'Offener Monatsbeitrag', member: 'Jonas Weber', body: 'Monatsbeitrag ueberfaellig, erste Zahlungserinnerung vorbereitet.', method: 'Ueberweisung', amount: '25 EUR', due: '01.06.2026', invoice: 'INV-2026-0038', reconciliation: '7 Tage ueberfaellig', icon: Icons.notifications_active_outlined, color: AirmiusColors.red),
-  _FinanceEntry(status: 'Bezahlt', title: 'Barzahlung Aufnahme', member: 'Ali Hassan', body: 'Aufnahmegebuehr wurde bar bezahlt und durch Admin bestaetigt.', method: 'Bar', amount: '15 EUR', due: 'Heute', invoice: 'REC-2026-0012', reconciliation: 'Admin bestaetigt', icon: Icons.payments_outlined, color: AirmiusColors.green),
+  _FinanceEntry(status: 'Offen', title: 'Jahresbeitrag 2026', member: 'ZBB Konto', body: 'Jaehrlicher Mitgliedsbeitrag per Überweisung, Verwendungszweck fehlt noch im Bankabgleich.', method: 'Überweisung', amount: '120 EUR', due: '15.06.2026', invoice: 'INV-2026-0042', reconciliation: 'Nicht gefunden', icon: Icons.account_balance_outlined, color: AirmiusColors.amber),
+  _FinanceEntry(status: 'SEPA', title: 'SEPA Lauf Juni', member: 'Mina Becker', body: 'Jugendbeitrag mit Guardian Consent und gültigem SEPA-Mandat.', method: 'SEPA', amount: '12 EUR', due: '01.06.2026', invoice: 'SEPA-2026-06', reconciliation: 'Mandat OK', icon: Icons.fact_check_outlined, color: AirmiusColors.blue),
+  _FinanceEntry(status: 'Mahnung', title: 'Offener Monatsbeitrag', member: 'Jonas Weber', body: 'Monatsbeitrag überfaellig, erste Zahlungserinnerung vorbereitet.', method: 'Überweisung', amount: '25 EUR', due: '01.06.2026', invoice: 'INV-2026-0038', reconciliation: '7 Tage überfaellig', icon: Icons.notifications_active_outlined, color: AirmiusColors.red),
+  _FinanceEntry(status: 'Bezahlt', title: 'Barzahlung Aufnahme', member: 'Ali Hassan', body: 'Aufnahmegebuehr wurde bar bezahlt und durch Admin bestätigt.', method: 'Bar', amount: '15 EUR', due: 'Heute', invoice: 'REC-2026-0012', reconciliation: 'Admin bestätigt', icon: Icons.payments_outlined, color: AirmiusColors.green),
   _FinanceEntry(status: 'Export', title: 'DATEV Monatsdaten', member: 'Verein ZBB', body: 'Monatsabschluss mit Rechnungen, Zahlungen, offenen Posten und Providerkosten.', method: 'DATEV', amount: 'Juni', due: '30.06.2026', invoice: 'EXPORT-2026-06', reconciliation: 'Bereit', icon: Icons.file_download_outlined, color: AirmiusColors.green),
 ];

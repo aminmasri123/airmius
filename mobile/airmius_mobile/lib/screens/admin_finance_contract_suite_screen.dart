@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -30,7 +30,7 @@ class _AdminFinanceContractSuiteScreenState extends State<AdminFinanceContractSu
       title: 'Subscription Invoices',
       area: 'Invoices',
       status: 'Abo',
-      body: 'Abo-Rechnungen fuer Plaene, Laufzeiten, Steuerhinweise, Rechnungsnummern und Download-Status.',
+      body: 'Abo-Rechnungen für Plaene, Laufzeiten, Steuerhinweise, Rechnungsnummern und Download-Status.',
       icon: Icons.request_quote_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -38,7 +38,7 @@ class _AdminFinanceContractSuiteScreenState extends State<AdminFinanceContractSu
       title: 'Payments',
       area: 'Payments',
       status: 'Abgleich',
-      body: 'Zahlungseingaenge, Banktransfer, Referenzen, Rueckfragen und manuelle Zahlungsfreigaben.',
+      body: 'Zahlungseingaenge, Banktransfer, Referenzen, Rückfragen und manuelle Zahlungsfreigaben.',
       icon: Icons.payments_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -46,7 +46,7 @@ class _AdminFinanceContractSuiteScreenState extends State<AdminFinanceContractSu
       title: 'Subscriptions',
       area: 'Payments',
       status: 'Plan',
-      body: 'Aktive Plaene, Upgrades, Downgrades, Pausen, Kuendigungen und Kulanzentscheidungen.',
+      body: 'Aktive Plaene, Upgrades, Downgrades, Pausen, Kündigungen und Kulanzentscheidungen.',
       icon: Icons.workspace_premium_outlined,
       color: Color(0xFFB084FF),
     ),
@@ -62,7 +62,7 @@ class _AdminFinanceContractSuiteScreenState extends State<AdminFinanceContractSu
       title: 'Operating Contracts',
       area: 'Contracts',
       status: 'Vertrag',
-      body: 'Betriebsvertraege, Dokumentstatus, Gueltigkeit, Ansprechpartner und Renewal-Hinweise.',
+      body: 'Betriebsverträge, Dokumentstatus, Gültigkeit, Ansprechpartner und Renewal-Hinweise.',
       icon: Icons.gavel_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -123,12 +123,12 @@ class _AdminFinanceContractSuiteScreenState extends State<AdminFinanceContractSu
                       onExport: () => openUiAction(
                         context,
                         title: 'Finanzexport',
-                        message: 'Die UI fuer Rechnungen, Zahlungen und Vertraege ist bereit; Daten kommen spaeter per API.',
+                        message: 'Die UI für Rechnungen, Zahlungen und Verträge ist bereit; Daten kommen später per API.',
                       ),
                       onApprove: () => openUiAction(
                         context,
                         title: 'Freigabe vorbereiten',
-                        message: 'Admin-Freigaben werden spaeter mit Laravel-Rollen und Audit-Logs verbunden.',
+                        message: 'Admin-Freigaben werden später mit Laravel-Rollen und Audit-Logs verbunden.',
                       ),
                       onSupport: () => _openSupport(context),
                     ),
@@ -206,10 +206,10 @@ class _Hero extends StatelessWidget {
         children: const [
           Text('ADMIN FINANCE', style: TextStyle(color: Color(0xFF5BA7FF), fontSize: 12, fontWeight: FontWeight.w900)),
           SizedBox(height: 8),
-          Text('Rechnungen & Vertraege', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
+          Text('Rechnungen & Verträge', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
           SizedBox(height: 8),
           Text(
-            'Native Mobile-UI fuer Admin Invoices, Payments, Subscription Invoices, Subscriptions, Provider Costs und Operating Contracts.',
+            'Native Mobile-UI für Admin Invoices, Payments, Subscription Invoices, Subscriptions, Provider Costs und Operating Contracts.',
             style: TextStyle(color: Color(0xFFAFC0D8), height: 1.45, fontWeight: FontWeight.w600),
           ),
         ],
@@ -299,7 +299,7 @@ class _VisibilityPanel extends StatelessWidget {
         children: [
           _SwitchRow(label: 'Rechnungen anzeigen', value: showInvoices, onChanged: onInvoices),
           _SwitchRow(label: 'Zahlungen anzeigen', value: showPayments, onChanged: onPayments),
-          _SwitchRow(label: 'Vertraege anzeigen', value: showContracts, onChanged: onContracts),
+          _SwitchRow(label: 'Verträge anzeigen', value: showContracts, onChanged: onContracts),
         ],
       ),
     );

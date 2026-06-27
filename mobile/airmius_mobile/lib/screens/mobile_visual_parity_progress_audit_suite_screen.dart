@@ -11,7 +11,7 @@ class MobileVisualParityProgressAuditSuiteScreen extends StatelessWidget {
     final tracks = [
       _ProgressTrack('Mobile Web-App Optik', '88%', '12% Rest', 'Shell, Farben, Panels, Buttons, Modals, Listen, Formulare, Deep-Link-QA sowie Light/Dark-Logo-Prinzip mit Theme-Umschalter, Persistenz und brightness-aware Fallbacks sind stark angenaehert.', AirmiusColors.green, Icons.palette_outlined),
       _ProgressTrack('Funktionsabdeckung UI', '87%', '13% Rest', 'Viele Web-App-Bereiche sind als mobile Screens vorbereitet; Deep-Link-Ankunftsseiten und Detail-CTAs verbessern die Detailtiefe weiter.', AirmiusColors.blue, Icons.dashboard_customize_outlined),
-        _ProgressTrack('Laravel API & echte Daten', '75%', '25% Rest', 'API-Client, Models, Repositories, Auth-State, persistenter TokenStore, Service-Container, Profile/Auth User, Search, Clubs, direktes Clubdetail fuer Deep Links, Detail-Endpunkte und Deep-Link-Detailpreview fuer Mitgliedsantraege, Notifications, Conversations, Events und Billing, File Upload Intents, Conditional HTTP und API-Mode-Flags sind vorbereitet.', AirmiusColors.amber, Icons.api_outlined),
+        _ProgressTrack('Laravel API & echte Daten', '75%', '25% Rest', 'API-Client, Models, Repositories, Auth-State, persistenter TokenStore, Service-Container, Profile/Auth User, Search, Clubs, direktes Clubdetail für Deep Links, Detail-Endpunkte und Deep-Link-Detailpreview für Mitgliedsanträge, Notifications, Conversations, Events und Billing, File Upload Intents, Conditional HTTP und API-Mode-Flags sind vorbereitet.', AirmiusColors.amber, Icons.api_outlined),
         _ProgressTrack('Store/Test/Release', '92%', '8% Rest', 'Store-Metadaten, Store-Listing-Texte, Datenschutzlabel-Drafts, Review-Notizen, Permission-Texte, Android Manifest, Android Application ID, Android/iOS App-Icons, Android Adaptive/Round Icons, Android Release-Signing-Struktur, Build- und Signing-Runbook, Android/iOS Evidence-CI, Evidence-Template, Evidence-Center, RC-Check-Script, Lokalisierungs-Matrix, Deep-Link-Struktur, Deep-Link-Resolver, Android/iOS Native Deep-Link Bridges, Deep-Link-Screen-Navigation mit direktem Clubdetail und Ziel-Ankunftsseiten, Domain-Verifikations-Templates, Domain-Verification-Runbook, Screenshot-Capture-Plan, Release-Review-Runbook, Final-Release-Candidate-Gate-Register und App-Screen, Android Splash/Marke, Light/Dark-Branding mit persistenter Theme-/Sprachwahl, persistente Session-Schicht, iOS Bundle ID, iOS LaunchScreen, iOS ExportOptions-Beispiel, GitHub Actions CI, Info.plist und Release-Gates sind vorbereitet; Ausfuehrung der Evidence-Gates fehlt noch.', AirmiusColors.red, Icons.store_outlined),
     ];
 
@@ -19,7 +19,7 @@ class MobileVisualParityProgressAuditSuiteScreen extends StatelessWidget {
       _GateItem('Design exakt angleichen', 'Mobile Header, Bottom Navigation, Clubseiten, Modals, Formulare und Scrollverhalten final nachziehen.'),
       _GateItem('Echte API anbinden', 'Laravel Auth, Vereine, Mitglieder, Dateien, Zahlungen, Chat, Feed, Events und Admin-Endpunkte verbinden.'),
       _GateItem('Native Funktionen ergaenzen', 'Push, Kamera, Dateiupload, Deep Links, Offline Queue, Secure Storage und Permissions integrieren.'),
-      _GateItem('Store-Reife pruefen', 'Flutter analyze/build, Android/iOS Tests, Screenshots, Datenschutz, App Icon, Splash und Release-Konfiguration.'),
+      _GateItem('Store-Reife prüfen', 'Flutter analyze/build, Android/iOS Tests, Screenshots, Datenschutz, App Icon, Splash und Release-Konfiguration.'),
     ];
 
     return Scaffold(
@@ -31,7 +31,7 @@ class MobileVisualParityProgressAuditSuiteScreen extends StatelessWidget {
       ),
       body: PageFrame(
         title: 'Produktfortschritt',
-        subtitle: 'Rest-Prozente, Web-App-Paritaet, API-Gaps, Store-Reife und naechste Gates fuer das fertige Produkt.',
+        subtitle: 'Rest-Prozente, Web-App-Paritaet, API-Gaps, Store-Reife und naechste Gates für das fertige Produkt.',
         trailing: const StatusPill('1% Rest', color: AirmiusColors.amber),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -30,7 +30,7 @@ class _PublicSystemPagesScreenState extends State<PublicSystemPagesScreen> {
       title: 'Wartungsmodus',
       area: 'Status',
       status: 'Maintenance',
-      body: 'Freundliche Systemseite fuer geplante Wartung, Rueckkehrzeit, Kontakt und Status-Hinweise.',
+      body: 'Freundliche Systemseite für geplante Wartung, Rückkehrzeit, Kontakt und Status-Hinweise.',
       icon: Icons.construction_outlined,
       color: Color(0xFFF8B84E),
     ),
@@ -38,7 +38,7 @@ class _PublicSystemPagesScreenState extends State<PublicSystemPagesScreen> {
       title: 'Kein Zugriff',
       area: 'Status',
       status: 'Forbidden',
-      body: 'Klare Fehlerseite fuer fehlende Rechte, gesperrte Bereiche und sichere Ruecknavigation.',
+      body: 'Klare Fehlerseite für fehlende Rechte, gesperrte Bereiche und sichere Rücknavigation.',
       icon: Icons.lock_person_outlined,
       color: Color(0xFFFF6B6B),
     ),
@@ -54,7 +54,7 @@ class _PublicSystemPagesScreenState extends State<PublicSystemPagesScreen> {
       title: 'Nutzungsbedingungen',
       area: 'Legal',
       status: 'AGB',
-      body: 'Mobile AGB-Ansicht fuer Accounts, Vereine, Zahlungen, Marketplace, Inhalte und Plattformregeln.',
+      body: 'Mobile AGB-Ansicht für Accounts, Vereine, Zahlungen, Marketplace, Inhalte und Plattformregeln.',
       icon: Icons.description_outlined,
       color: Color(0xFFB084FF),
     ),
@@ -115,7 +115,7 @@ class _PublicSystemPagesScreenState extends State<PublicSystemPagesScreen> {
                       onPreview: () => openUiAction(
                         context,
                         title: 'Public Preview',
-                        message: 'Diese Systemseiten sind als native UI vorbereitet und werden spaeter mit CMS/API-Inhalten gefuellt.',
+                        message: 'Diese Systemseiten sind als native UI vorbereitet und werden später mit CMS/API-Inhalten gefuellt.',
                       ),
                       onSupport: () => _openSupport(context),
                     ),
@@ -202,7 +202,7 @@ class _HeroPanel extends StatelessWidget {
           Text('Welcome, Recht & Status', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
           SizedBox(height: 8),
           Text(
-            'Native Mobile-UI fuer oeffentliche Einstiegsseiten, Wartung, Forbidden, Datenschutz und Nutzungsbedingungen.',
+            'Native Mobile-UI für öffentliche Einstiegsseiten, Wartung, Forbidden, Datenschutz und Nutzungsbedingungen.',
             style: TextStyle(color: Color(0xFFAFC0D8), height: 1.45, fontWeight: FontWeight.w600),
           ),
         ],

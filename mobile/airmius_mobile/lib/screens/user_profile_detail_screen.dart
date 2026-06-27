@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -55,8 +55,8 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Sichtbarkeit'),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: _visibility, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Profil sichtbar fuer'), items: const ['Privat', 'Freunde', 'Verein', 'Oeffentlich'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: widget.ownProfile ? (value) => setState(() => _visibility = value ?? _visibility) : null),
-            SwitchListTile(value: _shareRecommendations, onChanged: (value) => setState(() => _shareRecommendations = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Empfehlungen freigeben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Gemeinsame Vereine und Trainingsvorschlaege sichtbar machen.', style: TextStyle(color: AirmiusColors.muted))),
+            DropdownButtonFormField<String>(value: _visibility, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Profil sichtbar für'), items: const ['Privat', 'Freunde', 'Verein', 'Öffentlich'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: widget.ownProfile ? (value) => setState(() => _visibility = value ?? _visibility) : null),
+            SwitchListTile(value: _shareRecommendations, onChanged: (value) => setState(() => _shareRecommendations = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Empfehlungen freigeben', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Gemeinsame Vereine und Trainingsvorschläge sichtbar machen.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -69,7 +69,7 @@ class _UserProfileDetailScreenState extends State<UserProfileDetailScreen> {
           const SizedBox(height: 14),
           if (pending)
             Wrap(spacing: 10, runSpacing: 10, children: [
-              AirmiusButton(label: 'Annehmen', icon: Icons.check_circle_outline, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Anfrage annehmen', body: '${widget.name} als Kontakt bestaetigen und Sichtbarkeit aktualisieren.', status: 'Freund', icon: Icons.check_circle_outline)))),
+              AirmiusButton(label: 'Annehmen', icon: Icons.check_circle_outline, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Anfrage annehmen', body: '${widget.name} als Kontakt bestätigen und Sichtbarkeit aktualisieren.', status: 'Freund', icon: Icons.check_circle_outline)))),
               AirmiusButton(label: 'Ablehnen', icon: Icons.close_outlined, danger: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Anfrage ablehnen', body: 'Anfrage von ${widget.name} ablehnen und optional ausblenden.', status: 'Abgelehnt', icon: Icons.close_outlined)))),
             ])
           else if (recommendation)

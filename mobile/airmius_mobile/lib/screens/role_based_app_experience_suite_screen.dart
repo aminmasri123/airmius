@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -62,7 +62,7 @@ class _RoleBasedAppExperienceSuiteScreenState extends State<RoleBasedAppExperien
       title: 'Sponsor / Provider',
       area: 'Admin',
       status: 'Partner',
-      body: 'Sponsorprofil, Kampagnen, Marketplace-Produkte, VertrÃ¤ge, Provider-Kosten, Reporting und Kontaktanfragen.',
+      body: 'Sponsorprofil, Kampagnen, Marketplace-Produkte, Verträge, Provider-Kosten, Reporting und Kontaktanfragen.',
       icon: Icons.handshake_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -104,7 +104,7 @@ class _RoleBasedAppExperienceSuiteScreenState extends State<RoleBasedAppExperien
                     const _Hero(
                       eyebrow: 'ROLE EXPERIENCE',
                       title: 'Rollenbasierte App-Erlebnisse',
-                      subtitle: 'Native Kontroll-UI fuer Gast, Mitglied, Trainer, Guardian, Vereinsadmin, Sponsor/Provider, Plattformadmin und API-Rollen.',
+                      subtitle: 'Native Kontroll-UI für Gast, Mitglied, Trainer, Guardian, Vereinsadmin, Sponsor/Provider, Plattformadmin und API-Rollen.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -136,9 +136,9 @@ class _RoleBasedAppExperienceSuiteScreenState extends State<RoleBasedAppExperien
                       firstIcon: Icons.switch_account_outlined,
                       firstLabel: 'Rolle simulieren',
                       secondIcon: Icons.admin_panel_settings_outlined,
-                      secondLabel: 'Rechte pruefen',
-                      onFirst: () => openUiAction(context, title: 'Rolle simulieren', body: 'Die rollenbasierte UI-Zuordnung ist vorbereitet; echte Rollen kommen spaeter aus Laravel.', status: 'UI bereit', icon: Icons.info_outline),
-                      onSecond: () => openUiAction(context, title: 'Rechte pruefen', body: 'Rollen- und Berechtigungs-Gates sind als App-UI vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
+                      secondLabel: 'Rechte prüfen',
+                      onFirst: () => openUiAction(context, title: 'Rolle simulieren', body: 'Die rollenbasierte UI-Zuordnung ist vorbereitet; echte Rollen kommen später aus Laravel.', status: 'UI bereit', icon: Icons.info_outline),
+                      onSecond: () => openUiAction(context, title: 'Rechte prüfen', body: 'Rollen- und Berechtigungs-Gates sind als App-UI vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
                       onSupport: () => _openSupport(context),
                     ),
                   ],

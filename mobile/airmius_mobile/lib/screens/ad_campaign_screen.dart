@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'sponsor_ads_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
@@ -40,7 +40,7 @@ class _AdCampaignScreenState extends State<AdCampaignScreen> {
           AirmiusPanel(gradient: true, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Ads'),
             const SizedBox(height: 8),
-            const Text('Die Web-App hat eigene Ads-Routen fuer aktive Anzeige, Klick und Conversion. Diese App-UI macht Kampagnen mobil sichtbar und testbar.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+            const Text('Die Web-App hat eigene Ads-Routen für aktive Anzeige, Klick und Conversion. Diese App-UI macht Kampagnen mobil sichtbar und testbar.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
             const SizedBox(height: 14),
             Container(
               height: 170,
@@ -79,23 +79,23 @@ class _AdCampaignScreenState extends State<AdCampaignScreen> {
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Tracking'),
-            SwitchListTile(value: _trackClicks, onChanged: (value) => setState(() => _trackClicks = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Klicktracking aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Entspricht spaeter der Ads-Click-Route.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _trackClicks, onChanged: (value) => setState(() => _trackClicks = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Klicktracking aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Entspricht später der Ads-Click-Route.', style: TextStyle(color: AirmiusColors.muted))),
             SwitchListTile(value: _trackConversions, onChanged: (value) => setState(() => _trackConversions = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Conversiontracking aktiv', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Checkout, Lead oder Sponsor-Anfrage als Conversion vorbereiten.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _clubVisible, onChanged: (value) => setState(() => _clubVisible = value), activeColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Im Vereinskontext sichtbar', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Sichtbarkeit fuer Verein, Public-Bereich oder Marketplace steuern.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _clubVisible, onChanged: (value) => setState(() => _clubVisible = value), activeColor: AirmiusColors.amber, contentPadding: EdgeInsets.zero, title: const Text('Im Vereinskontext sichtbar', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Sichtbarkeit für Verein, Public-Bereich oder Marketplace steuern.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Eyebrow('Kampagnenstatus'),
             SizedBox(height: 10),
             _AdLine(icon: Icons.visibility_outlined, title: 'Active Ad', body: 'Aktive Anzeige laden, Preview anzeigen und Placement auswerten.', status: 'Active'),
-            _AdLine(icon: Icons.ads_click, title: 'Click Event', body: 'Klick speichern, Ziel oeffnen und Kampagnenmetrik aktualisieren.', status: 'Click'),
+            _AdLine(icon: Icons.ads_click, title: 'Click Event', body: 'Klick speichern, Ziel öffnen und Kampagnenmetrik aktualisieren.', status: 'Click'),
             _AdLine(icon: Icons.track_changes_outlined, title: 'Conversion Event', body: 'Lead, Checkout oder Anfrage als Conversion protokollieren.', status: 'Conversion'),
           ])),
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [
-            AirmiusButton(label: 'Active Ad laden', icon: Icons.visibility_outlined, onPressed: () => openUiAction(context, title: 'Active Ad laden', body: 'Aktive Anzeige fuer Placement $_placement laden und Preview aktualisieren.', status: 'Active', icon: Icons.visibility_outlined)),
+            AirmiusButton(label: 'Active Ad laden', icon: Icons.visibility_outlined, onPressed: () => openUiAction(context, title: 'Active Ad laden', body: 'Aktive Anzeige für Placement $_placement laden und Preview aktualisieren.', status: 'Active', icon: Icons.visibility_outlined)),
             AirmiusButton(label: 'Klick erfassen', icon: Icons.ads_click, secondary: true, onPressed: _trackClicks ? () => openUiAction(context, title: 'Ad-Klick erfassen', body: 'Klickevent, Ziel-Deep-Link und Kampagnenmetrik vorbereiten.', status: 'Click', icon: Icons.ads_click) : null),
-            AirmiusButton(label: 'Conversion melden', icon: Icons.track_changes_outlined, secondary: true, onPressed: _trackConversions ? () => openUiAction(context, title: 'Ad-Conversion melden', body: 'Conversion fuer Lead, Checkout oder Sponsor-Anfrage vorbereiten.', status: 'Conversion', icon: Icons.track_changes_outlined) : null),
+            AirmiusButton(label: 'Conversion melden', icon: Icons.track_changes_outlined, secondary: true, onPressed: _trackConversions ? () => openUiAction(context, title: 'Ad-Conversion melden', body: 'Conversion für Lead, Checkout oder Sponsor-Anfrage vorbereiten.', status: 'Conversion', icon: Icons.track_changes_outlined) : null),
           ]),
         ]),
       ),

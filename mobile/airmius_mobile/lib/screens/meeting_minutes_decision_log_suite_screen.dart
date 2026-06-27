@@ -16,8 +16,8 @@ class MeetingMinutesDecisionLogSuiteScreen extends StatelessWidget {
 
     final decisions = [
       _DecisionItem('Beitragsordnung aktualisieren', 'Beschlossen', 'Dokumentversion 2026-06 verknuepfen und Mitglieder informieren.', AirmiusColors.green),
-      _DecisionItem('Neue Trikots bestellen', 'Aufgabe offen', 'Angebote pruefen, Sponsorfreigabe einholen, Bestellung vorbereiten.', AirmiusColors.amber),
-      _DecisionItem('Datenschutzregel bestaetigen', 'Audit', 'Consent-Pflicht fuer neue Mitgliedsantraege aktivieren.', AirmiusColors.blue),
+      _DecisionItem('Neue Trikots bestellen', 'Aufgabe offen', 'Angebote prüfen, Sponsorfreigabe einholen, Bestellung vorbereiten.', AirmiusColors.amber),
+      _DecisionItem('Datenschutzregel bestätigen', 'Audit', 'Consent-Pflicht für neue Mitgliedsanträge aktivieren.', AirmiusColors.blue),
     ];
 
     return Scaffold(
@@ -43,7 +43,7 @@ class MeetingMinutesDecisionLogSuiteScreen extends StatelessWidget {
                   SizedBox(height: 10),
                   Text('Vereinsentscheidungen sollen nicht im Chat verloren gehen.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
                   SizedBox(height: 8),
-                  Text('Diese mobile UI fuehrt Sitzungen, Protokolle, Beschluesse, Aufgaben und verknuepfte Dateien zusammen, damit spaeter alles revisionssicher ueber Laravel gespeichert werden kann.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
+                  Text('Diese mobile UI fuehrt Sitzungen, Protokolle, Beschluesse, Aufgaben und verknuepfte Dateien zusammen, damit später alles revisionssicher über Laravel gespeichert werden kann.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
                 ],
               ),
             ),
@@ -104,9 +104,9 @@ class MeetingMinutesDecisionLogSuiteScreen extends StatelessWidget {
                   Eyebrow('VERKNUEPFUNGEN'),
                   SizedBox(height: 10),
                   _LinkLine(icon: Icons.folder_copy_outlined, title: 'Dateimanager', body: 'Protokolle, Satzung, Beitragsordnung und Anhaenge direkt mit Vereinsdateien verbinden.'),
-                  _LinkLine(icon: Icons.how_to_vote_outlined, title: 'Abstimmungen', body: 'Beschluesse koennen aus Umfragen oder Live-Abstimmungen entstehen.'),
+                  _LinkLine(icon: Icons.how_to_vote_outlined, title: 'Abstimmungen', body: 'Beschluesse können aus Umfragen oder Live-Abstimmungen entstehen.'),
                   _LinkLine(icon: Icons.task_alt_outlined, title: 'Aufgaben', body: 'Beschluss erzeugt Verantwortliche, Fristen, Erinnerung und Fortschritt.'),
-                  _LinkLine(icon: Icons.history_outlined, title: 'Audit', body: 'Versionen, Freigaben, Aenderungen und Widerrufe bleiben nachvollziehbar.'),
+                  _LinkLine(icon: Icons.history_outlined, title: 'Audit', body: 'Versionen, Freigaben, Änderungen und Widerrufe bleiben nachvollziehbar.'),
                 ],
               ),
             ),

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -22,7 +22,7 @@ class _GuestMarketplaceFlowScreenState extends State<GuestMarketplaceFlowScreen>
       title: 'Marketplace Start',
       area: 'Shop',
       status: 'Guest',
-      body: 'Oeffentliche Produktuebersicht mit Kategorien, Suche, Badges, Preisen und schnellen Produktkarten.',
+      body: 'Öffentliche Produktübersicht mit Kategorien, Suche, Badges, Preisen und schnellen Produktkarten.',
       icon: Icons.storefront_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -38,7 +38,7 @@ class _GuestMarketplaceFlowScreenState extends State<GuestMarketplaceFlowScreen>
       title: 'Anbieterprofil',
       area: 'Provider',
       status: 'Partner',
-      body: 'Profil fuer Marketplace-Anbieter mit Sortiment, Standort, Bewertung, Kontakt und Vertrauen.',
+      body: 'Profil für Marketplace-Anbieter mit Sortiment, Standort, Bewertung, Kontakt und Vertrauen.',
       icon: Icons.verified_outlined,
       color: Color(0xFFB084FF),
     ),
@@ -46,7 +46,7 @@ class _GuestMarketplaceFlowScreenState extends State<GuestMarketplaceFlowScreen>
       title: 'Wishlist',
       area: 'Shop',
       status: 'Merken',
-      body: 'Merkliste fuer Gaeste und User mit gespeicherten Produkten und spaeterer Account-Verknuepfung.',
+      body: 'Merkliste für Gäste und User mit gespeicherten Produkten und späterer Account-Verknuepfung.',
       icon: Icons.favorite_border_outlined,
       color: Color(0xFFFF6B6B),
     ),
@@ -59,10 +59,10 @@ class _GuestMarketplaceFlowScreenState extends State<GuestMarketplaceFlowScreen>
       color: Color(0xFFF8B84E),
     ),
     _MarketFlow(
-      title: 'Bankueberweisung',
+      title: 'Banküberweisung',
       area: 'Checkout',
       status: 'Transfer',
-      body: 'Gastfreundliche Zahlungsseite fuer Banktransfer, Referenznummer und Zahlungsstatus.',
+      body: 'Gastfreundliche Zahlungsseite für Banktransfer, Referenznummer und Zahlungsstatus.',
       icon: Icons.account_balance_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -70,7 +70,7 @@ class _GuestMarketplaceFlowScreenState extends State<GuestMarketplaceFlowScreen>
       title: 'Bestellstatus',
       area: 'Checkout',
       status: 'Order',
-      body: 'Statusseite fuer Bestellung, Zahlung, Versand, Abholung, Rechnung und Supportkontakt.',
+      body: 'Statusseite für Bestellung, Zahlung, Versand, Abholung, Rechnung und Supportkontakt.',
       icon: Icons.receipt_long_outlined,
       color: Color(0xFF2EE59D),
     ),
@@ -131,12 +131,12 @@ class _GuestMarketplaceFlowScreenState extends State<GuestMarketplaceFlowScreen>
                       onCart: () => openUiAction(
                         context,
                         title: 'Warenkorb',
-                        message: 'Die mobile Warenkorb-UI ist vorbereitet; Produktdaten kommen spaeter ueber die Laravel-API.',
+                        message: 'Die mobile Warenkorb-UI ist vorbereitet; Produktdaten kommen später über die Laravel-API.',
                       ),
                       onOrder: () => openUiAction(
                         context,
                         title: 'Bestellstatus',
-                        message: 'Hier wird spaeter Order-Status, Zahlung und Versand aus der API geladen.',
+                        message: 'Hier wird später Order-Status, Zahlung und Versand aus der API geladen.',
                       ),
                       onSupport: () => _openSupport(context),
                     ),
@@ -217,7 +217,7 @@ class _IntroPanel extends StatelessWidget {
           Text('Shop, Wishlist & Checkout', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
           SizedBox(height: 8),
           Text(
-            'Native Mobile-UI fuer Gast-Marketplace, Produkte, Anbieter, Wishlist, Warenkorb, Banktransfer und Bestellstatus.',
+            'Native Mobile-UI für Gast-Marketplace, Produkte, Anbieter, Wishlist, Warenkorb, Banktransfer und Bestellstatus.',
             style: TextStyle(color: Color(0xFFAFC0D8), height: 1.45, fontWeight: FontWeight.w600),
           ),
         ],
@@ -370,7 +370,7 @@ class _ActionPanel extends StatelessWidget {
         children: [
           _ActionButton(icon: Icons.shopping_cart_outlined, label: 'Warenkorb Vorschau', onTap: onCart),
           const SizedBox(height: 10),
-          _ActionButton(icon: Icons.receipt_long_outlined, label: 'Bestellstatus pruefen', onTap: onOrder),
+          _ActionButton(icon: Icons.receipt_long_outlined, label: 'Bestellstatus prüfen', onTap: onOrder),
           const SizedBox(height: 10),
           _ActionButton(icon: Icons.support_agent_outlined, label: 'Support kontaktieren', onTap: onSupport),
         ],

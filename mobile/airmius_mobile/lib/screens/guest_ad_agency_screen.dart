@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -21,7 +21,7 @@ class _GuestAdAgencyScreenState extends State<GuestAdAgencyScreen> {
 
   final List<_AdPackage> _packages = const [
     _AdPackage(title: 'Vereinskampagne', body: 'Regionale Sichtbarkeit bei Vereinen, Teams, Events und Clubprofilen.', status: 'Local', price: 'ab 199 EUR', icon: Icons.groups_2_outlined, color: AirmiusColors.blue),
-    _AdPackage(title: 'Sponsor Paket', body: 'Sponsorenflaechen, Landingpages, Sichtbarkeit und Reporting fuer Partner.', status: 'Sponsor', price: 'ab 499 EUR', icon: Icons.handshake_outlined, color: AirmiusColors.green),
+    _AdPackage(title: 'Sponsor Paket', body: 'Sponsorenflaechen, Landingpages, Sichtbarkeit und Reporting für Partner.', status: 'Sponsor', price: 'ab 499 EUR', icon: Icons.handshake_outlined, color: AirmiusColors.green),
     _AdPackage(title: 'Content Kampagne', body: 'Top-Inhalte, Blog, Feed, Social und native App-Platzierungen.', status: 'Content', price: 'ab 299 EUR', icon: Icons.campaign_outlined, color: AirmiusColors.amber),
     _AdPackage(title: 'Performance Paket', body: 'Zielgruppen, Tracking, Leads, Conversion und Admin-Auswertung.', status: 'Performance', price: 'auf Anfrage', icon: Icons.query_stats_outlined, color: AirmiusColors.red),
   ];

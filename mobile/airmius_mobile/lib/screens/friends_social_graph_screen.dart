@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -23,7 +23,7 @@ class _FriendsSocialGraphScreenState extends State<FriendsSocialGraphScreen> {
   final List<_FriendItem> _items = const [
     _FriendItem(title: 'Max Running', area: 'Freunde', body: 'Gemeinsamer Verein, Laufgruppe und drei gemeinsame Events.', status: 'Freund', meta: 'ZBB', icon: Icons.person_outline, color: AirmiusColors.blue),
     _FriendItem(title: 'Sarah Tennis', area: 'Anfragen', body: 'Offene Freundschaftsanfrage mit Vereinsbezug und Profilvorschau.', status: 'Offen', meta: 'Tennis Zentrum West', icon: Icons.person_add_outlined, color: AirmiusColors.green),
-    _FriendItem(title: 'Teamkontakt U16', area: 'Vorschlaege', body: 'Vorschlag aus Team, Training und gemeinsamen Vereinsmitgliedern.', status: 'Vorschlag', meta: 'U16 Jugend', icon: Icons.group_add_outlined, color: AirmiusColors.amber),
+    _FriendItem(title: 'Teamkontakt U16', area: 'Vorschläge', body: 'Vorschlag aus Team, Training und gemeinsamen Vereinsmitgliedern.', status: 'Vorschlag', meta: 'U16 Jugend', icon: Icons.group_add_outlined, color: AirmiusColors.amber),
     _FriendItem(title: 'Gesperrter Kontakt', area: 'Blockiert', body: 'Blockierte Person mit Melde-, Entsperr- und Privatsphaere-Hinweis.', status: 'Blockiert', meta: 'Safety', icon: Icons.block_outlined, color: AirmiusColors.red),
   ];
 
@@ -47,18 +47,18 @@ class _FriendsSocialGraphScreenState extends State<FriendsSocialGraphScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const PageTitle(title: 'Freunde & Kontakte', subtitle: 'Freundschaften, Anfragen, Vorschlaege, gemeinsame Vereine, Blockieren und Melden.'),
+                        const PageTitle(title: 'Freunde & Kontakte', subtitle: 'Freundschaften, Anfragen, Vorschläge, gemeinsame Vereine, Blockieren und Melden.'),
                         const SizedBox(height: 16),
                         _FriendsHero(onInvite: () => _toast('Freund einladen vorbereitet')),
                         const SizedBox(height: 16),
-                        _ChoicePanel(title: 'Ansicht', value: _tab, values: const ['Alle', 'Freunde', 'Anfragen', 'Vorschlaege', 'Blockiert'], onChanged: (value) => setState(() => _tab = value)),
+                        _ChoicePanel(title: 'Ansicht', value: _tab, values: const ['Alle', 'Freunde', 'Anfragen', 'Vorschläge', 'Blockiert'], onChanged: (value) => setState(() => _tab = value)),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Privatsphaere & Filter',
                           child: Column(
                             children: [
                               _SwitchRow(title: 'Anfragen anzeigen', subtitle: 'Eingehende und ausgehende Freundschaftsanfragen sichtbar machen.', value: _showRequests, onChanged: (value) => setState(() => _showRequests = value)),
-                              _SwitchRow(title: 'Vorschlaege anzeigen', subtitle: 'Empfehlungen aus Vereinen, Teams, Events und gemeinsamen Kontakten.', value: _showSuggestions, onChanged: (value) => setState(() => _showSuggestions = value)),
+                              _SwitchRow(title: 'Vorschläge anzeigen', subtitle: 'Empfehlungen aus Vereinen, Teams, Events und gemeinsamen Kontakten.', value: _showSuggestions, onChanged: (value) => setState(() => _showSuggestions = value)),
                               _SwitchRow(title: 'Vereinskontext anzeigen', subtitle: 'Gemeinsame Vereine, Teams und Trainings als Vertrauenshinweis.', value: _showClubContext, onChanged: (value) => setState(() => _showClubContext = value)),
                               _SwitchRow(title: 'Blockierte anzeigen', subtitle: 'Blockierte Kontakte, Entsperren und Meldeoptionen einblenden.', value: _showBlocked, onChanged: (value) => setState(() => _showBlocked = value)),
                             ],
@@ -69,7 +69,7 @@ class _FriendsSocialGraphScreenState extends State<FriendsSocialGraphScreen> {
                           _FriendCard(item: item, onOpen: () => _toast('${item.title}: Kontakt-Detail vorbereitet')),
                           const SizedBox(height: 12),
                         ],
-                        if (items.isEmpty) const EmptyPanel('Keine Kontakte fuer diese Ansicht gefunden.'),
+                        if (items.isEmpty) const EmptyPanel('Keine Kontakte für diese Ansicht gefunden.'),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Aktionen',
@@ -127,9 +127,9 @@ class _FriendsHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Das Friends-Webmodul wird als mobile UI abgebildet: Kontakte, Anfragen, Vorschlaege, Vereinskontext, Blockieren und Melden.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          const Text('Das Friends-Webmodul wird als mobile UI abgebildet: Kontakte, Anfragen, Vorschläge, Vereinskontext, Blockieren und Melden.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
-          const Row(children: [Expanded(child: MetricCard(value: '14', label: 'Freunde')), SizedBox(width: 10), Expanded(child: MetricCard(value: '3', label: 'Anfragen')), SizedBox(width: 10), Expanded(child: MetricCard(value: '6', label: 'Vorschlaege'))]),
+          const Row(children: [Expanded(child: MetricCard(value: '14', label: 'Freunde')), SizedBox(width: 10), Expanded(child: MetricCard(value: '3', label: 'Anfragen')), SizedBox(width: 10), Expanded(child: MetricCard(value: '6', label: 'Vorschläge'))]),
         ],
       ),
     );

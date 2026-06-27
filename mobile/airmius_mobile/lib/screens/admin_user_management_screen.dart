@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -21,10 +21,10 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
   bool _showIncomplete = true;
 
   final List<_AdminUserItem> _items = const [
-    _AdminUserItem(title: 'ZBB Konto', role: 'Player', body: 'Profil, Mitgliedsanfrage, Datenschutz, Vereine und Kontosicherheit pruefen.', status: 'Aktiv', meta: 'player', icon: Icons.person_outline, color: AirmiusColors.blue),
+    _AdminUserItem(title: 'ZBB Konto', role: 'Player', body: 'Profil, Mitgliedsanfrage, Datenschutz, Vereine und Kontosicherheit prüfen.', status: 'Aktiv', meta: 'player', icon: Icons.person_outline, color: AirmiusColors.blue),
     _AdminUserItem(title: 'verein airmius', role: 'Club Admin', body: 'Vereinsadmin mit Clubrollen, Verifizierung, Dokumenten und Anfrage-Eingang.', status: 'Admin', meta: 'club', icon: Icons.admin_panel_settings_outlined, color: AirmiusColors.green),
-    _AdminUserItem(title: 'Trainer Demo', role: 'Trainer', body: 'Trainerrolle, Teams, Trainings, Anwesenheit und Kommunikationsrechte.', status: 'Pruefen', meta: 'trainer', icon: Icons.sports_outlined, color: AirmiusColors.amber),
-    _AdminUserItem(title: 'Gesperrter User', role: 'Suspended', body: 'Sperrgrund, Moderation, Supportticket und moegliche Reaktivierung.', status: 'Gesperrt', meta: 'safety', icon: Icons.block_outlined, color: AirmiusColors.red),
+    _AdminUserItem(title: 'Trainer Demo', role: 'Trainer', body: 'Trainerrolle, Teams, Trainings, Anwesenheit und Kommunikationsrechte.', status: 'Prüfen', meta: 'trainer', icon: Icons.sports_outlined, color: AirmiusColors.amber),
+    _AdminUserItem(title: 'Gesperrter User', role: 'Suspended', body: 'Sperrgrund, Moderation, Supportticket und mögliche Reaktivierung.', status: 'Gesperrt', meta: 'safety', icon: Icons.block_outlined, color: AirmiusColors.red),
   ];
 
   List<_AdminUserItem> get _visibleItems => _items.where((item) => _role == 'Alle' || item.role == _role).toList();
@@ -69,7 +69,7 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
                           _UserCard(item: item, onOpen: () => _toast('${item.title}: Userdetail vorbereitet')),
                           const SizedBox(height: 12),
                         ],
-                        if (items.isEmpty) const EmptyPanel('Keine User fuer diese Rolle gefunden.'),
+                        if (items.isEmpty) const EmptyPanel('Keine User für diese Rolle gefunden.'),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Admin-Aktionen',
@@ -129,7 +129,7 @@ class _UsersHero extends StatelessWidget {
           const SizedBox(height: 14),
           const Text('Die Users-Webseiten werden als mobile Admin-UI abgebildet: Index, Create, Edit, Profile, Rollen, Sperren und Sicherheitsstatus.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
-          const Row(children: [Expanded(child: MetricCard(value: '4', label: 'Rollen')), SizedBox(width: 10), Expanded(child: MetricCard(value: '1', label: 'Gesperrt')), SizedBox(width: 10), Expanded(child: MetricCard(value: '2', label: 'Pruefen'))]),
+          const Row(children: [Expanded(child: MetricCard(value: '4', label: 'Rollen')), SizedBox(width: 10), Expanded(child: MetricCard(value: '1', label: 'Gesperrt')), SizedBox(width: 10), Expanded(child: MetricCard(value: '2', label: 'Prüfen'))]),
         ],
       ),
     );

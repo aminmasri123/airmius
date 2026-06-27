@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -18,7 +18,7 @@ class _GamificationBadgesRolesSuiteScreenState extends State<GamificationBadgesR
   bool _showRoles = true;
 
   final List<_SuiteItem> _items = const [
-    _SuiteItem('Badges Uebersicht', 'Badges', 'Index', 'Badge-Katalog, Fortschritt, Seltenheit, Status und User-Fortschritt als mobile UI.', Icons.workspace_premium_outlined, Color(0xFF5BA7FF)),
+    _SuiteItem('Badges Übersicht', 'Badges', 'Index', 'Badge-Katalog, Fortschritt, Seltenheit, Status und User-Fortschritt als mobile UI.', Icons.workspace_premium_outlined, Color(0xFF5BA7FF)),
     _SuiteItem('Badge Detail', 'Badges', 'Show', 'Detailansicht mit Beschreibung, Level, Bedingungen, Belohnung und Freischaltstatus.', Icons.military_tech_outlined, Color(0xFF2EE59D)),
     _SuiteItem('Meine Badges', 'Badges', 'User', 'Persoenliche Badges, erreichte Ziele, naechste Schritte und sichtbare Auszeichnungen.', Icons.emoji_events_outlined, Color(0xFFF8B84E)),
     _SuiteItem('Gamification Regeln', 'Rules', 'Rules', 'Punkte, Challenges, Trigger, Level, Vereinsregeln und Fairness-Hinweise.', Icons.rule_outlined, Color(0xFFB084FF)),
@@ -47,7 +47,7 @@ class _GamificationBadgesRolesSuiteScreenState extends State<GamificationBadgesR
                     const _Hero(
                       eyebrow: 'GAME & ACCESS',
                       title: 'Badges, Regeln & Rollen',
-                      subtitle: 'Native Mobile-UI fuer Badges, Gamification-Regeln, Rollen/Rechte und Social Graph.',
+                      subtitle: 'Native Mobile-UI für Badges, Gamification-Regeln, Rollen/Rechte und Social Graph.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -77,10 +77,10 @@ class _GamificationBadgesRolesSuiteScreenState extends State<GamificationBadgesR
                     ],
                     _ActionPanel(
                       firstIcon: Icons.emoji_events_outlined,
-                      firstLabel: 'Badge pruefen',
+                      firstLabel: 'Badge prüfen',
                       secondIcon: Icons.admin_panel_settings_outlined,
-                      secondLabel: 'Rollenmatrix oeffnen',
-                      onFirst: () => openUiAction(context, title: 'Badge pruefen', body: 'Die mobile Badge-UI ist vorbereitet; Regeln kommen spaeter ueber Laravel.', status: 'UI bereit', icon: Icons.info_outline),
+                      secondLabel: 'Rollenmatrix öffnen',
+                      onFirst: () => openUiAction(context, title: 'Badge prüfen', body: 'Die mobile Badge-UI ist vorbereitet; Regeln kommen später über Laravel.', status: 'UI bereit', icon: Icons.info_outline),
                       onSecond: () => openUiAction(context, title: 'Rollenmatrix', body: 'Rollen und Rechte sind als UI vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
                       onSupport: () => _openSupport(context),
                     ),

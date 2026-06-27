@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'gamification_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
@@ -24,7 +24,7 @@ class _GamificationRulesScreenState extends State<GamificationRulesScreen> {
       appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Gamification-Regeln', style: TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
         title: 'Gamification-Regeln',
-        subtitle: 'XP, Badges, Level, Achievements, Leaderboard und Regelpruefung',
+        subtitle: 'XP, Badges, Level, Achievements, Leaderboard und Regelprüfung',
         trailing: const StatusPill('Rules'),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           AirmiusPanel(gradient: true, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -32,7 +32,7 @@ class _GamificationRulesScreenState extends State<GamificationRulesScreen> {
             const SizedBox(height: 8),
             const Text('Motivation steuerbar machen.', style: TextStyle(color: AirmiusColors.text, fontSize: 23, fontWeight: FontWeight.w900)),
             const SizedBox(height: 8),
-            const Text('Regeln fuer XP, Badges, Streaks, Vereinsaktivitaet und Level werden mobil sichtbar und spaeter per API gespeichert.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+            const Text('Regeln für XP, Badges, Streaks, Vereinsaktivitaet und Level werden mobil sichtbar und später per API gespeichert.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
             const SizedBox(height: 14),
             Wrap(spacing: 8, runSpacing: 8, children: ['Badges', 'XP', 'Streaks', 'Leaderboard'].map((item) => ChoiceChip(
               selected: _scope == item,
@@ -49,7 +49,7 @@ class _GamificationRulesScreenState extends State<GamificationRulesScreen> {
           const SizedBox(height: 14),
           _RuleLine(icon: Icons.workspace_premium_outlined, title: 'Vereinsstarter', body: 'Badge nach erster angenommenen Vereinsmitgliedschaft vergeben.', status: 'Aktiv', color: AirmiusColors.green, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GamificationRuleDetailScreen(title: 'Vereinsstarter', status: 'Aktiv')))),
           const SizedBox(height: 12),
-          _RuleLine(icon: Icons.local_fire_department_outlined, title: 'Trainings-Streak', body: 'XP fuer dokumentierte Trainingstage in Folge.', status: 'XP', color: AirmiusColors.amber, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GamificationRuleDetailScreen(title: 'Trainings-Streak', status: 'XP')))),
+          _RuleLine(icon: Icons.local_fire_department_outlined, title: 'Trainings-Streak', body: 'XP für dokumentierte Trainingstage in Folge.', status: 'XP', color: AirmiusColors.amber, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GamificationRuleDetailScreen(title: 'Trainings-Streak', status: 'XP')))),
           const SizedBox(height: 12),
           _RuleLine(icon: Icons.leaderboard_outlined, title: 'Leaderboard Datenschutz', body: 'Anzeige nur mit Profil-Sichtbarkeit und Opt-in.', status: 'Sicher', color: AirmiusColors.blue, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => GamificationRuleDetailScreen(title: 'Leaderboard Datenschutz', status: 'Sicher')))),
           const SizedBox(height: 14),

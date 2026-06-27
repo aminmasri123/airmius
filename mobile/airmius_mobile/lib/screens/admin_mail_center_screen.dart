@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -24,9 +24,9 @@ class _AdminMailCenterScreenState extends State<AdminMailCenterScreen> {
 
   final List<_MailItem> _items = const [
     _MailItem(title: 'Willkommensmail', body: 'Neue User erhalten Hinweise zu Profil, Vereinen, Datenschutz und App-Start.', status: 'Template', channel: 'E-Mail', icon: Icons.mark_email_read_outlined, color: AirmiusColors.blue),
-    _MailItem(title: 'Mitgliedsanfrage Update', body: 'Status, Rueckfrage, Annahme, Ablehnung oder Rueckzug einer Vereinsanfrage.', status: 'Transaktional', channel: 'In-App', icon: Icons.assignment_turned_in_outlined, color: AirmiusColors.green),
-    _MailItem(title: 'Zahlungshinweis', body: 'Beitrag, Intervall, Zahlmethode, offene Zahlung oder Ueberweisungshinweis.', status: 'Finanzen', channel: 'E-Mail', icon: Icons.payments_outlined, color: AirmiusColors.amber),
-    _MailItem(title: 'Sicherheitswarnung', body: 'Login, Passwort, 2FA, Datenschutzanfrage oder verdÃ¤chtige Aktivitaet.', status: 'Sicherheit', channel: 'Push', icon: Icons.security_outlined, color: AirmiusColors.red),
+    _MailItem(title: 'Mitgliedsanfrage Update', body: 'Status, Rückfrage, Annahme, Ablehnung oder Rückzug einer Vereinsanfrage.', status: 'Transaktional', channel: 'In-App', icon: Icons.assignment_turned_in_outlined, color: AirmiusColors.green),
+    _MailItem(title: 'Zahlungshinweis', body: 'Beitrag, Intervall, Zahlmethode, offene Zahlung oder Überweisungshinweis.', status: 'Finanzen', channel: 'E-Mail', icon: Icons.payments_outlined, color: AirmiusColors.amber),
+    _MailItem(title: 'Sicherheitswarnung', body: 'Login, Passwort, 2FA, Datenschutzanfrage oder verdächtige Aktivität.', status: 'Sicherheit', channel: 'Push', icon: Icons.security_outlined, color: AirmiusColors.red),
   ];
 
   @override
@@ -73,8 +73,8 @@ class _AdminMailCenterScreenState extends State<AdminMailCenterScreen> {
                           title: 'Kanaele & Freigaben',
                           child: Column(
                             children: [
-                              _SwitchRow(title: 'E-Mail senden', subtitle: 'SMTP/Provider-API spaeter ueber Laravel anbinden.', value: _includeEmail, onChanged: (value) => setState(() => _includeEmail = value)),
-                              _SwitchRow(title: 'Push senden', subtitle: 'Mobile Push-Nachrichten fuer wichtige Updates vorbereiten.', value: _includePush, onChanged: (value) => setState(() => _includePush = value)),
+                              _SwitchRow(title: 'E-Mail senden', subtitle: 'SMTP/Provider-API später über Laravel anbinden.', value: _includeEmail, onChanged: (value) => setState(() => _includeEmail = value)),
+                              _SwitchRow(title: 'Push senden', subtitle: 'Mobile Push-Nachrichten für wichtige Updates vorbereiten.', value: _includePush, onChanged: (value) => setState(() => _includePush = value)),
                               _SwitchRow(title: 'In-App anzeigen', subtitle: 'Benachrichtigung im Airmius Notification Center anzeigen.', value: _includeInApp, onChanged: (value) => setState(() => _includeInApp = value)),
                               _SwitchRow(title: 'Adminfreigabe erforderlich', subtitle: 'Kampagnen und sensible Nachrichten brauchen Freigabe.', value: _requireApproval, onChanged: (value) => setState(() => _requireApproval = value)),
                             ],
@@ -144,7 +144,7 @@ class _MailHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Admins koennen Systemmails, Transaktionsmails, Kampagnen, Pushes und In-App-Mitteilungen als mobile UI vorbereiten.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          const Text('Admins können Systemmails, Transaktionsmails, Kampagnen, Pushes und In-App-Mitteilungen als mobile UI vorbereiten.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           const Row(children: [Expanded(child: MetricCard(value: '4', label: 'Templates')), SizedBox(width: 10), Expanded(child: MetricCard(value: '3', label: 'Kanaele')), SizedBox(width: 10), Expanded(child: MetricCard(value: '1', label: 'Freigabe'))]),
         ],

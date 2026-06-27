@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -53,11 +53,11 @@ class _OutfitSubscriptionCenterScreenState extends State<OutfitSubscriptionCente
           const SizedBox(height: 14),
           Row(children: const [Expanded(child: MetricCard(value: '1', label: 'Aktiv')), SizedBox(width: 10), Expanded(child: MetricCard(value: '2', label: 'Lieferungen')), SizedBox(width: 10), Expanded(child: MetricCard(value: '0', label: 'Probleme'))]),
           const SizedBox(height: 14),
-          const _OutfitCard(title: 'Performance Paket', body: 'Monatliches Outfit fuer Training und Verein', status: 'Aktiv', icon: Icons.checkroom_outlined),
+          const _OutfitCard(title: 'Performance Paket', body: 'Monatliches Outfit für Training und Verein', status: 'Aktiv', icon: Icons.checkroom_outlined),
           const SizedBox(height: 12),
-          const _OutfitCard(title: 'Lieferung Juni', body: 'Versand vorbereitet - Adresse bestaetigt', status: 'Versand', icon: Icons.local_shipping_outlined),
+          const _OutfitCard(title: 'Lieferung Juni', body: 'Versand vorbereitet - Adresse bestätigt', status: 'Versand', icon: Icons.local_shipping_outlined),
           const SizedBox(height: 12),
-          const _OutfitCard(title: 'Lieferproblem melden', body: 'Groesse, Qualitaet, Versand oder Rueckgabe melden', status: 'Support', icon: Icons.report_problem_outlined),
+          const _OutfitCard(title: 'Lieferproblem melden', body: 'Groesse, Qualitaet, Versand oder Rückgabe melden', status: 'Support', icon: Icons.report_problem_outlined),
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Abo-Aktionen'),
@@ -68,7 +68,7 @@ class _OutfitSubscriptionCenterScreenState extends State<OutfitSubscriptionCente
               AirmiusButton(label: 'Checkout Erfolg', icon: Icons.check_circle_outline, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CheckoutStatusScreen(flow: 'Outfit', status: 'Success', amount: '39,90 EUR')))),
               AirmiusButton(label: 'Checkout Abbruch', icon: Icons.cancel_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CheckoutStatusScreen(flow: 'Outfit', status: 'Cancel', amount: '39,90 EUR')))),
               AirmiusButton(label: 'Outfit Operations', icon: Icons.tune_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OutfitOperationsScreen()))),
-              AirmiusButton(label: 'Kuendigen', icon: Icons.cancel_outlined, danger: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Outfit-Abo kuendigen', body: 'Kuendigung, Frist, Warnung und Support-Hinweis vorbereiten.', status: 'Kuendigung', icon: Icons.cancel_outlined)))),
+              AirmiusButton(label: 'Kündigen', icon: Icons.cancel_outlined, danger: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Outfit-Abo kündigen', body: 'Kündigung, Frist, Warnung und Support-Hinweis vorbereiten.', status: 'Kündigung', icon: Icons.cancel_outlined)))),
             ]),
           ])),
         ]),

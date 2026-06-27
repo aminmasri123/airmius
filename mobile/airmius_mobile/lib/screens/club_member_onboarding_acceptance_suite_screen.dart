@@ -20,7 +20,7 @@ class _ClubMemberOnboardingAcceptanceSuiteScreenState extends State<ClubMemberOn
   Widget build(BuildContext context) {
     final steps = [
       _OnboardingStep(
-        title: 'Mitgliedschaft bestaetigen',
+        title: 'Mitgliedschaft bestätigen',
         body: 'Admin akzeptiert die Anfrage und erzeugt den Mitgliedsstatus mit Startdatum, Beitragsgruppe und Rolle.',
         done: true,
         icon: Icons.check_circle_outline,
@@ -35,14 +35,14 @@ class _ClubMemberOnboardingAcceptanceSuiteScreenState extends State<ClubMemberOn
       ),
       _OnboardingStep(
         title: 'Team oder Gruppe zuweisen',
-        body: 'Neue Mitglieder koennen direkt einem Team, Trainingsbereich oder einer Warteliste zugeordnet werden.',
+        body: 'Neue Mitglieder können direkt einem Team, Trainingsbereich oder einer Warteliste zugeordnet werden.',
         done: assignTeam,
         icon: Icons.people_outline,
         color: AirmiusColors.amber,
       ),
       _OnboardingStep(
         title: 'Zahlungsstart vorbereiten',
-        body: 'Beitragsrhythmus, Zahlungsart, SEPA-Status und erste Rechnung werden fuer die API-Phase vorbereitet.',
+        body: 'Beitragsrhythmus, Zahlungsart, SEPA-Status und erste Rechnung werden für die API-Phase vorbereitet.',
         done: activatePayment,
         icon: Icons.payments_outlined,
         color: AirmiusColors.pink,
@@ -131,7 +131,7 @@ class _ClubMemberOnboardingAcceptanceSuiteScreenState extends State<ClubMemberOn
                 const SectionLabel('USER-SICHT'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Der User sieht spaeter nicht nur "angenommen", sondern konkrete naechste Schritte: Willkommen, Dokumentstatus, Zahlungsinfo, Team, Ansprechpartner und digitale Mitgliedskarte.',
+                  'Der User sieht später nicht nur "angenommen", sondern konkrete naechste Schritte: Willkommen, Dokumentstatus, Zahlungsinfo, Team, Ansprechpartner und digitale Mitgliedskarte.',
                   style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),
@@ -141,7 +141,7 @@ class _ClubMemberOnboardingAcceptanceSuiteScreenState extends State<ClubMemberOn
                   onPressed: () => openUiAction(
                     context,
                     title: 'User-Onboarding',
-                    body: 'Diese UI bereitet die mobile Ansicht fuer angenommene Mitglieder vor: Status, Aufgaben, Zahlungsinfo, Team und Willkommenskommunikation.',
+                    body: 'Diese UI bereitet die mobile Ansicht für angenommene Mitglieder vor: Status, Aufgaben, Zahlungsinfo, Team und Willkommenskommunikation.',
                     status: 'UI vorbereitet',
                     icon: Icons.person_outline,
                   ),

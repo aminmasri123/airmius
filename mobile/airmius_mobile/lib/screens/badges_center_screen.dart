@@ -172,8 +172,8 @@ const _badges = [
   _Badge(title: 'Starter', body: 'Profil angelegt und Sprache gesetzt.', status: 'Erhalten'),
   _Badge(title: 'Vereinsstarter', body: 'Ersten Mitgliedsantrag senden.', status: 'Offen'),
   _Badge(title: 'Teamplayer', body: 'An einem Team-Event teilnehmen.', status: 'Offen'),
-  _Badge(title: 'Lernprofi', body: 'Kurs mit Zertifikat abschliessen.', status: 'Erhalten'),
+  _Badge(title: 'Lernprofi', body: 'Kurs mit Zertifikat abschließen.', status: 'Erhalten'),
   _Badge(title: 'Community', body: 'Freundschaftsanfrage annehmen.', status: 'Offen'),
-  _Badge(title: 'Sportkarte', body: 'Route speichern oder Track abschliessen.', status: 'Offen'),
+  _Badge(title: 'Sportkarte', body: 'Route speichern oder Track abschließen.', status: 'Offen'),
 ];
 

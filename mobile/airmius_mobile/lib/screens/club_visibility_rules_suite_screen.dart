@@ -24,8 +24,8 @@ class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuit
   Widget build(BuildContext context) {
     final rows = [
       _RuleRow(
-        title: 'Oeffentliches Vereinsprofil',
-        body: 'Name, Ort, Logo, Beschreibung, Kontakt und Mitgliedschaftsstatus fuer Besucher sichtbar machen.',
+        title: 'Öffentliches Vereinsprofil',
+        body: 'Name, Ort, Logo, Beschreibung, Kontakt und Mitgliedschaftsstatus für Besucher sichtbar machen.',
         value: publicProfile,
         onChanged: (value) => setState(() => publicProfile = value),
         icon: Icons.public_outlined,
@@ -41,7 +41,7 @@ class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuit
       ),
       _RuleRow(
         title: 'Teams anzeigen',
-        body: 'Teams, Trainingsgruppen und Rollen koennen auf der Clubseite sichtbar oder verborgen werden.',
+        body: 'Teams, Trainingsgruppen und Rollen können auf der Clubseite sichtbar oder verborgen werden.',
         value: showTeams,
         onChanged: (value) => setState(() => showTeams = value),
         icon: Icons.groups_2_outlined,
@@ -49,15 +49,15 @@ class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuit
       ),
       _RuleRow(
         title: 'Beitragsregeln anzeigen',
-        body: 'Monatlich, vierteljaehrlich, halbjaehrlich, jaehrlich, bar oder Ueberweisung als sichtbare Optionen.',
+        body: 'Monatlich, vierteljaehrlich, halbjaehrlich, jaehrlich, bar oder Überweisung als sichtbare Optionen.',
         value: showFees,
         onChanged: (value) => setState(() => showFees = value),
         icon: Icons.payments_outlined,
         color: AirmiusColors.pink,
       ),
       _RuleRow(
-        title: 'Datenschutz bestaetigen',
-        body: 'Mitgliedsantraege muessen Datenschutzdokumente lesen und aktiv bestaetigen.',
+        title: 'Datenschutz bestätigen',
+        body: 'Mitgliedsanträge müssen Datenschutzdokumente lesen und aktiv bestätigen.',
         value: requirePrivacyConsent,
         onChanged: (value) => setState(() => requirePrivacyConsent = value),
         icon: Icons.privacy_tip_outlined,
@@ -73,7 +73,7 @@ class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuit
       ),
       _RuleRow(
         title: 'Dokument-Upload erlauben',
-        body: 'PDF, Bild oder Nachweis wird mobil hochgeladen und spaeter automatisch dem Vereins-Dateimanager zugeordnet.',
+        body: 'PDF, Bild oder Nachweis wird mobil hochgeladen und später automatisch dem Vereins-Dateimanager zugeordnet.',
         value: allowDocumentUpload,
         onChanged: (value) => setState(() => allowDocumentUpload = value),
         icon: Icons.upload_file_outlined,
@@ -81,7 +81,7 @@ class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuit
       ),
       _RuleRow(
         title: 'Admins informieren',
-        body: 'Neue Anfragen, Rueckzuege, Dokumente und Formularaenderungen erzeugen sichtbare Vereinsbenachrichtigungen.',
+        body: 'Neue Anfragen, Rückzuege, Dokumente und Formularänderungen erzeugen sichtbare Vereinsbenachrichtigungen.',
         value: notifyAdmins,
         onChanged: (value) => setState(() => notifyAdmins = value),
         icon: Icons.notifications_active_outlined,
@@ -103,7 +103,7 @@ class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuit
                 const SectionLabel('CLUB CONTROL'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Vereine bekommen eine mobile Steuerzentrale: Was ist oeffentlich, welche Daten sind Pflicht, welche Regeln muessen bestaetigt werden und welche Dokumente duerfen hochgeladen werden?',
+                  'Vereine bekommen eine mobile Steuerzentrale: Was ist öffentlich, welche Daten sind Pflicht, welche Regeln müssen bestätigt werden und welche Dokumente dürfen hochgeladen werden?',
                   style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 16),
@@ -130,7 +130,7 @@ class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuit
                 const SectionLabel('DATEIMANAGER-LOGIK'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Hochgeladene Vereinsdokumente sollen spaeter automatisch im Dateimanager des Vereins landen, mit Kategorie, Sichtbarkeit, Gueltigkeit, Version und Zustimmungspflicht.',
+                  'Hochgeladene Vereinsdokumente sollen später automatisch im Dateimanager des Vereins landen, mit Kategorie, Sichtbarkeit, Gültigkeit, Version und Zustimmungspflicht.',
                   style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),
@@ -140,7 +140,7 @@ class _ClubVisibilityRulesSuiteScreenState extends State<ClubVisibilityRulesSuit
                   children: [
                     StatusPill('Datenschutz', color: AirmiusColors.blue),
                     StatusPill('Satzung', color: AirmiusColors.green),
-                    StatusPill('Beitraege', color: AirmiusColors.amber),
+                    StatusPill('Beiträge', color: AirmiusColors.amber),
                     StatusPill('Nachweise', color: AirmiusColors.pink),
                   ],
                 ),

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -19,7 +19,7 @@ class _GuestJobsCareersScreenState extends State<GuestJobsCareersScreen> {
 
   final List<_JobItem> _jobs = const [
     _JobItem(title: 'Flutter App Developer', area: 'Tech', body: 'Mobile UI, Laravel API-Anbindung, App Store Vorbereitung und Design-System-Ausbau.', status: 'Remote', icon: Icons.phone_iphone_outlined, color: AirmiusColors.blue),
-    _JobItem(title: 'Club Success Manager', area: 'Vereine', body: 'Vereine onboarden, Mitgliedsantraege, Dokumente, Rollen und Beitragsregeln begleiten.', status: 'Hybrid', icon: Icons.groups_2_outlined, color: AirmiusColors.green),
+    _JobItem(title: 'Club Success Manager', area: 'Vereine', body: 'Vereine onboarden, Mitgliedsanträge, Dokumente, Rollen und Beitragsregeln begleiten.', status: 'Hybrid', icon: Icons.groups_2_outlined, color: AirmiusColors.green),
     _JobItem(title: 'Content & Community', area: 'Community', body: 'Top-Inhalte, Blog, Social Posts, Moderation und Vereinskommunikation betreuen.', status: 'Teilzeit', icon: Icons.dynamic_feed_outlined, color: AirmiusColors.amber),
     _JobItem(title: 'Sales Partner', area: 'Growth', body: 'Sponsoren, Werbeagentur, Marketplace, Vereine und regionale Partnerschaften aufbauen.', status: 'Provision', icon: Icons.trending_up_outlined, color: AirmiusColors.red),
   ];
@@ -54,8 +54,8 @@ class _GuestJobsCareersScreenState extends State<GuestJobsCareersScreen> {
                           title: 'Arbeitsmodell',
                           child: Column(
                             children: [
-                              _SwitchRow(title: 'Remote moeglich', subtitle: 'Mobile, API, Support und Content koennen remote vorbereitet werden.', value: _remote, onChanged: (value) => setState(() => _remote = value)),
-                              _SwitchRow(title: 'Teilzeit moeglich', subtitle: 'Rollen koennen als Teilzeit- oder Projektmodell angezeigt werden.', value: _partTime, onChanged: (value) => setState(() => _partTime = value)),
+                              _SwitchRow(title: 'Remote möglich', subtitle: 'Mobile, API, Support und Content können remote vorbereitet werden.', value: _remote, onChanged: (value) => setState(() => _remote = value)),
+                              _SwitchRow(title: 'Teilzeit möglich', subtitle: 'Rollen können als Teilzeit- oder Projektmodell angezeigt werden.', value: _partTime, onChanged: (value) => setState(() => _partTime = value)),
                               _SwitchRow(title: 'Studenten willkommen', subtitle: 'Werkstudenten, Praktika und Junior-Rollen als Public Flow.', value: _student, onChanged: (value) => setState(() => _student = value)),
                             ],
                           ),
@@ -65,7 +65,7 @@ class _GuestJobsCareersScreenState extends State<GuestJobsCareersScreen> {
                           _JobCard(job: job, onApply: () => _toast('${job.title}: Bewerbung vorbereiten')),
                           const SizedBox(height: 12),
                         ],
-                        if (jobs.isEmpty) const EmptyPanel('Keine Jobs fuer diesen Bereich gefunden.'),
+                        if (jobs.isEmpty) const EmptyPanel('Keine Jobs für diesen Bereich gefunden.'),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Kontakt',

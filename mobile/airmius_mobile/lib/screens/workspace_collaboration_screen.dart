@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -25,7 +25,7 @@ class _WorkspaceCollaborationScreenState extends State<WorkspaceCollaborationScr
       area: 'Verein',
       status: 'Aktiv',
       meta: 'ZBB',
-      description: 'Zentrale Arbeitsflaeche fuer Verein, Admins, Mitglieder, Dokumente und interne Aufgaben.',
+      description: 'Zentrale Arbeitsflaeche für Verein, Admins, Mitglieder, Dokumente und interne Aufgaben.',
       icon: Icons.apartment_outlined,
       color: Color(0xFF5BA7FF),
       points: ['Mitgliederlisten', 'Vereinsdateien', 'Aufgabenboard', 'Rollenrechte'],
@@ -35,7 +35,7 @@ class _WorkspaceCollaborationScreenState extends State<WorkspaceCollaborationScr
       area: 'Team',
       status: 'Team',
       meta: 'U16',
-      description: 'Mobile Teamseite fuer Trainer, Spieler, Eltern, Termine, Training und schnelle Absprachen.',
+      description: 'Mobile Teamseite für Trainer, Spieler, Eltern, Termine, Training und schnelle Absprachen.',
       icon: Icons.groups_2_outlined,
       color: Color(0xFF2EE59D),
       points: ['Trainerzugriff', 'Teamdateien', 'Trainingstermine', 'Elterninfos'],
@@ -45,7 +45,7 @@ class _WorkspaceCollaborationScreenState extends State<WorkspaceCollaborationScr
       area: 'Projekt',
       status: 'Planung',
       meta: 'Event',
-      description: 'Planungsbereich fuer Turniere, Vereinsfeste, Sponsoring-Aktionen und wiederkehrende Projekte.',
+      description: 'Planungsbereich für Turniere, Vereinsfeste, Sponsoring-Aktionen und wiederkehrende Projekte.',
       icon: Icons.task_alt_outlined,
       color: Color(0xFFF8B84E),
       points: ['Checklisten', 'Zustaendigkeiten', 'Budgetnotizen', 'Dateianhaenge'],
@@ -85,7 +85,7 @@ class _WorkspaceCollaborationScreenState extends State<WorkspaceCollaborationScr
                     const _PageIntro(
                       eyebrow: 'ARBEITSBEREICHE',
                       title: 'Workspaces',
-                      subtitle: 'Mobile Zusammenarbeit fuer Vereine, Teams, Projekte, Dateien und Rechte.',
+                      subtitle: 'Mobile Zusammenarbeit für Vereine, Teams, Projekte, Dateien und Rechte.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -441,7 +441,7 @@ class _ActionPanel extends StatelessWidget {
         children: [
           _ActionButton(icon: Icons.add_circle_outline, label: 'Workspace erstellen', onTap: onCreate),
           const SizedBox(height: 10),
-          _ActionButton(icon: Icons.folder_copy_outlined, label: 'Dateimanager oeffnen', onTap: onFiles),
+          _ActionButton(icon: Icons.folder_copy_outlined, label: 'Dateimanager öffnen', onTap: onFiles),
           const SizedBox(height: 10),
           _ActionButton(icon: Icons.support_agent_outlined, label: 'Support kontaktieren', onTap: onSupport),
         ],

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -24,7 +24,7 @@ class _DataRightsRequestScreenState extends State<DataRightsRequestScreen> {
     _RightsItem(title: 'Datenauskunft', body: 'Export der gespeicherten Konto-, Profil-, Vereins- und Mitgliedschaftsdaten.', status: 'Export', icon: Icons.download_outlined, color: AirmiusColors.blue),
     _RightsItem(title: 'Daten korrigieren', body: 'Falsche Adresse, Kontaktdaten, Profilfelder oder Vereinsdaten berichtigen lassen.', status: 'Korrektur', icon: Icons.edit_note_outlined, color: AirmiusColors.green),
     _RightsItem(title: 'Verarbeitung einschraenken', body: 'Bestimmte optionale Verarbeitungen deaktivieren oder einfrieren.', status: 'Limit', icon: Icons.block_outlined, color: AirmiusColors.amber),
-    _RightsItem(title: 'Loeschanfrage', body: 'Konto- oder Vereinsdaten loeschen lassen, soweit keine Pflichtaufbewahrung besteht.', status: 'Sensibel', icon: Icons.delete_outline, color: AirmiusColors.red),
+    _RightsItem(title: 'Löschanfrage', body: 'Konto- oder Vereinsdaten löschen lassen, soweit keine Pflichtaufbewahrung besteht.', status: 'Sensibel', icon: Icons.delete_outline, color: AirmiusColors.red),
   ];
 
   @override
@@ -49,7 +49,7 @@ class _DataRightsRequestScreenState extends State<DataRightsRequestScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const PageTitle(title: 'Datenrechte', subtitle: 'Auskunft, Export, Korrektur, Einschraenkung, Loeschanfrage und Rueckfrage.'),
+                        const PageTitle(title: 'Datenrechte', subtitle: 'Auskunft, Export, Korrektur, Einschraenkung, Löschanfrage und Rückfrage.'),
                         const SizedBox(height: 16),
                         _RightsHero(onSubmit: _submit),
                         const SizedBox(height: 16),
@@ -62,7 +62,7 @@ class _DataRightsRequestScreenState extends State<DataRightsRequestScreen> {
                               _SwitchRow(title: 'Kontodaten', subtitle: 'Login, Profil, Sprache, Sicherheit und Einstellungen.', value: _includeAccount, onChanged: (value) => setState(() => _includeAccount = value)),
                               _SwitchRow(title: 'Vereinsdaten', subtitle: 'Mitgliedsanfragen, Rollen, Teams, Events und Clubzuordnung.', value: _includeClub, onChanged: (value) => setState(() => _includeClub = value)),
                               _SwitchRow(title: 'Zahlungsdaten', subtitle: 'Zahlmethode, Beitragsintervall, Status und Finanzhinweise.', value: _includePayments, onChanged: (value) => setState(() => _includePayments = value)),
-                              _SwitchRow(title: 'Nachrichten', subtitle: 'Chat- und Rueckfrage-Kontext fuer Datenschutzanfrage einbeziehen.', value: _includeMessages, onChanged: (value) => setState(() => _includeMessages = value)),
+                              _SwitchRow(title: 'Nachrichten', subtitle: 'Chat- und Rückfrage-Kontext für Datenschutzanfrage einbeziehen.', value: _includeMessages, onChanged: (value) => setState(() => _includeMessages = value)),
                             ],
                           ),
                         ),
@@ -83,8 +83,8 @@ class _DataRightsRequestScreenState extends State<DataRightsRequestScreen> {
                             runSpacing: 10,
                             children: [
                               AirmiusButton(label: 'Anfrage senden', icon: Icons.send_outlined, onPressed: _submit),
-                              AirmiusButton(label: 'Rueckfrage', icon: Icons.forum_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationChatOperationsScreen(initialTab: 'Chat')))),
-                              AirmiusButton(label: 'Einwilligungen', icon: Icons.privacy_tip_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Einwilligungen', body: 'Einwilligungscenter ist ueber Einstellungen und Operations Hub erreichbar.', status: 'UI bereit', icon: Icons.info_outline)),
+                              AirmiusButton(label: 'Rückfrage', icon: Icons.forum_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationChatOperationsScreen(initialTab: 'Chat')))),
+                              AirmiusButton(label: 'Einwilligungen', icon: Icons.privacy_tip_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Einwilligungen', body: 'Einwilligungscenter ist über Einstellungen und Operations Hub erreichbar.', status: 'UI bereit', icon: Icons.info_outline)),
                             ],
                           ),
                         ),
@@ -131,7 +131,7 @@ class _RightsHero extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Die mobile UI bereitet Datenschutzanfragen fuer Laravel-API-Prozesse vor: Export, Korrektur, Einschraenkung und Loeschanfrage.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+          const Text('Die mobile UI bereitet Datenschutzanfragen für Laravel-API-Prozesse vor: Export, Korrektur, Einschraenkung und Löschanfrage.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           const Row(children: [Expanded(child: MetricCard(value: '4', label: 'Rechte')), SizedBox(width: 10), Expanded(child: MetricCard(value: '4', label: 'Datenarten')), SizedBox(width: 10), Expanded(child: MetricCard(value: '1', label: 'Anfrage'))]),
         ],
@@ -150,7 +150,7 @@ class _RightsPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      title: 'Recht auswaehlen',
+      title: 'Recht auswählen',
       child: Wrap(
         spacing: 8,
         runSpacing: 8,

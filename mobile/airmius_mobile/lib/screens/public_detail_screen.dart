@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'public_growth_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
@@ -76,14 +76,14 @@ class PublicDetailScreen extends StatelessWidget {
     final lower = title.toLowerCase();
     if (kind == 'Legal') {
       return [
-        AirmiusButton(label: 'Rechtstext oeffnen', icon: Icons.description_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LegalDocumentScreen(initialDocument: title)))),
+        AirmiusButton(label: 'Rechtstext öffnen', icon: Icons.description_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LegalDocumentScreen(initialDocument: title)))),
         const SizedBox(height: 10),
         AirmiusButton(label: 'Kontakt & Melden', icon: Icons.contact_support_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LegalDocumentScreen(initialDocument: 'Kontakt & Melden')))),
       ];
     }
     if (lower.contains('top-inhalte')) {
       return [
-        AirmiusButton(label: 'Top-Inhalte oeffnen', icon: Icons.auto_awesome_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PublicTopContentScreen()))),
+        AirmiusButton(label: 'Top-Inhalte öffnen', icon: Icons.auto_awesome_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PublicTopContentScreen()))),
       ];
     }
     if (lower.contains('jobs')) {
@@ -128,7 +128,7 @@ class PublicDetailScreen extends StatelessWidget {
       return [
         AirmiusButton(label: 'Kursinteresse senden', icon: Icons.school_outlined, onPressed: () => _openInterest(context, 'E-Learning', 'Kurse')),
         const SizedBox(height: 10),
-        AirmiusButton(label: 'Zertifikat pruefen', icon: Icons.fact_check_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CertificateVerificationScreen()))),
+        AirmiusButton(label: 'Zertifikat prüfen', icon: Icons.fact_check_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CertificateVerificationScreen()))),
       ];
     }
     return [
@@ -157,27 +157,27 @@ class PublicDetailScreen extends StatelessWidget {
   }
 
   List<Widget> _clubs() => const [
-        _PublicInfoCard(icon: Icons.search, title: 'Vereinssuche', body: 'Oeffentliche Vereinsliste mit Ort, Mitgliederzahl, Status und Beitrittsmoeglichkeit.', status: 'Public'),
+        _PublicInfoCard(icon: Icons.search, title: 'Vereinssuche', body: 'Öffentliche Vereinsliste mit Ort, Mitgliederzahl, Status und Beitrittsmöglichkeit.', status: 'Public'),
         SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.assignment_outlined, title: 'Mitgliedschaftsanfrage', body: 'Interessierte koennen nach Login ein Formular ausfuellen und Dokumente bestaetigen.', status: 'Login'),
+        _PublicInfoCard(icon: Icons.assignment_outlined, title: 'Mitgliedschaftsanfrage', body: 'Interessierte können nach Login ein Formular ausfuellen und Dokumente bestätigen.', status: 'Login'),
         SizedBox(height: 12),
         _PublicInfoCard(icon: Icons.verified_outlined, title: 'Verifizierung', body: 'Verifizierte Vereine erscheinen mit Status und sichtbaren Profilinformationen.', status: 'Trust'),
       ];
 
   List<Widget> _marketplace() => const [
-        _PublicInfoCard(icon: Icons.storefront_outlined, title: 'Produkte & Anbieter', body: 'Produktkarten, Anbieterprofile, Varianten und oeffentliche Produktdetails.', status: 'Shop'),
+        _PublicInfoCard(icon: Icons.storefront_outlined, title: 'Produkte & Anbieter', body: 'Produktkarten, Anbieterprofile, Varianten und öffentliche Produktdetails.', status: 'Shop'),
         SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.shopping_cart_outlined, title: 'Checkout', body: 'Warenkorb und Gast-/User-Checkout werden spaeter an Commerce-API angeschlossen.', status: 'Checkout'),
+        _PublicInfoCard(icon: Icons.shopping_cart_outlined, title: 'Checkout', body: 'Warenkorb und Gast-/User-Checkout werden später an Commerce-API angeschlossen.', status: 'Checkout'),
       ];
 
   List<Widget> _learning() => const [
-        _PublicInfoCard(icon: Icons.school_outlined, title: 'Kurskatalog', body: 'Oeffentliche Kurse, Lektionen, Bewertungen und Zertifikatspruefung.', status: 'Kurse'),
+        _PublicInfoCard(icon: Icons.school_outlined, title: 'Kurskatalog', body: 'Öffentliche Kurse, Lektionen, Bewertungen und Zertifikatsprüfung.', status: 'Kurse'),
         SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.verified_outlined, title: 'Zertifikat verifizieren', body: 'Code pruefen und Zertifikatsstatus anzeigen.', status: 'Verify'),
+        _PublicInfoCard(icon: Icons.verified_outlined, title: 'Zertifikat verifizieren', body: 'Code prüfen und Zertifikatsstatus anzeigen.', status: 'Verify'),
       ];
 
   List<Widget> _blog() => const [
-        _PublicInfoCard(icon: Icons.article_outlined, title: 'Artikel-Liste', body: 'Kategorien, Suchauszug, Autor, Lesezeit und Veroeffentlichungsdatum.', status: 'Blog'),
+        _PublicInfoCard(icon: Icons.article_outlined, title: 'Artikel-Liste', body: 'Kategorien, Suchauszug, Autor, Lesezeit und Veröffentlichungsdatum.', status: 'Blog'),
         SizedBox(height: 12),
         _PublicInfoCard(icon: Icons.rss_feed_outlined, title: 'RSS & Kategorien', body: 'RSS und Kategorien bleiben als Public-Content-Struktur sichtbar.', status: 'RSS'),
       ];
@@ -185,19 +185,19 @@ class PublicDetailScreen extends StatelessWidget {
   List<Widget> _jobs() => const [
         _PublicInfoCard(icon: Icons.work_outline, title: 'Stellen & Engagement', body: 'Jobkarten mit Organisation, Ort, Beschreibung und Interesse senden.', status: 'Jobs'),
         SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.send_outlined, title: 'Interesse senden', body: 'Kontaktformular fuer Bewerber oder Interessenten.', status: 'Form'),
+        _PublicInfoCard(icon: Icons.send_outlined, title: 'Interesse senden', body: 'Kontaktformular für Bewerber oder Interessenten.', status: 'Form'),
       ];
 
   List<Widget> _sponsors() => const [
         _PublicInfoCard(icon: Icons.handshake_outlined, title: 'Sponsorenprofile', body: 'Partnerkarten, Sichtbarkeit, Kampagnen und Kontakt.', status: 'Partner'),
         SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.campaign_outlined, title: 'Kampagnen', body: 'Sponsoring- und Anzeigenbereiche fuer Vereine.', status: 'Ads'),
+        _PublicInfoCard(icon: Icons.campaign_outlined, title: 'Kampagnen', body: 'Sponsoring- und Anzeigenbereiche für Vereine.', status: 'Ads'),
       ];
 
   List<Widget> _gamification() => const [
         _PublicInfoCard(icon: Icons.workspace_premium_outlined, title: 'Badges & Fortschritt', body: 'Motivation, Regeln, Aktivitaet und Belohnungen.', status: 'Badges'),
         SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.leaderboard_outlined, title: 'Engagement', body: 'Leaderboard- und Aktivitaetsbereiche spaeter ueber API.', status: 'Score'),
+        _PublicInfoCard(icon: Icons.leaderboard_outlined, title: 'Engagement', body: 'Leaderboard- und Aktivitaetsbereiche später über API.', status: 'Score'),
       ];
 
   List<Widget> _agency() => const [
@@ -207,25 +207,25 @@ class PublicDetailScreen extends StatelessWidget {
       ];
 
   List<Widget> _pricing() => const [
-        _PublicInfoCard(icon: Icons.sell_outlined, title: 'Preisplaene', body: 'User-, Club- und Zusatzpakete mit Leistungsuebersicht.', status: 'Plans'),
+        _PublicInfoCard(icon: Icons.sell_outlined, title: 'Preisplaene', body: 'User-, Club- und Zusatzpakete mit Leistungsübersicht.', status: 'Plans'),
         SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.payments_outlined, title: 'Checkout-Einstieg', body: 'Stripe, PayPal oder Banktransfer werden spaeter angebunden.', status: 'Pay'),
+        _PublicInfoCard(icon: Icons.payments_outlined, title: 'Checkout-Einstieg', body: 'Stripe, PayPal oder Banktransfer werden später angebunden.', status: 'Pay'),
       ];
 
   List<Widget> _topContent() => const [
         _PublicInfoCard(icon: Icons.auto_awesome_outlined, title: 'Kuratierte Inhalte', body: 'Blog, Kurse, Marketplace, Vereine, Sponsoren und Gamification als mobile Public-Auswahl.', status: 'Top'),
         SizedBox(height: 12),
-        _PublicInfoCard(icon: Icons.query_stats_outlined, title: 'Beliebtheit & Sichtbarkeit', body: 'Spaeter sortiert Laravel nach Relevanz, Kategorie, Sprache und Public-Freigabe.', status: 'Ranking'),
+        _PublicInfoCard(icon: Icons.query_stats_outlined, title: 'Beliebtheit & Sichtbarkeit', body: 'Später sortiert Laravel nach Relevanz, Kategorie, Sprache und Public-Freigabe.', status: 'Ranking'),
       ];
 
   List<Widget> _legal() => const [
-        _PublicInfoCard(icon: Icons.description_outlined, title: 'Rechtstext', body: 'Struktur fuer Abschnitte, Stand, Kontakt und Download.', status: 'Legal'),
+        _PublicInfoCard(icon: Icons.description_outlined, title: 'Rechtstext', body: 'Struktur für Abschnitte, Stand, Kontakt und Download.', status: 'Legal'),
         SizedBox(height: 12),
         _PublicInfoCard(icon: Icons.report_outlined, title: 'Kontakt & Melden', body: 'Meldungen, Support und rechtliche Kontaktwege.', status: 'Support'),
       ];
 
   List<Widget> _generic() => const [
-        _PublicInfoCard(icon: Icons.public_outlined, title: 'Public Content', body: 'Native Detailseite fuer oeffentliche Inhalte vorbereitet.', status: 'Public'),
+        _PublicInfoCard(icon: Icons.public_outlined, title: 'Public Content', body: 'Native Detailseite für öffentliche Inhalte vorbereitet.', status: 'Public'),
       ];
 }
 

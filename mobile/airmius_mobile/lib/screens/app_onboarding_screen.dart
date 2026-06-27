@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_l10n.dart';
 import '../core/airmius_theme.dart';
@@ -107,10 +107,10 @@ class _AppOnboardingScreenState extends State<AppOnboardingScreen> {
               icon: Icons.groups_2_outlined,
               color: AirmiusColors.green,
               title: 'Verein oder Team verbinden',
-              body: 'Nutzer koennen direkt nach Vereinen, Teams oder Personen suchen. Fuer Vereinsbeitritt fuehrt der Flow spaeter in Antrag, Dokumente und Zahlungsdaten.',
+              body: 'Nutzer können direkt nach Vereinen, Teams oder Personen suchen. Für Vereinsbeitritt fuehrt der Flow später in Antrag, Dokumente und Zahlungsdaten.',
               status: 'Club-Kontext',
               actions: [
-                AirmiusButton(label: 'Suche oeffnen', icon: Icons.search, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SearchOperationsScreen()))),
+                AirmiusButton(label: 'Suche öffnen', icon: Icons.search, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SearchOperationsScreen()))),
               ],
             ),
             const SizedBox(height: 12),
@@ -131,14 +131,14 @@ class _AppOnboardingScreenState extends State<AppOnboardingScreen> {
                 children: [
                   Eyebrow(scope.t('onboarding.permissions')),
                   const SizedBox(height: 8),
-                  const Text('Diese Berechtigungen werden spaeter nativ auf Android/iOS abgefragt. Jetzt ist die UI vorbereitet und erklaert jeden Grund im Airmius-Stil.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  const Text('Diese Berechtigungen werden später nativ auf Android/iOS abgefragt. Jetzt ist die UI vorbereitet und erklaert jeden Grund im Airmius-Stil.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                   const SizedBox(height: 10),
-                  _PermissionSwitch(icon: Icons.privacy_tip_outlined, title: 'Datenschutz & AGB akzeptiert', body: 'Erforderlich fuer Konto, Mitgliedsantrag, Kontakt und API-Verarbeitung.', value: _privacy, onChanged: (value) => setState(() => _privacy = value), color: AirmiusColors.green),
+                  _PermissionSwitch(icon: Icons.privacy_tip_outlined, title: 'Datenschutz & AGB akzeptiert', body: 'Erforderlich für Konto, Mitgliedsantrag, Kontakt und API-Verarbeitung.', value: _privacy, onChanged: (value) => setState(() => _privacy = value), color: AirmiusColors.green),
                   _PermissionSwitch(icon: Icons.notifications_active_outlined, title: 'Push erlauben', body: 'Mitgliedschaftsanfragen, Chat, Zahlungen, Guardian und Safety-Hinweise.', value: _push, onChanged: (value) => setState(() => _push = value), color: AirmiusColors.blue),
                   _PermissionSwitch(icon: Icons.location_on_outlined, title: 'Standort erlauben', body: 'Sportkarte, Live-Track, Fahrgemeinschaft, Treffpunkt und Orte.', value: _location, onChanged: (value) => setState(() => _location = value), color: AirmiusColors.amber),
                   _PermissionSwitch(icon: Icons.camera_alt_outlined, title: 'Kamera/Fotos erlauben', body: 'Profilbild, Vereinsdokumente, Medien, Nutrition-Fotoanalyse und Retouren.', value: _camera, onChanged: (value) => setState(() => _camera = value), color: AirmiusColors.blue),
                   _PermissionSwitch(icon: Icons.folder_outlined, title: 'Dateien erlauben', body: 'Mitgliedsantrag, Datenschutzdokumente, Chat-Anhaenge und Dateimanager.', value: _files, onChanged: (value) => setState(() => _files = value), color: AirmiusColors.green),
-                  _PermissionSwitch(icon: Icons.family_restroom_outlined, title: 'Guardian Flow aktivieren', body: 'Fuer Minderjaehrige, Elternzugang, Consent und Maturity-Gates.', value: _guardian, onChanged: (value) => setState(() => _guardian = value), color: AirmiusColors.amber),
+                  _PermissionSwitch(icon: Icons.family_restroom_outlined, title: 'Guardian Flow aktivieren', body: 'Für Minderjaehrige, Elternzugang, Consent und Maturity-Gates.', value: _guardian, onChanged: (value) => setState(() => _guardian = value), color: AirmiusColors.amber),
                   const SizedBox(height: 12),
                   Wrap(spacing: 8, runSpacing: 8, children: [
                     AirmiusButton(label: 'Push Center', icon: Icons.notifications_active_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => NotificationChatOperationsScreen(initialTab: 'Push')))),
@@ -160,7 +160,7 @@ class _AppOnboardingScreenState extends State<AppOnboardingScreen> {
                   Text('Startbereich: $_workspace. Rolle: $_role. Setup: $_done von 5 Kernberechtigungen vorbereitet.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
                   const SizedBox(height: 12),
                   Wrap(spacing: 8, runSpacing: 8, children: [
-                    AirmiusButton(label: 'Onboarding abschliessen', icon: Icons.task_alt_outlined, onPressed: () => openUiAction(context, title: 'Onboarding abschliessen', body: 'Rolle $_role, Startbereich $_workspace, Datenschutz, Berechtigungen und Sprache fuer spaetere Laravel-API speichern.', status: 'Onboarding', icon: Icons.task_alt_outlined)),
+                    AirmiusButton(label: 'Onboarding abschließen', icon: Icons.task_alt_outlined, onPressed: () => openUiAction(context, title: 'Onboarding abschließen', body: 'Rolle $_role, Startbereich $_workspace, Datenschutz, Berechtigungen und Sprache für spätere Laravel-API speichern.', status: 'Onboarding', icon: Icons.task_alt_outlined)),
                     AirmiusButton(label: 'Operations Hub', icon: Icons.hub_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OperationsHubScreen()))),
                   ]),
                 ],

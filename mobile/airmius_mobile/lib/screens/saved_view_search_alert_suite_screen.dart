@@ -30,7 +30,7 @@ class _SavedViewSearchAlertSuiteScreenState extends State<SavedViewSearchAlertSu
       ),
       body: PageFrame(
         title: 'Saved Views Search Alerts',
-        subtitle: 'Mobile UI fuer gespeicherte Filter, Suchalarme, geteilte Listenansichten, Exporte und rollenbasierte Sichtbarkeit.',
+        subtitle: 'Mobile UI für gespeicherte Filter, Suchalarme, geteilte Listenansichten, Exporte und rollenbasierte Sichtbarkeit.',
         trailing: const StatusPill('Lists', color: AirmiusColors.blue),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -48,7 +48,7 @@ class _SavedViewSearchAlertSuiteScreenState extends State<SavedViewSearchAlertSu
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Die App bereitet gespeicherte Filter und Suchalarme fuer Mitglieder, Vereine, Events, Rechnungen, Dateien, Support und Marketplace vor.',
+                    'Die App bereitet gespeicherte Filter und Suchalarme für Mitglieder, Vereine, Events, Rechnungen, Dateien, Support und Marketplace vor.',
                     style: TextStyle(color: AirmiusColors.muted, height: 1.42),
                   ),
                   const SizedBox(height: 14),
@@ -90,21 +90,21 @@ class _SavedViewSearchAlertSuiteScreenState extends State<SavedViewSearchAlertSu
                   _ListToggle(
                     icon: Icons.bookmark_outline,
                     title: 'Gespeicherte Ansichten',
-                    body: 'Filter, Sortierung, Spalten, Statuschips und Suchbegriff koennen als persoenliche Ansicht gespeichert werden.',
+                    body: 'Filter, Sortierung, Spalten, Statuschips und Suchbegriff können als persoenliche Ansicht gespeichert werden.',
                     enabled: _savedViews,
                     onChanged: (value) => setState(() => _savedViews = value),
                   ),
                   _ListToggle(
                     icon: Icons.notifications_active_outlined,
                     title: 'Suchalarme',
-                    body: 'Neue Treffer fuer offene Antraege, ueberfaellige Rechnungen oder passende Vereine loesen Hinweise aus.',
+                    body: 'Neue Treffer für offene Antraege, überfaellige Rechnungen oder passende Vereine loesen Hinweise aus.',
                     enabled: _alerts,
                     onChanged: (value) => setState(() => _alerts = value),
                   ),
                   _ListToggle(
                     icon: Icons.groups_2_outlined,
                     title: 'Geteilte Vereinsansichten',
-                    body: 'Admins koennen Ansichten fuer Trainer, Vorstand, Kassenwart oder Support teilen.',
+                    body: 'Admins können Ansichten für Trainer, Vorstand, Kassenwart oder Support teilen.',
                     enabled: _sharedViews,
                     onChanged: (value) => setState(() => _sharedViews = value),
                   ),
@@ -179,14 +179,14 @@ class _SavedView {
 }
 
 const _views = [
-  _SavedView(area: 'Mitglieder', title: 'Offene Mitgliedsantraege', body: 'Neue Antraege, Rueckfragen, fehlende Dokumente und Rueckzuege.', status: 'Alert', icon: Icons.assignment_ind_outlined, color: AirmiusColors.green),
-  _SavedView(area: 'Mitglieder', title: 'Zahlstatus pruefen', body: 'Mitglieder mit offenen Beitraegen, Mahnungen oder unklarer Zahlungsart.', status: 'Finance', icon: Icons.receipt_long_outlined, color: AirmiusColors.amber),
-  _SavedView(area: 'Vereine', title: 'Vereine mit Anfragen', body: 'Oeffentliche Vereine, die Mitgliedsanfragen akzeptieren und passende Sportarten haben.', status: 'Public', icon: Icons.apartment_outlined, color: AirmiusColors.blue),
+  _SavedView(area: 'Mitglieder', title: 'Offene Mitgliedsanträge', body: 'Neue Antraege, Rückfragen, fehlende Dokumente und Rückzuege.', status: 'Alert', icon: Icons.assignment_ind_outlined, color: AirmiusColors.green),
+  _SavedView(area: 'Mitglieder', title: 'Zahlstatus prüfen', body: 'Mitglieder mit offenen Beiträgen, Mahnungen oder unklarer Zahlungsart.', status: 'Finance', icon: Icons.receipt_long_outlined, color: AirmiusColors.amber),
+  _SavedView(area: 'Vereine', title: 'Vereine mit Anfragen', body: 'Öffentliche Vereine, die Mitgliedsanfragen akzeptieren und passende Sportarten haben.', status: 'Public', icon: Icons.apartment_outlined, color: AirmiusColors.blue),
   _SavedView(area: 'Events', title: 'Heute Training', body: 'Trainings und Events mit RSVP, Check-in und Fahrgemeinschaften.', status: 'Heute', icon: Icons.event_available_outlined, color: AirmiusColors.green),
-  _SavedView(area: 'Rechnungen', title: 'Ueberfaellige Rechnungen', body: 'Offene Rechnungen, Beitragszyklen, Banktransfer und Mahnstufe.', status: 'Overdue', icon: Icons.payments_outlined, color: AirmiusColors.amber),
+  _SavedView(area: 'Rechnungen', title: 'Überfaellige Rechnungen', body: 'Offene Rechnungen, Beitragszyklen, Banktransfer und Mahnstufe.', status: 'Overdue', icon: Icons.payments_outlined, color: AirmiusColors.amber),
   _SavedView(area: 'Dateien', title: 'Consent-Dokumente', body: 'Datenschutz, Satzung, Beitragsordnung, SEPA und Dokumentversionen.', status: 'Legal', icon: Icons.folder_copy_outlined, color: AirmiusColors.blue),
   _SavedView(area: 'Support', title: 'Eskalierte Tickets', body: 'Supportfaelle mit Vereinsadmin-Hinweis, Plattformstatus und Dateianhaengen.', status: 'Urgent', icon: Icons.support_agent_outlined, color: AirmiusColors.amber),
-  _SavedView(area: 'Shop', title: 'Offene Bestellungen', body: 'Marketplace-Orders, Abholung, Versand, Rueckgabe und Zahlungsstatus.', status: 'Orders', icon: Icons.storefront_outlined, color: AirmiusColors.blue),
+  _SavedView(area: 'Shop', title: 'Offene Bestellungen', body: 'Marketplace-Orders, Abholung, Versand, Rückgabe und Zahlungsstatus.', status: 'Orders', icon: Icons.storefront_outlined, color: AirmiusColors.blue),
 ];
 
 class _SavedViewCard extends StatelessWidget {

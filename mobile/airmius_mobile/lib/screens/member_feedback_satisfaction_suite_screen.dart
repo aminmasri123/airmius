@@ -12,14 +12,14 @@ class MemberFeedbackSatisfactionSuiteScreen extends StatelessWidget {
       _SignalItem('Vereinszufriedenheit', '92%', 'Mitglieder bewerten Kommunikation, Training, Events und Vereinsleben.', AirmiusColors.green, Icons.sentiment_satisfied_alt_outlined),
       _SignalItem('Kritische Hinweise', '7 offen', 'Beschwerden, Risiken, Datenschutz, Safety oder Eskalation an Admins.', AirmiusColors.red, Icons.report_problem_outlined),
       _SignalItem('Ideen & Wuensche', '24', 'Verbesserungen, neue Teams, Events, Kurse, Ausstattung und Services.', AirmiusColors.blue, Icons.lightbulb_outlined),
-      _SignalItem('Trainerfeedback', 'Team', 'Feedback nach Training, Belastung, Stimmung und individuelle Rueckmeldung.', AirmiusColors.amber, Icons.sports_outlined),
+      _SignalItem('Trainerfeedback', 'Team', 'Feedback nach Training, Belastung, Stimmung und individuelle Rückmeldung.', AirmiusColors.amber, Icons.sports_outlined),
     ];
 
     final workflow = [
       _WorkflowItem('Feedback erfassen', 'Kurzes Formular, Skala, Freitext, Kategorie, Anonymitaet und Datei.'),
       _WorkflowItem('Einordnen', 'Verein, Team, Event, Training, Mitgliedschaft, Zahlung, Support oder Safety.'),
-      _WorkflowItem('Bearbeiten', 'Adminantwort, interne Notiz, Aufgabe, Eskalation oder Rueckfrage starten.'),
-      _WorkflowItem('Lernen', 'Trend, Score, Export, Massnahmen und Follow-up fuer Vereinsentwicklung.'),
+      _WorkflowItem('Bearbeiten', 'Adminantwort, interne Notiz, Aufgabe, Eskalation oder Rückfrage starten.'),
+      _WorkflowItem('Lernen', 'Trend, Score, Export, Massnahmen und Follow-up für Vereinsentwicklung.'),
     ];
 
     return Scaffold(
@@ -45,7 +45,7 @@ class MemberFeedbackSatisfactionSuiteScreen extends StatelessWidget {
                   SizedBox(height: 10),
                   Text('Die App soll merken, wie es den Mitgliedern wirklich geht.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
                   SizedBox(height: 8),
-                  Text('Feedback wird nicht nur gesammelt, sondern in Aufgaben, Trends, Adminantworten, Safety-Eskalationen und Vereinsverbesserungen ueberfuehrt.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
+                  Text('Feedback wird nicht nur gesammelt, sondern in Aufgaben, Trends, Adminantworten, Safety-Eskalationen und Vereinsverbesserungen überfuehrt.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
                 ],
               ),
             ),
@@ -115,9 +115,9 @@ class MemberFeedbackSatisfactionSuiteScreen extends StatelessWidget {
                   Eyebrow('VERKNUEPFUNGEN'),
                   SizedBox(height: 10),
                   _LinkLine(label: 'Support', value: 'Kritisches Feedback wird als Ticket oder Eskalation fortgefuehrt.'),
-                  _LinkLine(label: 'Umfragen', value: 'Feedback kann in strukturierte Vereinsumfragen uebergehen.'),
+                  _LinkLine(label: 'Umfragen', value: 'Feedback kann in strukturierte Vereinsumfragen übergehen.'),
                   _LinkLine(label: 'Training', value: 'Trainerfeedback beeinflusst Belastung, Planung und Teamstimmung.'),
-                  _LinkLine(label: 'Audit', value: 'Bearbeitung, Antworten, Eskalationen und Loeschfristen bleiben sichtbar.'),
+                  _LinkLine(label: 'Audit', value: 'Bearbeitung, Antworten, Eskalationen und Löschfristen bleiben sichtbar.'),
                 ],
               ),
             ),

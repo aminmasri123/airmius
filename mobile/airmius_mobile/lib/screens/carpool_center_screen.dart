@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -27,7 +27,7 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
       ),
       body: PageFrame(
         title: 'Fahrgemeinschaften',
-        subtitle: 'Mitfahrten, Treffpunkte, Routen und Sicherheit fuer Verein und Training',
+        subtitle: 'Mitfahrten, Treffpunkte, Routen und Sicherheit für Verein und Training',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -40,7 +40,7 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
                   const SizedBox(height: 8),
                   const Text('3 passende Mitfahrten zum Training gefunden.', style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900)),
                   const SizedBox(height: 8),
-                  const Text('Mitglieder koennen freie Plaetze anbieten, Treffpunkte abstimmen und sichere Fahrten fuer Minderjaehrige nur mit Freigabe anzeigen.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+                  const Text('Mitglieder können freie Plaetze anbieten, Treffpunkte abstimmen und sichere Fahrten für Minderjaehrige nur mit Freigabe anzeigen.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 10,
@@ -85,7 +85,7 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
             const SizedBox(height: 14),
             _RideCard(title: 'Zum Intervalltraining', route: 'Kleinblittersdorf -> Sportplatz', time: 'Heute 18:00', seats: '2 Plaetze', status: 'Angebot', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CarpoolDetailScreen(title: 'Zum Intervalltraining', status: 'Angebot')))),
             const SizedBox(height: 12),
-            _RideCard(title: 'Suche Mitfahrt', route: 'Saarbruecken Hbf -> ZBB', time: 'Morgen 17:30', seats: '1 Person', status: 'Gesuch', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CarpoolDetailScreen(title: 'Suche Mitfahrt', status: 'Gesuch')))),
+            _RideCard(title: 'Suche Mitfahrt', route: 'Saarbrücken Hbf -> ZBB', time: 'Morgen 17:30', seats: '1 Person', status: 'Gesuch', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CarpoolDetailScreen(title: 'Suche Mitfahrt', status: 'Gesuch')))),
             const SizedBox(height: 12),
             AirmiusPanel(
               child: Column(
@@ -94,8 +94,8 @@ class _CarpoolCenterScreenState extends State<CarpoolCenterScreen> {
                   const Eyebrow('Treffpunkt & Sicherheit'),
                   const SizedBox(height: 10),
                   const _SafetyLine(icon: Icons.location_on_outlined, title: 'Treffpunkt teilen', body: 'Nur Teilnehmer sehen Adresse, Uhrzeit und Kontakt.'),
-                  const _SafetyLine(icon: Icons.verified_user_outlined, title: 'Jugendschutz', body: 'Fahrten fuer Minderjaehrige koennen Guardian-Freigabe verlangen.'),
-                  const _SafetyLine(icon: Icons.report_outlined, title: 'Melden & Blockieren', body: 'Unsichere Fahrten oder Profile koennen direkt gemeldet werden.'),
+                  const _SafetyLine(icon: Icons.verified_user_outlined, title: 'Jugendschutz', body: 'Fahrten für Minderjaehrige können Guardian-Freigabe verlangen.'),
+                  const _SafetyLine(icon: Icons.report_outlined, title: 'Melden & Blockieren', body: 'Unsichere Fahrten oder Profile können direkt gemeldet werden.'),
                   const SizedBox(height: 12),
                   AirmiusButton(label: 'Regeln ansehen', icon: Icons.rule_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CarpoolDetailScreen(title: 'Fahrgemeinschaftsregeln', status: 'Regeln')))),
                 ],

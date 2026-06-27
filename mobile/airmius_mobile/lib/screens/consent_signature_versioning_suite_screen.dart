@@ -30,7 +30,7 @@ class _ConsentSignatureVersioningSuiteScreenState extends State<ConsentSignature
       ),
       body: PageFrame(
         title: 'Consent Signature Versioning',
-        subtitle: 'Mobile UI fuer Dokumentversionen, Einwilligungen, digitale Bestaetigungen, Guardian-Freigaben und Audit-Nachweise.',
+        subtitle: 'Mobile UI für Dokumentversionen, Einwilligungen, digitale Bestätigungen, Guardian-Freigaben und Audit-Nachweise.',
         trailing: const StatusPill('Legal ready', color: AirmiusColors.green),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -48,7 +48,7 @@ class _ConsentSignatureVersioningSuiteScreenState extends State<ConsentSignature
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Die App bereitet rechtssichere mobile Bestaetigungen fuer Datenschutz, Satzung, Beitragsordnung, SEPA, Medienrechte und Guardian-Freigaben vor.',
+                    'Die App bereitet rechtssichere mobile Bestätigungen für Datenschutz, Satzung, Beitragsordnung, SEPA, Medienrechte und Guardian-Freigaben vor.',
                     style: TextStyle(color: AirmiusColors.muted, height: 1.42),
                   ),
                   const SizedBox(height: 14),
@@ -97,21 +97,21 @@ class _ConsentSignatureVersioningSuiteScreenState extends State<ConsentSignature
                   _ConsentToggle(
                     icon: Icons.family_restroom_outlined,
                     title: 'Guardian-Freigabe',
-                    body: 'Bei Minderjaehrigen werden Eltern-/Guardian-Bestaetigungen sichtbar getrennt und pruefbar gehalten.',
+                    body: 'Bei Minderjaehrigen werden Eltern-/Guardian-Bestätigungen sichtbar getrennt und prüfbar gehalten.',
                     enabled: _guardianConsent,
                     onChanged: (value) => setState(() => _guardianConsent = value),
                   ),
                   _ConsentToggle(
                     icon: Icons.edit_note_outlined,
                     title: 'Digitale Signatur',
-                    body: 'Optional kann eine Signatur oder Namensbestaetigung fuer SEPA, Satzung oder Sonderregeln verlangt werden.',
+                    body: 'Optional kann eine Signatur oder Namensbestätigung für SEPA, Satzung oder Sonderregeln verlangt werden.',
                     enabled: _signatureRequired,
                     onChanged: (value) => setState(() => _signatureRequired = value),
                   ),
                   _ConsentToggle(
                     icon: Icons.history_outlined,
                     title: 'Audit Trail',
-                    body: 'Akzeptiert, widerrufen, erneuert und durch Admin geprueft werden als nachvollziehbare Ereignisse gespeichert.',
+                    body: 'Akzeptiert, widerrufen, erneuert und durch Admin geprüft werden als nachvollziehbare Ereignisse gespeichert.',
                     enabled: _auditTrail,
                     onChanged: (value) => setState(() => _auditTrail = value),
                     last: true,
@@ -132,7 +132,7 @@ class _ConsentSignatureVersioningSuiteScreenState extends State<ConsentSignature
                   const Eyebrow('USER BESTAETIGUNG'),
                   const SizedBox(height: 8),
                   const Text(
-                    'Ich habe Datenschutz, Satzung und Beitragsordnung gelesen und akzeptiere die fuer meine Mitgliedschaft geltenden Regeln.',
+                    'Ich habe Datenschutz, Satzung und Beitragsordnung gelesen und akzeptiere die für meine Mitgliedschaft geltenden Regeln.',
                     style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, height: 1.38),
                   ),
                   const SizedBox(height: 10),
@@ -146,7 +146,7 @@ class _ConsentSignatureVersioningSuiteScreenState extends State<ConsentSignature
                     ],
                   ),
                   const SizedBox(height: 12),
-                  AirmiusButton(label: 'Zustimmung bestaetigen', icon: Icons.fact_check_outlined, onPressed: () {}),
+                  AirmiusButton(label: 'Zustimmung bestätigen', icon: Icons.fact_check_outlined, onPressed: () {}),
                 ],
               ),
             ),
@@ -184,11 +184,11 @@ class _Consent {
 
 const _consents = [
   _Consent(context: 'Mitgliedsantrag', title: 'Datenschutz Verein', body: 'Version v4 wurde gelesen, akzeptiert und mit dem Antrag verknuepft.', status: 'Pflicht', icon: Icons.privacy_tip_outlined, color: AirmiusColors.green),
-  _Consent(context: 'Mitgliedsantrag', title: 'Satzung & Regeln', body: 'Satzung, Hausordnung und Vereinsregeln werden als Dokumentversion bestaetigt.', status: 'Pflicht', icon: Icons.gavel_outlined, color: AirmiusColors.blue),
-  _Consent(context: 'SEPA', title: 'SEPA-Lastschriftmandat', body: 'IBAN, Mandatstext, Name und digitale Bestaetigung werden auditierbar gespeichert.', status: 'Signatur', icon: Icons.account_balance_outlined, color: AirmiusColors.amber),
-  _Consent(context: 'Medien', title: 'Medienfreigabe', body: 'Foto- und Videoeinwilligung fuer Training, Events und Vereinsbeitraege.', status: 'Optional', icon: Icons.photo_camera_outlined, color: AirmiusColors.blue),
-  _Consent(context: 'Guardian', title: 'Elternfreigabe', body: 'Guardian bestaetigt Minderjaehrigenprofil, Kontakt, Notfallkontakt und Vereinsregeln.', status: 'Guardian', icon: Icons.family_restroom_outlined, color: AirmiusColors.green),
-  _Consent(context: 'Events', title: 'Event-Haftungshinweis', body: 'Teilnahmebedingungen, Gesundheits- und Sicherheitsinformationen fuer Events.', status: 'Event', icon: Icons.event_available_outlined, color: AirmiusColors.amber),
+  _Consent(context: 'Mitgliedsantrag', title: 'Satzung & Regeln', body: 'Satzung, Hausordnung und Vereinsregeln werden als Dokumentversion bestätigt.', status: 'Pflicht', icon: Icons.gavel_outlined, color: AirmiusColors.blue),
+  _Consent(context: 'SEPA', title: 'SEPA-Lastschriftmandat', body: 'IBAN, Mandatstext, Name und digitale Bestätigung werden auditierbar gespeichert.', status: 'Signatur', icon: Icons.account_balance_outlined, color: AirmiusColors.amber),
+  _Consent(context: 'Medien', title: 'Medienfreigabe', body: 'Foto- und Videoeinwilligung für Training, Events und Vereinsbeiträge.', status: 'Optional', icon: Icons.photo_camera_outlined, color: AirmiusColors.blue),
+  _Consent(context: 'Guardian', title: 'Elternfreigabe', body: 'Guardian bestätigt Minderjaehrigenprofil, Kontakt, Notfallkontakt und Vereinsregeln.', status: 'Guardian', icon: Icons.family_restroom_outlined, color: AirmiusColors.green),
+  _Consent(context: 'Events', title: 'Event-Haftungshinweis', body: 'Teilnahmebedingungen, Gesundheits- und Sicherheitsinformationen für Events.', status: 'Event', icon: Icons.event_available_outlined, color: AirmiusColors.amber),
   _Consent(context: 'Profil', title: 'Profilsichtbarkeit', body: 'User entscheidet, ob Vereinsmitgliedschaften, Teams und Nachrichtenrechte sichtbar sind.', status: 'User', icon: Icons.visibility_outlined, color: AirmiusColors.blue),
 ];
 

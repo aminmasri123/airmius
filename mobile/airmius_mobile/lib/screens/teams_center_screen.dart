@@ -63,7 +63,7 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
               Row(children: [
                 Expanded(child: MetricCard(value: '${teams.length}', label: 'Teams')),
                 const SizedBox(width: 10),
-                Expanded(child: MetricCard(value: '${teams.where((team) => _text(team.visibility).toLowerCase().contains('public')).length}', label: 'Oeffentlich')),
+                Expanded(child: MetricCard(value: '${teams.where((team) => _text(team.visibility).toLowerCase().contains('public')).length}', label: 'Öffentlich')),
                 const SizedBox(width: 10),
                 Expanded(child: MetricCard(value: '${teams.where((team) => _text(team.ageGroup).isNotEmpty).length}', label: 'Altersgruppen')),
               ]),
@@ -79,7 +79,7 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
               if (!snapshot.hasError && snapshot.connectionState != ConnectionState.waiting && filteredTeams.isEmpty) AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 const Eyebrow('Keine Teams gefunden'),
                 const SizedBox(height: 8),
-                Text(_tab == 'Alle' ? 'In der API sind noch keine Teams fuer diese Ansicht vorhanden.' : 'Fuer "$_tab" gibt es aktuell keine passenden Teams.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                Text(_tab == 'Alle' ? 'In der API sind noch keine Teams für diese Ansicht vorhanden.' : 'Für "$_tab" gibt es aktuell keine passenden Teams.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
                 const SizedBox(height: 12),
                 AirmiusButton(label: 'Alle Teams anzeigen', icon: Icons.groups_2_outlined, onPressed: () => setState(() => _tab = 'Alle')),
               ])),

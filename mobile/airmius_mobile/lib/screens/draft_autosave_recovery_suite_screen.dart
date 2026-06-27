@@ -30,7 +30,7 @@ class _DraftAutosaveRecoverySuiteScreenState extends State<DraftAutosaveRecovery
       ),
       body: PageFrame(
         title: 'Draft Autosave Recovery',
-        subtitle: 'Mobile UI fuer automatische Zwischenspeicherung, Offline-Drafts, Konflikte, Wiederherstellung und Datenschutz-Ablauf.',
+        subtitle: 'Mobile UI für automatische Zwischenspeicherung, Offline-Drafts, Konflikte, Wiederherstellung und Datenschutz-Ablauf.',
         trailing: const StatusPill('No data loss', color: AirmiusColors.green),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -43,12 +43,12 @@ class _DraftAutosaveRecoverySuiteScreenState extends State<DraftAutosaveRecovery
                   const Eyebrow('FORM SAFETY'),
                   const SizedBox(height: 8),
                   const Text(
-                    'Lange Eingaben duerfen nicht verloren gehen.',
+                    'Lange Eingaben dürfen nicht verloren gehen.',
                     style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08),
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Die App bereitet Autosave, lokale Drafts, Wiederherstellung, Konfliktpruefung und sichere Ablaufregeln fuer alle wichtigen Web-App-Formulare vor.',
+                    'Die App bereitet Autosave, lokale Drafts, Wiederherstellung, Konfliktprüfung und sichere Ablaufregeln für alle wichtigen Web-App-Formulare vor.',
                     style: TextStyle(color: AirmiusColors.muted, height: 1.42),
                   ),
                   const SizedBox(height: 14),
@@ -90,20 +90,20 @@ class _DraftAutosaveRecoverySuiteScreenState extends State<DraftAutosaveRecovery
                   _DraftToggle(
                     icon: Icons.save_outlined,
                     title: 'Automatisches Speichern',
-                    body: 'Formulare speichern sichere Zwischenstaende, ohne dass User manuell klicken muessen.',
+                    body: 'Formulare speichern sichere Zwischenstaende, ohne dass User manuell klicken müssen.',
                     enabled: _autosave,
                     onChanged: (value) => setState(() => _autosave = value),
                   ),
                   _DraftToggle(
                     icon: Icons.cloud_off_outlined,
                     title: 'Offline Drafts',
-                    body: 'Bei Netzwerkproblemen bleiben Eingaben lokal erhalten und werden spaeter synchronisiert.',
+                    body: 'Bei Netzwerkproblemen bleiben Eingaben lokal erhalten und werden später synchronisiert.',
                     enabled: _offlineDrafts,
                     onChanged: (value) => setState(() => _offlineDrafts = value),
                   ),
                   _DraftToggle(
                     icon: Icons.compare_arrows_outlined,
-                    title: 'Konfliktpruefung',
+                    title: 'Konfliktprüfung',
                     body: 'Wenn Serverdaten und lokaler Draft abweichen, zeigt die App eine klare Vergleichsansicht.',
                     enabled: _conflictReview,
                     onChanged: (value) => setState(() => _conflictReview = value),
@@ -111,7 +111,7 @@ class _DraftAutosaveRecoverySuiteScreenState extends State<DraftAutosaveRecovery
                   _DraftToggle(
                     icon: Icons.privacy_tip_outlined,
                     title: 'Datenschutz-Ablauf',
-                    body: 'Sensible Drafts laufen automatisch ab und koennen von Usern jederzeit geloescht werden.',
+                    body: 'Sensible Drafts laufen automatisch ab und können von Usern jederzeit gelöscht werden.',
                     enabled: _privacyExpiry,
                     onChanged: (value) => setState(() => _privacyExpiry = value),
                     last: true,
@@ -131,7 +131,7 @@ class _DraftAutosaveRecoverySuiteScreenState extends State<DraftAutosaveRecovery
                 children: [
                   const Eyebrow('WIEDERHERSTELLUNG'),
                   const SizedBox(height: 8),
-                  const Text('Beim erneuten Oeffnen erkennt die App passende Drafts, zeigt Zeitpunkt, betroffene Felder und bietet Fortsetzen, Verwerfen oder Vergleichen an.', style: TextStyle(color: AirmiusColors.muted, height: 1.38)),
+                  const Text('Beim erneuten Öffnen erkennt die App passende Drafts, zeigt Zeitpunkt, betroffene Felder und bietet Fortsetzen, Verwerfen oder Vergleichen an.', style: TextStyle(color: AirmiusColors.muted, height: 1.38)),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 8,
@@ -181,13 +181,13 @@ class _Draft {
 }
 
 const _drafts = [
-  _Draft(type: 'Mitgliedsantrag', title: 'ZBB Mitgliedsantrag', body: 'Personendaten, Wohndaten, Zahlungsart und Datenschutzbestaetigung sind zwischengespeichert.', status: 'Recoverable', time: 'vor 3 Min.', icon: Icons.assignment_ind_outlined, color: AirmiusColors.green),
-  _Draft(type: 'Mitgliedsantrag', title: 'SEPA Mandat unvollstaendig', body: 'IBAN wurde begonnen, Mandatsbestaetigung fehlt noch.', status: 'Needs input', time: 'vor 18 Min.', icon: Icons.account_balance_outlined, color: AirmiusColors.amber),
+  _Draft(type: 'Mitgliedsantrag', title: 'ZBB Mitgliedsantrag', body: 'Personendaten, Wohndaten, Zahlungsart und Datenschutzbestätigung sind zwischengespeichert.', status: 'Recoverable', time: 'vor 3 Min.', icon: Icons.assignment_ind_outlined, color: AirmiusColors.green),
+  _Draft(type: 'Mitgliedsantrag', title: 'SEPA Mandat unvollstaendig', body: 'IBAN wurde begonnen, Mandatsbestätigung fehlt noch.', status: 'Needs input', time: 'vor 18 Min.', icon: Icons.account_balance_outlined, color: AirmiusColors.amber),
   _Draft(type: 'Profil', title: 'Sportprofil bearbeiten', body: 'Sportarten, Ziele, Sichtbarkeit und Kontaktrechte wurden lokal gespeichert.', status: 'Local', time: 'Heute', icon: Icons.person_outline, color: AirmiusColors.blue),
   _Draft(type: 'Beitrag', title: 'Community Post', body: 'Text, Zielgruppe, Bildanhaenge und Moderationshinweis sind als Entwurf vorhanden.', status: 'Draft', time: 'Gestern', icon: Icons.forum_outlined, color: AirmiusColors.blue),
   _Draft(type: 'Support', title: 'Supportticket', body: 'Problemtyp, Beschreibung, Screenshot und Vereinskontext wurden vorbereitet.', status: 'Ready', time: 'Heute', icon: Icons.support_agent_outlined, color: AirmiusColors.green),
   _Draft(type: 'Checkout', title: 'Marketplace Checkout', body: 'Warenkorb, Lieferart, Rechnungsadresse und Zahlungsart warten auf Abschluss.', status: 'Pending', time: 'vor 1 Std.', icon: Icons.shopping_bag_outlined, color: AirmiusColors.amber),
-  _Draft(type: 'Upload', title: 'Vereinsdokument Upload', body: 'Beitragsordnung wurde ausgewaehlt, Zweck und Sichtbarkeit fehlen.', status: 'Incomplete', time: 'Heute', icon: Icons.cloud_upload_outlined, color: AirmiusColors.blue),
+  _Draft(type: 'Upload', title: 'Vereinsdokument Upload', body: 'Beitragsordnung wurde ausgewählt, Zweck und Sichtbarkeit fehlen.', status: 'Incomplete', time: 'Heute', icon: Icons.cloud_upload_outlined, color: AirmiusColors.blue),
 ];
 
 class _DraftCard extends StatelessWidget {

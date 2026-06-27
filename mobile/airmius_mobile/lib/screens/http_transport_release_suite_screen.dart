@@ -12,14 +12,14 @@ class HttpTransportReleaseSuiteScreen extends StatelessWidget {
       _TransportItem('Web Transport', 'Browser', 'Chrome/Web nutzt Browser-HTTP mit Headers, JSON-Body und Response-Header-Mapping.', AirmiusColors.blue, Icons.public_outlined),
       _TransportItem('IO Transport', 'Mobile/Desktop', 'Android, iOS, Windows, macOS und Linux nutzen Dart HttpClient ohne neue Packages.', AirmiusColors.green, Icons.phone_iphone_outlined),
       _TransportItem('Stub Transport', 'Fallback', 'Nicht unterstuetzte Plattformen bekommen klare 501-Response statt stiller Fehler.', AirmiusColors.amber, Icons.warning_amber_outlined),
-      _TransportItem('Static Transport', 'Demo/Test', 'Lokale Demo-Flows bleiben ohne Backend nutzbar und koennen spaeter Contract-Tests stuetzen.', AirmiusColors.pink, Icons.science_outlined),
+      _TransportItem('Static Transport', 'Demo/Test', 'Lokale Demo-Flows bleiben ohne Backend nutzbar und können später Contract-Tests stuetzen.', AirmiusColors.pink, Icons.science_outlined),
     ];
 
     final gates = [
       _GateItem('Laravel Base URL setzen', 'AirmiusApp kann jetzt per AIRMIUS_USE_HTTP und AIRMIUS_API_BASE_URL auf echten HTTP-Transport wechseln.'),
       _GateItem('CORS/Auth finalisieren', 'Laravel muss Mobile/Web-Origin, Bearer Tokens, JSON Errors und Sanctum/API-Strategie erlauben.'),
-      _GateItem('Screen-Migration fortsetzen', 'Notifications, Events, Billing, Profil und Dateien Schritt fuer Schritt auf HTTP-Repositories umstellen.'),
-      _GateItem('Build pruefen', 'Conditional Imports muessen mit Flutter Web und Android/iOS Build analysiert werden, sobald du Build freigibst.'),
+      _GateItem('Screen-Migration fortsetzen', 'Notifications, Events, Billing, Profil und Dateien Schritt für Schritt auf HTTP-Repositories umstellen.'),
+      _GateItem('Build prüfen', 'Conditional Imports müssen mit Flutter Web und Android/iOS Build analysiert werden, sobald du Build freigibst.'),
     ];
 
     return Scaffold(
@@ -35,7 +35,7 @@ class HttpTransportReleaseSuiteScreen extends StatelessWidget {
             SizedBox(height: 10),
             Text('Die App kann jetzt echte Requests bekommen, ohne neue Pakete zu brauchen.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
             SizedBox(height: 8),
-            Text('AirmiusHttpTransport nutzt Conditional Imports: Web bekommt Browser-HTTP, Mobile/Desktop bekommt Dart IO, StaticTransport bleibt fuer Demo und Tests erhalten.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
+            Text('AirmiusHttpTransport nutzt Conditional Imports: Web bekommt Browser-HTTP, Mobile/Desktop bekommt Dart IO, StaticTransport bleibt für Demo und Tests erhalten.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
           ])),
           const SizedBox(height: 14),
           Row(children: const [Expanded(child: MetricCard(value: '57%', label: 'Fertig')), SizedBox(width: 10), Expanded(child: MetricCard(value: '43%', label: 'Rest')), SizedBox(width: 10), Expanded(child: MetricCard(value: '56%', label: 'API'))]),

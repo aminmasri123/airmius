@@ -26,7 +26,7 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
       title: 'Mitgliedschaftsanfragen',
       value: '24',
       trend: '+18%',
-      body: 'Neue Antraege, Rueckzuege, offene Dokumente, angenommene Mitglieder und durchschnittliche Bearbeitungszeit.',
+      body: 'Neue Antraege, Rückzuege, offene Dokumente, angenommene Mitglieder und durchschnittliche Bearbeitungszeit.',
       icon: Icons.assignment_ind_outlined,
       color: AirmiusColors.green,
     ),
@@ -35,7 +35,7 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
       title: 'Vereinsfinanzen',
       value: '8.420 EUR',
       trend: '+9%',
-      body: 'Beitraege, Rechnungen, offene Zahlungen, Banktransfer, Mahnungen und Monatsabschluss als mobile KPI-Karten.',
+      body: 'Beiträge, Rechnungen, offene Zahlungen, Banktransfer, Mahnungen und Monatsabschluss als mobile KPI-Karten.',
       icon: Icons.account_balance_wallet_outlined,
       color: AirmiusColors.amber,
     ),
@@ -53,7 +53,7 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
       title: 'Systembetrieb',
       value: '99.8%',
       trend: 'stabil',
-      body: 'Mail, Providerkosten, Webhooks, Wartung, API-Fehler, Queue und Release-Gates als Betriebsuebersicht.',
+      body: 'Mail, Providerkosten, Webhooks, Wartung, API-Fehler, Queue und Release-Gates als Betriebsübersicht.',
       icon: Icons.monitor_heart_outlined,
       color: AirmiusColors.green,
     ),
@@ -62,7 +62,7 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
       title: 'Bestellungen',
       value: '156',
       trend: '+22%',
-      body: 'Marketplace, Checkouts, Banktransfer, Orders, Retouren, Anbieter und Umsatzentwicklung fuer Mobile Commerce.',
+      body: 'Marketplace, Checkouts, Banktransfer, Orders, Retouren, Anbieter und Umsatzentwicklung für Mobile Commerce.',
       icon: Icons.storefront_outlined,
       color: AirmiusColors.green,
     ),
@@ -163,7 +163,7 @@ class _AnalyticsChartDashboardParitySuiteScreenState extends State<AnalyticsChar
                   onRetry: () => openUiAction(
                     context,
                     title: 'Reportdaten neu laden',
-                    body: 'Loading, Empty, Error, Retry und Cache-Hinweis fuer mobile Analytics vorbereiten.',
+                    body: 'Loading, Empty, Error, Retry und Cache-Hinweis für mobile Analytics vorbereiten.',
                     status: 'Retry',
                     icon: Icons.refresh_outlined,
                   ),
@@ -223,7 +223,7 @@ class _Hero extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Flutter uebernimmt Web-Reports nicht als breite Diagramme, sondern als KPI-Karten, Trendleisten, Reportdetails, Export-CTAs und saubere Empty/Loading/Error-Zustaende.',
+            'Flutter übernimmt Web-Reports nicht als breite Diagramme, sondern als KPI-Karten, Trendleisten, Reportdetails, Export-CTAs und saubere Empty/Loading/Error-Zustaende.',
             style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
@@ -306,7 +306,7 @@ class _RulesPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Dashboard-Regeln',
-      subtitle: 'Diese Schalter simulieren spaeter API-Daten, Exportrechte und Datenzustand.',
+      subtitle: 'Diese Schalter simulieren später API-Daten, Exportrechte und Datenzustand.',
       children: [
         _SwitchLine(title: 'Mini-Charts anzeigen', value: showCharts, onChanged: onCharts),
         _SwitchLine(title: 'Export- und PDF-CTAs anzeigen', value: showExports, onChanged: onExports),
@@ -348,7 +348,7 @@ class _TrendPanel extends StatelessWidget {
     const values = [.35, .58, .44, .72, .63, .86, .76];
     return AirmiusPanel(
       title: 'Trend $area',
-      subtitle: 'Mini-Chart fuer $period, mobil lesbar ohne grosse Desktop-Achsen.',
+      subtitle: 'Mini-Chart für $period, mobil lesbar ohne große Desktop-Achsen.',
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -455,7 +455,7 @@ class _ReportCard extends StatelessWidget {
             runSpacing: 10,
             children: [
               AirmiusButton(
-                label: 'Report oeffnen',
+                label: 'Report öffnen',
                 icon: card.icon,
                 onPressed: () => openUiAction(
                   context,
@@ -473,7 +473,7 @@ class _ReportCard extends StatelessWidget {
                   onPressed: () => openUiAction(
                     context,
                     title: '${card.title} Export',
-                    body: 'CSV, PDF, Zeitraum, Filter, Berechtigung und Audit fuer ${card.title} vorbereiten.',
+                    body: 'CSV, PDF, Zeitraum, Filter, Berechtigung und Audit für ${card.title} vorbereiten.',
                     status: 'Export',
                     icon: Icons.download_outlined,
                   ),
@@ -495,7 +495,7 @@ class _Checklist extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Dashboard-Paritaet',
-      subtitle: 'Was aus Web-Reports mobil uebernommen wird.',
+      subtitle: 'Was aus Web-Reports mobil übernommen wird.',
       children: [
         const _CheckLine('KPI-Karten ersetzen breite Tabellen und komplexe Desktop-Charts.'),
         const _CheckLine('Mini-Charts, Trends und Reportdetails bleiben auf kleinen Screens lesbar.'),

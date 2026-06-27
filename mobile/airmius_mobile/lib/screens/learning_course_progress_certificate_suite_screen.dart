@@ -23,14 +23,14 @@ class _LearningCourseProgressCertificateSuiteScreenState extends State<LearningC
       const _CourseRow(
         title: 'Datenschutz im Verein',
         status: '80%',
-        body: 'Pflichtkurs fuer Vereinsadmins mit Lektionen, Quiz, Nachweis und Consent-Bezug.',
+        body: 'Pflichtkurs für Vereinsadmins mit Lektionen, Quiz, Nachweis und Consent-Bezug.',
         icon: Icons.privacy_tip_outlined,
         color: AirmiusColors.blue,
       ),
       const _CourseRow(
         title: 'Trainer Grundlagen',
         status: 'Zertifikat',
-        body: 'Lernpfad fuer Trainerrollen, Teamrechte, Anwesenheit, Sicherheit und Jugendschutz.',
+        body: 'Lernpfad für Trainerrollen, Teamrechte, Anwesenheit, Sicherheit und Jugendschutz.',
         icon: Icons.school_outlined,
         color: AirmiusColors.green,
       ),
@@ -44,7 +44,7 @@ class _LearningCourseProgressCertificateSuiteScreenState extends State<LearningC
       const _CourseRow(
         title: 'Sponsoren & Kampagnen',
         status: 'Review',
-        body: 'Kurs fuer Ads, Creative Review, Budget, Reporting und Vereinsfreigaben.',
+        body: 'Kurs für Ads, Creative Review, Budget, Reporting und Vereinsfreigaben.',
         icon: Icons.campaign_outlined,
         color: AirmiusColors.pink,
       ),
@@ -64,7 +64,7 @@ class _LearningCourseProgressCertificateSuiteScreenState extends State<LearningC
                 const SectionLabel('LEARNING CENTER'),
                 const SizedBox(height: 8),
                 const Text(
-                  'Die mobile App braucht eine Lernstrecke fuer Kurse, Lektionen, Quiz, Fortschritt, Zertifikate und herunterladbare Nachweise.',
+                  'Die mobile App braucht eine Lernstrecke für Kurse, Lektionen, Quiz, Fortschritt, Zertifikate und herunterladbare Nachweise.',
                   style: TextStyle(color: AirmiusColors.text, height: 1.45, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 16),
@@ -125,7 +125,7 @@ class _LearningCourseProgressCertificateSuiteScreenState extends State<LearningC
                 const SectionLabel('VORSCHAU'),
                 const SizedBox(height: 8),
                 Text(
-                  'Aktueller Lernpfad: $track. Spaeter verbindet die API Einschreibung, Lektionen, Quiz, Fortschritt, Zertifikate, Rollenrechte und Downloads.',
+                  'Aktueller Lernpfad: $track. Später verbindet die API Einschreibung, Lektionen, Quiz, Fortschritt, Zertifikate, Rollenrechte und Downloads.',
                   style: const TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 14),
@@ -135,7 +135,7 @@ class _LearningCourseProgressCertificateSuiteScreenState extends State<LearningC
                   onPressed: () => openUiAction(
                     context,
                     title: 'Zertifikat vorbereiten',
-                    body: 'Diese UI bereitet Kursabschluss, Zertifikate, Downloads, Rollenrechte und Nachweise fuer die spaetere Laravel-API vor.',
+                    body: 'Diese UI bereitet Kursabschluss, Zertifikate, Downloads, Rollenrechte und Nachweise für die spätere Laravel-API vor.',
                     status: 'UI vorbereitet',
                     icon: Icons.workspace_premium_outlined,
                   ),
@@ -234,7 +234,7 @@ class _CourseCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Kurs starten',
-                  body: 'Kursstart, Lektionen, Fortschritt, Quiz und Abschluss werden fuer die spaetere API vorbereitet.',
+                  body: 'Kursstart, Lektionen, Fortschritt, Quiz und Abschluss werden für die spätere API vorbereitet.',
                   status: 'UI vorbereitet',
                   icon: Icons.play_circle_outline,
                 ),
@@ -245,8 +245,8 @@ class _CourseCard extends StatelessWidget {
                 secondary: true,
                 onPressed: () => openUiAction(
                   context,
-                  title: 'Quiz oeffnen',
-                  body: 'Quizfragen, Bestehensgrenze, Wiederholung und Zertifikatslogik werden spaeter per API gesteuert.',
+                  title: 'Quiz öffnen',
+                  body: 'Quizfragen, Bestehensgrenze, Wiederholung und Zertifikatslogik werden später per API gesteuert.',
                   status: 'UI vorbereitet',
                   icon: Icons.quiz_outlined,
                 ),
@@ -258,7 +258,7 @@ class _CourseCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Nachweis herunterladen',
-                  body: 'Zertifikate und Kursnachweise koennen spaeter als PDF exportiert und im Profil angezeigt werden.',
+                  body: 'Zertifikate und Kursnachweise können später als PDF exportiert und im Profil angezeigt werden.',
                   status: 'UI vorbereitet',
                   icon: Icons.download_outlined,
                 ),

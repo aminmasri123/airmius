@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -35,7 +35,7 @@ class _SubscriptionCenterScreenState extends State<SubscriptionCenterScreen> {
                 children: [
                   const Eyebrow('Billing'),
                   const SizedBox(height: 8),
-                  const Text('User- und Vereinsabos mit Zahlungsstatus, Rechnungen, Banktransfer und Kuendigung.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  const Text('User- und Vereinsabos mit Zahlungsstatus, Rechnungen, Banktransfer und Kündigung.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 8,
@@ -104,7 +104,7 @@ class _PlansPanel extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         const Eyebrow('Plaene'),
         const SizedBox(height: 10),
-        const _BillingLine(icon: Icons.workspace_premium_outlined, title: 'Player Pro', body: 'Erweiterte Funktionen fuer Einzeluser', trailing: '9,90'),
+        const _BillingLine(icon: Icons.workspace_premium_outlined, title: 'Player Pro', body: 'Erweiterte Funktionen für Einzeluser', trailing: '9,90'),
         const _BillingLine(icon: Icons.apartment_outlined, title: 'Club Pro', body: 'Verein, Teams, Mitglieder und Dokumente', trailing: '49,00'),
         const SizedBox(height: 12),
         AirmiusButton(label: 'Plan wechseln', icon: Icons.swap_horiz_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => UiActionResultScreen(title: 'Plan wechseln', body: 'Abo-Plan wechseln, Checkout starten und Rechnung aktualisieren.', status: 'Abo', icon: Icons.swap_horiz_outlined)))),
@@ -122,9 +122,9 @@ class _InvoicePanel extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         const Eyebrow('Rechnungen & Zahlungen'),
         const SizedBox(height: 10),
-        const _BillingLine(icon: Icons.receipt_long_outlined, title: 'Rechnung #2026-004', body: 'Bezahlt per Ueberweisung', trailing: 'PDF'),
+        const _BillingLine(icon: Icons.receipt_long_outlined, title: 'Rechnung #2026-004', body: 'Bezahlt per Überweisung', trailing: 'PDF'),
         const _BillingLine(icon: Icons.account_balance_outlined, title: 'Banktransfer offen', body: 'Zahlung wartet auf Zuordnung', trailing: 'Offen'),
-        const _BillingLine(icon: Icons.cancel_schedule_send_outlined, title: 'Kuendigung vormerken', body: 'Abo pausieren, kuendigen oder erneuern', trailing: 'Aktion'),
+        const _BillingLine(icon: Icons.cancel_schedule_send_outlined, title: 'Kündigung vormerken', body: 'Abo pausieren, kündigen oder erneuern', trailing: 'Aktion'),
         const SizedBox(height: 12),
         Wrap(spacing: 10, runSpacing: 10, children: [
           AirmiusButton(label: 'Success', icon: Icons.check_circle_outline, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CheckoutStatusScreen(flow: 'Subscription', status: 'Success', amount: '49,00 EUR')))),

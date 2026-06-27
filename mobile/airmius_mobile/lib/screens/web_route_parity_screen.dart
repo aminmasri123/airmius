@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -39,7 +39,7 @@ class _WebRouteParityScreenState extends State<WebRouteParityScreen> {
                 children: [
                   const AirmiusLogo(),
                   const SizedBox(height: 14),
-                  const Text('Die Web-App wird Modul fuer Modul in native Mobile-UI uebersetzt.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
+                  const Text('Die Web-App wird Modul für Modul in native Mobile-UI übersetzt.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
                   const SizedBox(height: 8),
                   const Text('Diese Ansicht bildet die Route-Familien der Laravel-Webversion auf Flutter-Screens ab. So bleibt sichtbar, ob ein Bereich nur als API-Kontrakt existiert oder bereits native UI-Aktionen besitzt.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
                   const SizedBox(height: 14),
@@ -78,7 +78,7 @@ class _WebRouteParityScreenState extends State<WebRouteParityScreen> {
                 children: [
                   const Eyebrow('Navigation'),
                   const SizedBox(height: 8),
-                  const Text('Von hier aus geht es in den Operations Hub, den API-Kontrakt oder die Release-Prüfung. Das ist die Kontrollschicht fuer die vollstaendige Web-zu-Flutter-Konvertierung.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  const Text('Von hier aus geht es in den Operations Hub, den API-Kontrakt oder die Release-Prüfung. Das ist die Kontrollschicht für die vollstaendige Web-zu-Flutter-Konvertierung.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                   const SizedBox(height: 12),
                   Wrap(spacing: 8, runSpacing: 8, children: [
                     AirmiusButton(label: 'Operations Hub', icon: Icons.hub_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OperationsHubScreen()))),
@@ -200,12 +200,12 @@ const _areas = ['Alle', 'Public', 'Auth', 'Club', 'Social', 'Sport', 'Commerce',
 const _groups = <_ParityGroup>[
   _ParityGroup(area: 'Public', title: 'Gastseite & Public Growth', body: 'Landingpage, Public-Vereine, Preise, Jobs, Werbeagentur, Standort, Legal und Leads.', icon: Icons.public_outlined, color: AirmiusColors.blue, routes: [
     _RouteMap(webRoute: '/, /gastseite, /clubs', flutterUi: 'Guest Portal, Public Club Cards, Club Detail, Interest/Lead-Flows', status: 'Native UI', icon: Icons.open_in_new),
-    _RouteMap(webRoute: '/preise, /abos, /jobs, /werbeagentur-fuer-vereine', flutterUi: 'Public Growth Operations mit Lead-, Job-, Website- und Preisinteresse', status: 'Native UI', icon: Icons.campaign_outlined),
+    _RouteMap(webRoute: '/preise, /abos, /jobs, /werbeagentur-für-vereine', flutterUi: 'Public Growth Operations mit Lead-, Job-, Website- und Preisinteresse', status: 'Native UI', icon: Icons.campaign_outlined),
     _RouteMap(webRoute: '/impressum, /datenschutz, /agb, /jugendschutz, /widerruf', flutterUi: 'Legal Support Operations und Legal Center Cards', status: 'Native UI', icon: Icons.gavel_outlined),
   ]),
   _ParityGroup(area: 'Auth', title: 'Auth, Konto & Onboarding', body: 'Login, Register, Passwort, 2FA, Mailverifizierung, Profilabschluss und erster App-Start.', icon: Icons.manage_accounts_outlined, color: AirmiusColors.green, routes: [
     _RouteMap(webRoute: '/login, /register, /forgot-password, /reset-password', flutterUi: 'LoginScreen und AuthFlowsScreen mit mobilen Formularen', status: 'Native UI', icon: Icons.login),
-    _RouteMap(webRoute: '/user/two-factor-authentication, /email/verification-notification', flutterUi: 'Auth Operations und Account Operations fuer 2FA und Mailstatus', status: 'Native UI', icon: Icons.lock_outline),
+    _RouteMap(webRoute: '/user/two-factor-authentication, /email/verification-notification', flutterUi: 'Auth Operations und Account Operations für 2FA und Mailstatus', status: 'Native UI', icon: Icons.lock_outline),
     _RouteMap(webRoute: '/api/v1/me/language, /settings', flutterUi: 'App Onboarding, Localization Center und Settings Center', status: 'Native UI', icon: Icons.language_outlined),
   ]),
   _ParityGroup(area: 'Club', title: 'Vereine, Teams & Mitgliedschaft', body: 'Clubsuche, Clubprofil, Teamdetail, Mitgliedsantrag, Dokumente, Adminentscheidungen und Zahlrhythmus.', icon: Icons.groups_2_outlined, color: AirmiusColors.green, routes: [
@@ -218,10 +218,10 @@ const _groups = <_ParityGroup>[
     _RouteMap(webRoute: '/chat/conversations, /messages, /notifications', flutterUi: 'Inbox/Chat Operations, Chat Detail, Push Preferences und Notification Detail', status: 'Native UI', icon: Icons.chat_bubble_outline),
     _RouteMap(webRoute: '/friends, /carpools, /guardian/consents, /maturity/gates', flutterUi: 'Safety Community Operations mit Consent, Elternlogin, Reports und Maturity', status: 'Native UI', icon: Icons.security_outlined),
   ]),
-  _ParityGroup(area: 'Sport', title: 'Training, Sportprofil & Wellbeing', body: 'Events, Trainingsplaene, Logs, Coach, Ernaehrung, Wasser, Sportkarte, Routen und Tracks.', icon: Icons.sports_outlined, color: AirmiusColors.green, routes: [
+  _ParityGroup(area: 'Sport', title: 'Training, Sportprofil & Wellbeing', body: 'Events, Trainingsplaene, Logs, Coach, Ernährung, Wasser, Sportkarte, Routen und Tracks.', icon: Icons.sports_outlined, color: AirmiusColors.green, routes: [
     _RouteMap(webRoute: '/events, /training/plans, /training/logs, /trainer/actions', flutterUi: 'Training Operations, Event Detail, Trainer Cockpit und Coach Actions', status: 'Native UI', icon: Icons.event_available_outlined),
     _RouteMap(webRoute: '/nutrition, /nutrition/foods, /nutrition/ai/meal-image', flutterUi: 'Wellbeing Operations, Nutrition Detail, Barcode und Fotoanalyse UI', status: 'Native UI', icon: Icons.restaurant_outlined),
-    _RouteMap(webRoute: '/sport-routes, /sport-tracks, /sport-places', flutterUi: 'Sportkarten- und Wellbeing-Flows fuer Routen, Tracks, Orte und Safety Checks', status: 'Native UI', icon: Icons.map_outlined),
+    _RouteMap(webRoute: '/sport-routes, /sport-tracks, /sport-places', flutterUi: 'Sportkarten- und Wellbeing-Flows für Routen, Tracks, Orte und Safety Checks', status: 'Native UI', icon: Icons.map_outlined),
   ]),
   _ParityGroup(area: 'Commerce', title: 'Marketplace, Billing, Outfit & Sponsoring', body: 'Produkte, Cart, Checkout, Orders, Retouren, Anbieter, Abos, Rechnungen, Outfit und Ads.', icon: Icons.storefront_outlined, color: AirmiusColors.amber, routes: [
     _RouteMap(webRoute: '/marketplace, /marketplace/products/{id}/checkout', flutterUi: 'Marketplace Operations, Produktdetail, Checkout Status und Return-Flows', status: 'Native UI', icon: Icons.shopping_bag_outlined),
@@ -233,9 +233,9 @@ const _groups = <_ParityGroup>[
     _RouteMap(webRoute: '/admin/moderation, /admin/club-verifications, /admin/operating-contracts', flutterUi: 'Trust Operations mit Reports, Flags, Inaktivitaet und Verifizierung', status: 'Native UI', icon: Icons.shield_outlined),
     _RouteMap(webRoute: '/admin/blogs, /admin/media-guidelines, /admin/learning/courses/{id}/quality', flutterUi: 'Content Operations, Blog/Medien Detail und Learning Quality', status: 'Native UI', icon: Icons.article_outlined),
   ]),
-  _ParityGroup(area: 'Ops', title: 'Technische Web-Routen & API', body: 'Meta, CSRF, Webhooks, SEO, Mailcenter, Wartung, Systemstatus und spaetere Mobile-API.', icon: Icons.api_outlined, color: AirmiusColors.blue, routes: [
+  _ParityGroup(area: 'Ops', title: 'Technische Web-Routen & API', body: 'Meta, CSRF, Webhooks, SEO, Mailcenter, Wartung, Systemstatus und spätere Mobile-API.', icon: Icons.api_outlined, color: AirmiusColors.blue, routes: [
     _RouteMap(webRoute: '/api/v1/meta, /csrf-token, /settings', flutterUi: 'Platform Operations und API Connection mit BaseUrl/Feature-Kontrakt', status: 'Native UI', icon: Icons.api_outlined),
-    _RouteMap(webRoute: '/webhooks/stripe, /webhooks/paypal, /robots.txt, /sitemap.xml', flutterUi: 'Platform Operations fuer Checkout, SEO und Public Betrieb', status: 'Native UI', icon: Icons.sync_outlined),
+    _RouteMap(webRoute: '/webhooks/stripe, /webhooks/paypal, /robots.txt, /sitemap.xml', flutterUi: 'Platform Operations für Checkout, SEO und Public Betrieb', status: 'Native UI', icon: Icons.sync_outlined),
     _RouteMap(webRoute: '/admin/mail-center, /admin/settings, /admin/provider-costs', flutterUi: 'Admin/System Operations vorbereitet, echte API-Anbindung folgt', status: 'API offen', icon: Icons.settings_suggest_outlined),
   ]),
 ];

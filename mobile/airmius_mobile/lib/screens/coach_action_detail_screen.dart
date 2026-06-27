@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -54,13 +54,13 @@ class _CoachActionDetailScreenState extends State<CoachActionDetailScreen> {
             const SizedBox(height: 10),
             const AirmiusTextField(label: 'Coach-Feedback', hint: 'Antwort, Anpassung oder Planhinweis schreiben', icon: Icons.rate_review_outlined, maxLines: 4),
             SwitchListTile(value: _notifyAthlete, onChanged: (value) => setState(() => _notifyAthlete = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Athlet benachrichtigen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Push und Inbox-Eintrag vorbereiten.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _markResolved, onChanged: (value) => setState(() => _markResolved = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Aufgabe abschliessen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Coach-Aktion als erledigt markieren.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _markResolved, onChanged: (value) => setState(() => _markResolved = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Aufgabe abschließen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Coach-Aktion als erledigt markieren.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [
             AirmiusButton(label: 'Log ansehen', icon: Icons.assignment_turned_in_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TrainingLogDetailScreen(title: widget.title, body: widget.body, status: 'Log', icon: widget.icon)))),
-            AirmiusButton(label: 'Plan oeffnen', icon: Icons.calendar_month_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TrainingPlanDetailScreen(title: widget.title, body: widget.body, status: 'Plan', icon: widget.icon)))),
-            AirmiusButton(label: 'Feedback senden', icon: Icons.send_outlined, onPressed: () => openUiAction(context, title: 'Feedback senden', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.send_outlined)),
+            AirmiusButton(label: 'Plan öffnen', icon: Icons.calendar_month_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TrainingPlanDetailScreen(title: widget.title, body: widget.body, status: 'Plan', icon: widget.icon)))),
+            AirmiusButton(label: 'Feedback senden', icon: Icons.send_outlined, onPressed: () => openUiAction(context, title: 'Feedback senden', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.send_outlined)),
             AirmiusButton(label: 'Operations', icon: Icons.tune_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TrainingOperationsScreen()))),
           ]),
         ]),

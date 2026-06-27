@@ -37,7 +37,7 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
   final _iban = TextEditingController();
   final _bic = TextEditingController();
   String _membershipType = 'Allgemeine Anfrage';
-  String _paymentMethod = 'Ueberweisung';
+  String _paymentMethod = 'Überweisung';
   String _paymentCycle = 'Monatlich';
   bool _documentsAccepted = false;
   bool _privacyAccepted = false;
@@ -143,7 +143,7 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
                   const SizedBox(height: 14),
                   _SelectField(label: 'Mitgliedschaftstyp', value: _membershipType, items: const ['Allgemeine Anfrage', 'Aktives Mitglied', 'Foerdermitglied', 'Probetraining'], onChanged: (value) => setState(() => _membershipType = value)),
                   const SizedBox(height: 10),
-                  const Text('Die sichtbaren Felder koennen spaeter vom Verein pro Mitgliedschaftstyp ein- oder ausgeschaltet werden.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  const Text('Die sichtbaren Felder können später vom Verein pro Mitgliedschaftstyp ein- oder ausgeschaltet werden.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                 ],
               ),
             ),
@@ -180,7 +180,7 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
             const SizedBox(height: 12),
             _FormSection(step: '3', title: 'Wohndaten', children: [
               AirmiusTextField(label: 'Land *', hint: 'DE', controller: _country),
-              AirmiusTextField(label: 'Strasse *', controller: _street),
+              AirmiusTextField(label: 'Straße *', controller: _street),
               AirmiusTextField(label: 'Hausnummer *', controller: _houseNumber),
               AirmiusTextField(label: 'PLZ *', controller: _postalCode),
               AirmiusTextField(label: 'Stadt *', controller: _city),
@@ -205,7 +205,7 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
                 children: [
                   const _StepHeader(step: '6', title: 'Zahlungsdaten'),
                   const SizedBox(height: 14),
-                  _SelectField(label: 'Zahlmethode', value: _paymentMethod, items: const ['Ueberweisung', 'Bar', 'SEPA-Lastschrift'], onChanged: (value) => setState(() => _paymentMethod = value)),
+                  _SelectField(label: 'Zahlmethode', value: _paymentMethod, items: const ['Überweisung', 'Bar', 'SEPA-Lastschrift'], onChanged: (value) => setState(() => _paymentMethod = value)),
                   const SizedBox(height: 12),
                   _SelectField(label: 'Zahlungsrhythmus', value: _paymentCycle, items: const ['Monatlich', 'Alle 4 Monate', 'Halbjaehrlich', 'Jaehrlich'], onChanged: (value) => setState(() => _paymentCycle = value)),
                   const SizedBox(height: 12),
@@ -222,7 +222,7 @@ class _ApplicationScreenState extends State<ApplicationScreen> {
                 children: [
                   const Eyebrow('Dokumente & Regeln'),
                   const SizedBox(height: 8),
-                  const Text('Der Verein kann hier spaeter Pflichtdokumente aus dem Dateimanager verknuepfen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  const Text('Der Verein kann hier später Pflichtdokumente aus dem Dateimanager verknuepfen.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                   const SizedBox(height: 12),
                   _UploadTile(selected: _uploadedDocument, onTap: () => setState(() => _uploadedDocument = !_uploadedDocument)),
                   const SizedBox(height: 10),
@@ -487,7 +487,7 @@ class _ProgressPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          Text(done == 6 ? 'Bereit zum Senden.' : 'Bitte Regeln und Datenschutz bestaetigen.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+          Text(done == 6 ? 'Bereit zum Senden.' : 'Bitte Regeln und Datenschutz bestätigen.', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
         ],
       ),
     );
@@ -517,7 +517,7 @@ class _UploadTile extends StatelessWidget {
             Icon(selected ? Icons.check_circle_outline : Icons.upload_file_outlined, color: selected ? AirmiusColors.green : AirmiusColors.blue),
             const SizedBox(width: 12),
             const Expanded(child: Text('Dokument hochladen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900))),
-            Text(selected ? 'Ausgewaehlt' : 'Datei', style: const TextStyle(color: AirmiusColors.muted, fontSize: 12)),
+            Text(selected ? 'Ausgewählt' : 'Datei', style: const TextStyle(color: AirmiusColors.muted, fontSize: 12)),
           ],
         ),
       ),

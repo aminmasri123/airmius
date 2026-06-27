@@ -11,14 +11,14 @@ class SponsorLeadCrmPipelineSuiteScreen extends StatelessWidget {
     final leads = [
       _LeadItem('Autohaus Becker', 'Angebot offen', 'Bandenwerbung, Trikotsponsor, 2.400 EUR/Jahr', AirmiusColors.amber, Icons.directions_car_outlined),
       _LeadItem('Physio Aktiv', 'Warm', 'Gesundheitspartner, Kursrabatt, Eventstand', AirmiusColors.green, Icons.health_and_safety_outlined),
-      _LeadItem('Sparkasse Regional', 'Freigabe', 'Jugendfoerderung, Vereinsprojekt, Vorstandspruefung', AirmiusColors.blue, Icons.account_balance_outlined),
+      _LeadItem('Sparkasse Regional', 'Freigabe', 'Jugendfoerderung, Vereinsprojekt, Vorstandsprüfung', AirmiusColors.blue, Icons.account_balance_outlined),
       _LeadItem('Sporthaus Weber', 'Follow-up', 'Materialrabatt, Gutschein, Marketplace-Verknuepfung', AirmiusColors.pink, Icons.storefront_outlined),
     ];
 
     final pipeline = [
       _PipelineStep('Lead', 'Kontakt erfassen, Quelle, Branche, Ansprechpartner und Notiz speichern.'),
       _PipelineStep('Angebot', 'Paket, Laufzeit, Preis, Vorteile, Dateien und Genehmigung vorbereiten.'),
-      _PipelineStep('Freigabe', 'Vereinsadmin, Vorstand oder Plattform prueft Inhalt, Rechte und Sichtbarkeit.'),
+      _PipelineStep('Freigabe', 'Vereinsadmin, Vorstand oder Plattform prüft Inhalt, Rechte und Sichtbarkeit.'),
       _PipelineStep('Aktiv', 'Kampagne, Rechnung, Placement, Reporting und Renewal-Erinnerung starten.'),
     ];
 
@@ -45,7 +45,7 @@ class SponsorLeadCrmPipelineSuiteScreen extends StatelessWidget {
                   SizedBox(height: 10),
                   Text('Vereine brauchen Einnahmen, nicht nur Verwaltung.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
                   SizedBox(height: 8),
-                  Text('Diese mobile Suite bringt Sponsor-Leads, Angebote, Freigaben, Kampagnen, Dateien, Rechnungen und Reporting in einen klaren Prozess fuer Vereinsadmins.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
+                  Text('Diese mobile Suite bringt Sponsor-Leads, Angebote, Freigaben, Kampagnen, Dateien, Rechnungen und Reporting in einen klaren Prozess für Vereinsadmins.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
                 ],
               ),
             ),
@@ -115,8 +115,8 @@ class SponsorLeadCrmPipelineSuiteScreen extends StatelessWidget {
                 children: const [
                   Eyebrow('VERKNUEPFTE MODULE'),
                   SizedBox(height: 10),
-                  _ModuleLink(title: 'Dateimanager', body: 'Angebote, Logos, Vertraege und Kampagnenassets speichern.'),
-                  _ModuleLink(title: 'Rechnungen', body: 'Sponsorvertrag in Rechnung, Zahlungsstatus und Mahnung ueberfuehren.'),
+                  _ModuleLink(title: 'Dateimanager', body: 'Angebote, Logos, Verträge und Kampagnenassets speichern.'),
+                  _ModuleLink(title: 'Rechnungen', body: 'Sponsorvertrag in Rechnung, Zahlungsstatus und Mahnung überfuehren.'),
                   _ModuleLink(title: 'Ads & Public', body: 'Freigegebene Partner auf Vereinsprofil, Feed, Events oder Ads ausspielen.'),
                   _ModuleLink(title: 'Audit', body: 'Freigaben, Preiswechsel, Laufzeiten und Kontaktverlauf nachvollziehbar halten.'),
                 ],

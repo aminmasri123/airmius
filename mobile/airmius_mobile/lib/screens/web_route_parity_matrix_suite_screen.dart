@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
@@ -114,7 +114,7 @@ class _WebRouteParityMatrixSuiteScreenState extends State<WebRouteParityMatrixSu
       status: 'Backend offen',
       count: 'All',
       suite: 'Laravel API',
-      body: 'Alle Suiten sind UI-only: echte Daten, Auth-State, Uploads, Rollen, Persistenz und Zahlungsstatus werden spaeter ueber Laravel APIs verbunden.',
+      body: 'Alle Suiten sind UI-only: echte Daten, Auth-State, Uploads, Rollen, Persistenz und Zahlungsstatus werden später über Laravel APIs verbunden.',
       icon: Icons.cloud_sync_outlined,
       color: Color(0xFF5BA7FF),
     ),
@@ -134,7 +134,7 @@ class _WebRouteParityMatrixSuiteScreenState extends State<WebRouteParityMatrixSu
       status: 'Offen',
       count: '1',
       suite: 'Mobile Web-Vergleich',
-      body: 'Nach dem Compile-Gate muss die App visuell gegen die mobile Webversion geprueft werden: Abstand, Farben, Cards, Typografie und Navigation.',
+      body: 'Nach dem Compile-Gate muss die App visuell gegen die mobile Webversion geprüft werden: Abstand, Farben, Cards, Typografie und Navigation.',
       icon: Icons.palette_outlined,
       color: Color(0xFFB084FF),
     ),
@@ -160,7 +160,7 @@ class _WebRouteParityMatrixSuiteScreenState extends State<WebRouteParityMatrixSu
                     const _Hero(
                       eyebrow: 'ROUTE PARITY MATRIX',
                       title: 'Webseiten zu Flutter-Suiten',
-                      subtitle: 'Mobile Mapping-UI fuer Webbereiche, Flutter-Suiten, API-Grenzen und offene Release-Gates.',
+                      subtitle: 'Mobile Mapping-UI für Webbereiche, Flutter-Suiten, API-Grenzen und offene Release-Gates.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -190,10 +190,10 @@ class _WebRouteParityMatrixSuiteScreenState extends State<WebRouteParityMatrixSu
                     ],
                     _ActionPanel(
                       firstIcon: Icons.alt_route_outlined,
-                      firstLabel: 'Route-Matrix pruefen',
+                      firstLabel: 'Route-Matrix prüfen',
                       secondIcon: Icons.terminal_outlined,
                       secondLabel: 'Compile-Gate planen',
-                      onFirst: () => openUiAction(context, title: 'Route-Parity Matrix', body: 'Die Matrix zeigt die aktuelle UI-Zuordnung; finale Bestaetigung braucht den harten Prueflauf.', status: 'UI bereit', icon: Icons.info_outline),
+                      onFirst: () => openUiAction(context, title: 'Route-Parity Matrix', body: 'Die Matrix zeigt die aktuelle UI-Zuordnung; finale Bestätigung braucht den harten Prüflauf.', status: 'UI bereit', icon: Icons.info_outline),
                       onSecond: () => openUiAction(context, title: 'Compile-Gate', body: 'Flutter Analyze/Build ist der naechste technische Qualitaetsschritt.', status: 'UI bereit', icon: Icons.info_outline),
                       onSupport: () => _openSupport(context),
                     ),

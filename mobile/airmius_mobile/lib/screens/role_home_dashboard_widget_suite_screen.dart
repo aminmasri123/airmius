@@ -30,7 +30,7 @@ class _RoleHomeDashboardWidgetSuiteScreenState extends State<RoleHomeDashboardWi
       ),
       body: PageFrame(
         title: 'Role Home Dashboard Widgets',
-        subtitle: 'Mobile Startseite fuer Rollen, Aufgaben, Statuskarten, Schnellaktionen und naechste Schritte im Web-App-Stil.',
+        subtitle: 'Mobile Startseite für Rollen, Aufgaben, Statuskarten, Schnellaktionen und naechste Schritte im Web-App-Stil.',
         trailing: const StatusPill('Home', color: AirmiusColors.blue),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -48,7 +48,7 @@ class _RoleHomeDashboardWidgetSuiteScreenState extends State<RoleHomeDashboardWi
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Die Flutter-App bereitet Home-Widgets fuer Mitglieder, Vereinsadmins, Trainer, Guardians und Plattformadmins vor: Aufgaben, Status, Termine, Zahlungen und Schnellaktionen.',
+                    'Die Flutter-App bereitet Home-Widgets für Mitglieder, Vereinsadmins, Trainer, Guardians und Plattformadmins vor: Aufgaben, Status, Termine, Zahlungen und Schnellaktionen.',
                     style: TextStyle(color: AirmiusColors.muted, height: 1.42),
                   ),
                   const SizedBox(height: 14),
@@ -90,7 +90,7 @@ class _RoleHomeDashboardWidgetSuiteScreenState extends State<RoleHomeDashboardWi
                   _HomeToggle(
                     icon: Icons.task_alt_outlined,
                     title: 'Aufgaben anzeigen',
-                    body: 'Offene Antraege, Rueckfragen, Formulare, Supportantworten und Admin-Entscheidungen erscheinen zuerst.',
+                    body: 'Offene Antraege, Rückfragen, Formulare, Supportantworten und Admin-Entscheidungen erscheinen zuerst.',
                     enabled: _tasks,
                     onChanged: (value) => setState(() => _tasks = value),
                   ),
@@ -111,7 +111,7 @@ class _RoleHomeDashboardWidgetSuiteScreenState extends State<RoleHomeDashboardWi
                   _HomeToggle(
                     icon: Icons.receipt_long_outlined,
                     title: 'Zahlungen & Rechnungen',
-                    body: 'Offene Beitraege, Rechnungen, Mahnungen und Zahlungsstatus werden rollenbasiert angezeigt.',
+                    body: 'Offene Beiträge, Rechnungen, Mahnungen und Zahlungsstatus werden rollenbasiert angezeigt.',
                     enabled: _payments,
                     onChanged: (value) => setState(() => _payments = value),
                     last: true,
@@ -180,8 +180,8 @@ class _HomeWidget {
 
 const _widgets = [
   _HomeWidget(role: 'Mitglied', title: 'Meine Mitgliedschaften', body: 'Aktive Vereine, offene Anfragen, digitale Karte, Dokumente und naechste Schritte.', status: '2 aktiv', icon: Icons.badge_outlined, color: AirmiusColors.green),
-  _HomeWidget(role: 'Mitglied', title: 'Heute fuer dich', body: 'Training um 18:00, offene Rechnung, neue Nachricht und Antrag-Draft.', status: '4 Tasks', icon: Icons.today_outlined, color: AirmiusColors.blue),
-  _HomeWidget(role: 'Vereinsadmin', title: 'Anfrage-Eingang', body: 'Neue Mitgliedsantraege, Rueckzuege, Dokumentstatus und Rueckfragen.', status: '6 offen', icon: Icons.inbox_outlined, color: AirmiusColors.amber),
+  _HomeWidget(role: 'Mitglied', title: 'Heute für dich', body: 'Training um 18:00, offene Rechnung, neue Nachricht und Antrag-Draft.', status: '4 Tasks', icon: Icons.today_outlined, color: AirmiusColors.blue),
+  _HomeWidget(role: 'Vereinsadmin', title: 'Anfrage-Eingang', body: 'Neue Mitgliedsanträge, Rückzuege, Dokumentstatus und Rückfragen.', status: '6 offen', icon: Icons.inbox_outlined, color: AirmiusColors.amber),
   _HomeWidget(role: 'Vereinsadmin', title: 'Vereins-Cockpit', body: 'Mitglieder, Teams, Beitragsstatus, Dokumente, Sichtbarkeit und Reports.', status: 'Admin', icon: Icons.apartment_outlined, color: AirmiusColors.blue),
   _HomeWidget(role: 'Trainer', title: 'Trainer-Cockpit', body: 'Training, Anwesenheit, Kader, Feedback, Teamchat und Check-in.', status: 'Live', icon: Icons.sports_outlined, color: AirmiusColors.green),
   _HomeWidget(role: 'Guardian', title: 'Guardian Aufgaben', body: 'Freigaben, Minderjaehrigenprofil, Notfallkontakt, Medienrechte und Event-Zustimmung.', status: '2 offen', icon: Icons.family_restroom_outlined, color: AirmiusColors.amber),

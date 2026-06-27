@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'learning_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
@@ -24,16 +24,16 @@ class _CertificateVerificationScreenState extends State<CertificateVerificationS
     return Scaffold(
         floatingActionButton: FloatingActionButton.extended(backgroundColor: const Color(0xFF16855E), foregroundColor: Colors.white, icon: const Icon(Icons.school_outlined), label: const Text('Cert Ops', style: TextStyle(fontWeight: FontWeight.w900)), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => LearningOperationsScreen(initialTab: 'Zertifikate')))),
         
-      appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Zertifikat pruefen', style: TextStyle(fontWeight: FontWeight.w900))),
+      appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Zertifikat prüfen', style: TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
-        title: 'Zertifikat pruefen',
+        title: 'Zertifikat prüfen',
         subtitle: 'Public Certificate Verify, Code, Status und Download',
-        trailing: StatusPill(_valid ? 'Gueltig' : 'Ungueltig', color: _valid ? AirmiusColors.green : AirmiusColors.red),
+        trailing: StatusPill(_valid ? 'Gültig' : 'Ungültig', color: _valid ? AirmiusColors.green : AirmiusColors.red),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           AirmiusPanel(gradient: true, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Verification'),
             const SizedBox(height: 8),
-            const Text('Zertifikate koennen oeffentlich per Code geprueft und spaeter gegen Laravel validiert werden.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+            const Text('Zertifikate können öffentlich per Code geprüft und später gegen Laravel validiert werden.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
             const SizedBox(height: 12),
             AirmiusTextField(label: 'Zertifikatscode', hint: widget.code, icon: Icons.verified_outlined),
           ])),
@@ -42,20 +42,20 @@ class _CertificateVerificationScreenState extends State<CertificateVerificationS
           const SizedBox(height: 14),
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Status'),
-            SwitchListTile(value: _valid, onChanged: (value) => setState(() => _valid = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Zertifikat gueltig', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Zeigt den spaeteren API-Erfolgs- oder Fehlerzustand.', style: TextStyle(color: AirmiusColors.muted))),
-            SwitchListTile(value: _public, onChanged: (value) => setState(() => _public = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Oeffentlich verifizierbar', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Kann von Vereinen, Arbeitgebern oder Kursanbietern geprueft werden.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _valid, onChanged: (value) => setState(() => _valid = value), activeColor: AirmiusColors.green, contentPadding: EdgeInsets.zero, title: const Text('Zertifikat gültig', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Zeigt den späteren API-Erfolgs- oder Fehlerzustand.', style: TextStyle(color: AirmiusColors.muted))),
+            SwitchListTile(value: _public, onChanged: (value) => setState(() => _public = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Öffentlich verifizierbar', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Kann von Vereinen, Arbeitgebern oder Kursanbietern geprüft werden.', style: TextStyle(color: AirmiusColors.muted))),
           ])),
           const SizedBox(height: 14),
           const AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Eyebrow('Zertifikatsdaten'),
             SizedBox(height: 10),
             _CertificateLine(icon: Icons.person_outline, title: 'ZBB Konto', body: 'Teilnehmername und Profilbezug.', status: 'User'),
-            _CertificateLine(icon: Icons.school_outlined, title: 'Datenschutz im Sportverein', body: 'Kurs, Abschlussdatum, Pruefstatus und Aussteller.', status: 'Kurs'),
+            _CertificateLine(icon: Icons.school_outlined, title: 'Datenschutz im Sportverein', body: 'Kurs, Abschlussdatum, Prüfstatus und Aussteller.', status: 'Kurs'),
             _CertificateLine(icon: Icons.workspace_premium_outlined, title: 'Airmius Learning', body: 'Aussteller, Signatur und Audit-Hinweis.', status: 'Issuer'),
           ])),
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [
-            AirmiusButton(label: 'Code pruefen', icon: Icons.fact_check_outlined, onPressed: () => openUiAction(context, title: 'Zertifikatscode pruefen', body: 'Code gegen Public-Learning-API validieren und Ergebnis anzeigen.', status: 'Verify', icon: Icons.fact_check_outlined)),
+            AirmiusButton(label: 'Code prüfen', icon: Icons.fact_check_outlined, onPressed: () => openUiAction(context, title: 'Zertifikatscode prüfen', body: 'Code gegen Public-Learning-API validieren und Ergebnis anzeigen.', status: 'Verify', icon: Icons.fact_check_outlined)),
             AirmiusButton(label: 'PDF anzeigen', icon: Icons.picture_as_pdf_outlined, secondary: true, onPressed: _valid ? () => openUiAction(context, title: 'Zertifikat anzeigen', body: 'Zertifikat als PDF anzeigen, teilen oder herunterladen.', status: 'PDF', icon: Icons.picture_as_pdf_outlined) : null),
             AirmiusButton(label: 'Melden', icon: Icons.report_outlined, danger: true, onPressed: () => openUiAction(context, title: 'Zertifikat melden', body: 'Unstimmigkeit melden, Review starten und Supportfall vorbereiten.', status: 'Review', icon: Icons.report_outlined)),
           ]),

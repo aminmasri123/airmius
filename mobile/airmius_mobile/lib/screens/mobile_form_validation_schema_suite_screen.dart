@@ -28,7 +28,7 @@ class _MobileFormValidationSchemaSuiteScreenState extends State<MobileFormValida
       ),
       body: PageFrame(
         title: 'Mobile Form Validation Schema',
-        subtitle: 'Pflichtfelder, Regeln, Masken, Fehlertexte und API-Payloads fuer dynamische Vereinsformulare.',
+        subtitle: 'Pflichtfelder, Regeln, Masken, Fehlertexte und API-Payloads für dynamische Vereinsformulare.',
         trailing: const StatusPill('API-ready', color: AirmiusColors.green),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -46,7 +46,7 @@ class _MobileFormValidationSchemaSuiteScreenState extends State<MobileFormValida
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Die App bildet die Web-Logik mobil nach: Vereine koennen Felder aktivieren, als Pflicht markieren, Bedingungen setzen und die App zeigt sofort klare Fehlermeldungen.',
+                    'Die App bildet die Web-Logik mobil nach: Vereine können Felder aktivieren, als Pflicht markieren, Bedingungen setzen und die App zeigt sofort klare Fehlermeldungen.',
                     style: TextStyle(color: AirmiusColors.muted, height: 1.42),
                   ),
                   const SizedBox(height: 14),
@@ -88,7 +88,7 @@ class _MobileFormValidationSchemaSuiteScreenState extends State<MobileFormValida
                   _ToggleRow(
                     icon: Icons.star_outline,
                     title: 'Pflichtfelder erzwingen',
-                    body: 'Vorname, Nachname, Geburtstag, E-Mail, Adresse und Vereins-spezifische Pflichtfelder werden vor dem Senden geprueft.',
+                    body: 'Vorname, Nachname, Geburtstag, E-Mail, Adresse und Vereins-spezifische Pflichtfelder werden vor dem Senden geprüft.',
                     enabled: _requiredFields,
                     onChanged: (value) => setState(() => _requiredFields = value),
                   ),
@@ -149,11 +149,11 @@ class _MobileFormValidationSchemaSuiteScreenState extends State<MobileFormValida
                 children: [
                   const Eyebrow('FEHLERTEXTE'),
                   const SizedBox(height: 10),
-                  const _ErrorCard(title: 'Geschlecht fehlt', body: 'Bitte waehle eine Option oder markiere das Feld im Vereins-Builder als optional.'),
+                  const _ErrorCard(title: 'Geschlecht fehlt', body: 'Bitte wähle eine Option oder markiere das Feld im Vereins-Builder als optional.'),
                   const _ErrorCard(title: 'SEPA unvollstaendig', body: 'IBAN und SEPA-Mandat sind erforderlich, wenn Lastschrift aktiv ist.'),
-                  const _ErrorCard(title: 'Dokument fehlt', body: 'Bitte lade das Pflichtdokument hoch oder bestaetige die verknuepfte Vereinsregel.'),
+                  const _ErrorCard(title: 'Dokument fehlt', body: 'Bitte lade das Pflichtdokument hoch oder bestätige die verknuepfte Vereinsregel.'),
                   const SizedBox(height: 4),
-                  AirmiusButton(label: 'Schema spaeter mit Laravel API verbinden', icon: Icons.api_outlined, onPressed: () {}),
+                  AirmiusButton(label: 'Schema später mit Laravel API verbinden', icon: Icons.api_outlined, onPressed: () {}),
                 ],
               ),
             ),
@@ -173,7 +173,7 @@ class _SchemaPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final rows = [
       _SchemaRow('Personendaten', 'Vorname, Nachname, Geschlecht, Geburtstag', 'Pflicht'),
-      _SchemaRow('Wohndaten', 'Land, Strasse, Hausnummer, PLZ, Stadt', 'Pflicht'),
+      _SchemaRow('Wohndaten', 'Land, Straße, Hausnummer, PLZ, Stadt', 'Pflicht'),
       _SchemaRow('Kontakt', 'E-Mail, Telefon, Notfallkontakt', 'Teilweise'),
       _SchemaRow('Zahlung', 'Zahlart, Zahlungsrhythmus, IBAN, Mandat', 'Bedingt'),
       _SchemaRow('Dateien', 'Datenschutz, Satzung, Beitragsordnung, Nachweise', 'Upload'),

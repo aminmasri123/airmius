@@ -30,7 +30,7 @@ class _PublicBlogReaderScreenState extends State<PublicBlogReaderScreen> {
       appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Blog & Public Content', style: TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
         title: 'Blog & Medien',
-        subtitle: 'Oeffentliche Artikel, Kategorien, RSS, Suche und Meldungen',
+        subtitle: 'Öffentliche Artikel, Kategorien, RSS, Suche und Meldungen',
         trailing: const StatusPill('Public'),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           AirmiusPanel(gradient: true, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -71,10 +71,10 @@ class _PublicBlogReaderScreenState extends State<PublicBlogReaderScreen> {
           AirmiusPanel(borderColor: AirmiusColors.blue.withValues(alpha: 0.45), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('RSS & Kategorien'),
             const SizedBox(height: 8),
-            const Text('RSS, Kategorie-Feeds und Public-Content-Links werden spaeter ueber Laravel geladen. Die App zeigt bereits den nativen Einstieg.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+            const Text('RSS, Kategorie-Feeds und Public-Content-Links werden später über Laravel geladen. Die App zeigt bereits den nativen Einstieg.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
             const SizedBox(height: 12),
             Wrap(spacing: 10, runSpacing: 10, children: [
-              AirmiusButton(label: 'RSS oeffnen', icon: Icons.rss_feed_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'RSS oeffnen', body: 'Public RSS Feed laden, abonnieren oder extern teilen.', status: 'RSS', icon: Icons.rss_feed_outlined)),
+              AirmiusButton(label: 'RSS öffnen', icon: Icons.rss_feed_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'RSS öffnen', body: 'Public RSS Feed laden, abonnieren oder extern teilen.', status: 'RSS', icon: Icons.rss_feed_outlined)),
               AirmiusButton(label: 'Kategorie teilen', icon: Icons.ios_share_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Kategorie teilen', body: 'Kategorie-Link, Vorschau und Share Sheet vorbereiten.', status: _category, icon: Icons.ios_share_outlined)),
             ]),
           ])),
@@ -126,8 +126,8 @@ class _PublicArticle {
 }
 
 const _articles = [
-  _PublicArticle(title: 'Digitale Vereinsverwaltung starten', body: 'Mitglieder, Rollen, Dokumente und Beitraege in einem mobilen Prozess.', category: 'Vereine', meta: '4 min', icon: Icons.apartment_outlined),
+  _PublicArticle(title: 'Digitale Vereinsverwaltung starten', body: 'Mitglieder, Rollen, Dokumente und Beiträge in einem mobilen Prozess.', category: 'Vereine', meta: '4 min', icon: Icons.apartment_outlined),
   _PublicArticle(title: 'Datenschutz im Sportverein', body: 'Einwilligungen, Minderjaehrige, Medien und Dokumentversionen sauber fuehren.', category: 'Datenschutz', meta: '6 min', icon: Icons.privacy_tip_outlined),
   _PublicArticle(title: 'Training sichtbar planen', body: 'Events, Training, Feedback, Fahrgemeinschaften und Tagesflow verbinden.', category: 'Training', meta: '5 min', icon: Icons.event_available_outlined),
-  _PublicArticle(title: 'Marketplace fuer Vereine', body: 'Produkte, Anbieter, Retouren, Kampagnen und Payouts mobil vorbereiten.', category: 'Commerce', meta: '7 min', icon: Icons.storefront_outlined),
+  _PublicArticle(title: 'Marketplace für Vereine', body: 'Produkte, Anbieter, Retouren, Kampagnen und Payouts mobil vorbereiten.', category: 'Commerce', meta: '7 min', icon: Icons.storefront_outlined),
 ];

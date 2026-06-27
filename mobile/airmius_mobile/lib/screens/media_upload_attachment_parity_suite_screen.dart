@@ -25,7 +25,7 @@ class _MediaUploadAttachmentParitySuiteScreenState extends State<MediaUploadAtta
       title: 'Vereinsdokument hochladen',
       route: 'ClubPolicyDocuments + Files/Index',
       purpose: 'Vereinsdokument',
-      body: 'Datenschutz, Satzung, Beitragsordnung, SEPA-Mandat und Regeln koennen hochgeladen, versioniert und automatisch im Dateimanager des Vereins verknuepft werden.',
+      body: 'Datenschutz, Satzung, Beitragsordnung, SEPA-Mandat und Regeln können hochgeladen, versioniert und automatisch im Dateimanager des Vereins verknuepft werden.',
       status: 'Pflichtdokument',
       icon: Icons.rule_folder_outlined,
       primary: 'Dokument hochladen',
@@ -36,10 +36,10 @@ class _MediaUploadAttachmentParitySuiteScreenState extends State<MediaUploadAtta
       title: 'Mitgliedsantrag Anlage',
       route: 'MembershipApplicationForm',
       purpose: 'Vereinsdokument',
-      body: 'Ausweis, Lizenz, Einwilligung, Guardian-Nachweis oder club-spezifische Pflichtanlage mit Uploadstatus und Rueckzugsschutz.',
+      body: 'Ausweis, Lizenz, Einwilligung, Guardian-Nachweis oder club-spezifische Pflichtanlage mit Uploadstatus und Rückzugsschutz.',
       status: 'Antragsanlage',
       icon: Icons.assignment_ind_outlined,
-      primary: 'Anlage auswaehlen',
+      primary: 'Anlage auswählen',
       secondary: 'Pflichtfelder',
       color: AirmiusColors.blue,
     ),
@@ -50,7 +50,7 @@ class _MediaUploadAttachmentParitySuiteScreenState extends State<MediaUploadAtta
       body: 'Avatar, Vereinslogo, Banner, Zuschnitt, Vorschau, Entfernen und Sichtbarkeit werden als mobile Medienkarte vorbereitet.',
       status: 'Bild',
       icon: Icons.image_outlined,
-      primary: 'Bild waehlen',
+      primary: 'Bild wählen',
       secondary: 'Zuschneiden',
       color: AirmiusColors.blue,
     ),
@@ -80,7 +80,7 @@ class _MediaUploadAttachmentParitySuiteScreenState extends State<MediaUploadAtta
       title: 'Marketplace Produktbilder',
       route: 'Commerce/ProductShow',
       purpose: 'Marketplace',
-      body: 'Produktbilder, Variantenbilder, Anbieter-Assets, Reihenfolge, Preview und Moderationsstatus fuer mobile Commerce-UI.',
+      body: 'Produktbilder, Variantenbilder, Anbieter-Assets, Reihenfolge, Preview und Moderationsstatus für mobile Commerce-UI.',
       status: 'Product Media',
       icon: Icons.inventory_2_outlined,
       primary: 'Produktbild',
@@ -91,7 +91,7 @@ class _MediaUploadAttachmentParitySuiteScreenState extends State<MediaUploadAtta
       title: 'Trainingsnachweis',
       route: 'Training/LogCreate + LogShow',
       purpose: 'Training',
-      body: 'Foto, Video, Dokument, Route oder Messwert-Anhang fuer Trainingslog mit Coach-Sichtbarkeit und Maturity-Gate.',
+      body: 'Foto, Video, Dokument, Route oder Messwert-Anhang für Trainingslog mit Coach-Sichtbarkeit und Maturity-Gate.',
       status: 'Evidence',
       icon: Icons.fitness_center_outlined,
       primary: 'Nachweis',
@@ -167,7 +167,7 @@ class _MediaUploadAttachmentParitySuiteScreenState extends State<MediaUploadAtta
                 _UploadFlowCard(flow: flow),
                 const SizedBox(height: 12),
               ],
-              if (_visibleFlows.isEmpty) const EmptyPanel('Keine Upload-Flows fuer diesen Zweck sichtbar.'),
+              if (_visibleFlows.isEmpty) const EmptyPanel('Keine Upload-Flows für diesen Zweck sichtbar.'),
               const SizedBox(height: 4),
               _Checklist(
                 onOpen: () => openUiAction(
@@ -209,7 +209,7 @@ class _Hero extends StatelessWidget {
           const Eyebrow('UPLOADS & MEDIEN'),
           const SizedBox(height: 8),
           const Text(
-            'Uploads muessen mobil einfach, sicher und verknuepft sein.',
+            'Uploads müssen mobil einfach, sicher und verknuepft sein.',
             style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
@@ -263,7 +263,7 @@ class _UploadDropZone extends StatelessWidget {
           Text('Quelle: $source', style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
           const SizedBox(height: 6),
           const Text(
-            'Datei auswaehlen, Kamera starten, Bild scannen oder bestehende Vereinsdatei verknuepfen.',
+            'Datei auswählen, Kamera starten, Bild scannen oder bestehende Vereinsdatei verknuepfen.',
             textAlign: TextAlign.center,
             style: TextStyle(color: AirmiusColors.muted, height: 1.4, fontWeight: FontWeight.w700),
           ),
@@ -339,7 +339,7 @@ class _SwitchPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Upload-Regeln',
-      subtitle: 'Diese Optionen werden spaeter aus Route, Verein, Rolle und Laravel-API geladen.',
+      subtitle: 'Diese Optionen werden später aus Route, Verein, Rolle und Laravel-API geladen.',
       children: [
         _SwitchLine(title: 'Automatisch im Dateimanager verknuepfen', value: autoLinkToManager, onChanged: onAutoLink),
         _SwitchLine(title: 'Datenschutz-/Zweckbindung verlangen', value: needsPrivacyScope, onChanged: onPrivacy),
@@ -356,10 +356,10 @@ class _ProgressPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Uploadstatus',
-      subtitle: 'Mobile Vorschau fuer Fortschritt, Validierung und Verarbeitung.',
+      subtitle: 'Mobile Vorschau für Fortschritt, Validierung und Verarbeitung.',
       children: const [
         _ProgressLine(label: 'Auswahl validieren', value: .92, status: 'OK'),
-        _ProgressLine(label: 'Upload zu Laravel Storage', value: .64, status: 'Laeuft'),
+        _ProgressLine(label: 'Upload zu Laravel Storage', value: .64, status: 'Läuft'),
         _ProgressLine(label: 'Dateimanager verknuepfen', value: .38, status: 'Wartet'),
       ],
     );
@@ -468,7 +468,7 @@ class _UploadFlowCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: flow.secondary,
-                  body: 'Dateimanager, Vorschau, Datenschutz, Version, Zweckbindung und Audit fuer ${flow.title}.',
+                  body: 'Dateimanager, Vorschau, Datenschutz, Version, Zweckbindung und Audit für ${flow.title}.',
                   status: 'Verknuepfung',
                   icon: Icons.link_outlined,
                 ),
@@ -490,11 +490,11 @@ class _Checklist extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Upload-Paritaet',
-      subtitle: 'Was mobile Uploads aus der Web-App uebernehmen.',
+      subtitle: 'Was mobile Uploads aus der Web-App übernehmen.',
       children: [
         const _CheckLine('Kamera, Galerie, Dateien und Scan werden als Quellen vorbereitet.'),
         const _CheckLine('Jeder Upload hat Zweckbindung, Datenschutzstatus, Vorschau und Fortschritt.'),
-        const _CheckLine('Vereinsdokumente koennen automatisch im Dateimanager verknuepft werden.'),
+        const _CheckLine('Vereinsdokumente können automatisch im Dateimanager verknuepft werden.'),
         const _CheckLine('Chat, Blog, Marketplace, Training und Profil nutzen ein gemeinsames Medienmuster.'),
         const SizedBox(height: 12),
         AirmiusButton(label: 'Upload-Paritaet markieren', icon: Icons.fact_check_outlined, onPressed: onOpen),

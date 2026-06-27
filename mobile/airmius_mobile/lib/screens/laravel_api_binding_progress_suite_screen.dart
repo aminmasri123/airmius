@@ -10,13 +10,13 @@ class LaravelApiBindingProgressSuiteScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final bindings = [
       _BindingItem('Auth & Session', '45%', 'Login, Me, Token, Locale und Guard-Status sind als Client-Kontrakt vorbereitet.', AirmiusColors.blue, Icons.lock_outline),
-      _BindingItem('Vereine & Mitgliedschaft', '40%', 'Club-Liste, Clubdetail, Antrag senden und Antrag zurueckziehen sind als Endpunkte modelliert.', AirmiusColors.green, Icons.apartment_outlined),
+      _BindingItem('Vereine & Mitgliedschaft', '40%', 'Club-Liste, Clubdetail, Antrag senden und Antrag zurückziehen sind als Endpunkte modelliert.', AirmiusColors.green, Icons.apartment_outlined),
       _BindingItem('Dateien & Uploads', '28%', 'Upload-Intent ist vorbereitet; echter Multipart/Storage-Flow bleibt offen.', AirmiusColors.amber, Icons.cloud_upload_outlined),
       _BindingItem('Billing, Chat, Events', '24%', 'Invoices, Conversations, Notifications und Events sind als erste Lesepfade abgebildet.', AirmiusColors.pink, Icons.hub_outlined),
     ];
 
     final nextSteps = [
-      _NextStep('Transport implementieren', 'HTTP-Transport mit Auth-Headern, Timeout, Retry, Offline-Queue und Fehlervertrag anschliessen.'),
+      _NextStep('Transport implementieren', 'HTTP-Transport mit Auth-Headern, Timeout, Retry, Offline-Queue und Fehlervertrag anschließen.'),
       _NextStep('Laravel Routen absichern', 'API-v1-Routen, Sanctum/Token-Strategie, Policies, Pagination und Response-Formate finalisieren.'),
       _NextStep('Screens mit Daten verbinden', 'Clubseiten, Suche, Mitgliedsantrag, Dateien, Notifications und Rechnungen von Mock auf API umstellen.'),
       _NextStep('Tests & Monitoring', 'Contract-Tests, Smoke-Flows, Error-States, Logging und Rollback-Strategie aufbauen.'),
@@ -31,7 +31,7 @@ class LaravelApiBindingProgressSuiteScreen extends StatelessWidget {
       ),
       body: PageFrame(
         title: 'API Bindung',
-        subtitle: 'Laravel-v1-Client, Auth, Vereine, Mitgliedsantraege, Uploads, Billing, Chat, Events und offene Rest-Prozente.',
+        subtitle: 'Laravel-v1-Client, Auth, Vereine, Mitgliedsanträge, Uploads, Billing, Chat, Events und offene Rest-Prozente.',
         trailing: const StatusPill('66% Rest', color: AirmiusColors.amber),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -45,7 +45,7 @@ class LaravelApiBindingProgressSuiteScreen extends StatelessWidget {
                   SizedBox(height: 10),
                   Text('Jetzt beginnt der Weg von Mock-UI zu echter App.', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900, height: 1.08)),
                   SizedBox(height: 8),
-                  Text('Der Client-Kontrakt definiert die wichtigsten Laravel-v1-Endpunkte. Danach koennen Screens Schritt fuer Schritt echte Daten statt vorbereiteter UI-Zustaende verwenden.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
+                  Text('Der Client-Kontrakt definiert die wichtigsten Laravel-v1-Endpunkte. Danach können Screens Schritt für Schritt echte Daten statt vorbereiteter UI-Zustaende verwenden.', style: TextStyle(color: AirmiusColors.muted, height: 1.42)),
                 ],
               ),
             ),

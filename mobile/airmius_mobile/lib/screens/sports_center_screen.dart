@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'sports_operations_screen.dart';
 
 import '../core/airmius_theme.dart';
@@ -30,9 +30,9 @@ class _SportsCenterScreenState extends State<SportsCenterScreen> {
           AirmiusPanel(gradient: true, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Sportprofil'),
             const SizedBox(height: 8),
-            const Text('Deine Sportdaten fuer Training und KI-Coach.', style: TextStyle(color: AirmiusColors.text, fontSize: 23, fontWeight: FontWeight.w900)),
+            const Text('Deine Sportdaten für Training und KI-Coach.', style: TextStyle(color: AirmiusColors.text, fontSize: 23, fontWeight: FontWeight.w900)),
             const SizedBox(height: 8),
-            const Text('Disziplinen, Erfahrung, Wochenstunden, Ziele, Leistungswerte und fehlende Daten werden so vorbereitet, dass Laravel spaeter die echten Profile liefert.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+            const Text('Disziplinen, Erfahrung, Wochenstunden, Ziele, Leistungswerte und fehlende Daten werden so vorbereitet, dass Laravel später die echten Profile liefert.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
             const SizedBox(height: 14),
             Wrap(spacing: 8, runSpacing: 8, children: ['Laufen', 'Kraft', 'Tennis', 'Fussball', 'Allgemein'].map((item) => ChoiceChip(
               selected: _sport == item,

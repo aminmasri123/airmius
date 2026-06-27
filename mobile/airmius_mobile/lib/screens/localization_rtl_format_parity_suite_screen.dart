@@ -18,7 +18,7 @@ class _LocalizationRtlFormatParitySuiteScreenState extends State<LocalizationRtl
   bool _apiLocaleSync = true;
 
   static const _locales = ['DE', 'EN', 'FR', 'AR'];
-  static const _formats = ['Datum', 'Waehrung', 'Einheiten', 'Fehler', 'Legal'];
+  static const _formats = ['Datum', 'Währung', 'Einheiten', 'Fehler', 'Legal'];
 
   static const _items = <_LocaleItem>[
     _LocaleItem(
@@ -33,9 +33,9 @@ class _LocalizationRtlFormatParitySuiteScreenState extends State<LocalizationRtl
       color: AirmiusColors.blue,
     ),
     _LocaleItem(
-      format: 'Waehrung',
-      title: 'Waehrung und Zahlungen',
-      body: 'Mitgliedsbeitraege, Rechnungen, Checkout, Banktransfer, Mahnungen und Rabatte brauchen klare lokale Formate.',
+      format: 'Währung',
+      title: 'Währung und Zahlungen',
+      body: 'Mitgliedsbeiträge, Rechnungen, Checkout, Banktransfer, Mahnungen und Rabatte brauchen klare lokale Formate.',
       exampleDe: '42,00 EUR',
       exampleEn: 'EUR 42.00',
       exampleFr: '42,00 EUR',
@@ -46,7 +46,7 @@ class _LocalizationRtlFormatParitySuiteScreenState extends State<LocalizationRtl
     _LocaleItem(
       format: 'Einheiten',
       title: 'Sport- und Trainingseinheiten',
-      body: 'Distanz, Dauer, Gewicht, Wiederholungen, Puls, Wasser und Ernaehrung muessen mehrsprachig und eindeutig bleiben.',
+      body: 'Distanz, Dauer, Gewicht, Wiederholungen, Puls, Wasser und Ernährung müssen mehrsprachig und eindeutig bleiben.',
       exampleDe: '5,2 km · 45 Min.',
       exampleEn: '5.2 km · 45 min',
       exampleFr: '5,2 km · 45 min',
@@ -136,13 +136,13 @@ class _LocalizationRtlFormatParitySuiteScreenState extends State<LocalizationRtl
                   _LocaleItemCard(item: item, locale: _locale),
                   const SizedBox(height: 12),
                 ],
-                if (_visibleItems.isEmpty) const EmptyPanel('Keine Locale-Muster fuer diesen Bereich sichtbar.'),
+                if (_visibleItems.isEmpty) const EmptyPanel('Keine Locale-Muster für diesen Bereich sichtbar.'),
                 const SizedBox(height: 4),
                 _Checklist(
                   onOpen: () => openUiAction(
                     context,
                     title: 'Localization RTL Format Parity',
-                    body: 'DE, EN, FR, AR, RTL, Datum, Waehrung, Einheiten, Fehlertexte, Legal-Texte, Fallbacks und API-Locale-Sync sind als mobile UI vorbereitet.',
+                    body: 'DE, EN, FR, AR, RTL, Datum, Währung, Einheiten, Fehlertexte, Legal-Texte, Fallbacks und API-Locale-Sync sind als mobile UI vorbereitet.',
                     status: 'L10n',
                     icon: Icons.translate_outlined,
                   ),
@@ -179,12 +179,12 @@ class _Hero extends StatelessWidget {
           const Eyebrow('LOCALIZATION'),
           const SizedBox(height: 8),
           const Text(
-            'Mehrsprachigkeit ist mehr als uebersetzte Buttons.',
+            'Mehrsprachigkeit ist mehr als übersetzte Buttons.',
             style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
           const Text(
-            'Flutter bereitet Sprache, RTL, Datum, Waehrung, Einheiten, Fehlertexte, Legal-Versionen und API-Locale-Sync als echte App-Zustaende vor.',
+            'Flutter bereitet Sprache, RTL, Datum, Währung, Einheiten, Fehlertexte, Legal-Versionen und API-Locale-Sync als echte App-Zustaende vor.',
             style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 16),
@@ -267,7 +267,7 @@ class _RulesPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Sprachregeln',
-      subtitle: 'Diese Regeln machen mehrsprachige UI spaeter API-sicher.',
+      subtitle: 'Diese Regeln machen mehrsprachige UI später API-sicher.',
       children: [
         _SwitchLine(title: 'RTL-Vorschau aktivieren', value: rtlPreview, onChanged: onRtl),
         _SwitchLine(title: 'Fallback-Keys anzeigen', value: fallbackKeys, onChanged: onFallback),
@@ -319,7 +319,7 @@ class _LocalePreview extends StatelessWidget {
             onPressed: () => openUiAction(
               context,
               title: 'Locale Preview',
-              body: 'Locale $locale, Format $format, Richtung ${rtl ? 'RTL' : 'LTR'} und Fallback $fallbackKeys als mobile UI pruefen.',
+              body: 'Locale $locale, Format $format, Richtung ${rtl ? 'RTL' : 'LTR'} und Fallback $fallbackKeys als mobile UI prüfen.',
               status: 'L10n',
               icon: Icons.translate_outlined,
             ),
@@ -383,7 +383,7 @@ class _LocaleItemCard extends StatelessWidget {
             runSpacing: 10,
             children: [
               AirmiusButton(
-                label: 'Format pruefen',
+                label: 'Format prüfen',
                 icon: item.icon,
                 onPressed: () => openUiAction(
                   context,
@@ -400,7 +400,7 @@ class _LocaleItemCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: '${item.title} Fallback',
-                  body: 'Fallback, API-Locale, Text-Key, Pluralisierung und RTL-Verhalten fuer ${item.title}.',
+                  body: 'Fallback, API-Locale, Text-Key, Pluralisierung und RTL-Verhalten für ${item.title}.',
                   status: 'Fallback',
                   icon: Icons.language_outlined,
                 ),
@@ -422,12 +422,12 @@ class _Checklist extends StatelessWidget {
   Widget build(BuildContext context) {
     return AirmiusPanel(
       title: 'Locale-Paritaet',
-      subtitle: 'Was fuer echte Mehrsprachigkeit vorbereitet ist.',
+      subtitle: 'Was für echte Mehrsprachigkeit vorbereitet ist.',
       children: [
         const _CheckLine('DE, EN, FR und AR werden als UI-Sprachen mit Richtung und Fallbacks behandelt.'),
-        const _CheckLine('Datum, Waehrung, Einheiten, Fehlermeldungen und rechtliche Texte bekommen eigene Formatregeln.'),
-        const _CheckLine('RTL wird mit Directionality vorbereitet, nicht nur mit uebersetzten Strings.'),
-        const _CheckLine('Laravel API kann spaeter Locale, Legal-Versionen und User-Sprache synchronisieren.'),
+        const _CheckLine('Datum, Währung, Einheiten, Fehlermeldungen und rechtliche Texte bekommen eigene Formatregeln.'),
+        const _CheckLine('RTL wird mit Directionality vorbereitet, nicht nur mit übersetzten Strings.'),
+        const _CheckLine('Laravel API kann später Locale, Legal-Versionen und User-Sprache synchronisieren.'),
         const SizedBox(height: 12),
         AirmiusButton(label: 'Locale-Paritaet markieren', icon: Icons.fact_check_outlined, onPressed: onOpen),
       ],
@@ -555,7 +555,7 @@ String _sampleFor(String locale, String format) {
     if (locale == 'AR') return 'يبدأ التدريب في 05-06-2026.';
     return 'Das Training beginnt am 05.06.2026.';
   }
-  if (format == 'Waehrung') {
+  if (format == 'Währung') {
     if (locale == 'EN') return 'Membership fee: EUR 42.00';
     if (locale == 'FR') return 'Cotisation : 42,00 EUR';
     if (locale == 'AR') return 'رسوم العضوية: 42.00 EUR';
@@ -569,7 +569,7 @@ String _sampleFor(String locale, String format) {
     if (locale == 'EN') return 'Please check the required fields.';
     if (locale == 'FR') return 'Veuillez verifier les champs obligatoires.';
     if (locale == 'AR') return 'يرجى التحقق من الحقول المطلوبة.';
-    return 'Bitte pruefe die Pflichtfelder.';
+    return 'Bitte prüfe die Pflichtfelder.';
   }
   if (locale == 'EN') return 'Privacy policy accepted.';
   if (locale == 'FR') return 'Confidentialite acceptee.';
