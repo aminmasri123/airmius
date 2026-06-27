@@ -110,13 +110,16 @@ const items = computed(() => [
             </Link>
         </div>
 
-        <div class="custom-scrollbar flex w-full justify-center gap-5 overflow-x-auto bg-card/95 px-4 py-2 text-xs text-secondary md:hidden">
+        <div
+            class="custom-scrollbar flex w-full justify-start gap-3 overflow-x-auto bg-card/95 px-3 py-2 text-xs text-secondary md:hidden"
+            :dir="isRtl ? 'rtl' : 'ltr'"
+        >
             <Link
                 v-for="[icon, label, href, options] in items"
                 :key="label"
                 :href="href || '#'"
                 :class="[
-                    'rounded-full py-1 text-center transition hover:text-primary whitespace-nowrap',
+                    'min-w-[4.5rem] shrink-0 rounded-full px-1 py-1 text-center transition hover:text-primary',
                     options?.hideOnMobile ? 'hidden' : ''
                 ]"
             >

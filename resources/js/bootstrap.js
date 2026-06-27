@@ -12,16 +12,20 @@ window.Pusher = Pusher;
 
 const pusherKey = import.meta.env.VITE_PUSHER_APP_KEY;
 const reverbKey = import.meta.env.VITE_REVERB_APP_KEY;
+const reverbUsesTls = (import.meta.env.VITE_REVERB_SCHEME || 'https') === 'https';
+const pusherUsesTls = (import.meta.env.VITE_PUSHER_SCHEME || 'https') === 'https';
+const isLocalHost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+const echoEnabled = import.meta.env.VITE_ECHO_ENABLED === 'true' || (!isLocalHost && import.meta.env.VITE_ECHO_ENABLED !== 'false');
 
-if (reverbKey) {
+if (echoEnabled && reverbKey) {
     window.Echo = new Echo({
         broadcaster: 'reverb',
         key: reverbKey,
         wsHost: import.meta.env.VITE_REVERB_HOST || window.location.hostname,
         wsPort: Number(import.meta.env.VITE_REVERB_PORT || 80),
         wssPort: Number(import.meta.env.VITE_REVERB_PORT || 443),
-        forceTLS: (import.meta.env.VITE_REVERB_SCHEME || 'https') === 'https',
-        enabledTransports: ['ws', 'wss'],
+        forceTLS: reverbUsesTls,
+        enabledTransports: reverbUsesTls ? ['wss'] : ['ws'],
         authEndpoint: '/broadcasting/auth',
         auth: {
             headers: {
@@ -29,7 +33,7 @@ if (reverbKey) {
             },
         },
     });
-} else if (pusherKey) {
+} else if (echoEnabled && pusherKey) {
     window.Echo = new Echo({
         broadcaster: 'pusher',
         key: pusherKey,
@@ -37,8 +41,8 @@ if (reverbKey) {
         wsHost: import.meta.env.VITE_PUSHER_HOST || `ws-${import.meta.env.VITE_PUSHER_APP_CLUSTER || 'mt1'}.pusher.com`,
         wsPort: Number(import.meta.env.VITE_PUSHER_PORT || 80),
         wssPort: Number(import.meta.env.VITE_PUSHER_PORT || 443),
-        forceTLS: (import.meta.env.VITE_PUSHER_SCHEME || 'https') === 'https',
-        enabledTransports: ['ws', 'wss'],
+        forceTLS: pusherUsesTls,
+        enabledTransports: pusherUsesTls ? ['wss'] : ['ws'],
         authEndpoint: '/broadcasting/auth',
         auth: {
             headers: {

@@ -57,7 +57,10 @@ const navItems = [
 
 <template>
     <nav id="nav" class="fixed top-0 left-0 w-full z-50 nav-blur border-b backdrop-blur">
-        <div class="relative mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6">
+        <div
+            class="relative mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6"
+            :class="isRtl ? 'rtl-mobile-nav' : ''"
+        >
             <button
                 @click="scrollTo('hero')"
                 class="flex shrink-0 items-center gap-2 font-heading font-900 text-xl tracking-tight"
@@ -91,7 +94,7 @@ const navItems = [
 
             <div
                 class="flex shrink-0 items-center gap-2 sm:gap-3"
-                :class="isRtl ? 'max-lg:order-1 max-lg:mr-auto lg:ml-auto' : 'ml-auto'"
+                :class="isRtl ? 'max-lg:order-1 max-lg:mr-auto max-lg:flex-row-reverse lg:ml-auto' : 'ml-auto'"
             >
                 <LanguageDropdown />
 
@@ -248,4 +251,12 @@ const navItems = [
         </Transition>
     </Teleport>
 </template>
+
+<style scoped>
+@media (max-width: 1023.98px) {
+    .rtl-mobile-nav {
+        direction: ltr;
+    }
+}
+</style>
 

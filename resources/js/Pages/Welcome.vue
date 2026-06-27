@@ -853,11 +853,11 @@ const onBannerSecondaryCtaClick = () => {
                 <div class="space-y-3">
                     <details v-for="faq in faqItems" :key="faq.question" class="grad-card rounded-2xl p-4 sm:p-5">
                         <summary
-                            class="cursor-pointer list-none text-sm sm:text-base font-heading font-600 text-white flex justify-between items-center">
+                            class="cursor-pointer list-none text-sm sm:text-base font-heading font-600 text-primary flex justify-between items-center">
                             {{ faq.question }}
                             <span aria-hidden="true" class="ml-4 text-xs text-air-green">+</span>
                         </summary>
-                        <p class="text-sm text-gray-400 mt-3 leading-relaxed">{{ faq.answer }}</p>
+                        <p class="text-sm text-secondary mt-3 leading-relaxed">{{ faq.answer }}</p>
                     </details>
                 </div>
             </div>
