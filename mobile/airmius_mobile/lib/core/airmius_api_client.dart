@@ -139,8 +139,25 @@ class AirmiusApiClient {
   Future<AirmiusJson> updateTeam(int teamId, AirmiusJson payload) => _json('PUT', '/api/v1/teams/$teamId', body: payload);
   Future<AirmiusJson> deleteTeam(int teamId) => _json('DELETE', '/api/v1/teams/$teamId');
   Future<AirmiusJson> requestTeamJoin(int teamId) => _json('POST', '/api/v1/teams/$teamId/join-requests');
-  Future<AirmiusJson> approveTeamJoinRequest(int teamId, int requestId, {String role = 'Player'}) => _json('POST', '/api/v1/teams/$teamId/join-requests/$requestId/approve', body: {'role': role});
-  Future<AirmiusJson> declineTeamJoinRequest(int teamId, int requestId) => _json('POST', '/api/v1/teams/$teamId/join-requests/$requestId/decline');
+  Future<AirmiusJson> approveTeamJoinRequest(int teamId, int requestId, {String role = 'Player'}) async {
+    try {
+      return await _json('POST', '/api/v1/team-join-requests/$requestId/approve', body: {'role': role});
+    } on AirmiusApiException catch (error) {
+      if (!_shouldTryNestedTeamJoinRoute(error)) rethrow;
+      return _json('POST', '/api/v1/teams/$teamId/join-requests/$requestId/approve', body: {'role': role});
+    }
+  }
+
+  Future<AirmiusJson> declineTeamJoinRequest(int teamId, int requestId) async {
+    try {
+      return await _json('POST', '/api/v1/team-join-requests/$requestId/decline');
+    } on AirmiusApiException catch (error) {
+      if (!_shouldTryNestedTeamJoinRoute(error)) rethrow;
+      return _json('POST', '/api/v1/teams/$teamId/join-requests/$requestId/decline');
+    }
+  }
+
+  bool _shouldTryNestedTeamJoinRoute(AirmiusApiException error) => error.statusCode == 404 || error.statusCode == 405;
 
   Future<AirmiusJson> teamAttendanceStats(int teamId) => _json('GET', '/api/v1/teams/$teamId/attendance-stats');
 

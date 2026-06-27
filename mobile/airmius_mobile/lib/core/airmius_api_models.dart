@@ -456,6 +456,7 @@ class AirmiusTeam {
       eventsCount: json.containsKey('events_count') ? _int(json['events_count']) : null,
     );
   }
+
 }
 
 class AirmiusTeamJoinRequest {

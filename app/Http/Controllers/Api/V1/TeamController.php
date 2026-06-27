@@ -226,6 +226,11 @@ class TeamController extends Controller
         return new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
     }
 
+    public function approveJoinRequestById(Request $request, TeamJoinRequest $joinRequest)
+    {
+        return $this->approveJoinRequest($request, $joinRequest->team, $joinRequest);
+    }
+
     public function declineJoinRequest(Request $request, Team $team, TeamJoinRequest $joinRequest)
     {
         abort_unless($joinRequest->team_id === $team->id, 404);
@@ -250,6 +255,11 @@ class TeamController extends Controller
         ]);
 
         return new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
+    }
+
+    public function declineJoinRequestById(Request $request, TeamJoinRequest $joinRequest)
+    {
+        return $this->declineJoinRequest($request, $joinRequest->team, $joinRequest);
     }
 
     public function attendanceStats(Request $request, Team $team)
