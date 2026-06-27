@@ -25,6 +25,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
   bool _teamChat = true;
   bool _guardianGate = true;
   bool _requestingJoin = false;
+  bool _reviewingJoinRequest = false;
 
   @override
   void initState() {
@@ -81,6 +82,33 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
     }
   }
 
+  Future<void> _reviewJoinRequest(AirmiusTeam team, AirmiusTeamJoinRequest request, {required bool approve}) async {
+    if (_reviewingJoinRequest) return;
+    final confirmed = approve
+        ? true
+        : await confirmDanger(context, 'Team-Anfrage ablehnen', 'Moechtest du die Anfrage von ${request.name} ablehnen?', 'Ablehnen');
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _reviewingJoinRequest = true);
+    try {
+      final repository = AirmiusServicesScope.of(context).repositories.clubs;
+      final updatedTeam = approve
+          ? await repository.approveTeamJoinRequest(team.id, request.id, role: request.roleHint ?? 'Player')
+          : await repository.declineTeamJoinRequest(team.id, request.id);
+      if (!mounted) return;
+      setState(() {
+        _teamFuture = Future.value(updatedTeam);
+        _section = 'Einladungen';
+        _reviewingJoinRequest = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(approve ? 'Team-Anfrage angenommen.' : 'Team-Anfrage abgelehnt.')));
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _reviewingJoinRequest = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Team-Anfrage konnte nicht verarbeitet werden: $error')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final future = _teamFuture;
@@ -111,6 +139,9 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
     ];
     if (!sections.contains(_section)) {
       _section = 'Profil';
+    }
+    if (canManageTeam && (team?.pendingJoinRequests.isNotEmpty ?? false) && _section == 'Kader') {
+      _section = 'Einladungen';
     }
     return Scaffold(
       appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Team', style: TextStyle(fontWeight: FontWeight.w900))),
@@ -161,7 +192,13 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
           if (_section == 'Profil') _ProfilePanel(team: team, fallbackTitle: title, canManageTeam: canManageTeam, joinRequests: _joinRequests, teamChat: _teamChat, guardianGate: _guardianGate, onJoin: (value) => setState(() => _joinRequests = value), onChat: (value) => setState(() => _teamChat = value), onGuardian: (value) => setState(() => _guardianGate = value)),
           if (_section == 'Kader') _RosterPanel(team: team),
           if (_section == 'Rollen' && canManageTeam) const _RolesPanel(),
-          if (_section == 'Einladungen' && canManageTeam) const _InvitePanel(),
+          if (_section == 'Einladungen' && canManageTeam)
+            _InvitePanel(
+              team: team,
+              isReviewing: _reviewingJoinRequest,
+              onApprove: team == null ? null : (request) => _reviewJoinRequest(team, request, approve: true),
+              onDecline: team == null ? null : (request) => _reviewJoinRequest(team, request, approve: false),
+            ),
           if (_section == 'Kalender') const _CalendarPanel(),
           if (_section == 'Dateien') const _FilesPanel(),
           if (_section == 'Chat') const _ChatPanel(),
@@ -398,7 +435,85 @@ class _RolesPanel extends StatelessWidget {
 }
 
 class _InvitePanel extends StatelessWidget {
-  const _InvitePanel();
+  const _InvitePanel({required this.team, required this.isReviewing, required this.onApprove, required this.onDecline});
+
+  final AirmiusTeam? team;
+  final bool isReviewing;
+  final ValueChanged<AirmiusTeamJoinRequest>? onApprove;
+  final ValueChanged<AirmiusTeamJoinRequest>? onDecline;
+
+  @override
+  Widget build(BuildContext context) {
+    final requests = team?.pendingJoinRequests.where((request) => request.status == 'pending').toList() ?? const <AirmiusTeamJoinRequest>[];
+    return AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [
+        const Expanded(child: Eyebrow('Offene Team-Anfragen')),
+        StatusPill('${requests.length} offen', color: requests.isEmpty ? AirmiusColors.green : AirmiusColors.amber),
+      ]),
+      const SizedBox(height: 12),
+      if (requests.isEmpty)
+        const Text('Keine offenen Team-Anfragen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700))
+      else
+        for (final request in requests) ...[
+          _TeamJoinRequestCard(
+            request: request,
+            isBusy: isReviewing,
+            onApprove: onApprove == null ? null : () => onApprove!(request),
+            onDecline: onDecline == null ? null : () => onDecline!(request),
+          ),
+          const SizedBox(height: 10),
+        ],
+      const SizedBox(height: 10),
+      const Divider(color: AirmiusColors.border),
+      const SizedBox(height: 10),
+      const Eyebrow('Einladung senden'),
+      const SizedBox(height: 12),
+      const AirmiusTextField(label: 'E-Mail', hint: 'mitglied@example.com', icon: Icons.mail_outline),
+      const SizedBox(height: 10),
+      const AirmiusTextField(label: 'Rolle', hint: 'Spieler, Trainer, Captain', icon: Icons.admin_panel_settings_outlined),
+      const SizedBox(height: 10),
+      const Text('Einladungstoken, Ablaufdatum und Guardian-Pruefung werden spaeter ueber die API erzeugt.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+    ]));
+  }
+}
+
+class _TeamJoinRequestCard extends StatelessWidget {
+  const _TeamJoinRequestCard({required this.request, required this.isBusy, required this.onApprove, required this.onDecline});
+
+  final AirmiusTeamJoinRequest request;
+  final bool isBusy;
+  final VoidCallback? onApprove;
+  final VoidCallback? onDecline;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          AirmiusAvatar(request.name),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(request.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 2),
+            Text(request.email.isEmpty ? 'Keine E-Mail hinterlegt' : request.email, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+          ])),
+          StatusPill(request.roleHint ?? 'Spieler'),
+        ]),
+        const SizedBox(height: 12),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          AirmiusButton(label: isBusy ? 'Wird gespeichert...' : 'Annehmen', icon: Icons.check_circle_outline, onPressed: isBusy ? null : onApprove),
+          AirmiusButton(label: 'Ablehnen', icon: Icons.cancel_outlined, danger: true, secondary: true, onPressed: isBusy ? null : onDecline),
+        ]),
+      ]),
+    );
+  }
+}
+
+/*
+class _LegacyInvitePanel extends StatelessWidget {
+  const _LegacyInvitePanel();
 
   @override
   Widget build(BuildContext context) {
@@ -414,6 +529,7 @@ class _InvitePanel extends StatelessWidget {
   }
 }
 
+*/
 class _CalendarPanel extends StatelessWidget {
   const _CalendarPanel();
 

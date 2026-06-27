@@ -95,6 +95,20 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
     final data = json['data'];
     return AirmiusTeam.fromJson(data is JsonMap ? data : json);
   }
+
+  @override
+  Future<AirmiusTeam> approveTeamJoinRequest(int teamId, int requestId, {String role = 'Player'}) async {
+    final json = await client.approveTeamJoinRequest(teamId, requestId, role: role);
+    final data = json['data'];
+    return AirmiusTeam.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<AirmiusTeam> declineTeamJoinRequest(int teamId, int requestId) async {
+    final json = await client.declineTeamJoinRequest(teamId, requestId);
+    final data = json['data'];
+    return AirmiusTeam.fromJson(data is JsonMap ? data : json);
+  }
 }
 
 class AirmiusApiSportRepository implements AirmiusSportRepository {

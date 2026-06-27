@@ -31,6 +31,13 @@ class TeamResource extends JsonResource
         if ($canRequestJoin === null) {
             $canRequestJoin = $viewerIsClubMember && ! $viewerIsMember && ! $viewerPendingJoinRequestId;
         }
+        $canManageTeam = (bool) ($request->user()?->can('update', $this->resource) ?? false);
+        $pendingJoinRequests = collect();
+        if ($canManageTeam) {
+            $pendingJoinRequests = $this->relationLoaded('joinRequests')
+                ? $this->joinRequests->where('status', 'pending')->values()
+                : $this->joinRequests()->with('user')->where('status', 'pending')->get();
+        }
 
         return [
             'id' => $this->id,
@@ -44,11 +51,20 @@ class TeamResource extends JsonResource
             'visibility' => $this->visibility,
             'logo_url' => UploadStorage::url($this->logo),
             'cover_image_url' => UploadStorage::url($this->cover_image),
-            'can_manage' => (bool) ($request->user()?->can('update', $this->resource) ?? false),
+            'can_manage' => $canManageTeam,
             'can_delete' => (bool) ($request->user()?->can('delete', $this->resource) ?? false),
             'viewer_is_member' => $viewerIsMember,
             'viewer_pending_join_request_id' => $viewerPendingJoinRequestId,
             'can_request_join' => (bool) $canRequestJoin,
+            'pending_join_requests' => $pendingJoinRequests->map(fn ($joinRequest) => [
+                'id' => $joinRequest->id,
+                'team_id' => $joinRequest->team_id,
+                'user_id' => $joinRequest->user_id,
+                'name' => $joinRequest->user?->name ?? 'Mitglied',
+                'email' => $joinRequest->user?->email,
+                'status' => $joinRequest->status,
+                'created_at' => $joinRequest->created_at?->toJSON(),
+            ])->values(),
             'membership' => $this->pivot ? [
                 'role' => $this->pivot->role ?? null,
             ] : null,

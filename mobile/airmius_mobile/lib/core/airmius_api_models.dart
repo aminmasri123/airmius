@@ -407,6 +407,7 @@ class AirmiusTeam {
     this.viewerIsMember = false,
     this.canRequestJoin = false,
     this.viewerPendingJoinRequestId,
+    this.pendingJoinRequests = const [],
     this.usersCount,
     this.eventsCount,
   });
@@ -427,6 +428,7 @@ class AirmiusTeam {
   final bool viewerIsMember;
   final bool canRequestJoin;
   final int? viewerPendingJoinRequestId;
+  final List<AirmiusTeamJoinRequest> pendingJoinRequests;
   final int? usersCount;
   final int? eventsCount;
 
@@ -449,8 +451,45 @@ class AirmiusTeam {
       viewerIsMember: _bool(json['viewer_is_member']),
       canRequestJoin: _bool(json['can_request_join']),
       viewerPendingJoinRequestId: _nullableInt(json['viewer_pending_join_request_id']),
+      pendingJoinRequests: _jsonList(json['pending_join_requests'] ?? json['pending_team_join_requests'] ?? json['pending_requests']).map(AirmiusTeamJoinRequest.fromJson).toList(),
       usersCount: json.containsKey('users_count') ? _int(json['users_count']) : null,
       eventsCount: json.containsKey('events_count') ? _int(json['events_count']) : null,
+    );
+  }
+}
+
+class AirmiusTeamJoinRequest {
+  const AirmiusTeamJoinRequest({
+    required this.id,
+    required this.teamId,
+    required this.userId,
+    required this.name,
+    required this.email,
+    this.status = 'pending',
+    this.roleHint,
+    this.requestedAt,
+  });
+
+  final int id;
+  final int teamId;
+  final int userId;
+  final String name;
+  final String email;
+  final String status;
+  final String? roleHint;
+  final String? requestedAt;
+
+  factory AirmiusTeamJoinRequest.fromJson(JsonMap json) {
+    final user = json['user'] is JsonMap ? json['user'] as JsonMap : const <String, dynamic>{};
+    return AirmiusTeamJoinRequest(
+      id: _int(json['id']),
+      teamId: _int(json['team_id']),
+      userId: _int(json['user_id'] ?? user['id']),
+      name: _string(json['name'] ?? json['user_name'] ?? user['name'], fallback: 'Mitglied'),
+      email: _string(json['email'] ?? json['user_email'] ?? user['email']),
+      status: _string(json['status'], fallback: 'pending'),
+      roleHint: _nullableString(json['role'] ?? json['role_hint']),
+      requestedAt: _nullableString(json['created_at'] ?? json['requested_at']),
     );
   }
 }
@@ -1459,6 +1498,8 @@ abstract class AirmiusClubRepository {
   Future<AirmiusTeam> updateTeam(int id, JsonMap payload);
   Future<void> deleteTeam(int id);
   Future<AirmiusTeam> requestTeamJoin(int id);
+  Future<AirmiusTeam> approveTeamJoinRequest(int teamId, int requestId, {String role = 'Player'});
+  Future<AirmiusTeam> declineTeamJoinRequest(int teamId, int requestId);
 }
 
 abstract class AirmiusSportRepository {

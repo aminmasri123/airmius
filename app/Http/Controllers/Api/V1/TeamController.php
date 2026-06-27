@@ -16,6 +16,7 @@ use App\Support\Roles;
 use App\Support\TeamRoles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class TeamController extends Controller
@@ -25,7 +26,7 @@ class TeamController extends Controller
     public function index(Request $request)
     {
         $teams = Team::visibleTo($request->user())
-            ->with(['club', 'users', 'joinRequests'])
+            ->with(['club.users', 'users', 'joinRequests.user'])
             ->withCount(['users', 'events'])
             ->orderBy('name')
             ->paginate($this->perPage($request));
@@ -40,7 +41,7 @@ class TeamController extends Controller
             404
         );
 
-        $team->loadMissing(['club.users', 'users', 'joinRequests'])->loadCount(['users', 'events']);
+        $team->loadMissing(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']);
         $team->setAttribute(
             'attendance_stats',
             $this->canViewTrainingAttendanceStats($request->user(), $team)
@@ -97,7 +98,7 @@ class TeamController extends Controller
             ]));
 
         $freshTeam = $team->fresh()
-            ->load(['club.users', 'users', 'joinRequests'])
+            ->load(['club.users', 'users', 'joinRequests.user'])
             ->loadCount(['users', 'events']);
         $freshTeam->setAttribute('viewer_pending_join_request_id', $joinRequest->id);
         $freshTeam->setAttribute('can_request_join', false);
@@ -171,6 +172,84 @@ class TeamController extends Controller
         $team->delete();
 
         return response()->json(['data' => ['deleted' => true]]);
+    }
+
+    public function approveJoinRequest(Request $request, Team $team, TeamJoinRequest $joinRequest)
+    {
+        abort_unless($joinRequest->team_id === $team->id, 404);
+        $this->authorize('invite', $team);
+
+        if ($joinRequest->status !== 'pending') {
+            throw ValidationException::withMessages([
+                'join_request' => 'Diese Team-Beitrittsanfrage wurde bereits bearbeitet.',
+            ]);
+        }
+
+        $data = $request->validate([
+            'role' => ['nullable', Rule::in(Team::ROLES)],
+        ]);
+
+        abort_if(
+            ! $team->club->users()->where('users.id', $joinRequest->user_id)->exists()
+            && ! $team->club->canAddMembers(),
+            422,
+            'Das Mitgliederlimit des aktuellen Vereinsplans ist erreicht.'
+        );
+
+        DB::transaction(function () use ($team, $joinRequest, $data) {
+            $team->users()->syncWithoutDetaching([
+                $joinRequest->user_id => ['role' => $data['role'] ?? 'Player'],
+            ]);
+
+            $team->club->users()->syncWithoutDetaching([
+                $joinRequest->user_id => [
+                    'role' => 'member',
+                    'roles' => ['member'],
+                    'membership_status' => 'non_member',
+                    'joined_on' => now()->toDateString(),
+                ],
+            ]);
+
+            $joinRequest->update([
+                'status' => 'accepted',
+                'responded_at' => now(),
+            ]);
+        });
+
+        AppNotification::send($joinRequest->user_id, 'team.join_request_accepted', [
+            'title' => 'Team-Beitrittsanfrage akzeptiert',
+            'body' => 'Deine Anfrage fuer '.$team->name.' wurde akzeptiert.',
+            'team_id' => $team->id,
+            'club_id' => $team->club_id,
+        ]);
+
+        return new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
+    }
+
+    public function declineJoinRequest(Request $request, Team $team, TeamJoinRequest $joinRequest)
+    {
+        abort_unless($joinRequest->team_id === $team->id, 404);
+        $this->authorize('update', $team);
+
+        if ($joinRequest->status !== 'pending') {
+            throw ValidationException::withMessages([
+                'join_request' => 'Diese Team-Beitrittsanfrage wurde bereits bearbeitet.',
+            ]);
+        }
+
+        $joinRequest->update([
+            'status' => 'declined',
+            'responded_at' => now(),
+        ]);
+
+        AppNotification::send($joinRequest->user_id, 'team.join_request_declined', [
+            'title' => 'Team-Beitrittsanfrage abgelehnt',
+            'body' => 'Deine Anfrage fuer '.$team->name.' wurde abgelehnt.',
+            'team_id' => $team->id,
+            'club_id' => $team->club_id,
+        ]);
+
+        return new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
     }
 
     public function attendanceStats(Request $request, Team $team)
