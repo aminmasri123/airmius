@@ -56,13 +56,13 @@ class FeedTest extends TestCase
             'user_id' => $author->id,
             'visibility' => 'public',
             'moderation_status' => 'reported',
-            'content' => 'Eigener Beitrag in Pruefung',
+            'content' => 'Eigener Beitrag in Prüfung',
         ]);
 
         $this->actingAs($author)
             ->get(route('auth.feed.index'))
             ->assertOk()
-            ->assertSee('Eigener Beitrag in Pruefung');
+            ->assertSee('Eigener Beitrag in Prüfung');
     }
 
     public function test_comments_endpoint_returns_only_approved_comments_for_visible_post(): void
@@ -171,14 +171,14 @@ class FeedTest extends TestCase
             'moderation_status' => 'reported',
             'media_path' => 'stories/own.jpg',
             'media_type' => 'image/jpeg',
-            'caption' => 'Eigene Story in Pruefung',
+            'caption' => 'Eigene Story in Prüfung',
             'expires_at' => now()->addHours(4),
         ]);
 
         $this->actingAs($author)
             ->get(route('auth.feed.index'))
             ->assertOk()
-            ->assertSee('Eigene Story in Pruefung');
+            ->assertSee('Eigene Story in Prüfung');
     }
 
     public function test_story_view_endpoint_records_views_for_visible_story(): void

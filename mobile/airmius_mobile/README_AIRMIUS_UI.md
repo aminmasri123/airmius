@@ -143,9 +143,9 @@ Diese Flutter-App ist als native UI-Konvertierung der mobilen Airmius-Web-App an
 - Native Billing-Detail-UI mit Rechnung, Zahlung, Banktransfer, PDF, Zahlungsverlauf, Planwechsel und Kuendigung
 - Billing-Aktionen fuer Zahlung erfassen, Rechnung laden, Planwechsel und Kuendigung besitzen native UI-Aktionsflows
 - Native Eltern-/Jugendschutzcenter-UI mit Guardian Consent, Elternlogin, Kinderkonten, Zustimmung und Widerruf
-- Guardian-Aktionen fuer Zustimmung, Widerruf und Consent-Pruefung fuehren in native UI-Aktionsflows
+- Guardian-Aktionen fuer Zustimmung, Widerruf und Consent-Prüfung fuehren in native UI-Aktionsflows
 - Native Guardian-Consent-Detail-UI mit granularen Freigaben, Elterncode, E-Mail-Einladung, Historie und Widerruf
-- Guardian-Webflows fuer Elternlogin, Elterncode-Pruefung, Kinderkonto-Erstellung und Token-/Code-Eingabe sind als native UI vorbereitet
+- Guardian-Webflows fuer Elternlogin, Elterncode-Prüfung, Kinderkonto-Erstellung und Token-/Code-Eingabe sind als native UI vorbereitet
 - Native Altersfreigaben-/Maturity-UI mit Content-Gates, Altersgruppen, Guardian-Freigaben und Schutzregeln
 - Maturity-Aktionen fuer Gate erstellen, Consent pruefen und Regeln bearbeiten fuehren in native UI-Aktionsflows
 - Native Outfit-Abo-Center-UI mit Style-Profil, Groesse, Stil, Lieferstatus, Pause/Fortsetzen/Kuendigen und Support-Fall
@@ -182,7 +182,7 @@ Diese Flutter-App ist als native UI-Konvertierung der mobilen Airmius-Web-App an
 - Coach-Aktionsdetail mit echten Athletenlogs, Risiko-Auswertung, Feedback-Persistenz, Push und Planfreigabe-API verbinden
 - Ernaehrung mit Lebensmittel-Suche, Barcode-Resultat, Fotoanalyse-Ergebnis und Ziel-Editor vertiefen
 - Ernaehrung mit echter Lebensmitteldatenbank, Barcode-Resultat, KI-Fotoanalyse, Ziel-Editor und Verlaufsauswertung vertiefen
-- Sportprofil-Detail mit echten Leistungswerten, Zielhistorie, Pulsdaten, Gesundheitshinweisen und KI-Readiness-Pruefung verbinden
+- Sportprofil-Detail mit echten Leistungswerten, Zielhistorie, Pulsdaten, Gesundheitshinweisen und KI-Readiness-Prüfung verbinden
 - Sportkarte mit echter Kartenkomponente, GPS-Rechte-UI, Track-Aufzeichnung und Routeneditor vertiefen
 - Sportkarte mit nativer Kartenkomponente, Standortrechten, Track-Aufzeichnung, GPX-Export und Routeneditor vertiefen
 - Marketplace Checkout, Produktvarianten, Anbieterprofil, Retouren und Rechnungsdownload vertiefen
@@ -191,7 +191,7 @@ Diese Flutter-App ist als native UI-Konvertierung der mobilen Airmius-Web-App an
 - Sponsor-Detail mit echten Paketen, Kampagnenreporting, Kontaktpipeline, Vertrag, Logo-Upload und Public-Sponsorprofil verbinden
 - Blog-/Medien-Detail mit echtem Rich-Text-Editor, Medienbibliothek, Freigabeprozess, Publikationsworkflow und Review-API verbinden
 - Vereins-Cockpit mit echten Vereinsprofil-Editoren, Sichtbarkeitsregeln, Teamaktionen und Beitragsmoderation vertiefen
-- Medienrichtlinien mit Medienfreigabe-Workflow, Guardian-Consent-Pruefung und Upload-Policy-Editor vertiefen
+- Medienrichtlinien mit Medienfreigabe-Workflow, Guardian-Consent-Prüfung und Upload-Policy-Editor vertiefen
 - Learning Lektion-Detail, Quiz, Aufgabenabgabe, Kommentare und Kurseditor vertiefen
 - Learning mit echter Videowiedergabe, Quiz-Auswertung, Aufgabenabgabe, Kommentaren und Zertifikatsdownload vertiefen
 - Admin-Screens in Rollen/Permissions, Commerce, Moderation, Subscriptions und Settings aufteilen
@@ -208,7 +208,7 @@ Diese Flutter-App ist als native UI-Konvertierung der mobilen Airmius-Web-App an
 - Billing-Detail mit echtem Provider-Redirect, PDF-Download, Zahlungsabgleich, Mahnungen und Kuendigungsworkflow vertiefen
 - Guardian-Flows mit Token-Annahme, Code-Verifizierung und Elternkonto-Erstellung vertiefen
 - Guardian-Consent-Detail mit echten Consent-Tokens, Code-Verifizierung, Widerrufshistorie und granularen API-Rechten vertiefen
-- Altersfreigaben mit echten Content-Gates, Maturity-Policies und API-gestuetzter Consent-Pruefung vertiefen
+- Altersfreigaben mit echten Content-Gates, Maturity-Policies und API-gestuetzter Consent-Prüfung vertiefen
 - Outfit-Abos mit Lieferdetails, Adresseditor, Problem-Dialog und Admin-Lieferverwaltung vertiefen
 - Outfit-Lieferdetail mit Tracking-API, Rueckgabeprozess, Supportfall, Adresseditor und Admin-Lieferstatus vertiefen
 - Public-Detailseiten mit echten Listen/Einzeldatensaetzen fuer Blogartikel, Kursdetail, Produktdetail, Providerprofil und Job-Interesse vertiefen
@@ -417,7 +417,7 @@ Diese Flutter-App ist als native UI-Konvertierung der mobilen Airmius-Web-App an
 
 ## Web-Parity Release Audit
 
-- Web Parity Release Audit Suite: native Kontroll-UI fuer Web-zu-Flutter-Mapping, API-Readiness, Build-Gates, Design-Gates und finale Route-Parity-Pruefung.
+- Web Parity Release Audit Suite: native Kontroll-UI fuer Web-zu-Flutter-Mapping, API-Readiness, Build-Gates, Design-Gates und finale Route-Parity-Prüfung.
 - Bekannte technische Gates: Flutter Analyze/Build wurde noch nicht ausgefuehrt; der naechste harte Qualitaetsschritt ist ein expliziter Compile-/Analyzer-Lauf mit anschliessendem Fixpass.
 - Bekannte Backend-Grenze: Alle Suiten sind UI-only und API-ready; echte Daten, Auth-State, Rollen, Persistenz und Uploads werden spaeter ueber Laravel APIs angebunden.
 
@@ -435,7 +435,7 @@ Diese Flutter-App ist als native UI-Konvertierung der mobilen Airmius-Web-App an
 
 - API Binding Readiness Suite: native Kontroll-UI fuer Laravel API-Vertraege, Auth-State, Rollen, Datenbindung, Uploads, Fehler-Mapping und Optimistic UI.
 - Mobile Web Fidelity Accessibility Suite: native Kontroll-UI fuer Airmius Design, Header/Search, Bottom Navigation, Cards, Modals, Scroll UX, Touch Targets, Kontrast und Accessibility.
-- Diese Suiten bereiten die naechsten harten Gates vor: Laravel API-Verbindung, visueller Vergleich mit der mobilen Web-App und Accessibility-Pruefung.
+- Diese Suiten bereiten die naechsten harten Gates vor: Laravel API-Verbindung, visueller Vergleich mit der mobilen Web-App und Accessibility-Prüfung.
 
 ## Role-Based App Experience
 
@@ -711,7 +711,7 @@ Diese Flutter-App ist als native UI-Konvertierung der mobilen Airmius-Web-App an
 
 - Consent Signature Versioning: Dokumentversionen, Datenschutz, Satzung, Beitragsordnung, SEPA, Medienrechte, Guardian-Freigaben, digitale Bestaetigungen und Audit-Nachweise ergänzt.
 
-- Digital Member Card Check-in: Digitale Mitgliedskarte, QR-Verifikation, Training-Check-in, Offline-Pruefung, Minimaldaten, Token-Rotation und Anwesenheits-Audit als nativer Mobile-Mehrwert ergänzt.
+- Digital Member Card Check-in: Digitale Mitgliedskarte, QR-Verifikation, Training-Check-in, Offline-Prüfung, Minimaldaten, Token-Rotation und Anwesenheits-Audit als nativer Mobile-Mehrwert ergänzt.
 
 - Deep Link Route Resolver: Einladungen, QR-Codes, Push, E-Mail, Chat, Zahlung, Datei und Event-Links mit Auth-Gate, Workspace-Auswahl, Fallback und Routing-Audit ergänzt.
 

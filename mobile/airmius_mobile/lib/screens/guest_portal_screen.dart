@@ -3,7 +3,7 @@ import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
 import 'guest_blog_content_screen.dart';
 import 'guest_learning_certificate_screen.dart';
-import 'guest_marketplace_buyer_screen.dart';
+import 'guest_marketplace_parity_screen.dart';
 import 'guest_pricing_plans_screen.dart';
 import 'public_detail_screen.dart';
 import 'public_growth_guest_pages_screen.dart';
@@ -90,7 +90,7 @@ class GuestPortalScreen extends StatelessWidget {
   static void _openItem(BuildContext context, _PublicItem item) {
     switch (item.title) {
       case 'Marketplace':
-        _openScreen(context, const GuestMarketplaceBuyerScreen());
+        _openScreen(context, const GuestMarketplaceParityScreen());
         return;
       case 'Funktionen':
         _openScreen(context, const PublicGrowthGuestPagesScreen());

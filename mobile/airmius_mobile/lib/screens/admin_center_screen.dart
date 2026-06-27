@@ -46,7 +46,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
                 children: [
                   const Eyebrow('Systemverwaltung'),
                   const SizedBox(height: 8),
-                  const Text('Native Admin-Oberflaeche fuer Rollen, Pruefungen, Zahlungen, Moderation und Commerce.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  const Text('Native Admin-Oberflaeche fuer Rollen, Prüfungen, Zahlungen, Moderation und Commerce.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 8,
@@ -72,7 +72,7 @@ class _AdminCenterScreenState extends State<AdminCenterScreen> {
               children: const [
                 Expanded(child: MetricCard(value: '2', label: 'Reports')),
                 SizedBox(width: 10),
-                Expanded(child: MetricCard(value: '1', label: 'Pruefung')),
+                Expanded(child: MetricCard(value: '1', label: 'Prüfung')),
                 SizedBox(width: 10),
                 Expanded(child: MetricCard(value: '4', label: 'Zahlungen')),
               ],

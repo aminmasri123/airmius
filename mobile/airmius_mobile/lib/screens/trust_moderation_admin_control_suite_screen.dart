@@ -48,7 +48,7 @@ class _TrustModerationAdminControlSuiteScreenState extends State<TrustModeration
                     const _Hero(
                       eyebrow: 'TRUST CONTROL',
                       title: 'Moderation & Admin',
-                      subtitle: 'Native Mobile-UI fuer Moderation, Trust-Pruefungen, System Settings, Mail Center, User Management und Audit.',
+                      subtitle: 'Native Mobile-UI fuer Moderation, Trust-Prüfungen, System Settings, Mail Center, User Management und Audit.',
                     ),
                     const SizedBox(height: 18),
                     Row(
@@ -82,7 +82,7 @@ class _TrustModerationAdminControlSuiteScreenState extends State<TrustModeration
                       secondIcon: Icons.verified_outlined,
                       secondLabel: 'Verifizierung starten',
                       onFirst: () => openUiAction(context, title: 'Moderation Case', body: 'Die Moderations-UI ist vorbereitet; echte Cases kommen spaeter ueber Laravel.', status: 'UI bereit', icon: Icons.info_outline),
-                      onSecond: () => openUiAction(context, title: 'Trust Pruefung', body: 'Verifizierungs- und Audit-UI sind vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
+                      onSecond: () => openUiAction(context, title: 'Trust Prüfung', body: 'Verifizierungs- und Audit-UI sind vorbereitet.', status: 'UI bereit', icon: Icons.info_outline),
                       onSupport: () => _openSupport(context),
                     ),
                   ],

@@ -24,7 +24,7 @@ class _SupportHelpdeskScreenState extends State<SupportHelpdeskScreen> {
 
   final List<_TicketItem> _tickets = const [
     _TicketItem(title: 'Mitgliedsanfrage haengt', body: 'User sieht Anfrage gesendet, aber keine weiteren Details.', status: 'Offen', owner: 'Support', icon: Icons.assignment_turned_in_outlined, color: AirmiusColors.blue),
-    _TicketItem(title: 'Dokument kann nicht geladen werden', body: 'Vereinsdokument ist verknuepft, Upload oder Vorschau fehlt.', status: 'In Pruefung', owner: 'Dateien', icon: Icons.folder_copy_outlined, color: AirmiusColors.green),
+    _TicketItem(title: 'Dokument kann nicht geladen werden', body: 'Vereinsdokument ist verknuepft, Upload oder Vorschau fehlt.', status: 'In Prüfung', owner: 'Dateien', icon: Icons.folder_copy_outlined, color: AirmiusColors.green),
     _TicketItem(title: 'Zahlungsintervall unklar', body: 'Verein moechte monatlich, 4 Monate, 6 Monate oder jaehrlich anbieten.', status: 'Rueckfrage', owner: 'Finanzen', icon: Icons.payments_outlined, color: AirmiusColors.amber),
   ];
 

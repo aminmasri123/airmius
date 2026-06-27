@@ -30,7 +30,7 @@ class _AdminModerationAuditQueueSuiteScreenState extends State<AdminModerationAu
       const _ModerationCase(
         title: 'Nachricht gemeldet',
         area: 'Messages',
-        status: 'Pruefung',
+        status: 'Prüfung',
         body: 'Gemeldete Nachricht mit Chatkontext, blockiertem Kontakt und Supportverweis.',
         color: AirmiusColors.blue,
       ),
@@ -54,7 +54,7 @@ class _AdminModerationAuditQueueSuiteScreenState extends State<AdminModerationAu
 
     return PageFrame(
       title: 'Moderation & Audit',
-      subtitle: 'Meldungen, Pruefung und Entscheidungen',
+      subtitle: 'Meldungen, Prüfung und Entscheidungen',
       actions: const [AirmiusLogoMark(size: 34)],
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
@@ -92,7 +92,7 @@ class _AdminModerationAuditQueueSuiteScreenState extends State<AdminModerationAu
                   segments: const [
                     ButtonSegment(value: 'Alle', label: Text('Alle')),
                     ButtonSegment(value: 'Offen', label: Text('Offen')),
-                    ButtonSegment(value: 'Pruefung', label: Text('Pruefung')),
+                    ButtonSegment(value: 'Prüfung', label: Text('Prüfung')),
                     ButtonSegment(value: 'Eskalation', label: Text('Eskalation')),
                     ButtonSegment(value: 'Audit', label: Text('Audit')),
                   ],

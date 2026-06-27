@@ -2,6 +2,7 @@
 
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import 'guest_marketplace_parity_screen.dart';
 import 'support_helpdesk_screen.dart';
 
 class GuestMarketplaceBuyerScreen extends StatefulWidget {
@@ -29,6 +30,8 @@ class _GuestMarketplaceBuyerScreenState extends State<GuestMarketplaceBuyerScree
 
   @override
   Widget build(BuildContext context) {
+    return const GuestMarketplaceParityScreen();
+
     final items = _visibleItems;
 
     return Scaffold(

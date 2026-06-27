@@ -21,7 +21,7 @@ class AdminDetailScreen extends StatefulWidget {
 }
 
 class _AdminDetailScreenState extends State<AdminDetailScreen> {
-  String _status = 'In Pruefung';
+  String _status = 'In Prüfung';
   String _assignee = 'Admin Team';
   bool _notify = true;
 
@@ -60,7 +60,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
           AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Bearbeitung'),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(value: _status, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Status'), items: const ['Offen', 'In Pruefung', 'Genehmigt', 'Abgelehnt', 'Dringend', 'Archiviert', 'Shop', 'Billing', 'Config', 'System', 'Kosten', 'Rollen', 'Aktiv'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _status = value ?? _status)),
+            DropdownButtonFormField<String>(value: _status, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Status'), items: const ['Offen', 'In Prüfung', 'Genehmigt', 'Abgelehnt', 'Dringend', 'Archiviert', 'Shop', 'Billing', 'Config', 'System', 'Kosten', 'Rollen', 'Aktiv'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _status = value ?? _status)),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(value: _assignee, dropdownColor: AirmiusColors.cardSoft, decoration: const InputDecoration(labelText: 'Zuweisung'), items: const ['Admin Team', 'Billing Team', 'Moderation', 'Commerce', 'System'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _assignee = value ?? _assignee)),
             SwitchListTile(value: _notify, onChanged: (value) => setState(() => _notify = value), activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Betroffene informieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Benachrichtigung oder E-Mail nach Statuswechsel vorbereiten.', style: TextStyle(color: AirmiusColors.muted))),
@@ -181,7 +181,7 @@ class _AdminDetailScreenState extends State<AdminDetailScreen> {
     if (widget.area == 'Commerce') return 'Produkt/Order pruefen';
     if (widget.area == 'System') return 'Konfiguration pruefen';
     if (widget.area == 'Nutzer') return 'Nutzerkontext pruefen';
-    return 'Admin-Pruefung';
+    return 'Admin-Prüfung';
   }
 
   String _checkBodyOne() {

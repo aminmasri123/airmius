@@ -67,7 +67,7 @@ class _GuestLearningCertificateScreenState extends State<GuestLearningCertificat
                               _SwitchRow(title: 'Kurse anzeigen', subtitle: 'Guest E-Learning und Kursuebersicht mobil vorbereiten.', value: _showCourses, onChanged: (value) => setState(() => _showCourses = value)),
                               _SwitchRow(title: 'Zertifikate anzeigen', subtitle: 'Zertifikate, Gueltigkeit und Inhaberstatus sichtbar machen.', value: _showCertificates, onChanged: (value) => setState(() => _showCertificates = value)),
                               _SwitchRow(title: 'Vorschau erlauben', subtitle: 'Public Course Show mit Preview und Start-CTA.', value: _showPreview, onChanged: (value) => setState(() => _showPreview = value)),
-                              _SwitchRow(title: 'Oeffentliche Pruefung erlauben', subtitle: 'LearningCertificateVerify mit Code und Ergebnis vorbereiten.', value: _showPublicVerify, onChanged: (value) => setState(() => _showPublicVerify = value)),
+                              _SwitchRow(title: 'Oeffentliche Prüfung erlauben', subtitle: 'LearningCertificateVerify mit Code und Ergebnis vorbereiten.', value: _showPublicVerify, onChanged: (value) => setState(() => _showPublicVerify = value)),
                             ],
                           ),
                         ),

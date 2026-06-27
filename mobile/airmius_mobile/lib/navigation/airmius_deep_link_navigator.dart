@@ -70,7 +70,7 @@ class AirmiusDeepLinkNavigator {
       AirmiusDeepLinkTargetType.profile => AirmiusDeepLinkedTargetScreen(
           target: target,
           title: 'Profilbereich',
-          body: 'Die App hat einen Profilbereich erkannt und kann nach Auth-Pruefung direkt in dein Profil wechseln.',
+          body: 'Die App hat einen Profilbereich erkannt und kann nach Auth-Prüfung direkt in dein Profil wechseln.',
           icon: Icons.person_outline,
           color: AirmiusColors.amber,
           actionLabel: 'Profil oeffnen',

@@ -229,7 +229,7 @@ class _EditFormScreenState extends State<EditFormScreen> {
           value: _status,
           dropdownColor: AirmiusColors.cardSoft,
           decoration: const InputDecoration(labelText: 'Status'),
-          items: const ['Aktiv', 'In Pruefung', 'Gesperrt', 'Abgelehnt'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
+          items: const ['Aktiv', 'In Prüfung', 'Gesperrt', 'Abgelehnt'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
           onChanged: (value) => setState(() => _status = value ?? _status),
         ),
         const SizedBox(height: 12),

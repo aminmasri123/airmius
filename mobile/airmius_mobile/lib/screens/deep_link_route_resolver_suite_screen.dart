@@ -31,7 +31,7 @@ class _DeepLinkRouteResolverSuiteScreenState extends State<DeepLinkRouteResolver
       ),
       body: PageFrame(
         title: 'Deep Link Route Resolver',
-        subtitle: 'Mobile UI fuer Einladung, QR, Push, E-Mail, Chat, Zahlung, Datei und Event-Routing mit Auth- und Workspace-Pruefung.',
+        subtitle: 'Mobile UI fuer Einladung, QR, Push, E-Mail, Chat, Zahlung, Datei und Event-Routing mit Auth- und Workspace-Prüfung.',
         trailing: const StatusPill('Routing', color: AirmiusColors.blue),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

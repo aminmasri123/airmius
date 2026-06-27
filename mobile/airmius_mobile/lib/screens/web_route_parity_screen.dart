@@ -78,7 +78,7 @@ class _WebRouteParityScreenState extends State<WebRouteParityScreen> {
                 children: [
                   const Eyebrow('Navigation'),
                   const SizedBox(height: 8),
-                  const Text('Von hier aus geht es in den Operations Hub, den API-Kontrakt oder die Release-Pruefung. Das ist die Kontrollschicht fuer die vollstaendige Web-zu-Flutter-Konvertierung.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  const Text('Von hier aus geht es in den Operations Hub, den API-Kontrakt oder die Release-Prüfung. Das ist die Kontrollschicht fuer die vollstaendige Web-zu-Flutter-Konvertierung.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
                   const SizedBox(height: 12),
                   Wrap(spacing: 8, runSpacing: 8, children: [
                     AirmiusButton(label: 'Operations Hub', icon: Icons.hub_outlined, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OperationsHubScreen()))),

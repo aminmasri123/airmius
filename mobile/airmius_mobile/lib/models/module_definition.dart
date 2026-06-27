@@ -38,7 +38,7 @@ const appModules = [
   ModuleDefinition(title: 'Marketplace', subtitle: 'Produkte, Warenkorb, Bestellungen und Anbieter', icon: Icons.storefront_outlined, actions: ['Produkt suchen', 'Warenkorb oeffnen', 'Bestellung verfolgen'], metrics: {'Produkte': '36', 'Orders': '2'}),
   ModuleDefinition(title: 'Commerce', subtitle: 'Produkte, Orders, Coupons, Inventar, Payouts und Qualitaet', icon: Icons.store_mall_directory_outlined, actions: ['Produkt anlegen', 'Order pruefen', 'Payout vorbereiten'], metrics: {'Orders': '12', 'Payouts': '2'}),
   ModuleDefinition(title: 'Sponsoren', subtitle: 'Sponsorprofile, Kampagnen, Pakete und Sichtbarkeit', icon: Icons.handshake_outlined, actions: ['Sponsor ansehen', 'Paket pruefen', 'Kontakt aufnehmen'], metrics: {'Sponsoren': '4', 'Kampagnen': '2'}),
-  ModuleDefinition(title: 'Medienrichtlinien', subtitle: 'Bildrechte, Upload-Regeln, Freigaben und Moderation', icon: Icons.policy_outlined, actions: ['Freigabe pruefen', 'Regel bearbeiten', 'Meldung ansehen'], metrics: {'Regeln': '5', 'Pruefung': '2'}),
+  ModuleDefinition(title: 'Medienrichtlinien', subtitle: 'Bildrechte, Upload-Regeln, Freigaben und Moderation', icon: Icons.policy_outlined, actions: ['Freigabe pruefen', 'Regel bearbeiten', 'Meldung ansehen'], metrics: {'Regeln': '5', 'Prüfung': '2'}),
   ModuleDefinition(title: 'Blog & Medien', subtitle: 'Artikel, Medienrichtlinien, Freigaben und Redaktion', icon: Icons.article_outlined, actions: ['Artikel lesen', 'Beitrag planen', 'Richtlinien pruefen'], metrics: {'Artikel': '8', 'Entwuerfe': '2'}),
   ModuleDefinition(title: 'Nutzer', subtitle: 'Personen, Profile, Status, Rollen und Verbindungen', icon: Icons.people_alt_outlined, actions: ['Nutzer suchen', 'Profil ansehen', 'Status pruefen'], metrics: {'Nutzer': '42', 'Online': '7'}),
   ModuleDefinition(title: 'Abos & Rechnungen', subtitle: 'Plaene, Checkouts, Banktransfer und Rechnungen', icon: Icons.receipt_long_outlined, actions: ['Plan wechseln', 'Rechnung herunterladen', 'Offene Zahlung pruefen'], metrics: {'Aktiv': '2', 'Offen': '1'}),
@@ -46,7 +46,7 @@ const appModules = [
   ModuleDefinition(title: 'Altersfreigaben', subtitle: 'Maturity, Content-Gates, Guardian-Freigaben und Schutzregeln', icon: Icons.visibility_off_outlined, actions: ['Gate erstellen', 'Consent pruefen', 'Regeln bearbeiten'], metrics: {'Gates': '3', 'Offen': '1'}),
   ModuleDefinition(title: 'Outfit-Abos', subtitle: 'Style-Profil, Plaene, Lieferungen und Support', icon: Icons.checkroom_outlined, actions: ['Style bearbeiten', 'Lieferung ansehen', 'Abo pausieren'], metrics: {'Aktiv': '1', 'Lieferungen': '2'}),
   ModuleDefinition(title: 'Einstellungen', subtitle: 'Profil, Sprache, Datenschutz und Zahlungen', icon: Icons.settings_outlined, actions: ['Profil bearbeiten', 'Sprache wechseln', 'Abo verwalten'], metrics: {'Profil': '82%', 'Sprache': 'DE'}),
-  ModuleDefinition(title: 'Admin', subtitle: 'Moderation, Abos, Commerce und Systembereiche', icon: Icons.admin_panel_settings_outlined, actions: ['Mitglieder verwalten', 'Moderation pruefen', 'Zahlungen ansehen'], metrics: {'Tickets': '2', 'Pruefung': '1'}),
+  ModuleDefinition(title: 'Admin', subtitle: 'Moderation, Abos, Commerce und Systembereiche', icon: Icons.admin_panel_settings_outlined, actions: ['Mitglieder verwalten', 'Moderation pruefen', 'Zahlungen ansehen'], metrics: {'Tickets': '2', 'Prüfung': '1'}),
 ];
 
 

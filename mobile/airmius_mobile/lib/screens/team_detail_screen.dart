@@ -135,7 +135,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
           const SizedBox(height: 14),
           Wrap(spacing: 10, runSpacing: 10, children: [
             if (widget.teamId != null && widget.teamId! > 0) AirmiusButton(label: 'Neu laden', icon: Icons.refresh_outlined, onPressed: _reloadTeam),
-            if (team?.canDelete == true) AirmiusButton(label: 'Team loeschen', icon: Icons.delete_outline, danger: true, onPressed: () => _deleteTeam(team!)),
+            if (team?.canDelete == true) AirmiusButton(label: 'Team löschen', icon: Icons.delete_outline, danger: true, onPressed: () => _deleteTeam(team!)),
             AirmiusButton(label: 'Operations', icon: Icons.tune_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeamOperationsScreen()))),
           ]),
         ]),
@@ -172,12 +172,14 @@ class _ProfilePanel extends StatelessWidget {
     return AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       const Eyebrow('Teamdaten'),
       const SizedBox(height: 12),
-      _TeamInfoRow(label: 'Teamname', value: team?.name ?? fallbackTitle, icon: Icons.groups_2_outlined),
-      _TeamInfoRow(label: 'Verein', value: team?.clubName ?? 'Nicht angegeben', icon: Icons.shield_outlined),
-      _TeamInfoRow(label: 'Sportart', value: team?.sportType ?? 'Nicht angegeben', icon: Icons.sports_soccer_outlined),
-      _TeamInfoRow(label: 'Altersgruppe', value: team?.ageGroup ?? 'Nicht angegeben', icon: Icons.group_outlined),
-      _TeamInfoRow(label: 'Sichtbarkeit', value: team?.visibility ?? 'Teamspace', icon: Icons.visibility_outlined),
-      _TeamInfoRow(label: 'Beschreibung', value: team?.description ?? 'Keine Beschreibung vorhanden.', icon: Icons.notes_outlined),
+      _TeamInfoGrid(rows: [
+        _TeamInfoData(label: 'Teamname', value: team?.name ?? fallbackTitle, icon: Icons.groups_2_outlined),
+        _TeamInfoData(label: 'Verein', value: team?.clubName ?? 'Nicht angegeben', icon: Icons.shield_outlined),
+        _TeamInfoData(label: 'Sportart', value: team?.sportType ?? 'Nicht angegeben', icon: Icons.sports_soccer_outlined),
+        _TeamInfoData(label: 'Altersgruppe', value: team?.ageGroup ?? 'Nicht angegeben', icon: Icons.group_outlined),
+        _TeamInfoData(label: 'Sichtbarkeit', value: team?.visibility ?? 'Teamspace', icon: Icons.visibility_outlined),
+        _TeamInfoData(label: 'Beschreibung', value: team?.description ?? 'Keine Beschreibung vorhanden.', icon: Icons.notes_outlined),
+      ]),
       const SizedBox(height: 12),
       if (team?.attendanceStats != null) ...[
         _AttendanceStatsPanel(stats: team!.attendanceStats!),
@@ -238,26 +240,56 @@ class _AttendanceStatsPanel extends StatelessWidget {
   }
 }
 
-class _TeamInfoRow extends StatelessWidget {
-  const _TeamInfoRow({required this.label, required this.value, required this.icon});
+class _TeamInfoData {
+  const _TeamInfoData({required this.label, required this.value, required this.icon});
 
   final String label;
   final String value;
   final IconData icon;
+}
+
+class _TeamInfoGrid extends StatelessWidget {
+  const _TeamInfoGrid({required this.rows});
+
+  final List<_TeamInfoData> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 430 ? 2 : 1;
+        const gap = 10.0;
+        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final row in rows) SizedBox(width: width, child: _TeamInfoTile(row: row)),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _TeamInfoTile extends StatelessWidget {
+  const _TeamInfoTile({required this.row});
+
+  final _TeamInfoData row;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      height: 78,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icon, color: AirmiusColors.blue, size: 20),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        Icon(row.icon, color: AirmiusColors.blue, size: 20),
         const SizedBox(width: 10),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+          Text(row.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)),
           const SizedBox(height: 3),
-          Text(value, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, height: 1.3)),
+          Text(row.value, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, height: 1.2)),
         ])),
       ]),
     );
@@ -315,7 +347,7 @@ class _InvitePanel extends StatelessWidget {
       SizedBox(height: 10),
       AirmiusTextField(label: 'Rolle', hint: 'Spieler, Trainer, Captain', icon: Icons.admin_panel_settings_outlined),
       SizedBox(height: 10),
-      Text('Einladungstoken, Ablaufdatum und Guardian-Pruefung werden spaeter ueber die API erzeugt.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+      Text('Einladungstoken, Ablaufdatum und Guardian-Prüfung werden spaeter ueber die API erzeugt.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
     ]));
   }
 }

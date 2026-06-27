@@ -225,6 +225,7 @@ class AirmiusClub {
     this.country,
     this.canManage = false,
     this.canDelete = false,
+    this.management,
   });
 
   final int id;
@@ -243,6 +244,7 @@ class AirmiusClub {
   final String? country;
   final bool canManage;
   final bool canDelete;
+  final AirmiusClubManagement? management;
 
   factory AirmiusClub.fromJson(JsonMap json) => AirmiusClub(
         id: _int(json['id']),
@@ -261,11 +263,131 @@ class AirmiusClub {
         country: _nullableString(json['country']),
         canManage: _bool(json['can_manage']) || _bool(json['can_update']),
         canDelete: _bool(json['can_delete']) || _bool(json['can_destroy']),
+        management: json['management'] is JsonMap ? AirmiusClubManagement.fromJson(json['management'] as JsonMap) : null,
       );
 }
 
 List<AirmiusTeam> _clubTeams(Object? value) =>
     value is List ? value.whereType<JsonMap>().map(AirmiusTeam.fromJson).toList() : const [];
+
+class AirmiusClubManagement {
+  const AirmiusClubManagement({
+    required this.canManage,
+    this.summary = const {},
+    this.settings = const {},
+    this.subscription = const {},
+    this.capabilities = const {},
+    this.members = const [],
+    this.externalMembers = const [],
+    this.membershipRequests = const [],
+    this.pendingTeamJoinRequests = const [],
+    this.membershipTypes = const [],
+    this.contributionRules = const [],
+    this.invoices = const [],
+    this.payments = const [],
+    this.bankTransactions = const [],
+    this.membershipStatuses = const [],
+    this.contributionIntervals = const [],
+    this.teamRoles = const [],
+    this.teams = const [],
+  });
+
+  final bool canManage;
+  final JsonMap summary;
+  final JsonMap settings;
+  final JsonMap subscription;
+  final JsonMap capabilities;
+  final List<AirmiusClubMember> members;
+  final List<JsonMap> externalMembers;
+  final List<AirmiusClubMembershipRequest> membershipRequests;
+  final List<JsonMap> pendingTeamJoinRequests;
+  final List<JsonMap> membershipTypes;
+  final List<JsonMap> contributionRules;
+  final List<JsonMap> invoices;
+  final List<JsonMap> payments;
+  final List<JsonMap> bankTransactions;
+  final List<String> membershipStatuses;
+  final List<String> contributionIntervals;
+  final List<String> teamRoles;
+  final List<AirmiusTeam> teams;
+
+  int get pendingMembershipRequestsCount =>
+      _int(summary['pending_membership_requests_count'], fallback: membershipRequests.where((request) => request.status == 'pending').length);
+
+  int get pendingTeamJoinRequestsCount => _int(summary['pending_team_join_requests_count'], fallback: pendingTeamJoinRequests.length);
+
+  int get activeMembersCount => _int(summary['active_members_count'], fallback: members.length);
+
+  int get linkedPeopleCount => _int(summary['linked_people_count'], fallback: members.length + externalMembers.length);
+
+  double get openInvoiceAmount => _double(summary['open_invoice_amount']);
+
+  int get openInvoicesCount => _int(summary['open_invoices_count'], fallback: invoices.length);
+
+  int get sepaReadyMembersCount => _int(summary['sepa_ready_members_count']);
+
+  double get recurringContributionTotal => _double(summary['recurring_contribution_total']);
+
+  factory AirmiusClubManagement.fromJson(JsonMap json) => AirmiusClubManagement(
+        canManage: _bool(json['can_manage']),
+        summary: json['summary'] is JsonMap ? json['summary'] as JsonMap : const {},
+        settings: json['settings'] is JsonMap ? json['settings'] as JsonMap : const {},
+        subscription: json['subscription'] is JsonMap ? json['subscription'] as JsonMap : const {},
+        capabilities: json['capabilities'] is JsonMap ? json['capabilities'] as JsonMap : const {},
+        members: _jsonList(json['members']).map(AirmiusClubMember.fromJson).toList(),
+        externalMembers: _jsonList(json['external_members']),
+        membershipRequests: _jsonList(json['membership_requests'] ?? json['club_requests']).map(AirmiusClubMembershipRequest.fromJson).toList(),
+        pendingTeamJoinRequests: _jsonList(json['pending_team_join_requests'] ?? json['pending_requests']),
+        membershipTypes: _jsonList(json['membership_types']),
+        contributionRules: _jsonList(json['contribution_rules']),
+        invoices: _jsonList(json['invoices']),
+        payments: _jsonList(json['payments']),
+        bankTransactions: _jsonList(json['bank_transactions']),
+        membershipStatuses: _stringList(json['membership_statuses']),
+        contributionIntervals: _stringList(json['contribution_intervals']),
+        teamRoles: _stringList(json['team_roles']),
+        teams: _clubTeams(json['teams']),
+      );
+}
+
+class AirmiusClubMember {
+  const AirmiusClubMember({
+    required this.id,
+    required this.name,
+    required this.email,
+    this.licenseNumber,
+    this.avatarUrl,
+    this.membership = const {},
+    this.invoicesCount = 0,
+    this.paymentsCount = 0,
+  });
+
+  final int id;
+  final String name;
+  final String email;
+  final String? licenseNumber;
+  final String? avatarUrl;
+  final JsonMap membership;
+  final int invoicesCount;
+  final int paymentsCount;
+
+  String? get role => _nullableString(membership['role']);
+
+  String? get status => _nullableString(membership['status']);
+
+  String? get memberNumber => _nullableString(membership['member_number']);
+
+  factory AirmiusClubMember.fromJson(JsonMap json) => AirmiusClubMember(
+        id: _int(json['id']),
+        name: _string(json['name'], fallback: 'Mitglied'),
+        email: _string(json['email']),
+        licenseNumber: _nullableString(json['athlete_license_number']),
+        avatarUrl: _mediaUrl(json['profile_photo_url'] ?? json['profile_photo_thumb']),
+        membership: json['membership'] is JsonMap ? json['membership'] as JsonMap : const {},
+        invoicesCount: _int(json['invoices_count']),
+        paymentsCount: _int(json['payments_count']),
+      );
+}
 
 class AirmiusTeam {
   const AirmiusTeam({
@@ -463,6 +585,7 @@ class AirmiusClubMembershipRequest {
     this.applicantName,
     this.applicantEmail,
     this.clubName,
+    this.membershipTypeName,
     this.preferredPaymentMethod,
     this.requestedBillingInterval,
     this.previewAmount,
@@ -474,6 +597,7 @@ class AirmiusClubMembershipRequest {
   factory AirmiusClubMembershipRequest.fromJson(JsonMap json) {
     final user = json['user'];
     final club = json['club'];
+    final membershipType = json['membership_type'];
     final applicationData = json['application_data'];
     final acceptedDocuments = json['accepted_documents'];
 
@@ -488,6 +612,7 @@ class AirmiusClubMembershipRequest {
       applicantName: (user is JsonMap ? _nullableString(user['name']) : null) ?? _nullableString(json['applicant_name']),
       applicantEmail: (user is JsonMap ? _nullableString(user['email']) : null) ?? _nullableString(json['applicant_email']),
       clubName: (club is JsonMap ? _nullableString(club['name']) : null) ?? _nullableString(json['club_name']),
+      membershipTypeName: membershipType is JsonMap ? _nullableString(membershipType['name']) : _nullableString(json['membership_type_name']),
       preferredPaymentMethod: _nullableString(json['preferred_payment_method']),
       requestedBillingInterval: _nullableString(json['requested_billing_interval']),
       previewAmount: _nullableString(json['preview_amount']),
@@ -508,6 +633,7 @@ class AirmiusClubMembershipRequest {
   final String? applicantName;
   final String? applicantEmail;
   final String? clubName;
+  final String? membershipTypeName;
   final String? preferredPaymentMethod;
   final String? requestedBillingInterval;
   final String? previewAmount;

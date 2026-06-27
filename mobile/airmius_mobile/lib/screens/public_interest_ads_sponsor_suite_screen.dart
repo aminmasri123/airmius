@@ -20,7 +20,7 @@ class _PublicInterestAdsSponsorSuiteScreenState extends State<PublicInterestAdsS
   final List<_SuiteItem> _items = const [
     _SuiteItem('Interesse anmelden', 'Leads', 'Lead', 'Oeffentliche Anfrage fuer Nutzer, Vereine, Anbieter oder Partner mit Kontaktstatus.', Icons.waving_hand_outlined, Color(0xFF5BA7FF)),
     _SuiteItem('Standort vorschlagen', 'Leads', 'Location', 'Sportort, Verein, Adresse, Ansprechpartner, Pruefstatus und lokale Einordnung.', Icons.add_location_alt_outlined, Color(0xFF2EE59D)),
-    _SuiteItem('Verein empfehlen', 'Leads', 'Club', 'Vereinsvorschlag, Kontakt, Sportarten, Region und spaetere Admin-Pruefung.', Icons.apartment_outlined, Color(0xFFF8B84E)),
+    _SuiteItem('Verein empfehlen', 'Leads', 'Club', 'Vereinsvorschlag, Kontakt, Sportarten, Region und spaetere Admin-Prüfung.', Icons.apartment_outlined, Color(0xFFF8B84E)),
     _SuiteItem('Werbeagentur Landing', 'Ads', 'Public', 'Oeffentliche Ads-Seite mit Leistungen, Zielgruppen, Formaten und Kontaktanfrage.', Icons.campaign_outlined, Color(0xFFB084FF)),
     _SuiteItem('Ad Campaigns', 'Ads', 'Campaign', 'Kampagnen, Budget, Zielgruppe, Zeitraum, Status, Vorschau und Freigabe.', Icons.ads_click, Color(0xFFFF6B6B)),
     _SuiteItem('Sponsor Ads', 'Ads', 'Sponsor', 'Sponsor-Anzeigen, Platzierungen, Vereine, Laufzeit, Reporting und Ansprechpartner.', Icons.trending_up_outlined, Color(0xFF5BA7FF)),

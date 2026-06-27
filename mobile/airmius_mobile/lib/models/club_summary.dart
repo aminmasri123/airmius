@@ -20,6 +20,7 @@ class ClubSummary {
     this.country,
     this.canManage = false,
     this.canDelete = false,
+    this.management,
   });
 
   final int id;
@@ -40,6 +41,16 @@ class ClubSummary {
   final String? country;
   final bool canManage;
   final bool canDelete;
+  final AirmiusClubManagement? management;
+
+  int get pendingMembershipRequests => management?.pendingMembershipRequestsCount ?? 0;
+  int get pendingTeamJoinRequests => management?.pendingTeamJoinRequestsCount ?? 0;
+  int get externalMembersCount => management?.externalMembers.length ?? 0;
+  int get membershipTypesCount => management?.membershipTypes.length ?? 0;
+  int get contributionRulesCount => management?.contributionRules.length ?? 0;
+  int get invoicesCount => management?.invoices.length ?? 0;
+  int get paymentsCount => management?.payments.length ?? 0;
+  int get bankTransactionsCount => management?.bankTransactions.length ?? 0;
 
   factory ClubSummary.fromAirmiusClub(AirmiusClub club) => ClubSummary(
         id: club.id,
@@ -60,6 +71,7 @@ class ClubSummary {
         country: club.country,
         canManage: club.canManage,
         canDelete: club.canDelete,
+        management: club.management,
       );
 }
 

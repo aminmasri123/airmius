@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
@@ -273,6 +274,11 @@ class _ClubCardState extends State<_ClubCard> {
     return ClubSummary.fromAirmiusClub(detail);
   }
 
+  void _reloadDetail() {
+    setState(() => _detailFuture = _loadDetail());
+    widget.onReload();
+  }
+
   void _openPanel(String panel) {
     setState(() {
       _expanded = true;
@@ -349,7 +355,7 @@ class _ClubCardState extends State<_ClubCard> {
                       builder: (_) => ClubProfileScreen(club: detail, requested: widget.requested, onRequest: widget.onRequest, onWithdraw: widget.onWithdraw),
                     ),
                   ).then((_) => widget.onReload()),
-                  onReload: widget.onReload,
+                  onReload: _reloadDetail,
                 );
               },
             ),
@@ -434,20 +440,29 @@ class _ClubInlineWorkspace extends StatelessWidget {
         const SizedBox(height: 12),
         _InlineSection(
           title: 'Vereinsmitglieder',
-          subtitle: '${club.members} Mitglieder',
+          subtitle: '${club.management?.linkedPeopleCount ?? club.members} Personen in der Verwaltung',
           action: club.canManage ? _SmallInlineButton(label: 'Daten bearbeiten', onPressed: onEdit) : null,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _InlineMetricLine(icon: Icons.groups_outlined, title: 'Aktive Mitglieder', value: '${club.members}'),
+              _InlineMetricLine(icon: Icons.groups_outlined, title: 'Aktive Mitglieder', value: '${club.management?.activeMembersCount ?? club.members}'),
               const SizedBox(height: 8),
               _InlineMetricLine(icon: Icons.account_tree_outlined, title: 'Teams', value: '${club.teams}'),
               const SizedBox(height: 8),
-              _InlineMetricLine(icon: Icons.verified_outlined, title: 'Status', value: club.verified ? 'Freigegeben' : 'Wartet auf Pruefung'),
+              _InlineMetricLine(icon: Icons.person_add_alt_1_outlined, title: 'Offene Vereinsanfragen', value: '${club.pendingMembershipRequests}'),
+              const SizedBox(height: 8),
+              _InlineMetricLine(icon: Icons.verified_outlined, title: 'Status', value: club.verified ? 'Freigegeben' : 'Wartet auf Prüfung'),
             ],
           ),
         ),
         const SizedBox(height: 12),
+        if (club.canManage && club.management != null) ...[
+          _ClubManagementSection(
+            club: club,
+            onReload: onReload,
+          ),
+          const SizedBox(height: 12),
+        ],
         _InlineSection(
           title: 'Schnellzugriff',
           subtitle: 'Wie Web: direkt im Vereinsblock arbeiten',
@@ -464,6 +479,207 @@ class _ClubInlineWorkspace extends StatelessWidget {
     );
   }
 }
+
+class _ClubManagementSection extends StatelessWidget {
+  const _ClubManagementSection({required this.club, required this.onReload});
+
+  final ClubSummary club;
+  final VoidCallback onReload;
+
+  @override
+  Widget build(BuildContext context) {
+    final management = club.management!;
+    return _InlineSection(
+      title: 'Verwaltungsdaten',
+      subtitle: 'Mitglieder, Anfragen, Beitraege und Abrechnung wie im Web',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = constraints.maxWidth >= 520 ? 2 : 1;
+              const gap = 8.0;
+              final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+              return Wrap(
+                spacing: gap,
+                runSpacing: gap,
+                children: [
+                  SizedBox(width: width, child: _ManagementMetricTile(title: 'Offen', value: _formatMoney(management.openInvoiceAmount), subtitle: '${management.openInvoicesCount} Rechnung(en)')),
+                  SizedBox(width: width, child: _ManagementMetricTile(title: 'SEPA bereit', value: '${management.sepaReadyMembersCount}', subtitle: 'Mandate mit IBAN und Referenz')),
+                  SizedBox(width: width, child: _ManagementMetricTile(title: 'Wiederkehrende Beitraege', value: _formatMoney(management.recurringContributionTotal), subtitle: 'Summe aktiver Beitragssaetze')),
+                  SizedBox(width: width, child: _ManagementMetricTile(title: 'Regeln', value: '${club.contributionRulesCount}', subtitle: '${club.membershipTypesCount} Mitgliedschaftstyp(en)')),
+                  SizedBox(width: width, child: _ManagementMetricTile(title: 'Zahlungen', value: '${club.paymentsCount}', subtitle: '${club.bankTransactionsCount} Banktransaktion(en)')),
+                  SizedBox(width: width, child: _ManagementMetricTile(title: 'Externe Mitglieder', value: '${club.externalMembersCount}', subtitle: 'Importierte oder eingeladene Personen')),
+                ],
+              );
+            },
+          ),
+          if (management.membershipRequests.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Text('Offene Mitgliedschaftsanfragen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 8),
+            for (final request in management.membershipRequests.take(4)) ...[
+              _MembershipRequestCard(
+                request: request,
+                onApprove: () => _reviewRequest(context, request, approve: true),
+                onDecline: () => _reviewRequest(context, request, approve: false),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ],
+          if (management.pendingTeamJoinRequests.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Text('Offene Team-Beitrittsanfragen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 8),
+            for (final request in management.pendingTeamJoinRequests.take(4)) ...[
+              _RawRequestLine(request: request),
+              const SizedBox(height: 8),
+            ],
+          ],
+          if (management.members.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Text('Mitglieder', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 8),
+            for (final member in management.members.take(5)) ...[
+              _MemberLine(member: member),
+              const SizedBox(height: 8),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _reviewRequest(BuildContext context, AirmiusClubMembershipRequest request, {required bool approve}) async {
+    final ok = approve
+        ? true
+        : await confirmDanger(context, 'Anfrage ablehnen', 'Moechtest du die Anfrage von ${request.applicantName ?? 'dieser Person'} ablehnen?', 'Ablehnen');
+    if (!ok || !context.mounted) return;
+
+    try {
+      final services = AirmiusServicesScope.of(context);
+      if (approve) {
+        await services.repositories.memberships.approveClubRequest(club.id, request.id);
+      } else {
+        await services.repositories.memberships.declineClubRequest(club.id, request.id);
+      }
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(approve ? 'Anfrage angenommen.' : 'Anfrage abgelehnt.')));
+      onReload();
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Anfrage konnte nicht verarbeitet werden: $error')));
+    }
+  }
+}
+
+class _ManagementMetricTile extends StatelessWidget {
+  const _ManagementMetricTile({required this.title, required this.value, required this.subtitle});
+
+  final String title;
+  final String value;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      minHeight: 82,
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(color: AirmiusColors.card, borderRadius: BorderRadius.circular(10), border: Border.all(color: AirmiusColors.border)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 10, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 8),
+          Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 4),
+          Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, height: 1.25)),
+        ],
+      ),
+    );
+  }
+}
+
+class _MembershipRequestCard extends StatelessWidget {
+  const _MembershipRequestCard({required this.request, required this.onApprove, required this.onDecline});
+
+  final AirmiusClubMembershipRequest request;
+  final VoidCallback onApprove;
+  final VoidCallback onDecline;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(color: AirmiusColors.card, borderRadius: BorderRadius.circular(10), border: Border.all(color: AirmiusColors.border)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(request.applicantName ?? 'Unbekannte Person', style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 3),
+          Text(request.applicantEmail ?? request.message ?? 'Mitgliedschaftsanfrage', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.3)),
+          if (request.membershipTypeName != null || request.previewAmount != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              [
+                if (request.membershipTypeName != null) 'Typ: ${request.membershipTypeName}',
+                if (request.previewAmount != null) 'Vorschau: ${request.previewAmount} ${request.previewInterval ?? ''}'.trim(),
+              ].join(' - '),
+              style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w700),
+            ),
+          ],
+          if (request.preferredPaymentMethod != null || request.requestedBillingInterval != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              [
+                if (request.preferredPaymentMethod != null) 'Zahlung: ${request.preferredPaymentMethod}',
+                if (request.requestedBillingInterval != null) 'Intervall: ${request.requestedBillingInterval}',
+              ].join(' - '),
+              style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w700),
+            ),
+          ],
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(child: _SmallInlineButton(label: 'Annehmen', filled: true, onPressed: onApprove)),
+              const SizedBox(width: 8),
+              Expanded(child: _SmallInlineButton(label: 'Ablehnen', onPressed: onDecline)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RawRequestLine extends StatelessWidget {
+  const _RawRequestLine({required this.request});
+
+  final JsonMap request;
+
+  @override
+  Widget build(BuildContext context) {
+    final user = request['user'];
+    final team = request['team'];
+    final userName = user is JsonMap ? (user['name']?.toString() ?? 'Unbekannt') : 'Unbekannt';
+    final teamName = team is JsonMap ? (team['name']?.toString() ?? 'Team') : 'Team';
+    return _InlineMetricLine(icon: Icons.group_add_outlined, title: '$userName moechte zu $teamName', value: 'offen');
+  }
+}
+
+class _MemberLine extends StatelessWidget {
+  const _MemberLine({required this.member});
+
+  final AirmiusClubMember member;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = member.status?.isNotEmpty == true ? member.status! : 'aktiv';
+    return _InlineMetricLine(icon: Icons.person_outline, title: member.name, value: status);
+  }
+}
+
+String _formatMoney(double value) => '${value.toStringAsFixed(2).replaceAll('.', ',')} EUR';
 
 class _ClubEditInlinePanel extends StatelessWidget {
   const _ClubEditInlinePanel({required this.club, required this.onOpenProfile});
@@ -1151,7 +1367,7 @@ class _StructurePanel extends StatelessWidget {
               const Eyebrow('Vereinsdaten'),
               const SizedBox(height: 12),
               _DetailLine(icon: Icons.location_on_outlined, label: 'Standort', value: club.city.isEmpty ? 'Noch nicht hinterlegt' : club.city),
-              _DetailLine(icon: Icons.badge_outlined, label: 'Status', value: club.verified ? 'Verifiziert' : 'Profil in Pruefung'),
+              _DetailLine(icon: Icons.badge_outlined, label: 'Status', value: club.verified ? 'Verifiziert' : 'Profil in Prüfung'),
               _DetailLine(icon: Icons.groups_outlined, label: 'Mitglieder', value: '${club.members} aktive Kontakte'),
             ],
           ),

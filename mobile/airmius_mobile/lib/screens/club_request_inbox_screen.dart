@@ -108,7 +108,7 @@ class _InboxSettingsPanel extends StatelessWidget {
           const Text('Hier entscheidet der Verein, wie Admins und Antragsteller informiert werden. Rueckzuege bleiben sichtbar, damit keine versehentliche Anfrage weiterbearbeitet wird.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
           const SizedBox(height: 10),
           _InboxSwitch(icon: Icons.notifications_active_outlined, title: 'Admins benachrichtigen', body: 'Push, E-Mail oder Inbox-Eintrag fuer neue Mitgliedschaftsanfragen.', value: notifyAdmins, onChanged: onAdmins, color: AirmiusColors.green),
-          _InboxSwitch(icon: Icons.person_outline, title: 'Antragsteller informieren', body: 'Statusupdates fuer gesendet, in Pruefung, angenommen, abgelehnt oder zurueckgezogen.', value: notifyApplicant, onChanged: onApplicant, color: AirmiusColors.blue),
+          _InboxSwitch(icon: Icons.person_outline, title: 'Antragsteller informieren', body: 'Statusupdates fuer gesendet, in Prüfung, angenommen, abgelehnt oder zurueckgezogen.', value: notifyApplicant, onChanged: onApplicant, color: AirmiusColors.blue),
           _InboxSwitch(icon: Icons.task_alt_outlined, title: 'Admin-Aufgabe erzeugen', body: 'Neue Anfrage landet als Aufgabe im Vereinscockpit oder Adminbereich.', value: autoTask, onChanged: onTask, color: AirmiusColors.amber),
           _InboxSwitch(icon: Icons.undo_outlined, title: 'Rueckzuege anzeigen', body: 'Zurueckgezogene Anfragen bleiben mit Zeitstempel und Grund sichtbar.', value: showWithdrawn, onChanged: onWithdrawn, color: AirmiusColors.red),
         ]),
@@ -241,11 +241,11 @@ class _MembershipRequest {
   final Color color;
 }
 
-const _tabs = ['Alle', 'Neu', 'Pruefung', 'Rueckzug', 'Angenommen', 'Abgelehnt'];
+const _tabs = ['Alle', 'Neu', 'Prüfung', 'Rueckzug', 'Angenommen', 'Abgelehnt'];
 
 const _requests = <_MembershipRequest>[
   _MembershipRequest(status: 'Neu', name: 'ZBB Konto', email: 'zbb.bop.it@gmail.com', address: 'Saargemuender Str. 110, 66271 Kleinblittersdorf', type: 'Allgemeine Anfrage', received: 'Heute 10:24', body: 'Moechte dem Verein ZBB beitreten. Personendaten, Wohndaten und Kontaktdaten sind ausgefuellt.', payment: 'Ueberweisung', documents: '1 offen', color: AirmiusColors.green),
-  _MembershipRequest(status: 'Pruefung', name: 'Mina Becker', email: 'mina@example.com', address: 'Trier, Rheinland-Pfalz', type: 'Jugendmitglied', received: 'Gestern 18:12', body: 'Guardian Consent erforderlich. SEPA-Mandat und Medienfreigabe liegen als Upload vor.', payment: 'SEPA', documents: '3/3', color: AirmiusColors.blue),
+  _MembershipRequest(status: 'Prüfung', name: 'Mina Becker', email: 'mina@example.com', address: 'Trier, Rheinland-Pfalz', type: 'Jugendmitglied', received: 'Gestern 18:12', body: 'Guardian Consent erforderlich. SEPA-Mandat und Medienfreigabe liegen als Upload vor.', payment: 'SEPA', documents: '3/3', color: AirmiusColors.blue),
   _MembershipRequest(status: 'Rueckzug', name: 'Ali Hassan', email: 'ali@example.com', address: 'Saarbruecken', type: 'Probemonat', received: 'Vor 2 Tagen', body: 'Anfrage wurde vom Nutzer zurueckgezogen. Adminentscheidung ist gesperrt, Historie bleibt sichtbar.', payment: 'Bar', documents: 'Rueckzug', color: AirmiusColors.red),
   _MembershipRequest(status: 'Angenommen', name: 'Jonas Weber', email: 'jonas@example.com', address: 'Koblenz', type: 'Standard', received: '03.06.2026', body: 'Als Mitglied aufgenommen, Mitgliedsnummer vorbereitet und erste Zahlungsaufgabe erzeugt.', payment: 'Jaehrlich', documents: 'OK', color: AirmiusColors.green),
   _MembershipRequest(status: 'Abgelehnt', name: 'Test Account', email: 'test@example.com', address: 'Unvollstaendig', type: 'Unklar', received: '01.06.2026', body: 'Ablehnung wegen fehlender Pflichtdaten und nicht akzeptierter Vereinsregeln.', payment: 'Offen', documents: 'Fehlt', color: AirmiusColors.amber),

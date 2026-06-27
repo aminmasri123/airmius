@@ -197,7 +197,7 @@ class _Invite {
 const _invites = [
   _Invite(target: 'Mitglied', title: 'Max Mustermann', body: 'Mitgliedschaftseinladung fuer ZBB, Link laeuft in 3 Tagen ab.', status: 'Offen', icon: Icons.person_add_alt_1_outlined, color: AirmiusColors.blue),
   _Invite(target: 'Trainer', title: 'Coach Einladung', body: 'Trainerrolle mit Teamzugriff, Kader und Anwesenheitsrechten.', status: 'Akzeptiert', icon: Icons.sports_outlined, color: AirmiusColors.green),
-  _Invite(target: 'Guardian', title: 'Elternfreigabe', body: 'Guardian-Link fuer Minderjaehrigenprofil und Consent-Pruefung.', status: 'Wartet', icon: Icons.family_restroom_outlined, color: AirmiusColors.amber),
+  _Invite(target: 'Guardian', title: 'Elternfreigabe', body: 'Guardian-Link fuer Minderjaehrigenprofil und Consent-Prüfung.', status: 'Wartet', icon: Icons.family_restroom_outlined, color: AirmiusColors.amber),
   _Invite(target: 'Team', title: 'U16 Team QR', body: 'QR-Code fuer Teambeitritt nach Training, nur fuer Vereinsmitglieder.', status: 'Aktiv', icon: Icons.groups_2_outlined, color: AirmiusColors.green),
   _Invite(target: 'Sponsor', title: 'Sponsor Workspace', body: 'Einladung fuer Kampagnen, Placements und Reporting-Zugriff.', status: 'Offen', icon: Icons.campaign_outlined, color: AirmiusColors.blue),
   _Invite(target: 'Extern', title: 'Externer Kontakt', body: 'Kontakt ohne volles Mitgliedskonto fuer Kommunikation und Dokumentfreigabe.', status: 'Begrenzt', icon: Icons.link_outlined, color: AirmiusColors.amber),

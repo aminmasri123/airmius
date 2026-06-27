@@ -89,7 +89,7 @@ class _ClubMemberImportExportSuiteScreenState extends State<ClubMemberImportExpo
                 SegmentedButton<String>(
                   segments: const [
                     ButtonSegment(value: 'Import', label: Text('Import')),
-                    ButtonSegment(value: 'Pruefung', label: Text('Pruefung')),
+                    ButtonSegment(value: 'Prüfung', label: Text('Prüfung')),
                     ButtonSegment(value: 'Einladung', label: Text('Einladung')),
                     ButtonSegment(value: 'Export', label: Text('Export')),
                   ],

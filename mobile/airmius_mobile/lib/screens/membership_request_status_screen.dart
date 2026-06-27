@@ -144,7 +144,7 @@ class _StatusHero extends StatelessWidget {
             children: [
               const AirmiusAvatar('ZBB', large: true),
               const SizedBox(width: 12),
-              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Eyebrow('MITGLIEDSANFRAGE'), SizedBox(height: 4), Text('ZBB', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900)), Text('Anfrage gesendet - Pruefung laeuft', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800))])),
+              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Eyebrow('MITGLIEDSANFRAGE'), SizedBox(height: 4), Text('ZBB', style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900)), Text('Anfrage gesendet - Prüfung laeuft', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800))])),
               StatusPill('Gesendet', color: AirmiusColors.green),
             ],
           ),

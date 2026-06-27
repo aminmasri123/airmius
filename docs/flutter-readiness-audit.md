@@ -12,7 +12,7 @@ Die Webapp ist nach den aktuellen Reparaturen stabiler, mobilfreundlicher und de
 - Ein zentraler In-App-Dialog-Service ersetzt Confirm- und Prompt-Flows.
 - Sprachdateien `de`, `en`, `fr`, `ar` haben identische Key-Sets.
 - Alle literal verwendeten `t(...)`/`te(...)` Keys sind jetzt vorhanden.
-- UTF-8/Mojibake-Pruefung in `resources/js` ist sauber.
+- UTF-8/Mojibake-Prüfung in `resources/js` ist sauber.
 - Die sehr schweren Commerce-Screens rendern inaktive Top-Level-Tabs jetzt per `v-if` nicht mehr mit.
 - Teams- und Events-Wizard/Edit-Bereiche rendern inaktive Schritte jetzt per `v-if`.
 - Die globale Auto-Uebersetzung laeuft fuer Deutsch nicht mehr bei jeder DOM-Mutation ueber den kompletten Inertia-Root.

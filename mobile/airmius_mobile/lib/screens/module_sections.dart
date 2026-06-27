@@ -843,7 +843,7 @@ class _AdminSection extends StatelessWidget {
           Icon(Icons.chevron_right, color: AirmiusColors.muted),
         ]),
       ),
-      const _ListLine(icon: Icons.verified_user_outlined, title: 'Club-Verifizierungen', body: '1 Verein wartet auf Pruefung', trailing: 'Admin'),
+      const _ListLine(icon: Icons.verified_user_outlined, title: 'Club-Verifizierungen', body: '1 Verein wartet auf Prüfung', trailing: 'Admin'),
       const _ListLine(icon: Icons.report_outlined, title: 'Moderation', body: 'Flags, Reports und Community-Sicherheit', trailing: '2'),
       const _ListLine(icon: Icons.payments_outlined, title: 'Abos & Rechnungen', body: 'Zahlstatus, Banktransfer und Rechnungen', trailing: 'Billing'),
       const _ListLine(icon: Icons.store_mall_directory_outlined, title: 'Commerce', body: 'Coupons, Produkte, Bestellungen, Payouts', trailing: 'Shop'),

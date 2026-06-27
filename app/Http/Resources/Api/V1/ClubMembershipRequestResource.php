@@ -27,6 +27,7 @@ class ClubMembershipRequestResource extends JsonResource
             'preview_interval' => $this->preview_interval,
             'reviewed_at' => $this->reviewed_at?->toJSON(),
             'review_note' => $this->review_note,
+            'membership_type' => $this->whenLoaded('membershipType'),
             'club' => new ClubResource($this->whenLoaded('club')),
             'user' => new UserResource($this->whenLoaded('user')),
             'created_at' => $this->created_at?->toJSON(),

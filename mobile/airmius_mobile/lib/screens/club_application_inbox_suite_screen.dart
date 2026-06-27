@@ -202,7 +202,7 @@ class _RequestCard extends StatelessWidget {
                 onPressed: () => openUiAction(
                   context,
                   title: 'Anfrage annehmen',
-                  body: 'Der Verein kann spaeter nach Pruefung der Daten die Mitgliedschaft bestaetigen und den User informieren.',
+                  body: 'Der Verein kann spaeter nach Prüfung der Daten die Mitgliedschaft bestaetigen und den User informieren.',
                   status: 'UI vorbereitet',
                   icon: Icons.check_circle_outline,
                 ),

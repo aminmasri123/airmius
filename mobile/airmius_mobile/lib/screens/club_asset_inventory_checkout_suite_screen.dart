@@ -11,7 +11,7 @@ class ClubAssetInventoryCheckoutSuiteScreen extends StatelessWidget {
     final assets = [
       _AssetItem('Trikotsatz U17', 'Ausgeliehen', 'Team U17, Rueckgabe 18.06.2026', AirmiusColors.amber, Icons.checkroom_outlined),
       _AssetItem('Hallen-Schluessel', 'Kritisch', 'Trainer Max, Signatur erforderlich', AirmiusColors.red, Icons.vpn_key_outlined),
-      _AssetItem('Erste-Hilfe-Koffer', 'Verfuegbar', 'Sporthalle West, Pruefung faellig', AirmiusColors.green, Icons.medical_services_outlined),
+      _AssetItem('Erste-Hilfe-Koffer', 'Verfuegbar', 'Sporthalle West, Prüfung faellig', AirmiusColors.green, Icons.medical_services_outlined),
       _AssetItem('Beamer Vereinsheim', 'Reserviert', 'Vorstandssitzung, 20:00 Uhr', AirmiusColors.blue, Icons.videocam_outlined),
     ];
 

@@ -23,7 +23,7 @@ class _GuardianFamilyConsentScreenState extends State<GuardianFamilyConsentScree
 
   final List<_GuardianItem> _items = const [
     _GuardianItem(title: 'Kindkonto bestaetigen', body: 'Elternteil bestaetigt Kindkonto, Alter, Kontakt und Verantwortlichkeit.', status: 'Offen', icon: Icons.child_care_outlined, color: AirmiusColors.blue),
-    _GuardianItem(title: 'Vereinsbeitritt freigeben', body: 'Mitgliedsantrag, Datenschutz, Regeln und Zahlungsdaten fuer Minderjaehrige pruefen.', status: 'Pruefung', icon: Icons.assignment_turned_in_outlined, color: AirmiusColors.green),
+    _GuardianItem(title: 'Vereinsbeitritt freigeben', body: 'Mitgliedsantrag, Datenschutz, Regeln und Zahlungsdaten fuer Minderjaehrige pruefen.', status: 'Prüfung', icon: Icons.assignment_turned_in_outlined, color: AirmiusColors.green),
     _GuardianItem(title: 'Training & Events', body: 'Teilnahme, Anwesenheit, Notfallkontakt und Trainerkommunikation erlauben.', status: 'Aktiv', icon: Icons.event_available_outlined, color: AirmiusColors.amber),
     _GuardianItem(title: 'Medienfreigabe', body: 'Fotos, Videos, Teambeitraege und oeffentliche Vereinsinhalte optional erlauben.', status: 'Optional', icon: Icons.photo_camera_outlined, color: AirmiusColors.red),
   ];
@@ -48,7 +48,7 @@ class _GuardianFamilyConsentScreenState extends State<GuardianFamilyConsentScree
                         const SizedBox(height: 16),
                         _GuardianHero(onApprove: () => _toast('Guardian-Freigabe vorbereiten')),
                         const SizedBox(height: 16),
-                        _ChoicePanel(title: 'Kindstatus', value: _childStatus, values: const ['Offen', 'Pruefung', 'Aktiv', 'Abgelehnt'], onChanged: (value) => setState(() => _childStatus = value)),
+                        _ChoicePanel(title: 'Kindstatus', value: _childStatus, values: const ['Offen', 'Prüfung', 'Aktiv', 'Abgelehnt'], onChanged: (value) => setState(() => _childStatus = value)),
                         const SizedBox(height: 16),
                         AirmiusPanel(
                           title: 'Einwilligungen',

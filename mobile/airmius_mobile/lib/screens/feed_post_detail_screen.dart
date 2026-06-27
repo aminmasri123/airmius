@@ -523,7 +523,7 @@ class _DetailPostMetaBadges extends StatelessWidget {
     final badges = <_DetailPostBadgeData>[
       _DetailPostBadgeData(_postTypeLabel(post.postType), AirmiusColors.mutedSoft),
       _DetailPostBadgeData(_contentOriginLabel(post.contentOrigin), post.contentOrigin == 'ai' ? AirmiusColors.blue : AirmiusColors.mutedSoft),
-      if (post.moderationStatus != 'approved') const _DetailPostBadgeData('In Pruefung', AirmiusColors.amber),
+      if (post.moderationStatus != 'approved') const _DetailPostBadgeData('In Prüfung', AirmiusColors.amber),
       if (post.sportName != null) _DetailPostBadgeData(post.sportName!, AirmiusColors.green),
       for (final skill in post.sportSkills) _DetailPostBadgeData(skill, AirmiusColors.mutedSoft),
     ];

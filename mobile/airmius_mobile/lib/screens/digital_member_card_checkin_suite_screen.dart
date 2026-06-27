@@ -30,7 +30,7 @@ class _DigitalMemberCardCheckinSuiteScreenState extends State<DigitalMemberCardC
       ),
       body: PageFrame(
         title: 'Digital Member Card Check-in',
-        subtitle: 'Mobile UI fuer digitale Mitgliedskarte, QR-Verifikation, Training-Check-in, Offline-Pruefung und Datenschutz.',
+        subtitle: 'Mobile UI fuer digitale Mitgliedskarte, QR-Verifikation, Training-Check-in, Offline-Prüfung und Datenschutz.',
         trailing: const StatusPill('Native value', color: AirmiusColors.green),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -98,7 +98,7 @@ class _DigitalMemberCardCheckinSuiteScreenState extends State<DigitalMemberCardC
                   ),
                   _CardToggle(
                     icon: Icons.wifi_off_outlined,
-                    title: 'Offline-Pruefung',
+                    title: 'Offline-Prüfung',
                     body: 'Zeitlich begrenzte Tokens erlauben Check-in, auch wenn Internet in der Halle schlecht ist.',
                     enabled: _offlineVerify,
                     onChanged: (value) => setState(() => _offlineVerify = value),

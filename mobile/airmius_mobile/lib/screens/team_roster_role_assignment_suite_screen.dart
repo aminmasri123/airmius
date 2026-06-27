@@ -37,7 +37,7 @@ class _TeamRosterRoleAssignmentSuiteScreenState extends State<TeamRosterRoleAssi
       const _TeamRow(
         name: 'Warteliste Training',
         meta: '5 Join-Requests',
-        status: 'Pruefung',
+        status: 'Prüfung',
         body: 'Neue Anfragen koennen geprueft, angenommen, abgelehnt oder Rueckfragen erhalten.',
         color: AirmiusColors.amber,
       ),
@@ -86,7 +86,7 @@ class _TeamRosterRoleAssignmentSuiteScreenState extends State<TeamRosterRoleAssi
                     ButtonSegment(value: 'Alle', label: Text('Alle')),
                     ButtonSegment(value: 'Aktiv', label: Text('Aktiv')),
                     ButtonSegment(value: 'Jugend', label: Text('Jugend')),
-                    ButtonSegment(value: 'Pruefung', label: Text('Requests')),
+                    ButtonSegment(value: 'Prüfung', label: Text('Requests')),
                   ],
                   selected: {teamFilter},
                   onSelectionChanged: (value) => setState(() => teamFilter = value.first),

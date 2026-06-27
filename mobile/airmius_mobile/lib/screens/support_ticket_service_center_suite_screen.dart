@@ -36,7 +36,7 @@ class _SupportTicketServiceCenterSuiteScreenState extends State<SupportTicketSer
       ),
       const _TicketRow(
         title: 'Beitrag falsch angezeigt',
-        status: 'Pruefung',
+        status: 'Prüfung',
         body: 'Zahlungsrhythmus, Beitragsgruppe, Rechnung und Vereinsregel werden im Ticket zusammengefuehrt.',
         meta: 'Beitraege & Zahlung',
         color: AirmiusColors.green,

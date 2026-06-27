@@ -52,7 +52,7 @@ const airmiusStoreReleaseConfig = AirmiusStoreReleaseConfig(
   ],
   releaseGates: [
     AirmiusReleaseGate(title: 'Local Release Prerequisites', owner: 'Release', status: 'Skript vorbereitet', remainingWork: 'Flutter, Android SDK, adb, cmdline-tools, Android-Lizenzen, Java und Pflichtdateien als Evidence-Log beweisen.'),
-    AirmiusReleaseGate(title: 'Branding & Theme', owner: 'Design', status: 'Persistenz vorbereitet', remainingWork: 'Finale visuelle Pruefung auf Testgeraeten und spaetere Storage-Haertung nachziehen.'),
+    AirmiusReleaseGate(title: 'Branding & Theme', owner: 'Design', status: 'Persistenz vorbereitet', remainingWork: 'Finale visuelle Prüfung auf Testgeraeten und spaetere Storage-Haertung nachziehen.'),
     AirmiusReleaseGate(title: 'Logo & Theme Parity', owner: 'Design', status: 'QA-Gate vorbereitet', remainingWork: 'Normal mit dunklem Logo, Dunkel mit weissem Logo und System mit Geraete-Helligkeit per Screenshot nach Neustart beweisen.'),
     AirmiusReleaseGate(title: 'Logo Theme Asset Mapping', owner: 'Design', status: 'Skript vorbereitet', remainingWork: 'Statisches Logo-Asset- und Mapping-Log aus lokalem RC-Lauf oder CI als Evidence sichern.'),
     AirmiusReleaseGate(title: 'Auth Token Store', owner: 'Mobile', status: 'Persistenz vorbereitet', remainingWork: 'Flutter Secure Storage oder Keychain/Keystore-Provider fuer Release-Sicherheit final einsetzen.'),
