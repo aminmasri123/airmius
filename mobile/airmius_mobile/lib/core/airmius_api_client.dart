@@ -129,6 +129,11 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> createClub(AirmiusJson payload) => _json('POST', '/api/v1/clubs', body: payload);
   Future<AirmiusJson> clubDetail(int clubId) => _json('GET', '/api/v1/clubs/$clubId');
+  Future<AirmiusJson> updateClubMembershipSettings(int clubId, AirmiusJson payload) => _json('PUT', '/api/v1/clubs/$clubId/membership/settings', body: payload);
+  Future<AirmiusJson> createClubMembershipType(int clubId, AirmiusJson payload) => _json('POST', '/api/v1/clubs/$clubId/membership/types', body: payload);
+  Future<AirmiusJson> updateClubMembershipType(int clubId, int typeId, AirmiusJson payload) => _json('PUT', '/api/v1/clubs/$clubId/membership/types/$typeId', body: payload);
+  Future<AirmiusJson> createClubContributionRule(int clubId, AirmiusJson payload) => _json('POST', '/api/v1/clubs/$clubId/membership/contribution-rules', body: payload);
+  Future<AirmiusJson> updateClubContributionRule(int clubId, int ruleId, AirmiusJson payload) => _json('PUT', '/api/v1/clubs/$clubId/membership/contribution-rules/$ruleId', body: payload);
   Future<AirmiusJson> updateClubMemberRole(int clubId, int userId, String role) async {
     try {
       return await _json('PUT', '/api/v1/clubs/$clubId/members/$userId/role', body: {'role': role});

@@ -156,7 +156,9 @@ class _ClubCreateWizardScreenState extends State<_ClubCreateWizardScreen> {
   bool _official = false;
   bool _saving = false;
   String _country = 'DE';
+  String? _selectedSportSlug;
   String? _notice;
+  Future<List<AirmiusSport>>? _sportsFuture;
 
   static const _countries = [
     ('DE', 'Deutschland'),
@@ -168,6 +170,12 @@ class _ClubCreateWizardScreenState extends State<_ClubCreateWizardScreen> {
     ('TR', 'Tuerkei'),
     ('US', 'USA'),
   ];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sportsFuture ??= AirmiusServicesScope.of(context).repositories.sports.sports().then((page) => page.items);
+  }
 
   @override
   void dispose() {
@@ -217,7 +225,7 @@ class _ClubCreateWizardScreenState extends State<_ClubCreateWizardScreen> {
     try {
       await AirmiusServicesScope.of(context).repositories.clubs.createClub({
         'name': _name.text.trim(),
-        'sport_type': _nullable(_sportType.text),
+        'sport_type': _selectedSportSlug ?? _nullable(_sportType.text),
         'is_official': _official,
         'official_club_number': _official ? _nullable(_officialNumber.text) : null,
         'country': _country,
@@ -287,7 +295,21 @@ class _ClubCreateWizardScreenState extends State<_ClubCreateWizardScreen> {
       const SizedBox(height: 14),
       _WizardField(controller: _name, label: 'Vereinsname', placeholder: 'Vereinsname'),
       const SizedBox(height: 12),
-      _WizardField(controller: _sportType, label: 'Sportart', placeholder: 'Sportart suchen'),
+      FutureBuilder<List<AirmiusSport>>(
+        future: _sportsFuture,
+        builder: (context, snapshot) {
+          return _SportAutocompleteField(
+            controller: _sportType,
+            sports: snapshot.data ?? const [],
+            loading: snapshot.connectionState == ConnectionState.waiting,
+            onTextChanged: () => _selectedSportSlug = null,
+            onSelected: (sport) {
+              _selectedSportSlug = sport.slug.isNotEmpty ? sport.slug : sport.name;
+              _sportType.text = sport.name;
+            },
+          );
+        },
+      ),
       const SizedBox(height: 12),
       _OfficialTile(value: _official, onChanged: (value) => setState(() => _official = value)),
       if (_official) ...[
@@ -485,6 +507,109 @@ class _WizardField extends StatelessWidget {
         controller: controller,
         style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
         decoration: InputDecoration(hintText: placeholder),
+      ),
+    ]);
+  }
+}
+
+class _SportAutocompleteField extends StatelessWidget {
+  const _SportAutocompleteField({
+    required this.controller,
+    required this.sports,
+    required this.loading,
+    required this.onTextChanged,
+    required this.onSelected,
+  });
+
+  final TextEditingController controller;
+  final List<AirmiusSport> sports;
+  final bool loading;
+  final VoidCallback onTextChanged;
+  final ValueChanged<AirmiusSport> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    if (sports.isEmpty) {
+      return _WizardField(
+        controller: controller,
+        label: 'Sportart',
+        placeholder: loading ? 'Sportarten werden geladen...' : 'Sportart suchen',
+      );
+    }
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('Sportart', style: TextStyle(color: AirmiusColors.text, fontSize: 13, fontWeight: FontWeight.w900)),
+      const SizedBox(height: 6),
+      Autocomplete<AirmiusSport>(
+        initialValue: TextEditingValue(text: controller.text),
+        displayStringForOption: (sport) => sport.name,
+        optionsBuilder: (value) {
+          final query = value.text.trim().toLowerCase();
+          final options = query.isEmpty
+              ? sports
+              : sports.where((sport) {
+                  final name = sport.name.toLowerCase();
+                  final slug = sport.slug.toLowerCase();
+                  return name.contains(query) || slug.contains(query);
+                });
+          return options.take(10);
+        },
+        onSelected: onSelected,
+        fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
+          if (textController.text.isEmpty && controller.text.isNotEmpty) {
+            textController.text = controller.text;
+          }
+          return TextField(
+            controller: textController,
+            focusNode: focusNode,
+            style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
+            decoration: const InputDecoration(
+              hintText: 'Sportart suchen',
+              suffixIcon: Icon(Icons.search, color: AirmiusColors.muted),
+            ),
+            onChanged: (value) {
+              controller.text = value;
+              onTextChanged();
+            },
+          );
+        },
+        optionsViewBuilder: (context, onSelected, options) {
+          final items = options.toList();
+          final menuWidth = (MediaQuery.of(context).size.width - 32).clamp(180.0, 520.0).toDouble();
+          return Align(
+            alignment: Alignment.topLeft,
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                width: menuWidth,
+                margin: const EdgeInsets.only(top: 6),
+                constraints: const BoxConstraints(maxHeight: 260),
+                decoration: BoxDecoration(
+                  color: AirmiusColors.card,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AirmiusColors.border),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: .35), blurRadius: 18, offset: const Offset(0, 10))],
+                ),
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  shrinkWrap: true,
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1, color: AirmiusColors.border),
+                  itemBuilder: (context, index) {
+                    final sport = items[index];
+                    return ListTile(
+                      dense: true,
+                      onTap: () => onSelected(sport),
+                      leading: const Icon(Icons.sports_outlined, color: AirmiusColors.blue),
+                      title: Text(sport.name, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                      subtitle: sport.slug.isEmpty ? null : Text(sport.slug, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12)),
+                    );
+                  },
+                ),
+              ),
+            ),
+          );
+        },
       ),
     ]);
   }

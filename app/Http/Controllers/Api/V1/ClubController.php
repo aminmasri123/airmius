@@ -34,6 +34,8 @@ use App\Models\BankTransaction;
 
 class ClubController extends Controller
 {
+    public const CONTRIBUTION_INTERVALS = ['none', 'monthly', 'quarterly', 'four_monthly', 'semi_yearly', 'yearly', 'once'];
+
     public function __construct(
         private readonly PlanFeatureService $planFeatures,
         private readonly ClubService $clubService,
@@ -177,6 +179,87 @@ class ClubController extends Controller
         });
 
         return response()->json([
+            'data' => $this->managementPayload($request, $club->fresh(), true),
+        ]);
+    }
+
+    public function updateMembershipSettings(Request $request, Club $club)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageMembership($request, $club), 403);
+
+        $data = $request->validate([
+            'membership_requests_enabled' => ['boolean'],
+            'member_pause_requests_enabled' => ['boolean'],
+            'membership_application_fields' => ['nullable', 'array'],
+            'membership_application_fields.*' => ['nullable', Rule::in(ClubMembershipApplication::FIELD_MODES)],
+            'membership_payment_methods' => ['nullable', 'array'],
+            'membership_payment_methods.*' => ['string', Rule::in(collect(ClubMembershipApplication::paymentMethods())->pluck('value')->all())],
+        ]);
+
+        $club->update([
+            'membership_requests_enabled' => $request->has('membership_requests_enabled') ? (bool) $data['membership_requests_enabled'] : $club->membership_requests_enabled,
+            'member_pause_requests_enabled' => $request->has('member_pause_requests_enabled') ? (bool) $data['member_pause_requests_enabled'] : $club->member_pause_requests_enabled,
+            'membership_application_fields' => $request->has('membership_application_fields') ? ClubMembershipApplication::normalizeFieldModes($data['membership_application_fields'] ?? null) : $club->membership_application_fields,
+            'membership_payment_methods' => $request->has('membership_payment_methods') ? ClubMembershipApplication::normalizePaymentMethods($data['membership_payment_methods'] ?? null) : $club->membership_payment_methods,
+        ]);
+
+        return response()->json([
+            'message' => 'Mitgliedschafts-Einstellungen aktualisiert.',
+            'data' => $this->managementPayload($request, $club->fresh(), true),
+        ]);
+    }
+
+    public function storeMembershipType(Request $request, Club $club)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageMembership($request, $club), 403);
+
+        $club->membershipTypes()->create($this->validatedMembershipTypeData($request));
+
+        return response()->json([
+            'message' => 'Mitgliedschaftstyp gespeichert.',
+            'data' => $this->managementPayload($request, $club->fresh(), true),
+        ], 201);
+    }
+
+    public function updateMembershipType(Request $request, Club $club, ClubMembershipType $membershipType)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageMembership($request, $club), 403);
+        abort_unless($membershipType->club_id === $club->id, 404);
+
+        $membershipType->update($this->validatedMembershipTypeData($request));
+
+        return response()->json([
+            'message' => 'Mitgliedschaftstyp aktualisiert.',
+            'data' => $this->managementPayload($request, $club->fresh(), true),
+        ]);
+    }
+
+    public function storeContributionRule(Request $request, Club $club)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageMembership($request, $club), 403);
+
+        $club->contributionRules()->create($this->validatedContributionRuleData($request, $club));
+
+        return response()->json([
+            'message' => 'Beitragsregel gespeichert.',
+            'data' => $this->managementPayload($request, $club->fresh(), true),
+        ], 201);
+    }
+
+    public function updateContributionRule(Request $request, Club $club, ClubContributionRule $contributionRule)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageMembership($request, $club), 403);
+        abort_unless($contributionRule->club_id === $club->id, 404);
+
+        $contributionRule->update($this->validatedContributionRuleData($request, $club));
+
+        return response()->json([
+            'message' => 'Beitragsregel aktualisiert.',
             'data' => $this->managementPayload($request, $club->fresh(), true),
         ]);
     }
@@ -692,6 +775,49 @@ class ClubController extends Controller
                 'sepa_ready_members_count' => $club->users->filter(fn (User $member) => (bool) ($member->pivot?->sepa_mandate_active ?? false))->count(),
                 'recurring_contribution_total' => (float) $club->users->sum(fn (User $member) => (float) ($member->pivot?->contribution_amount ?? 0)),
             ],
+        ];
+    }
+
+    private function validatedMembershipTypeData(Request $request): array
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:120'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'is_public' => ['boolean'],
+            'is_active' => ['boolean'],
+            'sort_order' => ['nullable', 'integer', 'min:0', 'max:999'],
+        ]);
+
+        return [
+            ...$data,
+            'is_public' => (bool) ($data['is_public'] ?? true),
+            'is_active' => (bool) ($data['is_active'] ?? true),
+            'sort_order' => (int) ($data['sort_order'] ?? 0),
+        ];
+    }
+
+    private function validatedContributionRuleData(Request $request, Club $club): array
+    {
+        $data = $request->validate([
+            'club_membership_type_id' => ['nullable', Rule::exists('club_membership_types', 'id')->where('club_id', $club->id)],
+            'name' => ['required', 'string', 'max:255'],
+            'valid_from' => ['required', 'date'],
+            'valid_until' => ['nullable', 'date', 'after_or_equal:valid_from'],
+            'billing_interval' => ['required', Rule::in(self::CONTRIBUTION_INTERVALS)],
+            'amount' => ['required', 'numeric', 'min:0', 'max:999999.99'],
+            'age_min' => ['nullable', 'integer', 'min:0', 'max:120'],
+            'age_max' => ['nullable', 'integer', 'min:0', 'max:120'],
+            'factor_key' => ['nullable', 'string', 'max:80'],
+            'factor_operator' => ['nullable', 'string', 'max:20'],
+            'factor_value' => ['nullable', 'string', 'max:120'],
+            'is_active' => ['boolean'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        return [
+            ...$data,
+            'is_active' => (bool) ($data['is_active'] ?? true),
         ];
     }
 

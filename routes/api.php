@@ -142,6 +142,11 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/clubs/{club}', [ClubController::class, 'show'])->name('clubs.show');
         Route::get('/clubs/{club}/members', [ClubController::class, 'members'])->name('clubs.members.index');
         Route::put('/clubs/{club}/members/{user}/role', [ClubController::class, 'updateMemberRole'])->name('clubs.members.role.update');
+        Route::put('/clubs/{club}/membership/settings', [ClubController::class, 'updateMembershipSettings'])->name('clubs.membership.settings.update');
+        Route::post('/clubs/{club}/membership/types', [ClubController::class, 'storeMembershipType'])->name('clubs.membership.types.store');
+        Route::put('/clubs/{club}/membership/types/{membershipType}', [ClubController::class, 'updateMembershipType'])->name('clubs.membership.types.update');
+        Route::post('/clubs/{club}/membership/contribution-rules', [ClubController::class, 'storeContributionRule'])->name('clubs.membership.contribution-rules.store');
+        Route::put('/clubs/{club}/membership/contribution-rules/{contributionRule}', [ClubController::class, 'updateContributionRule'])->name('clubs.membership.contribution-rules.update');
         Route::get('/clubs/{club}/billing', [ClubController::class, 'billing'])->name('clubs.billing');
         Route::get('/clubs/{club}/membership-requests', [ClubController::class, 'membershipRequests'])->name('clubs.membership-requests.index');
         Route::post('/clubs/{club}/membership-requests', [ClubController::class, 'storeMembershipRequest'])->name('clubs.membership-requests.store');

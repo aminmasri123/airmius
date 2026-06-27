@@ -64,11 +64,40 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
     return AirmiusClub.fromJson(data is JsonMap ? data : json);
   }
 
+  AirmiusClubManagement _managementFromJson(JsonMap json) {
+    final data = json['data'];
+    return AirmiusClubManagement.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<AirmiusClubManagement> updateMembershipSettings(int clubId, JsonMap payload) async {
+    return _managementFromJson(await client.updateClubMembershipSettings(clubId, payload));
+  }
+
+  @override
+  Future<AirmiusClubManagement> createMembershipType(int clubId, JsonMap payload) async {
+    return _managementFromJson(await client.createClubMembershipType(clubId, payload));
+  }
+
+  @override
+  Future<AirmiusClubManagement> updateMembershipType(int clubId, int typeId, JsonMap payload) async {
+    return _managementFromJson(await client.updateClubMembershipType(clubId, typeId, payload));
+  }
+
+  @override
+  Future<AirmiusClubManagement> createContributionRule(int clubId, JsonMap payload) async {
+    return _managementFromJson(await client.createClubContributionRule(clubId, payload));
+  }
+
+  @override
+  Future<AirmiusClubManagement> updateContributionRule(int clubId, int ruleId, JsonMap payload) async {
+    return _managementFromJson(await client.updateClubContributionRule(clubId, ruleId, payload));
+  }
+
   @override
   Future<AirmiusClubManagement> updateClubMemberRole(int clubId, int userId, String role) async {
     final json = await client.updateClubMemberRole(clubId, userId, role);
-    final data = json['data'];
-    return AirmiusClubManagement.fromJson(data is JsonMap ? data : json);
+    return _managementFromJson(json);
   }
 
   @override
