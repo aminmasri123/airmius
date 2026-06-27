@@ -207,6 +207,7 @@ class _NotificationLineState extends State<_NotificationLine> {
   Future<void> _openNotification() async {
     if (_opening) return;
     setState(() => _opening = true);
+    final notification = widget.item;
     try {
       if (!mounted) return;
       await Navigator.push(

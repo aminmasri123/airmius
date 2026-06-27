@@ -8,7 +8,15 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        <link rel="icon" href="{{ asset('img/logo/airmius-icon.ico') }}" type="image/x-icon">
+        <meta name="theme-color" content="#07101D">
+        <meta name="application-name" content="Airmius">
+        <meta name="apple-mobile-web-app-title" content="Airmius">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <link rel="manifest" href="{{ asset('site.webmanifest') }}">
+        <link rel="icon" href="{{ asset('favicon.png') }}" type="image/png">
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('icons/airmius-icon-192.png') }}">
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
         <!-- Fonts -->
