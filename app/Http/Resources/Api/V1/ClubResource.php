@@ -45,6 +45,8 @@ class ClubResource extends JsonResource
             'members_can_post_to_club' => (bool) $this->members_can_post_to_club,
             'members_can_post_to_teams' => (bool) $this->members_can_post_to_teams,
             'visibility' => $this->visibility,
+            'can_manage' => (bool) ($request->user()?->can('update', $this->resource) ?? false),
+            'can_delete' => (bool) ($request->user()?->can('delete', $this->resource) ?? false),
             'membership' => $this->pivot ? [
                 'role' => $this->pivot->role ?? null,
                 'status' => $this->pivot->membership_status ?? null,

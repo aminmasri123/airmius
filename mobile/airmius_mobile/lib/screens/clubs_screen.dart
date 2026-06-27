@@ -8,7 +8,6 @@ import '../widgets/airmius_widgets.dart';
 import 'application_screen.dart';
 import 'club_cockpit_screen.dart';
 import 'club_membership_management_screen.dart';
-import 'team_detail_screen.dart';
 import 'ui_action_result_screen.dart';
 
 class ClubsScreen extends StatefulWidget {
@@ -164,28 +163,33 @@ class _ClubWorkspaceNav extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Wrap(
-            alignment: WrapAlignment.end,
-            spacing: 8,
-            runSpacing: 8,
+          Row(
             children: [
-              _WorkspaceTab(
-                icon: Icons.speed_outlined,
-                label: 'Vereins-Cockpit',
-                selected: false,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClubCockpitScreen())),
+              Expanded(
+                child: _WorkspaceTab(
+                  icon: Icons.speed_outlined,
+                  label: 'Cockpit',
+                  selected: false,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClubCockpitScreen())),
+                ),
               ),
-              _WorkspaceTab(
-                icon: Icons.account_tree_outlined,
-                label: 'Vereine & Teams',
-                selected: true,
-                onTap: () {},
+              const SizedBox(width: 8),
+              Expanded(
+                child: _WorkspaceTab(
+                  icon: Icons.account_tree_outlined,
+                  label: 'Vereine & Teams',
+                  selected: true,
+                  onTap: () {},
+                ),
               ),
-              _WorkspaceTab(
-                icon: Icons.badge_outlined,
-                label: 'Mitglieder & Beitraege',
-                selected: false,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClubMembershipManagementScreen())),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _WorkspaceTab(
+                  icon: Icons.badge_outlined,
+                  label: 'Mitglieder',
+                  selected: false,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClubMembershipManagementScreen())),
+                ),
               ),
             ],
           ),
@@ -211,8 +215,7 @@ class _WorkspaceTab extends StatelessWidget {
       borderRadius: BorderRadius.circular(4),
       child: Container(
         height: 38,
-        constraints: const BoxConstraints(minWidth: 148),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 6),
         decoration: BoxDecoration(
           color: selected ? AirmiusColors.text : AirmiusColors.card,
           borderRadius: BorderRadius.circular(4),
@@ -222,8 +225,8 @@ class _WorkspaceTab extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, size: 15, color: color),
-            const SizedBox(width: 7),
-            Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w900))),
+            const SizedBox(width: 5),
+            Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900))),
           ],
         ),
       ),
@@ -231,7 +234,7 @@ class _WorkspaceTab extends StatelessWidget {
   }
 }
 
-class _ClubCard extends StatelessWidget {
+class _ClubCard extends StatefulWidget {
   const _ClubCard({required this.club, required this.showManageActions, required this.requested, required this.onRequest, required this.onWithdraw, required this.onReload});
 
   final ClubSummary club;
@@ -242,14 +245,45 @@ class _ClubCard extends StatelessWidget {
   final VoidCallback onReload;
 
   @override
+  State<_ClubCard> createState() => _ClubCardState();
+}
+
+class _ClubCardState extends State<_ClubCard> {
+  bool _expanded = false;
+  String? _panel;
+  Future<ClubSummary>? _detailFuture;
+
+  ClubSummary get club => widget.club;
+
+  void _toggleExpanded() {
+    setState(() {
+      _expanded = !_expanded;
+      if (_expanded) {
+        _detailFuture ??= _loadDetail();
+      } else {
+        _panel = null;
+      }
+    });
+  }
+
+  Future<ClubSummary> _loadDetail() async {
+    final services = AirmiusServicesScope.of(context);
+    final detail = await services.repositories.clubs.club(club.id);
+    return ClubSummary.fromAirmiusClub(detail);
+  }
+
+  void _openPanel(String panel) {
+    setState(() {
+      _expanded = true;
+      _panel = _panel == panel ? null : panel;
+      _detailFuture ??= _loadDetail();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AirmiusPanel(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ClubProfileScreen(club: club, requested: requested, onRequest: onRequest, onWithdraw: onWithdraw),
-        ),
-      ),
+      onTap: _toggleExpanded,
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -270,41 +304,53 @@ class _ClubCard extends StatelessWidget {
               ),
             ],
           ),
-          if (showManageActions || club.canDelete || requested) ...[
+          if (widget.showManageActions || club.canDelete || widget.requested) ...[
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                if (showManageActions)
+                if (widget.showManageActions)
                   _InlineAction(
                     label: 'Daten bearbeiten',
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ClubProfileScreen(
-                          club: club,
-                          requested: requested,
-                          onRequest: onRequest,
-                          onWithdraw: onWithdraw,
-                        ),
-                      ),
-                    ).then((_) => onReload()),
+                    onPressed: () => _openPanel('edit'),
                   ),
-                if (showManageActions)
+                if (widget.showManageActions)
                   _InlineAction(
                     label: '+ Team',
-                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeamDetailScreen(title: 'Neues Team', mode: 'Profil'))),
+                    onPressed: () => _openPanel('team'),
                   ),
-                if (club.canDelete || showManageActions)
+                if (club.canDelete || widget.showManageActions)
                   _InlineAction(
                     label: 'L\u00f6schen',
                     danger: true,
                     onPressed: () => confirmDanger(context, 'Verein "${club.name}" l\u00f6schen', 'Dadurch werden auch alle Teams dieses Vereins geloescht. Diese Aktion kann nicht rueckgaengig gemacht werden.', 'L\u00f6schen'),
                   ),
-                if (requested && !club.canManage)
+                if (widget.requested && !club.canManage)
                   _InlineAction(label: 'Anfrage offen', onPressed: null),
               ],
+            ),
+          ],
+          if (_expanded) ...[
+            const SizedBox(height: 14),
+            FutureBuilder<ClubSummary>(
+              future: _detailFuture,
+              builder: (context, snapshot) {
+                final detail = snapshot.data ?? club;
+                return _ClubInlineWorkspace(
+                  club: detail,
+                  panel: _panel,
+                  onEdit: () => _openPanel('edit'),
+                  onTeam: () => _openPanel('team'),
+                  onOpenProfile: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ClubProfileScreen(club: detail, requested: widget.requested, onRequest: widget.onRequest, onWithdraw: widget.onWithdraw),
+                    ),
+                  ).then((_) => widget.onReload()),
+                  onReload: widget.onReload,
+                );
+              },
             ),
           ],
         ],
@@ -323,16 +369,307 @@ class _ClubCard extends StatelessWidget {
   }
 }
 
-class _InitialsCircle extends StatelessWidget {
-  const _InitialsCircle(this.name);
+class _ClubInlineWorkspace extends StatelessWidget {
+  const _ClubInlineWorkspace({
+    required this.club,
+    required this.panel,
+    required this.onEdit,
+    required this.onTeam,
+    required this.onOpenProfile,
+    required this.onReload,
+  });
 
-  final String name;
+  final ClubSummary club;
+  final String? panel;
+  final VoidCallback onEdit;
+  final VoidCallback onTeam;
+  final VoidCallback onOpenProfile;
+  final VoidCallback onReload;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (panel == 'edit') ...[
+          _ClubEditInlinePanel(club: club, onOpenProfile: onOpenProfile),
+          const SizedBox(height: 12),
+        ],
+        if (panel == 'team') ...[
+          _TeamCreateInlinePanel(club: club),
+          const SizedBox(height: 12),
+        ],
+        _InlineSection(
+          title: 'Teams',
+          subtitle: '${club.teamList.isNotEmpty ? club.teamList.length : club.teams} Teams',
+          action: club.canManage ? _SmallInlineButton(label: '+ Team', onPressed: onTeam) : null,
+          child: club.teamList.isEmpty
+              ? const Text('Noch keine Teams sichtbar.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w600))
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final columns = constraints.maxWidth >= 520 ? 2 : 1;
+                    const gap = 10.0;
+                    final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+                    return Wrap(
+                      spacing: gap,
+                      runSpacing: gap,
+                      children: [
+                        for (final team in club.teamList) SizedBox(width: width, child: _InlineTeamCard(team: team)),
+                      ],
+                    );
+                  },
+                ),
+        ),
+        const SizedBox(height: 12),
+        _InlineSection(
+          title: 'Vereinsmitglieder',
+          subtitle: '${club.members} Mitglieder',
+          action: club.canManage ? _SmallInlineButton(label: 'Daten bearbeiten', onPressed: onEdit) : null,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _InlineMetricLine(icon: Icons.groups_outlined, title: 'Aktive Mitglieder', value: '${club.members}'),
+              const SizedBox(height: 8),
+              _InlineMetricLine(icon: Icons.account_tree_outlined, title: 'Teams', value: '${club.teams}'),
+              const SizedBox(height: 8),
+              _InlineMetricLine(icon: Icons.verified_outlined, title: 'Status', value: club.verified ? 'Freigegeben' : 'Wartet auf Pruefung'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _InlineSection(
+          title: 'Schnellzugriff',
+          subtitle: 'Wie Web: direkt im Vereinsblock arbeiten',
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _SmallInlineButton(label: 'Vereinsprofil', onPressed: onOpenProfile),
+              _SmallInlineButton(label: 'Neu laden', onPressed: onReload),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ClubEditInlinePanel extends StatelessWidget {
+  const _ClubEditInlinePanel({required this.club, required this.onOpenProfile});
+
+  final ClubSummary club;
+  final VoidCallback onOpenProfile;
+
+  @override
+  Widget build(BuildContext context) {
+    return _InlineSection(
+      title: 'Vereinsdaten bearbeiten',
+      subtitle: 'Basisdaten, Adresse und Sportart pflegen.',
+      child: Column(
+        children: [
+          _ReadOnlyFormLine(label: 'Verein', value: club.name),
+          const SizedBox(height: 10),
+          _ReadOnlyFormLine(label: 'Sportart', value: club.sportType?.isNotEmpty == true ? club.sportType! : 'Sportart offen'),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(child: _ReadOnlyFormLine(label: 'Stadt', value: club.city.isNotEmpty ? club.city : 'Ort offen')),
+              const SizedBox(width: 10),
+              Expanded(child: _ReadOnlyFormLine(label: 'PLZ', value: club.postalCode?.isNotEmpty == true ? club.postalCode! : '-')),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _SmallInlineButton(label: 'Speichern', filled: true, onPressed: () => openUiAction(context, title: 'Vereinsdaten speichern', body: 'Der native Flutter-Dialog ist vorbereitet. Fuer echtes Speichern braucht die mobile API noch PUT /api/v1/clubs/{id}.', status: 'API fehlt', icon: Icons.save_outlined))),
+              const SizedBox(width: 10),
+              Expanded(child: _SmallInlineButton(label: 'Details', onPressed: onOpenProfile)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TeamCreateInlinePanel extends StatelessWidget {
+  const _TeamCreateInlinePanel({required this.club});
+
+  final ClubSummary club;
+
+  @override
+  Widget build(BuildContext context) {
+    return _InlineSection(
+      title: 'Team hinzufuegen',
+      subtitle: 'Neues Team fuer ${club.name} vorbereiten.',
+      child: Column(
+        children: [
+          const _ReadOnlyFormLine(label: 'Teamname', value: 'Neues Team'),
+          const SizedBox(height: 10),
+          _ReadOnlyFormLine(label: 'Verein', value: club.name),
+          const SizedBox(height: 12),
+          _SmallInlineButton(
+            label: 'Team erstellen',
+            filled: true,
+            onPressed: () => openUiAction(context, title: 'Team erstellen', body: 'Der native Flutter-Flow ist vorbereitet. Fuer echtes Erstellen braucht die mobile API noch POST /api/v1/teams.', status: 'API fehlt', icon: Icons.group_add_outlined),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineSection extends StatelessWidget {
+  const _InlineSection({required this.title, required this.subtitle, required this.child, this.action});
+
+  final String title;
+  final String subtitle;
+  final Widget child;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 40,
-      height: 40,
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(color: AirmiusColors.bg, borderRadius: BorderRadius.circular(12), border: Border.all(color: AirmiusColors.border)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 3),
+                    Text(subtitle, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+              if (action != null) action!,
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineTeamCard extends StatelessWidget {
+  const _InlineTeamCard({required this.team});
+
+  final TeamSummary team;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: AirmiusColors.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: AirmiusColors.border)),
+      child: Row(
+        children: [
+          _InitialsCircle(team.name, size: 34),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(team.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 3),
+                Text(team.meta, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12)),
+              ],
+            ),
+          ),
+          const StatusPill('Aktiv', color: AirmiusColors.green),
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineMetricLine extends StatelessWidget {
+  const _InlineMetricLine({required this.icon, required this.title, required this.value});
+
+  final IconData icon;
+  final String title;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, color: AirmiusColors.blue, size: 19),
+        const SizedBox(width: 10),
+        Expanded(child: Text(title, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700))),
+        Text(value, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+      ],
+    );
+  }
+}
+
+class _ReadOnlyFormLine extends StatelessWidget {
+  const _ReadOnlyFormLine({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return InputDecorator(
+      decoration: InputDecoration(labelText: label),
+      child: Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800)),
+    );
+  }
+}
+
+class _SmallInlineButton extends StatelessWidget {
+  const _SmallInlineButton({required this.label, required this.onPressed, this.filled = false});
+
+  final String label;
+  final VoidCallback onPressed;
+  final bool filled;
+
+  @override
+  Widget build(BuildContext context) {
+    if (filled) {
+      return FilledButton(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: AirmiusColors.blue,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
+      );
+    }
+
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AirmiusColors.text,
+        side: const BorderSide(color: AirmiusColors.border),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
+    );
+  }
+}
+
+class _InitialsCircle extends StatelessWidget {
+  const _InitialsCircle(this.name, {this.size = 40});
+
+  final String name;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
       decoration: const BoxDecoration(
         color: AirmiusColors.cardSoft,
         shape: BoxShape.circle,
