@@ -195,6 +195,16 @@ class ClubController extends Controller
             'membership_application_fields.*' => ['nullable', Rule::in(ClubMembershipApplication::FIELD_MODES)],
             'membership_payment_methods' => ['nullable', 'array'],
             'membership_payment_methods.*' => ['string', Rule::in(collect(ClubMembershipApplication::paymentMethods())->pluck('value')->all())],
+            'membership_application_documents' => ['nullable', 'array'],
+            'membership_application_documents.*.id' => ['nullable', 'string', 'max:80'],
+            'membership_application_documents.*.type' => ['nullable', Rule::in(ClubMembershipApplication::DOCUMENT_TYPES)],
+            'membership_application_documents.*.title' => ['nullable', 'string', 'max:255'],
+            'membership_application_documents.*.url' => ['nullable', 'string', 'max:1000'],
+            'membership_application_documents.*.file_id' => ['nullable', 'integer', 'exists:files,id'],
+            'membership_application_documents.*.file_name' => ['nullable', 'string', 'max:255'],
+            'membership_application_documents.*.description' => ['nullable', 'string', 'max:1000'],
+            'membership_application_documents.*.is_visible' => ['boolean'],
+            'membership_application_documents.*.is_required' => ['boolean'],
         ]);
 
         $club->update([
@@ -202,6 +212,7 @@ class ClubController extends Controller
             'member_pause_requests_enabled' => $request->has('member_pause_requests_enabled') ? (bool) $data['member_pause_requests_enabled'] : $club->member_pause_requests_enabled,
             'membership_application_fields' => $request->has('membership_application_fields') ? ClubMembershipApplication::normalizeFieldModes($data['membership_application_fields'] ?? null) : $club->membership_application_fields,
             'membership_payment_methods' => $request->has('membership_payment_methods') ? ClubMembershipApplication::normalizePaymentMethods($data['membership_payment_methods'] ?? null) : $club->membership_payment_methods,
+            'membership_application_documents' => $request->has('membership_application_documents') ? ClubMembershipApplication::normalizeDocuments($data['membership_application_documents'] ?? []) : $club->membership_application_documents,
         ]);
 
         return response()->json([

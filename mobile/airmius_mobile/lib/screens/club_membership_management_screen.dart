@@ -568,6 +568,7 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
   String _ruleInterval = 'monthly';
   Set<String> _paymentMethods = {'bank_transfer', 'cash'};
   Map<String, String> _fieldModes = {};
+  List<JsonMap> _documents = [];
 
   @override
   void initState() {
@@ -604,6 +605,8 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
       for (final field in fields is List ? fields.whereType<JsonMap>() : const <JsonMap>[])
         if (field['key'] != null) '${field['key']}': _string(field['mode'], fallback: 'off'),
     };
+    final documents = settings['membership_application_documents'];
+    _documents = documents is List ? documents.whereType<JsonMap>().map((item) => Map<String, dynamic>.from(item)).toList() : [];
   }
 
   void _clearForms() {
@@ -671,6 +674,7 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
         'member_pause_requests_enabled': _pauseRequestsEnabled,
         'membership_payment_methods': _paymentMethods.toList(),
         'membership_application_fields': _fieldModes,
+        'membership_application_documents': _documents,
       });
       if (mounted) widget.onChanged();
     } catch (error) {
@@ -780,6 +784,94 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
     };
   }
 
+  String _documentTypeLabel(String value) {
+    return switch (value) {
+      'privacy' => 'Datenschutz',
+      'statutes' => 'Satzung',
+      'rules' => 'Regeln',
+      'fees' => 'Beitragsordnung',
+      'sepa' => 'SEPA-Mandat',
+      'other' => 'Sonstiges',
+      _ => value,
+    };
+  }
+
+  Future<void> _openDocumentDialog({int? index}) async {
+    final existing = index == null ? const <String, dynamic>{} : _documents[index];
+    final title = TextEditingController(text: _string(existing['title']));
+    final url = TextEditingController(text: _string(existing['url']));
+    final description = TextEditingController(text: _string(existing['description']));
+    var type = _string(existing['type'], fallback: 'privacy');
+    var visible = existing.isEmpty ? true : _bool(existing['is_visible']);
+    var isRequired = _bool(existing['is_required']);
+
+    final saved = await showDialog<JsonMap>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: AirmiusColors.card,
+            title: Text(index == null ? 'Dokument hinzufuegen' : 'Dokument bearbeiten', style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            content: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                DropdownButtonFormField<String>(
+                  value: type,
+                  dropdownColor: AirmiusColors.cardSoft,
+                  decoration: const InputDecoration(labelText: 'Dokumenttyp'),
+                  items: const ['privacy', 'statutes', 'rules', 'fees', 'sepa', 'other'].map((item) => DropdownMenuItem(value: item, child: Text(_documentTypeLabel(item)))).toList(),
+                  onChanged: (value) => setDialogState(() => type = value ?? type),
+                ),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Titel', hint: 'z. B. Beitragsordnung', controller: title),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Link', hint: 'https://...', controller: url),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Beschreibung', hint: 'optional', controller: description, maxLines: 2),
+                const SizedBox(height: 10),
+                _SettingsToggle(title: 'Im Antrag sichtbar', value: visible, onChanged: (value) => setDialogState(() => visible = value)),
+                const SizedBox(height: 8),
+                _SettingsToggle(title: 'Bestaetigung Pflicht', value: isRequired, onChanged: (value) => setDialogState(() => isRequired = value)),
+              ]),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Abbrechen')),
+              FilledButton(
+                onPressed: () {
+                  if (title.text.trim().isEmpty && url.text.trim().isEmpty) return;
+                  Navigator.pop(context, {
+                    'id': _string(existing['id'], fallback: 'doc-${DateTime.now().millisecondsSinceEpoch}'),
+                    'type': type,
+                    'title': title.text.trim(),
+                    'url': url.text.trim(),
+                    'description': description.text.trim(),
+                    'is_visible': visible,
+                    'is_required': isRequired,
+                    'file_id': existing['file_id'],
+                    'file_name': existing['file_name'],
+                  });
+                },
+                child: const Text('Speichern'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    title.dispose();
+    url.dispose();
+    description.dispose();
+
+    if (saved == null) return;
+    setState(() {
+      if (index == null) {
+        _documents.add(saved);
+      } else {
+        _documents[index] = saved;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final membershipTypes = widget.management.membershipTypes;
@@ -852,6 +944,34 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
               );
             }),
           ],
+          const SizedBox(height: 18),
+          const Eyebrow('Dokumente & Bestaetigungen'),
+          const SizedBox(height: 8),
+          const Text(
+            'Verknuepfe Datenschutz, Satzung, Regeln oder Beitragsordnung. Pflichtdokumente muessen Interessenten vor dem Absenden bestaetigen.',
+            style: TextStyle(color: AirmiusColors.muted, height: 1.35, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+          AirmiusButton(label: 'Dokument hinzufuegen', icon: Icons.add_link_outlined, secondary: true, onPressed: () => _openDocumentDialog()),
+          const SizedBox(height: 10),
+          if (_documents.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AirmiusColors.bg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AirmiusColors.border, style: BorderStyle.solid),
+              ),
+              child: const Text('Noch keine Dokumente verknuepft.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+            )
+          else
+            for (final entry in _documents.indexed)
+              _MembershipDocumentLine(
+                document: entry.$2,
+                typeLabel: _documentTypeLabel(_string(entry.$2['type'], fallback: 'other')),
+                onEdit: () => _openDocumentDialog(index: entry.$1),
+                onDelete: () => setState(() => _documents.removeAt(entry.$1)),
+              ),
           const SizedBox(height: 18),
           const Eyebrow('Mitgliedschaftstyp'),
           const SizedBox(height: 10),
@@ -967,6 +1087,58 @@ class _SettingsToggle extends StatelessWidget {
           Flexible(child: Text(title, style: TextStyle(color: value ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900))),
         ]),
       ),
+    );
+  }
+}
+
+class _MembershipDocumentLine extends StatelessWidget {
+  const _MembershipDocumentLine({
+    required this.document,
+    required this.typeLabel,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final JsonMap document;
+  final String typeLabel;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  String _text(Object? value, {String fallback = ''}) {
+    final text = '$value'.trim();
+    return text.isEmpty || text == 'null' ? fallback : text;
+  }
+
+  bool _bool(Object? value) => value == true || '$value'.toLowerCase() == 'true' || '$value' == '1';
+
+  @override
+  Widget build(BuildContext context) {
+    final title = _text(document['title'], fallback: 'Dokument');
+    final url = _text(document['url']);
+    final isRequired = _bool(document['is_required']);
+    final visible = _bool(document['is_visible']);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(12), border: Border.all(color: AirmiusColors.border)),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(isRequired ? Icons.verified_user_outlined : Icons.description_outlined, color: isRequired ? AirmiusColors.green : AirmiusColors.blue),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 4),
+            Text('$typeLabel - ${isRequired ? 'Pflicht' : 'Optional'} - ${visible ? 'sichtbar' : 'ausgeblendet'}', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+            if (url.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text(url, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.blue, fontSize: 12, fontWeight: FontWeight.w700)),
+            ],
+          ]),
+        ),
+        IconButton(onPressed: onEdit, icon: const Icon(Icons.edit_outlined), color: AirmiusColors.blue, tooltip: 'Bearbeiten'),
+        IconButton(onPressed: onDelete, icon: const Icon(Icons.delete_outline), color: AirmiusColors.red, tooltip: 'Entfernen'),
+      ]),
     );
   }
 }
