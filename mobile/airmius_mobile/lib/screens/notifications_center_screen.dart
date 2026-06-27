@@ -208,12 +208,6 @@ class _NotificationLineState extends State<_NotificationLine> {
     if (_opening) return;
     setState(() => _opening = true);
     try {
-      var notification = widget.item;
-      if (widget.item.unread) {
-        await AirmiusServicesScope.of(context).repositories.notifications.markAsRead(widget.item.id);
-        notification = widget.item.copyWith(unread: false);
-        widget.onChanged();
-      }
       if (!mounted) return;
       await Navigator.push(
         context,
@@ -230,6 +224,14 @@ class _NotificationLineState extends State<_NotificationLine> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AirmiusScope.of(context).t('notifications.error'))));
     } finally {
+      if (widget.item.unread && mounted) {
+        try {
+          await AirmiusServicesScope.of(context).repositories.notifications.markAsRead(widget.item.id);
+          widget.onChanged();
+        } catch (_) {
+          // Opening the notification must not depend on the read-state request.
+        }
+      }
       if (mounted) setState(() => _opening = false);
     }
   }

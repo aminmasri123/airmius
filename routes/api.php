@@ -97,6 +97,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         })->name('sports.index');
 
         Route::get('/notifications', [MobileNotificationController::class, 'index'])->name('notifications.index');
+        Route::get('/notifications/{notification}', [MobileNotificationController::class, 'show'])->name('notifications.show');
         Route::post('/notifications/read-all', [MobileNotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
         Route::post('/notifications/{notification}/read', [MobileNotificationController::class, 'markAsRead'])->name('notifications.read');
         Route::delete('/notifications/{notification}', [MobileNotificationController::class, 'destroy'])->name('notifications.destroy');

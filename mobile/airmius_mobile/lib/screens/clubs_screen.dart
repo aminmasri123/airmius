@@ -53,36 +53,49 @@ class _ClubsScreenState extends State<ClubsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _ClubWorkspaceNav(),
-          const SizedBox(height: 24),
           FutureBuilder<List<ClubSummary>>(
             future: _clubsFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const AirmiusPanel(child: Center(child: Padding(padding: EdgeInsets.all(18), child: CircularProgressIndicator(color: AirmiusColors.blue))));
+                return const Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  _ClubWorkspaceNav(canManageClubs: false),
+                  SizedBox(height: 24),
+                  AirmiusPanel(child: Center(child: Padding(padding: EdgeInsets.all(18), child: CircularProgressIndicator(color: AirmiusColors.blue)))),
+                ]);
               }
               if (snapshot.hasError) {
-                return AirmiusPanel(
-                  borderColor: AirmiusColors.red.withValues(alpha: .5),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text('Vereine konnten nicht geladen werden.', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                      const SizedBox(height: 8),
-                      Text('${snapshot.error}', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
-                      const SizedBox(height: 12),
-                      AirmiusButton(label: 'Erneut laden', icon: Icons.refresh_outlined, secondary: true, onPressed: () => setState(() => _clubsFuture = _loadClubs())),
-                    ],
+                return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  const _ClubWorkspaceNav(canManageClubs: false),
+                  const SizedBox(height: 24),
+                  AirmiusPanel(
+                    borderColor: AirmiusColors.red.withValues(alpha: .5),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text('Vereine konnten nicht geladen werden.', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                        const SizedBox(height: 8),
+                        Text('${snapshot.error}', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                        const SizedBox(height: 12),
+                        AirmiusButton(label: 'Erneut laden', icon: Icons.refresh_outlined, secondary: true, onPressed: () => setState(() => _clubsFuture = _loadClubs())),
+                      ],
+                    ),
                   ),
-                );
+                ]);
               }
               final clubs = snapshot.data ?? const <ClubSummary>[];
+              final canManageClubs = clubs.any((club) => club.canManage);
               if (clubs.isEmpty) {
-                return const AirmiusPanel(child: Center(child: Padding(padding: EdgeInsets.all(18), child: Text('Keine Vereine gefunden.', style: TextStyle(color: AirmiusColors.muted)))));
+                return const Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  _ClubWorkspaceNav(canManageClubs: false),
+                  SizedBox(height: 24),
+                  AirmiusPanel(child: Center(child: Padding(padding: EdgeInsets.all(18), child: Text('Keine Vereine gefunden.', style: TextStyle(color: AirmiusColors.muted))))),
+                ]);
               }
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  _ClubWorkspaceNav(canManageClubs: canManageClubs),
+                  const SizedBox(height: 24),
                   for (final entry in clubs.indexed) ...[
                     _ClubCard(
                       club: entry.$2,
@@ -140,7 +153,9 @@ class _CreateClubButton extends StatelessWidget {
 }
 
 class _ClubWorkspaceNav extends StatelessWidget {
-  const _ClubWorkspaceNav();
+  const _ClubWorkspaceNav({required this.canManageClubs});
+
+  final bool canManageClubs;
 
   @override
   Widget build(BuildContext context) {
@@ -167,15 +182,17 @@ class _ClubWorkspaceNav extends StatelessWidget {
           const SizedBox(height: 14),
           Row(
             children: [
-              Expanded(
-                child: _WorkspaceTab(
-                  icon: Icons.speed_outlined,
-                  label: 'Cockpit',
-                  selected: false,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClubCockpitScreen())),
+              if (canManageClubs) ...[
+                Expanded(
+                  child: _WorkspaceTab(
+                    icon: Icons.speed_outlined,
+                    label: 'Cockpit',
+                    selected: false,
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClubCockpitScreen())),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
+                const SizedBox(width: 8),
+              ],
               Expanded(
                 child: _WorkspaceTab(
                   icon: Icons.account_tree_outlined,
@@ -184,15 +201,17 @@ class _ClubWorkspaceNav extends StatelessWidget {
                   onTap: () {},
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _WorkspaceTab(
-                  icon: Icons.badge_outlined,
-                  label: 'Mitglieder',
-                  selected: false,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClubMembershipManagementScreen())),
+              if (canManageClubs) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _WorkspaceTab(
+                    icon: Icons.badge_outlined,
+                    label: 'Mitglieder',
+                    selected: false,
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClubMembershipManagementScreen())),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ],

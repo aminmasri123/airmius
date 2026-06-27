@@ -4,6 +4,7 @@ import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
+import '../navigation/airmius_deep_link_navigator.dart';
 import '../widgets/airmius_widgets.dart';
 import 'notification_preferences_screen.dart';
 
@@ -119,7 +120,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                   AirmiusButton(
                     label: scope.t('notifications.openContext'),
                     icon: Icons.open_in_new_outlined,
-                    onPressed: null,
+                    onPressed: () => AirmiusDeepLinkNavigator.open(context, widget.notification.actionUrl!),
                   ),
                 AirmiusButton(
                   label: _busy ? scope.t('status.loading') : scope.t('notifications.markRead'),
