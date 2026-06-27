@@ -45,8 +45,8 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   final AirmiusApiClient client;
 
   @override
-  Future<AirmiusPage<AirmiusClub>> searchClubs({String? query, int page = 1}) async {
-    final json = await client.clubs(query: query);
+  Future<AirmiusPage<AirmiusClub>> searchClubs({String? query, int page = 1, bool mine = false}) async {
+    final json = await client.clubs(query: query, mine: mine);
     return AirmiusPage<AirmiusClub>.fromJson(_paged(json, page), AirmiusClub.fromJson);
   }
 

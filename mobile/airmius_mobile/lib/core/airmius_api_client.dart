@@ -122,7 +122,10 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> sports() => _json('GET', '/api/v1/sports');
 
-  Future<AirmiusJson> clubs({String? query}) => _json('GET', '/api/v1/clubs', query: query == null ? const {} : {'q': query});
+  Future<AirmiusJson> clubs({String? query, bool mine = false}) => _json('GET', '/api/v1/clubs', query: {
+        if (query != null) 'q': query,
+        if (mine) 'mine': '1',
+      });
 
   Future<AirmiusJson> clubDetail(int clubId) => _json('GET', '/api/v1/clubs/$clubId');
 

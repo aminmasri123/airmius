@@ -45,10 +45,7 @@ class ClubController extends Controller
 
         $user = auth()->user();
         $clubs = Club::query()
-            ->where(function ($query) use ($user) {
-                $query->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id))
-                    ->orWhereHas('teams.users', fn ($userQuery) => $userQuery->where('users.id', $user->id));
-            })
+            ->linkedToUser($user)
             ->with([
                 'users:id,name,email,profile_photo_path',
                 'teams' => fn ($query) => $query

@@ -31,7 +31,17 @@ class ClubController extends Controller
 
     public function index(Request $request)
     {
-        $clubs = Club::visibleTo($request->user())
+        $clubs = Club::query()
+            ->when($request->boolean('mine'), fn ($query) => $query->linkedToUser($request->user()))
+            ->when(! $request->boolean('mine'), fn ($query) => $query->visibleTo($request->user()))
+            ->when($request->filled('q'), function ($query) use ($request) {
+                $search = trim((string) $request->query('q'));
+                $query->where(function ($searchQuery) use ($search) {
+                    $searchQuery->where('name', 'like', "%{$search}%")
+                        ->orWhere('city', 'like', "%{$search}%")
+                        ->orWhere('sport_type', 'like', "%{$search}%");
+                });
+            })
             ->withCount(['users', 'teams'])
             ->orderBy('name')
             ->paginate($this->perPage($request));

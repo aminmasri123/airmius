@@ -16,6 +16,7 @@ import 'conversations_center_screen.dart';
 import 'dashboard_screen.dart';
 import 'feed_center_screen.dart';
 import 'global_search_screen.dart';
+import 'guest_portal_screen.dart';
 import 'module_screen.dart';
 import 'notifications_center_screen.dart';
 import 'profile_screen.dart';
@@ -333,6 +334,7 @@ class _ModuleDrawer extends StatelessWidget {
             _DrawerTab(icon: Icons.groups_outlined, label: scope.t('clubs'), active: currentTab == AppTab.clubs, onTap: () => _selectTab(context, AppTab.clubs)),
             _DrawerTab(icon: Icons.dynamic_feed_outlined, label: scope.t('feed.title'), active: currentTab == AppTab.feed, onTap: () => _selectTab(context, AppTab.feed)),
             _DrawerTab(icon: Icons.notifications_outlined, label: scope.t('updates'), active: currentTab == AppTab.updates, onTap: () => _selectTab(context, AppTab.updates)),
+            _DrawerTab(icon: Icons.public_outlined, label: 'Gastseite', active: false, onTap: () => _openScreen(context, const GuestPortalScreen())),
             _DrawerTab(icon: Icons.hub_outlined, label: scope.t('ops.hub'), active: false, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OperationsHubScreen()))),
             const SizedBox(height: 18),
             const Eyebrow('Alle Module'),
@@ -355,6 +357,11 @@ class _ModuleDrawer extends StatelessWidget {
   void _selectTab(BuildContext context, AppTab tab) {
     Navigator.pop(context);
     onOpenTab(tab);
+  }
+
+  void _openScreen(BuildContext context, Widget screen) {
+    Navigator.pop(context);
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
   }
 }
 

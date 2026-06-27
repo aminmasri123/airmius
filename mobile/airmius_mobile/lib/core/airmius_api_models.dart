@@ -1297,7 +1297,7 @@ abstract class AirmiusAuthRepository {
 }
 
 abstract class AirmiusClubRepository {
-  Future<AirmiusPage<AirmiusClub>> searchClubs({String? query, int page = 1});
+  Future<AirmiusPage<AirmiusClub>> searchClubs({String? query, int page = 1, bool mine = false});
   Future<AirmiusClub> club(int id);
   Future<AirmiusPage<AirmiusTeam>> teams({int page = 1});
   Future<AirmiusTeam> team(int id);

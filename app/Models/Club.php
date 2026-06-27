@@ -111,6 +111,14 @@ class Club extends Model
         });
     }
 
+    public function scopeLinkedToUser($query, $user)
+    {
+        return $query->where(function ($query) use ($user) {
+            $query->whereHas('users', fn ($userQuery) => $userQuery->where('users.id', $user->id))
+                ->orWhereHas('teams.users', fn ($userQuery) => $userQuery->where('users.id', $user->id));
+        });
+    }
+
     public function owner()
     {
         return $this->belongsTo(User::class, 'owner_id');

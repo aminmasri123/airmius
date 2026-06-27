@@ -1,11 +1,15 @@
 ﻿import 'package:flutter/material.dart';
-import 'public_growth_operations_screen.dart';
-
 import '../core/airmius_theme.dart';
 import '../widgets/airmius_widgets.dart';
+import 'guest_blog_content_screen.dart';
+import 'guest_learning_certificate_screen.dart';
+import 'guest_marketplace_buyer_screen.dart';
+import 'guest_pricing_plans_screen.dart';
 import 'public_detail_screen.dart';
+import 'public_growth_guest_pages_screen.dart';
 import 'public_top_content_screen.dart';
 import 'public_growth_operations_screen.dart';
+import 'support_helpdesk_screen.dart';
 
 class GuestPortalScreen extends StatelessWidget {
   const GuestPortalScreen({super.key});
@@ -47,7 +51,9 @@ class GuestPortalScreen extends StatelessWidget {
               runSpacing: 10,
               children: [
                 AirmiusButton(label: 'Vereine entdecken', icon: Icons.groups_outlined, onPressed: () => _open(context, 'Vereine', 'Oeffentliche Vereinsliste mit Suche und Beitrittsmoeglichkeit.', Icons.groups_outlined, 'Public')),
-                AirmiusButton(label: 'Preise ansehen', icon: Icons.sell_outlined, secondary: true, onPressed: () => _open(context, 'Preise', 'Abo- und Paketuebersicht fuer Nutzer und Vereine.', Icons.sell_outlined, 'Public')),
+                AirmiusButton(label: 'Funktionen', icon: Icons.apps_outlined, secondary: true, onPressed: () => _openScreen(context, const PublicGrowthGuestPagesScreen())),
+                AirmiusButton(label: 'Preise ansehen', icon: Icons.sell_outlined, secondary: true, onPressed: () => _openScreen(context, const GuestPricingPlansScreen())),
+                AirmiusButton(label: 'Kontakt', icon: Icons.support_agent_outlined, secondary: true, onPressed: () => _openScreen(context, const SupportHelpdeskScreen())),
                 AirmiusButton(label: 'Top-Inhalte', icon: Icons.auto_awesome_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PublicTopContentScreen()))),
               ],
             ),
@@ -76,6 +82,35 @@ class GuestPortalScreen extends StatelessWidget {
   static void _open(BuildContext context, String title, String body, IconData icon, String trailing) {
     Navigator.push(context, MaterialPageRoute(builder: (_) => PublicDetailScreen(title: title, body: body, icon: icon, kind: trailing)));
   }
+
+  static void _openScreen(BuildContext context, Widget screen) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+  }
+
+  static void _openItem(BuildContext context, _PublicItem item) {
+    switch (item.title) {
+      case 'Marketplace':
+        _openScreen(context, const GuestMarketplaceBuyerScreen());
+        return;
+      case 'Funktionen':
+        _openScreen(context, const PublicGrowthGuestPagesScreen());
+        return;
+      case 'E-Learning':
+        _openScreen(context, const GuestLearningCertificateScreen());
+        return;
+      case 'Blog':
+        _openScreen(context, const GuestBlogContentScreen());
+        return;
+      case 'Top-Inhalte':
+        _openScreen(context, const PublicTopContentScreen());
+        return;
+      case 'Kontakt & Melden':
+        _openScreen(context, const SupportHelpdeskScreen());
+        return;
+      default:
+        _open(context, item.title, item.body, item.icon, 'Public');
+    }
+  }
 }
 
 class _PublicGrid extends StatelessWidget {
@@ -101,7 +136,7 @@ class _PublicGrid extends StatelessWidget {
           itemBuilder: (context, index) {
             final item = items[index];
             return AirmiusPanel(
-              onTap: () => GuestPortalScreen._open(context, item.title, item.body, item.icon, 'Public'),
+              onTap: () => GuestPortalScreen._openItem(context, item),
               padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,7 +164,7 @@ class _PublicLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => GuestPortalScreen._open(context, item.title, item.body, item.icon, 'Legal'),
+      onTap: () => GuestPortalScreen._openItem(context, item),
       borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.all(12),
@@ -165,6 +200,7 @@ class _PublicItem {
 }
 
 const _primaryItems = [
+  _PublicItem(title: 'Funktionen', body: 'Oeffentliche Funktionen und Bereiche der Gastseite im Ueberblick.', icon: Icons.apps_outlined),
   _PublicItem(title: 'Vereine', body: 'Vereine suchen, oeffentliche Profile ansehen und Beitritt starten.', icon: Icons.groups_outlined),
   _PublicItem(title: 'Marketplace', body: 'Produkte, Anbieter, Warenkorb und Bestellungen entdecken.', icon: Icons.storefront_outlined),
   _PublicItem(title: 'E-Learning', body: 'Kurse, Zertifikate und Lerninhalte fuer Sportorganisationen.', icon: Icons.school_outlined),

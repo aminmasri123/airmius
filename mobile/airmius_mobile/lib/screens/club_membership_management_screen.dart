@@ -33,6 +33,30 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     _BankEntry(title: 'Ruecklastschrift pruefen', detail: 'SEPA Mandat Junior Mitglied braucht Bestaetigung'),
   ];
 
+  int get _activeMembersCount => _members.where((member) => member.type != 'Extern').length;
+  int get _sepaReadyMembersCount => _members.where((member) => member.sepa).length;
+  int get _openInvoicesCount => _invoices.where((invoice) => invoice.status == 'Offen').length;
+
+  String get _openInvoiceTotal {
+    final total = _invoices.where((invoice) => invoice.status == 'Offen').fold<int>(0, (sum, invoice) => sum + _parseEuroCents(invoice.amount));
+    return _formatEuro(total);
+  }
+
+  String get _recurringContributionTotal {
+    final total = _members.fold<int>(0, (sum, member) => sum + (member.type == 'Jugend' ? 900 : member.type == 'Aktiv' ? 1200 : 0));
+    return _formatEuro(total);
+  }
+
+  int _parseEuroCents(String value) {
+    final normalized = value.replaceAll(' EUR', '').replaceAll('.', '').replaceAll(',', '.').trim();
+    return ((double.tryParse(normalized) ?? 0) * 100).round();
+  }
+
+  String _formatEuro(int cents) {
+    final euros = (cents / 100).toStringAsFixed(2).replaceAll('.', ',');
+    return '$euros EUR';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -48,44 +72,14 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AirmiusPanel(
-              gradient: true,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Eyebrow('ZBB Verwaltung'),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Verein, Mitglieder und Zahlungen in einem nativen Workflow.',
-                    style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Diese Ansicht bildet die Web-App mobil nach: externe Mitglieder erfassen, Mitgliedsnummern vergeben, Rechnungen erstellen, Zahlungen abgleichen und Exporte vorbereiten.',
-                    style: TextStyle(color: AirmiusColors.muted, height: 1.42),
-                  ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      AirmiusButton(label: 'Mitglied importieren', icon: Icons.upload_file_outlined, onPressed: () => openUiAction(context, title: 'Mitglied importieren', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.upload_file_outlined)),
-                      AirmiusButton(label: 'Rechnung erstellen', icon: Icons.receipt_long_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Rechnung erstellen', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.receipt_long_outlined)),
-                      AirmiusButton(label: 'SEPA export', icon: Icons.account_balance_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'SEPA export', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird spaeter ueber die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.account_balance_outlined)),
-                      AirmiusButton(label: 'Membership Ops', icon: Icons.tune_outlined, secondary: true, onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MembershipOperationsScreen()))),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            _ClubMembershipHeader(onMembershipOps: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MembershipOperationsScreen()))),
             const SizedBox(height: 14),
-            Row(
-              children: const [
-                Expanded(child: MetricCard(value: '3', label: 'Mitglieder')),
-                SizedBox(width: 10),
-                Expanded(child: MetricCard(value: '2', label: 'Offene Posten')),
-                SizedBox(width: 10),
-                Expanded(child: MetricCard(value: '33 EUR', label: 'Monat')),
+            _MembershipKpiGrid(
+              cards: [
+                _MembershipKpi(title: 'Aktive Mitglieder', value: '$_activeMembersCount', detail: 'von ${_members.length} verknuepften Personen'),
+                _MembershipKpi(title: 'Offen', value: _openInvoiceTotal, detail: '$_openInvoicesCount offene Rechnung(en)'),
+                _MembershipKpi(title: 'SEPA bereit', value: '$_sepaReadyMembersCount', detail: 'Mandate mit IBAN und Referenz'),
+                _MembershipKpi(title: 'Wiederkehrende Beitraege', value: _recurringContributionTotal, detail: 'Summe aktiver Beitragssaetze'),
               ],
             ),
             const SizedBox(height: 14),
@@ -222,6 +216,150 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
             const SizedBox(height: 18),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ClubMembershipHeader extends StatelessWidget {
+  const _ClubMembershipHeader({required this.onMembershipOps});
+
+  final VoidCallback onMembershipOps;
+
+  @override
+  Widget build(BuildContext context) {
+    return AirmiusPanel(
+      gradient: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Eyebrow('VEREINSBEREICH'),
+          const SizedBox(height: 8),
+          const Text(
+            'Mitglieder & Beitraege',
+            style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Mitgliederdaten, Beitragssaetze, Rechnungen, SEPA, DATEV und Import wie in der Web-App als native Flutter-Ansicht.',
+            style: TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              AirmiusButton(
+                label: 'Mitglied importieren',
+                icon: Icons.upload_file_outlined,
+                onPressed: () => openUiAction(
+                  context,
+                  title: 'Mitglied importieren',
+                  body: 'Import-Workflow fuer bestehende Vereinsmitglieder, CSV und externe Mitglieder.',
+                  status: 'Import',
+                  icon: Icons.upload_file_outlined,
+                ),
+              ),
+              AirmiusButton(
+                label: 'Rechnung erstellen',
+                icon: Icons.receipt_long_outlined,
+                secondary: true,
+                onPressed: () => openUiAction(
+                  context,
+                  title: 'Rechnung erstellen',
+                  body: 'Native Vorbereitung fuer Mitgliedsbeitrag, Faelligkeit, Zahlungsstatus und Erinnerung.',
+                  status: 'Rechnung',
+                  icon: Icons.receipt_long_outlined,
+                ),
+              ),
+              AirmiusButton(
+                label: 'SEPA export',
+                icon: Icons.account_balance_outlined,
+                secondary: true,
+                onPressed: () => openUiAction(
+                  context,
+                  title: 'SEPA export',
+                  body: 'SEPA-Mandate pruefen und Export fuer Sammellauf vorbereiten.',
+                  status: 'SEPA',
+                  icon: Icons.account_balance_outlined,
+                ),
+              ),
+              AirmiusButton(label: 'Membership Ops', icon: Icons.tune_outlined, secondary: true, onPressed: onMembershipOps),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MembershipKpi {
+  const _MembershipKpi({required this.title, required this.value, required this.detail});
+
+  final String title;
+  final String value;
+  final String detail;
+}
+
+class _MembershipKpiGrid extends StatelessWidget {
+  const _MembershipKpiGrid({required this.cards});
+
+  final List<_MembershipKpi> cards;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 720 ? 4 : 2;
+        const gap = 10.0;
+        final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
+
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final card in cards) SizedBox(width: width, child: _MembershipKpiCard(card: card)),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _MembershipKpiCard extends StatelessWidget {
+  const _MembershipKpiCard({required this.card});
+
+  final _MembershipKpi card;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 108),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: AirmiusColors.card,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AirmiusColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            card.title.toUpperCase(),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: .2),
+          ),
+          const SizedBox(height: 12),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(card.value, style: const TextStyle(color: AirmiusColors.text, fontSize: 23, fontWeight: FontWeight.w900)),
+          ),
+          const SizedBox(height: 8),
+          Text(card.detail, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.25)),
+        ],
       ),
     );
   }

@@ -38,7 +38,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
 
   Future<List<ClubSummary>> _loadClubs() async {
     final services = AirmiusServicesScope.of(context);
-    final page = await services.repositories.clubs.searchClubs();
+    final page = await services.repositories.clubs.searchClubs(mine: true);
     return page.items.map(ClubSummary.fromAirmiusClub).toList();
   }
 
@@ -75,7 +75,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
                   ),
                 );
               }
-              final clubs = snapshot.data?.isNotEmpty == true ? snapshot.data! : demoClubs;
+              final clubs = snapshot.data ?? const <ClubSummary>[];
               if (clubs.isEmpty) {
                 return const AirmiusPanel(child: Center(child: Padding(padding: EdgeInsets.all(18), child: Text('Keine Vereine gefunden.', style: TextStyle(color: AirmiusColors.muted)))));
               }
