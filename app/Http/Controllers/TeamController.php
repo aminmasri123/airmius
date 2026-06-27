@@ -815,6 +815,10 @@ class TeamController extends Controller
             ]);
         }
 
+        if ($request->expectsJson()) {
+            return new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
+        }
+
         return back()->with('success', 'Teamrolle aktualisiert.');
     }
 

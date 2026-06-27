@@ -66,6 +66,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'checkout/subscriptions/*',
             'team-join-requests/*/approve',
             'team-join-requests/*/decline',
+            'teams/*/members/*',
+            'clubs/*/members/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -140,6 +140,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/clubs', [ClubController::class, 'index'])->name('clubs.index');
         Route::get('/clubs/{club}', [ClubController::class, 'show'])->name('clubs.show');
         Route::get('/clubs/{club}/members', [ClubController::class, 'members'])->name('clubs.members.index');
+        Route::put('/clubs/{club}/members/{user}/role', [ClubController::class, 'updateMemberRole'])->name('clubs.members.role.update');
         Route::get('/clubs/{club}/billing', [ClubController::class, 'billing'])->name('clubs.billing');
         Route::get('/clubs/{club}/membership-requests', [ClubController::class, 'membershipRequests'])->name('clubs.membership-requests.index');
         Route::post('/clubs/{club}/membership-requests', [ClubController::class, 'storeMembershipRequest'])->name('clubs.membership-requests.store');
@@ -159,6 +160,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/team-join-requests/{joinRequest}/decline', [TeamController::class, 'declineJoinRequestById'])->name('team-join-requests.decline');
         Route::post('/teams/{team}/join-requests/{joinRequest}/approve', [TeamController::class, 'approveJoinRequest'])->name('teams.join-requests.approve');
         Route::post('/teams/{team}/join-requests/{joinRequest}/decline', [TeamController::class, 'declineJoinRequest'])->name('teams.join-requests.decline');
+        Route::put('/teams/{team}/members/{user}', [TeamController::class, 'updateMember'])->name('teams.members.update');
         Route::get('/teams/{team}/attendance-stats', [TeamController::class, 'attendanceStats'])->name('teams.attendance-stats');
         Route::get('/teams/{team}/penalties', [TeamPenaltyController::class, 'index'])->name('teams.penalties.index');
         Route::post('/teams/{team}/penalty-rules', [TeamPenaltyController::class, 'storeRule'])->name('teams.penalty-rules.store');

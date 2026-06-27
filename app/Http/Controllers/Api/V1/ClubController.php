@@ -103,6 +103,47 @@ class ClubController extends Controller
         return ClubMemberResource::collection($members);
     }
 
+    public function updateMemberRole(Request $request, Club $club, User $user)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageMembership($request, $club), 403);
+        abort_unless($club->users()->where('users.id', $user->id)->exists(), 404);
+
+        $data = $request->validate([
+            'role' => ['required', Rule::in(ClubRoles::ALL)],
+        ]);
+
+        $roles = ClubRoles::normalize($data['role'], [$data['role']]);
+        abort_if(
+            $club->owner_id === $user->id && ! in_array('owner', $roles, true),
+            422,
+            'Der Owner kann hier nicht herabgestuft werden.'
+        );
+
+        DB::transaction(function () use ($club, $user, $roles) {
+            if (in_array('owner', $roles, true)) {
+                $previousOwnerId = $club->owner_id;
+                $club->forceFill(['owner_id' => $user->id])->save();
+
+                if ($previousOwnerId && $previousOwnerId !== $user->id) {
+                    $club->users()->updateExistingPivot($previousOwnerId, [
+                        'role' => 'admin',
+                        'roles' => ['admin'],
+                    ]);
+                }
+            }
+
+            $club->users()->updateExistingPivot($user->id, [
+                'role' => ClubRoles::primary($roles),
+                'roles' => $roles,
+            ]);
+        });
+
+        return response()->json([
+            'data' => $this->managementPayload($request, $club->fresh(), true),
+        ]);
+    }
+
     public function billing(Request $request, Club $club)
     {
         $this->authorizeVisible($request, $club);

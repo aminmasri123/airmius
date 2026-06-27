@@ -359,6 +359,17 @@ class ClubController extends Controller
             }
         });
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => [
+                    'club_id' => $club->id,
+                    'user_id' => $user->id,
+                    'role' => $primaryRole,
+                    'roles' => $roles,
+                ],
+            ]);
+        }
+
         return back()->with('success', 'Vereinsrolle aktualisiert.');
     }
 

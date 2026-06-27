@@ -262,6 +262,22 @@ class TeamController extends Controller
         return $this->declineJoinRequest($request, $joinRequest->team, $joinRequest);
     }
 
+    public function updateMember(Request $request, Team $team, User $user)
+    {
+        $this->authorize('update', $team);
+        abort_unless($team->users()->where('users.id', $user->id)->exists(), 404);
+
+        $data = $request->validate([
+            'role' => ['required', Rule::in(Team::ROLES)],
+        ]);
+
+        $team->users()->updateExistingPivot($user->id, [
+            'role' => $data['role'],
+        ]);
+
+        return new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
+    }
+
     public function attendanceStats(Request $request, Team $team)
     {
         abort_unless(

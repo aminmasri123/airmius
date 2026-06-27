@@ -27,6 +27,7 @@ class UserResource extends JsonResource
             'gender' => $this->gender,
             'guardian_email' => $this->guardian_email,
             'role' => $roleLabel ?: 'Member',
+            'team_role' => $this->pivot?->role,
             'language' => $this->language ?? 'de',
             'theme' => $this->theme,
             'country' => $this->country,

@@ -58,6 +58,13 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   }
 
   @override
+  Future<AirmiusClubManagement> updateClubMemberRole(int clubId, int userId, String role) async {
+    final json = await client.updateClubMemberRole(clubId, userId, role);
+    final data = json['data'];
+    return AirmiusClubManagement.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
   Future<AirmiusPage<AirmiusTeam>> teams({int page = 1}) async {
     final json = await client.teams(page: page);
     return AirmiusPage<AirmiusTeam>.fromJson(_paged(json, page), AirmiusTeam.fromJson);
@@ -106,6 +113,13 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   @override
   Future<AirmiusTeam> declineTeamJoinRequest(int teamId, int requestId) async {
     final json = await client.declineTeamJoinRequest(teamId, requestId);
+    final data = json['data'];
+    return AirmiusTeam.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<AirmiusTeam> updateTeamMemberRole(int teamId, int userId, String role) async {
+    final json = await client.updateTeamMemberRole(teamId, userId, role);
     final data = json['data'];
     return AirmiusTeam.fromJson(data is JsonMap ? data : json);
   }

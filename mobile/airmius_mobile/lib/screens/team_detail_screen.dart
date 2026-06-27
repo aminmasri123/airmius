@@ -26,6 +26,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
   bool _guardianGate = true;
   bool _requestingJoin = false;
   bool _reviewingJoinRequest = false;
+  int? _updatingRoleUserId;
 
   @override
   void initState() {
@@ -106,6 +107,26 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
       if (!mounted) return;
       setState(() => _reviewingJoinRequest = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Team-Anfrage konnte nicht verarbeitet werden: $error')));
+    }
+  }
+
+  Future<void> _updateTeamMemberRole(AirmiusTeam team, AirmiusUser user, String role) async {
+    if (_updatingRoleUserId != null || user.role == role) return;
+    setState(() => _updatingRoleUserId = user.id);
+
+    try {
+      final updatedTeam = await AirmiusServicesScope.of(context).repositories.clubs.updateTeamMemberRole(team.id, user.id, role);
+      if (!mounted) return;
+      setState(() {
+        _teamFuture = Future.value(updatedTeam);
+        _section = 'Kader';
+        _updatingRoleUserId = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Teamrolle aktualisiert.')));
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _updatingRoleUserId = null);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Teamrolle konnte nicht gespeichert werden: $error')));
     }
   }
 
@@ -190,7 +211,13 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
           ]),
           const SizedBox(height: 14),
           if (_section == 'Profil') _ProfilePanel(team: team, fallbackTitle: title, canManageTeam: canManageTeam, joinRequests: _joinRequests, teamChat: _teamChat, guardianGate: _guardianGate, onJoin: (value) => setState(() => _joinRequests = value), onChat: (value) => setState(() => _teamChat = value), onGuardian: (value) => setState(() => _guardianGate = value)),
-          if (_section == 'Kader') _RosterPanel(team: team),
+          if (_section == 'Kader')
+            _RosterPanel(
+              team: team,
+              canManageTeam: canManageTeam,
+              updatingUserId: _updatingRoleUserId,
+              onRoleChanged: team == null ? null : (user, role) => _updateTeamMemberRole(team, user, role),
+            ),
           if (_section == 'Rollen' && canManageTeam) const _RolesPanel(),
           if (_section == 'Einladungen' && canManageTeam)
             _InvitePanel(
@@ -396,9 +423,12 @@ class _TeamInfoTile extends StatelessWidget {
 }
 
 class _RosterPanel extends StatelessWidget {
-  const _RosterPanel({required this.team});
+  const _RosterPanel({required this.team, required this.canManageTeam, required this.updatingUserId, required this.onRoleChanged});
 
   final AirmiusTeam? team;
+  final bool canManageTeam;
+  final int? updatingUserId;
+  final void Function(AirmiusUser user, String role)? onRoleChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -410,7 +440,12 @@ class _RosterPanel extends StatelessWidget {
         const Text('Noch keine Teammitglieder geladen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700))
       else
         for (final user in users) ...[
-          _MemberRow(name: user.name, role: user.email.isNotEmpty ? user.email : user.role, status: 'Aktiv'),
+          _MemberRow(
+            user: user,
+            canManageTeam: canManageTeam,
+            isUpdating: updatingUserId == user.id,
+            onRoleChanged: onRoleChanged == null ? null : (role) => onRoleChanged!(user, role),
+          ),
           const SizedBox(height: 10),
         ],
     ]));
@@ -578,17 +613,68 @@ class _ChatPanel extends StatelessWidget {
 }
 
 class _MemberRow extends StatelessWidget {
-  const _MemberRow({required this.name, required this.role, required this.status});
+  const _MemberRow({required this.user, required this.canManageTeam, required this.isUpdating, required this.onRoleChanged});
 
-  final String name;
-  final String role;
-  final String status;
+  final AirmiusUser user;
+  final bool canManageTeam;
+  final bool isUpdating;
+  final ValueChanged<String>? onRoleChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Row(children: [AirmiusAvatar(name), const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), Text(role, style: const TextStyle(color: AirmiusColors.muted))])), StatusPill(status)]);
+    final role = _teamRoleValues.contains(user.role) ? user.role : 'Player';
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          AirmiusAvatar(user.name, imageUrl: user.avatarUrl),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(user.name, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            Text(user.email.isNotEmpty ? user.email : _teamRoleLabel(role), style: const TextStyle(color: AirmiusColors.muted)),
+          ])),
+          StatusPill(_teamRoleLabel(role), color: role == 'Coach' ? AirmiusColors.blue : role == 'Captain' ? AirmiusColors.green : AirmiusColors.amber),
+        ]),
+        if (canManageTeam) ...[
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(
+            value: role,
+            isExpanded: true,
+            dropdownColor: AirmiusColors.card,
+            decoration: InputDecoration(
+              labelText: isUpdating ? 'Speichert...' : 'Teamrolle',
+              labelStyle: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AirmiusColors.border)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AirmiusColors.blue)),
+              filled: true,
+              fillColor: AirmiusColors.card,
+            ),
+            style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
+            items: [
+              for (final item in _teamRoleValues) DropdownMenuItem(value: item, child: Text(_teamRoleLabel(item))),
+            ],
+            onChanged: isUpdating || onRoleChanged == null ? null : (value) {
+              if (value != null) onRoleChanged!(value);
+            },
+          ),
+        ],
+      ]),
+    );
   }
 }
+
+const _teamRoleValues = ['Coach', 'Captain', 'Player', 'Treasurer', 'ClubPresident', 'ParentContact'];
+
+String _teamRoleLabel(String role) => switch (role) {
+      'Coach' => 'Trainer',
+      'Captain' => 'Kapitän',
+      'Player' => 'Spieler',
+      'Treasurer' => 'Kassenwart',
+      'ClubPresident' => 'Vorsitzender',
+      'ParentContact' => 'Elternkontakt',
+      _ => role,
+    };
 
 class _RoleRow extends StatelessWidget {
   const _RoleRow({required this.role, required this.rights});

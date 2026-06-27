@@ -82,7 +82,7 @@ class AirmiusUser {
         id: _int(json['id']),
         name: _string(json['name']),
         email: _string(json['email']),
-        role: _string(json['role'], fallback: 'member'),
+        role: _userRole(json),
         firstName: _nullableString(json['first_name']),
         lastName: _nullableString(json['last_name']),
         birthDate: json['birth_date'] == null ? null : _date(json['birth_date']),
@@ -106,6 +106,18 @@ class AirmiusUser {
         badges: _jsonList(json['badges']).map(AirmiusUserBadge.fromJson).toList(),
         gamification: json['gamification'] is JsonMap ? AirmiusGamification.fromJson(json['gamification'] as JsonMap) : null,
       );
+}
+
+String _userRole(JsonMap json) {
+  final pivot = json['pivot'];
+  final membership = json['membership'];
+  return _string(
+    json['team_role'] ??
+        (pivot is JsonMap ? pivot['role'] : null) ??
+        (membership is JsonMap ? membership['role'] : null) ??
+        json['role'],
+    fallback: 'member',
+  );
 }
 
 class AirmiusNamedItem {
@@ -1493,6 +1505,7 @@ abstract class AirmiusAuthRepository {
 abstract class AirmiusClubRepository {
   Future<AirmiusPage<AirmiusClub>> searchClubs({String? query, int page = 1, bool mine = false});
   Future<AirmiusClub> club(int id);
+  Future<AirmiusClubManagement> updateClubMemberRole(int clubId, int userId, String role);
   Future<AirmiusPage<AirmiusTeam>> teams({int page = 1});
   Future<AirmiusTeam> team(int id);
   Future<AirmiusTeam> createTeam(JsonMap payload);
@@ -1501,6 +1514,7 @@ abstract class AirmiusClubRepository {
   Future<AirmiusTeam> requestTeamJoin(int id);
   Future<AirmiusTeam> approveTeamJoinRequest(int teamId, int requestId, {String role = 'Player'});
   Future<AirmiusTeam> declineTeamJoinRequest(int teamId, int requestId);
+  Future<AirmiusTeam> updateTeamMemberRole(int teamId, int userId, String role);
 }
 
 abstract class AirmiusSportRepository {

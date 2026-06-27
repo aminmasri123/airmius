@@ -51,6 +51,12 @@ Route::options('/team-join-requests/{joinRequest}/approve', fn () => response(''
 Route::options('/team-join-requests/{joinRequest}/decline', fn () => response('', 204))
     ->middleware(EnsureApiCorsHeaders::class)
     ->name('auth.team-join-requests.decline.options');
+Route::options('/teams/{team}/members/{user}', fn () => response('', 204))
+    ->middleware(EnsureApiCorsHeaders::class)
+    ->name('auth.teams.members.update.options');
+Route::options('/clubs/{club}/members/{user}', fn () => response('', 204))
+    ->middleware(EnsureApiCorsHeaders::class)
+    ->name('auth.clubs.members.update.options');
 
 Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])->group(function () {
 
@@ -233,7 +239,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::post('/clubs/{club}/sponsors', [ClubController::class, 'storeSponsor'])->middleware('club')->name('auth.clubs.sponsors.store');
     Route::put('/clubs/{club}/sponsors/{sponsor}', [ClubController::class, 'updateSponsor'])->middleware('club')->name('auth.clubs.sponsors.update');
     Route::delete('/clubs/{club}/sponsors/{sponsor}', [ClubController::class, 'destroySponsor'])->middleware('club')->name('auth.clubs.sponsors.destroy');
-    Route::put('/clubs/{club}/members/{user}', [ClubController::class, 'updateMember'])->name('auth.clubs.members.update');
+    Route::put('/clubs/{club}/members/{user}', [ClubController::class, 'updateMember'])
+        ->middleware(EnsureApiCorsHeaders::class)
+        ->name('auth.clubs.members.update');
     Route::post('/clubs/{club}/images', [ClubController::class, 'updateImages'])->name('auth.clubs.images.update');
     Route::post('/clubs/{club}/jobs', [OrganizationJobController::class, 'store'])->name('auth.clubs.jobs.store');
     Route::delete('/clubs/{club}', [ClubController::class, 'destroy'])->middleware('club')->name('auth.clubs.destroy');
@@ -298,7 +306,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::post('/team-join-requests/{joinRequest}/decline', [TeamController::class, 'declineJoinRequest'])
         ->middleware(EnsureApiCorsHeaders::class)
         ->name('auth.team-join-requests.decline');
-    Route::put('/teams/{team}/members/{user}', [TeamController::class, 'updateMember'])->name('auth.teams.members.update');
+    Route::put('/teams/{team}/members/{user}', [TeamController::class, 'updateMember'])
+        ->middleware(EnsureApiCorsHeaders::class)
+        ->name('auth.teams.members.update');
     Route::delete('/teams/{team}/members/{user}', [TeamController::class, 'removeMember'])->name('auth.teams.members.destroy');
 
     // EVENTS

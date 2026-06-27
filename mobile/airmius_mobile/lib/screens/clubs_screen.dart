@@ -499,14 +499,22 @@ class _ClubInlineWorkspace extends StatelessWidget {
   }
 }
 
-class _ClubManagementSection extends StatelessWidget {
+class _ClubManagementSection extends StatefulWidget {
   const _ClubManagementSection({required this.club, required this.onReload});
 
   final ClubSummary club;
   final VoidCallback onReload;
 
   @override
+  State<_ClubManagementSection> createState() => _ClubManagementSectionState();
+}
+
+class _ClubManagementSectionState extends State<_ClubManagementSection> {
+  int? _updatingMemberId;
+
+  @override
   Widget build(BuildContext context) {
+    final club = widget.club;
     final management = club.management!;
     return _InlineSection(
       title: 'Verwaltungsdaten',
@@ -560,7 +568,11 @@ class _ClubManagementSection extends StatelessWidget {
             const Text('Mitglieder', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
             const SizedBox(height: 8),
             for (final member in management.members.take(5)) ...[
-              _MemberLine(member: member),
+              _MemberLine(
+                member: member,
+                isUpdating: _updatingMemberId == member.id,
+                onRoleChanged: (role) => _updateMemberRole(context, member, role),
+              ),
               const SizedBox(height: 8),
             ],
           ],
@@ -578,16 +590,33 @@ class _ClubManagementSection extends StatelessWidget {
     try {
       final services = AirmiusServicesScope.of(context);
       if (approve) {
-        await services.repositories.memberships.approveClubRequest(club.id, request.id);
+        await services.repositories.memberships.approveClubRequest(widget.club.id, request.id);
       } else {
-        await services.repositories.memberships.declineClubRequest(club.id, request.id);
+        await services.repositories.memberships.declineClubRequest(widget.club.id, request.id);
       }
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(approve ? 'Anfrage angenommen.' : 'Anfrage abgelehnt.')));
-      onReload();
+      widget.onReload();
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Anfrage konnte nicht verarbeitet werden: $error')));
+    }
+  }
+
+  Future<void> _updateMemberRole(BuildContext context, AirmiusClubMember member, String role) async {
+    if (_updatingMemberId != null || member.role == role) return;
+    setState(() => _updatingMemberId = member.id);
+
+    try {
+      await AirmiusServicesScope.of(context).repositories.clubs.updateClubMemberRole(widget.club.id, member.id, role);
+      if (!context.mounted) return;
+      setState(() => _updatingMemberId = null);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vereinsrolle aktualisiert.')));
+      widget.onReload();
+    } catch (error) {
+      if (!context.mounted) return;
+      setState(() => _updatingMemberId = null);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Vereinsrolle konnte nicht gespeichert werden: $error')));
     }
   }
 }
@@ -687,16 +716,74 @@ class _RawRequestLine extends StatelessWidget {
 }
 
 class _MemberLine extends StatelessWidget {
-  const _MemberLine({required this.member});
+  const _MemberLine({required this.member, required this.isUpdating, required this.onRoleChanged});
 
   final AirmiusClubMember member;
+  final bool isUpdating;
+  final ValueChanged<String> onRoleChanged;
 
   @override
   Widget build(BuildContext context) {
     final status = member.status?.isNotEmpty == true ? member.status! : 'aktiv';
-    return _InlineMetricLine(icon: Icons.person_outline, title: member.name, value: status);
+    final role = _clubRoleValues.contains(member.role) ? member.role! : 'member';
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(14), border: Border.all(color: AirmiusColors.border)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          AirmiusAvatar(member.name, imageUrl: member.avatarUrl),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(member.name, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            Text(member.email.isNotEmpty ? member.email : status, style: const TextStyle(color: AirmiusColors.muted)),
+          ])),
+          StatusPill(_clubRoleLabel(role), color: _clubRoleColor(role)),
+        ]),
+        const SizedBox(height: 10),
+        DropdownButtonFormField<String>(
+          value: role,
+          isExpanded: true,
+          dropdownColor: AirmiusColors.card,
+          decoration: InputDecoration(
+            labelText: isUpdating ? 'Speichert...' : 'Vereinsrolle',
+            labelStyle: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AirmiusColors.border)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AirmiusColors.blue)),
+            filled: true,
+            fillColor: AirmiusColors.card,
+          ),
+          style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
+          items: [
+            for (final item in _clubRoleValues) DropdownMenuItem(value: item, child: Text(_clubRoleLabel(item))),
+          ],
+          onChanged: isUpdating ? null : (value) {
+            if (value != null) onRoleChanged(value);
+          },
+        ),
+      ]),
+    );
   }
 }
+
+const _clubRoleValues = ['owner', 'admin', 'manager', 'academy_manager', 'financial_controller', 'trainer', 'member'];
+
+String _clubRoleLabel(String role) => switch (role) {
+      'owner' => 'Owner',
+      'admin' => 'Verein-Admin',
+      'manager' => 'Manager',
+      'academy_manager' => 'Akademie-Manager',
+      'financial_controller' => 'Finanzen',
+      'trainer' => 'Trainer',
+      'member' => 'Mitglied',
+      _ => role,
+    };
+
+Color _clubRoleColor(String role) => switch (role) {
+      'owner' || 'admin' => AirmiusColors.blue,
+      'manager' || 'academy_manager' || 'financial_controller' => AirmiusColors.green,
+      'trainer' => AirmiusColors.amber,
+      _ => AirmiusColors.muted,
+    };
 
 String _formatMoney(double value) => '${value.toStringAsFixed(2).replaceAll('.', ',')} EUR';
 

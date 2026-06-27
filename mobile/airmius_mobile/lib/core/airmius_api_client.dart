@@ -128,6 +128,17 @@ class AirmiusApiClient {
       });
 
   Future<AirmiusJson> clubDetail(int clubId) => _json('GET', '/api/v1/clubs/$clubId');
+  Future<AirmiusJson> updateClubMemberRole(int clubId, int userId, String role) async {
+    try {
+      return await _json('PUT', '/api/v1/clubs/$clubId/members/$userId/role', body: {'role': role});
+    } on AirmiusApiException catch (error) {
+      if (!_shouldTryTeamJoinFallback(error)) rethrow;
+      await _json('PUT', '/clubs/$clubId/members/$userId', body: {'role': role, 'roles': [role]});
+      final detail = await clubDetail(clubId);
+      final data = detail['data'];
+      return data is JsonMap && data['management'] is JsonMap ? data['management'] as JsonMap : detail;
+    }
+  }
 
   Future<AirmiusJson> teams({int page = 1, int perPage = 50}) => _json('GET', '/api/v1/teams', query: {
         'page': '$page',
@@ -168,6 +179,15 @@ class AirmiusApiClient {
   }
 
   bool _shouldTryTeamJoinFallback(AirmiusApiException error) => error.statusCode == 0 || error.statusCode == 404 || error.statusCode == 405 || error.statusCode == 599;
+
+  Future<AirmiusJson> updateTeamMemberRole(int teamId, int userId, String role) async {
+    try {
+      return await _json('PUT', '/api/v1/teams/$teamId/members/$userId', body: {'role': role});
+    } on AirmiusApiException catch (error) {
+      if (!_shouldTryTeamJoinFallback(error)) rethrow;
+      return _json('PUT', '/teams/$teamId/members/$userId', body: {'role': role});
+    }
+  }
 
   Future<AirmiusJson> teamAttendanceStats(int teamId) => _json('GET', '/api/v1/teams/$teamId/attendance-stats');
 
