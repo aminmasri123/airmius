@@ -19,6 +19,7 @@ use App\Models\Payment;
 use App\Models\Team;
 use App\Models\TeamJoinRequest;
 use App\Models\User;
+use App\Services\ClubService;
 use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
 use App\Support\ClubMembershipApplication;
@@ -26,13 +27,17 @@ use App\Support\ClubRoles;
 use App\Support\Roles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
 use App\Models\BankTransaction;
 
 class ClubController extends Controller
 {
-    public function __construct(private readonly PlanFeatureService $planFeatures) {}
+    public function __construct(
+        private readonly PlanFeatureService $planFeatures,
+        private readonly ClubService $clubService,
+    ) {}
 
     public function index(Request $request)
     {
@@ -52,6 +57,38 @@ class ClubController extends Controller
             ->paginate($this->perPage($request));
 
         return ClubResource::collection($clubs);
+    }
+
+    public function store(Request $request)
+    {
+        Gate::authorize('create', Club::class);
+
+        $club = $this->clubService->create($request->user(), $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'sport_type' => ['nullable', 'string', 'max:120'],
+            'is_official' => ['boolean'],
+            'official_club_number' => ['nullable', 'string', 'max:120'],
+            'country' => ['required', 'string', 'size:2'],
+            'street' => ['nullable', 'string', 'max:255'],
+            'house_number' => ['nullable', 'string', 'max:40'],
+            'postal_code' => ['nullable', 'string', 'max:30'],
+            'city' => ['nullable', 'string', 'max:255'],
+            'state' => ['nullable', 'string', 'max:255'],
+            'sepa_account_holder' => ['nullable', 'string', 'max:120'],
+            'sepa_iban' => ['nullable', 'string', 'max:40'],
+            'sepa_bic' => ['nullable', 'string', 'max:20'],
+            'is_listed' => ['boolean'],
+            'teams_are_listed' => ['boolean'],
+            'members_can_post_to_club' => ['boolean'],
+            'members_can_post_to_teams' => ['boolean'],
+        ]));
+
+        $club->loadCount(['users', 'teams']);
+
+        return response()->json([
+            'message' => 'Verein registriert. Der Antrag wartet jetzt auf Pruefung.',
+            'data' => (new ClubResource($club))->resolve($request),
+        ], 201);
     }
 
     public function show(Request $request, Club $club)

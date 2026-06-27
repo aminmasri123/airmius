@@ -127,6 +127,7 @@ class AirmiusApiClient {
         if (mine) 'mine': '1',
       });
 
+  Future<AirmiusJson> createClub(AirmiusJson payload) => _json('POST', '/api/v1/clubs', body: payload);
   Future<AirmiusJson> clubDetail(int clubId) => _json('GET', '/api/v1/clubs/$clubId');
   Future<AirmiusJson> updateClubMemberRole(int clubId, int userId, String role) async {
     try {

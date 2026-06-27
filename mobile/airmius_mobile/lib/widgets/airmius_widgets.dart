@@ -559,14 +559,9 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: AirmiusColors.header,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
+      automaticallyImplyLeading: false,
       centerTitle: false,
-      leading: Builder(
-        builder: (context) => IconButton(
-          icon: const Icon(Icons.menu, color: AirmiusColors.text),
-          onPressed: () => Scaffold.of(context).openDrawer(),
-        ),
-      ),
-      titleSpacing: 0,
+      titleSpacing: 12,
       title: InkWell(
         onTap: onLogoTap,
         borderRadius: BorderRadius.circular(8),
@@ -601,7 +596,14 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
           )
         else
           UserBubble(label: fallbackLabel, imageUrl: userImageUrl),
-        const SizedBox(width: 12),
+        Builder(
+          builder: (context) => IconButton(
+            tooltip: 'Menue',
+            onPressed: () => Scaffold.of(context).openDrawer(),
+            icon: const Icon(Icons.menu, color: AirmiusColors.text),
+          ),
+        ),
+        const SizedBox(width: 6),
       ],
     );
   }

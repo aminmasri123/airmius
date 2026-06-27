@@ -10,7 +10,6 @@ import 'application_screen.dart';
 import 'club_cockpit_screen.dart';
 import 'club_membership_management_screen.dart';
 import 'team_detail_screen.dart';
-import 'ui_action_result_screen.dart';
 
 class ClubsScreen extends StatefulWidget {
   const ClubsScreen({
@@ -116,15 +115,476 @@ class _ClubsScreenState extends State<ClubsScreen> {
     );
   }
 
-  void _openCreateClub() {
-    Navigator.push(
+  Future<void> _openCreateClub() async {
+    final created = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => const UiActionResultScreen(
-          title: 'Verein registrieren',
-          body: 'Verein wie in Laravel/Inertia anlegen: Basisdaten, Adresse und Prüfschritt.',
-          status: 'Verein',
-          icon: Icons.add_business_outlined,
+        fullscreenDialog: true,
+        builder: (_) => const _ClubCreateWizardScreen(),
+      ),
+    );
+    if (created == true && mounted) {
+      setState(() => _clubsFuture = _loadClubs());
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Verein registriert. Der Antrag wartet jetzt auf Pruefung.')),
+      );
+    }
+  }
+}
+
+class _ClubCreateWizardScreen extends StatefulWidget {
+  const _ClubCreateWizardScreen();
+
+  @override
+  State<_ClubCreateWizardScreen> createState() => _ClubCreateWizardScreenState();
+}
+
+class _ClubCreateWizardScreenState extends State<_ClubCreateWizardScreen> {
+  final _name = TextEditingController();
+  final _sportType = TextEditingController();
+  final _officialNumber = TextEditingController();
+  final _city = TextEditingController();
+  final _postalCode = TextEditingController();
+  final _state = TextEditingController();
+  final _street = TextEditingController();
+  final _houseNumber = TextEditingController();
+  final _accountHolder = TextEditingController();
+  final _iban = TextEditingController();
+  final _bic = TextEditingController();
+
+  int _step = 1;
+  bool _official = false;
+  bool _saving = false;
+  String _country = 'DE';
+  String? _notice;
+
+  static const _countries = [
+    ('DE', 'Deutschland'),
+    ('AT', 'Oesterreich'),
+    ('CH', 'Schweiz'),
+    ('FR', 'Frankreich'),
+    ('NL', 'Niederlande'),
+    ('BE', 'Belgien'),
+    ('TR', 'Tuerkei'),
+    ('US', 'USA'),
+  ];
+
+  @override
+  void dispose() {
+    for (final controller in [_name, _sportType, _officialNumber, _city, _postalCode, _state, _street, _houseNumber, _accountHolder, _iban, _bic]) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _next() {
+    if (_step == 1 && _name.text.trim().isEmpty) {
+      setState(() => _notice = 'Bitte gib einen Vereinsnamen ein.');
+      return;
+    }
+    setState(() {
+      _notice = null;
+      _step = (_step + 1).clamp(1, 3).toInt();
+    });
+  }
+
+  void _back() {
+    setState(() {
+      _notice = null;
+      _step = (_step - 1).clamp(1, 3).toInt();
+    });
+  }
+
+  String? _nullable(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  Future<void> _save() async {
+    if (_name.text.trim().isEmpty) {
+      setState(() {
+        _step = 1;
+        _notice = 'Bitte gib einen Vereinsnamen ein.';
+      });
+      return;
+    }
+
+    setState(() {
+      _saving = true;
+      _notice = null;
+    });
+
+    try {
+      await AirmiusServicesScope.of(context).repositories.clubs.createClub({
+        'name': _name.text.trim(),
+        'sport_type': _nullable(_sportType.text),
+        'is_official': _official,
+        'official_club_number': _official ? _nullable(_officialNumber.text) : null,
+        'country': _country,
+        'street': _nullable(_street.text),
+        'house_number': _nullable(_houseNumber.text),
+        'postal_code': _nullable(_postalCode.text),
+        'city': _nullable(_city.text),
+        'state': _nullable(_state.text),
+        'sepa_account_holder': _nullable(_accountHolder.text),
+        'sepa_iban': _nullable(_iban.text),
+        'sepa_bic': _nullable(_bic.text),
+        'is_listed': true,
+        'teams_are_listed': true,
+        'members_can_post_to_club': true,
+        'members_can_post_to_teams': true,
+      });
+      if (mounted) Navigator.pop(context, true);
+    } catch (error) {
+      if (mounted) setState(() => _notice = 'Verein konnte nicht gespeichert werden. $error');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AirmiusColors.bg,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _WizardHeader(
+              step: _step,
+              onClose: _saving ? null : () => Navigator.pop(context, false),
+              onStep: (step) => setState(() => _step = step),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  if (_notice != null) ...[
+                    _NoticeBox(text: _notice!),
+                    const SizedBox(height: 14),
+                  ],
+                  if (_step == 1) _basisdaten(),
+                  if (_step == 2) _adresse(),
+                  if (_step == 3) _pruefen(),
+                ],
+              ),
+            ),
+            _WizardFooter(
+              step: _step,
+              saving: _saving,
+              onBack: _back,
+              onNext: _next,
+              onSave: _save,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _basisdaten() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const _WizardIntro(title: 'Basisdaten', body: 'Name, Sportart und Land des Vereins. Nach dem Absenden prueft Airmius den Antrag.'),
+      const SizedBox(height: 14),
+      _WizardField(controller: _name, label: 'Vereinsname', placeholder: 'Vereinsname'),
+      const SizedBox(height: 12),
+      _WizardField(controller: _sportType, label: 'Sportart', placeholder: 'Sportart suchen'),
+      const SizedBox(height: 12),
+      _OfficialTile(value: _official, onChanged: (value) => setState(() => _official = value)),
+      if (_official) ...[
+        const SizedBox(height: 12),
+        _WizardField(controller: _officialNumber, label: 'Vereinsnummer zur Pruefung', placeholder: 'z. B. Vereinsregister- oder Verbandsnummer'),
+      ],
+      const SizedBox(height: 12),
+      _CountryField(value: _country, countries: _countries, onChanged: (value) => setState(() => _country = value)),
+    ]);
+  }
+
+  Widget _adresse() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const _WizardIntro(title: 'Adresse & Bankkonto', body: 'Optional: Standort und Bankkonto fuer Mitglieder-Ueberweisungen eintragen.'),
+      const SizedBox(height: 14),
+      _WizardField(controller: _city, placeholder: 'Stadt'),
+      const SizedBox(height: 12),
+      _WizardField(controller: _postalCode, placeholder: 'PLZ'),
+      const SizedBox(height: 12),
+      _WizardField(controller: _state, placeholder: 'Region'),
+      const SizedBox(height: 12),
+      _WizardField(controller: _street, placeholder: 'Strasse'),
+      const SizedBox(height: 12),
+      _WizardField(controller: _houseNumber, placeholder: 'Hausnummer'),
+      const SizedBox(height: 14),
+      AirmiusPanel(
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Text('BANKKONTO FUER VEREINSRECHNUNGEN', style: TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 6),
+          const Text('Diese Daten werden Mitgliedern angezeigt, wenn sie offene Vereinsrechnungen per Ueberweisung zahlen.', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.35)),
+          const SizedBox(height: 12),
+          _WizardField(controller: _accountHolder, placeholder: 'Kontoinhaber'),
+          const SizedBox(height: 12),
+          _WizardField(controller: _iban, placeholder: 'IBAN'),
+          const SizedBox(height: 12),
+          _WizardField(controller: _bic, placeholder: 'BIC'),
+        ]),
+      ),
+    ]);
+  }
+
+  Widget _pruefen() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const _WizardIntro(title: 'Pruefen', body: 'Kontrolliere die Angaben vor dem Absenden. Der Verein wird als Antrag gespeichert.'),
+      const SizedBox(height: 14),
+      AirmiusPanel(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          _ReviewLine(label: 'Verein', value: _name.text),
+          _ReviewLine(label: 'Sportart', value: _sportType.text),
+          _ReviewLine(label: 'Offizielle Pruefung', value: _official ? 'Beantragt' : 'Nicht beantragt'),
+          if (_official) _ReviewLine(label: 'Vereinsnummer zur Pruefung', value: _officialNumber.text),
+          const _ReviewLine(label: 'Status nach Absenden', value: 'Wartet auf Pruefung'),
+          _ReviewLine(label: 'Land', value: _country),
+          _ReviewLine(label: 'Adresse', value: '${_street.text} ${_houseNumber.text}, ${_postalCode.text} ${_city.text}'),
+          _ReviewLine(label: 'Region', value: _state.text),
+          _ReviewLine(label: 'Kontoinhaber', value: _accountHolder.text),
+          _ReviewLine(label: 'IBAN', value: _iban.text),
+          _ReviewLine(label: 'BIC', value: _bic.text, last: true),
+        ]),
+      ),
+    ]);
+  }
+}
+
+class _WizardHeader extends StatelessWidget {
+  const _WizardHeader({required this.step, required this.onClose, required this.onStep});
+
+  final int step;
+  final VoidCallback? onClose;
+  final ValueChanged<int> onStep;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(color: AirmiusColors.card, border: Border(bottom: BorderSide(color: AirmiusColors.border))),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Column(children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Verein registrieren', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 4),
+              Text('Schritt $step von 3', style: const TextStyle(color: AirmiusColors.muted, fontSize: 13, fontWeight: FontWeight.w700)),
+            ]),
+          ),
+          IconButton(tooltip: 'Schliessen', onPressed: onClose, icon: const Icon(Icons.close_rounded, color: AirmiusColors.muted)),
+        ]),
+        const SizedBox(height: 14),
+        Row(children: [
+          Expanded(child: _StepPill(label: 'Basisdaten', active: step == 1, done: step > 1, onTap: () => onStep(1))),
+          const SizedBox(width: 8),
+          Expanded(child: _StepPill(label: 'Adresse', active: step == 2, done: step > 2, onTap: () => onStep(2))),
+          const SizedBox(width: 8),
+          Expanded(child: _StepPill(label: 'Pruefen', active: step == 3, done: false, onTap: () => onStep(3))),
+        ]),
+      ]),
+    );
+  }
+}
+
+class _StepPill extends StatelessWidget {
+  const _StepPill({required this.label, required this.active, required this.done, required this.onTap});
+
+  final String label;
+  final bool active;
+  final bool done;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(99),
+      child: Container(
+        height: 34,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: active ? AirmiusColors.blue : done ? AirmiusColors.green.withValues(alpha: .16) : AirmiusColors.input,
+          borderRadius: BorderRadius.circular(99),
+        ),
+        child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: active ? Colors.white : done ? AirmiusColors.green : AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w900)),
+      ),
+    );
+  }
+}
+
+class _WizardFooter extends StatelessWidget {
+  const _WizardFooter({required this.step, required this.saving, required this.onBack, required this.onNext, required this.onSave});
+
+  final int step;
+  final bool saving;
+  final VoidCallback onBack;
+  final VoidCallback onNext;
+  final VoidCallback onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(color: AirmiusColors.card, border: Border(top: BorderSide(color: AirmiusColors.border))),
+      child: Row(children: [
+        Expanded(
+          child: OutlinedButton(
+            onPressed: step == 1 || saving ? null : onBack,
+            style: OutlinedButton.styleFrom(foregroundColor: AirmiusColors.muted, side: const BorderSide(color: AirmiusColors.border), padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            child: const Text('Zurueck', style: TextStyle(fontWeight: FontWeight.w900)),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: FilledButton(
+            onPressed: saving ? null : (step < 3 ? onNext : onSave),
+            style: FilledButton.styleFrom(backgroundColor: AirmiusColors.blue, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            child: Text(saving ? 'Speichert...' : (step < 3 ? 'Weiter' : 'Speichern'), style: const TextStyle(fontWeight: FontWeight.w900)),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+class _WizardIntro extends StatelessWidget {
+  const _WizardIntro({required this.title, required this.body});
+
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(title, style: const TextStyle(color: AirmiusColors.text, fontSize: 16, fontWeight: FontWeight.w900)),
+      const SizedBox(height: 6),
+      Text(body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+    ]);
+  }
+}
+
+class _WizardField extends StatelessWidget {
+  const _WizardField({required this.controller, this.label, required this.placeholder});
+
+  final TextEditingController controller;
+  final String? label;
+  final String placeholder;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if (label != null) ...[
+        Text(label!, style: const TextStyle(color: AirmiusColors.text, fontSize: 13, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 6),
+      ],
+      TextField(
+        controller: controller,
+        style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
+        decoration: InputDecoration(hintText: placeholder),
+      ),
+    ]);
+  }
+}
+
+class _CountryField extends StatelessWidget {
+  const _CountryField({required this.value, required this.countries, required this.onChanged});
+
+  final String value;
+  final List<(String, String)> countries;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('Land', style: TextStyle(color: AirmiusColors.text, fontSize: 13, fontWeight: FontWeight.w900)),
+      const SizedBox(height: 6),
+      DropdownButtonFormField<String>(
+        value: value,
+        dropdownColor: AirmiusColors.card,
+        decoration: const InputDecoration(),
+        style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
+        items: [for (final country in countries) DropdownMenuItem(value: country.$1, child: Text(country.$2))],
+        onChanged: (value) {
+          if (value != null) onChanged(value);
+        },
+      ),
+    ]);
+  }
+}
+
+class _OfficialTile extends StatelessWidget {
+  const _OfficialTile({required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => onChanged(!value),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: value ? AirmiusColors.blue.withValues(alpha: .1) : AirmiusColors.bg, borderRadius: BorderRadius.circular(8), border: Border.all(color: value ? AirmiusColors.blue : AirmiusColors.border)),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(color: value ? AirmiusColors.blue : AirmiusColors.input, borderRadius: BorderRadius.circular(7), border: Border.all(color: value ? AirmiusColors.blue : AirmiusColors.border)),
+            child: value ? const Icon(Icons.check, color: Colors.white, size: 16) : null,
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Offizielle Pruefung beantragen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+              SizedBox(height: 4),
+              Text('Der Verein wird erst nach Admin-Freigabe oeffentlich sichtbar und als offiziell markiert.', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.35)),
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _NoticeBox extends StatelessWidget {
+  const _NoticeBox({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: AirmiusColors.red.withValues(alpha: .12), borderRadius: BorderRadius.circular(8), border: Border.all(color: AirmiusColors.red.withValues(alpha: .4))),
+      child: Text(text, style: const TextStyle(color: AirmiusColors.red, fontWeight: FontWeight.w800, height: 1.35)),
+    );
+  }
+}
+
+class _ReviewLine extends StatelessWidget {
+  const _ReviewLine({required this.label, required this.value, this.last = false});
+
+  final String label;
+  final String value;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    final display = value.trim().isEmpty || value.trim() == ',' ? '-' : value.trim();
+    return Padding(
+      padding: EdgeInsets.only(bottom: last ? 0 : 10),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(color: AirmiusColors.muted, fontSize: 14, height: 1.3),
+          children: [
+            TextSpan(text: '$label: ', style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            TextSpan(text: display),
+          ],
         ),
       ),
     );

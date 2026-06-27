@@ -138,6 +138,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::delete('/stories/{story}', [MobileStoryController::class, 'destroy'])->name('stories.destroy');
 
         Route::get('/clubs', [ClubController::class, 'index'])->name('clubs.index');
+        Route::post('/clubs', [ClubController::class, 'store'])->name('clubs.store');
         Route::get('/clubs/{club}', [ClubController::class, 'show'])->name('clubs.show');
         Route::get('/clubs/{club}/members', [ClubController::class, 'members'])->name('clubs.members.index');
         Route::put('/clubs/{club}/members/{user}/role', [ClubController::class, 'updateMemberRole'])->name('clubs.members.role.update');
