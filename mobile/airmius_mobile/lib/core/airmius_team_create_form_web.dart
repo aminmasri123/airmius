@@ -18,12 +18,14 @@ Future<AirmiusJson?> sendTeamCreateForm({
     if (value != null) formData.append(key, '$value');
   });
 
+  final xhr = HttpRequest();
   try {
-    final xhr = await HttpRequest.request(
-      uri.toString(),
-      method: 'POST',
-      sendData: formData,
-    );
+    xhr
+      ..open('POST', uri.toString())
+      ..setRequestHeader('Accept', 'application/json')
+      ..send(formData);
+
+    await xhr.onLoadEnd.first;
     final status = xhr.status ?? 0;
     final body = xhr.responseText ?? '';
 
@@ -37,6 +39,11 @@ Future<AirmiusJson?> sendTeamCreateForm({
     return {'data': decoded};
   } catch (error) {
     if (error is AirmiusApiException) rethrow;
+    final status = xhr.status ?? 0;
+    final body = xhr.responseText ?? '';
+    if (status > 0 || body.trim().isNotEmpty) {
+      throw AirmiusApiException(statusCode: status, body: body, path: '/api/v1/teams');
+    }
     throw AirmiusApiException(
       statusCode: 599,
       path: '/api/v1/teams',

@@ -156,7 +156,7 @@ class TeamController extends Controller
         $accessToken = $token !== '' ? PersonalAccessToken::findToken($token) : null;
         $user = $accessToken?->tokenable;
 
-        abort_unless($user instanceof User, 401);
+        abort_unless($user instanceof User, 401, 'Nicht authentifiziert. Bitte in Flutter abmelden und neu einloggen.');
 
         Auth::setUser($user);
         $request->setUserResolver(fn () => $user);
