@@ -73,6 +73,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         ->middleware('throttle:5,1')
         ->name('auth.register');
 
+    Route::post('/web-bridge/teams', [TeamController::class, 'storeFromBridge'])
+        ->middleware('throttle:30,1')
+        ->name('web-bridge.teams.store');
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::post('/account/deletion-code', [MobileAccountDeletionController::class, 'sendCode'])

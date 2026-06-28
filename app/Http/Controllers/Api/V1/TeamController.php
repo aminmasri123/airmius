@@ -15,9 +15,11 @@ use App\Support\ClubRoles;
 use App\Support\Roles;
 use App\Support\TeamRoles;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class TeamController extends Controller
 {
@@ -151,6 +153,27 @@ class TeamController extends Controller
     public function storeForClub(Request $request, Club $club)
     {
         $request->merge(['club_id' => $club->id]);
+
+        return $this->store($request);
+    }
+
+    public function storeFromBridge(Request $request)
+    {
+        $payload = json_decode($request->getContent(), true);
+        $payload = is_array($payload) ? $payload : $request->all();
+        $token = (string) ($payload['token'] ?? '');
+        $accessToken = $token !== '' ? PersonalAccessToken::findToken($token) : null;
+        $user = $accessToken?->tokenable;
+
+        abort_unless($user instanceof User, 401);
+
+        Auth::setUser($user);
+        $request->setUserResolver(fn () => $user);
+        $request->merge([
+            'club_id' => $payload['club_id'] ?? null,
+            'name' => $payload['name'] ?? null,
+            'sport_type' => $payload['sport_type'] ?? null,
+        ]);
 
         return $this->store($request);
     }

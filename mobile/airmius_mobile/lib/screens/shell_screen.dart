@@ -197,6 +197,8 @@ class _ShellScreenState extends State<ShellScreen> {
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
+    final theme = Theme.of(context);
+    final navBackground = _bottomNavBackground(context);
     final authState = AirmiusServicesScope.of(context).authState;
     final userLabel = _userInitials(
       firstName: authState.user?.firstName,
@@ -216,7 +218,7 @@ class _ShellScreenState extends State<ShellScreen> {
     return WillPopScope(
       onWillPop: () async => !_handleBackNavigation(),
       child: Scaffold(
-        backgroundColor: AirmiusColors.bg,
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AirmiusTopBar(
           title: _openedModule == null ? scope.t(_tab.i18nKey) : scope.copy(_openedModule!.title),
           onLogoTap: () => _openTab(AppTab.feed),
@@ -245,22 +247,44 @@ class _ShellScreenState extends State<ShellScreen> {
           },
         ),
         body: page,
-        bottomNavigationBar: NavigationBar(
-          backgroundColor: AirmiusColors.header,
-          indicatorColor: AirmiusColors.blue.withValues(alpha: 0.22),
-          selectedIndex: AppTab.values.indexOf(_tab),
-          onDestinationSelected: (index) => _openTab(AppTab.values[index]),
-          destinations: [
-            NavigationDestination(icon: const Icon(Icons.grid_view_outlined), selectedIcon: const Icon(Icons.grid_view), label: scope.t('dashboard')),
-            NavigationDestination(icon: const Icon(Icons.groups_outlined), selectedIcon: const Icon(Icons.groups), label: scope.t('clubs')),
-            NavigationDestination(icon: const Icon(Icons.dynamic_feed_outlined), selectedIcon: const Icon(Icons.dynamic_feed), label: scope.t('feed.title')),
-            NavigationDestination(icon: _NavigationBadgeIcon(icon: Icons.notifications_outlined, count: _notificationCount), selectedIcon: _NavigationBadgeIcon(icon: Icons.notifications, count: _notificationCount), label: scope.t('updates')),
-            NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: scope.t('profile')),
-          ],
+        bottomNavigationBar: DecoratedBox(
+          decoration: BoxDecoration(
+            color: navBackground,
+            border: Border(top: BorderSide(color: theme.dividerColor)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: theme.brightness == Brightness.dark ? 0.22 : 0.08),
+                blurRadius: 18,
+                offset: const Offset(0, -8),
+              ),
+            ],
+          ),
+          child: NavigationBar(
+            height: 72,
+            elevation: 0,
+            backgroundColor: navBackground,
+            surfaceTintColor: Colors.transparent,
+            indicatorColor: theme.colorScheme.primary.withValues(alpha: theme.brightness == Brightness.dark ? 0.22 : 0.14),
+            selectedIndex: AppTab.values.indexOf(_tab),
+            onDestinationSelected: (index) => _openTab(AppTab.values[index]),
+            destinations: [
+              NavigationDestination(icon: const Icon(Icons.grid_view_outlined), selectedIcon: const Icon(Icons.grid_view), label: scope.t('dashboard')),
+              NavigationDestination(icon: const Icon(Icons.groups_outlined), selectedIcon: const Icon(Icons.groups), label: scope.t('clubs')),
+              NavigationDestination(icon: const Icon(Icons.dynamic_feed_outlined), selectedIcon: const Icon(Icons.dynamic_feed), label: scope.t('feed.title')),
+              NavigationDestination(icon: _NavigationBadgeIcon(icon: Icons.notifications_outlined, count: _notificationCount), selectedIcon: _NavigationBadgeIcon(icon: Icons.notifications, count: _notificationCount), label: scope.t('updates')),
+              NavigationDestination(icon: const Icon(Icons.person_outline), selectedIcon: const Icon(Icons.person), label: scope.t('profile')),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+Color _bottomNavBackground(BuildContext context) {
+  final theme = Theme.of(context);
+  final mix = theme.brightness == Brightness.dark ? 0.78 : 0.96;
+  return Color.lerp(theme.scaffoldBackgroundColor, theme.colorScheme.surface, mix) ?? theme.colorScheme.surface;
 }
 
 class _NavigationBadgeIcon extends StatelessWidget {
@@ -285,7 +309,7 @@ class _NavigationBadgeIcon extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AirmiusColors.red,
                 borderRadius: BorderRadius.circular(99),
-                border: Border.all(color: AirmiusColors.header, width: 2),
+                border: Border.all(color: _bottomNavBackground(context), width: 2),
               ),
               alignment: Alignment.center,
               child: Text(

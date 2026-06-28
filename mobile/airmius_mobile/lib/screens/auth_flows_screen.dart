@@ -412,41 +412,43 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   }
 
   Widget _suspended() {
-    return const AirmiusPanel(
+    final muted = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+    return AirmiusPanel(
       borderColor: AirmiusColors.red,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Eyebrow('Konto eingeschraenkt'),
-          SizedBox(height: 8),
-          Text('Der Zugriff kann durch Moderation, fehlende Verifizierung oder Sicherheitsregeln eingeschraenkt sein.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
-          SizedBox(height: 12),
-          _AuthStatusLine(icon: Icons.report_outlined, title: 'Status', body: 'Support kann Details prüfen.', status: 'Gesperrt'),
-          SizedBox(height: 12),
-          _AuthAction(label: 'Support kontaktieren', icon: Icons.support_agent_outlined),
+          const Eyebrow('Konto eingeschraenkt'),
+          const SizedBox(height: 8),
+          Text('Der Zugriff kann durch Moderation, fehlende Verifizierung oder Sicherheitsregeln eingeschraenkt sein.', style: TextStyle(color: muted, height: 1.35)),
+          const SizedBox(height: 12),
+          const _AuthStatusLine(icon: Icons.report_outlined, title: 'Status', body: 'Support kann Details prüfen.', status: 'Gesperrt'),
+          const SizedBox(height: 12),
+          const _AuthAction(label: 'Support kontaktieren', icon: Icons.support_agent_outlined),
         ],
       ),
     );
   }
 
   Widget _deleteAccount() {
-    return const AirmiusPanel(
+    final muted = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+    return AirmiusPanel(
       borderColor: AirmiusColors.red,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Eyebrow('Konto löschen'),
-          SizedBox(height: 8),
-          Text('Die Web-App sendet zuerst einen Löschcode. Die native App zeigt Warnung, Code-Eingabe, Export-Hinweis und finale Bestätigung.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
-          SizedBox(height: 12),
-          AirmiusTextField(label: 'Löschcode', hint: 'Code aus der E-Mail', icon: Icons.password_outlined),
-          SizedBox(height: 12),
-          _AuthStatusLine(icon: Icons.download_outlined, title: 'Datenexport', body: 'Profil, Mitgliedschaften, Zahlungen und Medien vor Löschung exportieren.', status: 'Empfohlen'),
-          _AuthStatusLine(icon: Icons.warning_amber_outlined, title: 'Endgültige Löschung', body: 'Konto wird erst nach API-Bestätigung final gelöscht.', status: 'Kritisch'),
-          SizedBox(height: 12),
-          _AuthAction(label: 'Löschcode senden', icon: Icons.mark_email_read_outlined),
-          SizedBox(height: 10),
-          _AuthAction(label: 'Konto endgültig löschen', icon: Icons.delete_forever_outlined),
+          const Eyebrow('Konto löschen'),
+          const SizedBox(height: 8),
+          Text('Die Web-App sendet zuerst einen Löschcode. Die native App zeigt Warnung, Code-Eingabe, Export-Hinweis und finale Bestätigung.', style: TextStyle(color: muted, height: 1.35)),
+          const SizedBox(height: 12),
+          const AirmiusTextField(label: 'Löschcode', hint: 'Code aus der E-Mail', icon: Icons.password_outlined),
+          const SizedBox(height: 12),
+          const _AuthStatusLine(icon: Icons.download_outlined, title: 'Datenexport', body: 'Profil, Mitgliedschaften, Zahlungen und Medien vor Löschung exportieren.', status: 'Empfohlen'),
+          const _AuthStatusLine(icon: Icons.warning_amber_outlined, title: 'Endgültige Löschung', body: 'Konto wird erst nach API-Bestätigung final gelöscht.', status: 'Kritisch'),
+          const SizedBox(height: 12),
+          const _AuthAction(label: 'Löschcode senden', icon: Icons.mark_email_read_outlined),
+          const SizedBox(height: 10),
+          const _AuthAction(label: 'Konto endgültig löschen', icon: Icons.delete_forever_outlined),
         ],
       ),
     );
