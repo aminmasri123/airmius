@@ -37,7 +37,7 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-Route::prefix('v1')->name('api.v1.')->group(function () {
+Route::prefix('v1')->name('api.v1.')->middleware(EnsureApiCorsHeaders::class)->group(function () {
     Route::options('/{any}', fn () => response('', 204))
         ->middleware(EnsureApiCorsHeaders::class)
         ->where('any', '.*')
