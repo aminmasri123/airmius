@@ -15,11 +15,9 @@ use App\Support\ClubRoles;
 use App\Support\Roles;
 use App\Support\TeamRoles;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use Laravel\Sanctum\PersonalAccessToken;
 
 class TeamController extends Controller
 {
@@ -148,37 +146,6 @@ class TeamController extends Controller
         return (new TeamResource($team->fresh()->load(['club', 'users'])->loadCount(['users', 'events'])))
             ->response()
             ->setStatusCode(201);
-    }
-
-    public function storeForClub(Request $request, Club $club)
-    {
-        $request->merge(['club_id' => $club->id]);
-
-        return $this->store($request);
-    }
-
-    public function storeWithToken(Request $request)
-    {
-        $payload = $request->all();
-        if ($payload === []) {
-            $decoded = json_decode($request->getContent(), true);
-            $payload = is_array($decoded) ? $decoded : [];
-        }
-        $token = (string) ($payload['token'] ?? $request->bearerToken() ?? '');
-        $accessToken = $token !== '' ? PersonalAccessToken::findToken($token) : null;
-        $user = $accessToken?->tokenable;
-
-        abort_unless($user instanceof User, 401);
-
-        Auth::setUser($user);
-        $request->setUserResolver(fn () => $user);
-        $request->merge([
-            'club_id' => $payload['club_id'] ?? null,
-            'name' => $payload['name'] ?? null,
-            'sport_type' => $payload['sport_type'] ?? null,
-        ]);
-
-        return $this->store($request);
     }
 
     public function update(Request $request, Team $team)

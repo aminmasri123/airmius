@@ -73,10 +73,6 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         ->middleware('throttle:5,1')
         ->name('auth.register');
 
-    Route::post('/teams', [TeamController::class, 'storeWithToken'])
-        ->middleware('throttle:30,1')
-        ->name('teams.store.token');
-
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::post('/account/deletion-code', [MobileAccountDeletionController::class, 'sendCode'])
@@ -165,7 +161,6 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
         Route::get('/teams', [TeamController::class, 'index'])->name('teams.index');
         Route::post('/teams', [TeamController::class, 'store'])->name('teams.store');
-        Route::post('/clubs/{club}/teams', [TeamController::class, 'storeForClub'])->name('clubs.teams.store');
         Route::get('/teams/{team}', [TeamController::class, 'show'])->name('teams.show');
         Route::put('/teams/{team}', [TeamController::class, 'update'])->name('teams.update');
         Route::delete('/teams/{team}', [TeamController::class, 'destroy'])->name('teams.destroy');

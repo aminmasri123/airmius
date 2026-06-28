@@ -1,7 +1,5 @@
 import 'dart:convert';
 
-import 'airmius_web_bridge_stub.dart' if (dart.library.html) 'airmius_web_bridge_web.dart';
-
 typedef AirmiusHeaders = Map<String, String>;
 typedef AirmiusJson = Map<String, dynamic>;
 
@@ -154,36 +152,7 @@ class AirmiusApiClient {
       });
 
   Future<AirmiusJson> teamDetail(int teamId) => _json('GET', '/api/v1/teams/$teamId');
-  Future<AirmiusJson> createTeam(AirmiusJson payload) async {
-    try {
-      return await _json('POST', '/api/v1/teams', body: payload);
-    } on AirmiusApiException catch (error) {
-      if (!_shouldTryTeamJoinFallback(error)) rethrow;
-      final clubId = payload['club_id'];
-      if (clubId != null) {
-        try {
-          return await _json('POST', '/api/v1/clubs/$clubId/teams', body: payload);
-        } on AirmiusApiException catch (nestedError) {
-          if (!_shouldTryTeamJoinFallback(nestedError)) rethrow;
-        }
-      }
-      final bridgeResponse = await _sendTeamCreateBridge(payload);
-      if (bridgeResponse != null) return bridgeResponse;
-      rethrow;
-    }
-  }
-
-  Future<AirmiusJson?> _sendTeamCreateBridge(AirmiusJson payload) {
-    final sessionToken = token;
-    if (sessionToken == null || sessionToken.isEmpty) return Future.value(null);
-
-    return sendTeamCreateBridge(
-      baseUrl: baseUrl,
-      token: sessionToken,
-      locale: locale,
-      payload: payload,
-    );
-  }
+  Future<AirmiusJson> createTeam(AirmiusJson payload) => _json('POST', '/api/v1/teams', body: payload);
 
   Future<AirmiusJson> updateTeam(int teamId, AirmiusJson payload) => _json('PUT', '/api/v1/teams/$teamId', body: payload);
   Future<AirmiusJson> deleteTeam(int teamId) => _json('DELETE', '/api/v1/teams/$teamId');
