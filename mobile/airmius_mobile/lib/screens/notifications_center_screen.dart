@@ -4,9 +4,11 @@ import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
+import '../core/airmius_theme_mode_scope.dart';
 import '../widgets/airmius_widgets.dart';
 import 'notification_detail_screen.dart';
 import 'notification_preferences_screen.dart';
+import 'team_invitation_response_screen.dart';
 
 class NotificationsCenterScreen extends StatefulWidget {
   const NotificationsCenterScreen({super.key, this.embedded = false});
@@ -96,8 +98,10 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
     if (widget.embedded) return body;
 
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor: _notificationHeader(context),
+        foregroundColor: _notificationText(context),
         surfaceTintColor: Colors.transparent,
         title: Text(scope.t('notifications.title'), style: const TextStyle(fontWeight: FontWeight.w900)),
       ),
@@ -112,9 +116,14 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
 
   Widget _buildNotifications(BuildContext context) {
     final scope = AirmiusScope.of(context);
+    final accent = _notificationAccent(context);
+    final surface = _notificationSurface(context);
+    final surfaceSoft = _notificationSurfaceSoft(context);
+    final muted = _notificationMuted(context);
+    final border = _notificationBorder(context);
     return RefreshIndicator(
-      color: AirmiusColors.blue,
-      backgroundColor: AirmiusColors.card,
+      color: accent,
+      backgroundColor: surface,
       onRefresh: () async {
         _reload();
         await _notificationsFuture;
@@ -159,10 +168,11 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
                         selected: _filter == entry.key,
                         label: Text(entry.value),
                         onSelected: (_) => setState(() => _filter = entry.key),
-                        selectedColor: AirmiusColors.blue.withValues(alpha: 0.22),
-                        backgroundColor: AirmiusColors.cardSoft,
-                        side: BorderSide(color: _filter == entry.key ? AirmiusColors.blue : AirmiusColors.border),
-                        labelStyle: TextStyle(color: _filter == entry.key ? AirmiusColors.blue : AirmiusColors.muted, fontWeight: FontWeight.w900),
+                        selectedColor: accent.withValues(alpha: _notificationDarkUi(context) ? 0.22 : 0.14),
+                        backgroundColor: surfaceSoft,
+                        checkmarkColor: accent,
+                        side: BorderSide(color: _filter == entry.key ? accent : border),
+                        labelStyle: TextStyle(color: _filter == entry.key ? accent : muted, fontWeight: FontWeight.w900),
                       ),
                   ],
                 ),
@@ -197,6 +207,67 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
       ),
     );
   }
+}
+
+AirmiusThemePalette _notificationPalette(BuildContext context) {
+  try {
+    return AirmiusThemeModeScope.of(context).palette;
+  } on StateError {
+    return Theme.of(context).brightness == Brightness.dark ? AirmiusThemePalette.dark : AirmiusThemePalette.air;
+  }
+}
+
+bool _notificationDarkUi(BuildContext context) {
+  final palette = _notificationPalette(context);
+  if (palette == AirmiusThemePalette.dark) return true;
+  try {
+    final mode = AirmiusThemeModeScope.of(context).mode;
+    return switch (mode) {
+      ThemeMode.dark => true,
+      ThemeMode.light => false,
+      ThemeMode.system => Theme.of(context).brightness == Brightness.dark,
+    };
+  } on StateError {
+    return Theme.of(context).brightness == Brightness.dark;
+  }
+}
+
+Color _notificationAccent(BuildContext context) {
+  return _notificationPalette(context).primary;
+}
+
+Color _notificationHeader(BuildContext context) {
+  final palette = _notificationPalette(context);
+  return _notificationDarkUi(context) ? palette.darkHeader : palette.lightSurface;
+}
+
+Color _notificationSurface(BuildContext context) {
+  final palette = _notificationPalette(context);
+  return _notificationDarkUi(context) ? palette.darkSurface : palette.lightSurface;
+}
+
+Color _notificationSurfaceSoft(BuildContext context) {
+  final palette = _notificationPalette(context);
+  return _notificationDarkUi(context) ? palette.darkSurfaceSoft : palette.lightSurfaceSoft;
+}
+
+Color _notificationText(BuildContext context) {
+  final palette = _notificationPalette(context);
+  return _notificationDarkUi(context) ? AirmiusColors.text : palette.lightText;
+}
+
+Color _notificationMuted(BuildContext context) {
+  final palette = _notificationPalette(context);
+  return _notificationDarkUi(context) ? AirmiusColors.muted : palette.lightMutedText;
+}
+
+Color _notificationMutedSoft(BuildContext context) {
+  return Color.lerp(_notificationMuted(context), _notificationSurface(context), _notificationDarkUi(context) ? 0.22 : 0.28) ?? _notificationMuted(context);
+}
+
+Color _notificationBorder(BuildContext context) {
+  final palette = _notificationPalette(context);
+  return _notificationDarkUi(context) ? AirmiusColors.border : palette.lightBorder;
 }
 
 class _ScrollableNotifications extends StatelessWidget {
@@ -247,6 +318,16 @@ class _NotificationLineState extends State<_NotificationLine> {
     final notification = widget.item;
     try {
       if (!mounted) return;
+      final teamInvitationId = _teamInvitationId(notification);
+      if (teamInvitationId != null) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => TeamInvitationResponseScreen(invitationId: teamInvitationId)),
+        );
+        widget.onChanged();
+        return;
+      }
+
       await Navigator.push(
         context,
         MaterialPageRoute(
@@ -278,20 +359,27 @@ class _NotificationLineState extends State<_NotificationLine> {
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
     final item = widget.item;
+    final accent = _notificationAccent(context);
+    final surface = _notificationSurface(context);
+    final text = _notificationText(context);
+    final muted = _notificationMuted(context);
+    final mutedSoft = _notificationMutedSoft(context);
+    final border = _notificationBorder(context);
+    final unreadBackground = Color.lerp(surface, accent, _notificationDarkUi(context) ? 0.12 : 0.09) ?? surface;
     return InkWell(
       onTap: _openNotification,
       borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: item.unread ? AirmiusColors.blue.withValues(alpha: 0.10) : AirmiusColors.cardSoft,
+          color: item.unread ? unreadBackground : surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: item.unread ? AirmiusColors.blue.withValues(alpha: 0.45) : AirmiusColors.border),
+          border: Border.all(color: item.unread ? accent.withValues(alpha: 0.45) : border),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(_iconForType(item.type), color: item.unread ? AirmiusColors.blue : AirmiusColors.muted),
+            Icon(_iconForType(item.type), color: item.unread ? accent : muted),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -299,14 +387,14 @@ class _NotificationLineState extends State<_NotificationLine> {
                 children: [
                   Row(
                     children: [
-                      Expanded(child: Text(item.title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900))),
-                      Text(_shortTime(item.timeLabel), style: const TextStyle(color: AirmiusColors.mutedSoft, fontSize: 12)),
+                      Expanded(child: Text(item.title, style: TextStyle(color: text, fontWeight: FontWeight.w900))),
+                      Text(_shortTime(item.timeLabel), style: TextStyle(color: mutedSoft, fontSize: 12)),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text(item.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.3)),
+                  Text(item.body, style: TextStyle(color: muted, height: 1.3)),
                   const SizedBox(height: 8),
-                  StatusPill(_labelForType(scope, item.type), color: item.unread ? AirmiusColors.blue : AirmiusColors.mutedSoft),
+                  StatusPill(_labelForType(scope, item.type), color: item.unread ? accent : mutedSoft),
                 ],
               ),
             ),
@@ -314,9 +402,9 @@ class _NotificationLineState extends State<_NotificationLine> {
             IconButton(
               tooltip: item.unread ? scope.t('notifications.markRead') : scope.t('notifications.markUnread'),
               onPressed: _busy ? null : _toggleReadState,
-              icon: Icon(item.unread ? Icons.mark_email_read_outlined : Icons.mark_email_unread_outlined, color: item.unread ? AirmiusColors.blue : AirmiusColors.muted),
+              icon: Icon(item.unread ? Icons.mark_email_read_outlined : Icons.mark_email_unread_outlined, color: item.unread ? accent : muted),
             ),
-            const Icon(Icons.chevron_right, color: AirmiusColors.muted, size: 20),
+            Icon(Icons.chevron_right, color: muted, size: 20),
           ],
         ),
       ),
@@ -330,15 +418,17 @@ class _LoadingNotifications extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
+    final accent = _notificationAccent(context);
+    final muted = _notificationMuted(context);
     return AirmiusPanel(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 20),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AirmiusColors.blue)),
+            SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: accent)),
             const SizedBox(width: 12),
-            Text(scope.t('status.loading'), style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)),
+            Text(scope.t('status.loading'), style: TextStyle(color: muted, fontWeight: FontWeight.w800)),
           ],
         ),
       ),
@@ -354,13 +444,14 @@ class _ErrorNotifications extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
+    final text = _notificationText(context);
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Icon(Icons.error_outline, color: AirmiusColors.red, size: 34),
           const SizedBox(height: 10),
-          Text(scope.t('notifications.error'), textAlign: TextAlign.center, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+          Text(scope.t('notifications.error'), textAlign: TextAlign.center, style: TextStyle(color: text, fontWeight: FontWeight.w900)),
           const SizedBox(height: 12),
           AirmiusButton(label: scope.t('notifications.retry'), icon: Icons.refresh_outlined, onPressed: onRetry, secondary: true),
         ],
@@ -387,6 +478,26 @@ String _typeKey(String rawType) {
 
 String _labelForType(AirmiusScope scope, String rawType) {
   return _filters(scope)[_typeKey(rawType)] ?? scope.t('notifications.system');
+}
+
+int? _teamInvitationId(AirmiusNotification notification) {
+  final type = notification.type.toLowerCase();
+  final explicitId = _intFromDynamic(notification.data['invitation_id'] ?? notification.data['team_invitation_id']);
+  if (explicitId != null && (type.contains('team.invite') || type.contains('trainer') || type.contains('invite'))) {
+    return explicitId;
+  }
+
+  final actionUrl = notification.actionUrl;
+  if (actionUrl == null || actionUrl.isEmpty) return null;
+
+  final match = RegExp(r'(?:team_invitation|invitation_id)=([0-9]+)').firstMatch(actionUrl);
+  return match == null ? null : int.tryParse(match.group(1) ?? '');
+}
+
+int? _intFromDynamic(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse('$value');
 }
 
 IconData _iconForType(String rawType) {

@@ -507,6 +507,54 @@ class AirmiusTeamJoinRequest {
   }
 }
 
+class AirmiusTeamInvitation {
+  const AirmiusTeamInvitation({
+    required this.id,
+    required this.role,
+    required this.status,
+    required this.teamId,
+    required this.teamName,
+    this.clubId,
+    this.clubName,
+    this.sportType,
+    this.inviterName,
+    this.inviterEmail,
+    this.createdAt,
+  });
+
+  final int id;
+  final String role;
+  final String status;
+  final int teamId;
+  final int? clubId;
+  final String teamName;
+  final String? clubName;
+  final String? sportType;
+  final String? inviterName;
+  final String? inviterEmail;
+  final String? createdAt;
+
+  factory AirmiusTeamInvitation.fromJson(JsonMap json) {
+    final team = json['team'] is JsonMap ? json['team'] as JsonMap : const <String, dynamic>{};
+    final club = team['club'] is JsonMap ? team['club'] as JsonMap : const <String, dynamic>{};
+    final inviter = json['inviter'] is JsonMap ? json['inviter'] as JsonMap : const <String, dynamic>{};
+
+    return AirmiusTeamInvitation(
+      id: _int(json['id']),
+      role: _string(json['role'], fallback: 'Player'),
+      status: _string(json['status'], fallback: 'pending'),
+      teamId: _int(json['team_id'] ?? team['id']),
+      clubId: _nullableInt(json['club_id'] ?? team['club_id'] ?? club['id']),
+      teamName: _string(json['team_name'] ?? team['name'], fallback: 'Team'),
+      clubName: _nullableString(json['club_name'] ?? club['name']),
+      sportType: _nullableString(json['sport_type'] ?? team['sport_type']),
+      inviterName: _nullableString(json['inviter_name'] ?? inviter['name']),
+      inviterEmail: _nullableString(json['inviter_email'] ?? inviter['email']),
+      createdAt: _nullableString(json['created_at'] ?? json['invited_at']),
+    );
+  }
+}
+
 class AirmiusTeamAttendanceStats {
   const AirmiusTeamAttendanceStats({
     required this.trainingsTotal,
@@ -932,18 +980,24 @@ class AirmiusNotification {
     required this.body,
     required this.timeLabel,
     required this.unread,
+    this.data = const {},
     this.actionUrl,
   });
 
-  factory AirmiusNotification.fromJson(JsonMap json) => AirmiusNotification(
-        id: json['id'] as int? ?? int.tryParse('${json['id'] ?? 0}') ?? 0,
-        type: '${json['type'] ?? json['category'] ?? 'System'}',
-        title: '${json['title'] ?? json['subject'] ?? 'Benachrichtigung'}',
-        body: '${json['body'] ?? json['message'] ?? json['description'] ?? ''}',
-        timeLabel: '${json['time_label'] ?? json['time'] ?? json['created_at'] ?? 'Jetzt'}',
-        unread: json['unread'] as bool? ?? !(json['read'] as bool? ?? json['read_at'] != null),
-        actionUrl: json['action_url'] as String? ?? json['url'] as String?,
-      );
+  factory AirmiusNotification.fromJson(JsonMap json) {
+    final data = json['data'];
+    final dataMap = data is JsonMap ? data : const <String, dynamic>{};
+    return AirmiusNotification(
+      id: json['id'] as int? ?? int.tryParse('${json['id'] ?? 0}') ?? 0,
+      type: '${json['type'] ?? json['category'] ?? 'System'}',
+      title: '${json['title'] ?? dataMap['title'] ?? json['subject'] ?? 'Benachrichtigung'}',
+      body: '${json['body'] ?? dataMap['body'] ?? dataMap['message'] ?? json['message'] ?? json['description'] ?? ''}',
+      timeLabel: '${json['time_label'] ?? json['time'] ?? json['created_at'] ?? 'Jetzt'}',
+      unread: json['unread'] as bool? ?? !(json['read'] as bool? ?? json['read_at'] != null),
+      data: dataMap,
+      actionUrl: json['action_url'] as String? ?? json['url'] as String? ?? dataMap['url'] as String?,
+    );
+  }
 
   final int id;
   final String type;
@@ -951,6 +1005,7 @@ class AirmiusNotification {
   final String body;
   final String timeLabel;
   final bool unread;
+  final JsonMap data;
   final String? actionUrl;
 
   AirmiusNotification copyWith({bool? unread}) => AirmiusNotification(
@@ -960,6 +1015,7 @@ class AirmiusNotification {
         body: body,
         timeLabel: timeLabel,
         unread: unread ?? this.unread,
+        data: data,
         actionUrl: actionUrl,
       );
 }
@@ -1520,6 +1576,10 @@ abstract class AirmiusClubRepository {
   Future<AirmiusTeam> requestTeamJoin(int id);
   Future<AirmiusTeam> approveTeamJoinRequest(int teamId, int requestId, {String role = 'Player'});
   Future<AirmiusTeam> declineTeamJoinRequest(int teamId, int requestId);
+  Future<List<AirmiusTeamInvitation>> teamInvitations();
+  Future<AirmiusTeamInvitation> teamInvitation(int invitationId);
+  Future<AirmiusTeam> acceptTeamInvitation(int invitationId);
+  Future<AirmiusTeamInvitation> declineTeamInvitation(int invitationId);
   Future<AirmiusTeam> updateTeamMemberRole(int teamId, int userId, String role);
 }
 

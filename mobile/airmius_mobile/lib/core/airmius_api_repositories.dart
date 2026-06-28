@@ -154,6 +154,35 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   }
 
   @override
+  Future<List<AirmiusTeamInvitation>> teamInvitations() async {
+    final json = await client.teamInvitations();
+    final data = json['data'];
+    final items = data is List ? data : const [];
+    return items.whereType<JsonMap>().map(AirmiusTeamInvitation.fromJson).toList();
+  }
+
+  @override
+  Future<AirmiusTeamInvitation> teamInvitation(int invitationId) async {
+    final json = await client.teamInvitation(invitationId);
+    final data = json['data'];
+    return AirmiusTeamInvitation.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<AirmiusTeam> acceptTeamInvitation(int invitationId) async {
+    final json = await client.acceptTeamInvitation(invitationId);
+    final data = json['data'];
+    return AirmiusTeam.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
+  Future<AirmiusTeamInvitation> declineTeamInvitation(int invitationId) async {
+    final json = await client.declineTeamInvitation(invitationId);
+    final data = json['data'];
+    return AirmiusTeamInvitation.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
   Future<AirmiusTeam> updateTeamMemberRole(int teamId, int userId, String role) async {
     final json = await client.updateTeamMemberRole(teamId, userId, role);
     final data = json['data'];

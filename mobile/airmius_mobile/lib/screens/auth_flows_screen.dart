@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
+import '../core/airmius_theme_mode_scope.dart';
 import '../widgets/airmius_widgets.dart';
 import 'ui_action_result_screen.dart';
 import 'account_operations_screen.dart';
@@ -139,15 +140,23 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final accent = Theme.of(context).colorScheme.primary;
-    final surface = Theme.of(context).colorScheme.surface;
-    final muted = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
-    final border = Theme.of(context).dividerColor;
+    final accent = _authAccent(context);
+    final surfaceSoft = _authSurfaceSoft(context);
+    final text = _authText(context);
+    final muted = _authMuted(context);
+    final border = _authBorder(context);
     return Scaffold(
-        floatingActionButton: FloatingActionButton.extended(backgroundColor: accent, foregroundColor: Colors.white, icon: const Icon(Icons.manage_accounts_outlined), label: const Text('Konto Ops', style: TextStyle(fontWeight: FontWeight.w900)), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AccountOperationsScreen(initialTab: 'Auth')))),
-
+      backgroundColor: _authBackground(context),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: accent,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.manage_accounts_outlined),
+        label: const Text('Konto Ops', style: TextStyle(fontWeight: FontWeight.w900)),
+        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AccountOperationsScreen(initialTab: 'Auth'))),
+      ),
       appBar: AppBar(
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        backgroundColor: _authHeader(context),
+        foregroundColor: text,
         surfaceTintColor: Colors.transparent,
         title: const Text('Konto & Sicherheit', style: TextStyle(fontWeight: FontWeight.w900)),
       ),
@@ -177,8 +186,9 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
                           selected: _flow == flow,
                           label: Text(flow),
                           onSelected: (_) => setState(() => _flow = flow),
-                          selectedColor: accent.withValues(alpha: 0.22),
-                          backgroundColor: Color.lerp(surface, accent, 0.10),
+                          selectedColor: accent.withValues(alpha: _authDarkUi(context) ? 0.22 : 0.14),
+                          backgroundColor: surfaceSoft,
+                          checkmarkColor: accent,
                           side: BorderSide(color: _flow == flow ? accent : border),
                           labelStyle: TextStyle(color: _flow == flow ? accent : muted, fontWeight: FontWeight.w900),
                         ),
@@ -213,8 +223,8 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
     final services = AirmiusServicesScope.of(context);
     final isLoading = services.authState.phase.name == 'loading';
     final error = _registerError ?? services.authState.error;
-    final text = Theme.of(context).textTheme.bodyLarge?.color ?? AirmiusColors.text;
-    final muted = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+    final text = _authText(context);
+    final muted = _authMuted(context);
 
     return AirmiusPanel(
       child: Column(
@@ -262,7 +272,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             value: _gender.isEmpty ? null : _gender,
-            dropdownColor: Theme.of(context).colorScheme.surface,
+            dropdownColor: _authSurface(context),
             decoration: InputDecoration(
               labelText: 'Geschlecht',
               prefixIcon: Icon(Icons.wc_outlined, color: muted),
@@ -290,7 +300,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
           CheckboxListTile(
             value: _terms,
             onChanged: (value) => setState(() => _terms = value ?? false),
-            activeColor: Theme.of(context).colorScheme.primary,
+            activeColor: _authAccent(context),
             contentPadding: EdgeInsets.zero,
             title: Text('AGB und Datenschutz akzeptieren', style: TextStyle(color: text, fontWeight: FontWeight.w800)),
           ),
@@ -314,7 +324,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   }
 
   Widget _socialLogin() {
-    final muted = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+    final muted = _authMuted(context);
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -357,7 +367,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   }
 
   Widget _twoFactor() {
-    final muted = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+    final muted = _authMuted(context);
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -377,7 +387,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   }
 
   Widget _emailVerify() {
-    final muted = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+    final muted = _authMuted(context);
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -412,7 +422,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   }
 
   Widget _suspended() {
-    final muted = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+    final muted = _authMuted(context);
     return AirmiusPanel(
       borderColor: AirmiusColors.red,
       child: Column(
@@ -431,7 +441,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   }
 
   Widget _deleteAccount() {
-    final muted = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+    final muted = _authMuted(context);
     return AirmiusPanel(
       borderColor: AirmiusColors.red,
       child: Column(
@@ -453,6 +463,68 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
       ),
     );
   }
+}
+
+AirmiusThemePalette _authPalette(BuildContext context) {
+  try {
+    return AirmiusThemeModeScope.of(context).palette;
+  } on StateError {
+    return Theme.of(context).brightness == Brightness.dark ? AirmiusThemePalette.dark : AirmiusThemePalette.air;
+  }
+}
+
+bool _authDarkUi(BuildContext context) {
+  final palette = _authPalette(context);
+  if (palette == AirmiusThemePalette.dark) return true;
+  try {
+    final mode = AirmiusThemeModeScope.of(context).mode;
+    return switch (mode) {
+      ThemeMode.dark => true,
+      ThemeMode.light => false,
+      ThemeMode.system => Theme.of(context).brightness == Brightness.dark,
+    };
+  } on StateError {
+    return Theme.of(context).brightness == Brightness.dark;
+  }
+}
+
+Color _authAccent(BuildContext context) {
+  return _authPalette(context).primary;
+}
+
+Color _authBackground(BuildContext context) {
+  final palette = _authPalette(context);
+  return _authDarkUi(context) ? palette.darkBackground : palette.lightBackground;
+}
+
+Color _authHeader(BuildContext context) {
+  final palette = _authPalette(context);
+  return _authDarkUi(context) ? palette.darkHeader : palette.lightSurface;
+}
+
+Color _authSurface(BuildContext context) {
+  final palette = _authPalette(context);
+  return _authDarkUi(context) ? palette.darkSurface : palette.lightSurface;
+}
+
+Color _authSurfaceSoft(BuildContext context) {
+  final palette = _authPalette(context);
+  return _authDarkUi(context) ? palette.darkSurfaceSoft : palette.lightSurfaceSoft;
+}
+
+Color _authText(BuildContext context) {
+  final palette = _authPalette(context);
+  return _authDarkUi(context) ? AirmiusColors.text : palette.lightText;
+}
+
+Color _authMuted(BuildContext context) {
+  final palette = _authPalette(context);
+  return _authDarkUi(context) ? AirmiusColors.muted : palette.lightMutedText;
+}
+
+Color _authBorder(BuildContext context) {
+  final palette = _authPalette(context);
+  return _authDarkUi(context) ? AirmiusColors.border : palette.lightBorder;
 }
 
 class _AuthAction extends StatelessWidget {
@@ -489,14 +561,15 @@ class _AuthStatusLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = Theme.of(context).textTheme.bodyLarge?.color ?? AirmiusColors.text;
-    final mutedColor = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+    final accent = _authAccent(context);
+    final textColor = _authText(context);
+    final mutedColor = _authMuted(context);
     return Padding(
       padding: const EdgeInsets.only(top: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AirmiusColors.blue),
+          Icon(icon, color: accent),
           const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: TextStyle(color: textColor, fontWeight: FontWeight.w900)), const SizedBox(height: 3), Text(body, style: TextStyle(color: mutedColor, height: 1.3))])),
           StatusPill(status),

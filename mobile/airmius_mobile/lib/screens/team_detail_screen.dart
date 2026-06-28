@@ -213,7 +213,21 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
             Expanded(child: MetricCard(value: '${team?.attendanceStats?.trainingsTotal ?? '-'}', label: 'Trainings')),
           ]),
           const SizedBox(height: 14),
-          if (_section == 'Profil') _ProfilePanel(team: team, fallbackTitle: title, canManageTeam: canManageTeam, joinRequests: _joinRequests, teamChat: _teamChat, guardianGate: _guardianGate, onJoin: (value) => setState(() => _joinRequests = value), onChat: (value) => setState(() => _teamChat = value), onGuardian: (value) => setState(() => _guardianGate = value), onUpdated: (updatedTeam) => setState(() => _teamFuture = Future.value(updatedTeam))),
+          if (_section == 'Profil')
+            _ProfilePanel(
+              team: team,
+              fallbackTitle: title,
+              canManageTeam: canManageTeam,
+              joinRequests: _joinRequests,
+              teamChat: _teamChat,
+              guardianGate: _guardianGate,
+              onJoin: (value) => setState(() => _joinRequests = value),
+              onChat: (value) => setState(() => _teamChat = value),
+              onGuardian: (value) => setState(() => _guardianGate = value),
+              onUpdated: (updatedTeam) => setState(() {
+                _teamFuture = Future.value(updatedTeam);
+              }),
+            ),
           if (_section == 'Kader')
             _RosterPanel(
               team: team,
@@ -314,7 +328,7 @@ class _ProfilePanel extends StatelessWidget {
         const SizedBox(height: 12),
       ],
       if (canManageTeam && team != null) ...[
-        _TeamEditPanel(team: team!, onUpdated: onUpdated),
+        _TeamEditSection(team: team!, onUpdated: onUpdated),
         const SizedBox(height: 12),
       ],
       if (canManageTeam) ...[
@@ -325,6 +339,42 @@ class _ProfilePanel extends StatelessWidget {
         SwitchListTile(value: guardianGate, onChanged: onGuardian, activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Jugendschutz prüfen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Minderjährige brauchen passende Freigaben.', style: TextStyle(color: AirmiusColors.muted))),
       ],
     ]));
+  }
+}
+
+class _TeamEditSection extends StatefulWidget {
+  const _TeamEditSection({required this.team, required this.onUpdated});
+
+  final AirmiusTeam team;
+  final ValueChanged<AirmiusTeam> onUpdated;
+
+  @override
+  State<_TeamEditSection> createState() => _TeamEditSectionState();
+}
+
+class _TeamEditSectionState extends State<_TeamEditSection> {
+  bool _editing = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      AirmiusButton(
+        label: _editing ? 'Bearbeitung schließen' : 'Teamdaten bearbeiten',
+        icon: _editing ? Icons.close_outlined : Icons.edit_outlined,
+        secondary: true,
+        onPressed: () => setState(() => _editing = !_editing),
+      ),
+      if (_editing) ...[
+        const SizedBox(height: 10),
+        _TeamEditPanel(
+          team: widget.team,
+          onUpdated: (team) {
+            widget.onUpdated(team);
+            if (mounted) setState(() => _editing = false);
+          },
+        ),
+      ],
+    ]);
   }
 }
 

@@ -170,6 +170,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/teams/{team}/join-requests', [TeamController::class, 'requestJoin'])->name('teams.join-requests.store');
         Route::post('/team-join-requests/{joinRequest}/approve', [TeamController::class, 'approveJoinRequestById'])->name('team-join-requests.approve');
         Route::post('/team-join-requests/{joinRequest}/decline', [TeamController::class, 'declineJoinRequestById'])->name('team-join-requests.decline');
+        Route::get('/team-invitations', [TeamController::class, 'invitations'])->name('team-invitations.index');
+        Route::get('/team-invitations/{invitation}', [TeamController::class, 'invitation'])->name('team-invitations.show');
+        Route::post('/team-invitations/{invitation}/accept', [TeamController::class, 'acceptInvitation'])->name('team-invitations.accept');
+        Route::post('/team-invitations/{invitation}/decline', [TeamController::class, 'declineInvitation'])->name('team-invitations.decline');
         Route::post('/teams/{team}/join-requests/{joinRequest}/approve', [TeamController::class, 'approveJoinRequest'])->name('teams.join-requests.approve');
         Route::post('/teams/{team}/join-requests/{joinRequest}/decline', [TeamController::class, 'declineJoinRequest'])->name('teams.join-requests.decline');
         Route::put('/teams/{team}/members/{user}', [TeamController::class, 'updateMember'])->name('teams.members.update');

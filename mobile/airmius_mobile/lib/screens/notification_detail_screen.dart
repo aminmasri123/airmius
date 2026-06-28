@@ -4,6 +4,7 @@ import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
+import '../core/airmius_theme_mode_scope.dart';
 import '../navigation/airmius_deep_link_navigator.dart';
 import '../widgets/airmius_widgets.dart';
 import 'notification_preferences_screen.dart';
@@ -73,9 +74,14 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
+    final accent = _notificationDetailAccent(context);
+    final text = _notificationDetailText(context);
+    final muted = _notificationDetailMuted(context);
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor: _notificationDetailHeader(context),
+        foregroundColor: text,
         surfaceTintColor: Colors.transparent,
         title: Text(scope.t('notifications.title'), style: const TextStyle(fontWeight: FontWeight.w900)),
       ),
@@ -94,9 +100,9 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(widget.icon, color: AirmiusColors.blue, size: 34),
+                      Icon(widget.icon, color: accent, size: 34),
                       const SizedBox(width: 12),
-                      Expanded(child: Text(widget.notification.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35))),
+                      Expanded(child: Text(widget.notification.body, style: TextStyle(color: muted, height: 1.35))),
                     ],
                   ),
                   const SizedBox(height: 14),
@@ -105,7 +111,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                     runSpacing: 8,
                     children: [
                       StatusPill(widget.typeLabel),
-                      StatusPill(widget.notification.unread ? scope.t('messages.unread') : scope.t('status.ready'), color: widget.notification.unread ? AirmiusColors.green : AirmiusColors.blue),
+                      StatusPill(widget.notification.unread ? scope.t('messages.unread') : scope.t('status.ready'), color: widget.notification.unread ? AirmiusColors.green : accent),
                     ],
                   ),
                 ],
@@ -147,4 +153,46 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
       ),
     );
   }
+}
+
+AirmiusThemePalette _notificationDetailPalette(BuildContext context) {
+  try {
+    return AirmiusThemeModeScope.of(context).palette;
+  } on StateError {
+    return Theme.of(context).brightness == Brightness.dark ? AirmiusThemePalette.dark : AirmiusThemePalette.air;
+  }
+}
+
+bool _notificationDetailDarkUi(BuildContext context) {
+  final palette = _notificationDetailPalette(context);
+  if (palette == AirmiusThemePalette.dark) return true;
+  try {
+    final mode = AirmiusThemeModeScope.of(context).mode;
+    return switch (mode) {
+      ThemeMode.dark => true,
+      ThemeMode.light => false,
+      ThemeMode.system => Theme.of(context).brightness == Brightness.dark,
+    };
+  } on StateError {
+    return Theme.of(context).brightness == Brightness.dark;
+  }
+}
+
+Color _notificationDetailAccent(BuildContext context) {
+  return _notificationDetailPalette(context).primary;
+}
+
+Color _notificationDetailHeader(BuildContext context) {
+  final palette = _notificationDetailPalette(context);
+  return _notificationDetailDarkUi(context) ? palette.darkHeader : palette.lightSurface;
+}
+
+Color _notificationDetailText(BuildContext context) {
+  final palette = _notificationDetailPalette(context);
+  return _notificationDetailDarkUi(context) ? AirmiusColors.text : palette.lightText;
+}
+
+Color _notificationDetailMuted(BuildContext context) {
+  final palette = _notificationDetailPalette(context);
+  return _notificationDetailDarkUi(context) ? AirmiusColors.muted : palette.lightMutedText;
 }

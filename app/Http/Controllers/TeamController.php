@@ -238,6 +238,9 @@ class TeamController extends Controller
     {
         $this->authorize('update', $team);
 
+        $previousName = $team->name;
+        $previousSportType = $team->sport_type;
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'sport_type' => ['nullable', 'string', 'max:120'],
@@ -247,6 +250,10 @@ class TeamController extends Controller
             'name' => $data['name'],
             'sport_type' => $data['sport_type'] ?? $team->sport_type,
         ]);
+
+        if ($team->wasChanged(['name', 'sport_type'])) {
+            $this->notifyTeamProfileUpdated($team->fresh(['users', 'club']), $request->user(), $previousName, $previousSportType);
+        }
 
         return back()->with('success', 'Team aktualisiert');
     }
@@ -875,6 +882,37 @@ class TeamController extends Controller
         }
 
         return back()->with('success', $isLeavingSelf ? 'Du hast das Team verlassen.' : 'Mitglied entfernt.');
+    }
+
+    private function notifyTeamProfileUpdated(Team $team, User $actor, string $previousName, ?string $previousSportType): void
+    {
+        $changes = [];
+        if ($team->name !== $previousName) {
+            $changes[] = 'Name: '.$previousName.' -> '.$team->name;
+        }
+        if (($team->sport_type ?? '') !== ($previousSportType ?? '')) {
+            $changes[] = 'Sportart: '.($previousSportType ?: 'offen').' -> '.($team->sport_type ?: 'offen');
+        }
+
+        $body = $actor->name.' hat die Teamdaten von '.$team->name.' aktualisiert.';
+        if ($changes !== []) {
+            $body .= "\n".implode("\n", $changes);
+        }
+
+        $team->users
+            ->where('id', '!=', $actor->id)
+            ->each(fn (User $member) => AppNotification::send($member, 'team.profile_updated', [
+                'title' => 'Teamdaten aktualisiert',
+                'body' => $body,
+                'url' => route('auth.teams.show', $team),
+                'club_id' => $team->club_id,
+                'team_id' => $team->id,
+                'updated_by' => $actor->id,
+                'previous_name' => $previousName,
+                'name' => $team->name,
+                'previous_sport_type' => $previousSportType,
+                'sport_type' => $team->sport_type,
+            ]));
     }
 
     private function notifyClubManagers(Club $club, string $type, array $data, ?int $exceptUserId = null): void

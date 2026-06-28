@@ -7,6 +7,7 @@ use App\Http\Resources\Api\V1\TeamResource;
 use App\Models\Club;
 use App\Models\Event;
 use App\Models\Team;
+use App\Models\TeamInvitation;
 use App\Models\TeamJoinRequest;
 use App\Models\User;
 use App\Services\PlanFeatureService;
@@ -176,6 +177,9 @@ class TeamController extends Controller
     {
         $this->authorize('update', $team);
 
+        $previousName = $team->name;
+        $previousSportType = $team->sport_type;
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'sport_type' => ['nullable', 'string', 'max:120'],
@@ -185,6 +189,10 @@ class TeamController extends Controller
             'name' => $data['name'],
             'sport_type' => $data['sport_type'] ?? $team->sport_type,
         ]);
+
+        if ($team->wasChanged(['name', 'sport_type'])) {
+            $this->notifyTeamProfileUpdated($team->fresh(['users', 'club']), $request->user(), $previousName, $previousSportType);
+        }
 
         return new TeamResource($team->fresh()->load(['club', 'users'])->loadCount(['users', 'events']));
     }
@@ -286,6 +294,78 @@ class TeamController extends Controller
         return $this->declineJoinRequest($request, $joinRequest->team, $joinRequest);
     }
 
+    public function invitations(Request $request)
+    {
+        $invitations = TeamInvitation::query()
+            ->where('recipient_id', $request->user()->id)
+            ->where('status', 'pending')
+            ->with(['team.club:id,name', 'inviter:id,name,email'])
+            ->latest('id')
+            ->get()
+            ->map(fn (TeamInvitation $invitation) => $this->teamInvitationPayload($invitation))
+            ->values();
+
+        return response()->json(['data' => $invitations]);
+    }
+
+    public function invitation(Request $request, TeamInvitation $invitation)
+    {
+        abort_unless($invitation->recipient_id === $request->user()->id, 404);
+
+        return response()->json([
+            'data' => $this->teamInvitationPayload($invitation->loadMissing(['team.club:id,name', 'inviter:id,name,email'])),
+        ]);
+    }
+
+    public function acceptInvitation(Request $request, TeamInvitation $invitation)
+    {
+        abort_unless($invitation->recipient_id === $request->user()->id, 403);
+        abort_unless($invitation->status === 'pending', 422);
+        abort_if(
+            ! $invitation->team->club->users()->where('users.id', $invitation->recipient_id)->exists()
+            && ! $invitation->team->club->canAddMembers(),
+            422,
+            'Das Mitgliederlimit des aktuellen Vereinsplans ist erreicht.'
+        );
+
+        DB::transaction(function () use ($invitation) {
+            $invitation->team->users()->syncWithoutDetaching([
+                $invitation->recipient_id => ['role' => $invitation->role],
+            ]);
+
+            $invitation->team->club->users()->syncWithoutDetaching([
+                $invitation->recipient_id => [
+                    'role' => 'member',
+                    'roles' => ['member'],
+                    'membership_status' => 'non_member',
+                    'joined_on' => now()->toDateString(),
+                ],
+            ]);
+
+            $invitation->update([
+                'status' => 'accepted',
+                'responded_at' => now(),
+            ]);
+        });
+
+        return new TeamResource($invitation->team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
+    }
+
+    public function declineInvitation(Request $request, TeamInvitation $invitation)
+    {
+        abort_unless($invitation->recipient_id === $request->user()->id, 403);
+        abort_unless($invitation->status === 'pending', 422);
+
+        $invitation->update([
+            'status' => 'declined',
+            'responded_at' => now(),
+        ]);
+
+        return response()->json([
+            'data' => $this->teamInvitationPayload($invitation->fresh()->load(['team.club:id,name', 'inviter:id,name,email'])),
+        ]);
+    }
+
     public function updateMember(Request $request, Team $team, User $user)
     {
         $this->authorize('update', $team);
@@ -302,6 +382,31 @@ class TeamController extends Controller
         return new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
     }
 
+    private function teamInvitationPayload(TeamInvitation $invitation): array
+    {
+        return [
+            'id' => $invitation->id,
+            'role' => $invitation->role,
+            'status' => $invitation->status,
+            'created_at' => $invitation->created_at?->toJSON(),
+            'team' => [
+                'id' => $invitation->team?->id,
+                'club_id' => $invitation->team?->club_id,
+                'name' => $invitation->team?->name,
+                'sport_type' => $invitation->team?->sport_type,
+                'club' => $invitation->team?->club ? [
+                    'id' => $invitation->team->club->id,
+                    'name' => $invitation->team->club->name,
+                ] : null,
+            ],
+            'inviter' => $invitation->inviter ? [
+                'id' => $invitation->inviter->id,
+                'name' => $invitation->inviter->name,
+                'email' => $invitation->inviter->email,
+            ] : null,
+        ];
+    }
+
     public function attendanceStats(Request $request, Team $team)
     {
         abort_unless(
@@ -313,6 +418,37 @@ class TeamController extends Controller
         return response()->json([
             'data' => $this->trainingAttendanceStats($team->loadMissing('users')),
         ]);
+    }
+
+    private function notifyTeamProfileUpdated(Team $team, User $actor, string $previousName, ?string $previousSportType): void
+    {
+        $changes = [];
+        if ($team->name !== $previousName) {
+            $changes[] = 'Name: '.$previousName.' -> '.$team->name;
+        }
+        if (($team->sport_type ?? '') !== ($previousSportType ?? '')) {
+            $changes[] = 'Sportart: '.($previousSportType ?: 'offen').' -> '.($team->sport_type ?: 'offen');
+        }
+
+        $body = $actor->name.' hat die Teamdaten von '.$team->name.' aktualisiert.';
+        if ($changes !== []) {
+            $body .= "\n".implode("\n", $changes);
+        }
+
+        $team->users
+            ->where('id', '!=', $actor->id)
+            ->each(fn (User $member) => AppNotification::send($member, 'team.profile_updated', [
+                'title' => 'Teamdaten aktualisiert',
+                'body' => $body,
+                'url' => '/teams/'.$team->id,
+                'club_id' => $team->club_id,
+                'team_id' => $team->id,
+                'updated_by' => $actor->id,
+                'previous_name' => $previousName,
+                'name' => $team->name,
+                'previous_sport_type' => $previousSportType,
+                'sport_type' => $team->sport_type,
+            ]));
     }
 
     private function perPage(Request $request): int

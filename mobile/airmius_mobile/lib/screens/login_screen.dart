@@ -50,10 +50,11 @@ class _LoginScreenState extends State<LoginScreen> {
     final scope = AirmiusScope.of(context);
     final isLoading = widget.authState.phase == AirmiusAuthPhase.loading;
     final error = widget.authState.phase == AirmiusAuthPhase.error ? widget.authState.error : null;
-    final text = Theme.of(context).textTheme.bodyLarge?.color ?? AirmiusColors.text;
-    final muted = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+    final text = _loginText(context);
+    final muted = _loginMuted(context);
 
     return Scaffold(
+      backgroundColor: _loginBackground(context),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -270,21 +271,22 @@ class _LoginIconMenu<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final foreground = Theme.of(context).textTheme.bodyLarge?.color ?? AirmiusColors.text;
-    final border = Theme.of(context).dividerColor;
+    final foreground = _loginText(context);
+    final border = _loginBorder(context);
+    final surface = _loginSurface(context);
+    final surfaceSoft = _loginSurfaceSoft(context);
     return PopupMenuButton<T>(
       tooltip: tooltip,
       initialValue: value,
       onSelected: onSelected,
-      color: scheme.surface,
+      color: surface,
       surfaceTintColor: Colors.transparent,
       itemBuilder: (_) => entries,
       child: Container(
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: Color.lerp(scheme.surface, scheme.primary, 0.12) ?? scheme.surface,
+          color: surfaceSoft,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: border),
         ),
@@ -309,9 +311,9 @@ class _MenuLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = Theme.of(context).colorScheme.primary;
-    final text = Theme.of(context).textTheme.bodyLarge?.color ?? AirmiusColors.text;
-    final muted = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+    final accent = _loginAccent(context);
+    final text = _loginText(context);
+    final muted = _loginMuted(context);
     final color = selected ? accent : text;
     return Row(
       children: [
@@ -329,4 +331,61 @@ class _MenuLine extends StatelessWidget {
       ],
     );
   }
+}
+
+AirmiusThemePalette _loginPalette(BuildContext context) {
+  try {
+    return AirmiusThemeModeScope.of(context).palette;
+  } on StateError {
+    return Theme.of(context).brightness == Brightness.dark ? AirmiusThemePalette.dark : AirmiusThemePalette.air;
+  }
+}
+
+bool _loginDarkUi(BuildContext context) {
+  final palette = _loginPalette(context);
+  if (palette == AirmiusThemePalette.dark) return true;
+  try {
+    final mode = AirmiusThemeModeScope.of(context).mode;
+    return switch (mode) {
+      ThemeMode.dark => true,
+      ThemeMode.light => false,
+      ThemeMode.system => Theme.of(context).brightness == Brightness.dark,
+    };
+  } on StateError {
+    return Theme.of(context).brightness == Brightness.dark;
+  }
+}
+
+Color _loginAccent(BuildContext context) {
+  return _loginPalette(context).primary;
+}
+
+Color _loginBackground(BuildContext context) {
+  final palette = _loginPalette(context);
+  return _loginDarkUi(context) ? palette.darkBackground : palette.lightBackground;
+}
+
+Color _loginSurface(BuildContext context) {
+  final palette = _loginPalette(context);
+  return _loginDarkUi(context) ? palette.darkSurface : palette.lightSurface;
+}
+
+Color _loginSurfaceSoft(BuildContext context) {
+  final palette = _loginPalette(context);
+  return _loginDarkUi(context) ? palette.darkSurfaceSoft : palette.lightSurfaceSoft;
+}
+
+Color _loginText(BuildContext context) {
+  final palette = _loginPalette(context);
+  return _loginDarkUi(context) ? AirmiusColors.text : palette.lightText;
+}
+
+Color _loginMuted(BuildContext context) {
+  final palette = _loginPalette(context);
+  return _loginDarkUi(context) ? AirmiusColors.muted : palette.lightMutedText;
+}
+
+Color _loginBorder(BuildContext context) {
+  final palette = _loginPalette(context);
+  return _loginDarkUi(context) ? AirmiusColors.border : palette.lightBorder;
 }

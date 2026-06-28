@@ -210,6 +210,14 @@ class AirmiusApiClient {
 
   bool _shouldTryTeamJoinFallback(AirmiusApiException error) => error.statusCode == 0 || error.statusCode == 404 || error.statusCode == 405 || error.statusCode == 599;
 
+  Future<AirmiusJson> teamInvitations() => _json('GET', '/api/v1/team-invitations');
+
+  Future<AirmiusJson> teamInvitation(int invitationId) => _json('GET', '/api/v1/team-invitations/$invitationId');
+
+  Future<AirmiusJson> acceptTeamInvitation(int invitationId) => _json('POST', '/api/v1/team-invitations/$invitationId/accept');
+
+  Future<AirmiusJson> declineTeamInvitation(int invitationId) => _json('POST', '/api/v1/team-invitations/$invitationId/decline');
+
   Future<AirmiusJson> updateTeamMemberRole(int teamId, int userId, String role) async {
     try {
       return await _json('PUT', '/api/v1/teams/$teamId/members/$userId', body: {'role': role});
