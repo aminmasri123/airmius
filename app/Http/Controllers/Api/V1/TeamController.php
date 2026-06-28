@@ -14,6 +14,7 @@ use App\Support\AppNotification;
 use App\Support\ClubRoles;
 use App\Support\Roles;
 use App\Support\TeamRoles;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +24,8 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class TeamController extends Controller
 {
+    use AuthorizesRequests;
+
     public function __construct(private readonly PlanFeatureService $planFeatures) {}
 
     public function index(Request $request)
