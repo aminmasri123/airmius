@@ -191,7 +191,7 @@ class _LoginTopBar extends StatelessWidget {
         const Expanded(
           child: Align(
             alignment: Alignment.centerLeft,
-            child: AirmiusLogo(compact: true),
+            child: AirmiusLogo(variant: AirmiusLogoVariant.vertical, size: 58),
           ),
         ),
         const SizedBox(width: 12),

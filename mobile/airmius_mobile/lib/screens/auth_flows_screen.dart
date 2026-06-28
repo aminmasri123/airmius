@@ -158,6 +158,8 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const Center(child: AirmiusLogo(variant: AirmiusLogoVariant.vertical, size: 118)),
+                  const SizedBox(height: 12),
                   const Eyebrow('Auth'),
                   const SizedBox(height: 8),
                   const Text('Alle wichtigen Auth-Seiten der Web-App als native UI vorbereitet.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),

@@ -10,6 +10,7 @@ enum AirmiusLogoVariant {
   mark,
   wordmark,
   full,
+  vertical,
 }
 
 class AirmiusLogo extends StatelessWidget {
@@ -34,11 +35,12 @@ class AirmiusLogo extends StatelessWidget {
     final selectedVariant = markOnly ? AirmiusLogoVariant.mark : variant;
     final useDarkUiLogo = forceDark ?? _shouldUseDarkUiLogo(context);
     final assetPath = switch (selectedVariant) {
-      AirmiusLogoVariant.mark => 'assets/images/airmius-green-test-mark.png',
-      AirmiusLogoVariant.wordmark => useDarkUiLogo ? 'assets/images/airmius-green-test-logo-dark.png' : 'assets/images/airmius-green-test-logo-light.png',
-      AirmiusLogoVariant.full => useDarkUiLogo ? 'assets/images/airmius-green-test-logo-dark.png' : 'assets/images/airmius-green-test-logo-light.png',
+      AirmiusLogoVariant.mark => 'assets/images/airmius-mark.png',
+      AirmiusLogoVariant.wordmark => useDarkUiLogo ? 'assets/images/airmius-logo-dark.png' : 'assets/images/airmius-logo-light.png',
+      AirmiusLogoVariant.full => useDarkUiLogo ? 'assets/images/airmius-logo-dark.png' : 'assets/images/airmius-logo-light.png',
+      AirmiusLogoVariant.vertical => useDarkUiLogo ? 'assets/images/airmius-logo-vertical-dark.png' : 'assets/images/airmius-logo-vertical-light.png',
     };
-    final fallbackAssetPath = useDarkUiLogo ? 'assets/images/airmius-green-test-logo-dark.png' : 'assets/images/airmius-green-test-logo-light.png';
+    final fallbackAssetPath = useDarkUiLogo ? 'assets/images/airmius-logo-dark.png' : 'assets/images/airmius-logo-light.png';
 
     return Semantics(
       label: 'Airmius Logo',

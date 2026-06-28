@@ -25,25 +25,25 @@ Route::get('/site.webmanifest', function () {
         'theme_color' => '#07101D',
         'icons' => [
             [
-                'src' => '/img/logo/Airmius-Green-Test-Mark.png',
+                'src' => '/img/logo/Airmius-Mark.png',
                 'sizes' => '192x192',
                 'type' => 'image/png',
                 'purpose' => 'any',
             ],
             [
-                'src' => '/img/logo/Airmius-Green-Test-Mark.png',
+                'src' => '/img/logo/Airmius-Mark.png',
                 'sizes' => '512x512',
                 'type' => 'image/png',
                 'purpose' => 'any',
             ],
             [
-                'src' => '/img/logo/Airmius-Green-Test-Mark.png',
+                'src' => '/img/logo/Airmius-Mark.png',
                 'sizes' => '192x192',
                 'type' => 'image/png',
                 'purpose' => 'maskable',
             ],
             [
-                'src' => '/img/logo/Airmius-Green-Test-Mark.png',
+                'src' => '/img/logo/Airmius-Mark.png',
                 'sizes' => '512x512',
                 'type' => 'image/png',
                 'purpose' => 'maskable',

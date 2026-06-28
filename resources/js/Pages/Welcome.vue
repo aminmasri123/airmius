@@ -81,7 +81,7 @@ const pageSchema = computed(() => {
         '@type': 'Organization',
         name: 'Airmius',
         url: typeof window !== 'undefined' ? `${window.location.origin}/` : undefined,
-        logo: typeof window !== 'undefined' ? `${window.location.origin}/img/logo/Logo-Airmius-Quervormat.png` : undefined,
+        logo: typeof window !== 'undefined' ? `${window.location.origin}/img/logo/Airmius-Logo-Light.png` : undefined,
     }
 
     const faqSchema = {
@@ -559,7 +559,7 @@ const onBannerSecondaryCtaClick = () => {
                             {{ heroPrimaryCtaLabel }}
                         </a>
                         <button type="button" @click="onHeroSecondaryCtaClick"
-                            class="border border-border bg-card text-primary hover:border-air-blue/50 hover:bg-muted font-semibold px-8 py-3.5 rounded-full text-center transition">
+                            class="border border-border bg-card text-primary shadow-sm hover:border-air-blue/50 hover:bg-muted font-semibold px-8 py-3.5 rounded-full text-center transition">
                             {{ heroCopy.secondaryCta }}
                         </button>
                     </div>
@@ -644,9 +644,9 @@ const onBannerSecondaryCtaClick = () => {
                 </div>
                 <div class="mt-10 grid sm:grid-cols-3 gap-4">
                     <div v-for="point in proofPoints" :key="point.value"
-                        class="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4 text-center">
-                        <div class="font-heading font-800 text-2xl text-white">{{ point.value }}</div>
-                        <p class="mt-1 text-xs text-gray-500">{{ point.label }}</p>
+                        class="rounded-2xl border border-border bg-card/85 px-5 py-4 text-center shadow-sm backdrop-blur">
+                        <div class="font-heading font-800 text-2xl text-primary">{{ point.value }}</div>
+                        <p class="mt-1 text-xs font-semibold text-secondary">{{ point.label }}</p>
                     </div>
                 </div>
             </div>
@@ -958,14 +958,14 @@ const onBannerSecondaryCtaClick = () => {
             <div class="max-w-4xl mx-auto text-center grad-card rounded-3xl p-10 sm:p-14"
                 style="background: linear-gradient(135deg, rgba(0,102,255,.15), rgba(0,200,83,.1), rgba(255,109,0,.08)); border-color: rgba(0,102,255,.2);">
                 <h2 class="font-heading font-800 text-3xl sm:text-4xl">{{ t('guest.welcome.cta.title') }}</h2>
-                <p class="text-gray-400 mt-3 max-w-lg mx-auto">{{ t('guest.welcome.cta.subtitle') }}</p>
+                <p class="text-secondary mt-3 max-w-lg mx-auto">{{ t('guest.welcome.cta.subtitle') }}</p>
                 <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
                     <a :href="heroPrimaryCta" @click="onBannerPrimaryCtaClick"
                         class="bg-air-blue hover:bg-blue-600 glow-blue text-white font-bold px-8 py-3.5 rounded-full transition">
                         {{ heroCopy.primaryCta }}
                     </a>
                     <button type="button" @click="onBannerSecondaryCtaClick"
-                        class="border border-white/15 hover:border-white/30 text-white font-semibold px-8 py-3.5 rounded-full transition">
+                        class="border border-border bg-card text-primary shadow-sm hover:border-air-blue/50 hover:bg-muted font-semibold px-8 py-3.5 rounded-full transition">
                         {{ heroCopy.secondaryCta }}
                     </button>
                 </div>

@@ -66,17 +66,11 @@ flutter:
 
 
   assets:
-    - assets/images/airmius-logo.png
     - assets/images/airmius-mark.png
-    - assets/images/airmius-wordmark-light.png
-    - assets/images/airmius-wordmark-dark.png
-    - assets/images/airmius-full-light.png
-    - assets/images/airmius-full-dark.png
-    - assets/images/airmius-green-test-mark.png
-    - assets/images/airmius-green-test-wordmark-light.png
-    - assets/images/airmius-green-test-wordmark-dark.png
-    - assets/images/airmius-green-test-logo-light.png
-    - assets/images/airmius-green-test-logo-dark.png
+    - assets/images/airmius-logo-light.png
+    - assets/images/airmius-logo-dark.png
+    - assets/images/airmius-logo-vertical-light.png
+    - assets/images/airmius-logo-vertical-dark.png
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

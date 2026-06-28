@@ -14,10 +14,10 @@
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        <link rel="manifest" href="{{ route('site.webmanifest') }}?v=7">
-        <link rel="shortcut icon" href="{{ asset('img/logo/Airmius-Green-Test-Mark.png') }}?v=7" type="image/png">
-        <link rel="icon" href="{{ asset('img/logo/Airmius-Green-Test-Mark.png') }}?v=7" type="image/png" sizes="512x512">
-        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('img/logo/Airmius-Green-Test-Mark.png') }}?v=7">
+        <link rel="manifest" href="{{ route('site.webmanifest') }}?v=8">
+        <link rel="shortcut icon" href="{{ asset('img/logo/Airmius-Mark.png') }}?v=8" type="image/png">
+        <link rel="icon" href="{{ asset('img/logo/Airmius-Mark.png') }}?v=8" type="image/png" sizes="512x512">
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('img/logo/Airmius-Mark.png') }}?v=8">
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
         <!-- Fonts -->

@@ -5,7 +5,7 @@ import { computed, onBeforeUnmount, watch } from 'vue'
 const props = defineProps({
     title: { type: String, required: true },
     description: { type: String, required: true },
-    image: { type: String, default: '/img/logo/Logo-Airmius-Quervormat.png' },
+    image: { type: String, default: '/img/logo/Airmius-Logo-Light.png' },
     type: { type: String, default: 'website' },
     canonical: { type: String, default: null },
     noindex: { type: Boolean, default: false },

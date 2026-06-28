@@ -41,7 +41,7 @@ width: 100% !important;
 <!-- LOGO DIREKT ÜBER DER BEGRÜSSUNG -->
 <div align="center" style="margin-bottom: 20px;">
     <a href="{{ config('app.url') }}" style="display: inline-block;">
-        <img src="{{ asset('img/logo/Logo-Airmius-mit-Schrift.png') }}" width="180" style="width: 180px; height: auto;" alt="Airmius Logo">
+        <img src="{{ asset('img/logo/Airmius-Logo-Light.png') }}" width="220" style="width: 220px; height: auto;" alt="Airmius Logo">
     </a>
 </div>
 

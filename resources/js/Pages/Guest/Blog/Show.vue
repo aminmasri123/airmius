@@ -97,7 +97,7 @@ const categoryHref = computed(() => props.post.blog_category?.slug
     <SeoHead
         :title="isPreview ? `[Vorschau] ${post.meta_title || post.title}` : (post.meta_title || post.title)"
         :description="post.meta_description || post.excerpt || 'Artikel aus dem Airmius Blog zu Sport, Training, Vereinen und digitaler Organisation.'"
-        :image="post.cover_image || '/img/logo/Logo-Airmius-Quervormat.png'"
+        :image="post.cover_image || '/img/logo/Airmius-Logo-Light.png'"
         type="article"
         :schema="articleSchema"
         :noindex="isPreview"

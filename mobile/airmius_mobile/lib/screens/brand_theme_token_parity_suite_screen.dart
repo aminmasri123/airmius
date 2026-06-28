@@ -33,7 +33,7 @@ class _BrandThemeTokenParitySuiteScreenState extends State<BrandThemeTokenParity
     ),
     _DesignToken(
       title: 'Logo und Brand Mark',
-      source: 'assets/images/airmius-logo.png',
+      source: 'assets/images/airmius-logo-light.png',
       body: 'Logo wird in Header, Hero, Auth, Splash, Settings und Release-Gates konsistent verwendet.',
       status: 'Brand',
       icon: Icons.auto_awesome_outlined,
