@@ -314,21 +314,22 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   }
 
   Widget _socialLogin() {
-    return const AirmiusPanel(
+    final muted = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+    return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Eyebrow('Social Login'),
-          SizedBox(height: 8),
-          Text('Die Web-App besitzt OAuth-Redirects. In der Mobile-App wird daraus ein nativer Provider-Flow mit Account-Linking, Datenschutz und Fehlerstatus.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
-          SizedBox(height: 12),
-          _AuthStatusLine(icon: Icons.account_circle_outlined, title: 'Google', body: 'OAuth, E-Mail-Abgleich und Profilanlage.', status: 'Provider'),
-          _AuthStatusLine(icon: Icons.phone_iphone_outlined, title: 'Apple', body: 'Sign in with Apple, Private Relay und Account-Linking.', status: 'iOS'),
-          _AuthStatusLine(icon: Icons.link_outlined, title: 'Konto verknuepfen', body: 'Bestehende Airmius-Konten mit Provider verbinden.', status: 'Linking'),
-          SizedBox(height: 12),
-          _AuthAction(label: 'Google Login starten', icon: Icons.account_circle_outlined),
-          SizedBox(height: 10),
-          _AuthAction(label: 'Apple Login starten', icon: Icons.phone_iphone_outlined),
+          const Eyebrow('Social Login'),
+          const SizedBox(height: 8),
+          Text('Die Web-App besitzt OAuth-Redirects. In der Mobile-App wird daraus ein nativer Provider-Flow mit Account-Linking, Datenschutz und Fehlerstatus.', style: TextStyle(color: muted, height: 1.35)),
+          const SizedBox(height: 12),
+          const _AuthStatusLine(icon: Icons.account_circle_outlined, title: 'Google', body: 'OAuth, E-Mail-Abgleich und Profilanlage.', status: 'Provider'),
+          const _AuthStatusLine(icon: Icons.phone_iphone_outlined, title: 'Apple', body: 'Sign in with Apple, Private Relay und Account-Linking.', status: 'iOS'),
+          const _AuthStatusLine(icon: Icons.link_outlined, title: 'Konto verknuepfen', body: 'Bestehende Airmius-Konten mit Provider verbinden.', status: 'Linking'),
+          const SizedBox(height: 12),
+          const _AuthAction(label: 'Google Login starten', icon: Icons.account_circle_outlined),
+          const SizedBox(height: 10),
+          const _AuthAction(label: 'Apple Login starten', icon: Icons.phone_iphone_outlined),
         ],
       ),
     );
@@ -356,36 +357,38 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   }
 
   Widget _twoFactor() {
-    return const AirmiusPanel(
+    final muted = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+    return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Eyebrow('Zwei-Faktor-Authentifizierung'),
-          SizedBox(height: 8),
-          Text('Code aus Authenticator-App oder Recovery-Code eingeben.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
-          SizedBox(height: 12),
-          AirmiusTextField(label: '2FA Code', hint: '123456', icon: Icons.password_outlined),
-          SizedBox(height: 12),
-          AirmiusTextField(label: 'Recovery Code', hint: 'Optional'),
-          SizedBox(height: 12),
-          _AuthAction(label: 'Verifizieren', icon: Icons.verified_user_outlined),
+          const Eyebrow('Zwei-Faktor-Authentifizierung'),
+          const SizedBox(height: 8),
+          Text('Code aus Authenticator-App oder Recovery-Code eingeben.', style: TextStyle(color: muted, height: 1.35)),
+          const SizedBox(height: 12),
+          const AirmiusTextField(label: '2FA Code', hint: '123456', icon: Icons.password_outlined),
+          const SizedBox(height: 12),
+          const AirmiusTextField(label: 'Recovery Code', hint: 'Optional'),
+          const SizedBox(height: 12),
+          const _AuthAction(label: 'Verifizieren', icon: Icons.verified_user_outlined),
         ],
       ),
     );
   }
 
   Widget _emailVerify() {
-    return const AirmiusPanel(
+    final muted = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+    return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Eyebrow('E-Mail verifizieren'),
-          SizedBox(height: 8),
-          Text('Bitte bestätige deine E-Mail-Adresse. Bei Bedarf kann eine neue Mail versendet werden.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
-          SizedBox(height: 12),
-          _AuthStatusLine(icon: Icons.mail_outline, title: 'zbb.bop.it@gmail.com', body: 'Wartet auf Bestätigung', status: 'Offen'),
-          SizedBox(height: 12),
-          _AuthAction(label: 'Verifizierungslink erneut senden', icon: Icons.send_outlined),
+          const Eyebrow('E-Mail verifizieren'),
+          const SizedBox(height: 8),
+          Text('Bitte bestätige deine E-Mail-Adresse. Bei Bedarf kann eine neue Mail versendet werden.', style: TextStyle(color: muted, height: 1.35)),
+          const SizedBox(height: 12),
+          const _AuthStatusLine(icon: Icons.mail_outline, title: 'zbb.bop.it@gmail.com', body: 'Wartet auf Bestätigung', status: 'Offen'),
+          const SizedBox(height: 12),
+          const _AuthAction(label: 'Verifizierungslink erneut senden', icon: Icons.send_outlined),
         ],
       ),
     );
@@ -484,6 +487,8 @@ class _AuthStatusLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color ?? AirmiusColors.text;
+    final mutedColor = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
     return Padding(
       padding: const EdgeInsets.only(top: 12),
       child: Row(
@@ -491,7 +496,7 @@ class _AuthStatusLine extends StatelessWidget {
         children: [
           Icon(icon, color: AirmiusColors.blue),
           const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), const SizedBox(height: 3), Text(body, style: const TextStyle(color: AirmiusColors.muted, height: 1.3))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: TextStyle(color: textColor, fontWeight: FontWeight.w900)), const SizedBox(height: 3), Text(body, style: TextStyle(color: mutedColor, height: 1.3))])),
           StatusPill(status),
         ],
       ),
