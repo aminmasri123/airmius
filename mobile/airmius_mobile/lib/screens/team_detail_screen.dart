@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
@@ -212,7 +213,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
             Expanded(child: MetricCard(value: '${team?.attendanceStats?.trainingsTotal ?? '-'}', label: 'Trainings')),
           ]),
           const SizedBox(height: 14),
-          if (_section == 'Profil') _ProfilePanel(team: team, fallbackTitle: title, canManageTeam: canManageTeam, joinRequests: _joinRequests, teamChat: _teamChat, guardianGate: _guardianGate, onJoin: (value) => setState(() => _joinRequests = value), onChat: (value) => setState(() => _teamChat = value), onGuardian: (value) => setState(() => _guardianGate = value)),
+          if (_section == 'Profil') _ProfilePanel(team: team, fallbackTitle: title, canManageTeam: canManageTeam, joinRequests: _joinRequests, teamChat: _teamChat, guardianGate: _guardianGate, onJoin: (value) => setState(() => _joinRequests = value), onChat: (value) => setState(() => _teamChat = value), onGuardian: (value) => setState(() => _guardianGate = value), onUpdated: (updatedTeam) => setState(() => _teamFuture = Future.value(updatedTeam))),
           if (_section == 'Kader')
             _RosterPanel(
               team: team,
@@ -281,7 +282,7 @@ class _JoinRequestPendingNotice extends StatelessWidget {
 }
 
 class _ProfilePanel extends StatelessWidget {
-  const _ProfilePanel({required this.team, required this.fallbackTitle, required this.canManageTeam, required this.joinRequests, required this.teamChat, required this.guardianGate, required this.onJoin, required this.onChat, required this.onGuardian});
+  const _ProfilePanel({required this.team, required this.fallbackTitle, required this.canManageTeam, required this.joinRequests, required this.teamChat, required this.guardianGate, required this.onJoin, required this.onChat, required this.onGuardian, required this.onUpdated});
 
   final AirmiusTeam? team;
   final String fallbackTitle;
@@ -292,6 +293,7 @@ class _ProfilePanel extends StatelessWidget {
   final ValueChanged<bool> onJoin;
   final ValueChanged<bool> onChat;
   final ValueChanged<bool> onGuardian;
+  final ValueChanged<AirmiusTeam> onUpdated;
 
   @override
   Widget build(BuildContext context) {
@@ -311,6 +313,10 @@ class _ProfilePanel extends StatelessWidget {
         _AttendanceStatsPanel(stats: team!.attendanceStats!),
         const SizedBox(height: 12),
       ],
+      if (canManageTeam && team != null) ...[
+        _TeamEditPanel(team: team!, onUpdated: onUpdated),
+        const SizedBox(height: 12),
+      ],
       if (canManageTeam) ...[
         const Eyebrow('Mobile Teamfunktionen'),
         const SizedBox(height: 8),
@@ -319,6 +325,170 @@ class _ProfilePanel extends StatelessWidget {
         SwitchListTile(value: guardianGate, onChanged: onGuardian, activeColor: AirmiusColors.blue, contentPadding: EdgeInsets.zero, title: const Text('Jugendschutz prüfen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), subtitle: const Text('Minderjährige brauchen passende Freigaben.', style: TextStyle(color: AirmiusColors.muted))),
       ],
     ]));
+  }
+}
+
+class _TeamEditPanel extends StatefulWidget {
+  const _TeamEditPanel({required this.team, required this.onUpdated});
+
+  final AirmiusTeam team;
+  final ValueChanged<AirmiusTeam> onUpdated;
+
+  @override
+  State<_TeamEditPanel> createState() => _TeamEditPanelState();
+}
+
+class _TeamEditPanelState extends State<_TeamEditPanel> {
+  late final TextEditingController _nameController;
+  late final TextEditingController _sportController;
+  Future<List<AirmiusSport>>? _sportsFuture;
+  String? _selectedSportSlug;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.team.name);
+    _sportController = TextEditingController(text: widget.team.sportType ?? '');
+    _selectedSportSlug = widget.team.sportType;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sportsFuture ??= AirmiusServicesScope.of(context).repositories.sports.sports().then((page) => page.items);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _sportController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final name = _nameController.text.trim();
+    final sportType = (_selectedSportSlug ?? _sportController.text).trim();
+    if (name.isEmpty || _saving) return;
+
+    setState(() => _saving = true);
+    try {
+      final updatedTeam = await AirmiusServicesScope.of(context).repositories.clubs.updateTeam(widget.team.id, {
+        'name': name,
+        'sport_type': sportType.isEmpty ? null : sportType,
+      });
+      if (!mounted) return;
+      widget.onUpdated(updatedTeam);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Teamdaten gespeichert.')));
+    } catch (error) {
+      if (!mounted) return;
+      final message = error is AirmiusApiException ? error.userMessage : '$error';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Teamdaten konnten nicht gespeichert werden: $message')));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AirmiusColors.cardSoft,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AirmiusColors.border),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        const Eyebrow('Teamdaten bearbeiten'),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _nameController,
+          style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
+          decoration: const InputDecoration(labelText: 'Teamname'),
+        ),
+        const SizedBox(height: 10),
+        FutureBuilder<List<AirmiusSport>>(
+          future: _sportsFuture,
+          builder: (context, snapshot) {
+            final sports = snapshot.data ?? const <AirmiusSport>[];
+            return _TeamSportField(
+              controller: _sportController,
+              sports: sports,
+              loading: snapshot.connectionState == ConnectionState.waiting,
+              onTextChanged: () => _selectedSportSlug = null,
+              onSelected: (sport) {
+                _sportController.text = sport.name;
+                _selectedSportSlug = sport.slug;
+              },
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        AirmiusButton(
+          label: _saving ? 'Speichert...' : 'Teamdaten speichern',
+          icon: Icons.save_outlined,
+          onPressed: _saving ? null : _save,
+        ),
+      ]),
+    );
+  }
+}
+
+class _TeamSportField extends StatelessWidget {
+  const _TeamSportField({required this.controller, required this.sports, required this.loading, required this.onTextChanged, required this.onSelected});
+
+  final TextEditingController controller;
+  final List<AirmiusSport> sports;
+  final bool loading;
+  final VoidCallback onTextChanged;
+  final ValueChanged<AirmiusSport> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    if (sports.isEmpty) {
+      return TextField(
+        controller: controller,
+        style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
+        decoration: InputDecoration(labelText: 'Sportart', hintText: loading ? 'Sportarten werden geladen...' : 'Sportart suchen'),
+        onChanged: (_) => onTextChanged(),
+      );
+    }
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('Sportart', style: TextStyle(color: AirmiusColors.text, fontSize: 13, fontWeight: FontWeight.w900)),
+      const SizedBox(height: 6),
+      Autocomplete<AirmiusSport>(
+        initialValue: TextEditingValue(text: controller.text),
+        displayStringForOption: (sport) => sport.name,
+        optionsBuilder: (value) {
+          final query = value.text.trim().toLowerCase();
+          final options = query.isEmpty
+              ? sports
+              : sports.where((sport) {
+                  final name = sport.name.toLowerCase();
+                  final slug = sport.slug.toLowerCase();
+                  return name.contains(query) || slug.contains(query);
+                });
+          return options.take(10);
+        },
+        onSelected: onSelected,
+        fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
+          if (textController.text.isEmpty && controller.text.isNotEmpty) {
+            textController.text = controller.text;
+          }
+          return TextField(
+            controller: textController,
+            focusNode: focusNode,
+            style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
+            decoration: const InputDecoration(hintText: 'Sportart suchen', suffixIcon: Icon(Icons.search, color: AirmiusColors.muted)),
+            onChanged: (value) {
+              controller.text = value;
+              onTextChanged();
+            },
+          );
+        },
+      ),
+    ]);
   }
 }
 

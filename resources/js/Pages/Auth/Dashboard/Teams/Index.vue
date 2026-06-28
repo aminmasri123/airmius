@@ -83,6 +83,8 @@ const inviteForms = ref({})
 const inviteNotices = ref({})
 const joinRequestNotices = ref({})
 const teamForms = ref({})
+const teamEditForms = ref({})
+const editingTeamIds = ref(new Set())
 const clubEditForms = ref({})
 const clubEditTabs = ref({})
 const sponsorForms = ref({})
@@ -207,6 +209,42 @@ const teamFormFor = (club) => {
     }
 
     return teamForms.value[club.id]
+}
+
+const teamEditFormFor = (team) => {
+    teamEditForms.value[team.id] ??= {
+        name: team.name || '',
+        sport_type: team.sport_type || '',
+    }
+
+    return teamEditForms.value[team.id]
+}
+
+const editTeam = (team) => {
+    teamEditForms.value[team.id] = {
+        name: team.name || '',
+        sport_type: team.sport_type || '',
+    }
+    editingTeamIds.value = new Set([...editingTeamIds.value, team.id])
+}
+
+const cancelTeamEdit = (team) => {
+    const next = new Set(editingTeamIds.value)
+    next.delete(team.id)
+    editingTeamIds.value = next
+}
+
+const updateTeam = (team) => {
+    actionNotice.value = null
+
+    router.put(route('auth.teams.update', team.id), teamEditFormFor(team), {
+        preserveScroll: true,
+        onSuccess: () => {
+            cancelTeamEdit(team)
+            setActionNotice('success', 'Teamdaten wurden gespeichert.')
+        },
+        onError: (errors) => setActionNotice('error', errors.name || errors.sport_type || 'Teamdaten konnten nicht gespeichert werden.'),
+    })
 }
 
 const inviteFormFor = (team) => {
@@ -1337,6 +1375,15 @@ const deleteJob = (job) => {
                             </span>
 
                             <button
+                                v-if="team.can_manage"
+                                type="button"
+                                class="rounded border border-border px-2 py-1 text-xs font-semibold text-primary hover:bg-muted"
+                                @click="editingTeamIds.has(team.id) ? cancelTeamEdit(team) : editTeam(team)"
+                            >
+                                {{ editingTeamIds.has(team.id) ? 'Schließen' : 'Bearbeiten' }}
+                            </button>
+
+                            <button
                                 v-if="team.can_delete"
                                 type="button"
                                 class="rounded bg-error px-2 py-1 text-xs font-semibold text-white hover:opacity-90"
@@ -1346,6 +1393,55 @@ const deleteJob = (job) => {
                             </button>
                         </div>
                     </div>
+
+                    <form
+                        v-if="team.can_manage && editingTeamIds.has(team.id)"
+                        class="grid gap-3 rounded-lg border border-border bg-card p-3"
+                        @submit.prevent="updateTeam(team)"
+                    >
+                        <label class="grid gap-1 text-sm font-semibold text-primary">
+                            Teamname
+                            <input
+                                v-model="teamEditFormFor(team).name"
+                                required
+                                class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                                placeholder="Teamname"
+                            >
+                        </label>
+
+                        <label class="grid gap-1 text-sm font-semibold text-primary">
+                            Sportart
+                            <select
+                                v-model="teamEditFormFor(team).sport_type"
+                                class="rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                            >
+                                <option value="">Sportart offen</option>
+                                <option
+                                    v-for="sport in sports"
+                                    :key="sport.slug || sport.id"
+                                    :value="sport.slug || sport.name"
+                                >
+                                    {{ sportLabel(sport.slug || sport.name) }}
+                                </option>
+                            </select>
+                        </label>
+
+                        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                            <button
+                                type="button"
+                                class="rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-muted"
+                                @click="cancelTeamEdit(team)"
+                            >
+                                Abbrechen
+                            </button>
+                            <button
+                                type="submit"
+                                class="rounded-lg bg-buttonPrimary px-3 py-2 text-sm font-semibold text-buttonTextPrimary hover:bg-buttonPrimaryHover"
+                            >
+                                Team speichern
+                            </button>
+                        </div>
+                    </form>
 
                     <div class="space-y-2">
                         <div
