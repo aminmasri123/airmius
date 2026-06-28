@@ -375,6 +375,13 @@ class AirmiusApiNotificationRepository implements AirmiusNotificationRepository 
   }
 
   @override
+  Future<AirmiusNotification> markAsUnread(int notificationId) async {
+    final json = await client.markNotificationAsUnread(notificationId);
+    final data = json['data'];
+    return AirmiusNotification.fromJson(data is JsonMap ? data : json);
+  }
+
+  @override
   Future<void> markAllAsRead() async {
     await client.markAllNotificationsAsRead();
   }

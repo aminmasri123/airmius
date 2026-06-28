@@ -300,6 +300,8 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> markNotificationAsRead(int notificationId) => _json('POST', '/api/v1/notifications/$notificationId/read');
 
+  Future<AirmiusJson> markNotificationAsUnread(int notificationId) => _json('POST', '/api/v1/notifications/$notificationId/unread');
+
   Future<AirmiusJson> markAllNotificationsAsRead() => _json('POST', '/api/v1/notifications/read-all');
 
   Future<AirmiusJson> deleteNotification(int notificationId) => _json('DELETE', '/api/v1/notifications/$notificationId');

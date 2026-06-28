@@ -37,6 +37,15 @@ class NotificationController extends Controller
         return back();
     }
 
+    public function markAsUnread(Request $request, Notification $notification)
+    {
+        abort_unless($notification->user_id === $request->user()->id, 403);
+
+        $notification->update(['read' => false]);
+
+        return back();
+    }
+
     public function markAllAsRead(Request $request)
     {
         $request->user()

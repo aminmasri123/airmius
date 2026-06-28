@@ -75,7 +75,7 @@ class MobileMetaController extends Controller
                     ],
                     'settings' => ['read', 'update'],
                     'uploads' => ['list', 'create', 'rename', 'delete'],
-                    'notifications' => ['list', 'unread_count', 'mark_read', 'mark_all_read', 'delete', 'realtime'],
+                    'notifications' => ['list', 'unread_count', 'mark_read', 'mark_unread', 'mark_all_read', 'delete', 'realtime'],
                 ],
                 'catalogs' => [
                     'training' => [

@@ -154,6 +154,7 @@ class AirmiusApiContract {
   static String workspace(int id) => '$workspaces/$id';
   static String notification(String id) => '$notifications/$id';
   static String notificationRead(String id) => '$notifications/$id/read';
+  static String notificationUnread(String id) => '$notifications/$id/unread';
   static String notificationsReadAll() => '$notifications/read-all';
   static String story(int id) => '$stories/$id';
   static String storyViewed(int id) => '$stories/$id/viewed';

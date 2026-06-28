@@ -158,7 +158,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Center(child: AirmiusLogo(variant: AirmiusLogoVariant.vertical, size: 118)),
+                  const Center(child: AirmiusLogo(size: 72)),
                   const SizedBox(height: 12),
                   const Eyebrow('Auth'),
                   const SizedBox(height: 8),

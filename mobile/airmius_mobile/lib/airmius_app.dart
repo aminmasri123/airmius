@@ -35,6 +35,7 @@ class _AirmiusAppState extends State<AirmiusApp> {
 
   AirmiusLanguage _language = AirmiusLanguage.de;
   ThemeMode _themeMode = ThemeMode.dark;
+  AirmiusThemePalette _themePalette = AirmiusThemePalette.dark;
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   final AirmiusPreferences _preferences = AirmiusPreferences();
   final AirmiusDeepLinkInbox _deepLinkInbox = AirmiusDeepLinkInbox();
@@ -61,6 +62,7 @@ class _AirmiusAppState extends State<AirmiusApp> {
   Future<void> _restorePreferences() async {
     final language = await _preferences.readLanguage();
     final themeMode = await _preferences.readThemeMode();
+    final themePalette = await _preferences.readThemePalette();
     if (!mounted) return;
     setState(() {
       if (language != null) {
@@ -68,6 +70,9 @@ class _AirmiusAppState extends State<AirmiusApp> {
       }
       if (themeMode != null) {
         _themeMode = themeMode;
+      }
+      if (themePalette != null) {
+        _themePalette = themePalette;
       }
     });
   }
@@ -91,12 +96,17 @@ class _AirmiusAppState extends State<AirmiusApp> {
               setState(() => _themeMode = mode);
               unawaited(_preferences.writeThemeMode(mode));
             },
+            palette: _themePalette,
+            setPalette: (palette) {
+              setState(() => _themePalette = palette);
+              unawaited(_preferences.writeThemePalette(palette));
+            },
             child: MaterialApp(
             navigatorKey: _navigatorKey,
             title: 'Airmius',
             debugShowCheckedModeBanner: false,
-            theme: AirmiusTheme.light(),
-            darkTheme: AirmiusTheme.dark(),
+            theme: AirmiusTheme.light(_themePalette),
+            darkTheme: AirmiusTheme.dark(_themePalette),
             themeMode: _themeMode,
             locale: _language.locale,
             supportedLocales: AirmiusLanguage.values.map((language) => language.locale).toList(),

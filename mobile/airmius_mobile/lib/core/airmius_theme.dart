@@ -30,12 +30,118 @@ class AirmiusColors {
   static const lightMuted = Color(0xFF536174);
 }
 
+enum AirmiusThemePalette {
+  dark,
+  air,
+  champion,
+  sprint,
+  arena,
+  trail,
+}
+
+extension AirmiusThemePaletteInfo on AirmiusThemePalette {
+  String get key => switch (this) {
+        AirmiusThemePalette.dark => 'dark',
+        AirmiusThemePalette.air => 'air',
+        AirmiusThemePalette.champion => 'champion',
+        AirmiusThemePalette.sprint => 'sprint',
+        AirmiusThemePalette.arena => 'arena',
+        AirmiusThemePalette.trail => 'trail',
+      };
+
+  String get label => switch (this) {
+        AirmiusThemePalette.dark => 'Dark',
+        AirmiusThemePalette.air => 'Air',
+        AirmiusThemePalette.champion => 'Champion',
+        AirmiusThemePalette.sprint => 'Sprint',
+        AirmiusThemePalette.arena => 'Arena',
+        AirmiusThemePalette.trail => 'Trail',
+      };
+
+  String get description => switch (this) {
+        AirmiusThemePalette.dark => 'Dunkel, klar und kontrastreich.',
+        AirmiusThemePalette.air => 'Klar, leicht und fokussiert.',
+        AirmiusThemePalette.champion => 'Goldene Energie fuer Gewinner.',
+        AirmiusThemePalette.sprint => 'Frisch, schnell und aktiv.',
+        AirmiusThemePalette.arena => 'Ruhig, robust und professionell.',
+        AirmiusThemePalette.trail => 'Natuerlich, ausdauernd und bodenstaendig.',
+      };
+
+  Color get primary => switch (this) {
+        AirmiusThemePalette.dark => AirmiusColors.blue,
+        AirmiusThemePalette.air => const Color(0xFF0EA5E9),
+        AirmiusThemePalette.champion => const Color(0xFFB45309),
+        AirmiusThemePalette.sprint => const Color(0xFF059669),
+        AirmiusThemePalette.arena => const Color(0xFF334155),
+        AirmiusThemePalette.trail => const Color(0xFF4D7C0F),
+      };
+
+  Color get secondary => switch (this) {
+        AirmiusThemePalette.dark => AirmiusColors.green,
+        AirmiusThemePalette.air => const Color(0xFF10B981),
+        AirmiusThemePalette.champion => const Color(0xFFF59E0B),
+        AirmiusThemePalette.sprint => const Color(0xFF10B981),
+        AirmiusThemePalette.arena => const Color(0xFF64748B),
+        AirmiusThemePalette.trail => const Color(0xFF65A30D),
+      };
+
+  Color get lightBackground => switch (this) {
+        AirmiusThemePalette.dark => AirmiusColors.lightBg,
+        AirmiusThemePalette.air => const Color(0xFFF7FBFF),
+        AirmiusThemePalette.champion => const Color(0xFFFFFAF0),
+        AirmiusThemePalette.sprint => const Color(0xFFF5FFF9),
+        AirmiusThemePalette.arena => const Color(0xFFF8FAFC),
+        AirmiusThemePalette.trail => const Color(0xFFF6F8F2),
+      };
+
+  Color get lightSurface => switch (this) {
+        AirmiusThemePalette.dark => AirmiusColors.lightCard,
+        AirmiusThemePalette.air => const Color(0xFFFFFFFF),
+        AirmiusThemePalette.champion => const Color(0xFFFFFDF7),
+        AirmiusThemePalette.sprint => const Color(0xFFFBFFFD),
+        AirmiusThemePalette.arena => const Color(0xFFFFFFFF),
+        AirmiusThemePalette.trail => const Color(0xFFFBFDF7),
+      };
+
+  Color get darkBackground => switch (this) {
+        AirmiusThemePalette.dark => AirmiusColors.bg,
+        AirmiusThemePalette.air => const Color(0xFF07131D),
+        AirmiusThemePalette.champion => const Color(0xFF1C1206),
+        AirmiusThemePalette.sprint => const Color(0xFF061A13),
+        AirmiusThemePalette.arena => const Color(0xFF0E141D),
+        AirmiusThemePalette.trail => const Color(0xFF101707),
+      };
+
+  Color get darkHeader => switch (this) {
+        AirmiusThemePalette.dark => AirmiusColors.header,
+        AirmiusThemePalette.air => const Color(0xFF081A28),
+        AirmiusThemePalette.champion => const Color(0xFF261807),
+        AirmiusThemePalette.sprint => const Color(0xFF071F17),
+        AirmiusThemePalette.arena => const Color(0xFF111827),
+        AirmiusThemePalette.trail => const Color(0xFF17210A),
+      };
+
+  Color get darkSurface => Color.lerp(AirmiusColors.card, primary, 0.10) ?? AirmiusColors.card;
+
+  Color get darkSurfaceSoft => Color.lerp(AirmiusColors.cardSoft, primary, 0.16) ?? AirmiusColors.cardSoft;
+
+}
+
+AirmiusThemePalette airmiusThemePaletteFromKey(String? key) {
+  for (final palette in AirmiusThemePalette.values) {
+    if (palette.key == key) {
+      return palette;
+    }
+  }
+  return AirmiusThemePalette.dark;
+}
+
 class AirmiusTheme {
   const AirmiusTheme._();
 
-  static ThemeData light() {
+  static ThemeData light([AirmiusThemePalette palette = AirmiusThemePalette.dark]) {
     final scheme = ColorScheme.fromSeed(
-      seedColor: AirmiusColors.blue,
+      seedColor: palette.primary,
       brightness: Brightness.light,
     );
 
@@ -43,12 +149,12 @@ class AirmiusTheme {
       useMaterial3: true,
       brightness: Brightness.light,
       colorScheme: scheme.copyWith(
-        surface: AirmiusColors.lightCard,
-        primary: AirmiusColors.blueDeep,
-        secondary: AirmiusColors.green,
+        surface: palette.lightSurface,
+        primary: palette.primary,
+        secondary: palette.secondary,
         error: AirmiusColors.red,
       ),
-      scaffoldBackgroundColor: AirmiusColors.lightBg,
+      scaffoldBackgroundColor: palette.lightBackground,
       fontFamily: 'Roboto',
       textTheme: const TextTheme(
         headlineLarge: TextStyle(decoration: TextDecoration.none),
@@ -77,15 +183,15 @@ class AirmiusTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AirmiusColors.blueDeep, width: 1.4),
+          borderSide: BorderSide(color: palette.primary, width: 1.4),
         ),
       ),
     );
   }
 
-  static ThemeData dark() {
+  static ThemeData dark([AirmiusThemePalette palette = AirmiusThemePalette.dark]) {
     final scheme = ColorScheme.fromSeed(
-      seedColor: AirmiusColors.blue,
+      seedColor: palette.primary,
       brightness: Brightness.dark,
     );
 
@@ -93,12 +199,12 @@ class AirmiusTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: scheme.copyWith(
-        surface: AirmiusColors.card,
-        primary: AirmiusColors.blue,
-        secondary: AirmiusColors.green,
+        surface: palette.darkSurface,
+        primary: palette.primary,
+        secondary: palette.secondary,
         error: AirmiusColors.red,
       ),
-      scaffoldBackgroundColor: AirmiusColors.bg,
+      scaffoldBackgroundColor: palette.darkBackground,
       fontFamily: 'Roboto',
       textTheme: const TextTheme(
         headlineLarge: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900, decoration: TextDecoration.none),
@@ -113,7 +219,7 @@ class AirmiusTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AirmiusColors.input,
+        fillColor: palette.darkSurfaceSoft,
         labelStyle: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
         hintStyle: const TextStyle(color: AirmiusColors.mutedSoft),
         enabledBorder: OutlineInputBorder(
@@ -122,8 +228,13 @@ class AirmiusTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AirmiusColors.blue, width: 1.4),
+          borderSide: BorderSide(color: palette.primary, width: 1.4),
         ),
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: palette.darkHeader,
+        foregroundColor: AirmiusColors.text,
+        surfaceTintColor: Colors.transparent,
       ),
     );
   }

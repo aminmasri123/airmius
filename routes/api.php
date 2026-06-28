@@ -104,6 +104,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/notifications/{notification}', [MobileNotificationController::class, 'show'])->name('notifications.show');
         Route::post('/notifications/read-all', [MobileNotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
         Route::post('/notifications/{notification}/read', [MobileNotificationController::class, 'markAsRead'])->name('notifications.read');
+        Route::post('/notifications/{notification}/unread', [MobileNotificationController::class, 'markAsUnread'])->name('notifications.unread');
         Route::delete('/notifications/{notification}', [MobileNotificationController::class, 'destroy'])->name('notifications.destroy');
 
         Route::get('/feed', [FeedController::class, 'index'])->name('feed.index');

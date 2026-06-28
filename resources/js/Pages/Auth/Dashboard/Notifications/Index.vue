@@ -61,8 +61,10 @@ const markAsRead = (notification) => {
     })
 }
 
-const markAllAsRead = () => {
-    router.post(route('auth.notifications.read-all'), {}, {
+const markAsUnread = (notification) => {
+    if (!notification.read) return
+
+    router.post(route('auth.notifications.unread', notification.id), {}, {
         preserveScroll: true,
     })
 }
@@ -124,22 +126,13 @@ onUnmounted(() => {
     <Head title="Benachrichtigungen" />
 
     <div class="mx-auto max-w-4xl space-y-6">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
             <div>
                 <h1 class="text-2xl font-bold text-primary">Benachrichtigungen</h1>
                 <p class="mt-1 text-sm text-secondary">
                     Alles Wichtige aus Chat, Feed und Einladungen an einem Ort.
                 </p>
             </div>
-
-            <button
-                type="button"
-                class="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary transition hover:border-borderHover"
-                @click="markAllAsRead"
-            >
-                <i class="las la-check-double"></i>
-                Alle gelesen
-            </button>
         </div>
 
         <div class="surface-card overflow-hidden">
@@ -191,12 +184,11 @@ onUnmounted(() => {
                                 </button>
 
                                 <button
-                                    v-if="!notification.read"
                                     type="button"
                                     class="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary transition hover:border-borderHover"
-                                    @click="markAsRead(notification)"
+                                    @click="notification.read ? markAsUnread(notification) : markAsRead(notification)"
                                 >
-                                    Gelesen
+                                    {{ notification.read ? 'Ungelesen' : 'Gelesen' }}
                                 </button>
 
                                 <button

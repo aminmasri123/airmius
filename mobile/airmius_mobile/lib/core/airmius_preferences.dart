@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'airmius_l10n.dart';
 import 'airmius_preferences_store.dart';
+import 'airmius_theme.dart';
 
 class AirmiusPreferences {
   AirmiusPreferences({
@@ -43,6 +44,19 @@ class AirmiusPreferences {
     return _store.writeString(_themeModeKey, value);
   }
 
+  Future<AirmiusThemePalette?> readThemePalette() async {
+    final value = await _store.readString(_themePaletteKey);
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+    return airmiusThemePaletteFromKey(value);
+  }
+
+  Future<void> writeThemePalette(AirmiusThemePalette palette) {
+    return _store.writeString(_themePaletteKey, palette.key);
+  }
+
   static const _languageKey = 'airmius.language';
   static const _themeModeKey = 'airmius.themeMode';
+  static const _themePaletteKey = 'airmius.themePalette';
 }

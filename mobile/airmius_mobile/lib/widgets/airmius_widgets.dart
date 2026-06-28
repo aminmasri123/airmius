@@ -6,6 +6,22 @@ import '../core/airmius_theme_mode_scope.dart';
 import 'airmius_web_image_stub.dart'
     if (dart.library.html) 'airmius_web_image_web.dart';
 
+Color _themeAccent(BuildContext context) {
+  try {
+    return AirmiusThemeModeScope.of(context).palette.primary;
+  } on StateError {
+    return Theme.of(context).colorScheme.primary;
+  }
+}
+
+Color _themeAccent2(BuildContext context) {
+  try {
+    return AirmiusThemeModeScope.of(context).palette.secondary;
+  } on StateError {
+    return Theme.of(context).colorScheme.secondary;
+  }
+}
+
 enum AirmiusLogoVariant {
   mark,
   wordmark,
@@ -55,7 +71,7 @@ class AirmiusLogo extends StatelessWidget {
           height: resolvedSize,
           width: selectedVariant == AirmiusLogoVariant.mark ? resolvedSize : null,
           fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const Icon(Icons.auto_awesome, color: AirmiusColors.blue),
+          errorBuilder: (context, __, ___) => Icon(Icons.auto_awesome, color: _themeAccent(context)),
         ),
       ),
     );
@@ -103,6 +119,8 @@ class AirmiusPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = _themeAccent(context);
+    final accent2 = _themeAccent2(context);
     final content = child ??
         (children == null
             ? null
@@ -149,14 +167,14 @@ class AirmiusPanel extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AirmiusColors.cardSoft,
+                  Color.lerp(AirmiusColors.cardSoft, accent, 0.18) ?? AirmiusColors.cardSoft,
                   AirmiusColors.card,
-                  AirmiusColors.blue.withValues(alpha: 0.10),
+                  accent2.withValues(alpha: 0.16),
                 ],
               )
             : null,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borderColor ?? AirmiusColors.border),
+        border: Border.all(color: borderColor ?? Color.lerp(AirmiusColors.border, accent, 0.18) ?? AirmiusColors.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.20),
@@ -314,10 +332,11 @@ class SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = _themeAccent(context);
     return Text(
       text.toUpperCase(),
-      style: const TextStyle(
-        color: AirmiusColors.blue,
+      style: TextStyle(
+        color: accent,
         fontSize: 12,
         letterSpacing: 0.7,
         fontWeight: FontWeight.w900,
@@ -450,6 +469,7 @@ class _OpenUiActionResultScreenState extends State<_OpenUiActionResultScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final accent = _themeAccent(context);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AirmiusColors.header,
@@ -467,7 +487,7 @@ class _OpenUiActionResultScreenState extends State<_OpenUiActionResultScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(widget.icon, color: AirmiusColors.blue, size: 36),
+                  Icon(widget.icon, color: accent, size: 36),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -495,7 +515,7 @@ class _OpenUiActionResultScreenState extends State<_OpenUiActionResultScreen> {
               SwitchListTile.adaptive(
                 value: _saveAsDraft,
                 onChanged: (value) => setState(() => _saveAsDraft = value),
-                activeColor: AirmiusColors.blue,
+                activeColor: accent,
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Als Entwurf vormerken', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
                 subtitle: const Text('UI bleibt lokal sichtbar, Server-Sync ist später geplant.', style: TextStyle(color: AirmiusColors.muted)),
@@ -662,6 +682,7 @@ class UserBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = _themeAccent(context);
     final imageUrl = _normalizedImageUrl;
     final size = small ? 32.0 : 40.0;
     final initials = Text(
@@ -676,9 +697,9 @@ class UserBubble extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: AirmiusColors.blue.withValues(alpha: 0.28),
+        color: accent.withValues(alpha: 0.28),
         shape: BoxShape.circle,
-        border: Border.all(color: AirmiusColors.blue.withValues(alpha: 0.35)),
+        border: Border.all(color: accent.withValues(alpha: 0.35)),
       ),
       clipBehavior: Clip.antiAlias,
       child: imageUrl == null
@@ -840,9 +861,10 @@ class Eyebrow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = _themeAccent(context);
     return Text(
       text.toUpperCase(),
-      style: const TextStyle(color: AirmiusColors.blue, fontSize: 12, letterSpacing: 0.7, fontWeight: FontWeight.w900),
+      style: TextStyle(color: accent, fontSize: 12, letterSpacing: 0.7, fontWeight: FontWeight.w900),
     );
   }
 }
@@ -865,7 +887,7 @@ class AirmiusButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = danger ? AirmiusColors.red : AirmiusColors.blue;
+    final color = danger ? AirmiusColors.red : _themeAccent(context);
     if (secondary || danger) {
       return OutlinedButton.icon(
         onPressed: onPressed,
@@ -886,7 +908,7 @@ class AirmiusButton extends StatelessWidget {
       icon: Icon(icon, size: 18),
       label: Text(label, style: const TextStyle(fontWeight: FontWeight.w900)),
       style: FilledButton.styleFrom(
-        backgroundColor: AirmiusColors.blue,
+        backgroundColor: color,
         foregroundColor: Colors.white,
         disabledBackgroundColor: AirmiusColors.cardSoft,
         disabledForegroundColor: AirmiusColors.mutedSoft,
@@ -925,6 +947,7 @@ class AirmiusTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = _themeAccent(context);
     return TextField(
       controller: controller,
       focusNode: focusNode,
@@ -951,6 +974,7 @@ class SearchBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = _themeAccent(context);
     return TextField(
       onChanged: onChanged,
       style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
@@ -960,7 +984,7 @@ class SearchBox extends StatelessWidget {
         filled: true,
         fillColor: AirmiusColors.cardSoft,
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: AirmiusColors.border)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: AirmiusColors.blue)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide(color: accent)),
       ),
     );
   }
@@ -974,12 +998,13 @@ class MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = _themeAccent(context);
     return AirmiusPanel(
       padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900)),
+          Text(value, style: TextStyle(color: accent, fontSize: 24, fontWeight: FontWeight.w900)),
           const SizedBox(height: 4),
           Text(label, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
         ],
@@ -997,6 +1022,7 @@ class AirmiusAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = _themeAccent(context);
     final initials = initialsFromName(name);
     final radius = large ? 20.0 : 16.0;
     final resolvedImageUrl = _imageUrl;
@@ -1004,9 +1030,9 @@ class AirmiusAvatar extends StatelessWidget {
       width: large ? 64 : 52,
       height: large ? 64 : 52,
       decoration: BoxDecoration(
-        color: AirmiusColors.blue.withValues(alpha: 0.22),
+        color: accent.withValues(alpha: 0.22),
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: AirmiusColors.blue.withValues(alpha: 0.35)),
+        border: Border.all(color: accent.withValues(alpha: 0.35)),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(radius),
@@ -1175,21 +1201,22 @@ class _MediaFallback extends StatelessWidget {
 }
 
 class StatusPill extends StatelessWidget {
-  const StatusPill(this.label, {super.key, this.color = AirmiusColors.blue});
+  const StatusPill(this.label, {super.key, this.color});
 
   final String label;
-  final Color color;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
+    final resolvedColor = color ?? _themeAccent(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
+        color: resolvedColor.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(99),
-        border: Border.all(color: color.withValues(alpha: 0.45)),
+        border: Border.all(color: resolvedColor.withValues(alpha: 0.45)),
       ),
-      child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
+      child: Text(label, style: TextStyle(color: resolvedColor, fontSize: 12, fontWeight: FontWeight.w900)),
     );
   }
 }
@@ -1200,6 +1227,7 @@ class LanguageChooser extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
+    final accent = _themeAccent(context);
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1215,10 +1243,10 @@ class LanguageChooser extends StatelessWidget {
                   selected: scope.language == language,
                   label: Text(language.code),
                   onSelected: (_) => scope.setLanguage(language),
-                  selectedColor: AirmiusColors.blue.withValues(alpha: 0.22),
+                  selectedColor: accent.withValues(alpha: 0.22),
                   backgroundColor: AirmiusColors.cardSoft,
-                  side: BorderSide(color: scope.language == language ? AirmiusColors.blue : AirmiusColors.border),
-                  labelStyle: TextStyle(color: scope.language == language ? AirmiusColors.blue : AirmiusColors.muted, fontWeight: FontWeight.w900),
+                  side: BorderSide(color: scope.language == language ? accent : AirmiusColors.border),
+                  labelStyle: TextStyle(color: scope.language == language ? accent : AirmiusColors.muted, fontWeight: FontWeight.w900),
                 ),
             ],
           ),
@@ -1254,6 +1282,17 @@ class AirmiusThemeChooser extends StatelessWidget {
               _ThemeChoice(mode: ThemeMode.system, active: scope.mode, label: 'System'),
             ],
           ),
+          const SizedBox(height: 14),
+          const Text('Farbpalette', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final palette in AirmiusThemePalette.values)
+                _PaletteChoice(palette: palette, active: scope.palette),
+            ],
+          ),
         ],
       ),
     );
@@ -1274,14 +1313,62 @@ class _ThemeChoice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusThemeModeScope.of(context);
+    final accent = _themeAccent(context);
     return ChoiceChip(
       selected: active == mode,
       label: Text(label),
       onSelected: (_) => scope.setMode(mode),
-      selectedColor: AirmiusColors.blue.withValues(alpha: 0.22),
+      selectedColor: accent.withValues(alpha: 0.22),
       backgroundColor: AirmiusColors.cardSoft,
-      side: BorderSide(color: active == mode ? AirmiusColors.blue : AirmiusColors.border),
-      labelStyle: TextStyle(color: active == mode ? AirmiusColors.blue : AirmiusColors.muted, fontWeight: FontWeight.w900),
+      side: BorderSide(color: active == mode ? accent : AirmiusColors.border),
+      labelStyle: TextStyle(color: active == mode ? accent : AirmiusColors.muted, fontWeight: FontWeight.w900),
+    );
+  }
+}
+
+class _PaletteChoice extends StatelessWidget {
+  const _PaletteChoice({
+    required this.palette,
+    required this.active,
+  });
+
+  final AirmiusThemePalette palette;
+  final AirmiusThemePalette active;
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = AirmiusThemeModeScope.of(context);
+    final selected = active == palette;
+    return ChoiceChip(
+      selected: selected,
+      avatar: _PaletteSwatch(palette: palette),
+      label: Text(palette.label),
+      onSelected: (_) => scope.setPalette(palette),
+      selectedColor: palette.primary.withValues(alpha: 0.22),
+      backgroundColor: AirmiusColors.cardSoft,
+      side: BorderSide(color: selected ? palette.primary : AirmiusColors.border),
+      labelStyle: TextStyle(color: selected ? palette.primary : AirmiusColors.muted, fontWeight: FontWeight.w900),
+    );
+  }
+}
+
+class _PaletteSwatch extends StatelessWidget {
+  const _PaletteSwatch({required this.palette});
+
+  final AirmiusThemePalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 18,
+      height: 18,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(colors: [palette.primary, palette.secondary]),
+          border: Border.all(color: AirmiusColors.border),
+        ),
+      ),
     );
   }
 }

@@ -180,6 +180,7 @@ class _SettingsCenterScreenState extends State<SettingsCenterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
     return Scaffold(
         floatingActionButton: FloatingActionButton.extended(backgroundColor: const Color(0xFF1D5FA8), foregroundColor: Colors.white, icon: const Icon(Icons.manage_accounts_outlined), label: const Text('Account Ops', style: TextStyle(fontWeight: FontWeight.w900)), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AccountOperationsScreen(initialTab: 'Konto')))),
         
@@ -200,21 +201,23 @@ class _SettingsCenterScreenState extends State<SettingsCenterScreen> {
               selected: _section == item,
               label: Text(item),
               onSelected: (_) => setState(() => _section = item),
-              selectedColor: AirmiusColors.blue.withValues(alpha: 0.22),
+              selectedColor: accent.withValues(alpha: 0.22),
               backgroundColor: AirmiusColors.cardSoft,
-              side: BorderSide(color: _section == item ? AirmiusColors.blue : AirmiusColors.border),
-              labelStyle: TextStyle(color: _section == item ? AirmiusColors.blue : AirmiusColors.muted, fontWeight: FontWeight.w900),
+              side: BorderSide(color: _section == item ? accent : AirmiusColors.border),
+              labelStyle: TextStyle(color: _section == item ? accent : AirmiusColors.muted, fontWeight: FontWeight.w900),
             )).toList()),
           ])),
           const SizedBox(height: 14),
           Row(children: const [Expanded(child: MetricCard(value: '82%', label: 'Profil')), SizedBox(width: 10), Expanded(child: MetricCard(value: 'DE', label: 'Sprache')), SizedBox(width: 10), Expanded(child: MetricCard(value: '2FA', label: 'Sicher'))]),
+          const SizedBox(height: 14),
+          const AirmiusThemeChooser(),
           const SizedBox(height: 14),
           _SettingLine(
             icon: Icons.person_outline,
             title: 'Profil & Sportprofil',
             body: 'Persoenliche Daten, Sportdaten, Sichtbarkeit und Profilvollstaendigkeit.',
             status: '82%',
-            color: AirmiusColors.blue,
+            color: accent,
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SettingsDetailScreen(section: 'Profil & Sportprofil', status: '82%'))),
           ),
           const SizedBox(height: 12),
@@ -232,7 +235,7 @@ class _SettingsCenterScreenState extends State<SettingsCenterScreen> {
             title: 'Sprache & Übersetzungen',
             body: 'Deutsch, Englisch, Franzoesisch, Arabisch, RTL und API-Synchronisierung.',
             status: '4',
-            color: AirmiusColors.blue,
+            color: accent,
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LocalizationCenterScreen())),
           ),
           const SizedBox(height: 12),
@@ -250,7 +253,7 @@ class _SettingsCenterScreenState extends State<SettingsCenterScreen> {
             title: 'Plattformbetrieb',
             body: 'API, Webhooks, SEO, Gast-Checkout, Wartung und Systemstatus.',
             status: 'Ops',
-            color: AirmiusColors.blue,
+            color: accent,
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PlatformOperationsScreen())),
           ),
           const SizedBox(height: 14),

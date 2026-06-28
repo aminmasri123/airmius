@@ -1711,6 +1711,7 @@ abstract class AirmiusNotificationRepository {
   Future<AirmiusPage<AirmiusNotification>> notifications({int page = 1});
   Future<AirmiusNotification> notification(int notificationId);
   Future<AirmiusNotification> markAsRead(int notificationId);
+  Future<AirmiusNotification> markAsUnread(int notificationId);
   Future<void> markAllAsRead();
   Future<void> delete(int notificationId);
 }

@@ -19,7 +19,6 @@ class NotificationsCenterScreen extends StatefulWidget {
 
 class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
   String _filter = 'all';
-  bool _busy = false;
   bool _notificationsLoaded = false;
   late Future<AirmiusPage<AirmiusNotification>> _notificationsFuture;
 
@@ -37,23 +36,6 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
 
   void _reload() {
     setState(() => _notificationsFuture = _loadNotifications());
-  }
-
-  Future<void> _markAllRead() async {
-    if (_busy) return;
-    setState(() => _busy = true);
-    try {
-      await AirmiusServicesScope.of(context).repositories.notifications.markAllAsRead();
-      if (!mounted) return;
-      setState(() {
-        _busy = false;
-        _notificationsFuture = _loadNotifications();
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _busy = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AirmiusScope.of(context).t('notifications.error'))));
-    }
   }
 
   @override
@@ -150,23 +132,11 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
                     ),
                   ),
                 const SizedBox(height: 14),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    AirmiusButton(
-                      label: _busy ? scope.t('status.loading') : scope.t('notifications.markAllRead'),
-                      icon: Icons.done_all_outlined,
-                      secondary: true,
-                      onPressed: _busy ? null : _markAllRead,
-                    ),
-                    AirmiusButton(
-                      label: 'Push',
-                      icon: Icons.tune_outlined,
-                      secondary: true,
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationPreferencesScreen())),
-                    ),
-                  ],
+                AirmiusButton(
+                  label: 'Push',
+                  icon: Icons.tune_outlined,
+                  secondary: true,
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationPreferencesScreen())),
                 ),
               ],
             ),
@@ -203,6 +173,22 @@ class _NotificationLine extends StatefulWidget {
 
 class _NotificationLineState extends State<_NotificationLine> {
   bool _opening = false;
+  bool _busy = false;
+
+  Future<void> _toggleReadState() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final repository = AirmiusServicesScope.of(context).repositories.notifications;
+      widget.item.unread ? await repository.markAsRead(widget.item.id) : await repository.markAsUnread(widget.item.id);
+      widget.onChanged();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AirmiusScope.of(context).t('notifications.error'))));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   Future<void> _openNotification() async {
     if (_opening) return;
@@ -272,6 +258,12 @@ class _NotificationLineState extends State<_NotificationLine> {
                   StatusPill(_labelForType(scope, item.type), color: item.unread ? AirmiusColors.blue : AirmiusColors.mutedSoft),
                 ],
               ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              tooltip: item.unread ? scope.t('notifications.markRead') : scope.t('notifications.markUnread'),
+              onPressed: _busy ? null : _toggleReadState,
+              icon: Icon(item.unread ? Icons.mark_email_read_outlined : Icons.mark_email_unread_outlined, color: item.unread ? AirmiusColors.blue : AirmiusColors.muted),
             ),
             const Icon(Icons.chevron_right, color: AirmiusColors.muted, size: 20),
           ],
