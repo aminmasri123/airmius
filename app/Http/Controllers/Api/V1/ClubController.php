@@ -221,12 +221,13 @@ class ClubController extends Controller
             ]);
         }
 
+        $athleteLicenseNumber = trim((string) ($data['athlete_license_number'] ?? '')) ?: null;
+
         $memberData = [
             'role' => 'member',
             'roles' => ['member'],
             'membership_status' => $data['membership_status'] ?? 'active',
             'member_number' => trim((string) ($data['member_number'] ?? '')) ?: null,
-            'athlete_license_number' => trim((string) ($data['athlete_license_number'] ?? '')) ?: null,
             'contribution_amount' => null,
             'contribution_interval' => 'none',
             'contribution_next_invoice_on' => null,
@@ -246,14 +247,14 @@ class ClubController extends Controller
         $result = 'stored';
 
         if ($sendInvitation && $existingUser) {
-            DB::transaction(function () use ($club, $existingUser, $memberData) {
+            DB::transaction(function () use ($club, $existingUser, $memberData, $athleteLicenseNumber) {
                 $club->users()->syncWithoutDetaching([
                     $existingUser->id => $memberData,
                 ]);
 
-                if (filled($memberData['athlete_license_number'])) {
+                if (filled($athleteLicenseNumber)) {
                     $existingUser->forceFill([
-                        'athlete_license_number' => $memberData['athlete_license_number'],
+                        'athlete_license_number' => $athleteLicenseNumber,
                     ])->save();
                 }
 
@@ -283,7 +284,7 @@ class ClubController extends Controller
                     'role' => 'member',
                     'membership_status' => $memberData['membership_status'],
                     'member_number' => $memberData['member_number'],
-                    'athlete_license_number' => $memberData['athlete_license_number'],
+                    'athlete_license_number' => $athleteLicenseNumber,
                     'contribution_amount' => null,
                     'contribution_interval' => 'none',
                     'contribution_next_invoice_on' => null,
