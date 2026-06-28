@@ -15,9 +15,11 @@ use App\Support\ClubRoles;
 use App\Support\Roles;
 use App\Support\TeamRoles;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class TeamController extends Controller
 {
@@ -146,6 +148,25 @@ class TeamController extends Controller
         return (new TeamResource($team->fresh()->load(['club', 'users'])->loadCount(['users', 'events'])))
             ->response()
             ->setStatusCode(201);
+    }
+
+    public function storeWithToken(Request $request)
+    {
+        $token = (string) ($request->bearerToken() ?: $request->input('token', ''));
+        $accessToken = $token !== '' ? PersonalAccessToken::findToken($token) : null;
+        $user = $accessToken?->tokenable;
+
+        abort_unless($user instanceof User, 401);
+
+        Auth::setUser($user);
+        $request->setUserResolver(fn () => $user);
+        $request->merge([
+            'club_id' => $request->input('club_id'),
+            'name' => $request->input('name'),
+            'sport_type' => $request->input('sport_type'),
+        ]);
+
+        return $this->store($request);
     }
 
     public function update(Request $request, Team $team)

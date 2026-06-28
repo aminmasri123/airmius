@@ -231,13 +231,6 @@ class TeamController extends Controller
             'role' => 'Coach',
         ]);
 
-        if ($request->expectsJson() || $request->bearerToken()) {
-            return (new TeamResource($team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events'])))
-                ->additional(['message' => 'Team erstellt'])
-                ->response()
-                ->setStatusCode(201);
-        }
-
         return back()->with('success', 'Team erstellt');
     }
 

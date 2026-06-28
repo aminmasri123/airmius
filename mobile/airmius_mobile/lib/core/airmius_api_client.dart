@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'airmius_team_create_form_stub.dart' if (dart.library.html) 'airmius_team_create_form_web.dart';
+
 typedef AirmiusHeaders = Map<String, String>;
 typedef AirmiusJson = Map<String, dynamic>;
 
@@ -157,8 +159,22 @@ class AirmiusApiClient {
       return await _json('POST', '/api/v1/teams', body: payload);
     } on AirmiusApiException catch (error) {
       if (!_shouldTryTeamJoinFallback(error)) rethrow;
-      return _json('POST', '/teams', body: payload);
+      final formResponse = await _sendTeamCreateForm(payload);
+      if (formResponse != null) return formResponse;
+      rethrow;
     }
+  }
+
+  Future<AirmiusJson?> _sendTeamCreateForm(AirmiusJson payload) {
+    final sessionToken = token;
+    if (sessionToken == null || sessionToken.isEmpty) return Future.value(null);
+
+    return sendTeamCreateForm(
+      baseUrl: baseUrl,
+      token: sessionToken,
+      locale: locale,
+      payload: payload,
+    );
   }
 
   Future<AirmiusJson> updateTeam(int teamId, AirmiusJson payload) => _json('PUT', '/api/v1/teams/$teamId', body: payload);

@@ -64,7 +64,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhooks/commerce/paypal',
             'webhooks/outfit-subscriptions/paypal',
             'checkout/subscriptions/*',
-            'teams',
             'team-join-requests/*/approve',
             'team-join-requests/*/decline',
             'teams/*/members/*',
