@@ -21,6 +21,7 @@ export const settingsThemeOptions = [
     { key: 'pulse', label: 'Pulse', descriptionKey: 'pulse', description: 'Dynamisch und motivierend.', colors: ['#ea580c', '#f97316', '#fff7ed'] },
     { key: 'trail', label: 'Trail', descriptionKey: 'trail', description: 'Natürlich, ausdauernd und bodenständig.', colors: ['#4d7c0f', '#65a30d', '#f6f8f2'] },
     { key: 'bazaar', label: 'Bazaar Rush', descriptionKey: 'bazaar', description: 'Lebendig, verkaufsstark und frisch für Marketplace-Flows.', colors: ['#00a8c6', '#ff8a00', '#ffffff'] },
+    { key: 'vital', label: 'Vital Green', descriptionKey: 'vital', description: 'Frisch, klar und sportlich mit kräftigem Grün.', colors: ['#6CC63A', '#262827', '#FFFFFF', '#EDEDED'] },
 ]
 
 export const trainingDayOptions = [

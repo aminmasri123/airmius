@@ -14,7 +14,6 @@ const props = defineProps({
 const mobileOpen = ref(false)
 const page = usePage()
 const isRtl = computed(() => page.props.direction === 'rtl')
-const brandName = computed(() => isRtl.value ? 'إيرميوس' : 'AIRMIUS')
 
 const scrollTo = (id) => {
     const el = document.getElementById(id)
@@ -64,11 +63,10 @@ const navItems = [
         >
             <button
                 @click="scrollTo('hero')"
-                class="flex shrink-0 items-center gap-2 font-heading font-900 text-xl tracking-tight"
+                class="flex shrink-0 items-center font-heading font-900 text-xl tracking-tight"
                 :class="isRtl ? 'max-lg:order-2 max-lg:flex-row-reverse' : ''"
             >
-                <ApplicationLogo class="w-8 h-8" />
-                <span class="text-primary font-[--ubuntu]">{{ brandName }}</span>
+                <ApplicationLogo class="h-10 w-auto max-w-[11rem]" />
             </button>
 
             <div class="hidden min-w-0 flex-1 items-center justify-center gap-4 overflow-hidden text-sm font-medium text-secondary lg:flex xl:gap-6">

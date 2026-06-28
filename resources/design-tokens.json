@@ -219,6 +219,28 @@
       "accent2": "#16a34a",
       "accent3": "#ff8a00",
       "surfaceStrong": "#c8eef4"
+    },
+    "vital": {
+      "bg": "#FFFFFF",
+      "card": "#FFFFFF",
+      "primary": "#262827",
+      "secondary": "#5D625F",
+      "success": "#6CC63A",
+      "error": "#dc2626",
+      "border": "#D7DED7",
+      "borderHover": "#6CC63A",
+      "muted": "#EDEDED",
+      "buttonPrimary": "#6CC63A",
+      "inputBg": "#FFFFFF",
+      "table": "#F6F8F5",
+      "buttonTextPrimary": "#151515",
+      "buttonTextSecondary": "#262827",
+      "buttonPrimaryHover": "#58A932",
+      "progress": "#8ED34A",
+      "accent": "#6CC63A",
+      "accent2": "#8ED34A",
+      "accent3": "#262827",
+      "surfaceStrong": "#151515"
     }
   }
 }

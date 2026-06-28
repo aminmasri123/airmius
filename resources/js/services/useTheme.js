@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 
 const isDark = ref(false)
-const themes = ['air', 'dark', 'womanly', 'champion', 'sprint', 'arena', 'pulse', 'trail', 'bazaar']
+const themes = ['air', 'dark', 'womanly', 'champion', 'sprint', 'arena', 'pulse', 'trail', 'bazaar', 'vital']
 
 const setTheme = (theme) => {
     const nextTheme = themes.includes(theme) ? theme : 'air'

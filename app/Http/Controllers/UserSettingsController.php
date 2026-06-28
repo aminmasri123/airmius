@@ -173,7 +173,7 @@ class UserSettingsController extends Controller
     public function update(Request $request)
     {
             $data = $request->validate([
-                'theme' => ['nullable', 'in:air,dark,womanly,champion,sprint,arena,pulse,trail,bazaar'],
+                'theme' => ['nullable', 'in:air,dark,womanly,champion,sprint,arena,pulse,trail,bazaar,vital'],
                 'country' => ['required', 'string', 'size:2'],
                 'street' => ['nullable', 'string', 'max:255'],
                 'house_number' => ['nullable', 'string', 'max:40'],

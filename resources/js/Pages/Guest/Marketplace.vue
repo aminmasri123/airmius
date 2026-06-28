@@ -469,7 +469,7 @@ const selectSegment = (segment) => {
                     <div class="flex min-w-0 flex-1 items-center gap-3">
                         <img :src="marketplaceLogo" alt="AIRMIUS" class="h-9 w-auto max-w-[8.25rem] shrink-0 object-contain sm:h-12 sm:max-w-none" @error="applyLogoFallback">
                         <div class="hidden min-w-0 sm:block">
-                            <p class="font-heading text-lg font-900 leading-tight sm:text-2xl">{{ mt("AIRMIUS Marketplace") }}</p>
+                            <p class="font-heading text-lg font-900 leading-tight sm:text-2xl">{{ mt("Marketplace") }}</p>
                             <p class="truncate text-xs font-semibold text-secondary sm:text-sm">
                                 {{ mt("Sport Deals, Kurse, Camps und Services passend zu deinem Design") }}
                             </p>
@@ -814,7 +814,7 @@ const selectSegment = (segment) => {
                         />
                         <div class="absolute inset-0 bg-gradient-to-r from-black/75 via-black/35 to-transparent"></div>
                         <div class="relative flex min-h-[15rem] max-w-2xl flex-col justify-end p-5 text-white md:min-h-[22rem] md:justify-center md:p-8">
-                            <p class="text-xs font-black uppercase tracking-wide text-white/80">{{ mt("Airmius Marketplace") }}</p>
+                            <p class="text-xs font-black uppercase tracking-wide text-white/80">{{ mt("Marketplace") }}</p>
                             <h1 class="mt-2 font-heading text-2xl font-900 leading-tight md:text-5xl">
                                 {{ mt("Sport Deals für Training, Team und Wettkampf") }}
                             </h1>

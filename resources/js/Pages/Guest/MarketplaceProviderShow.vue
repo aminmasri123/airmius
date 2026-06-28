@@ -96,7 +96,7 @@ const shortDescription = (text, length = 110) => {
                             <i class="las la-arrow-left text-xl"></i>
                         </span>
                         <span class="hidden min-w-0 sm:block">
-                            <span class="block font-heading text-lg font-900 leading-tight sm:text-2xl">{{ $t("AIRMIUS Marketplace") }}</span>
+                            <span class="block font-heading text-lg font-900 leading-tight sm:text-2xl">{{ $t("Marketplace") }}</span>
                             <span class="block truncate text-xs font-semibold text-secondary sm:text-sm">{{ $t("Zurück zu allen Angeboten") }}</span>
                         </span>
                     </Link>

@@ -1,0 +1,1 @@
+const s="/img/logo/Airmius-Green-Test-Logo-Light.png",e="/img/logo/Airmius-Green-Test-Logo-Dark.png",l="/img/logo/Airmius-Green-Test-Logo-Light.png",t="/img/logo/Airmius-Green-Test-Logo-Dark.png",i=(o=!1)=>o?e:s,n=(o=!1)=>o?t:l,r=(o,a=s)=>{const g=o?.target;!g||g.dataset.logoFallbackApplied||(g.dataset.logoFallbackApplied="1",g.src=a)};export{r as a,n as b,i as l};

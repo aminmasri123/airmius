@@ -1,8 +1,12 @@
 <script setup>
-import { LOGO_MARK, applyLogoFallback } from '@/services/logoAssets'
+import { computed } from 'vue'
+import { useTheme } from '@/services/useTheme'
+import { applyLogoFallback, logoWordmark } from '@/services/logoAssets'
+
+const { isDark } = useTheme()
+const logoSrc = computed(() => logoWordmark(isDark.value))
 </script>
 
 <template>
-    <img :src="LOGO_MARK" alt="AIRMIUS Logo" class="w-10 h-10 mr-2 inline-block -mt-1" @error="applyLogoFallback">
-
+    <img :src="logoSrc" alt="AIRMIUS Logo" class="inline-block w-auto object-contain align-middle" @error="applyLogoFallback">
 </template>

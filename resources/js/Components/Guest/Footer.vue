@@ -1,10 +1,6 @@
 ﻿<script setup>
-import { Link, router, usePage } from '@inertiajs/vue3'
-import { computed } from 'vue'
+import { Link, router } from '@inertiajs/vue3'
 import ApplicationLogo from '@/Components/ApplicationLogo.vue'
-
-const page = usePage()
-const brandName = computed(() => page.props.direction === 'rtl' ? 'إيرميوس' : 'AIRMIUS')
 
 const scrollTo = (id) => {
     const el = document.getElementById(id)
@@ -37,9 +33,8 @@ const safeRoute = (name, fallback, params) => {
         <div class="mx-auto max-w-6xl">
             <div class="grid grid-cols-1 gap-4 sm:gap-8 min-[420px]:grid-cols-2 lg:gap-10 xl:grid-cols-4">
                 <div class="rounded-2xl border border-border bg-bg/60 p-4 shadow-sm min-[420px]:col-span-2 sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none xl:col-span-1">
-                    <button @click="scrollTo('hero')" class="inline-flex items-center gap-3 text-left font-heading text-xl font-900 tracking-tight sm:block">
-                        <ApplicationLogo class="h-10 w-10 shrink-0 sm:h-16 sm:w-16" />
-                        <span class="font-[--ubuntu] text-primary">{{ brandName }}</span>
+                    <button @click="scrollTo('hero')" class="inline-flex items-center text-left font-heading text-xl font-900 tracking-tight sm:block">
+                        <ApplicationLogo class="h-12 w-auto max-w-[12rem] shrink-0 sm:h-14 sm:max-w-[14rem]" />
                     </button>
                     <p class="mt-3 max-w-xl text-sm leading-6 text-secondary sm:mt-4 xl:max-w-none">
                         {{ $t('guest.footer.description') }}

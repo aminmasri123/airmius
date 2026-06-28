@@ -40,9 +40,8 @@ const legalLinks = [
     <main class="min-h-screen bg-bg text-primary">
         <header class="border-b border-border bg-card/70">
             <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-                <Link :href="route('welcome')" class="flex items-center gap-3">
-                    <ApplicationLogo class="h-12 w-12" />
-                    <span class="font-semibold tracking-wide">AIRMIUS</span>
+                <Link :href="route('welcome')" class="flex items-center">
+                    <ApplicationLogo class="h-10 w-auto max-w-[11rem]" />
                 </Link>
 
                 <div class="flex items-center gap-2">

@@ -1,5 +1,11 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
 
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+
+import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
@@ -802,8 +808,18 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
     final url = TextEditingController(text: _string(existing['url']));
     final description = TextEditingController(text: _string(existing['description']));
     var type = _string(existing['type'], fallback: 'privacy');
+    var source = _string(existing['file_id']).isNotEmpty ? 'file' : 'link';
     var visible = existing.isEmpty ? true : _bool(existing['is_visible']);
     var isRequired = _bool(existing['is_required']);
+    var uploading = false;
+    PlatformFile? pickedFile;
+    JsonMap? uploadedFile = existing['file_id'] == null
+        ? null
+        : {
+            'id': existing['file_id'],
+            'display_name': existing['file_name'],
+            'url': existing['url'],
+          };
 
     final saved = await showDialog<JsonMap>(
       context: context,
@@ -822,9 +838,50 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
                   onChanged: (value) => setDialogState(() => type = value ?? type),
                 ),
                 const SizedBox(height: 10),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'link', icon: Icon(Icons.link_outlined), label: Text('Link')),
+                    ButtonSegment(value: 'file', icon: Icon(Icons.upload_file_outlined), label: Text('Datei')),
+                  ],
+                  selected: {source},
+                  onSelectionChanged: (selection) => setDialogState(() => source = selection.first),
+                ),
+                const SizedBox(height: 10),
                 AirmiusTextField(label: 'Titel', hint: 'z. B. Beitragsordnung', controller: title),
                 const SizedBox(height: 10),
-                AirmiusTextField(label: 'Link', hint: 'https://...', controller: url),
+                if (source == 'link')
+                  AirmiusTextField(label: 'Link', hint: 'https://...', controller: url)
+                else
+                  _DocumentUploadBox(
+                    fileName: uploadedFile == null ? pickedFile?.name : _string(uploadedFile!['display_name'], fallback: pickedFile?.name ?? 'Datei hochgeladen'),
+                    uploading: uploading,
+                    onPick: () async {
+                      final result = await FilePicker.platform.pickFiles(withData: true);
+                      final file = result?.files.single;
+                      if (file == null) return;
+                      setDialogState(() {
+                        pickedFile = file;
+                        title.text = title.text.trim().isEmpty ? file.name : title.text;
+                        uploadedFile = null;
+                      });
+                    },
+                    onUpload: pickedFile == null || uploading
+                        ? null
+                        : () async {
+                            setDialogState(() => uploading = true);
+                            try {
+                              final uploaded = await _uploadMembershipDocument(pickedFile!);
+                              setDialogState(() {
+                                uploadedFile = uploaded;
+                                url.text = _string(uploaded['url']);
+                              });
+                            } catch (error) {
+                              if (mounted) _showError(error);
+                            } finally {
+                              setDialogState(() => uploading = false);
+                            }
+                          },
+                  ),
                 const SizedBox(height: 10),
                 AirmiusTextField(label: 'Beschreibung', hint: 'optional', controller: description, maxLines: 2),
                 const SizedBox(height: 10),
@@ -837,17 +894,18 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
               TextButton(onPressed: () => Navigator.pop(context), child: const Text('Abbrechen')),
               FilledButton(
                 onPressed: () {
-                  if (title.text.trim().isEmpty && url.text.trim().isEmpty) return;
+                  if (source == 'file' && uploadedFile == null) return;
+                  if (source == 'link' && title.text.trim().isEmpty && url.text.trim().isEmpty) return;
                   Navigator.pop(context, {
                     'id': _string(existing['id'], fallback: 'doc-${DateTime.now().millisecondsSinceEpoch}'),
                     'type': type,
                     'title': title.text.trim(),
-                    'url': url.text.trim(),
+                    'url': source == 'file' && uploadedFile != null ? _string(uploadedFile!['url']) : url.text.trim(),
                     'description': description.text.trim(),
                     'is_visible': visible,
                     'is_required': isRequired,
-                    'file_id': existing['file_id'],
-                    'file_name': existing['file_name'],
+                    'file_id': source == 'file' && uploadedFile != null ? uploadedFile!['id'] : null,
+                    'file_name': source == 'file' && uploadedFile != null ? _string(uploadedFile!['display_name'], fallback: pickedFile?.name ?? '') : null,
                   });
                 },
                 child: const Text('Speichern'),
@@ -870,6 +928,58 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
         _documents[index] = saved;
       }
     });
+  }
+
+  Future<JsonMap> _uploadMembershipDocument(PlatformFile file) async {
+    final services = AirmiusServicesScope.of(context);
+    final base = Uri.parse(services.environment.apiBaseUrl);
+    final path = '${base.path.endsWith('/') ? base.path : '${base.path}/'}api/v1/uploads';
+    final request = http.MultipartRequest('POST', base.replace(path: path, query: null, fragment: null));
+
+    request.headers.addAll({
+      'Accept': 'application/json',
+      'X-Airmius-Locale': services.environment.locale,
+      if (services.authState.session?.token.isNotEmpty == true) 'Authorization': 'Bearer ${services.authState.session!.token}',
+    });
+    request.fields['scope'] = 'club';
+    request.fields['club_id'] = '${widget.club.id}';
+
+    if (file.bytes != null && file.bytes!.isNotEmpty) {
+      request.files.add(http.MultipartFile.fromBytes('file', file.bytes!, filename: file.name, contentType: _contentTypeFor(file)));
+    } else if (file.path != null && file.path!.trim().isNotEmpty) {
+      request.files.add(await http.MultipartFile.fromPath('file', file.path!, filename: file.name, contentType: _contentTypeFor(file)));
+    } else {
+      throw const AirmiusApiException(statusCode: 0, body: 'Die ausgewaehlte Datei konnte nicht gelesen werden.', path: '/api/v1/uploads');
+    }
+
+    final response = await http.Response.fromStream(await request.send());
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw AirmiusApiException(statusCode: response.statusCode, body: response.body, path: '/api/v1/uploads');
+    }
+
+    final decoded = jsonDecode(response.body);
+    final json = decoded is JsonMap ? decoded : <String, dynamic>{'data': decoded};
+    final data = json['data'];
+    return data is JsonMap ? data : json;
+  }
+
+  MediaType _contentTypeFor(PlatformFile file) {
+    final extension = (file.extension ?? file.name.split('.').last).toLowerCase();
+    return switch (extension) {
+      'jpg' || 'jpeg' => MediaType('image', 'jpeg'),
+      'png' => MediaType('image', 'png'),
+      'webp' => MediaType('image', 'webp'),
+      'gif' => MediaType('image', 'gif'),
+      'mp4' => MediaType('video', 'mp4'),
+      'mov' => MediaType('video', 'quicktime'),
+      'webm' => MediaType('video', 'webm'),
+      'pdf' => MediaType('application', 'pdf'),
+      'doc' => MediaType('application', 'msword'),
+      'docx' => MediaType('application', 'vnd.openxmlformats-officedocument.wordprocessingml.document'),
+      'xls' => MediaType('application', 'vnd.ms-excel'),
+      'xlsx' => MediaType('application', 'vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
+      _ => MediaType('application', 'octet-stream'),
+    };
   }
 
   @override
@@ -1087,6 +1197,51 @@ class _SettingsToggle extends StatelessWidget {
           Flexible(child: Text(title, style: TextStyle(color: value ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900))),
         ]),
       ),
+    );
+  }
+}
+
+class _DocumentUploadBox extends StatelessWidget {
+  const _DocumentUploadBox({
+    required this.fileName,
+    required this.uploading,
+    required this.onPick,
+    required this.onUpload,
+  });
+
+  final String? fileName;
+  final bool uploading;
+  final VoidCallback onPick;
+  final VoidCallback? onUpload;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AirmiusColors.input,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AirmiusColors.border),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          const Icon(Icons.upload_file_outlined, color: AirmiusColors.blue),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              fileName == null || fileName!.trim().isEmpty ? 'Noch keine Datei ausgewaehlt.' : fileName!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
+            ),
+          ),
+        ]),
+        const SizedBox(height: 10),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          OutlinedButton.icon(onPressed: uploading ? null : onPick, icon: const Icon(Icons.folder_open_outlined), label: const Text('Datei waehlen')),
+          FilledButton.icon(onPressed: onUpload, icon: uploading ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.cloud_upload_outlined), label: Text(uploading ? 'Laedt hoch...' : 'Hochladen')),
+        ]),
+      ]),
     );
   }
 }

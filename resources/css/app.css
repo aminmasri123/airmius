@@ -251,6 +251,33 @@
     --card-gradient: linear-gradient(180deg, rgba(255,255,255,.96), rgba(244,251,252,.9));
   }
 
+  .theme-vital {
+    --bg: theme('colors.vital.bg');
+    --card: theme('colors.vital.card');
+    --primary: theme('colors.vital.primary');
+    --secondary: theme('colors.vital.secondary');
+    --success: theme('colors.vital.success');
+    --error: theme('colors.vital.error');
+    --border: theme('colors.vital.border');
+    --muted: theme('colors.vital.muted');
+    --buttonPrimary: theme('colors.vital.buttonPrimary');
+    --inputBg: theme('colors.vital.inputBg');
+    --borderHover: theme('colors.vital.borderHover');
+    --table: theme('colors.vital.table');
+    --buttonTextPrimary: theme('colors.vital.buttonTextPrimary');
+    --buttonTextSecondary: theme('colors.vital.buttonTextSecondary');
+    --buttonPrimaryHover: theme('colors.vital.buttonPrimaryHover');
+    --buttonTextPrimaryHover: theme('colors.vital.buttonTextPrimaryHover');
+    --buttonTextSecondaryHover: theme('colors.vital.buttonTextSecondaryHover');
+    --progress: theme('colors.vital.progress');
+    --accent: #6CC63A;
+    --accent-2: #8ED34A;
+    --accent-3: #262827;
+    --surface-strong: #151515;
+    --soft-shadow: 0 18px 50px rgba(38, 40, 39, .12);
+    --card-gradient: linear-gradient(180deg, rgba(255,255,255,.98), rgba(237,237,237,.9));
+  }
+
   html {
     background: var(--bg);
     color: var(--primary);
