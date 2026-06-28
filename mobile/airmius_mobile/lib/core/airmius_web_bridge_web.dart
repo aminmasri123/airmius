@@ -10,6 +10,18 @@ Future<AirmiusJson?> sendTeamCreateBridge({
   required AirmiusJson payload,
 }) async {
   final base = Uri.parse(baseUrl);
+  if (_isLocalFlutterOriginWithLiveApi(base)) {
+    throw AirmiusApiException(
+      statusCode: 599,
+      path: '/api/v1/teams',
+      body: jsonEncode({
+        'error': 'wrong_api_environment',
+        'message':
+            'Flutter laeuft lokal, aber AIRMIUS_API_BASE_URL zeigt auf https://airmius.com. Lokale Laravel-Aenderungen sind dort nicht aktiv. Starte lokal mit AIRMIUS_API_BASE_URL=http://localhost oder deploye die API-Aenderungen auf airmius.com.',
+      }),
+    );
+  }
+
   final path = _bridgePath(base);
   final uri = base.replace(path: path, queryParameters: null);
   final formData = FormData()
@@ -49,6 +61,14 @@ Future<AirmiusJson?> sendTeamCreateBridge({
       }),
     );
   }
+}
+
+bool _isLocalFlutterOriginWithLiveApi(Uri base) {
+  final apiHost = base.host.toLowerCase();
+  final appHost = window.location.hostname.toLowerCase();
+  final localApp = appHost == 'localhost' || appHost == '127.0.0.1' || appHost == '0.0.0.0' || appHost == '::1';
+  final liveApi = apiHost == 'airmius.com' || apiHost == 'www.airmius.com' || apiHost == 'app.airmius.com';
+  return localApp && liveApi;
 }
 
 String _bridgePath(Uri base) {

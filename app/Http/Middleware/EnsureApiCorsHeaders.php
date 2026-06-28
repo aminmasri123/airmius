@@ -3,17 +3,23 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 class EnsureApiCorsHeaders
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ($this->isPreflight($request)) {
-            $response = response('', 204);
-        } else {
-            $response = $next($request);
+        try {
+            if ($this->isPreflight($request)) {
+                $response = response('', 204);
+            } else {
+                $response = $next($request);
+            }
+        } catch (Throwable $error) {
+            $response = app(ExceptionHandler::class)->render($request, $error);
         }
 
         return $this->withCorsHeaders($request, $response);
@@ -49,12 +55,28 @@ class EnsureApiCorsHeaders
             return false;
         }
 
-        return in_array($host, [
+        $host = strtolower(trim($host, '[]'));
+
+        if (in_array($host, [
             'airmius.com',
             'www.airmius.com',
             'app.airmius.com',
             'localhost',
             '127.0.0.1',
-        ], true);
+            '0.0.0.0',
+            '::1',
+        ], true)) {
+            return true;
+        }
+
+        if (str_ends_with($host, '.local')) {
+            return true;
+        }
+
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            return filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false;
+        }
+
+        return false;
     }
 }
