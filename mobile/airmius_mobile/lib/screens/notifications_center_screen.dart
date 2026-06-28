@@ -481,7 +481,7 @@ String _labelForType(AirmiusScope scope, String rawType) {
 int? _teamInvitationId(AirmiusNotification notification) {
   final type = notification.type.toLowerCase();
   final explicitId = _intFromDynamic(notification.data['invitation_id'] ?? notification.data['team_invitation_id']);
-  if (explicitId != null && (type.contains('team.invite') || type.contains('trainer') || type.contains('invite'))) {
+  if (explicitId != null && (type.contains('team.invite') || type.contains('team.invitation') || type.contains('trainer') || type.contains('invite') || type.contains('invitation'))) {
     return explicitId;
   }
 

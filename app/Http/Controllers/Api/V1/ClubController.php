@@ -19,6 +19,7 @@ use App\Models\Payment;
 use App\Models\Team;
 use App\Models\TeamJoinRequest;
 use App\Models\User;
+use App\Notifications\ExternalClubMembershipInvitation;
 use App\Services\ClubService;
 use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
@@ -28,6 +29,8 @@ use App\Support\Roles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
 use App\Models\BankTransaction;
@@ -181,6 +184,139 @@ class ClubController extends Controller
         return response()->json([
             'data' => $this->managementPayload($request, $club->fresh(), true),
         ]);
+    }
+
+    public function inviteMember(Request $request, Club $club)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageMembership($request, $club), 403);
+
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+            'name' => ['nullable', 'string', 'max:255'],
+            'member_number' => ['nullable', 'string', 'max:120'],
+            'athlete_license_number' => ['nullable', 'string', 'max:120'],
+            'membership_status' => ['nullable', Rule::in(['active', 'non_member', 'pending', 'paused', 'former'])],
+            'send_invitation' => ['boolean'],
+        ]);
+
+        $sendInvitation = $request->boolean('send_invitation', true);
+        if ($sendInvitation) {
+            $this->planFeatures->ensureCanSendMemberInvitations($club);
+        }
+
+        $email = strtolower(trim((string) $data['email']));
+        $alreadyTracked = $club->users()->where('users.email', $email)->exists()
+            || $club->externalMembers()->where('email', $email)->exists();
+
+        if (! $alreadyTracked && ! $club->canAddMembers()) {
+            $plan = $club->subscriptionPlan();
+            $limit = $plan?->member_limit;
+            throw ValidationException::withMessages([
+                'email' => 'Das Mitgliederlimit des aktuellen Plans'.($plan ? ' '.$plan->name : '').' ist erreicht'.($limit ? " ({$limit} Mitglieder)." : '.'),
+            ]);
+        }
+
+        $memberData = [
+            'role' => 'member',
+            'roles' => ['member'],
+            'membership_status' => $data['membership_status'] ?? 'active',
+            'member_number' => trim((string) ($data['member_number'] ?? '')) ?: null,
+            'athlete_license_number' => trim((string) ($data['athlete_license_number'] ?? '')) ?: null,
+            'contribution_amount' => null,
+            'contribution_interval' => 'none',
+            'contribution_next_invoice_on' => null,
+            'contribution_last_invoice_at' => null,
+            'sepa_iban' => null,
+            'sepa_bic' => null,
+            'sepa_mandate_reference' => null,
+            'sepa_mandate_signed_on' => null,
+            'sepa_mandate_active' => false,
+            'joined_on' => now()->toDateString(),
+            'membership_ends_on' => null,
+            'membership_end_notified_at' => null,
+            'membership_notes' => null,
+        ];
+
+        $existingUser = User::query()->where('email', $email)->first();
+        $result = 'stored';
+
+        if ($sendInvitation && $existingUser) {
+            DB::transaction(function () use ($club, $existingUser, $memberData) {
+                $club->users()->syncWithoutDetaching([
+                    $existingUser->id => $memberData,
+                ]);
+
+                if (filled($memberData['athlete_license_number'])) {
+                    $existingUser->forceFill([
+                        'athlete_license_number' => $memberData['athlete_license_number'],
+                    ])->save();
+                }
+
+                ClubExternalMember::query()
+                    ->where('club_id', $club->id)
+                    ->where('email', strtolower($existingUser->email))
+                    ->delete();
+            });
+
+            AppNotification::send($existingUser, 'club.member_linked', [
+                'title' => 'Du wurdest mit '.$club->name.' verknuepft',
+                'body' => 'Der Verein hat dich als Mitglied hinzugefuegt.',
+                'url' => '/club-memberships',
+                'club_id' => $club->id,
+            ]);
+
+            $result = 'linked';
+        } else {
+            $externalMember = ClubExternalMember::query()->updateOrCreate(
+                [
+                    'club_id' => $club->id,
+                    'email' => $email,
+                ],
+                [
+                    'created_by' => $request->user()->id,
+                    'name' => trim((string) ($data['name'] ?? '')) ?: null,
+                    'role' => 'member',
+                    'membership_status' => $memberData['membership_status'],
+                    'member_number' => $memberData['member_number'],
+                    'athlete_license_number' => $memberData['athlete_license_number'],
+                    'contribution_amount' => null,
+                    'contribution_interval' => 'none',
+                    'contribution_next_invoice_on' => null,
+                    'contribution_last_invoice_at' => null,
+                    'sepa_iban' => null,
+                    'sepa_bic' => null,
+                    'sepa_mandate_reference' => null,
+                    'sepa_mandate_signed_on' => null,
+                    'sepa_mandate_active' => false,
+                    'joined_on' => now()->toDateString(),
+                    'membership_ends_on' => null,
+                    'membership_end_notified_at' => null,
+                    'membership_notes' => null,
+                    'invitation_status' => $sendInvitation ? 'pending' : 'none',
+                    'invitation_token' => $sendInvitation ? Str::random(64) : null,
+                    'invited_at' => $sendInvitation ? now() : null,
+                ],
+            );
+
+            if ($sendInvitation) {
+                Notification::route('mail', $email)
+                    ->notify(new ExternalClubMembershipInvitation($externalMember->load('club')));
+                $result = 'invited';
+            }
+        }
+
+        $messages = [
+            'linked' => 'Mitglied wurde direkt mit dem Verein verknuepft.',
+            'invited' => 'Einladung wurde versendet.',
+            'stored' => 'Externes Mitglied wurde gespeichert.',
+        ];
+
+        return response()->json([
+            'message' => $messages[$result] ?? 'Einladung verarbeitet.',
+            'status' => $result,
+            'data' => $this->managementPayload($request, $club->fresh(), true),
+        ], $result === 'stored' ? 201 : 200);
     }
 
     public function updateMembershipSettings(Request $request, Club $club)

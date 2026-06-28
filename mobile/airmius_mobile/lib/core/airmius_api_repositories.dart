@@ -95,6 +95,11 @@ class AirmiusApiClubRepository implements AirmiusClubRepository {
   }
 
   @override
+  Future<AirmiusClubManagement> inviteClubMember(int clubId, JsonMap payload) async {
+    return _managementFromJson(await client.inviteClubMember(clubId, payload));
+  }
+
+  @override
   Future<AirmiusClubManagement> updateClubMemberRole(int clubId, int userId, String role) async {
     final json = await client.updateClubMemberRole(clubId, userId, role);
     return _managementFromJson(json);

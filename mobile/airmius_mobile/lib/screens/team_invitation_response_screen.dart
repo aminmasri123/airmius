@@ -140,22 +140,13 @@ class _TeamInvitationResponseScreenState extends State<TeamInvitationResponseScr
             }
 
             if (snapshot.hasError) {
-              return AirmiusPanel(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Icon(Icons.error_outline, color: AirmiusColors.red, size: 34),
-                    const SizedBox(height: 10),
-                    Text('Team-Einladung konnte nicht geladen werden.', textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 12),
-                    AirmiusButton(
-                      label: 'Erneut laden',
-                      icon: Icons.refresh_outlined,
-                      secondary: true,
-                      onPressed: () => setState(() => _invitationFuture = _loadInvitation()),
-                    ),
-                  ],
-                ),
+              final fallback = _fallbackInvitation() ?? _genericInvitation(widget.invitationId, widget.notification);
+              return _InvitationStatusPanel(
+                invitation: fallback,
+                busy: _busy,
+                onAccept: fallback.status == 'pending' ? () => _accept(fallback) : null,
+                onDecline: fallback.status == 'pending' ? () => _decline(fallback) : null,
+                contextNote: 'Der Server konnte die Einladung gerade nicht synchron laden. Der angezeigte Stand stammt aus der Benachrichtigung.',
               );
             }
 
@@ -163,50 +154,106 @@ class _TeamInvitationResponseScreenState extends State<TeamInvitationResponseScr
             if (invitation == null) {
               return const EmptyPanel('Keine offene Team-Einladung gefunden.');
             }
-            final answered = invitation.status == 'accepted' || invitation.status == 'declined';
-            final accepted = invitation.status == 'accepted';
-
-            return AirmiusPanel(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Eyebrow(answered ? 'Team-Einladung beantwortet' : 'Offene Team-Einladung'),
-                  const SizedBox(height: 8),
-                  Text(
-                    answered ? (accepted ? 'Du hast die Einladung angenommen' : 'Du hast die Einladung abgelehnt') : 'Du wurdest zu einem Team eingeladen',
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 21, fontWeight: FontWeight.w900),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    answered
-                        ? (accepted ? 'Du bist dem Team und dem zugehoerigen Verein beigetreten.' : 'Diese Team-Einladung ist nicht mehr offen.')
-                        : 'Nimm die Einladung an, um dem Team und dem zugehoerigen Verein beizutreten.',
-                    style: const TextStyle(color: AirmiusColors.muted, height: 1.35),
-                  ),
-                  const SizedBox(height: 14),
-                  _InvitationCard(invitation: invitation),
-                  const SizedBox(height: 14),
-                  if (answered)
-                    StatusPill(accepted ? 'Angenommen' : 'Abgelehnt', color: accepted ? AirmiusColors.green : AirmiusColors.red)
-                  else ...[
-                    AirmiusButton(
-                      label: _busy ? 'Wird angenommen...' : 'Annehmen',
-                      icon: Icons.check_circle_outline,
-                      onPressed: _busy ? null : () => _accept(invitation),
-                    ),
-                    const SizedBox(height: 10),
-                    AirmiusButton(
-                      label: _busy ? 'Bitte warten...' : 'Ablehnen',
-                      icon: Icons.cancel_outlined,
-                      secondary: true,
-                      onPressed: _busy ? null : () => _decline(invitation),
-                    ),
-                  ],
-                ],
-              ),
+            return _InvitationStatusPanel(
+              invitation: invitation,
+              busy: _busy,
+              onAccept: invitation.status == 'pending' ? () => _accept(invitation) : null,
+              onDecline: invitation.status == 'pending' ? () => _decline(invitation) : null,
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+AirmiusTeamInvitation _genericInvitation(int? invitationId, AirmiusNotification? notification) {
+    final status = _stringFrom(notification?.data['invitation_status'] ?? notification?.data['status']) ?? _statusFromText('${notification?.title ?? ''} ${notification?.body ?? ''}') ?? 'unknown';
+    return AirmiusTeamInvitation(
+      id: invitationId ?? 0,
+      role: _stringFrom(notification?.data['role']) ?? 'Player',
+      status: status,
+      teamId: _intFrom(notification?.data['team_id']) ?? 0,
+      clubId: _intFrom(notification?.data['club_id']),
+      teamName: _stringFrom(notification?.data['team_name']) ?? _teamNameFromTitle(notification?.title ?? '') ?? 'Team',
+      clubName: _stringFrom(notification?.data['club_name']),
+      sportType: _stringFrom(notification?.data['sport_type']),
+      inviterName: _stringFrom(notification?.data['inviter_name']),
+      inviterEmail: _stringFrom(notification?.data['inviter_email']),
+      createdAt: notification?.timeLabel,
+    );
+}
+
+class _InvitationStatusPanel extends StatelessWidget {
+  const _InvitationStatusPanel({
+    required this.invitation,
+    required this.busy,
+    this.onAccept,
+    this.onDecline,
+    this.contextNote,
+  });
+
+  final AirmiusTeamInvitation invitation;
+  final bool busy;
+  final VoidCallback? onAccept;
+  final VoidCallback? onDecline;
+  final String? contextNote;
+
+  @override
+  Widget build(BuildContext context) {
+    final answered = invitation.status == 'accepted' || invitation.status == 'declined';
+    final accepted = invitation.status == 'accepted';
+    final unavailable = invitation.status == 'unknown';
+
+    return AirmiusPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Eyebrow(answered ? 'Team-Einladung beantwortet' : unavailable ? 'Team-Einladung' : 'Offene Team-Einladung'),
+          const SizedBox(height: 8),
+          Text(
+            answered
+                ? (accepted ? 'Du hast die Einladung angenommen' : 'Du hast die Einladung abgelehnt')
+                : unavailable
+                    ? 'Einladungsstatus konnte nicht synchron geladen werden'
+                    : 'Du wurdest zu einem Team eingeladen',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 21, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            answered
+                ? (accepted ? 'Du bist dem Team und dem zugehoerigen Verein beigetreten.' : 'Diese Team-Einladung ist nicht mehr offen.')
+                : unavailable
+                    ? 'Oeffne die Benachrichtigung erneut, sobald der Server die aktuellen Daten bereitstellt.'
+                    : 'Nimm die Einladung an, um dem Team und dem zugehoerigen Verein beizutreten.',
+            style: const TextStyle(color: AirmiusColors.muted, height: 1.35),
+          ),
+          if (contextNote != null) ...[
+            const SizedBox(height: 8),
+            Text(contextNote!, style: const TextStyle(color: AirmiusColors.amber, height: 1.35, fontWeight: FontWeight.w800)),
+          ],
+          const SizedBox(height: 14),
+          _InvitationCard(invitation: invitation),
+          const SizedBox(height: 14),
+          if (answered)
+            StatusPill(accepted ? 'Angenommen' : 'Abgelehnt', color: accepted ? AirmiusColors.green : AirmiusColors.red)
+          else if (unavailable)
+            const StatusPill('Nicht synchronisiert', color: AirmiusColors.amber)
+          else ...[
+            AirmiusButton(
+              label: busy ? 'Wird angenommen...' : 'Annehmen',
+              icon: Icons.check_circle_outline,
+              onPressed: busy ? null : onAccept,
+            ),
+            const SizedBox(height: 10),
+            AirmiusButton(
+              label: busy ? 'Bitte warten...' : 'Ablehnen',
+              icon: Icons.cancel_outlined,
+              secondary: true,
+              onPressed: busy ? null : onDecline,
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -300,5 +347,12 @@ String? _roleFromBody(String body) {
   if (lower.contains('coach')) return 'Coach';
   if (lower.contains('spieler')) return 'Player';
   if (lower.contains('player')) return 'Player';
+  return null;
+}
+
+String? _statusFromText(String text) {
+  final lower = text.toLowerCase();
+  if (lower.contains('angenommen') || lower.contains('accepted')) return 'accepted';
+  if (lower.contains('abgelehnt') || lower.contains('declined') || lower.contains('refused')) return 'declined';
   return null;
 }

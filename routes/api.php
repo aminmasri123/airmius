@@ -148,6 +148,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/clubs', [ClubController::class, 'store'])->name('clubs.store');
         Route::get('/clubs/{club}', [ClubController::class, 'show'])->name('clubs.show');
         Route::get('/clubs/{club}/members', [ClubController::class, 'members'])->name('clubs.members.index');
+        Route::post('/clubs/{club}/members/invite', [ClubController::class, 'inviteMember'])->name('clubs.members.invite');
         Route::put('/clubs/{club}/members/{user}/role', [ClubController::class, 'updateMemberRole'])->name('clubs.members.role.update');
         Route::put('/clubs/{club}/membership/settings', [ClubController::class, 'updateMembershipSettings'])->name('clubs.membership.settings.update');
         Route::post('/clubs/{club}/membership/types', [ClubController::class, 'storeMembershipType'])->name('clubs.membership.types.store');

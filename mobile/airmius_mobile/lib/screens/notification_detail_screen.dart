@@ -8,6 +8,7 @@ import '../core/airmius_theme_mode_scope.dart';
 import '../navigation/airmius_deep_link_navigator.dart';
 import '../widgets/airmius_widgets.dart';
 import 'notification_preferences_screen.dart';
+import 'team_invitation_response_screen.dart';
 
 class NotificationDetailScreen extends StatefulWidget {
   const NotificationDetailScreen({
@@ -71,6 +72,22 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
     }
   }
 
+  void _openContext() {
+    final invitationId = _teamInvitationId(widget.notification);
+    if (invitationId != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => TeamInvitationResponseScreen(invitationId: invitationId, notification: widget.notification)),
+      );
+      return;
+    }
+
+    final actionUrl = widget.notification.actionUrl;
+    if (actionUrl != null) {
+      AirmiusDeepLinkNavigator.open(context, actionUrl);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
@@ -126,7 +143,7 @@ class _NotificationDetailScreenState extends State<NotificationDetailScreen> {
                   AirmiusButton(
                     label: scope.t('notifications.openContext'),
                     icon: Icons.open_in_new_outlined,
-                    onPressed: () => AirmiusDeepLinkNavigator.open(context, widget.notification.actionUrl!),
+                    onPressed: _openContext,
                   ),
                 AirmiusButton(
                   label: _busy ? scope.t('status.loading') : scope.t('notifications.markRead'),
@@ -193,4 +210,24 @@ Color _notificationDetailText(BuildContext context) {
 Color _notificationDetailMuted(BuildContext context) {
   final palette = _notificationDetailPalette(context);
   return _notificationDetailDarkUi(context) ? AirmiusColors.muted : palette.lightMutedText;
+}
+
+int? _teamInvitationId(AirmiusNotification notification) {
+  final type = notification.type.toLowerCase();
+  final explicitId = _intFromDynamic(notification.data['invitation_id'] ?? notification.data['team_invitation_id']);
+  if (explicitId != null && (type.contains('team.invite') || type.contains('team.invitation') || type.contains('trainer') || type.contains('invite') || type.contains('invitation'))) {
+    return explicitId;
+  }
+
+  final actionUrl = notification.actionUrl;
+  if (actionUrl == null || actionUrl.isEmpty) return null;
+
+  final match = RegExp(r'(?:team_invitation|invitation_id)=([0-9]+)').firstMatch(actionUrl);
+  return match == null ? null : int.tryParse(match.group(1) ?? '');
+}
+
+int? _intFromDynamic(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse('$value');
 }

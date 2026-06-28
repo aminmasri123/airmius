@@ -26,6 +26,9 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
   String _period = 'Juni 2026';
   int? _selectedClubId;
   Future<_ManagedMembershipData?>? _clubFuture;
+  final _inviteNameController = TextEditingController();
+  final _inviteEmailController = TextEditingController();
+  bool _sendingInvitation = false;
 
   int _parseEuroCents(String value) {
     final normalized = value.replaceAll(' EUR', '').replaceAll('.', '').replaceAll(',', '.').trim();
@@ -149,6 +152,13 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     _clubFuture ??= _loadManagedClub();
   }
 
+  @override
+  void dispose() {
+    _inviteNameController.dispose();
+    _inviteEmailController.dispose();
+    super.dispose();
+  }
+
   Future<_ManagedMembershipData?> _loadManagedClub() async {
     final services = AirmiusServicesScope.of(context);
     final page = await services.repositories.clubs.searchClubs(mine: true);
@@ -170,6 +180,46 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     setState(() {
       _clubFuture = _loadManagedClub();
     });
+  }
+
+  Future<void> _sendClubInvitation(ClubSummary club) async {
+    if (_sendingInvitation) return;
+
+    final email = _inviteEmailController.text.trim();
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bitte gib eine E-Mail-Adresse ein.')),
+      );
+      return;
+    }
+
+    setState(() => _sendingInvitation = true);
+    try {
+      await AirmiusServicesScope.of(context).repositories.clubs.inviteClubMember(club.id, {
+        'email': email,
+        'name': _inviteNameController.text.trim(),
+        'send_invitation': true,
+        'membership_status': 'active',
+      });
+
+      if (!mounted) return;
+      _inviteNameController.clear();
+      _inviteEmailController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Einladung wurde versendet.')),
+      );
+      setState(() {
+        _sendingInvitation = false;
+        _clubFuture = _loadManagedClub();
+      });
+    } catch (error) {
+      if (!mounted) return;
+      final message = error is AirmiusApiException ? error.userMessage : '$error';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Einladung konnte nicht gesendet werden: $message')),
+      );
+      setState(() => _sendingInvitation = false);
+    }
   }
 
   @override
@@ -318,13 +368,25 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                 children: [
                   const Eyebrow('Import & Einladung'),
                   const SizedBox(height: 10),
-                  const AirmiusTextField(label: 'E-Mail oder CSV-Hinweis', hint: 'mitglied@example.com oder CSV importieren', icon: Icons.alternate_email),
+                  AirmiusTextField(label: 'Name', hint: 'Optional', icon: Icons.badge_outlined, controller: _inviteNameController),
+                  const SizedBox(height: 10),
+                  AirmiusTextField(
+                    label: 'E-Mail',
+                    hint: 'mitglied@example.com',
+                    icon: Icons.alternate_email,
+                    controller: _inviteEmailController,
+                    keyboardType: TextInputType.emailAddress,
+                  ),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 10,
                     runSpacing: 10,
                     children: [
-                      AirmiusButton(label: 'Einladung senden', icon: Icons.mark_email_read_outlined, onPressed: () => openUiAction(context, title: 'Einladung senden', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.mark_email_read_outlined)),
+                      AirmiusButton(
+                        label: _sendingInvitation ? 'Wird gesendet...' : 'Einladung senden',
+                        icon: Icons.mark_email_read_outlined,
+                        onPressed: _sendingInvitation ? null : () => _sendClubInvitation(club),
+                      ),
                       AirmiusButton(label: 'CSV Vorlage', icon: Icons.table_view_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'CSV Vorlage', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.table_view_outlined)),
                       AirmiusButton(label: 'Extern anlegen', icon: Icons.person_add_alt_1_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Extern anlegen', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.person_add_alt_1_outlined)),
                     ],
