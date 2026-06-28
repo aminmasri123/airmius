@@ -141,8 +141,10 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
     final surface = Theme.of(context).colorScheme.surface;
+    final muted = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+    final border = Theme.of(context).dividerColor;
     return Scaffold(
-        floatingActionButton: FloatingActionButton.extended(backgroundColor: const Color(0xFF1D5FA8), foregroundColor: Colors.white, icon: const Icon(Icons.manage_accounts_outlined), label: const Text('Konto Ops', style: TextStyle(fontWeight: FontWeight.w900)), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AccountOperationsScreen(initialTab: 'Auth')))),
+        floatingActionButton: FloatingActionButton.extended(backgroundColor: accent, foregroundColor: Colors.white, icon: const Icon(Icons.manage_accounts_outlined), label: const Text('Konto Ops', style: TextStyle(fontWeight: FontWeight.w900)), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AccountOperationsScreen(initialTab: 'Auth')))),
 
       appBar: AppBar(
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
@@ -164,7 +166,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
                   const SizedBox(height: 12),
                   const Eyebrow('Auth'),
                   const SizedBox(height: 8),
-                  const Text('Alle wichtigen Auth-Seiten der Web-App als native UI vorbereitet.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  Text('Alle wichtigen Auth-Seiten der Web-App als native UI vorbereitet.', style: TextStyle(color: muted, height: 1.35)),
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 8,
@@ -177,8 +179,8 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
                           onSelected: (_) => setState(() => _flow = flow),
                           selectedColor: accent.withValues(alpha: 0.22),
                           backgroundColor: Color.lerp(surface, accent, 0.10),
-                          side: BorderSide(color: _flow == flow ? accent : AirmiusColors.border),
-                          labelStyle: TextStyle(color: _flow == flow ? accent : AirmiusColors.muted, fontWeight: FontWeight.w900),
+                          side: BorderSide(color: _flow == flow ? accent : border),
+                          labelStyle: TextStyle(color: _flow == flow ? accent : muted, fontWeight: FontWeight.w900),
                         ),
                     ],
                   ),
@@ -211,6 +213,8 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
     final services = AirmiusServicesScope.of(context);
     final isLoading = services.authState.phase.name == 'loading';
     final error = _registerError ?? services.authState.error;
+    final text = Theme.of(context).textTheme.bodyLarge?.color ?? AirmiusColors.text;
+    final muted = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
 
     return AirmiusPanel(
       child: Column(
@@ -259,11 +263,11 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
           DropdownButtonFormField<String>(
             value: _gender.isEmpty ? null : _gender,
             dropdownColor: Theme.of(context).colorScheme.surface,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Geschlecht',
-              prefixIcon: Icon(Icons.wc_outlined, color: AirmiusColors.muted),
+              prefixIcon: Icon(Icons.wc_outlined, color: muted),
             ),
-            style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
+            style: TextStyle(color: text, fontWeight: FontWeight.w800),
             items: const [
               DropdownMenuItem(value: 'female', child: Text('Weiblich')),
               DropdownMenuItem(value: 'male', child: Text('Männlich')),
@@ -286,9 +290,9 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
           CheckboxListTile(
             value: _terms,
             onChanged: (value) => setState(() => _terms = value ?? false),
-            activeColor: AirmiusColors.blue,
+            activeColor: Theme.of(context).colorScheme.primary,
             contentPadding: EdgeInsets.zero,
-            title: const Text('AGB und Datenschutz akzeptieren', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800)),
+            title: Text('AGB und Datenschutz akzeptieren', style: TextStyle(color: text, fontWeight: FontWeight.w800)),
           ),
           Wrap(
             spacing: 10,

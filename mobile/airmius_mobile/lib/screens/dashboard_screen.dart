@@ -118,6 +118,12 @@ class _DashboardHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = _dashText(context);
+    final muted = _dashMuted(context);
+    final surface = _dashSurface(context);
+    final surfaceSoft = _dashSurfaceSoft(context);
+    final border = _dashBorder(context);
     return AirmiusPanel(
       padding: const EdgeInsets.all(0),
       child: ClipRRect(
@@ -131,10 +137,10 @@ class _DashboardHero extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      AirmiusColors.blue.withValues(alpha: 0.28),
-                      AirmiusColors.green.withValues(alpha: 0.13),
-                      AirmiusColors.pink.withValues(alpha: 0.18),
-                      AirmiusColors.card,
+                      scheme.primary.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.30 : 0.18),
+                      scheme.secondary.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.16 : 0.12),
+                      AirmiusColors.pink.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.16 : 0.08),
+                      surface,
                     ],
                   ),
                 ),
@@ -154,9 +160,9 @@ class _DashboardHero extends StatelessWidget {
                           children: [
                             const Eyebrow('Dashboard'),
                             const SizedBox(height: 7),
-                            Text('Hallo $userName', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontSize: 28, fontWeight: FontWeight.w900)),
+                            Text('Hallo $userName', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: text, fontSize: 28, fontWeight: FontWeight.w900)),
                             const SizedBox(height: 8),
-                            const Text('Deine wichtigsten Werte, Aufgaben und Schnellstarts auf einen Blick.', style: TextStyle(color: AirmiusColors.muted, height: 1.45, fontWeight: FontWeight.w700)),
+                            Text('Deine wichtigsten Werte, Aufgaben und Schnellstarts auf einen Blick.', style: TextStyle(color: muted, height: 1.45, fontWeight: FontWeight.w700)),
                           ],
                         ),
                       ),
@@ -166,9 +172,9 @@ class _DashboardHero extends StatelessWidget {
                         icon: const Icon(Icons.tune_outlined, size: 18),
                         label: const Text('Anpassen', style: TextStyle(fontWeight: FontWeight.w900)),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: AirmiusColors.text,
-                          side: const BorderSide(color: AirmiusColors.border),
-                          backgroundColor: AirmiusColors.card.withValues(alpha: 0.76),
+                          foregroundColor: text,
+                          side: BorderSide(color: border),
+                          backgroundColor: surface.withValues(alpha: 0.76),
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
@@ -180,22 +186,22 @@ class _DashboardHero extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AirmiusColors.input.withValues(alpha: 0.78),
+                        color: surfaceSoft.withValues(alpha: 0.78),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: AirmiusColors.border),
+                        border: Border.all(color: border),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Row(
                             children: [
-                              const Expanded(
+                              Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Widgets', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                                    SizedBox(height: 2),
-                                    Text('Wähle aus, was sichtbar ist.', style: TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
+                                    Text('Widgets', style: TextStyle(color: text, fontWeight: FontWeight.w900)),
+                                    const SizedBox(height: 2),
+                                    Text('Wähle aus, was sichtbar ist.', style: TextStyle(color: muted, fontSize: 12, fontWeight: FontWeight.w700)),
                                   ],
                                 ),
                               ),
@@ -238,22 +244,26 @@ class _WidgetToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final muted = _dashMuted(context);
+    final surface = _dashSurface(context);
+    final border = _dashBorder(context);
+    final accent = Theme.of(context).colorScheme.primary;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(999),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? AirmiusColors.blue.withValues(alpha: 0.15) : AirmiusColors.card,
+          color: active ? accent.withValues(alpha: 0.15) : surface,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: active ? AirmiusColors.blue.withValues(alpha: 0.75) : AirmiusColors.border),
+          border: Border.all(color: active ? accent.withValues(alpha: 0.75) : border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(item.icon, size: 16, color: active ? AirmiusColors.blue : AirmiusColors.muted),
+            Icon(item.icon, size: 16, color: active ? accent : muted),
             const SizedBox(width: 7),
-            Text(item.label, style: TextStyle(color: active ? AirmiusColors.blue : AirmiusColors.muted, fontWeight: FontWeight.w900, fontSize: 12)),
+            Text(item.label, style: TextStyle(color: active ? accent : muted, fontWeight: FontWeight.w900, fontSize: 12)),
           ],
         ),
       ),
@@ -269,6 +279,8 @@ class _QuickActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = _dashText(context);
+    final muted = _dashMuted(context);
     final actions = [
       _QuickAction(title: 'Training', subtitle: 'Dokumentieren', icon: Icons.assignment_turned_in_outlined, color: AirmiusColors.blue, onTap: () => onOpenModule(_module('Events & Training'))),
       _QuickAction(title: 'Route', subtitle: 'Planen', icon: Icons.route_outlined, color: AirmiusColors.green, onTap: () => onOpenModule(_module('Sportkarte'))),
@@ -298,9 +310,9 @@ class _QuickActions extends StatelessWidget {
               children: [
                 Icon(action.icon, color: action.color, size: 24),
                 const Spacer(),
-                Text(action.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                Text(action.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: text, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 2),
-                Text(action.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
+                Text(action.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: muted, fontSize: 12, fontWeight: FontWeight.w700)),
               ],
             ),
           ),
@@ -339,6 +351,8 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = _dashText(context);
+    final muted = _dashMuted(context);
     return AirmiusPanel(
       padding: const EdgeInsets.all(14),
       child: Row(
@@ -348,11 +362,11 @@ class _StatCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(stat.label.toUpperCase(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.7)),
+                Text(stat.label.toUpperCase(), maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: muted, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.7)),
                 const SizedBox(height: 8),
-                Text(stat.value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900)),
+                Text(stat.value, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: text, fontSize: 22, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 4),
-                Text(stat.meta, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w700)),
+                Text(stat.meta, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: muted, fontSize: 11, fontWeight: FontWeight.w700)),
               ],
             ),
           ),
@@ -423,6 +437,7 @@ class _TrainingWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final muted = _dashMuted(context);
     final bars = [35, 72, 48, 88, 42, 64, 28];
     final labels = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
     return AirmiusPanel(
@@ -457,7 +472,7 @@ class _TrainingWidget extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text(labels[index], style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w800)),
+                        Text(labels[index], style: TextStyle(color: muted, fontSize: 11, fontWeight: FontWeight.w800)),
                       ],
                     ),
                   ),
@@ -524,6 +539,8 @@ class _CompactWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final surfaceSoft = _dashSurfaceSoft(context);
+    final border = _dashBorder(context);
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -539,9 +556,9 @@ class _CompactWidget extends StatelessWidget {
           Container(
             height: 84,
             decoration: BoxDecoration(
-              color: AirmiusColors.input,
+              color: surfaceSoft,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AirmiusColors.border),
+              border: Border.all(color: border),
             ),
             child: Center(child: Icon(icon, color: color, size: 34)),
           ),
@@ -564,6 +581,8 @@ class _ListWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = _dashText(context);
+    final border = _dashBorder(context);
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -573,8 +592,8 @@ class _ListWidget extends StatelessWidget {
           for (final line in lines)
             Container(
               padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AirmiusColors.border))),
-              child: Text(line, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800)),
+              decoration: BoxDecoration(border: Border(bottom: BorderSide(color: border))),
+              child: Text(line, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: text, fontWeight: FontWeight.w800)),
             ),
         ],
       ),
@@ -614,12 +633,13 @@ class _WidgetTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = _dashText(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(eyebrow.toUpperCase(), style: const TextStyle(color: AirmiusColors.blue, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.7)),
+        Text(eyebrow.toUpperCase(), style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 0.7)),
         const SizedBox(height: 3),
-        Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontSize: 19, fontWeight: FontWeight.w900)),
+        Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: text, fontSize: 19, fontWeight: FontWeight.w900)),
       ],
     );
   }
@@ -633,11 +653,13 @@ class _MiniMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = _dashText(context);
+    final muted = _dashMuted(context);
     return Column(
       children: [
-        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: TextStyle(color: text, fontSize: 18, fontWeight: FontWeight.w900)),
         const SizedBox(height: 3),
-        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w700)),
+        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, style: TextStyle(color: muted, fontSize: 11, fontWeight: FontWeight.w700)),
       ],
     );
   }
@@ -650,6 +672,11 @@ class _FocusRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = _dashText(context);
+    final muted = _dashMuted(context);
+    final surfaceSoft = _dashSurfaceSoft(context);
+    final border = _dashBorder(context);
+    final accent = Theme.of(context).colorScheme.primary;
     return InkWell(
       onTap: item.onTap,
       borderRadius: BorderRadius.circular(16),
@@ -660,22 +687,22 @@ class _FocusRow extends StatelessWidget {
             Container(
               width: 42,
               height: 42,
-              decoration: BoxDecoration(color: AirmiusColors.input, borderRadius: BorderRadius.circular(16), border: Border.all(color: AirmiusColors.border)),
-              child: Icon(item.icon, color: AirmiusColors.blue),
+              decoration: BoxDecoration(color: surfaceSoft, borderRadius: BorderRadius.circular(16), border: Border.all(color: border)),
+              child: Icon(item.icon, color: accent),
             ),
             const SizedBox(width: 11),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                  Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: text, fontWeight: FontWeight.w900)),
                   const SizedBox(height: 2),
-                  Text(item.body, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
+                  Text(item.body, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: muted, fontSize: 12, fontWeight: FontWeight.w700)),
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            Text(item.meta, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w800)),
+            Text(item.meta, style: TextStyle(color: muted, fontSize: 12, fontWeight: FontWeight.w800)),
           ],
         ),
       ),

@@ -181,8 +181,11 @@ class _SettingsCenterScreenState extends State<SettingsCenterScreen> {
   @override
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
+    final text = Theme.of(context).textTheme.bodyLarge?.color ?? AirmiusColors.text;
+    final muted = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+    final border = Theme.of(context).dividerColor;
     return Scaffold(
-        floatingActionButton: FloatingActionButton.extended(backgroundColor: const Color(0xFF1D5FA8), foregroundColor: Colors.white, icon: const Icon(Icons.manage_accounts_outlined), label: const Text('Account Ops', style: TextStyle(fontWeight: FontWeight.w900)), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AccountOperationsScreen(initialTab: 'Konto')))),
+        floatingActionButton: FloatingActionButton.extended(backgroundColor: accent, foregroundColor: Colors.white, icon: const Icon(Icons.manage_accounts_outlined), label: const Text('Account Ops', style: TextStyle(fontWeight: FontWeight.w900)), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AccountOperationsScreen(initialTab: 'Konto')))),
         
       appBar: AppBar(backgroundColor: Theme.of(context).appBarTheme.backgroundColor, surfaceTintColor: Colors.transparent, title: const Text('Einstellungen', style: TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
@@ -193,9 +196,9 @@ class _SettingsCenterScreenState extends State<SettingsCenterScreen> {
           AirmiusPanel(gradient: true, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             const Eyebrow('Konto & App'),
             const SizedBox(height: 8),
-            const Text('Deine Airmius-App einstellen.', style: TextStyle(color: AirmiusColors.text, fontSize: 23, fontWeight: FontWeight.w900)),
+            Text('Deine Airmius-App einstellen.', style: TextStyle(color: text, fontSize: 23, fontWeight: FontWeight.w900)),
             const SizedBox(height: 8),
-            const Text('Profil, Sprache, Datenschutz, Push-Benachrichtigungen, Sicherheit, Zahlungen und Kontoaktionen im mobilen Web-App-Stil.', style: TextStyle(color: AirmiusColors.muted, height: 1.4)),
+            Text('Profil, Sprache, Datenschutz, Push-Benachrichtigungen, Sicherheit, Zahlungen und Kontoaktionen im mobilen Web-App-Stil.', style: TextStyle(color: muted, height: 1.4)),
             const SizedBox(height: 14),
             Wrap(spacing: 8, runSpacing: 8, children: ['Profil', 'Datenschutz', 'Push', 'Sicherheit', 'Zahlung'].map((item) => ChoiceChip(
               selected: _section == item,
@@ -203,8 +206,8 @@ class _SettingsCenterScreenState extends State<SettingsCenterScreen> {
               onSelected: (_) => setState(() => _section = item),
               selectedColor: accent.withValues(alpha: 0.22),
               backgroundColor: Color.lerp(Theme.of(context).colorScheme.surface, accent, 0.10),
-              side: BorderSide(color: _section == item ? accent : AirmiusColors.border),
-              labelStyle: TextStyle(color: _section == item ? accent : AirmiusColors.muted, fontWeight: FontWeight.w900),
+              side: BorderSide(color: _section == item ? accent : border),
+              labelStyle: TextStyle(color: _section == item ? accent : muted, fontWeight: FontWeight.w900),
             )).toList()),
           ])),
           const SizedBox(height: 14),
@@ -408,11 +411,13 @@ class _SettingLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color ?? AirmiusColors.text;
+    final mutedColor = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
     return AirmiusPanel(onTap: onTap, borderColor: color.withValues(alpha: 0.45), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Icon(icon, color: color, size: 28),
       const SizedBox(width: 12),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)), const SizedBox(height: 10), StatusPill(status, color: color)])),
-      const Icon(Icons.chevron_right, color: AirmiusColors.muted),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: TextStyle(color: textColor, fontWeight: FontWeight.w900)), const SizedBox(height: 4), Text(body, style: TextStyle(color: mutedColor, height: 1.35)), const SizedBox(height: 10), StatusPill(status, color: color)])),
+      Icon(Icons.chevron_right, color: mutedColor),
     ]));
   }
 }

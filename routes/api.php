@@ -161,6 +161,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
         Route::get('/teams', [TeamController::class, 'index'])->name('teams.index');
         Route::post('/teams', [TeamController::class, 'store'])->name('teams.store');
+        Route::post('/clubs/{club}/teams', [TeamController::class, 'storeForClub'])->name('clubs.teams.store');
         Route::get('/teams/{team}', [TeamController::class, 'show'])->name('teams.show');
         Route::put('/teams/{team}', [TeamController::class, 'update'])->name('teams.update');
         Route::delete('/teams/{team}', [TeamController::class, 'destroy'])->name('teams.destroy');

@@ -50,6 +50,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final scope = AirmiusScope.of(context);
     final isLoading = widget.authState.phase == AirmiusAuthPhase.loading;
     final error = widget.authState.phase == AirmiusAuthPhase.error ? widget.authState.error : null;
+    final text = Theme.of(context).textTheme.bodyLarge?.color ?? AirmiusColors.text;
+    final muted = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
 
     return Scaffold(
       body: SafeArea(
@@ -77,11 +79,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Text(
                             scope.t('login.title'),
                             maxLines: 1,
-                            style: const TextStyle(color: AirmiusColors.text, fontSize: 30, fontWeight: FontWeight.w900, height: 1.04),
+                            style: TextStyle(color: text, fontSize: 30, fontWeight: FontWeight.w900, height: 1.04),
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text(scope.t('login.subtitle'), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                        Text(scope.t('login.subtitle'), maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: muted, height: 1.35)),
                       ],
                     ),
                   ),
@@ -108,7 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             tooltip: _isPasswordVisible ? 'Passwort ausblenden' : 'Passwort einblenden',
                             icon: Icon(
                               _isPasswordVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                              color: AirmiusColors.muted,
+                              color: muted,
                             ),
                             onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
                           ),
@@ -269,6 +271,8 @@ class _LoginIconMenu<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final foreground = Theme.of(context).textTheme.bodyLarge?.color ?? AirmiusColors.text;
+    final border = Theme.of(context).dividerColor;
     return PopupMenuButton<T>(
       tooltip: tooltip,
       initialValue: value,
@@ -282,9 +286,9 @@ class _LoginIconMenu<T> extends StatelessWidget {
         decoration: BoxDecoration(
           color: Color.lerp(scheme.surface, scheme.primary, 0.12) ?? scheme.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AirmiusColors.border),
+          border: Border.all(color: border),
         ),
-        child: Icon(icon, color: AirmiusColors.text, size: 21),
+        child: Icon(icon, color: foreground, size: 21),
       ),
     );
   }
@@ -305,7 +309,10 @@ class _MenuLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AirmiusColors.blue : AirmiusColors.text;
+    final accent = Theme.of(context).colorScheme.primary;
+    final text = Theme.of(context).textTheme.bodyLarge?.color ?? AirmiusColors.text;
+    final muted = Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+    final color = selected ? accent : text;
     return Row(
       children: [
         Icon(icon, color: color, size: 19),
@@ -313,11 +320,11 @@ class _MenuLine extends StatelessWidget {
         Expanded(child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w900))),
         if (trailing != null) ...[
           const SizedBox(width: 14),
-          Text(trailing!, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w900)),
+          Text(trailing!, style: TextStyle(color: muted, fontWeight: FontWeight.w900)),
         ],
         if (selected) ...[
           const SizedBox(width: 10),
-          const Icon(Icons.check_circle, color: AirmiusColors.blue, size: 18),
+          Icon(Icons.check_circle, color: accent, size: 18),
         ],
       ],
     );

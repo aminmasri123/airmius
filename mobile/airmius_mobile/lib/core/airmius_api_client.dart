@@ -157,8 +157,15 @@ class AirmiusApiClient {
       return await _json('POST', '/api/v1/teams', body: payload);
     } on AirmiusApiException catch (error) {
       if (!_shouldTryTeamJoinFallback(error)) rethrow;
-      await _okRequest('POST', '/teams', body: payload);
-      return _findCreatedTeam(payload);
+      final clubId = payload['club_id'];
+      if (clubId != null) {
+        try {
+          return await _json('POST', '/api/v1/clubs/$clubId/teams', body: payload);
+        } on AirmiusApiException catch (nestedError) {
+          if (!_shouldTryTeamJoinFallback(nestedError)) rethrow;
+        }
+      }
+      rethrow;
     }
   }
 
@@ -202,25 +209,6 @@ class AirmiusApiClient {
       if (!_shouldTryTeamJoinFallback(error)) rethrow;
       return _json('PUT', '/teams/$teamId/members/$userId', body: {'role': role});
     }
-  }
-
-  Future<AirmiusJson> _findCreatedTeam(AirmiusJson payload) async {
-    final json = await teams(perPage: 100);
-    final data = json['data'];
-    final clubId = '${payload['club_id']}';
-    final name = '${payload['name']}'.trim().toLowerCase();
-
-    if (data is List) {
-      final match = data
-          .cast<Object?>()
-          .whereType<Map<String, dynamic>>()
-          .cast<AirmiusJson>()
-          .where((team) => '${team['club_id']}' == clubId && '${team['name']}'.trim().toLowerCase() == name)
-          .toList();
-      if (match.isNotEmpty) return {'data': match.first};
-    }
-
-    return json;
   }
 
   Future<AirmiusJson> teamAttendanceStats(int teamId) => _json('GET', '/api/v1/teams/$teamId/attendance-stats');
@@ -483,21 +471,6 @@ class AirmiusApiClient {
         throw AirmiusApiException(statusCode: response.statusCode, body: response.body, path: path);
       }
       return _normalizeMediaUrls(response.json) as AirmiusJson;
-    } catch (error) {
-      if (error is AirmiusApiException) rethrow;
-      throw AirmiusApiException(
-        statusCode: _networkStatus(error),
-        body: error.toString(),
-        path: path,
-      );
-    }
-  }
-
-  Future<void> _okRequest(String method, String path, {AirmiusJson? body, Map<String, String> query = const {}}) async {
-    try {
-      final response = await transport.send(AirmiusApiRequest(method: method, path: path, body: body, query: query, headers: _headers));
-      if (response.statusCode >= 200 && response.statusCode < 400) return;
-      throw AirmiusApiException(statusCode: response.statusCode, body: response.body, path: path);
     } catch (error) {
       if (error is AirmiusApiException) rethrow;
       throw AirmiusApiException(

@@ -148,6 +148,13 @@ class TeamController extends Controller
             ->setStatusCode(201);
     }
 
+    public function storeForClub(Request $request, Club $club)
+    {
+        $request->merge(['club_id' => $club->id]);
+
+        return $this->store($request);
+    }
+
     public function update(Request $request, Team $team)
     {
         $this->authorize('update', $team);
