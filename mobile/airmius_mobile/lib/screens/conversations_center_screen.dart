@@ -38,7 +38,9 @@ class _ConversationsCenterScreenState extends State<ConversationsCenterScreen> {
   }
 
   void _reload() {
-    setState(() => _conversationsFuture = _loadConversations());
+    setState(() {
+      _conversationsFuture = _loadConversations();
+    });
   }
 
   @override

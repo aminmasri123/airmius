@@ -46,7 +46,9 @@ class _ClubMembershipAdminScreenState extends State<ClubMembershipAdminScreen> {
   }
 
   void _reloadRequests() {
-    setState(() => _requestsFuture = _loadRequests());
+    setState(() {
+      _requestsFuture = _loadRequests();
+    });
   }
 
   @override

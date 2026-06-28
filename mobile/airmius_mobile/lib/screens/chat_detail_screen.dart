@@ -52,7 +52,9 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   void _reload() {
-    setState(() => _messagesFuture = _loadMessages());
+    setState(() {
+      _messagesFuture = _loadMessages();
+    });
   }
 
   Future<void> _send() async {

@@ -46,7 +46,9 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
   void _reloadTeam() {
     final teamId = widget.teamId;
     if (teamId == null || teamId <= 0) return;
-    setState(() => _teamFuture = AirmiusServicesScope.of(context).repositories.clubs.team(teamId));
+    setState(() {
+      _teamFuture = AirmiusServicesScope.of(context).repositories.clubs.team(teamId);
+    });
   }
 
   Future<void> _deleteTeam(AirmiusTeam team) async {

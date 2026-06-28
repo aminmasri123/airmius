@@ -43,7 +43,9 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   }
 
   void _reload() {
-    setState(() => _resultsFuture = _loadResults(_query));
+    setState(() {
+      _resultsFuture = _loadResults(_query);
+    });
   }
 
   @override

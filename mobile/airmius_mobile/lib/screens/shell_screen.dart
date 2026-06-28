@@ -287,6 +287,22 @@ Color _bottomNavBackground(BuildContext context) {
   return Color.lerp(theme.scaffoldBackgroundColor, theme.colorScheme.surface, mix) ?? theme.colorScheme.surface;
 }
 
+Color _drawerBackground(BuildContext context) {
+  final theme = Theme.of(context);
+  if (theme.brightness == Brightness.dark) {
+    return theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface;
+  }
+  return Color.lerp(theme.scaffoldBackgroundColor, theme.colorScheme.surface, 0.92) ?? theme.colorScheme.surface;
+}
+
+Color _shellText(BuildContext context) {
+  return Theme.of(context).textTheme.bodyLarge?.color ?? AirmiusColors.text;
+}
+
+Color _shellMuted(BuildContext context) {
+  return Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+}
+
 class _NavigationBadgeIcon extends StatelessWidget {
   const _NavigationBadgeIcon({required this.icon, required this.count});
 
@@ -347,10 +363,12 @@ class _ModuleDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
     final drawerModules = appModules.where((module) => !_hiddenDrawerModuleTitles.contains(module.title));
+    final theme = Theme.of(context);
+    final drawerBackground = _drawerBackground(context);
     return SizedBox(
       width: MediaQuery.of(context).size.width,
       child: Material(
-        color: AirmiusColors.header,
+        color: drawerBackground,
         elevation: 16,
         child: SafeArea(
           child: Column(
@@ -366,12 +384,12 @@ class _ModuleDrawer extends StatelessWidget {
                       constraints: const BoxConstraints.tightFor(width: 44, height: 44),
                       tooltip: 'Menue schliessen',
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close_rounded, color: AirmiusColors.text),
+                      icon: Icon(Icons.close_rounded, color: _shellText(context)),
                     ),
                   ],
                 ),
               ),
-              const Divider(height: 1, color: AirmiusColors.border),
+              Divider(height: 1, color: theme.dividerColor),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(14, 14, 14, 20),
@@ -429,6 +447,12 @@ class _DrawerTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final activeColor = theme.colorScheme.primary;
+    final textColor = _shellText(context);
+    final mutedColor = _shellMuted(context);
+    final activeBackground = activeColor.withValues(alpha: theme.brightness == Brightness.dark ? 0.16 : 0.11);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: InkWell(
@@ -437,14 +461,14 @@ class _DrawerTab extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
-            color: active ? AirmiusColors.cardSoft : Colors.transparent,
+            color: active ? activeBackground : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             children: [
-              Icon(icon, size: 20, color: active ? AirmiusColors.blue : AirmiusColors.muted),
+              Icon(icon, size: 20, color: active ? activeColor : mutedColor),
               const SizedBox(width: 12),
-              Expanded(child: Text(label, style: TextStyle(color: active ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w800))),
+              Expanded(child: Text(label, style: TextStyle(color: active ? textColor : mutedColor, fontWeight: FontWeight.w800))),
             ],
           ),
         ),

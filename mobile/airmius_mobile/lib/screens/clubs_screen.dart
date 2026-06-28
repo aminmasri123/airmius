@@ -75,7 +75,14 @@ class _ClubsScreenState extends State<ClubsScreen> {
                         const SizedBox(height: 8),
                         Text('${snapshot.error}', style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
                         const SizedBox(height: 12),
-                        AirmiusButton(label: 'Erneut laden', icon: Icons.refresh_outlined, secondary: true, onPressed: () => setState(() => _clubsFuture = _loadClubs())),
+                        AirmiusButton(
+                          label: 'Erneut laden',
+                          icon: Icons.refresh_outlined,
+                          secondary: true,
+                          onPressed: () => setState(() {
+                            _clubsFuture = _loadClubs();
+                          }),
+                        ),
                       ],
                     ),
                   ),
@@ -102,7 +109,9 @@ class _ClubsScreenState extends State<ClubsScreen> {
                       requested: widget.requestedClubIds.contains(entry.$2.id) || entry.$2.hasPendingMembershipRequest,
                       onRequest: widget.onRequestClub,
                       onWithdraw: widget.onWithdrawClub,
-                      onReload: () => setState(() => _clubsFuture = _loadClubs()),
+                      onReload: () => setState(() {
+                        _clubsFuture = _loadClubs();
+                      }),
                     ),
                     const SizedBox(height: 12),
                   ],
@@ -124,7 +133,9 @@ class _ClubsScreenState extends State<ClubsScreen> {
       ),
     );
     if (created == true && mounted) {
-      setState(() => _clubsFuture = _loadClubs());
+      setState(() {
+        _clubsFuture = _loadClubs();
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Verein registriert. Der Antrag wartet jetzt auf Pruefung.')),
       );
@@ -879,7 +890,9 @@ class _ClubCardState extends State<_ClubCard> {
   }
 
   void _reloadDetail() {
-    setState(() => _detailFuture = _loadDetail());
+    setState(() {
+      _detailFuture = _loadDetail();
+    });
     widget.onReload();
   }
 

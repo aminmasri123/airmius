@@ -60,7 +60,9 @@ class _TrainingCenterScreenState extends State<TrainingCenterScreen> {
   }
 
   void _reload() {
-    setState(() => _workspaceFuture = _loadWorkspace());
+    setState(() {
+      _workspaceFuture = _loadWorkspace();
+    });
   }
 
   void _setPeriod(_EventPeriod period) {

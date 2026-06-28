@@ -25,7 +25,9 @@ class _TeamsCenterScreenState extends State<TeamsCenterScreen> {
   }
 
   void _reloadTeams() {
-    setState(() => _teamsFuture = AirmiusServicesScope.of(context).repositories.clubs.teams());
+    setState(() {
+      _teamsFuture = AirmiusServicesScope.of(context).repositories.clubs.teams();
+    });
   }
 
   @override

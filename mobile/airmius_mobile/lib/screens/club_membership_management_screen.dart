@@ -167,7 +167,9 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
   }
 
   void _reloadClub() {
-    setState(() => _clubFuture = _loadManagedClub());
+    setState(() {
+      _clubFuture = _loadManagedClub();
+    });
   }
 
   @override

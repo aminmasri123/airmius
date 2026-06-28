@@ -1907,7 +1907,9 @@ class _PostCardState extends State<_PostCard> {
               showAll: _commentsPerPage > 20,
               onSend: _sendComment,
               onReload: () {
-                setState(() => _commentsFuture = _loadComments());
+                setState(() {
+                  _commentsFuture = _loadComments();
+                });
                 widget.onChanged();
               },
               onShowAll: _showAllCommentsInline,

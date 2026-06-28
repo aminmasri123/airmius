@@ -30,7 +30,9 @@ class _ClubMemberFinanceScreenState extends State<ClubMemberFinanceScreen> {
   }
 
   void _reload() {
-    setState(() => _invoicesFuture = _loadInvoices());
+    setState(() {
+      _invoicesFuture = _loadInvoices();
+    });
   }
 
   @override

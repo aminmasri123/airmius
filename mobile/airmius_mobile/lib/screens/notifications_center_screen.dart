@@ -56,7 +56,9 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
   }
 
   void _reload() {
-    setState(() => _notificationsFuture = _loadNotifications());
+    setState(() {
+      _notificationsFuture = _loadNotifications();
+    });
   }
 
   Future<void> _toggleNotificationReadState(AirmiusNotification notification) async {
