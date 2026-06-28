@@ -167,14 +167,15 @@ class AirmiusApiClient {
           if (!_shouldTryTeamJoinFallback(nestedError)) rethrow;
         }
       }
-      if (_sendTeamCreateBridge(payload)) return _pendingCreatedTeam(payload);
+      final bridgeResponse = await _sendTeamCreateBridge(payload);
+      if (bridgeResponse != null) return bridgeResponse;
       rethrow;
     }
   }
 
-  bool _sendTeamCreateBridge(AirmiusJson payload) {
+  Future<AirmiusJson?> _sendTeamCreateBridge(AirmiusJson payload) {
     final sessionToken = token;
-    if (sessionToken == null || sessionToken.isEmpty) return false;
+    if (sessionToken == null || sessionToken.isEmpty) return Future.value(null);
 
     return sendTeamCreateBridge(
       baseUrl: baseUrl,
@@ -182,23 +183,6 @@ class AirmiusApiClient {
       locale: locale,
       payload: payload,
     );
-  }
-
-  AirmiusJson _pendingCreatedTeam(AirmiusJson payload) {
-    return {
-      'data': {
-        'id': -DateTime.now().millisecondsSinceEpoch,
-        'club_id': payload['club_id'],
-        'name': payload['name'],
-        'sport_type': payload['sport_type'],
-        'can_manage': true,
-        'can_delete': true,
-        'viewer_is_member': true,
-        'users_count': 1,
-        'events_count': 0,
-        'pending_sync': true,
-      },
-    };
   }
 
   Future<AirmiusJson> updateTeam(int teamId, AirmiusJson payload) => _json('PUT', '/api/v1/teams/$teamId', body: payload);

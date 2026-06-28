@@ -1469,19 +1469,14 @@ class _TeamCreateInlinePanelState extends State<_TeamCreateInlinePanel> {
     setState(() => _saving = true);
     try {
       final services = AirmiusServicesScope.of(context);
-      final createdTeam = await services.repositories.clubs.createTeam({
+      await services.repositories.clubs.createTeam({
         'club_id': widget.club.id,
         'name': name,
         if ((_selectedSportSlug ?? _sportController.text).trim().isNotEmpty)
           'sport_type': (_selectedSportSlug ?? _sportController.text).trim(),
       });
       if (!mounted) return;
-      final pendingSync = createdTeam.id < 0;
-      if (pendingSync) {
-        await Future<void>.delayed(const Duration(milliseconds: 900));
-        if (!mounted) return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(pendingSync ? 'Team wird synchronisiert.' : 'Team erstellt.')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Team erstellt.')));
       widget.onCreated();
       _nameController.clear();
     } catch (error) {

@@ -28,10 +28,15 @@ class AirmiusApp extends StatefulWidget {
 }
 
 class _AirmiusAppState extends State<AirmiusApp> {
-  static const _apiBaseUrl = String.fromEnvironment(
+  static const _configuredApiBaseUrl = String.fromEnvironment(
     'AIRMIUS_API_BASE_URL',
-    defaultValue: 'https://airmius.com',
+    defaultValue: '',
   );
+  static String get _apiBaseUrl {
+    final configured = _configuredApiBaseUrl.trim();
+    if (configured.isNotEmpty) return configured;
+    return kReleaseMode ? 'https://airmius.com' : 'http://localhost';
+  }
 
   AirmiusLanguage _language = AirmiusLanguage.de;
   ThemeMode _themeMode = ThemeMode.dark;
@@ -41,8 +46,8 @@ class _AirmiusAppState extends State<AirmiusApp> {
   final AirmiusDeepLinkInbox _deepLinkInbox = AirmiusDeepLinkInbox();
   final AirmiusExternalAuthLauncher _externalAuthLauncher = const AirmiusExternalAuthLauncher();
   late final AirmiusServiceContainer _services = AirmiusServiceContainer(
-    environment: const AirmiusAppEnvironment(apiBaseUrl: _apiBaseUrl, locale: 'de'),
-    transport: const AirmiusHttpTransport(baseUrl: _apiBaseUrl),
+    environment: AirmiusAppEnvironment(apiBaseUrl: _apiBaseUrl, locale: 'de'),
+    transport: AirmiusHttpTransport(baseUrl: _apiBaseUrl),
   );
 
   @override
