@@ -167,6 +167,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('/teams/{team}', [TeamController::class, 'show'])->name('teams.show');
         Route::put('/teams/{team}', [TeamController::class, 'update'])->name('teams.update');
         Route::delete('/teams/{team}', [TeamController::class, 'destroy'])->name('teams.destroy');
+        Route::post('/teams/{team}/invite', [TeamController::class, 'invite'])->name('teams.invite');
         Route::post('/teams/{team}/join-requests', [TeamController::class, 'requestJoin'])->name('teams.join-requests.store');
         Route::post('/team-join-requests/{joinRequest}/approve', [TeamController::class, 'approveJoinRequestById'])->name('team-join-requests.approve');
         Route::post('/team-join-requests/{joinRequest}/decline', [TeamController::class, 'declineJoinRequestById'])->name('team-join-requests.decline');

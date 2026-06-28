@@ -1576,6 +1576,7 @@ abstract class AirmiusClubRepository {
   Future<AirmiusTeam> requestTeamJoin(int id);
   Future<AirmiusTeam> approveTeamJoinRequest(int teamId, int requestId, {String role = 'Player'});
   Future<AirmiusTeam> declineTeamJoinRequest(int teamId, int requestId);
+  Future<AirmiusTeamInvitation> inviteTeamMember(int teamId, {required String email, required String role});
   Future<List<AirmiusTeamInvitation>> teamInvitations();
   Future<AirmiusTeamInvitation> teamInvitation(int invitationId);
   Future<AirmiusTeam> acceptTeamInvitation(int invitationId);

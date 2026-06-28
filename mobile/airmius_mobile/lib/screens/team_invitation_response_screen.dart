@@ -56,7 +56,7 @@ class _TeamInvitationResponseScreenState extends State<TeamInvitationResponseScr
     return AirmiusTeamInvitation(
       id: invitationId,
       role: _stringFrom(data['role']) ?? _roleFromBody(body) ?? 'Player',
-      status: 'pending',
+      status: _stringFrom(data['invitation_status'] ?? data['status']) ?? 'pending',
       teamId: _intFrom(data['team_id']) ?? 0,
       clubId: _intFrom(data['club_id']),
       teamName: teamName,
@@ -163,31 +163,45 @@ class _TeamInvitationResponseScreenState extends State<TeamInvitationResponseScr
             if (invitation == null) {
               return const EmptyPanel('Keine offene Team-Einladung gefunden.');
             }
+            final answered = invitation.status == 'accepted' || invitation.status == 'declined';
+            final accepted = invitation.status == 'accepted';
 
             return AirmiusPanel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Eyebrow('Offene Team-Einladung'),
+                  Eyebrow(answered ? 'Team-Einladung beantwortet' : 'Offene Team-Einladung'),
                   const SizedBox(height: 8),
-                  Text('Du wurdest zu einem Team eingeladen', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 21, fontWeight: FontWeight.w900)),
+                  Text(
+                    answered ? (accepted ? 'Du hast die Einladung angenommen' : 'Du hast die Einladung abgelehnt') : 'Du wurdest zu einem Team eingeladen',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 21, fontWeight: FontWeight.w900),
+                  ),
                   const SizedBox(height: 6),
-                  const Text('Nimm die Einladung an, um dem Team und dem zugehoerigen Verein beizutreten.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                  Text(
+                    answered
+                        ? (accepted ? 'Du bist dem Team und dem zugehoerigen Verein beigetreten.' : 'Diese Team-Einladung ist nicht mehr offen.')
+                        : 'Nimm die Einladung an, um dem Team und dem zugehoerigen Verein beizutreten.',
+                    style: const TextStyle(color: AirmiusColors.muted, height: 1.35),
+                  ),
                   const SizedBox(height: 14),
                   _InvitationCard(invitation: invitation),
                   const SizedBox(height: 14),
-                  AirmiusButton(
-                    label: _busy ? 'Wird angenommen...' : 'Annehmen',
-                    icon: Icons.check_circle_outline,
-                    onPressed: _busy ? null : () => _accept(invitation),
-                  ),
-                  const SizedBox(height: 10),
-                  AirmiusButton(
-                    label: _busy ? 'Bitte warten...' : 'Ablehnen',
-                    icon: Icons.cancel_outlined,
-                    secondary: true,
-                    onPressed: _busy ? null : () => _decline(invitation),
-                  ),
+                  if (answered)
+                    StatusPill(accepted ? 'Angenommen' : 'Abgelehnt', color: accepted ? AirmiusColors.green : AirmiusColors.red)
+                  else ...[
+                    AirmiusButton(
+                      label: _busy ? 'Wird angenommen...' : 'Annehmen',
+                      icon: Icons.check_circle_outline,
+                      onPressed: _busy ? null : () => _accept(invitation),
+                    ),
+                    const SizedBox(height: 10),
+                    AirmiusButton(
+                      label: _busy ? 'Bitte warten...' : 'Ablehnen',
+                      icon: Icons.cancel_outlined,
+                      secondary: true,
+                      onPressed: _busy ? null : () => _decline(invitation),
+                    ),
+                  ],
                 ],
               ),
             );

@@ -10,18 +10,23 @@ use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\TeamJoinRequest;
 use App\Models\User;
+use App\Notifications\ExternalTeamInvitation;
 use App\Services\PlanFeatureService;
 use App\Support\AppNotification;
 use App\Support\ClubRoles;
 use App\Support\Roles;
 use App\Support\TeamRoles;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\PersonalAccessToken;
+use Throwable;
 
 class TeamController extends Controller
 {
@@ -294,6 +299,99 @@ class TeamController extends Controller
         return $this->declineJoinRequest($request, $joinRequest->team, $joinRequest);
     }
 
+    public function invite(Request $request, Team $team)
+    {
+        $this->authorize('invite', $team);
+
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+            'role' => ['required', Rule::in(Team::ROLES)],
+        ]);
+
+        $recipient = User::where('email', strtolower($data['email']))->first();
+
+        $this->planFeatures->ensureCanSendMemberInvitations($team->club);
+
+        if (! $recipient) {
+            $email = strtolower($data['email']);
+            $invitation = TeamInvitation::updateOrCreate(
+                ['team_id' => $team->id, 'email' => $email],
+                [
+                    'inviter_id' => $request->user()->id,
+                    'recipient_id' => null,
+                    'token' => Str::random(64),
+                    'role' => $data['role'],
+                    'status' => 'pending',
+                    'invited_at' => null,
+                    'responded_at' => null,
+                ],
+            );
+
+            try {
+                Notification::route('mail', $email)->notify(new ExternalTeamInvitation($invitation->load('team')));
+                $invitation->forceFill(['invited_at' => now()])->save();
+            } catch (Throwable $exception) {
+                Log::warning('External team invitation mail failed via API.', [
+                    'team_id' => $team->id,
+                    'club_id' => $team->club_id,
+                    'email' => $email,
+                    'exception' => $exception::class,
+                    'message' => $exception->getMessage(),
+                ]);
+
+                throw ValidationException::withMessages([
+                    'email' => 'Die Einladung wurde vorbereitet, aber die E-Mail konnte nicht versendet werden. Bitte pruefe die SMTP-/Mail-Einstellungen oder versuche es spaeter erneut.',
+                ]);
+            }
+
+            return response()->json([
+                'data' => $this->teamInvitationPayload($invitation->fresh(['team.club:id,name', 'inviter:id,name,email'])),
+                'message' => 'Einladung per E-Mail wurde gesendet.',
+            ], 201);
+        }
+
+        if ($team->users()->where('users.id', $recipient->id)->exists()) {
+            throw ValidationException::withMessages([
+                'email' => 'User ist bereits im Team.',
+            ]);
+        }
+
+        $invitation = TeamInvitation::updateOrCreate(
+            ['team_id' => $team->id, 'recipient_id' => $recipient->id],
+            [
+                'inviter_id' => $request->user()->id,
+                'email' => $recipient->email,
+                'token' => Str::random(64),
+                'role' => $data['role'],
+                'status' => 'pending',
+                'invited_at' => now(),
+                'responded_at' => null,
+            ],
+        );
+
+        AppNotification::send($recipient->id, $data['role'] === 'Coach' ? 'team.trainer_mentioned' : 'team.invite', [
+            'title' => $data['role'] === 'Coach' ? 'Trainer-Einladung zu '.$team->name : 'Einladung zu '.$team->name,
+            'body' => $data['role'] === 'Coach'
+                ? 'Du wurdest als Trainer fuer '.$team->name.' eingeladen.'
+                : 'Du wurdest als '.$data['role'].' eingeladen.',
+            'url' => '/teams?team_invitation='.$invitation->id,
+            'team_id' => $team->id,
+            'team_name' => $team->name,
+            'club_id' => $team->club_id,
+            'club_name' => $team->club?->name,
+            'invitation_id' => $invitation->id,
+            'role' => $data['role'],
+            'inviter_id' => $request->user()->id,
+            'inviter_name' => $request->user()->name,
+            'inviter_email' => $request->user()->email,
+        ]);
+
+        return response()->json([
+            'data' => $this->teamInvitationPayload($invitation->fresh(['team.club:id,name', 'inviter:id,name,email'])),
+            'message' => 'Einladung wurde gesendet.',
+        ], 201);
+    }
+
     public function invitations(Request $request)
     {
         $invitations = TeamInvitation::query()
@@ -348,6 +446,9 @@ class TeamController extends Controller
             ]);
         });
 
+        $this->markTeamInvitationNotificationResponded($invitation->fresh(['team.club']), $request->user(), 'accepted');
+        $this->notifyTeamInvitationResponse($invitation->fresh(['team.club', 'inviter']), $request->user(), 'accepted');
+
         return new TeamResource($invitation->team->fresh()->load(['club.users', 'users', 'joinRequests.user'])->loadCount(['users', 'events']));
     }
 
@@ -360,6 +461,9 @@ class TeamController extends Controller
             'status' => 'declined',
             'responded_at' => now(),
         ]);
+
+        $this->markTeamInvitationNotificationResponded($invitation->fresh(['team.club']), $request->user(), 'declined');
+        $this->notifyTeamInvitationResponse($invitation->fresh(['team.club', 'inviter']), $request->user(), 'declined');
 
         return response()->json([
             'data' => $this->teamInvitationPayload($invitation->fresh()->load(['team.club:id,name', 'inviter:id,name,email'])),
@@ -405,6 +509,65 @@ class TeamController extends Controller
                 'email' => $invitation->inviter->email,
             ] : null,
         ];
+    }
+
+    private function notifyTeamInvitationResponse(TeamInvitation $invitation, User $responder, string $status): void
+    {
+        if (! $invitation->inviter_id || $invitation->inviter_id === $responder->id) {
+            return;
+        }
+
+        $accepted = $status === 'accepted';
+        $teamName = $invitation->team?->name ?? 'Team';
+
+        AppNotification::send($invitation->inviter_id, 'team.invitation.'.$status, [
+            'title' => $accepted ? 'Team-Einladung angenommen' : 'Team-Einladung abgelehnt',
+            'body' => $responder->name.' hat die Einladung zu '.$teamName.($accepted ? ' angenommen.' : ' abgelehnt.'),
+            'url' => '/teams/'.$invitation->team_id,
+            'team_id' => $invitation->team_id,
+            'team_name' => $teamName,
+            'club_id' => $invitation->team?->club_id,
+            'club_name' => $invitation->team?->club?->name,
+            'invitation_id' => $invitation->id,
+            'invitation_status' => $status,
+            'role' => $invitation->role,
+            'responder_id' => $responder->id,
+            'responder_name' => $responder->name,
+            'responder_email' => $responder->email,
+        ]);
+    }
+
+    private function markTeamInvitationNotificationResponded(TeamInvitation $invitation, User $responder, string $status): void
+    {
+        $accepted = $status === 'accepted';
+        $teamName = $invitation->team?->name ?? 'Team';
+        $title = $accepted ? 'Team-Einladung angenommen' : 'Team-Einladung abgelehnt';
+        $body = $accepted
+            ? 'Du hast die Einladung zu '.$teamName.' angenommen.'
+            : 'Du hast die Einladung zu '.$teamName.' abgelehnt.';
+
+        \App\Models\Notification::query()
+            ->where('user_id', $responder->id)
+            ->where('data->invitation_id', $invitation->id)
+            ->get()
+            ->each(function (\App\Models\Notification $notification) use ($invitation, $status, $title, $body, $teamName) {
+                $data = $notification->data ?: [];
+                $notification->update([
+                    'read' => false,
+                    'data' => array_merge($data, [
+                        'title' => $title,
+                        'body' => $body,
+                        'team_id' => $invitation->team_id,
+                        'team_name' => $teamName,
+                        'club_id' => $invitation->team?->club_id,
+                        'club_name' => $invitation->team?->club?->name,
+                        'invitation_id' => $invitation->id,
+                        'invitation_status' => $status,
+                        'role' => $invitation->role,
+                        'responded_at' => now()->toJSON(),
+                    ]),
+                ]);
+            });
     }
 
     public function attendanceStats(Request $request, Team $team)

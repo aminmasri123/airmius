@@ -691,7 +691,7 @@ class _RolesPanel extends StatelessWidget {
   }
 }
 
-class _InvitePanel extends StatelessWidget {
+class _InvitePanel extends StatefulWidget {
   const _InvitePanel({required this.team, required this.isReviewing, required this.onApprove, required this.onDecline});
 
   final AirmiusTeam? team;
@@ -700,8 +700,43 @@ class _InvitePanel extends StatelessWidget {
   final ValueChanged<AirmiusTeamJoinRequest>? onDecline;
 
   @override
+  State<_InvitePanel> createState() => _InvitePanelState();
+}
+
+class _InvitePanelState extends State<_InvitePanel> {
+  final TextEditingController _emailController = TextEditingController();
+  String _role = 'Player';
+  bool _sending = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendInvitation() async {
+    final team = widget.team;
+    final email = _emailController.text.trim();
+    if (team == null || email.isEmpty || _sending) return;
+
+    setState(() => _sending = true);
+    try {
+      await AirmiusServicesScope.of(context).repositories.clubs.inviteTeamMember(team.id, email: email, role: _role);
+      if (!mounted) return;
+      _emailController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Einladung wurde als ${_teamRoleLabel(_role)} gesendet.')));
+    } catch (error) {
+      if (!mounted) return;
+      final message = error is AirmiusApiException ? error.userMessage : '$error';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Einladung konnte nicht gesendet werden: $message')));
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final requests = team?.pendingJoinRequests.where((request) => request.status == 'pending').toList() ?? const <AirmiusTeamJoinRequest>[];
+    final requests = widget.team?.pendingJoinRequests.where((request) => request.status == 'pending').toList() ?? const <AirmiusTeamJoinRequest>[];
     return AirmiusPanel(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
         const Expanded(child: Eyebrow('Offene Team-Anfragen')),
@@ -714,9 +749,9 @@ class _InvitePanel extends StatelessWidget {
         for (final request in requests) ...[
           _TeamJoinRequestCard(
             request: request,
-            isBusy: isReviewing,
-            onApprove: onApprove == null ? null : () => onApprove!(request),
-            onDecline: onDecline == null ? null : () => onDecline!(request),
+            isBusy: widget.isReviewing,
+            onApprove: widget.onApprove == null ? null : () => widget.onApprove!(request),
+            onDecline: widget.onDecline == null ? null : () => widget.onDecline!(request),
           ),
           const SizedBox(height: 10),
         ],
@@ -725,11 +760,45 @@ class _InvitePanel extends StatelessWidget {
       const SizedBox(height: 10),
       const Eyebrow('Einladung senden'),
       const SizedBox(height: 12),
-      const AirmiusTextField(label: 'E-Mail', hint: 'mitglied@example.com', icon: Icons.mail_outline),
+      TextField(
+        controller: _emailController,
+        keyboardType: TextInputType.emailAddress,
+        enabled: !_sending && widget.team != null,
+        style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
+        decoration: const InputDecoration(
+          labelText: 'E-Mail',
+          hintText: 'mitglied@example.com',
+          prefixIcon: Icon(Icons.mail_outline),
+        ),
+      ),
       const SizedBox(height: 10),
-      const AirmiusTextField(label: 'Rolle', hint: 'Spieler, Trainer, Captain', icon: Icons.admin_panel_settings_outlined),
+      DropdownButtonFormField<String>(
+        value: _role,
+        isExpanded: true,
+        dropdownColor: AirmiusColors.card,
+        decoration: InputDecoration(
+          labelText: 'Rolle',
+          labelStyle: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800),
+          prefixIcon: const Icon(Icons.admin_panel_settings_outlined),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AirmiusColors.border)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AirmiusColors.blue)),
+          filled: true,
+          fillColor: AirmiusColors.cardSoft,
+        ),
+        style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
+        items: [
+          for (final item in _teamRoleValues) DropdownMenuItem(value: item, child: Text(_teamRoleLabel(item))),
+        ],
+        onChanged: _sending ? null : (value) => setState(() => _role = value ?? 'Player'),
+      ),
       const SizedBox(height: 10),
-      const Text('Einladungstoken, Ablaufdatum und Guardian-Pruefung werden spaeter ueber die API erzeugt.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
+      AirmiusButton(
+        label: _sending ? 'Einladung wird gesendet...' : 'Einladung senden',
+        icon: Icons.send_outlined,
+        onPressed: _sending || widget.team == null ? null : _sendInvitation,
+      ),
+      const SizedBox(height: 10),
+      const Text('Registrierte Airmius-User erhalten eine In-App-Benachrichtigung, externe E-Mail-Adressen eine Einladung per Mail.', style: TextStyle(color: AirmiusColors.muted, height: 1.35)),
     ]));
   }
 }

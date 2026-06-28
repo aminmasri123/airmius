@@ -212,6 +212,13 @@ class AirmiusApiClient {
 
   Future<AirmiusJson> teamInvitations() => _json('GET', '/api/v1/team-invitations');
 
+  Future<AirmiusJson> inviteTeamMember(int teamId, {required String email, required String role}) {
+    return _json('POST', '/api/v1/teams/$teamId/invite', body: {
+      'email': email,
+      'role': role,
+    });
+  }
+
   Future<AirmiusJson> teamInvitation(int invitationId) => _json('GET', '/api/v1/team-invitations/$invitationId');
 
   Future<AirmiusJson> acceptTeamInvitation(int invitationId) => _json('POST', '/api/v1/team-invitations/$invitationId/accept');
