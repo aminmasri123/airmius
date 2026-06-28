@@ -51,6 +51,9 @@ Route::options('/team-join-requests/{joinRequest}/approve', fn () => response(''
 Route::options('/team-join-requests/{joinRequest}/decline', fn () => response('', 204))
     ->middleware(EnsureApiCorsHeaders::class)
     ->name('auth.team-join-requests.decline.options');
+Route::options('/teams', fn () => response('', 204))
+    ->middleware(EnsureApiCorsHeaders::class)
+    ->name('auth.teams.store.options');
 Route::options('/teams/{team}/members/{user}', fn () => response('', 204))
     ->middleware(EnsureApiCorsHeaders::class)
     ->name('auth.teams.members.update.options');
@@ -288,7 +291,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::post('/teams/{team}/penalty-fees', [TeamPenaltyController::class, 'storeFee'])->name('auth.teams.penalty-fees.store');
     Route::post('/teams/{team}/penalty-fees/{fee}/paid', [TeamPenaltyController::class, 'markFeePaid'])->name('auth.teams.penalty-fees.paid');
     Route::post('/teams/{team}/penalty-fees/{fee}/cancel', [TeamPenaltyController::class, 'cancelFee'])->name('auth.teams.penalty-fees.cancel');
-    Route::post('/teams', [TeamController::class, 'store'])->name('auth.teams.store');
+    Route::post('/teams', [TeamController::class, 'store'])
+        ->middleware(EnsureApiCorsHeaders::class)
+        ->name('auth.teams.store');
     Route::put('/teams/{team}', [TeamController::class, 'update'])->name('auth.teams.update');
     Route::post('/teams/{team}/images', [TeamController::class, 'updateImages'])->name('auth.teams.images.update');
     Route::delete('/teams/{team}', [TeamController::class, 'destroy'])->name('auth.teams.destroy');

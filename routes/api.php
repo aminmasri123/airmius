@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\V1\TrainingController;
 use App\Http\Controllers\Api\V1\UploadController;
 use App\Http\Controllers\ContentReportController;
 use App\Http\Controllers\GlobalSearchController;
+use App\Http\Middleware\EnsureApiCorsHeaders;
 use App\Models\Post;
 use App\Models\Sport;
 use App\Support\UploadStorage;
@@ -38,6 +39,7 @@ Route::get('/user', function (Request $request) {
 
 Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::options('/{any}', fn () => response('', 204))
+        ->middleware(EnsureApiCorsHeaders::class)
         ->where('any', '.*')
         ->name('options');
 

@@ -139,11 +139,13 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    final surface = Theme.of(context).colorScheme.surface;
     return Scaffold(
         floatingActionButton: FloatingActionButton.extended(backgroundColor: const Color(0xFF1D5FA8), foregroundColor: Colors.white, icon: const Icon(Icons.manage_accounts_outlined), label: const Text('Konto Ops', style: TextStyle(fontWeight: FontWeight.w900)), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AccountOperationsScreen(initialTab: 'Auth')))),
 
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         surfaceTintColor: Colors.transparent,
         title: const Text('Konto & Sicherheit', style: TextStyle(fontWeight: FontWeight.w900)),
       ),
@@ -173,10 +175,10 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
                           selected: _flow == flow,
                           label: Text(flow),
                           onSelected: (_) => setState(() => _flow = flow),
-                          selectedColor: AirmiusColors.blue.withValues(alpha: 0.22),
-                          backgroundColor: AirmiusColors.cardSoft,
-                          side: BorderSide(color: _flow == flow ? AirmiusColors.blue : AirmiusColors.border),
-                          labelStyle: TextStyle(color: _flow == flow ? AirmiusColors.blue : AirmiusColors.muted, fontWeight: FontWeight.w900),
+                          selectedColor: accent.withValues(alpha: 0.22),
+                          backgroundColor: Color.lerp(surface, accent, 0.10),
+                          side: BorderSide(color: _flow == flow ? accent : AirmiusColors.border),
+                          labelStyle: TextStyle(color: _flow == flow ? accent : AirmiusColors.muted, fontWeight: FontWeight.w900),
                         ),
                     ],
                   ),
@@ -256,7 +258,7 @@ class _AuthFlowsScreenState extends State<AuthFlowsScreen> {
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
             value: _gender.isEmpty ? null : _gender,
-            dropdownColor: AirmiusColors.card,
+            dropdownColor: Theme.of(context).colorScheme.surface,
             decoration: const InputDecoration(
               labelText: 'Geschlecht',
               prefixIcon: Icon(Icons.wc_outlined, color: AirmiusColors.muted),

@@ -184,7 +184,7 @@ class _SettingsCenterScreenState extends State<SettingsCenterScreen> {
     return Scaffold(
         floatingActionButton: FloatingActionButton.extended(backgroundColor: const Color(0xFF1D5FA8), foregroundColor: Colors.white, icon: const Icon(Icons.manage_accounts_outlined), label: const Text('Account Ops', style: TextStyle(fontWeight: FontWeight.w900)), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => AccountOperationsScreen(initialTab: 'Konto')))),
         
-      appBar: AppBar(backgroundColor: AirmiusColors.header, surfaceTintColor: Colors.transparent, title: const Text('Einstellungen', style: TextStyle(fontWeight: FontWeight.w900))),
+      appBar: AppBar(backgroundColor: Theme.of(context).appBarTheme.backgroundColor, surfaceTintColor: Colors.transparent, title: const Text('Einstellungen', style: TextStyle(fontWeight: FontWeight.w900))),
       body: PageFrame(
         title: 'Einstellungen',
         subtitle: 'Profil, Sprache, Datenschutz, Benachrichtigungen, Sicherheit und Zahlungen',
@@ -202,7 +202,7 @@ class _SettingsCenterScreenState extends State<SettingsCenterScreen> {
               label: Text(item),
               onSelected: (_) => setState(() => _section = item),
               selectedColor: accent.withValues(alpha: 0.22),
-              backgroundColor: AirmiusColors.cardSoft,
+              backgroundColor: Color.lerp(Theme.of(context).colorScheme.surface, accent, 0.10),
               side: BorderSide(color: _section == item ? accent : AirmiusColors.border),
               labelStyle: TextStyle(color: _section == item ? accent : AirmiusColors.muted, fontWeight: FontWeight.w900),
             )).toList()),

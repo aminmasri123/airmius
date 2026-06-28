@@ -8,6 +8,28 @@ import '../models/club_summary.dart';
 import '../models/module_definition.dart';
 import '../widgets/airmius_widgets.dart';
 
+Color _dashText(BuildContext context) {
+  return Theme.of(context).textTheme.bodyLarge?.color ?? AirmiusColors.text;
+}
+
+Color _dashMuted(BuildContext context) {
+  return Theme.of(context).textTheme.bodyMedium?.color ?? AirmiusColors.muted;
+}
+
+Color _dashSurface(BuildContext context) {
+  return Theme.of(context).colorScheme.surface;
+}
+
+Color _dashSurfaceSoft(BuildContext context) {
+  final theme = Theme.of(context);
+  final fill = theme.inputDecorationTheme.fillColor;
+  return fill ?? Color.lerp(theme.colorScheme.surface, theme.colorScheme.primary, theme.brightness == Brightness.dark ? 0.16 : 0.08) ?? theme.colorScheme.surface;
+}
+
+Color _dashBorder(BuildContext context) {
+  return Theme.of(context).dividerColor;
+}
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({
     super.key,

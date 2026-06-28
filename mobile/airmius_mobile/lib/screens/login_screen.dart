@@ -268,18 +268,19 @@ class _LoginIconMenu<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return PopupMenuButton<T>(
       tooltip: tooltip,
       initialValue: value,
       onSelected: onSelected,
-      color: AirmiusColors.card,
+      color: scheme.surface,
       surfaceTintColor: Colors.transparent,
       itemBuilder: (_) => entries,
       child: Container(
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: AirmiusColors.cardSoft,
+          color: Color.lerp(scheme.surface, scheme.primary, 0.12) ?? scheme.surface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AirmiusColors.border),
         ),

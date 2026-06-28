@@ -22,6 +22,74 @@ Color _themeAccent2(BuildContext context) {
   }
 }
 
+AirmiusThemePalette _themePalette(BuildContext context) {
+  try {
+    return AirmiusThemeModeScope.of(context).palette;
+  } on StateError {
+    return AirmiusThemePalette.dark;
+  }
+}
+
+bool _isDarkUi(BuildContext context) {
+  final palette = _themePalette(context);
+  if (palette == AirmiusThemePalette.dark) return true;
+  try {
+    final mode = AirmiusThemeModeScope.of(context).mode;
+    return switch (mode) {
+      ThemeMode.dark => true,
+      ThemeMode.light => false,
+      ThemeMode.system => Theme.of(context).brightness == Brightness.dark,
+    };
+  } on StateError {
+    return Theme.of(context).brightness == Brightness.dark;
+  }
+}
+
+Color _themeBackground(BuildContext context) {
+  final palette = _themePalette(context);
+  return _isDarkUi(context) ? palette.darkBackground : palette.lightBackground;
+}
+
+Color _themeHeader(BuildContext context) {
+  final palette = _themePalette(context);
+  return _isDarkUi(context) ? palette.darkHeader : palette.lightSurface;
+}
+
+Color _themeSurface(BuildContext context) {
+  final palette = _themePalette(context);
+  return _isDarkUi(context) ? palette.darkSurface : palette.lightSurface;
+}
+
+Color _themeSurfaceSoft(BuildContext context) {
+  final palette = _themePalette(context);
+  return _isDarkUi(context) ? palette.darkSurfaceSoft : palette.lightSurfaceSoft;
+}
+
+Color _themeInput(BuildContext context) {
+  final palette = _themePalette(context);
+  return _isDarkUi(context) ? palette.darkSurfaceSoft : palette.lightInput;
+}
+
+Color _themeText(BuildContext context) {
+  final palette = _themePalette(context);
+  return _isDarkUi(context) ? AirmiusColors.text : palette.lightText;
+}
+
+Color _themeMuted(BuildContext context) {
+  final palette = _themePalette(context);
+  return _isDarkUi(context) ? AirmiusColors.muted : palette.lightMutedText;
+}
+
+Color _themeBorder(BuildContext context) {
+  final palette = _themePalette(context);
+  return _isDarkUi(context) ? AirmiusColors.border : palette.lightBorder;
+}
+
+Color _themeShadow(BuildContext context) {
+  final palette = _themePalette(context);
+  return _isDarkUi(context) ? Colors.black.withValues(alpha: 0.20) : palette.primary.withValues(alpha: 0.12);
+}
+
 enum AirmiusLogoVariant {
   mark,
   wordmark,
@@ -78,16 +146,7 @@ class AirmiusLogo extends StatelessWidget {
   }
 
   bool _shouldUseDarkUiLogo(BuildContext context) {
-    try {
-      final mode = AirmiusThemeModeScope.of(context).mode;
-      return switch (mode) {
-        ThemeMode.dark => true,
-        ThemeMode.light => false,
-        ThemeMode.system => Theme.of(context).brightness == Brightness.dark,
-      };
-    } on StateError {
-      return Theme.of(context).brightness == Brightness.dark;
-    }
+    return _isDarkUi(context);
   }
 }
 
@@ -121,6 +180,11 @@ class AirmiusPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = _themeAccent(context);
     final accent2 = _themeAccent2(context);
+    final surface = _themeSurface(context);
+    final surfaceSoft = _themeSurfaceSoft(context);
+    final text = _themeText(context);
+    final muted = _themeMuted(context);
+    final border = _themeBorder(context);
     final content = child ??
         (children == null
             ? null
@@ -134,13 +198,13 @@ class AirmiusPanel extends StatelessWidget {
         ? Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (title != null) Text(title!, style: const TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
+              if (title != null) Text(title!, style: TextStyle(color: text, fontSize: 18, fontWeight: FontWeight.w900)),
               if (subtitle != null) ...[
                 const SizedBox(height: 4),
-                Text(subtitle!, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+                Text(subtitle!, style: TextStyle(color: muted, fontWeight: FontWeight.w700)),
               ] else if (body != null) ...[
                 const SizedBox(height: 4),
-                Text(body!, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+                Text(body!, style: TextStyle(color: muted, fontWeight: FontWeight.w700)),
               ],
               if (content != null) ...[
                 const SizedBox(height: 10),
@@ -161,25 +225,25 @@ class AirmiusPanel extends StatelessWidget {
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: AirmiusColors.card,
+        color: surface,
         gradient: gradient
             ? LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color.lerp(AirmiusColors.cardSoft, accent, 0.18) ?? AirmiusColors.cardSoft,
-                  AirmiusColors.card,
+                  surfaceSoft,
+                  surface,
                   accent2.withValues(alpha: 0.16),
                 ],
               )
             : null,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borderColor ?? Color.lerp(AirmiusColors.border, accent, 0.18) ?? AirmiusColors.border),
+        border: Border.all(color: borderColor ?? Color.lerp(border, accent, 0.18) ?? border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.20),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: _themeShadow(context),
+            blurRadius: _isDarkUi(context) ? 20 : 30,
+            offset: Offset(0, _isDarkUi(context) ? 10 : 16),
           ),
         ],
       ),
@@ -217,6 +281,8 @@ class PageFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = _themeText(context);
+    final muted = _themeMuted(context);
     final trailingWidgets = <Widget>[
       if (trailing != null) trailing!,
       if (actions != null)
@@ -226,7 +292,7 @@ class PageFrame extends StatelessWidget {
     ];
 
     return ColoredBox(
-      color: AirmiusColors.bg,
+      color: _themeBackground(context),
       child: CustomScrollView(
         slivers: [
           SliverPadding(
@@ -248,8 +314,8 @@ class PageFrame extends StatelessWidget {
                                 children: [
                                   Text(
                                     title,
-                                    style: const TextStyle(
-                                      color: AirmiusColors.text,
+                                    style: TextStyle(
+                                      color: text,
                                       fontSize: 26,
                                       fontWeight: FontWeight.w900,
                                       height: 1.05,
@@ -258,8 +324,8 @@ class PageFrame extends StatelessWidget {
                                   const SizedBox(height: 4),
                                   Text(
                                     subtitle,
-                                    style: const TextStyle(
-                                      color: AirmiusColors.muted,
+                                    style: TextStyle(
+                                      color: muted,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -364,14 +430,16 @@ class Metric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = _themeText(context);
+    final muted = _themeMuted(context);
     return AirmiusPanel(
       padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: const TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900)),
+          Text(value, style: TextStyle(color: text, fontSize: 22, fontWeight: FontWeight.w900)),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w700)),
+          Text(label, style: TextStyle(color: muted, fontSize: 11, fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -390,12 +458,14 @@ class PageTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = _themeText(context);
+    final muted = _themeMuted(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(color: AirmiusColors.text, fontSize: 26, fontWeight: FontWeight.w900, height: 1.05)),
+        Text(title, style: TextStyle(color: text, fontSize: 26, fontWeight: FontWeight.w900, height: 1.05)),
         const SizedBox(height: 4),
-        Text(subtitle, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w600)),
+        Text(subtitle, style: TextStyle(color: muted, fontWeight: FontWeight.w600)),
       ],
     );
   }
@@ -408,12 +478,13 @@ class EmptyPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final muted = _themeMuted(context);
     return AirmiusPanel(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Text(
           message,
-          style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700),
+          style: TextStyle(color: muted, fontWeight: FontWeight.w700),
         ),
       ),
     );
@@ -470,9 +541,11 @@ class _OpenUiActionResultScreenState extends State<_OpenUiActionResultScreen> {
   @override
   Widget build(BuildContext context) {
     final accent = _themeAccent(context);
+    final text = _themeText(context);
+    final muted = _themeMuted(context);
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AirmiusColors.header,
+        backgroundColor: _themeHeader(context),
         surfaceTintColor: Colors.transparent,
         title: Text(widget.title, style: const TextStyle(fontWeight: FontWeight.w900)),
       ),
@@ -495,7 +568,7 @@ class _OpenUiActionResultScreenState extends State<_OpenUiActionResultScreen> {
                       children: [
                         const Eyebrow('UI-Aktion'),
                         const SizedBox(height: 8),
-                        Text(widget.body, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                        Text(widget.body, style: TextStyle(color: muted, height: 1.35)),
                         const SizedBox(height: 10),
                         Wrap(
                           spacing: 8,
@@ -517,16 +590,16 @@ class _OpenUiActionResultScreenState extends State<_OpenUiActionResultScreen> {
                 onChanged: (value) => setState(() => _saveAsDraft = value),
                 activeColor: accent,
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Als Entwurf vormerken', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                subtitle: const Text('UI bleibt lokal sichtbar, Server-Sync ist später geplant.', style: TextStyle(color: AirmiusColors.muted)),
+                title: Text('Als Entwurf vormerken', style: TextStyle(color: text, fontWeight: FontWeight.w900)),
+                subtitle: Text('UI bleibt lokal sichtbar, Server-Sync ist später geplant.', style: TextStyle(color: muted)),
               ),
               SwitchListTile.adaptive(
                 value: _notify,
                 onChanged: (value) => setState(() => _notify = value),
                 activeColor: AirmiusColors.amber,
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Benachrichtigung ausloesen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-                subtitle: const Text('Push/Inbox-Signal optional vormerken.', style: TextStyle(color: AirmiusColors.muted)),
+                title: Text('Benachrichtigung ausloesen', style: TextStyle(color: text, fontWeight: FontWeight.w900)),
+                subtitle: Text('Push/Inbox-Signal optional vormerken.', style: TextStyle(color: muted)),
               ),
               const SizedBox(height: 12),
               AirmiusButton(
@@ -576,9 +649,11 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final fallbackLabel = (userLabel == null || userLabel!.trim().isEmpty) ? 'GK' : userLabel!.trim();
+    final text = _themeText(context);
+    final muted = _themeMuted(context);
 
     return AppBar(
-      backgroundColor: AirmiusColors.header,
+      backgroundColor: _themeHeader(context),
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       automaticallyImplyLeading: false,
@@ -596,12 +671,12 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
         IconButton(
           tooltip: 'Suche',
           onPressed: onSearch,
-          icon: const Icon(Icons.search, color: AirmiusColors.muted),
+          icon: Icon(Icons.search, color: muted),
         ),
         IconButton(
           tooltip: 'Nachrichten',
           onPressed: onMessages,
-          icon: const Icon(Icons.chat_bubble_outline, color: AirmiusColors.muted),
+          icon: Icon(Icons.chat_bubble_outline, color: muted),
         ),
         IconButton(
           tooltip: 'Benachrichtigungen',
@@ -622,7 +697,7 @@ class AirmiusTopBar extends StatelessWidget implements PreferredSizeWidget {
           builder: (context) => IconButton(
             tooltip: 'Menue',
             onPressed: () => Scaffold.of(context).openDrawer(),
-            icon: const Icon(Icons.menu, color: AirmiusColors.text),
+            icon: Icon(Icons.menu, color: text),
           ),
         ),
         const SizedBox(width: 6),
@@ -638,10 +713,11 @@ class _NotificationBell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final muted = _themeMuted(context);
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        const Icon(Icons.notifications_none, color: AirmiusColors.muted),
+        Icon(Icons.notifications_none, color: muted),
         if (count > 0)
           Positioned(
             right: -6,
@@ -652,7 +728,7 @@ class _NotificationBell extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AirmiusColors.red,
                 borderRadius: BorderRadius.circular(99),
-                border: Border.all(color: AirmiusColors.header, width: 2),
+                border: Border.all(color: _themeHeader(context), width: 2),
               ),
               alignment: Alignment.center,
               child: Text(
@@ -683,12 +759,13 @@ class UserBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = _themeAccent(context);
+    final text = _themeText(context);
     final imageUrl = _normalizedImageUrl;
     final size = small ? 32.0 : 40.0;
     final initials = Text(
       _shortLabel,
       style: TextStyle(
-        color: AirmiusColors.text,
+        color: text,
         fontWeight: FontWeight.w900,
         fontSize: small ? 11 : 13,
       ),
@@ -792,6 +869,7 @@ class _ProfileMenuBubble extends StatelessWidget {
     final items = <PopupMenuEntry<_ProfileAction>>[];
     if (onOpenProfile != null) {
       items.add(_buildItem(
+        context,
         action: _ProfileAction.openProfile,
         icon: Icons.person_outline,
         text: 'Profil',
@@ -799,6 +877,7 @@ class _ProfileMenuBubble extends StatelessWidget {
     }
     if (onOpenSettings != null) {
       items.add(_buildItem(
+        context,
         action: _ProfileAction.openSettings,
         icon: Icons.settings_outlined,
         text: 'Einstellungen',
@@ -809,6 +888,7 @@ class _ProfileMenuBubble extends StatelessWidget {
         items.add(const PopupMenuDivider());
       }
       items.add(_buildItem(
+        context,
         action: _ProfileAction.signOut,
         icon: Icons.logout_outlined,
         text: 'Abmelden',
@@ -819,6 +899,8 @@ class _ProfileMenuBubble extends StatelessWidget {
       tooltip: 'Benutzer',
       offset: const Offset(0, 48),
       icon: UserBubble(label: userLabel, imageUrl: userImageUrl),
+      color: _themeSurface(context),
+      surfaceTintColor: Colors.transparent,
       itemBuilder: (_) => items,
       onSelected: (value) {
         switch (value) {
@@ -836,18 +918,20 @@ class _ProfileMenuBubble extends StatelessWidget {
     );
   }
 
-  PopupMenuItem<_ProfileAction> _buildItem({
+  PopupMenuItem<_ProfileAction> _buildItem(
+    BuildContext context, {
     required _ProfileAction action,
     required IconData icon,
     required String text,
   }) {
+    final foreground = _themeText(context);
     return PopupMenuItem<_ProfileAction>(
       value: action,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: AirmiusColors.text),
+          Icon(icon, size: 18, color: foreground),
           const SizedBox(width: 12),
-          Text(text, style: const TextStyle(fontWeight: FontWeight.w800)),
+          Text(text, style: TextStyle(color: foreground, fontWeight: FontWeight.w800)),
         ],
       ),
     );
@@ -888,6 +972,7 @@ class AirmiusButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = danger ? AirmiusColors.red : _themeAccent(context);
+    final muted = _themeMuted(context);
     if (secondary || danger) {
       return OutlinedButton.icon(
         onPressed: onPressed,
@@ -910,8 +995,8 @@ class AirmiusButton extends StatelessWidget {
       style: FilledButton.styleFrom(
         backgroundColor: color,
         foregroundColor: Colors.white,
-        disabledBackgroundColor: AirmiusColors.cardSoft,
-        disabledForegroundColor: AirmiusColors.mutedSoft,
+        disabledBackgroundColor: _themeSurfaceSoft(context),
+        disabledForegroundColor: muted,
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       ),
@@ -947,7 +1032,8 @@ class AirmiusTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = _themeAccent(context);
+    final text = _themeText(context);
+    final muted = _themeMuted(context);
     return TextField(
       controller: controller,
       focusNode: focusNode,
@@ -955,11 +1041,11 @@ class AirmiusTextField extends StatelessWidget {
       keyboardType: keyboardType,
       obscureText: obscureText,
       maxLines: maxLines,
-      style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w700),
+      style: TextStyle(color: text, fontWeight: FontWeight.w700),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        prefixIcon: icon == null ? null : Icon(icon, color: AirmiusColors.muted),
+        prefixIcon: icon == null ? null : Icon(icon, color: muted),
         suffixIcon: suffixIcon,
       ),
     );
@@ -975,15 +1061,18 @@ class SearchBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = _themeAccent(context);
+    final text = _themeText(context);
+    final muted = _themeMuted(context);
+    final border = _themeBorder(context);
     return TextField(
       onChanged: onChanged,
-      style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
+      style: TextStyle(color: text, fontWeight: FontWeight.w800),
       decoration: InputDecoration(
         hintText: hint,
-        prefixIcon: const Icon(Icons.search, color: AirmiusColors.muted),
+        prefixIcon: Icon(Icons.search, color: muted),
         filled: true,
-        fillColor: AirmiusColors.cardSoft,
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: const BorderSide(color: AirmiusColors.border)),
+        fillColor: _themeInput(context),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide(color: border)),
         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide(color: accent)),
       ),
     );
@@ -999,6 +1088,7 @@ class MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = _themeAccent(context);
+    final muted = _themeMuted(context);
     return AirmiusPanel(
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -1006,7 +1096,7 @@ class MetricCard extends StatelessWidget {
         children: [
           Text(value, style: TextStyle(color: accent, fontSize: 24, fontWeight: FontWeight.w900)),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w700)),
+          Text(label, style: TextStyle(color: muted, fontSize: 12, fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -1023,6 +1113,7 @@ class AirmiusAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = _themeAccent(context);
+    final text = _themeText(context);
     final initials = initialsFromName(name);
     final radius = large ? 20.0 : 16.0;
     final resolvedImageUrl = _imageUrl;
@@ -1041,7 +1132,7 @@ class AirmiusAvatar extends StatelessWidget {
                 child: Text(
                   initials,
                   style: TextStyle(
-                    color: AirmiusColors.text,
+                    color: text,
                     fontSize: large ? 28 : 22,
                     fontWeight: FontWeight.w900,
                   ),
@@ -1055,7 +1146,7 @@ class AirmiusAvatar extends StatelessWidget {
                   child: Text(
                     initials,
                     style: TextStyle(
-                      color: AirmiusColors.text,
+                      color: text,
                       fontSize: large ? 28 : 22,
                       fontWeight: FontWeight.w900,
                     ),
@@ -1094,7 +1185,7 @@ class AirmiusMediaImage extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: Container(
-        color: AirmiusColors.cardSoft,
+        color: _themeSurfaceSoft(context),
         child: height != null
             ? SizedBox(width: double.infinity, height: height, child: _AirmiusNetworkImageWithFallbacks(url: url, fallbackUrls: fallbackUrls, fallback: fallback))
             : AspectRatio(aspectRatio: aspectRatio ?? 16 / 9, child: _AirmiusNetworkImageWithFallbacks(url: url, fallbackUrls: fallbackUrls, fallback: fallback)),
@@ -1191,10 +1282,10 @@ class _MediaFallback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(18),
-        child: Icon(Icons.image_not_supported_outlined, color: AirmiusColors.muted),
+        padding: const EdgeInsets.all(18),
+        child: Icon(Icons.image_not_supported_outlined, color: _themeMuted(context)),
       ),
     );
   }
@@ -1228,11 +1319,14 @@ class LanguageChooser extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = AirmiusScope.of(context);
     final accent = _themeAccent(context);
+    final text = _themeText(context);
+    final muted = _themeMuted(context);
+    final border = _themeBorder(context);
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(scope.t('language'), style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+          Text(scope.t('language'), style: TextStyle(color: text, fontWeight: FontWeight.w900)),
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,
@@ -1244,9 +1338,9 @@ class LanguageChooser extends StatelessWidget {
                   label: Text(language.code),
                   onSelected: (_) => scope.setLanguage(language),
                   selectedColor: accent.withValues(alpha: 0.22),
-                  backgroundColor: AirmiusColors.cardSoft,
-                  side: BorderSide(color: scope.language == language ? accent : AirmiusColors.border),
-                  labelStyle: TextStyle(color: scope.language == language ? accent : AirmiusColors.muted, fontWeight: FontWeight.w900),
+                  backgroundColor: _themeSurfaceSoft(context),
+                  side: BorderSide(color: scope.language == language ? accent : border),
+                  labelStyle: TextStyle(color: scope.language == language ? accent : muted, fontWeight: FontWeight.w900),
                 ),
             ],
           ),
@@ -1262,15 +1356,17 @@ class AirmiusThemeChooser extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = AirmiusThemeModeScope.of(context);
+    final text = _themeText(context);
+    final muted = _themeMuted(context);
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Design', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+          Text('Design', style: TextStyle(color: text, fontWeight: FontWeight.w900)),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Logo und Theme folgen dem Airmius-Prinzip für Dunkel, Normal und System.',
-            style: TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.35),
+            style: TextStyle(color: muted, fontSize: 12, height: 1.35),
           ),
           const SizedBox(height: 10),
           Wrap(
@@ -1283,7 +1379,7 @@ class AirmiusThemeChooser extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Farbpalette', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+          Text('Farbpalette', style: TextStyle(color: text, fontWeight: FontWeight.w900)),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -1314,14 +1410,16 @@ class _ThemeChoice extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = AirmiusThemeModeScope.of(context);
     final accent = _themeAccent(context);
+    final muted = _themeMuted(context);
+    final border = _themeBorder(context);
     return ChoiceChip(
       selected: active == mode,
       label: Text(label),
       onSelected: (_) => scope.setMode(mode),
       selectedColor: accent.withValues(alpha: 0.22),
-      backgroundColor: AirmiusColors.cardSoft,
-      side: BorderSide(color: active == mode ? accent : AirmiusColors.border),
-      labelStyle: TextStyle(color: active == mode ? accent : AirmiusColors.muted, fontWeight: FontWeight.w900),
+      backgroundColor: _themeSurfaceSoft(context),
+      side: BorderSide(color: active == mode ? accent : border),
+      labelStyle: TextStyle(color: active == mode ? accent : muted, fontWeight: FontWeight.w900),
     );
   }
 }
@@ -1339,15 +1437,17 @@ class _PaletteChoice extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = AirmiusThemeModeScope.of(context);
     final selected = active == palette;
+    final muted = _themeMuted(context);
+    final border = _themeBorder(context);
     return ChoiceChip(
       selected: selected,
       avatar: _PaletteSwatch(palette: palette),
       label: Text(palette.label),
       onSelected: (_) => scope.setPalette(palette),
       selectedColor: palette.primary.withValues(alpha: 0.22),
-      backgroundColor: AirmiusColors.cardSoft,
-      side: BorderSide(color: selected ? palette.primary : AirmiusColors.border),
-      labelStyle: TextStyle(color: selected ? palette.primary : AirmiusColors.muted, fontWeight: FontWeight.w900),
+      backgroundColor: _themeSurfaceSoft(context),
+      side: BorderSide(color: selected ? palette.primary : border),
+      labelStyle: TextStyle(color: selected ? palette.primary : muted, fontWeight: FontWeight.w900),
     );
   }
 }
@@ -1366,7 +1466,7 @@ class _PaletteSwatch extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: LinearGradient(colors: [palette.primary, palette.secondary]),
-          border: Border.all(color: AirmiusColors.border),
+          border: Border.all(color: _themeBorder(context)),
         ),
       ),
     );
@@ -1386,10 +1486,10 @@ Future<bool> confirmDanger(
   final result = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      backgroundColor: AirmiusColors.card,
+      backgroundColor: _themeSurface(context),
       surfaceTintColor: Colors.transparent,
-      title: Text(resolvedTitle, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
-      content: Text(resolvedMessage, style: const TextStyle(color: AirmiusColors.muted, height: 1.4)),
+      title: Text(resolvedTitle, style: TextStyle(color: _themeText(context), fontWeight: FontWeight.w900)),
+      content: Text(resolvedMessage, style: TextStyle(color: _themeMuted(context), height: 1.4)),
       actions: [
         TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Abbrechen')),
         FilledButton(

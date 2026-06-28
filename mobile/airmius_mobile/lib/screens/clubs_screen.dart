@@ -1423,12 +1423,21 @@ class _TeamCreateInlinePanel extends StatefulWidget {
 class _TeamCreateInlinePanelState extends State<_TeamCreateInlinePanel> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _sportController = TextEditingController();
+  Future<List<AirmiusSport>>? _sportsFuture;
+  String? _selectedSportSlug;
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
     _sportController.text = widget.club.sportType ?? '';
+    _selectedSportSlug = widget.club.sportType;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sportsFuture ??= AirmiusServicesScope.of(context).repositories.sports.sports().then((page) => page.items);
   }
 
   @override
@@ -1450,7 +1459,8 @@ class _TeamCreateInlinePanelState extends State<_TeamCreateInlinePanel> {
       await services.repositories.clubs.createTeam({
         'club_id': widget.club.id,
         'name': name,
-        if (_sportController.text.trim().isNotEmpty) 'sport_type': _sportController.text.trim(),
+        if ((_selectedSportSlug ?? _sportController.text).trim().isNotEmpty)
+          'sport_type': (_selectedSportSlug ?? _sportController.text).trim(),
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Team erstellt.')));
@@ -1477,10 +1487,20 @@ class _TeamCreateInlinePanelState extends State<_TeamCreateInlinePanel> {
             decoration: const InputDecoration(labelText: 'Teamname', hintText: 'z.B. U16, Herren Aktiv'),
           ),
           const SizedBox(height: 10),
-          TextField(
-            controller: _sportController,
-            style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
-            decoration: const InputDecoration(labelText: 'Sportart', hintText: 'z.B. fussball'),
+          FutureBuilder<List<AirmiusSport>>(
+            future: _sportsFuture,
+            builder: (context, snapshot) {
+              return _SportAutocompleteField(
+                controller: _sportController,
+                sports: snapshot.data ?? const [],
+                loading: snapshot.connectionState == ConnectionState.waiting,
+                onTextChanged: () => _selectedSportSlug = null,
+                onSelected: (sport) {
+                  _sportController.text = sport.name;
+                  _selectedSportSlug = sport.slug;
+                },
+              );
+            },
           ),
           const SizedBox(height: 12),
           _SmallInlineButton(

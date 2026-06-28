@@ -20,6 +20,9 @@ class NotificationsCenterScreen extends StatefulWidget {
 class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
   String _filter = 'all';
   bool _notificationsLoaded = false;
+  AirmiusPage<AirmiusNotification>? _lastNotificationsPage;
+  final Set<int> _locallyRead = <int>{};
+  final Set<int> _locallyUnread = <int>{};
   late Future<AirmiusPage<AirmiusNotification>> _notificationsFuture;
 
   @override
@@ -30,12 +33,58 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
     _notificationsFuture = _loadNotifications();
   }
 
-  Future<AirmiusPage<AirmiusNotification>> _loadNotifications() {
-    return AirmiusServicesScope.of(context).repositories.notifications.notifications();
+  Future<AirmiusPage<AirmiusNotification>> _loadNotifications() async {
+    final page = await AirmiusServicesScope.of(context).repositories.notifications.notifications();
+    final adjustedPage = _applyLocalReadState(page);
+    _lastNotificationsPage = adjustedPage;
+    return adjustedPage;
+  }
+
+  AirmiusPage<AirmiusNotification> _applyLocalReadState(AirmiusPage<AirmiusNotification> page) {
+    final items = page.items.map((item) {
+      if (_locallyUnread.contains(item.id)) return item.copyWith(unread: true);
+      if (_locallyRead.contains(item.id)) return item.copyWith(unread: false);
+      return item;
+    }).toList();
+
+    return AirmiusPage<AirmiusNotification>(
+      items: items,
+      currentPage: page.currentPage,
+      lastPage: page.lastPage,
+      unreadCount: items.where((item) => item.unread).length,
+    );
   }
 
   void _reload() {
     setState(() => _notificationsFuture = _loadNotifications());
+  }
+
+  Future<void> _toggleNotificationReadState(AirmiusNotification notification) async {
+    final markUnread = !notification.unread;
+
+    setState(() {
+      if (markUnread) {
+        _locallyUnread.add(notification.id);
+        _locallyRead.remove(notification.id);
+      } else {
+        _locallyRead.add(notification.id);
+        _locallyUnread.remove(notification.id);
+      }
+
+      final currentPage = _lastNotificationsPage;
+      if (currentPage != null) {
+        final adjustedPage = _applyLocalReadState(currentPage);
+        _lastNotificationsPage = adjustedPage;
+      }
+    });
+
+    try {
+      final repository = AirmiusServicesScope.of(context).repositories.notifications;
+      markUnread ? await repository.markAsUnread(notification.id) : await repository.markAsRead(notification.id);
+    } catch (_) {
+      // Keep the local state. A stale backend route cache or temporary transport
+      // issue must not turn a successful UI action into a list loading error.
+    }
   }
 
   @override
@@ -78,7 +127,8 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
             return _ScrollableNotifications(child: _ErrorNotifications(onRetry: _reload));
           }
 
-          final allItems = snapshot.data?.items ?? const <AirmiusNotification>[];
+          final page = _lastNotificationsPage ?? snapshot.data;
+          final allItems = page?.items ?? const <AirmiusNotification>[];
           final items = allItems.where((item) => _filter == 'all' || _typeKey(item.type) == _filter).toList();
           final unread = allItems.where((item) => item.unread).length;
           final requests = allItems.where((item) => _typeKey(item.type) == 'club').length;
@@ -125,7 +175,7 @@ class _NotificationsCenterScreenState extends State<NotificationsCenterScreen> {
                         SectionLabel(scope.t('notifications.title')),
                         const SizedBox(height: 10),
                         for (final item in items) ...[
-                          _NotificationLine(item: item, onChanged: _reload),
+                          _NotificationLine(item: item, onChanged: _reload, onToggleReadState: _toggleNotificationReadState),
                           const SizedBox(height: 10),
                         ],
                       ],
@@ -162,10 +212,11 @@ class _ScrollableNotifications extends StatelessWidget {
 }
 
 class _NotificationLine extends StatefulWidget {
-  const _NotificationLine({required this.item, required this.onChanged});
+  const _NotificationLine({required this.item, required this.onChanged, required this.onToggleReadState});
 
   final AirmiusNotification item;
   final VoidCallback onChanged;
+  final Future<void> Function(AirmiusNotification notification) onToggleReadState;
 
   @override
   State<_NotificationLine> createState() => _NotificationLineState();
@@ -179,9 +230,7 @@ class _NotificationLineState extends State<_NotificationLine> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      final repository = AirmiusServicesScope.of(context).repositories.notifications;
-      widget.item.unread ? await repository.markAsRead(widget.item.id) : await repository.markAsUnread(widget.item.id);
-      widget.onChanged();
+      await widget.onToggleReadState(widget.item);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AirmiusScope.of(context).t('notifications.error'))));
