@@ -29,10 +29,12 @@ use App\Support\Roles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
+use Throwable;
 use App\Models\BankTransaction;
 
 class ClubController extends Controller
@@ -295,13 +297,27 @@ class ClubController extends Controller
                     'membership_notes' => null,
                     'invitation_status' => $sendInvitation ? 'pending' : 'none',
                     'invitation_token' => $sendInvitation ? Str::random(64) : null,
-                    'invited_at' => $sendInvitation ? now() : null,
+                    'invited_at' => null,
                 ],
             );
 
             if ($sendInvitation) {
-                Notification::route('mail', $email)
-                    ->notify(new ExternalClubMembershipInvitation($externalMember->load('club')));
+                try {
+                    Notification::route('mail', $email)
+                        ->notify(new ExternalClubMembershipInvitation($externalMember->load('club')));
+                    $externalMember->forceFill(['invited_at' => now()])->save();
+                } catch (Throwable $exception) {
+                    Log::warning('External club membership invitation mail failed via API.', [
+                        'club_id' => $club->id,
+                        'email' => $email,
+                        'exception' => $exception::class,
+                        'message' => $exception->getMessage(),
+                    ]);
+
+                    throw ValidationException::withMessages([
+                        'email' => 'Die Einladung wurde vorbereitet, aber die E-Mail konnte nicht versendet werden. Bitte pruefe die SMTP-/Mail-Einstellungen oder versuche es spaeter erneut.',
+                    ]);
+                }
                 $result = 'invited';
             }
         }

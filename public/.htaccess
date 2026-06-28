@@ -9,6 +9,16 @@
 
     RewriteEngine On
 
+    <IfModule mod_headers.c>
+        SetEnvIfNoCase Origin "^(https?://(localhost|127\.0\.0\.1|0\.0\.0\.0|\[?::1\]?)(:[0-9]+)?|https://(airmius\.com|www\.airmius\.com|app\.airmius\.com))$" AIRMIUS_CORS_ORIGIN=$0
+        Header always set Access-Control-Allow-Origin "%{AIRMIUS_CORS_ORIGIN}e" env=AIRMIUS_CORS_ORIGIN
+        Header always merge Vary "Origin" env=AIRMIUS_CORS_ORIGIN
+        Header always set Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS" env=AIRMIUS_CORS_ORIGIN
+        Header always set Access-Control-Allow-Headers "Authorization, Content-Type, Accept, X-Requested-With, X-Airmius-Locale, X-App-Locale, X-CSRF-TOKEN, X-XSRF-TOKEN" env=AIRMIUS_CORS_ORIGIN
+        Header always set Access-Control-Expose-Headers "Authorization, Content-Type" env=AIRMIUS_CORS_ORIGIN
+        Header always set Access-Control-Max-Age "86400" env=AIRMIUS_CORS_ORIGIN
+    </IfModule>
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
