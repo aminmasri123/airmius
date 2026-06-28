@@ -77,6 +77,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         ->middleware(['throttle:30,1', EnsureApiCorsHeaders::class])
         ->name('teams.store.token');
 
+    Route::post('/clubs/{club}/members/invite-token', [ClubController::class, 'inviteMemberWithToken'])
+        ->middleware(['throttle:30,1', EnsureApiCorsHeaders::class])
+        ->name('clubs.members.invite.token');
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::post('/account/deletion-code', [MobileAccountDeletionController::class, 'sendCode'])

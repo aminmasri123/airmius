@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'airmius_club_member_invite_form_stub.dart' if (dart.library.html) 'airmius_club_member_invite_form_web.dart';
 import 'airmius_team_create_form_stub.dart' if (dart.library.html) 'airmius_team_create_form_web.dart';
 
 typedef AirmiusHeaders = Map<String, String>;
@@ -136,7 +137,30 @@ class AirmiusApiClient {
   Future<AirmiusJson> updateClubMembershipType(int clubId, int typeId, AirmiusJson payload) => _json('PUT', '/api/v1/clubs/$clubId/membership/types/$typeId', body: payload);
   Future<AirmiusJson> createClubContributionRule(int clubId, AirmiusJson payload) => _json('POST', '/api/v1/clubs/$clubId/membership/contribution-rules', body: payload);
   Future<AirmiusJson> updateClubContributionRule(int clubId, int ruleId, AirmiusJson payload) => _json('PUT', '/api/v1/clubs/$clubId/membership/contribution-rules/$ruleId', body: payload);
-  Future<AirmiusJson> inviteClubMember(int clubId, AirmiusJson payload) => _json('POST', '/api/v1/clubs/$clubId/members/invite', body: payload);
+  Future<AirmiusJson> inviteClubMember(int clubId, AirmiusJson payload) async {
+    try {
+      return await _json('POST', '/api/v1/clubs/$clubId/members/invite', body: payload);
+    } on AirmiusApiException catch (error) {
+      if (!_shouldTryTeamJoinFallback(error)) rethrow;
+      final formResponse = await _sendClubMemberInviteForm(clubId, payload);
+      if (formResponse != null) return formResponse;
+      rethrow;
+    }
+  }
+
+  Future<AirmiusJson?> _sendClubMemberInviteForm(int clubId, AirmiusJson payload) {
+    final sessionToken = token;
+    if (sessionToken == null || sessionToken.isEmpty) return Future.value(null);
+
+    return sendClubMemberInviteForm(
+      baseUrl: baseUrl,
+      token: sessionToken,
+      locale: locale,
+      clubId: clubId,
+      payload: payload,
+    );
+  }
+
   Future<AirmiusJson> updateClubMemberRole(int clubId, int userId, String role) async {
     try {
       return await _json('PUT', '/api/v1/clubs/$clubId/members/$userId/role', body: {'role': role});

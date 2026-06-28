@@ -27,6 +27,7 @@ use App\Support\ClubMembershipApplication;
 use App\Support\ClubRoles;
 use App\Support\Roles;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
@@ -34,6 +35,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
+use Laravel\Sanctum\PersonalAccessToken;
 use Throwable;
 use App\Models\BankTransaction;
 
@@ -333,6 +335,28 @@ class ClubController extends Controller
             'status' => $result,
             'data' => $this->managementPayload($request, $club->fresh(), true),
         ], $result === 'stored' ? 201 : 200);
+    }
+
+    public function inviteMemberWithToken(Request $request, Club $club)
+    {
+        $token = (string) ($request->bearerToken() ?: $request->input('token', ''));
+        $accessToken = $token !== '' ? PersonalAccessToken::findToken($token) : null;
+        $user = $accessToken?->tokenable;
+
+        abort_unless($user instanceof User, 401, 'Nicht authentifiziert. Bitte in Flutter abmelden und neu einloggen.');
+
+        Auth::setUser($user);
+        $request->setUserResolver(fn () => $user);
+        $request->merge([
+            'email' => $request->input('email'),
+            'name' => $request->input('name'),
+            'member_number' => $request->input('member_number'),
+            'athlete_license_number' => $request->input('athlete_license_number'),
+            'membership_status' => $request->input('membership_status', 'active'),
+            'send_invitation' => $request->boolean('send_invitation', true),
+        ]);
+
+        return $this->inviteMember($request, $club);
     }
 
     public function updateMembershipSettings(Request $request, Club $club)
