@@ -35,6 +35,9 @@ class _AirmiusAppState extends State<AirmiusApp> {
   static String get _apiBaseUrl {
     final configured = _configuredApiBaseUrl.trim();
     if (configured.isNotEmpty) return configured;
+    if (kIsWeb && (Uri.base.scheme == 'http' || Uri.base.scheme == 'https')) {
+      return Uri.base.origin;
+    }
     return kReleaseMode ? 'https://airmius.com' : 'http://localhost';
   }
 

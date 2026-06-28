@@ -12,6 +12,10 @@ class EnsureApiCorsHeaders
 {
     public function handle(Request $request, Closure $next): Response
     {
+        if (! $this->shouldHandle($request)) {
+            return $next($request);
+        }
+
         try {
             if ($this->isPreflight($request)) {
                 $response = response('', 204);
@@ -23,6 +27,14 @@ class EnsureApiCorsHeaders
         }
 
         return $this->withCorsHeaders($request, $response);
+    }
+
+    private function shouldHandle(Request $request): bool
+    {
+        return $this->isPreflight($request)
+            || $request->is('api')
+            || $request->is('api/*')
+            || $request->is('sanctum/csrf-cookie');
     }
 
     private function isPreflight(Request $request): bool

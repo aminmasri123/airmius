@@ -31,11 +31,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->prepend(EnsureApiCorsHeaders::class);
+
         $middleware->statefulApi();
 
         // Mobile/API clients can send X-Locale, X-App-Locale, or Accept-Language.
         $middleware->api(prepend: [
-            EnsureApiCorsHeaders::class,
             SetLocale::class,
         ]);
 
