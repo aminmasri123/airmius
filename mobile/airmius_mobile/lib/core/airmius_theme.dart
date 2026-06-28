@@ -185,10 +185,6 @@ class AirmiusTheme {
   const AirmiusTheme._();
 
   static ThemeData light([AirmiusThemePalette palette = AirmiusThemePalette.dark]) {
-    if (palette == AirmiusThemePalette.dark) {
-      return dark(palette);
-    }
-
     final scheme = ColorScheme.fromSeed(
       seedColor: palette.primary,
       brightness: Brightness.light,

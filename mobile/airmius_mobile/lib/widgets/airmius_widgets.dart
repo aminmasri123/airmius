@@ -31,8 +31,6 @@ AirmiusThemePalette _themePalette(BuildContext context) {
 }
 
 bool _isDarkUi(BuildContext context) {
-  final palette = _themePalette(context);
-  if (palette == AirmiusThemePalette.dark) return true;
   try {
     final mode = AirmiusThemeModeScope.of(context).mode;
     return switch (mode) {

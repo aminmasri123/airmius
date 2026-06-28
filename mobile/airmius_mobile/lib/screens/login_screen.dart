@@ -342,8 +342,6 @@ AirmiusThemePalette _loginPalette(BuildContext context) {
 }
 
 bool _loginDarkUi(BuildContext context) {
-  final palette = _loginPalette(context);
-  if (palette == AirmiusThemePalette.dark) return true;
   try {
     final mode = AirmiusThemeModeScope.of(context).mode;
     return switch (mode) {

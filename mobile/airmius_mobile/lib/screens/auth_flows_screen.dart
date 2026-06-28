@@ -474,8 +474,6 @@ AirmiusThemePalette _authPalette(BuildContext context) {
 }
 
 bool _authDarkUi(BuildContext context) {
-  final palette = _authPalette(context);
-  if (palette == AirmiusThemePalette.dark) return true;
   try {
     final mode = AirmiusThemeModeScope.of(context).mode;
     return switch (mode) {

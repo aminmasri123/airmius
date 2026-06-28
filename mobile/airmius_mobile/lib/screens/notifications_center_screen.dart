@@ -218,8 +218,6 @@ AirmiusThemePalette _notificationPalette(BuildContext context) {
 }
 
 bool _notificationDarkUi(BuildContext context) {
-  final palette = _notificationPalette(context);
-  if (palette == AirmiusThemePalette.dark) return true;
   try {
     final mode = AirmiusThemeModeScope.of(context).mode;
     return switch (mode) {
@@ -322,7 +320,7 @@ class _NotificationLineState extends State<_NotificationLine> {
       if (teamInvitationId != null) {
         await Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => TeamInvitationResponseScreen(invitationId: teamInvitationId)),
+          MaterialPageRoute(builder: (_) => TeamInvitationResponseScreen(invitationId: teamInvitationId, notification: notification)),
         );
         widget.onChanged();
         return;

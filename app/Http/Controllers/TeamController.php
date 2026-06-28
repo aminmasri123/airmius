@@ -505,7 +505,14 @@ class TeamController extends Controller
                     : 'Du wurdest als '.$data['role'].' eingeladen.',
                 'url' => route('auth.teams.index', ['team_invitation' => $invitation->id]),
                 'team_id' => $team->id,
+                'team_name' => $team->name,
+                'club_id' => $team->club_id,
+                'club_name' => $team->club?->name,
                 'invitation_id' => $invitation->id,
+                'role' => $data['role'],
+                'inviter_id' => $request->user()->id,
+                'inviter_name' => $request->user()->name,
+                'inviter_email' => $request->user()->email,
             ]);
 
             return back()->with('success', 'Einladung gesendet.');

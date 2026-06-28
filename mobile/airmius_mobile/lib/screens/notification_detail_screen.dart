@@ -164,8 +164,6 @@ AirmiusThemePalette _notificationDetailPalette(BuildContext context) {
 }
 
 bool _notificationDetailDarkUi(BuildContext context) {
-  final palette = _notificationDetailPalette(context);
-  if (palette == AirmiusThemePalette.dark) return true;
   try {
     final mode = AirmiusThemeModeScope.of(context).mode;
     return switch (mode) {
