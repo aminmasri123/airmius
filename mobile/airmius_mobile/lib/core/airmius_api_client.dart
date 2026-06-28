@@ -152,7 +152,14 @@ class AirmiusApiClient {
       });
 
   Future<AirmiusJson> teamDetail(int teamId) => _json('GET', '/api/v1/teams/$teamId');
-  Future<AirmiusJson> createTeam(AirmiusJson payload) => _json('POST', '/api/v1/teams', body: payload);
+  Future<AirmiusJson> createTeam(AirmiusJson payload) async {
+    try {
+      return await _json('POST', '/api/v1/teams', body: payload);
+    } on AirmiusApiException catch (error) {
+      if (!_shouldTryTeamJoinFallback(error)) rethrow;
+      return _json('POST', '/teams', body: payload);
+    }
+  }
 
   Future<AirmiusJson> updateTeam(int teamId, AirmiusJson payload) => _json('PUT', '/api/v1/teams/$teamId', body: payload);
   Future<AirmiusJson> deleteTeam(int teamId) => _json('DELETE', '/api/v1/teams/$teamId');
