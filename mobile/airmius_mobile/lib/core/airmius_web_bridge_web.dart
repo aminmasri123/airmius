@@ -26,11 +26,11 @@ Future<AirmiusJson?> sendTeamCreateBridge({
       method: 'POST',
       sendData: formData,
     );
-
     final status = xhr.status ?? 0;
     final body = xhr.responseText ?? '';
+
     if (status < 200 || status >= 300) {
-      throw AirmiusApiException(statusCode: status, body: body, path: '/api/v1/web-bridge/teams');
+      throw AirmiusApiException(statusCode: status, body: body, path: '/api/v1/teams');
     }
 
     if (body.trim().isEmpty) return null;
@@ -41,19 +41,19 @@ Future<AirmiusJson?> sendTeamCreateBridge({
     if (error is AirmiusApiException) rethrow;
     throw AirmiusApiException(
       statusCode: 599,
+      path: '/api/v1/teams',
       body: jsonEncode({
-        'error': 'bridge_failed',
-        'message': 'Team konnte auch ueber den Flutter-Web-Bridge-Request nicht erstellt werden.',
+        'error': 'form_post_failed',
+        'message': 'Der einfache Formular-POST auf /api/v1/teams wurde vom Browser oder Server blockiert.',
         'details': error.toString(),
       }),
-      path: '/api/v1/web-bridge/teams',
     );
   }
 }
 
 String _bridgePath(Uri base) {
   final cleanBase = base.path.replaceFirst(RegExp(r'/$'), '');
-  if (cleanBase.endsWith('/api/v1')) return '$cleanBase/web-bridge/teams';
-  if (cleanBase.isEmpty) return '/api/v1/web-bridge/teams';
-  return '$cleanBase/api/v1/web-bridge/teams';
+  if (cleanBase.endsWith('/api/v1')) return '$cleanBase/teams';
+  if (cleanBase.isEmpty) return '/api/v1/teams';
+  return '$cleanBase/api/v1/teams';
 }

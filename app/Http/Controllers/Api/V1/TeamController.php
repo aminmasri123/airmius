@@ -157,14 +157,14 @@ class TeamController extends Controller
         return $this->store($request);
     }
 
-    public function storeFromBridge(Request $request)
+    public function storeWithToken(Request $request)
     {
         $payload = $request->all();
         if ($payload === []) {
             $decoded = json_decode($request->getContent(), true);
             $payload = is_array($decoded) ? $decoded : [];
         }
-        $token = (string) ($payload['token'] ?? '');
+        $token = (string) ($payload['token'] ?? $request->bearerToken() ?? '');
         $accessToken = $token !== '' ? PersonalAccessToken::findToken($token) : null;
         $user = $accessToken?->tokenable;
 

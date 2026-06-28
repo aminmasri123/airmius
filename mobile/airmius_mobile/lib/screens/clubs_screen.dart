@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/airmius_api_client.dart';
 import '../core/airmius_api_models.dart';
 import '../core/airmius_l10n.dart';
 import '../core/airmius_services_scope.dart';
@@ -1481,7 +1482,8 @@ class _TeamCreateInlinePanelState extends State<_TeamCreateInlinePanel> {
       _nameController.clear();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Team konnte nicht erstellt werden: $error')));
+      final message = error is AirmiusApiException ? error.userMessage : '$error';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Team konnte nicht erstellt werden: $message')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
