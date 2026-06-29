@@ -101,6 +101,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     return members
         .map(
           (member) => _MemberEntry(
+            id: member.id,
             name: member.name,
             email: member.email,
             type: _memberType(member),
@@ -354,6 +355,215 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     }
   }
 
+  Future<void> _recordDonation(ClubSummary club, List<_MemberEntry> members) async {
+    final availableMembers = members.where((member) => member.id > 0).toList();
+    if (availableMembers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Keine Mitglieder für eine Spende gefunden.')),
+      );
+      return;
+    }
+
+    var selectedMemberId = availableMembers.first.id;
+    var method = 'cash';
+    final amount = TextEditingController();
+    final paidAt = TextEditingController(text: DateTime.now().toIso8601String().substring(0, 10));
+    final reference = TextEditingController();
+    final notes = TextEditingController();
+
+    final payload = await showDialog<JsonMap>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: AirmiusColors.card,
+            title: const Text('Spende erfassen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            content: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                DropdownButtonFormField<int>(
+                  value: selectedMemberId,
+                  dropdownColor: AirmiusColors.cardSoft,
+                  decoration: const InputDecoration(labelText: 'Mitglied'),
+                  items: [
+                    for (final member in availableMembers)
+                      DropdownMenuItem<int>(
+                        value: member.id,
+                        child: Text('${member.name} - ${member.email}', overflow: TextOverflow.ellipsis),
+                      ),
+                  ],
+                  onChanged: (value) => setDialogState(() => selectedMemberId = value ?? selectedMemberId),
+                ),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Betrag EUR', hint: '0,00', controller: amount, keyboardType: TextInputType.number),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: method,
+                  dropdownColor: AirmiusColors.cardSoft,
+                  decoration: const InputDecoration(labelText: 'Zahlungsart'),
+                  items: const ['cash', 'bank_transfer'].map((item) => DropdownMenuItem<String>(value: item, child: Text(_paymentMethodLabel(item)))).toList(),
+                  onChanged: (value) => setDialogState(() => method = value ?? method),
+                ),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Erhalten am', hint: 'YYYY-MM-DD', controller: paidAt),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Referenz', hint: 'optional', controller: reference),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Notiz', hint: 'optional', controller: notes, maxLines: 2),
+              ]),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Abbrechen')),
+              FilledButton.icon(
+                onPressed: () {
+                  if (amount.text.trim().isEmpty) return;
+                  Navigator.pop(dialogContext, {
+                          'user_id': selectedMemberId,
+                          'amount': _normalizePaymentAmount(amount.text),
+                          'method': method,
+                          'paid_at': paidAt.text.trim().isEmpty ? null : paidAt.text.trim(),
+                          'reference': reference.text.trim().isEmpty ? null : reference.text.trim(),
+                          'notes': notes.text.trim().isEmpty ? null : notes.text.trim(),
+                        });
+                },
+                icon: const Icon(Icons.volunteer_activism_outlined),
+                label: const Text('Speichern'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    amount.dispose();
+    paidAt.dispose();
+    reference.dispose();
+    notes.dispose();
+
+    if (payload == null) return;
+
+    try {
+      await AirmiusServicesScope.of(context).repositories.clubs.recordDonation(club.id, payload);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Spende per ${_paymentMethodLabel('${payload['method']}')} erfasst.')),
+      );
+      _reloadClub();
+    } catch (error) {
+      if (!mounted) return;
+      final message = error is AirmiusApiException ? error.userMessage : '$error';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Spende konnte nicht erfasst werden: $message')),
+      );
+    }
+  }
+
+  Future<void> _recordPrepayment(ClubSummary club, List<_MemberEntry> members) async {
+    final availableMembers = members.where((member) => member.id > 0).toList();
+    if (availableMembers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Keine Mitglieder für eine Vorauszahlung gefunden.')),
+      );
+      return;
+    }
+
+    var selectedMemberId = availableMembers.first.id;
+    var method = 'cash';
+    final amount = TextEditingController();
+    final paidAt = TextEditingController(text: DateTime.now().toIso8601String().substring(0, 10));
+    final coverageNote = TextEditingController();
+    final reference = TextEditingController();
+    final notes = TextEditingController();
+
+    final payload = await showDialog<JsonMap>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: AirmiusColors.card,
+            title: const Text('Vorauszahlung erfassen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            content: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                DropdownButtonFormField<int>(
+                  value: selectedMemberId,
+                  dropdownColor: AirmiusColors.cardSoft,
+                  decoration: const InputDecoration(labelText: 'Mitglied'),
+                  items: [
+                    for (final member in availableMembers)
+                      DropdownMenuItem<int>(
+                        value: member.id,
+                        child: Text('${member.name} - ${member.email}', overflow: TextOverflow.ellipsis),
+                      ),
+                  ],
+                  onChanged: (value) => setDialogState(() => selectedMemberId = value ?? selectedMemberId),
+                ),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Betrag EUR', hint: '120,00', controller: amount, keyboardType: TextInputType.number),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: method,
+                  dropdownColor: AirmiusColors.cardSoft,
+                  decoration: const InputDecoration(labelText: 'Zahlungsart'),
+                  items: const ['cash', 'bank_transfer'].map((item) => DropdownMenuItem<String>(value: item, child: Text(_paymentMethodLabel(item)))).toList(),
+                  onChanged: (value) => setDialogState(() => method = value ?? method),
+                ),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Erhalten am', hint: 'YYYY-MM-DD', controller: paidAt),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Gilt für', hint: 'z. B. Juli-Dezember 2026', controller: coverageNote),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Referenz', hint: 'optional', controller: reference),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Notiz', hint: 'optional', controller: notes, maxLines: 2),
+              ]),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Abbrechen')),
+              FilledButton.icon(
+                onPressed: () {
+                  if (amount.text.trim().isEmpty) return;
+                  Navigator.pop(dialogContext, {
+                    'user_id': selectedMemberId,
+                    'amount': _normalizePaymentAmount(amount.text),
+                    'method': method,
+                    'paid_at': paidAt.text.trim().isEmpty ? null : paidAt.text.trim(),
+                    'coverage_note': coverageNote.text.trim().isEmpty ? null : coverageNote.text.trim(),
+                    'reference': reference.text.trim().isEmpty ? null : reference.text.trim(),
+                    'notes': notes.text.trim().isEmpty ? null : notes.text.trim(),
+                  });
+                },
+                icon: const Icon(Icons.account_balance_wallet_outlined),
+                label: const Text('Speichern'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    amount.dispose();
+    paidAt.dispose();
+    coverageNote.dispose();
+    reference.dispose();
+    notes.dispose();
+
+    if (payload == null) return;
+
+    try {
+      await AirmiusServicesScope.of(context).repositories.clubs.recordPrepayment(club.id, payload);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Vorauszahlung per ${_paymentMethodLabel('${payload['method']}')} erfasst.')),
+      );
+      _reloadClub();
+    } catch (error) {
+      if (!mounted) return;
+      final message = error is AirmiusApiException ? error.userMessage : '$error';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Vorauszahlung konnte nicht erfasst werden: $message')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<_ManagedMembershipData?>(
@@ -577,6 +787,8 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                     runSpacing: 10,
                     children: [
                       AirmiusButton(label: 'Zahlung erfassen', icon: Icons.payments_outlined, onPressed: () => _recordPayment(club, invoices)),
+                      AirmiusButton(label: 'Spende erfassen', icon: Icons.volunteer_activism_outlined, secondary: true, onPressed: () => _recordDonation(club, members)),
+                      AirmiusButton(label: 'Vorauszahlung', icon: Icons.account_balance_wallet_outlined, secondary: true, onPressed: () => _recordPrepayment(club, members)),
                       AirmiusButton(label: 'Mahnung vorbereiten', icon: Icons.notification_important_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Mahnung vorbereiten', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.notification_important_outlined)),
                     ],
                   ),
@@ -2083,8 +2295,9 @@ class _MembershipKpiCard extends StatelessWidget {
 }
 
 class _MemberEntry {
-  const _MemberEntry({required this.name, required this.email, required this.type, required this.number, required this.balance, required this.sepa});
+  const _MemberEntry({required this.id, required this.name, required this.email, required this.type, required this.number, required this.balance, required this.sepa});
 
+  final int id;
   final String name;
   final String email;
   final String type;

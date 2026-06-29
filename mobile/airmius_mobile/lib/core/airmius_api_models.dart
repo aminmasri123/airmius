@@ -1568,6 +1568,8 @@ abstract class AirmiusClubRepository {
   Future<AirmiusClubManagement> createContributionRule(int clubId, JsonMap payload);
   Future<AirmiusClubManagement> updateContributionRule(int clubId, int ruleId, JsonMap payload);
   Future<AirmiusClubManagement> recordMembershipPayment(int clubId, int invoiceId, JsonMap payload);
+  Future<AirmiusClubManagement> recordDonation(int clubId, JsonMap payload);
+  Future<AirmiusClubManagement> recordPrepayment(int clubId, JsonMap payload);
   Future<AirmiusClubManagement> inviteClubMember(int clubId, JsonMap payload);
   Future<AirmiusClubManagement> updateClubMemberRole(int clubId, int userId, String role);
   Future<AirmiusPage<AirmiusTeam>> teams({int page = 1});

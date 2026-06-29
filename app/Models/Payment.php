@@ -13,6 +13,7 @@ class Payment extends Model
         'club_id',
         'user_id',
         'invoice_id',
+        'purpose',
         'amount',
         'status',
         'method',

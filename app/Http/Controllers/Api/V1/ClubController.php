@@ -497,6 +497,7 @@ class ClubController extends Controller
             'club_id' => $invoice->club_id,
             'user_id' => $invoice->user_id,
             'invoice_id' => $invoice->id,
+            'purpose' => 'membership_invoice',
             'amount' => $data['amount'] ?? $invoice->amount,
             'status' => 'paid',
             'method' => $data['method'] ?? 'manual',
@@ -522,6 +523,97 @@ class ClubController extends Controller
 
         return response()->json([
             'message' => 'Zahlung erfasst.',
+            'data' => $this->managementPayload($request, $club->fresh(), true),
+        ]);
+    }
+
+    public function recordDonation(Request $request, Club $club)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageMembership($request, $club), 403);
+        $this->planFeatures->ensureAllows($club, 'payment_tracking');
+
+        $data = $request->validate([
+            'user_id' => ['required', 'integer', Rule::exists('users', 'id')],
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:999999.99'],
+            'method' => ['nullable', 'string', Rule::in(['cash', 'bank_transfer', 'sepa_debit', 'manual'])],
+            'reference' => ['nullable', 'string', 'max:255'],
+            'paid_at' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $member = $club->users()->where('users.id', $data['user_id'])->firstOrFail();
+
+        Payment::create([
+            'club_id' => $club->id,
+            'user_id' => $member->id,
+            'invoice_id' => null,
+            'purpose' => 'donation',
+            'amount' => $data['amount'],
+            'status' => 'paid',
+            'method' => $data['method'] ?? 'manual',
+            'reference' => $data['reference'] ?? null,
+            'paid_at' => $data['paid_at'] ?? now(),
+            'notes' => trim('Spende'.(($data['notes'] ?? null) ? ': '.$data['notes'] : '')),
+        ]);
+
+        AppNotification::send((int) $member->id, 'donation.recorded', [
+            'title' => 'Spende erfasst',
+            'body' => 'Deine Spende an '.$club->name.' wurde erfasst.',
+            'url' => '/settings',
+            'club_id' => $club->id,
+        ]);
+
+        return response()->json([
+            'message' => 'Spende erfasst.',
+            'data' => $this->managementPayload($request, $club->fresh(), true),
+        ]);
+    }
+
+    public function recordPrepayment(Request $request, Club $club)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageMembership($request, $club), 403);
+        $this->planFeatures->ensureAllows($club, 'payment_tracking');
+
+        $data = $request->validate([
+            'user_id' => ['required', 'integer', Rule::exists('users', 'id')],
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:999999.99'],
+            'method' => ['nullable', 'string', Rule::in(['cash', 'bank_transfer', 'sepa_debit', 'manual'])],
+            'reference' => ['nullable', 'string', 'max:255'],
+            'paid_at' => ['nullable', 'date'],
+            'coverage_note' => ['nullable', 'string', 'max:255'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $member = $club->users()->where('users.id', $data['user_id'])->firstOrFail();
+        $notes = collect([
+            filled($data['coverage_note'] ?? null) ? 'Zeitraum: '.$data['coverage_note'] : null,
+            $data['notes'] ?? null,
+        ])->filter()->implode("\n");
+
+        Payment::create([
+            'club_id' => $club->id,
+            'user_id' => $member->id,
+            'invoice_id' => null,
+            'purpose' => 'prepayment',
+            'amount' => $data['amount'],
+            'status' => 'paid',
+            'method' => $data['method'] ?? 'manual',
+            'reference' => $data['reference'] ?? null,
+            'paid_at' => $data['paid_at'] ?? now(),
+            'notes' => $notes ?: null,
+        ]);
+
+        AppNotification::send((int) $member->id, 'prepayment.recorded', [
+            'title' => 'Vorauszahlung erfasst',
+            'body' => 'Deine Vorauszahlung an '.$club->name.' wurde erfasst.',
+            'url' => '/settings',
+            'club_id' => $club->id,
+        ]);
+
+        return response()->json([
+            'message' => 'Vorauszahlung erfasst.',
             'data' => $this->managementPayload($request, $club->fresh(), true),
         ]);
     }

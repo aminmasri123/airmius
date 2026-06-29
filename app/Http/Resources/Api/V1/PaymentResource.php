@@ -14,6 +14,7 @@ class PaymentResource extends JsonResource
             'club_id' => $this->club_id,
             'user_id' => $this->user_id,
             'invoice_id' => $this->invoice_id,
+            'purpose' => $this->purpose,
             'amount' => $this->amount,
             'status' => $this->status,
             'method' => $this->method,
