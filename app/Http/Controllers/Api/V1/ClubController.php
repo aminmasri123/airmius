@@ -478,6 +478,54 @@ class ClubController extends Controller
         ]);
     }
 
+    public function recordMembershipPayment(Request $request, Club $club, Invoice $invoice)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageMembership($request, $club), 403);
+        abort_unless((int) $invoice->club_id === (int) $club->id, 404);
+        $this->planFeatures->ensureAllows($club, 'payment_tracking');
+
+        $data = $request->validate([
+            'amount' => ['nullable', 'numeric', 'min:0.01', 'max:999999.99'],
+            'method' => ['nullable', 'string', Rule::in(['cash', 'bank_transfer', 'sepa_debit', 'manual'])],
+            'reference' => ['nullable', 'string', 'max:255'],
+            'paid_at' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        Payment::create([
+            'club_id' => $invoice->club_id,
+            'user_id' => $invoice->user_id,
+            'invoice_id' => $invoice->id,
+            'amount' => $data['amount'] ?? $invoice->amount,
+            'status' => 'paid',
+            'method' => $data['method'] ?? 'manual',
+            'reference' => $data['reference'] ?? null,
+            'paid_at' => $data['paid_at'] ?? now(),
+            'notes' => $data['notes'] ?? null,
+        ]);
+
+        $invoice->update([
+            'status' => 'paid',
+            'paid_at' => $data['paid_at'] ?? now(),
+        ]);
+
+        if ($invoice->user_id) {
+            AppNotification::send((int) $invoice->user_id, 'invoice.paid', [
+                'title' => 'Zahlung erfasst',
+                'body' => 'Deine Zahlung fuer '.$invoice->number.' wurde markiert.',
+                'url' => '/settings',
+                'invoice_id' => $invoice->id,
+                'club_id' => $club->id,
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Zahlung erfasst.',
+            'data' => $this->managementPayload($request, $club->fresh(), true),
+        ]);
+    }
+
     public function membershipRequests(Request $request, Club $club)
     {
         $this->authorizeVisible($request, $club);

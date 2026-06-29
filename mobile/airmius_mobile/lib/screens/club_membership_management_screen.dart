@@ -11,7 +11,6 @@ import '../core/airmius_services_scope.dart';
 import '../core/airmius_theme.dart';
 import '../models/club_summary.dart';
 import '../widgets/airmius_widgets.dart';
-import 'membership_operations_screen.dart';
 import 'ui_action_result_screen.dart';
 
 class ClubMembershipManagementScreen extends StatefulWidget {
@@ -24,6 +23,7 @@ class ClubMembershipManagementScreen extends StatefulWidget {
 class _ClubMembershipManagementScreenState extends State<ClubMembershipManagementScreen> {
   String _filter = 'Alle';
   String _period = 'Juni 2026';
+  String _section = 'overview';
   int? _selectedClubId;
   Future<_ManagedMembershipData?>? _clubFuture;
   final _inviteNameController = TextEditingController();
@@ -70,6 +70,12 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
       if (value != null && '$value'.trim().isNotEmpty) return '$value';
     }
     return fallback;
+  }
+
+  int _intFromAny(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse('$value') ?? 0;
   }
 
   String _moneyFromValue(Object? value) {
@@ -120,6 +126,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
       final paid = rawStatus == 'paid' || rawStatus == 'bezahlt' || rawStatus == 'settled';
       final status = paid ? 'Bezahlt' : 'Offen';
       return _InvoiceEntry(
+        id: _intFromAny(invoice['id']),
         title: _stringFromJson(invoice, ['title', 'number', 'invoice_number'], fallback: 'Rechnung'),
         person: person,
         amount: _moneyFromValue(invoice['amount'] ?? invoice['amount_due'] ?? invoice['total'] ?? invoice['total_amount']),
@@ -208,10 +215,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Einladung wurde versendet.')),
       );
-      setState(() {
-        _sendingInvitation = false;
-        _clubFuture = _loadManagedClub();
-      });
+      setState(() => _sendingInvitation = false);
     } catch (error) {
       if (!mounted) return;
       final message = error is AirmiusApiException ? error.userMessage : '$error';
@@ -219,6 +223,134 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
         SnackBar(content: Text('Einladung konnte nicht gesendet werden: $message')),
       );
       setState(() => _sendingInvitation = false);
+    }
+  }
+
+  String _paymentMethodLabel(String method) {
+    return switch (method) {
+      'cash' => 'Barzahlung',
+      'bank_transfer' => 'Überweisung',
+      'sepa_debit' => 'SEPA-Lastschrift',
+      _ => method,
+    };
+  }
+
+  String _paymentAmountInput(String amount) {
+    return amount.replaceAll('EUR', '').replaceAll('€', '').trim();
+  }
+
+  String _normalizePaymentAmount(String value) {
+    final trimmed = value.trim();
+    if (trimmed.contains(',')) {
+      return trimmed.replaceAll('.', '').replaceAll(',', '.');
+    }
+    return trimmed;
+  }
+
+  Future<void> _recordPayment(ClubSummary club, List<_InvoiceEntry> invoices) async {
+    final openInvoices = invoices.where((invoice) => invoice.id > 0 && invoice.status != 'Bezahlt').toList();
+    if (openInvoices.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Keine offene Rechnung zum Bezahlen gefunden.')),
+      );
+      return;
+    }
+
+    var selectedInvoiceId = openInvoices.first.id;
+    var method = 'cash';
+    final amount = TextEditingController(text: _paymentAmountInput(openInvoices.first.amount));
+    final paidAt = TextEditingController(text: DateTime.now().toIso8601String().substring(0, 10));
+    final reference = TextEditingController();
+    final notes = TextEditingController();
+
+    final payload = await showDialog<JsonMap>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: AirmiusColors.card,
+            title: const Text('Zahlung erfassen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            content: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                DropdownButtonFormField<int>(
+                  value: selectedInvoiceId,
+                  dropdownColor: AirmiusColors.cardSoft,
+                  decoration: const InputDecoration(labelText: 'Rechnung'),
+                  items: [
+                    for (final invoice in openInvoices)
+                      DropdownMenuItem<int>(
+                        value: invoice.id,
+                        child: Text('${invoice.title} - ${invoice.person} - ${invoice.amount}', overflow: TextOverflow.ellipsis),
+                      ),
+                  ],
+                  onChanged: (value) {
+                    final nextId = value ?? selectedInvoiceId;
+                    final selected = openInvoices.firstWhere((invoice) => invoice.id == nextId, orElse: () => openInvoices.first);
+                    setDialogState(() {
+                      selectedInvoiceId = nextId;
+                      amount.text = _paymentAmountInput(selected.amount);
+                    });
+                  },
+                ),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Betrag EUR', hint: '0,00', controller: amount, keyboardType: TextInputType.number),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: method,
+                  dropdownColor: AirmiusColors.cardSoft,
+                  decoration: const InputDecoration(labelText: 'Zahlungsart'),
+                  items: const ['cash', 'bank_transfer'].map((item) => DropdownMenuItem<String>(value: item, child: Text(_paymentMethodLabel(item)))).toList(),
+                  onChanged: (value) => setDialogState(() => method = value ?? method),
+                ),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Bezahlt am', hint: 'YYYY-MM-DD', controller: paidAt),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Referenz', hint: 'optional', controller: reference),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Notiz', hint: 'optional', controller: notes, maxLines: 2),
+              ]),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Abbrechen')),
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(dialogContext, {
+                  'invoice_id': selectedInvoiceId,
+                  'amount': amount.text.trim().isEmpty ? null : _normalizePaymentAmount(amount.text),
+                  'method': method,
+                  'paid_at': paidAt.text.trim().isEmpty ? null : paidAt.text.trim(),
+                  'reference': reference.text.trim().isEmpty ? null : reference.text.trim(),
+                  'notes': notes.text.trim().isEmpty ? null : notes.text.trim(),
+                }),
+                icon: const Icon(Icons.payments_outlined),
+                label: const Text('Speichern'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    amount.dispose();
+    paidAt.dispose();
+    reference.dispose();
+    notes.dispose();
+
+    if (payload == null) return;
+
+    try {
+      final invoiceId = _intFromAny(payload['invoice_id']);
+      await AirmiusServicesScope.of(context).repositories.clubs.recordMembershipPayment(club.id, invoiceId, payload);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Zahlung per ${_paymentMethodLabel('${payload['method']}')} erfasst.')),
+      );
+      _reloadClub();
+    } catch (error) {
+      if (!mounted) return;
+      final message = error is AirmiusApiException ? error.userMessage : '$error';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Zahlung konnte nicht erfasst werden: $message')),
+      );
     }
   }
 
@@ -297,8 +429,6 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _ClubMembershipHeader(onMembershipOps: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MembershipOperationsScreen()))),
-            const SizedBox(height: 14),
             _ClubMembershipClubSelector(
               clubs: data.clubs,
               selectedClubId: club.id,
@@ -306,16 +436,30 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                 setState(() {
                   _selectedClubId = clubId;
                   _filter = 'Alle';
+                  _section = 'overview';
                   _clubFuture = _loadManagedClub();
                 });
               },
             ),
             const SizedBox(height: 14),
-            if (management != null) ...[
+            _MembershipSectionTabs(
+              active: _section,
+              hasRules: management != null,
+              onSelect: (value) => setState(() => _section = value),
+            ),
+            const SizedBox(height: 14),
+            if (_section == 'rules' && management != null) ...[
               _MembershipRulesAdminPanel(club: club, management: management, onChanged: _reloadClub),
               const SizedBox(height: 14),
             ],
-            _MembershipKpiGrid(
+            if (_section == 'rules' && management == null) ...[
+              const AirmiusPanel(
+                child: Text('Beitragsregeln sind fuer diesen Verein nicht geladen.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+              ),
+              const SizedBox(height: 14),
+            ],
+            if (_section == 'overview') ...[
+              _MembershipKpiGrid(
               cards: [
                 _MembershipKpi(title: 'Aktive Mitglieder', value: '$activeMembersCount', detail: 'von $linkedPeopleCount verknüpften Personen'),
                 _MembershipKpi(title: 'Offen', value: openInvoiceTotal, detail: '$openInvoicesCount offene Rechnung(en)'),
@@ -324,7 +468,9 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
               ],
             ),
             const SizedBox(height: 14),
-            AirmiusPanel(
+            ],
+            if (_section == 'members') ...[
+              AirmiusPanel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -361,8 +507,10 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                 ],
               ),
             ),
-            const SizedBox(height: 14),
-            AirmiusPanel(
+              const SizedBox(height: 14),
+            ],
+            if (_section == 'invite') ...[
+              AirmiusPanel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -394,8 +542,10 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                 ],
               ),
             ),
-            const SizedBox(height: 14),
-            AirmiusPanel(
+              const SizedBox(height: 14),
+            ],
+            if (_section == 'payments') ...[
+              AirmiusPanel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -426,7 +576,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                     spacing: 10,
                     runSpacing: 10,
                     children: [
-                      AirmiusButton(label: 'Zahlung erfassen', icon: Icons.payments_outlined, onPressed: () => openUiAction(context, title: 'Zahlung erfassen', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.payments_outlined)),
+                      AirmiusButton(label: 'Zahlung erfassen', icon: Icons.payments_outlined, onPressed: () => _recordPayment(club, invoices)),
                       AirmiusButton(label: 'Mahnung vorbereiten', icon: Icons.notification_important_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Mahnung vorbereiten', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.notification_important_outlined)),
                     ],
                   ),
@@ -459,8 +609,10 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                 ],
               ),
             ),
-            const SizedBox(height: 14),
-            AirmiusPanel(
+              const SizedBox(height: 14),
+            ],
+            if (_section == 'export') ...[
+              AirmiusPanel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -481,6 +633,8 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                 ],
               ),
             ),
+              const SizedBox(height: 14),
+            ],
             const SizedBox(height: 18),
           ],
         ),
@@ -496,6 +650,105 @@ class _ManagedMembershipData {
 
   final List<ClubSummary> clubs;
   final ClubSummary selectedClub;
+}
+
+class _MembershipSectionTabs extends StatelessWidget {
+  const _MembershipSectionTabs({
+    required this.active,
+    required this.hasRules,
+    required this.onSelect,
+  });
+
+  final String active;
+  final bool hasRules;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final tabs = [
+      const _MembershipSectionTabData('overview', 'Uebersicht', Icons.dashboard_customize_outlined),
+      if (hasRules) const _MembershipSectionTabData('rules', 'Regeln', Icons.tune_outlined),
+      const _MembershipSectionTabData('members', 'Mitglieder', Icons.groups_2_outlined),
+      const _MembershipSectionTabData('invite', 'Einladen', Icons.mark_email_read_outlined),
+      const _MembershipSectionTabData('payments', 'Zahlungen', Icons.receipt_long_outlined),
+      const _MembershipSectionTabData('export', 'Export', Icons.ios_share_outlined),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final preferredColumns = constraints.maxWidth >= 860
+            ? tabs.length
+            : constraints.maxWidth >= 500
+                ? 3
+                : 2;
+        final columns = preferredColumns > tabs.length ? tabs.length : preferredColumns;
+        const gap = 8.0;
+        final tabWidth = (constraints.maxWidth - (gap * (columns - 1))) / columns;
+
+        return Wrap(
+          alignment: WrapAlignment.center,
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            for (final tab in tabs)
+              SizedBox(
+                width: tabWidth,
+                child: _MembershipSectionTab(
+                  tab: tab,
+                  selected: active == tab.value,
+                  onTap: () => onSelect(tab.value),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _MembershipSectionTabData {
+  const _MembershipSectionTabData(this.value, this.label, this.icon);
+
+  final String value;
+  final String label;
+  final IconData icon;
+}
+
+class _MembershipSectionTab extends StatelessWidget {
+  const _MembershipSectionTab({required this.tab, required this.selected, required this.onTap});
+
+  final _MembershipSectionTabData tab;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? AirmiusColors.blue.withValues(alpha: .18) : AirmiusColors.cardSoft,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: selected ? AirmiusColors.blue : AirmiusColors.border),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Icon(tab.icon, size: 18, color: selected ? AirmiusColors.blue : AirmiusColors.muted),
+            const SizedBox(width: 7),
+            Text(
+              tab.label,
+              style: TextStyle(color: selected ? AirmiusColors.text : AirmiusColors.muted, fontWeight: FontWeight.w900),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _ClubMembershipClubSelector extends StatelessWidget {
@@ -556,13 +809,6 @@ class _ClubMembershipClubSelector extends StatelessWidget {
             )
           else
             _SelectedClubLine(club: selectedClub),
-          const SizedBox(height: 8),
-          Text(
-            clubs.length > 1
-                ? 'Die Daten darunter gehoeren immer zum hier ausgewaehlten Verein.'
-                : 'Du hast aktuell fuer diesen Verein Verwaltungsrechte.',
-            style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, height: 1.35, fontWeight: FontWeight.w700),
-          ),
         ],
       ),
     );
@@ -636,6 +882,7 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
   bool _pauseRequestsEnabled = false;
   bool _saving = false;
   String _ruleInterval = 'monthly';
+  String _rulesTab = 'application';
   Set<String> _paymentMethods = {'bank_transfer', 'cash'};
   Map<String, String> _fieldModes = {};
   List<JsonMap> _documents = [];
@@ -736,7 +983,7 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Speichern fehlgeschlagen: $error')));
   }
 
-  Future<void> _saveSettings() async {
+  Future<bool> _saveSettings() async {
     setState(() => _saving = true);
     try {
       await AirmiusServicesScope.of(context).repositories.clubs.updateMembershipSettings(widget.club.id, {
@@ -747,15 +994,17 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
         'membership_application_documents': _documents,
       });
       if (mounted) widget.onChanged();
+      return true;
     } catch (error) {
       if (mounted) _showError(error);
+      return false;
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 
-  Future<void> _saveType() async {
-    if (_typeName.text.trim().isEmpty) return;
+  Future<bool> _saveType() async {
+    if (_typeName.text.trim().isEmpty) return false;
     setState(() => _saving = true);
     try {
       final repo = AirmiusServicesScope.of(context).repositories.clubs;
@@ -768,15 +1017,17 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
         _clearForms();
         widget.onChanged();
       }
+      return true;
     } catch (error) {
       if (mounted) _showError(error);
+      return false;
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 
-  Future<void> _saveRule() async {
-    if (_ruleName.text.trim().isEmpty || _ruleAmount.text.trim().isEmpty || _ruleValidFrom.text.trim().isEmpty) return;
+  Future<bool> _saveRule() async {
+    if (_ruleName.text.trim().isEmpty || _ruleAmount.text.trim().isEmpty || _ruleValidFrom.text.trim().isEmpty) return false;
     setState(() => _saving = true);
     try {
       final repo = AirmiusServicesScope.of(context).repositories.clubs;
@@ -789,8 +1040,10 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
         _clearForms();
         widget.onChanged();
       }
+      return true;
     } catch (error) {
       if (mounted) _showError(error);
+      return false;
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -820,6 +1073,33 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
       _ruleAgeMax.text = _string(rule['age_max']);
       _ruleNotes.text = _string(rule['notes']);
       _ruleActive = _bool(rule['is_active']);
+    });
+  }
+
+  void _newTypeForm() {
+    setState(() {
+      _editingTypeId = null;
+      _typeName.clear();
+      _typeSlug.clear();
+      _typeDescription.clear();
+      _typePublic = true;
+      _typeActive = true;
+    });
+  }
+
+  void _newRuleForm() {
+    setState(() {
+      _editingRuleId = null;
+      _ruleTypeId = null;
+      _ruleName.clear();
+      _ruleAmount.clear();
+      _ruleInterval = 'monthly';
+      _ruleValidFrom.text = DateTime.now().toIso8601String().substring(0, 10);
+      _ruleValidUntil.clear();
+      _ruleAgeMin.clear();
+      _ruleAgeMax.clear();
+      _ruleNotes.clear();
+      _ruleActive = true;
     });
   }
 
@@ -1046,6 +1326,277 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
     };
   }
 
+  Future<void> _openApplicationSettingsSheet(List<JsonMap> applicationFields) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AirmiusColors.card,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          void update(VoidCallback fn) {
+            setState(fn);
+            setSheetState(() {});
+          }
+
+          return SafeArea(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * .88),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+                    const Text('Antrag & Felder', style: TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 6),
+                    const Text('Online-Anfragen, Zahlarten und sichtbare Felder kompakt bearbeiten.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700, height: 1.35)),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        _SettingsToggle(title: 'Mitgliedsanfragen erlauben', value: _requestsEnabled, onChanged: (value) => update(() => _requestsEnabled = value)),
+                        _SettingsToggle(title: 'Pausen-Anfragen erlauben', value: _pauseRequestsEnabled, onChanged: (value) => update(() => _pauseRequestsEnabled = value)),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    const Eyebrow('Zahlarten'),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final method in const ['bank_transfer', 'cash', 'sepa_debit'])
+                          FilterChip(
+                            selected: _paymentMethods.contains(method),
+                            label: Text(_paymentLabel(method)),
+                            onSelected: (selected) => update(() => selected ? _paymentMethods.add(method) : _paymentMethods.remove(method)),
+                            selectedColor: AirmiusColors.blue.withValues(alpha: .22),
+                            backgroundColor: AirmiusColors.cardSoft,
+                            side: BorderSide(color: _paymentMethods.contains(method) ? AirmiusColors.blue : AirmiusColors.border),
+                            labelStyle: TextStyle(color: _paymentMethods.contains(method) ? AirmiusColors.blue : AirmiusColors.muted, fontWeight: FontWeight.w900),
+                          ),
+                      ],
+                    ),
+                    if (applicationFields.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      const Eyebrow('Mitgliedsantrag-Felder'),
+                      const SizedBox(height: 8),
+                      LayoutBuilder(builder: (context, constraints) {
+                        final twoColumns = constraints.maxWidth >= 620;
+                        final fieldWidth = twoColumns ? (constraints.maxWidth - 10) / 2 : constraints.maxWidth;
+                        return Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            for (final field in applicationFields)
+                              SizedBox(
+                                width: fieldWidth,
+                                child: DropdownButtonFormField<String>(
+                                  value: (() {
+                                    final current = _fieldModes[_string(field['key'])] ?? _string(field['mode'], fallback: 'off');
+                                    return const ['required', 'optional', 'off'].contains(current) ? current : 'off';
+                                  })(),
+                                  dropdownColor: AirmiusColors.cardSoft,
+                                  decoration: InputDecoration(labelText: _string(field['label'], fallback: _string(field['key'], fallback: 'Feld'))),
+                                  items: const ['required', 'optional', 'off'].map((mode) => DropdownMenuItem(value: mode, child: Text(_fieldModeLabel(mode)))).toList(),
+                                  onChanged: (value) {
+                                    final key = _string(field['key']);
+                                    if (key.isNotEmpty && value != null) update(() => _fieldModes[key] = value);
+                                  },
+                                ),
+                              ),
+                          ],
+                        );
+                      }),
+                    ],
+                    const SizedBox(height: 18),
+                    Row(children: [
+                      Expanded(child: TextButton(onPressed: () => Navigator.pop(sheetContext), child: const Text('Abbrechen'))),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _saving
+                              ? null
+                              : () async {
+                                  final saved = await _saveSettings();
+                                  if (saved && mounted) Navigator.pop(sheetContext);
+                                },
+                          icon: const Icon(Icons.save_outlined),
+                          label: Text(_saving ? 'Speichert...' : 'Speichern'),
+                        ),
+                      ),
+                    ]),
+                  ]),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _openTypeSheet({JsonMap? type}) async {
+    if (type == null) {
+      _newTypeForm();
+    } else {
+      _editType(type);
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AirmiusColors.card,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          void update(VoidCallback fn) {
+            setState(fn);
+            setSheetState(() {});
+          }
+
+          return SafeArea(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * .86),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+                    Text(_editingTypeId == null ? 'Mitgliedschaftstyp erstellen' : 'Mitgliedschaftstyp bearbeiten', style: const TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 14),
+                    AirmiusTextField(label: 'Name', hint: 'z. B. Jugendmitglied', controller: _typeName),
+                    const SizedBox(height: 10),
+                    AirmiusTextField(label: 'Slug', hint: 'optional', controller: _typeSlug),
+                    const SizedBox(height: 10),
+                    AirmiusTextField(label: 'Beschreibung', hint: 'Beschreibung', controller: _typeDescription, maxLines: 2),
+                    const SizedBox(height: 12),
+                    Wrap(spacing: 10, runSpacing: 8, children: [
+                      _SettingsToggle(title: 'Oeffentlich sichtbar', value: _typePublic, onChanged: (value) => update(() => _typePublic = value)),
+                      _SettingsToggle(title: 'Aktiv', value: _typeActive, onChanged: (value) => update(() => _typeActive = value)),
+                    ]),
+                    const SizedBox(height: 18),
+                    Row(children: [
+                      Expanded(child: TextButton(onPressed: () => Navigator.pop(sheetContext), child: const Text('Abbrechen'))),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _saving
+                              ? null
+                              : () async {
+                                  final saved = await _saveType();
+                                  if (saved && mounted) Navigator.pop(sheetContext);
+                                },
+                          icon: const Icon(Icons.badge_outlined),
+                          label: Text(_saving ? 'Speichert...' : (_editingTypeId == null ? 'Erstellen' : 'Aktualisieren')),
+                        ),
+                      ),
+                    ]),
+                  ]),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _openRuleSheet({JsonMap? rule, required List<JsonMap> membershipTypes, required List<String> intervals}) async {
+    if (rule == null) {
+      _newRuleForm();
+    } else {
+      _editRule(rule);
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AirmiusColors.card,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          void update(VoidCallback fn) {
+            setState(fn);
+            setSheetState(() {});
+          }
+
+          return SafeArea(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * .9),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+                    Text(_editingRuleId == null ? 'Beitragsregel erstellen' : 'Beitragsregel bearbeiten', style: const TextStyle(color: AirmiusColors.text, fontSize: 22, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<int>(
+                      value: _ruleTypeId ?? 0,
+                      dropdownColor: AirmiusColors.cardSoft,
+                      decoration: const InputDecoration(labelText: 'Mitgliedschaftstyp'),
+                      items: [
+                        const DropdownMenuItem<int>(value: 0, child: Text('Alle Typen')),
+                        for (final type in membershipTypes)
+                          if (_intOrNull(type['id']) != null) DropdownMenuItem<int>(value: _intOrNull(type['id'])!, child: Text(_string(type['name'], fallback: 'Typ'))),
+                      ],
+                      onChanged: (value) => update(() => _ruleTypeId = value == null || value == 0 ? null : value),
+                    ),
+                    const SizedBox(height: 10),
+                    AirmiusTextField(label: 'Regelname', hint: 'Regelname', controller: _ruleName),
+                    const SizedBox(height: 10),
+                    AirmiusTextField(label: 'Beitrag EUR', hint: '12.00', controller: _ruleAmount, keyboardType: TextInputType.number),
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<String>(
+                      value: intervals.contains(_ruleInterval) ? _ruleInterval : intervals.first,
+                      dropdownColor: AirmiusColors.cardSoft,
+                      decoration: const InputDecoration(labelText: 'Intervall'),
+                      items: [for (final interval in intervals) DropdownMenuItem(value: interval, child: Text(_intervalLabel(interval)))],
+                      onChanged: (value) => update(() => _ruleInterval = value ?? _ruleInterval),
+                    ),
+                    const SizedBox(height: 10),
+                    LayoutBuilder(builder: (context, constraints) {
+                      final twoColumns = constraints.maxWidth >= 520;
+                      final fieldWidth = twoColumns ? (constraints.maxWidth - 10) / 2 : constraints.maxWidth;
+                      return Wrap(spacing: 10, runSpacing: 10, children: [
+                        SizedBox(width: fieldWidth, child: AirmiusTextField(label: 'Gueltig ab', hint: 'YYYY-MM-DD', controller: _ruleValidFrom)),
+                        SizedBox(width: fieldWidth, child: AirmiusTextField(label: 'Gueltig bis', hint: 'optional', controller: _ruleValidUntil)),
+                        SizedBox(width: fieldWidth, child: AirmiusTextField(label: 'Alter von', hint: 'optional', controller: _ruleAgeMin, keyboardType: TextInputType.number)),
+                        SizedBox(width: fieldWidth, child: AirmiusTextField(label: 'Alter bis', hint: 'optional', controller: _ruleAgeMax, keyboardType: TextInputType.number)),
+                      ]);
+                    }),
+                    const SizedBox(height: 10),
+                    AirmiusTextField(label: 'Notiz', hint: 'optional', controller: _ruleNotes, maxLines: 2),
+                    const SizedBox(height: 12),
+                    _SettingsToggle(title: 'Regel aktiv', value: _ruleActive, onChanged: (value) => update(() => _ruleActive = value)),
+                    const SizedBox(height: 18),
+                    Row(children: [
+                      Expanded(child: TextButton(onPressed: () => Navigator.pop(sheetContext), child: const Text('Abbrechen'))),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _saving
+                              ? null
+                              : () async {
+                                  final saved = await _saveRule();
+                                  if (saved && mounted) Navigator.pop(sheetContext);
+                                },
+                          icon: const Icon(Icons.tune_outlined),
+                          label: Text(_saving ? 'Speichert...' : (_editingRuleId == null ? 'Erstellen' : 'Aktualisieren')),
+                        ),
+                      ),
+                    ]),
+                  ]),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final membershipTypes = widget.management.membershipTypes;
@@ -1055,182 +1606,164 @@ class _MembershipRulesAdminPanelState extends State<_MembershipRulesAdminPanel> 
         ? const ['none', 'monthly', 'quarterly', 'four_monthly', 'semi_yearly', 'yearly', 'once']
         : widget.management.contributionIntervals;
 
+    final requiredFields = applicationFields.where((field) {
+      final key = _string(field['key']);
+      final mode = _fieldModes[key] ?? _string(field['mode'], fallback: 'off');
+      return mode == 'required';
+    }).length;
+    final activeTypes = membershipTypes.where((type) => _bool(type['is_active'])).length;
+    final activeRules = contributionRules.where((rule) => _bool(rule['is_active'])).length;
+    final requiredDocs = _documents.where((document) => _bool(document['is_required'])).length;
+
     return AirmiusPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Eyebrow('Beitragsregeln'),
-          const SizedBox(height: 8),
-          const Text('Online-Anfragen, Mitgliedschaftstypen und Beitragsregeln verwalten.', style: TextStyle(color: AirmiusColors.text, fontSize: 18, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
+          Row(
             children: [
-              _SettingsToggle(title: 'Mitgliedsanfragen erlauben', value: _requestsEnabled, onChanged: (value) => setState(() => _requestsEnabled = value)),
-              _SettingsToggle(title: 'Pausen-Anfragen erlauben', value: _pauseRequestsEnabled, onChanged: (value) => setState(() => _pauseRequestsEnabled = value)),
+              const Expanded(child: Eyebrow('Beitragsregeln')),
+              StatusPill('$activeRules aktiv'),
             ],
           ),
           const SizedBox(height: 12),
           Wrap(
+            alignment: WrapAlignment.center,
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final method in const ['bank_transfer', 'cash', 'sepa_debit'])
-                FilterChip(
-                  selected: _paymentMethods.contains(method),
-                  label: Text(_paymentLabel(method)),
-                  onSelected: (selected) => setState(() => selected ? _paymentMethods.add(method) : _paymentMethods.remove(method)),
-                  selectedColor: AirmiusColors.blue.withValues(alpha: .22),
-                  backgroundColor: AirmiusColors.cardSoft,
-                  side: BorderSide(color: _paymentMethods.contains(method) ? AirmiusColors.blue : AirmiusColors.border),
-                  labelStyle: TextStyle(color: _paymentMethods.contains(method) ? AirmiusColors.blue : AirmiusColors.muted, fontWeight: FontWeight.w900),
-                ),
-              AirmiusButton(label: 'Einstellungen speichern', icon: Icons.save_outlined, onPressed: _saving ? null : _saveSettings),
+              for (final tab in const [
+                _MembershipSectionTabData('application', 'Antrag', Icons.assignment_outlined),
+                _MembershipSectionTabData('documents', 'Dokumente', Icons.description_outlined),
+                _MembershipSectionTabData('types', 'Typen', Icons.badge_outlined),
+                _MembershipSectionTabData('rules', 'Regeln', Icons.tune_outlined),
+              ])
+                _MembershipSectionTab(tab: tab, selected: _rulesTab == tab.value, onTap: () => setState(() => _rulesTab = tab.value)),
             ],
           ),
-          if (applicationFields.isNotEmpty) ...[
-            const SizedBox(height: 18),
-            const Eyebrow('Mitgliedsantrag-Felder'),
-            const SizedBox(height: 10),
-            LayoutBuilder(builder: (context, constraints) {
-              final twoColumns = constraints.maxWidth >= 620;
-              final fieldWidth = twoColumns ? (constraints.maxWidth - 10) / 2 : constraints.maxWidth;
-              return Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  for (final field in applicationFields)
-                    SizedBox(
-                      width: fieldWidth,
-                      child: DropdownButtonFormField<String>(
-                        value: _fieldModes[_string(field['key'])] ?? _string(field['mode'], fallback: 'off'),
-                        dropdownColor: AirmiusColors.cardSoft,
-                        decoration: InputDecoration(labelText: _string(field['label'], fallback: _string(field['key'], fallback: 'Feld'))),
-                        items: const ['required', 'optional', 'off'].map((mode) => DropdownMenuItem(value: mode, child: Text(_fieldModeLabel(mode)))).toList(),
-                        onChanged: (value) {
-                          final key = _string(field['key']);
-                          if (key.isNotEmpty && value != null) setState(() => _fieldModes[key] = value);
-                        },
-                      ),
-                    ),
-                ],
-              );
-            }),
-          ],
-          const SizedBox(height: 18),
-          const Eyebrow('Dokumente & Bestaetigungen'),
-          const SizedBox(height: 8),
-          const Text(
-            'Verknuepfe Datenschutz, Satzung, Regeln oder Beitragsordnung. Pflichtdokumente muessen Interessenten vor dem Absenden bestaetigen.',
-            style: TextStyle(color: AirmiusColors.muted, height: 1.35, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 10),
-          AirmiusButton(label: 'Dokument hinzufuegen', icon: Icons.add_link_outlined, secondary: true, onPressed: () => _openDocumentDialog()),
-          const SizedBox(height: 10),
-          if (_documents.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AirmiusColors.bg,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AirmiusColors.border, style: BorderStyle.solid),
-              ),
-              child: const Text('Noch keine Dokumente verknuepft.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
-            )
-          else
-            for (final entry in _documents.indexed)
-              _MembershipDocumentLine(
-                document: entry.$2,
-                typeLabel: _documentTypeLabel(_string(entry.$2['type'], fallback: 'other')),
-                onEdit: () => _openDocumentDialog(index: entry.$1),
-                onDelete: () => setState(() => _documents.removeAt(entry.$1)),
-              ),
-          const SizedBox(height: 18),
-          const Eyebrow('Mitgliedschaftstyp'),
-          const SizedBox(height: 10),
-          AirmiusTextField(label: 'Name', hint: 'z. B. Jugendmitglied', controller: _typeName),
-          const SizedBox(height: 10),
-          AirmiusTextField(label: 'Slug', hint: 'optional', controller: _typeSlug),
-          const SizedBox(height: 10),
-          AirmiusTextField(label: 'Beschreibung', hint: 'Beschreibung', controller: _typeDescription, maxLines: 2),
-          const SizedBox(height: 8),
-          Wrap(spacing: 10, runSpacing: 8, children: [
-            _SettingsToggle(title: 'Oeffentlich sichtbar', value: _typePublic, onChanged: (value) => setState(() => _typePublic = value)),
-            _SettingsToggle(title: 'Aktiv', value: _typeActive, onChanged: (value) => setState(() => _typeActive = value)),
-            AirmiusButton(label: _editingTypeId == null ? 'Typ speichern' : 'Typ aktualisieren', icon: Icons.badge_outlined, onPressed: _saving ? null : _saveType),
-          ]),
-          if (membershipTypes.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          if (_rulesTab == 'application') ...[
+            Wrap(alignment: WrapAlignment.center, spacing: 10, runSpacing: 10, children: [
+              _AdminMiniStat(icon: Icons.how_to_reg_outlined, title: 'Anfragen', value: _requestsEnabled ? 'An' : 'Aus'),
+              _AdminMiniStat(icon: Icons.pause_circle_outline, title: 'Pausen', value: _pauseRequestsEnabled ? 'An' : 'Aus'),
+              _AdminMiniStat(icon: Icons.payments_outlined, title: 'Zahlarten', value: '${_paymentMethods.length}'),
+              _AdminMiniStat(icon: Icons.fact_check_outlined, title: 'Pflichtfelder', value: '$requiredFields'),
+            ]),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
+            AirmiusButton(label: 'Antrag & Felder bearbeiten', icon: Icons.edit_note_outlined, onPressed: () => _openApplicationSettingsSheet(applicationFields)),
+          ] else if (_rulesTab == 'documents') ...[
+            Row(children: [
+              Expanded(child: Text('${_documents.length} Dokument(e), $requiredDocs Pflicht', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800))),
+              IconButton(onPressed: () => _openDocumentDialog(), icon: const Icon(Icons.add_link_outlined), color: AirmiusColors.blue, tooltip: 'Dokument hinzufuegen'),
+            ]),
+            const SizedBox(height: 10),
+            if (_documents.isEmpty)
+              const _EmptyAdminHint(text: 'Noch keine Dokumente verknuepft.')
+            else
+              for (final entry in _documents.take(3).indexed)
+                _MembershipDocumentLine(
+                  document: entry.$2,
+                  typeLabel: _documentTypeLabel(_string(entry.$2['type'], fallback: 'other')),
+                  onEdit: () => _openDocumentDialog(index: entry.$1),
+                  onDelete: () => setState(() => _documents.removeAt(entry.$1)),
+                ),
+            if (_documents.length > 3) Text('+ ${_documents.length - 3} weitere Dokumente', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 12),
+            Wrap(spacing: 10, runSpacing: 10, children: [
+              AirmiusButton(label: 'Dokument hinzufuegen', icon: Icons.add_link_outlined, secondary: true, onPressed: () => _openDocumentDialog()),
+              AirmiusButton(label: 'Dokumente speichern', icon: Icons.save_outlined, onPressed: _saving ? null : () { _saveSettings(); }),
+            ]),
+          ] else if (_rulesTab == 'types') ...[
+            Wrap(alignment: WrapAlignment.center, spacing: 10, runSpacing: 10, children: [
+              _AdminMiniStat(icon: Icons.badge_outlined, title: 'Typen', value: '${membershipTypes.length}'),
+              _AdminMiniStat(icon: Icons.check_circle_outline, title: 'Aktiv', value: '$activeTypes'),
+            ]),
+            const SizedBox(height: 12),
+            if (membershipTypes.isEmpty)
+              const _EmptyAdminHint(text: 'Noch keine Mitgliedschaftstypen.')
+            else
+              Wrap(spacing: 8, runSpacing: 8, children: [
                 for (final type in membershipTypes)
                   ActionChip(
                     label: Text(_string(type['name'], fallback: 'Typ')),
-                    onPressed: () => _editType(type),
+                    onPressed: () => _openTypeSheet(type: type),
                     avatar: Icon(_bool(type['is_active']) ? Icons.check_circle_outline : Icons.pause_circle_outline, color: AirmiusColors.blue, size: 18),
                     backgroundColor: AirmiusColors.cardSoft,
                     labelStyle: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
                     side: const BorderSide(color: AirmiusColors.border),
                   ),
-              ],
-            ),
+              ]),
+            const SizedBox(height: 12),
+            AirmiusButton(label: 'Typ erstellen', icon: Icons.add_circle_outline, onPressed: () => _openTypeSheet()),
+          ] else ...[
+            Row(children: [
+              Expanded(child: Text('${contributionRules.length} Regel(n), $activeRules aktiv', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800))),
+              IconButton(onPressed: () => _openRuleSheet(membershipTypes: membershipTypes, intervals: intervals), icon: const Icon(Icons.add_circle_outline), color: AirmiusColors.blue, tooltip: 'Regel erstellen'),
+            ]),
+            const SizedBox(height: 10),
+            if (contributionRules.isEmpty)
+              const _EmptyAdminHint(text: 'Noch keine Beitragsregeln.')
+            else
+              for (final rule in contributionRules.take(4))
+                _ContributionRuleLine(
+                  rule: rule,
+                  intervalLabel: _intervalLabel,
+                  onEdit: () => _openRuleSheet(rule: rule, membershipTypes: membershipTypes, intervals: intervals),
+                ),
+            if (contributionRules.length > 4) Text('+ ${contributionRules.length - 4} weitere Regeln', style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 12),
+            AirmiusButton(label: 'Regel erstellen', icon: Icons.tune_outlined, onPressed: () => _openRuleSheet(membershipTypes: membershipTypes, intervals: intervals)),
           ],
-          const SizedBox(height: 18),
-          const Eyebrow('Neue Beitragsregel'),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<int>(
-            value: _ruleTypeId ?? 0,
-            dropdownColor: AirmiusColors.cardSoft,
-            decoration: const InputDecoration(labelText: 'Mitgliedschaftstyp'),
-            items: [
-              const DropdownMenuItem<int>(value: 0, child: Text('Alle Typen')),
-              for (final type in membershipTypes)
-                if (_intOrNull(type['id']) != null) DropdownMenuItem<int>(value: _intOrNull(type['id'])!, child: Text(_string(type['name'], fallback: 'Typ'))),
-            ],
-            onChanged: (value) => setState(() => _ruleTypeId = value == null || value == 0 ? null : value),
-          ),
-          const SizedBox(height: 10),
-          AirmiusTextField(label: 'Regelname', hint: 'Regelname', controller: _ruleName),
-          const SizedBox(height: 10),
-          AirmiusTextField(label: 'Beitrag EUR', hint: '12.00', controller: _ruleAmount, keyboardType: TextInputType.number),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<String>(
-            value: intervals.contains(_ruleInterval) ? _ruleInterval : intervals.first,
-            dropdownColor: AirmiusColors.cardSoft,
-            decoration: const InputDecoration(labelText: 'Intervall'),
-            items: [for (final interval in intervals) DropdownMenuItem(value: interval, child: Text(_intervalLabel(interval)))],
-            onChanged: (value) => setState(() => _ruleInterval = value ?? _ruleInterval),
-          ),
-          const SizedBox(height: 10),
-          LayoutBuilder(builder: (context, constraints) {
-            final twoColumns = constraints.maxWidth >= 520;
-            final fieldWidth = twoColumns ? (constraints.maxWidth - 10) / 2 : constraints.maxWidth;
-            return Wrap(spacing: 10, runSpacing: 10, children: [
-              SizedBox(width: fieldWidth, child: AirmiusTextField(label: 'Gueltig ab', hint: 'YYYY-MM-DD', controller: _ruleValidFrom)),
-              SizedBox(width: fieldWidth, child: AirmiusTextField(label: 'Gueltig bis', hint: 'optional', controller: _ruleValidUntil)),
-              SizedBox(width: fieldWidth, child: AirmiusTextField(label: 'Alter von', hint: 'optional', controller: _ruleAgeMin, keyboardType: TextInputType.number)),
-              SizedBox(width: fieldWidth, child: AirmiusTextField(label: 'Alter bis', hint: 'optional', controller: _ruleAgeMax, keyboardType: TextInputType.number)),
-            ]);
-          }),
-          const SizedBox(height: 10),
-          AirmiusTextField(label: 'Notiz', hint: 'optional', controller: _ruleNotes, maxLines: 2),
-          const SizedBox(height: 8),
-          Wrap(spacing: 10, runSpacing: 8, children: [
-            _SettingsToggle(title: 'Regel aktiv', value: _ruleActive, onChanged: (value) => setState(() => _ruleActive = value)),
-            AirmiusButton(label: _editingRuleId == null ? 'Regel speichern' : 'Regel aktualisieren', icon: Icons.tune_outlined, onPressed: _saving ? null : _saveRule),
-          ]),
-          const SizedBox(height: 16),
-          const Eyebrow('Historische Beitragsregeln'),
-          const SizedBox(height: 10),
-          if (contributionRules.isEmpty)
-            const Text('Noch keine Beitragsregeln.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700))
-          else
-            for (final rule in contributionRules) _ContributionRuleLine(rule: rule, intervalLabel: _intervalLabel, onEdit: () => _editRule(rule)),
         ],
       ),
+    );
+  }
+}
+
+class _AdminMiniStat extends StatelessWidget {
+  const _AdminMiniStat({required this.icon, required this.title, required this.value});
+
+  final IconData icon;
+  final String title;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 126),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      decoration: BoxDecoration(
+        color: AirmiusColors.cardSoft,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AirmiusColors.border),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, color: AirmiusColors.blue, size: 19),
+        const SizedBox(width: 9),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, style: const TextStyle(color: AirmiusColors.muted, fontSize: 12, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 2),
+          Text(value, style: const TextStyle(color: AirmiusColors.text, fontSize: 16, fontWeight: FontWeight.w900)),
+        ]),
+      ]),
+    );
+  }
+}
+
+class _EmptyAdminHint extends StatelessWidget {
+  const _EmptyAdminHint({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AirmiusColors.bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AirmiusColors.border),
+      ),
+      child: Text(text, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)),
     );
   }
 }
@@ -1421,14 +1954,14 @@ class _ClubMembershipHeader extends StatelessWidget {
           const SizedBox(height: 8),
           const Text(
             'Mitglieder & Beiträge',
-            style: TextStyle(color: AirmiusColors.text, fontSize: 24, fontWeight: FontWeight.w900),
+            style: TextStyle(color: AirmiusColors.text, fontSize: 21, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
           const Text(
             'Mitgliederdaten, Beitragssätze, Rechnungen, SEPA, DATEV und Import wie in der Web-App als native Flutter-Ansicht.',
             style: TextStyle(color: AirmiusColors.muted, height: 1.42, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           Wrap(
             spacing: 10,
             runSpacing: 10,
@@ -1561,8 +2094,9 @@ class _MemberEntry {
 }
 
 class _InvoiceEntry {
-  const _InvoiceEntry({required this.title, required this.person, required this.amount, required this.status, required this.color});
+  const _InvoiceEntry({required this.id, required this.title, required this.person, required this.amount, required this.status, required this.color});
 
+  final int id;
   final String title;
   final String person;
   final String amount;
