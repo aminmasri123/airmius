@@ -582,13 +582,19 @@ class ClubController extends Controller
             'method' => ['nullable', 'string', Rule::in(['cash', 'bank_transfer', 'sepa_debit', 'manual'])],
             'reference' => ['nullable', 'string', 'max:255'],
             'paid_at' => ['nullable', 'date'],
+            'coverage_start' => ['nullable', 'date'],
+            'coverage_end' => ['nullable', 'date', 'after_or_equal:coverage_start'],
             'coverage_note' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $member = $club->users()->where('users.id', $data['user_id'])->firstOrFail();
+        $coverageNote = $data['coverage_note'] ?? null;
+        if (! filled($coverageNote) && filled($data['coverage_start'] ?? null)) {
+            $coverageNote = ($data['coverage_start'] ?? '').(filled($data['coverage_end'] ?? null) ? ' bis '.$data['coverage_end'] : '');
+        }
         $notes = collect([
-            filled($data['coverage_note'] ?? null) ? 'Zeitraum: '.$data['coverage_note'] : null,
+            filled($coverageNote) ? 'Zeitraum: '.$coverageNote : null,
             $data['notes'] ?? null,
         ])->filter()->implode("\n");
 

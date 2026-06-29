@@ -248,6 +248,10 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     return trimmed;
   }
 
+  String _dateOnly(DateTime value) => value.toIso8601String().substring(0, 10);
+
+  String _dateRangeLabel(DateTimeRange range) => '${_dateOnly(range.start)} bis ${_dateOnly(range.end)}';
+
   Future<void> _recordPayment(ClubSummary club, List<_InvoiceEntry> invoices) async {
     final openInvoices = invoices.where((invoice) => invoice.id > 0 && invoice.status != 'Bezahlt').toList();
     if (openInvoices.isEmpty) {
@@ -468,9 +472,9 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
 
     var selectedMemberId = availableMembers.first.id;
     var method = 'cash';
+    DateTimeRange? coverageRange;
     final amount = TextEditingController();
     final paidAt = TextEditingController(text: DateTime.now().toIso8601String().substring(0, 10));
-    final coverageNote = TextEditingController();
     final reference = TextEditingController();
     final notes = TextEditingController();
 
@@ -509,7 +513,33 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                 const SizedBox(height: 10),
                 AirmiusTextField(label: 'Erhalten am', hint: 'YYYY-MM-DD', controller: paidAt),
                 const SizedBox(height: 10),
-                AirmiusTextField(label: 'Gilt für', hint: 'z. B. Juli-Dezember 2026', controller: coverageNote),
+                InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () async {
+                    final now = DateTime.now();
+                    final picked = await showDateRangePicker(
+                      context: dialogContext,
+                      firstDate: DateTime(now.year - 1),
+                      lastDate: DateTime(now.year + 5),
+                      initialDateRange: coverageRange,
+                      helpText: 'Zeitraum auswählen',
+                      saveText: 'Übernehmen',
+                    );
+                    if (picked != null) {
+                      setDialogState(() => coverageRange = picked);
+                    }
+                  },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Gilt für',
+                      suffixIcon: Icon(Icons.date_range_outlined),
+                    ),
+                    child: Text(
+                      coverageRange == null ? 'Zeitraum auswählen' : _dateRangeLabel(coverageRange!),
+                      style: TextStyle(color: coverageRange == null ? AirmiusColors.muted : AirmiusColors.text, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 10),
                 AirmiusTextField(label: 'Referenz', hint: 'optional', controller: reference),
                 const SizedBox(height: 10),
@@ -526,7 +556,9 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                     'amount': _normalizePaymentAmount(amount.text),
                     'method': method,
                     'paid_at': paidAt.text.trim().isEmpty ? null : paidAt.text.trim(),
-                    'coverage_note': coverageNote.text.trim().isEmpty ? null : coverageNote.text.trim(),
+                    'coverage_start': coverageRange == null ? null : _dateOnly(coverageRange!.start),
+                    'coverage_end': coverageRange == null ? null : _dateOnly(coverageRange!.end),
+                    'coverage_note': coverageRange == null ? null : _dateRangeLabel(coverageRange!),
                     'reference': reference.text.trim().isEmpty ? null : reference.text.trim(),
                     'notes': notes.text.trim().isEmpty ? null : notes.text.trim(),
                   });
@@ -542,7 +574,6 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
 
     amount.dispose();
     paidAt.dispose();
-    coverageNote.dispose();
     reference.dispose();
     notes.dispose();
 
@@ -2241,13 +2272,14 @@ class _MembershipKpiGrid extends StatelessWidget {
       builder: (context, constraints) {
         final columns = constraints.maxWidth >= 720 ? 4 : 2;
         const gap = 10.0;
+        const cardHeight = 150.0;
         final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
 
         return Wrap(
           spacing: gap,
           runSpacing: gap,
           children: [
-            for (final card in cards) SizedBox(width: width, child: _MembershipKpiCard(card: card)),
+            for (final card in cards) SizedBox(width: width, height: cardHeight, child: _MembershipKpiCard(card: card)),
           ],
         );
       },
@@ -2263,7 +2295,6 @@ class _MembershipKpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 108),
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
         color: AirmiusColors.card,
