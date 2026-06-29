@@ -52,6 +52,31 @@ class ClubSummary {
   int get paymentsCount => management?.payments.length ?? 0;
   int get bankTransactionsCount => management?.bankTransactions.length ?? 0;
 
+  ClubSummary copyWith({
+    AirmiusClubManagement? management,
+  }) =>
+      ClubSummary(
+        id: id,
+        name: name,
+        city: city,
+        members: members,
+        teams: teams,
+        posts: posts,
+        acceptsMemberships: acceptsMemberships,
+        hasPendingMembershipRequest: hasPendingMembershipRequest,
+        isMember: isMember,
+        verified: verified,
+        teamList: teamList,
+        logoUrl: logoUrl,
+        bannerUrl: bannerUrl,
+        sportType: sportType,
+        postalCode: postalCode,
+        country: country,
+        canManage: canManage,
+        canDelete: canDelete,
+        management: management ?? this.management,
+      );
+
   factory ClubSummary.fromAirmiusClub(AirmiusClub club) => ClubSummary(
         id: club.id,
         name: club.name,

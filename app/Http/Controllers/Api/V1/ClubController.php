@@ -465,7 +465,7 @@ class ClubController extends Controller
 
         $payments = Payment::query()
             ->where('club_id', $club->id)
-            ->with(['club', 'invoice'])
+            ->with(['club', 'invoice', 'user:id,name,email'])
             ->latest('id')
             ->paginate($this->perPage($request), ['*'], 'payments_page');
 
@@ -987,7 +987,7 @@ class ClubController extends Controller
 
         $payments = Payment::query()
             ->where('club_id', $club->id)
-            ->with(['club', 'invoice'])
+            ->with(['club', 'invoice', 'user:id,name,email'])
             ->latest('id')
             ->limit(60)
             ->get();

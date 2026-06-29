@@ -23,6 +23,11 @@ class PaymentResource extends JsonResource
             'notes' => $this->notes,
             'club' => new ClubResource($this->whenLoaded('club')),
             'invoice' => new InvoiceResource($this->whenLoaded('invoice')),
+            'user' => $this->whenLoaded('user', fn () => $this->user ? [
+                'id' => $this->user->id,
+                'name' => $this->user->name,
+                'email' => $this->user->email,
+            ] : null),
             'created_at' => $this->created_at?->toJSON(),
             'updated_at' => $this->updated_at?->toJSON(),
         ];

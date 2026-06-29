@@ -26,6 +26,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
   String _section = 'overview';
   int? _selectedClubId;
   Future<_ManagedMembershipData?>? _clubFuture;
+  _ManagedMembershipData? _currentData;
   final _inviteNameController = TextEditingController();
   final _inviteEmailController = TextEditingController();
   bool _sendingInvitation = false;
@@ -137,6 +138,85 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     }).toList();
   }
 
+  List<_PaymentEntry> _paymentsFromManagement(AirmiusClubManagement? management, List<_MemberEntry> members) {
+    final payments = management?.payments ?? const <JsonMap>[];
+    return payments.map((payment) {
+      final purpose = _stringFromJson(payment, ['purpose'], fallback: 'payment').toLowerCase();
+      final method = _stringFromJson(payment, ['method'], fallback: 'manual');
+      final detail = _stringFromJson(payment, ['notes', 'reference'], fallback: '');
+
+      return _PaymentEntry(
+        title: _paymentPurposeLabel(purpose),
+        person: _paymentPersonLabel(payment, members),
+        amount: _moneyFromValue(payment['amount']),
+        method: _paymentMethodLabel(method),
+        date: _dateLabelFromValue(payment['paid_at'] ?? payment['created_at']),
+        detail: detail,
+        icon: _paymentPurposeIcon(purpose),
+        color: _paymentPurposeColor(purpose),
+      );
+    }).toList();
+  }
+
+  String _paymentPersonLabel(JsonMap payment, List<_MemberEntry> members) {
+    final user = payment['user'];
+    if (user is JsonMap) {
+      final name = _stringFromJson(user, ['name'], fallback: '');
+      final email = _stringFromJson(user, ['email'], fallback: '');
+      if (name.isNotEmpty && email.isNotEmpty) return '$name - $email';
+      if (name.isNotEmpty) return name;
+      if (email.isNotEmpty) return email;
+    }
+
+    final userId = _intFromAny(payment['user_id']);
+    if (userId > 0) {
+      for (final member in members) {
+        if (member.id == userId) return _memberPickerLabel(member);
+      }
+    }
+
+    final invoice = payment['invoice'];
+    if (invoice is JsonMap) {
+      return _stringFromJson(invoice, ['user_name', 'member_name', 'recipient_name', 'title'], fallback: 'Mitglied');
+    }
+
+    return 'Mitglied';
+  }
+
+  String _dateLabelFromValue(Object? value) {
+    final raw = '$value'.trim();
+    if (raw.isEmpty || raw == 'null') return '-';
+    final parsed = DateTime.tryParse(raw);
+    return parsed == null ? raw : _dateDisplay(parsed.toLocal());
+  }
+
+  String _paymentPurposeLabel(String purpose) {
+    return switch (purpose) {
+      'prepayment' => 'Vorauszahlung',
+      'donation' => 'Spende',
+      'membership_invoice' => 'Rechnungszahlung',
+      _ => 'Zahlung',
+    };
+  }
+
+  IconData _paymentPurposeIcon(String purpose) {
+    return switch (purpose) {
+      'prepayment' => Icons.account_balance_wallet_outlined,
+      'donation' => Icons.volunteer_activism_outlined,
+      'membership_invoice' => Icons.receipt_long_outlined,
+      _ => Icons.payments_outlined,
+    };
+  }
+
+  Color _paymentPurposeColor(String purpose) {
+    return switch (purpose) {
+      'prepayment' => AirmiusColors.blue,
+      'donation' => AirmiusColors.green,
+      'membership_invoice' => AirmiusColors.amber,
+      _ => AirmiusColors.blue,
+    };
+  }
+
   List<_BankEntry> _bankEntriesFromManagement(AirmiusClubManagement? management) {
     final entries = management?.bankTransactions ?? const <JsonMap>[];
     return entries
@@ -181,12 +261,30 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     }
     _selectedClubId = selected.id;
     final detail = await services.repositories.clubs.club(selected.id);
-    return _ManagedMembershipData(clubs: managed, selectedClub: ClubSummary.fromAirmiusClub(detail));
+    final data = _ManagedMembershipData(clubs: managed, selectedClub: ClubSummary.fromAirmiusClub(detail));
+    _currentData = data;
+    return data;
   }
 
   void _reloadClub() {
     setState(() {
       _clubFuture = _loadManagedClub();
+    });
+  }
+
+  void _applyManagement(AirmiusClubManagement management) {
+    final current = _currentData;
+    if (current == null) return;
+
+    final updatedClub = current.selectedClub.copyWith(management: management);
+    final updatedData = _ManagedMembershipData(
+      clubs: current.clubs.map((club) => club.id == updatedClub.id ? club.copyWith(management: management) : club).toList(),
+      selectedClub: updatedClub,
+    );
+
+    setState(() {
+      _currentData = updatedData;
+      _clubFuture = Future.value(updatedData);
     });
   }
 
@@ -248,9 +346,148 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     return trimmed;
   }
 
-  String _dateOnly(DateTime value) => value.toIso8601String().substring(0, 10);
+  String _twoDigits(int value) => value.toString().padLeft(2, '0');
 
-  String _dateRangeLabel(DateTimeRange range) => '${_dateOnly(range.start)} bis ${_dateOnly(range.end)}';
+  String _dateOnly(DateTime value) => '${value.year}-${_twoDigits(value.month)}-${_twoDigits(value.day)}';
+
+  String _dateDisplay(DateTime value) => '${_twoDigits(value.day)}.${_twoDigits(value.month)}.${value.year}';
+
+  String? _dateInputForApi(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return null;
+
+    final german = RegExp(r'^(\d{1,2})\.(\d{1,2})\.(\d{4})$').firstMatch(trimmed);
+    if (german != null) {
+      final day = _twoDigits(int.tryParse(german.group(1) ?? '') ?? 0);
+      final month = _twoDigits(int.tryParse(german.group(2) ?? '') ?? 0);
+      final year = german.group(3) ?? '';
+      return '$year-$month-$day';
+    }
+
+    final parsed = DateTime.tryParse(trimmed);
+    return parsed == null ? trimmed : _dateOnly(parsed);
+  }
+
+  String _dateRangeLabel(DateTimeRange range) => '${_dateDisplay(range.start)} bis ${_dateDisplay(range.end)}';
+
+  String _memberPickerLabel(_MemberEntry member) {
+    return member.email.trim().isEmpty ? member.name : '${member.name} - ${member.email}';
+  }
+
+  _MemberEntry _memberById(List<_MemberEntry> members, int memberId) {
+    return members.firstWhere((member) => member.id == memberId, orElse: () => members.first);
+  }
+
+  Widget _memberPickerField({
+    required BuildContext context,
+    required List<_MemberEntry> members,
+    required int selectedMemberId,
+    required ValueChanged<int> onChanged,
+  }) {
+    final selected = _memberById(members, selectedMemberId);
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () async {
+        final picked = await _pickMember(context, members, selectedMemberId);
+        if (picked != null) onChanged(picked.id);
+      },
+      child: InputDecorator(
+        decoration: const InputDecoration(
+          labelText: 'Mitglied',
+          prefixIcon: Icon(Icons.search_outlined),
+          suffixIcon: Icon(Icons.expand_more),
+        ),
+        child: Text(
+          _memberPickerLabel(selected),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
+        ),
+      ),
+    );
+  }
+
+  Future<_MemberEntry?> _pickMember(BuildContext context, List<_MemberEntry> members, int selectedMemberId) async {
+    final search = TextEditingController();
+    try {
+      return await showModalBottomSheet<_MemberEntry>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: AirmiusColors.card,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        builder: (sheetContext) => StatefulBuilder(
+          builder: (context, setSheetState) {
+            final query = search.text.trim().toLowerCase();
+            final filtered = query.isEmpty
+                ? members
+                : members.where((member) {
+                    final haystack = '${member.name} ${member.email} ${member.number}'.toLowerCase();
+                    return haystack.contains(query);
+                  }).toList();
+
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 16 + MediaQuery.of(sheetContext).viewInsets.bottom),
+                child: SizedBox(
+                  height: MediaQuery.of(sheetContext).size.height * .72,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text('Mitglied auswählen', style: TextStyle(color: AirmiusColors.text, fontSize: 20, fontWeight: FontWeight.w900)),
+                      const SizedBox(height: 12),
+                      AirmiusTextField(
+                        label: 'Suchen',
+                        hint: 'Name, E-Mail oder Mitgliedsnummer',
+                        icon: Icons.search_outlined,
+                        controller: search,
+                        onChanged: (_) => setSheetState(() {}),
+                      ),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: filtered.isEmpty
+                            ? const Center(child: Text('Kein Mitglied gefunden.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800)))
+                            : ListView.separated(
+                                itemCount: filtered.length,
+                                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                                itemBuilder: (context, index) {
+                                  final member = filtered[index];
+                                  final selected = member.id == selectedMemberId;
+                                  return ListTile(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                      side: BorderSide(color: selected ? AirmiusColors.blue : AirmiusColors.border),
+                                    ),
+                                    tileColor: selected ? AirmiusColors.blue.withValues(alpha: .18) : AirmiusColors.cardSoft,
+                                    leading: CircleAvatar(
+                                      backgroundColor: selected ? AirmiusColors.blue : AirmiusColors.input,
+                                      foregroundColor: Colors.white,
+                                      child: Text(member.name.isEmpty ? '?' : member.name.substring(0, 1).toUpperCase()),
+                                    ),
+                                    title: Text(member.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                                    subtitle: Text(
+                                      [member.email, member.number].where((value) => value.trim().isNotEmpty).join(' - '),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700),
+                                    ),
+                                    trailing: selected ? const Icon(Icons.check_circle, color: AirmiusColors.blue) : null,
+                                    onTap: () => Navigator.pop(sheetContext, member),
+                                  );
+                                },
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    } finally {
+      search.dispose();
+    }
+  }
 
   Future<void> _recordPayment(ClubSummary club, List<_InvoiceEntry> invoices) async {
     final openInvoices = invoices.where((invoice) => invoice.id > 0 && invoice.status != 'Bezahlt').toList();
@@ -264,7 +501,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     var selectedInvoiceId = openInvoices.first.id;
     var method = 'cash';
     final amount = TextEditingController(text: _paymentAmountInput(openInvoices.first.amount));
-    final paidAt = TextEditingController(text: DateTime.now().toIso8601String().substring(0, 10));
+    final paidAt = TextEditingController(text: _dateDisplay(DateTime.now()));
     final reference = TextEditingController();
     final notes = TextEditingController();
 
@@ -308,7 +545,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                   onChanged: (value) => setDialogState(() => method = value ?? method),
                 ),
                 const SizedBox(height: 10),
-                AirmiusTextField(label: 'Bezahlt am', hint: 'YYYY-MM-DD', controller: paidAt),
+                AirmiusTextField(label: 'Bezahlt am', hint: 'TT.MM.JJJJ', controller: paidAt),
                 const SizedBox(height: 10),
                 AirmiusTextField(label: 'Referenz', hint: 'optional', controller: reference),
                 const SizedBox(height: 10),
@@ -322,7 +559,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                   'invoice_id': selectedInvoiceId,
                   'amount': amount.text.trim().isEmpty ? null : _normalizePaymentAmount(amount.text),
                   'method': method,
-                  'paid_at': paidAt.text.trim().isEmpty ? null : paidAt.text.trim(),
+                  'paid_at': _dateInputForApi(paidAt.text),
                   'reference': reference.text.trim().isEmpty ? null : reference.text.trim(),
                   'notes': notes.text.trim().isEmpty ? null : notes.text.trim(),
                 }),
@@ -344,12 +581,12 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
 
     try {
       final invoiceId = _intFromAny(payload['invoice_id']);
-      await AirmiusServicesScope.of(context).repositories.clubs.recordMembershipPayment(club.id, invoiceId, payload);
+      final management = await AirmiusServicesScope.of(context).repositories.clubs.recordMembershipPayment(club.id, invoiceId, payload);
       if (!mounted) return;
+      _applyManagement(management);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Zahlung per ${_paymentMethodLabel('${payload['method']}')} erfasst.')),
       );
-      _reloadClub();
     } catch (error) {
       if (!mounted) return;
       final message = error is AirmiusApiException ? error.userMessage : '$error';
@@ -371,7 +608,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     var selectedMemberId = availableMembers.first.id;
     var method = 'cash';
     final amount = TextEditingController();
-    final paidAt = TextEditingController(text: DateTime.now().toIso8601String().substring(0, 10));
+    final paidAt = TextEditingController(text: _dateDisplay(DateTime.now()));
     final reference = TextEditingController();
     final notes = TextEditingController();
 
@@ -384,18 +621,11 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
             title: const Text('Spende erfassen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
             content: SingleChildScrollView(
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                DropdownButtonFormField<int>(
-                  value: selectedMemberId,
-                  dropdownColor: AirmiusColors.cardSoft,
-                  decoration: const InputDecoration(labelText: 'Mitglied'),
-                  items: [
-                    for (final member in availableMembers)
-                      DropdownMenuItem<int>(
-                        value: member.id,
-                        child: Text('${member.name} - ${member.email}', overflow: TextOverflow.ellipsis),
-                      ),
-                  ],
-                  onChanged: (value) => setDialogState(() => selectedMemberId = value ?? selectedMemberId),
+                _memberPickerField(
+                  context: dialogContext,
+                  members: availableMembers,
+                  selectedMemberId: selectedMemberId,
+                  onChanged: (value) => setDialogState(() => selectedMemberId = value),
                 ),
                 const SizedBox(height: 10),
                 AirmiusTextField(label: 'Betrag EUR', hint: '0,00', controller: amount, keyboardType: TextInputType.number),
@@ -408,7 +638,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                   onChanged: (value) => setDialogState(() => method = value ?? method),
                 ),
                 const SizedBox(height: 10),
-                AirmiusTextField(label: 'Erhalten am', hint: 'YYYY-MM-DD', controller: paidAt),
+                AirmiusTextField(label: 'Erhalten am', hint: 'TT.MM.JJJJ', controller: paidAt),
                 const SizedBox(height: 10),
                 AirmiusTextField(label: 'Referenz', hint: 'optional', controller: reference),
                 const SizedBox(height: 10),
@@ -424,7 +654,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                           'user_id': selectedMemberId,
                           'amount': _normalizePaymentAmount(amount.text),
                           'method': method,
-                          'paid_at': paidAt.text.trim().isEmpty ? null : paidAt.text.trim(),
+                          'paid_at': _dateInputForApi(paidAt.text),
                           'reference': reference.text.trim().isEmpty ? null : reference.text.trim(),
                           'notes': notes.text.trim().isEmpty ? null : notes.text.trim(),
                         });
@@ -446,12 +676,12 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     if (payload == null) return;
 
     try {
-      await AirmiusServicesScope.of(context).repositories.clubs.recordDonation(club.id, payload);
+      final management = await AirmiusServicesScope.of(context).repositories.clubs.recordDonation(club.id, payload);
       if (!mounted) return;
+      _applyManagement(management);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Spende per ${_paymentMethodLabel('${payload['method']}')} erfasst.')),
       );
-      _reloadClub();
     } catch (error) {
       if (!mounted) return;
       final message = error is AirmiusApiException ? error.userMessage : '$error';
@@ -474,7 +704,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     var method = 'cash';
     DateTimeRange? coverageRange;
     final amount = TextEditingController();
-    final paidAt = TextEditingController(text: DateTime.now().toIso8601String().substring(0, 10));
+    final paidAt = TextEditingController(text: _dateDisplay(DateTime.now()));
     final reference = TextEditingController();
     final notes = TextEditingController();
 
@@ -487,18 +717,11 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
             title: const Text('Vorauszahlung erfassen', style: TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
             content: SingleChildScrollView(
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                DropdownButtonFormField<int>(
-                  value: selectedMemberId,
-                  dropdownColor: AirmiusColors.cardSoft,
-                  decoration: const InputDecoration(labelText: 'Mitglied'),
-                  items: [
-                    for (final member in availableMembers)
-                      DropdownMenuItem<int>(
-                        value: member.id,
-                        child: Text('${member.name} - ${member.email}', overflow: TextOverflow.ellipsis),
-                      ),
-                  ],
-                  onChanged: (value) => setDialogState(() => selectedMemberId = value ?? selectedMemberId),
+                _memberPickerField(
+                  context: dialogContext,
+                  members: availableMembers,
+                  selectedMemberId: selectedMemberId,
+                  onChanged: (value) => setDialogState(() => selectedMemberId = value),
                 ),
                 const SizedBox(height: 10),
                 AirmiusTextField(label: 'Betrag EUR', hint: '120,00', controller: amount, keyboardType: TextInputType.number),
@@ -511,7 +734,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                   onChanged: (value) => setDialogState(() => method = value ?? method),
                 ),
                 const SizedBox(height: 10),
-                AirmiusTextField(label: 'Erhalten am', hint: 'YYYY-MM-DD', controller: paidAt),
+                AirmiusTextField(label: 'Erhalten am', hint: 'TT.MM.JJJJ', controller: paidAt),
                 const SizedBox(height: 10),
                 InkWell(
                   borderRadius: BorderRadius.circular(14),
@@ -555,7 +778,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                     'user_id': selectedMemberId,
                     'amount': _normalizePaymentAmount(amount.text),
                     'method': method,
-                    'paid_at': paidAt.text.trim().isEmpty ? null : paidAt.text.trim(),
+                    'paid_at': _dateInputForApi(paidAt.text),
                     'coverage_start': coverageRange == null ? null : _dateOnly(coverageRange!.start),
                     'coverage_end': coverageRange == null ? null : _dateOnly(coverageRange!.end),
                     'coverage_note': coverageRange == null ? null : _dateRangeLabel(coverageRange!),
@@ -580,12 +803,12 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     if (payload == null) return;
 
     try {
-      await AirmiusServicesScope.of(context).repositories.clubs.recordPrepayment(club.id, payload);
+      final management = await AirmiusServicesScope.of(context).repositories.clubs.recordPrepayment(club.id, payload);
       if (!mounted) return;
+      _applyManagement(management);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Vorauszahlung per ${_paymentMethodLabel('${payload['method']}')} erfasst.')),
       );
-      _reloadClub();
     } catch (error) {
       if (!mounted) return;
       final message = error is AirmiusApiException ? error.userMessage : '$error';
@@ -599,8 +822,9 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
   Widget build(BuildContext context) {
     return FutureBuilder<_ManagedMembershipData?>(
       future: _clubFuture,
+      initialData: _currentData,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting && snapshot.data == null) {
           return const Scaffold(
             backgroundColor: AirmiusColors.bg,
             body: PageFrame(
@@ -650,6 +874,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
         final members = _membersFromManagement(management);
         final invoices = _invoicesFromManagement(management);
         final bankEntries = _bankEntriesFromManagement(management);
+        final payments = _paymentsFromManagement(management, members);
         final activeMembersCount = management?.activeMembersCount ?? members.where((member) => member.type == 'Aktiv').length;
         final linkedPeopleCount = management?.linkedPeopleCount ?? members.length;
         final openInvoicesCount = management?.openInvoicesCount ?? invoices.where((invoice) => invoice.status == 'Offen').length;
@@ -823,6 +1048,23 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                       AirmiusButton(label: 'Mahnung vorbereiten', icon: Icons.notification_important_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Mahnung vorbereiten', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.notification_important_outlined)),
                     ],
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            AirmiusPanel(
+              borderColor: AirmiusColors.green.withValues(alpha: 0.45),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Eyebrow('Erfasste Zahlungen'),
+                  const SizedBox(height: 10),
+                  for (final payment in payments) _PaymentLine(payment: payment),
+                  if (payments.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Text('Noch keine Zahlung, Spende oder Vorauszahlung erfasst.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+                    ),
                 ],
               ),
             ),
@@ -2348,6 +2590,28 @@ class _InvoiceEntry {
   final Color color;
 }
 
+class _PaymentEntry {
+  const _PaymentEntry({
+    required this.title,
+    required this.person,
+    required this.amount,
+    required this.method,
+    required this.date,
+    required this.detail,
+    required this.icon,
+    required this.color,
+  });
+
+  final String title;
+  final String person;
+  final String amount;
+  final String method;
+  final String date;
+  final String detail;
+  final IconData icon;
+  final Color color;
+}
+
 class _BankEntry {
   const _BankEntry({required this.title, required this.detail});
 
@@ -2433,6 +2697,65 @@ class _InvoiceLine extends StatelessWidget {
             ),
           ),
           StatusPill(invoice.status, color: invoice.color),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentLine extends StatelessWidget {
+  const _PaymentLine({required this.payment});
+
+  final _PaymentEntry payment;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(16), border: Border.all(color: payment.color.withValues(alpha: 0.45))),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(color: payment.color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(14), border: Border.all(color: payment.color.withValues(alpha: 0.45))),
+            child: Icon(payment.icon, color: payment.color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(payment.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(payment.amount, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(payment.person, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    StatusPill(payment.method, color: payment.color),
+                    StatusPill(payment.date, color: AirmiusColors.muted),
+                  ],
+                ),
+                if (payment.detail.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(payment.detail, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
