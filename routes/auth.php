@@ -275,6 +275,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'),'verified'])
     Route::put('/membership-invoices/{invoice}', [ClubMembershipController::class, 'updateInvoiceStatus'])->name('auth.club-memberships.invoices.update');
     Route::post('/membership-invoices/{invoice}/payments', [ClubMembershipController::class, 'recordPayment'])->name('auth.club-memberships.invoices.payments.store');
     Route::post('/membership-invoices/{invoice}/reminder', [ClubMembershipController::class, 'sendReminder'])->name('auth.club-memberships.invoices.reminder');
+    Route::post('/clubs/{club}/membership/finance-entries', [ClubMembershipController::class, 'storeFinanceEntry'])->name('auth.club-memberships.finance-entries.store');
+    Route::put('/clubs/{club}/membership/finance-entries/{financeEntry}', [ClubMembershipController::class, 'updateFinanceEntry'])->name('auth.club-memberships.finance-entries.update');
     Route::post('/clubs/{club}/membership/bank-transactions/import', [ClubMembershipController::class, 'importBankTransactions'])->name('auth.club-memberships.bank-transactions.import');
     Route::post('/membership-bank-transactions/{bankTransaction}/confirm', [ClubMembershipController::class, 'confirmBankTransaction'])->name('auth.club-memberships.bank-transactions.confirm');
     Route::put('/clubs/{club}/membership/datev-settings', [ClubMembershipController::class, 'updateDatevSettings'])->name('auth.club-memberships.datev-settings.update');

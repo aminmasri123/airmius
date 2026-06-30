@@ -297,6 +297,7 @@ class AirmiusClubManagement {
     this.contributionRules = const [],
     this.invoices = const [],
     this.payments = const [],
+    this.financeEntries = const [],
     this.bankTransactions = const [],
     this.membershipStatuses = const [],
     this.contributionIntervals = const [],
@@ -317,6 +318,7 @@ class AirmiusClubManagement {
   final List<JsonMap> contributionRules;
   final List<JsonMap> invoices;
   final List<JsonMap> payments;
+  final List<JsonMap> financeEntries;
   final List<JsonMap> bankTransactions;
   final List<String> membershipStatuses;
   final List<String> contributionIntervals;
@@ -348,6 +350,10 @@ class AirmiusClubManagement {
 
   double get totalBalance => _double(summary['total_balance']);
 
+  double get incomeTotal => _double(summary['income_total']);
+
+  double get expenseTotal => _double(summary['expense_total']);
+
   factory AirmiusClubManagement.fromJson(JsonMap json) => AirmiusClubManagement(
         canManage: _bool(json['can_manage']),
         summary: json['summary'] is JsonMap ? json['summary'] as JsonMap : const {},
@@ -362,6 +368,7 @@ class AirmiusClubManagement {
         contributionRules: _jsonList(json['contribution_rules']),
         invoices: _jsonList(json['invoices']),
         payments: _jsonList(json['payments']),
+        financeEntries: _jsonList(json['finance_entries']),
         bankTransactions: _jsonList(json['bank_transactions']),
         membershipStatuses: _stringList(json['membership_statuses']),
         contributionIntervals: _stringList(json['contribution_intervals']),
@@ -1579,6 +1586,8 @@ abstract class AirmiusClubRepository {
   Future<AirmiusClubManagement> recordDonation(int clubId, JsonMap payload);
   Future<AirmiusClubManagement> recordPrepayment(int clubId, JsonMap payload);
   Future<AirmiusClubManagement> updatePayment(int clubId, int paymentId, JsonMap payload);
+  Future<AirmiusClubManagement> createFinanceEntry(int clubId, JsonMap payload);
+  Future<AirmiusClubManagement> updateFinanceEntry(int clubId, int entryId, JsonMap payload);
   Future<AirmiusClubManagement> inviteClubMember(int clubId, JsonMap payload);
   Future<AirmiusClubManagement> updateClubMemberRole(int clubId, int userId, String role);
   Future<AirmiusPage<AirmiusTeam>> teams({int page = 1});

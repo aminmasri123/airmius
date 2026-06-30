@@ -225,6 +225,11 @@ class Club extends Model
         return $this->hasMany(BankTransaction::class);
     }
 
+    public function financeEntries()
+    {
+        return $this->hasMany(ClubFinanceEntry::class);
+    }
+
     public function currentSubscription()
     {
         return $this->hasOne(ClubSubscription::class)->with('plan');

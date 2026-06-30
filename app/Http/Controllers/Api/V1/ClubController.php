@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Api\V1\ClubFinanceEntryResource;
 use App\Http\Resources\Api\V1\ClubMemberResource;
 use App\Http\Resources\Api\V1\ClubMembershipRequestResource;
 use App\Http\Resources\Api\V1\ClubResource;
@@ -12,6 +13,7 @@ use App\Http\Resources\Api\V1\TeamResource;
 use App\Models\Club;
 use App\Models\ClubContributionRule;
 use App\Models\ClubExternalMember;
+use App\Models\ClubFinanceEntry;
 use App\Models\ClubMembershipType;
 use App\Models\ClubMembershipRequest;
 use App\Models\Invoice;
@@ -667,6 +669,41 @@ class ClubController extends Controller
         ]);
     }
 
+    public function storeFinanceEntry(Request $request, Club $club)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageMembership($request, $club), 403);
+        $this->planFeatures->ensureAllows($club, 'payment_tracking');
+
+        $data = $this->validatedFinanceEntryData($request);
+
+        ClubFinanceEntry::create([
+            ...$data,
+            'club_id' => $club->id,
+            'user_id' => $request->user()->id,
+        ]);
+
+        return response()->json([
+            'message' => 'Finanzbuchung gespeichert.',
+            'data' => $this->managementPayload($request, $club->fresh(), true),
+        ]);
+    }
+
+    public function updateFinanceEntry(Request $request, Club $club, ClubFinanceEntry $financeEntry)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageMembership($request, $club), 403);
+        abort_unless((int) $financeEntry->club_id === (int) $club->id, 404);
+        $this->planFeatures->ensureAllows($club, 'payment_tracking');
+
+        $financeEntry->update($this->validatedFinanceEntryData($request));
+
+        return response()->json([
+            'message' => 'Finanzbuchung aktualisiert.',
+            'data' => $this->managementPayload($request, $club->fresh(), true),
+        ]);
+    }
+
     public function membershipRequests(Request $request, Club $club)
     {
         $this->authorizeVisible($request, $club);
@@ -955,6 +992,53 @@ class ClubController extends Controller
             ->each(fn (User $manager) => AppNotification::send($manager, $type, $data));
     }
 
+    private function financeBalanceSummary(Club $club): array
+    {
+        $paymentTotalsByMethod = Payment::query()
+            ->where('club_id', $club->id)
+            ->where('status', 'paid')
+            ->selectRaw("COALESCE(method, 'manual') as payment_method, SUM(amount) as amount")
+            ->groupBy('payment_method')
+            ->pluck('amount', 'payment_method');
+
+        $paymentCash = (float) ($paymentTotalsByMethod->get('cash', 0));
+        $paymentBank = (float) $paymentTotalsByMethod
+            ->only(['bank_transfer', 'sepa_debit'])
+            ->sum(fn ($amount) => (float) $amount);
+        $paymentTotal = (float) $paymentTotalsByMethod->sum(fn ($amount) => (float) $amount);
+        $unassignedBalance = max(0, $paymentTotal - $paymentCash - $paymentBank);
+
+        $entryTotals = ClubFinanceEntry::query()
+            ->where('club_id', $club->id)
+            ->selectRaw('account, type, SUM(amount) as amount')
+            ->groupBy('account', 'type')
+            ->get();
+
+        $entryTotal = function (string $account, string $type) use ($entryTotals): float {
+            $row = $entryTotals->first(fn ($item) => $item->account === $account && $item->type === $type);
+
+            return (float) ($row?->amount ?? 0);
+        };
+
+        $incomeTotal = $paymentTotal + (float) $entryTotals
+            ->where('type', 'income')
+            ->sum(fn ($item) => (float) $item->amount);
+        $expenseTotal = (float) $entryTotals
+            ->where('type', 'expense')
+            ->sum(fn ($item) => (float) $item->amount);
+        $cashBalance = $paymentCash + $entryTotal('cash', 'income') - $entryTotal('cash', 'expense');
+        $bankBalance = $paymentBank + $entryTotal('bank', 'income') - $entryTotal('bank', 'expense');
+
+        return [
+            'cash_balance' => $cashBalance,
+            'bank_balance' => $bankBalance,
+            'unassigned_balance' => $unassignedBalance,
+            'total_balance' => $cashBalance + $bankBalance + $unassignedBalance,
+            'income_total' => $incomeTotal,
+            'expense_total' => $expenseTotal,
+        ];
+    }
+
     private function managementPayload(Request $request, Club $club, bool $canManageMembership): array
     {
         $subscription = [
@@ -1042,19 +1126,15 @@ class ClubController extends Controller
             ->limit(60)
             ->get();
 
-        $paymentTotalsByMethod = Payment::query()
+        $financeEntries = ClubFinanceEntry::query()
             ->where('club_id', $club->id)
-            ->where('status', 'paid')
-            ->selectRaw("COALESCE(method, 'manual') as payment_method, SUM(amount) as amount")
-            ->groupBy('payment_method')
-            ->pluck('amount', 'payment_method');
+            ->with('user:id,name,email')
+            ->orderByDesc('booked_on')
+            ->latest('id')
+            ->limit(80)
+            ->get();
 
-        $cashBalance = (float) ($paymentTotalsByMethod->get('cash', 0));
-        $bankBalance = (float) $paymentTotalsByMethod
-            ->only(['bank_transfer', 'sepa_debit'])
-            ->sum(fn ($amount) => (float) $amount);
-        $paymentBalanceTotal = (float) $paymentTotalsByMethod->sum(fn ($amount) => (float) $amount);
-        $unassignedBalance = max(0, $paymentBalanceTotal - $cashBalance - $bankBalance);
+        $financeSummary = $this->financeBalanceSummary($club);
 
         return [
             ...$base,
@@ -1137,6 +1217,7 @@ class ClubController extends Controller
             'club_requests' => ClubMembershipRequestResource::collection($membershipRequests)->resolve($request),
             'invoices' => InvoiceResource::collection($invoices)->resolve($request),
             'payments' => PaymentResource::collection($payments)->resolve($request),
+            'finance_entries' => ClubFinanceEntryResource::collection($financeEntries)->resolve($request),
             'bank_transactions' => $bankTransactions->map(fn (BankTransaction $transaction) => [
                 'id' => $transaction->id,
                 'club_id' => $transaction->club_id,
@@ -1165,11 +1246,33 @@ class ClubController extends Controller
                 'open_invoices_count' => $invoices->where('status', '!=', 'paid')->count(),
                 'sepa_ready_members_count' => $club->users->filter(fn (User $member) => (bool) ($member->pivot?->sepa_mandate_active ?? false))->count(),
                 'recurring_contribution_total' => (float) $club->users->sum(fn (User $member) => (float) ($member->pivot?->contribution_amount ?? 0)),
-                'cash_balance' => $cashBalance,
-                'bank_balance' => $bankBalance,
-                'unassigned_balance' => $unassignedBalance,
-                'total_balance' => $paymentBalanceTotal,
+                ...$financeSummary,
             ],
+        ];
+    }
+
+    private function validatedFinanceEntryData(Request $request): array
+    {
+        $data = $request->validate([
+            'type' => ['required', Rule::in(ClubFinanceEntry::TYPES)],
+            'account' => ['required', Rule::in(ClubFinanceEntry::ACCOUNTS)],
+            'category' => ['nullable', 'string', 'max:120'],
+            'title' => ['required', 'string', 'max:255'],
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:999999.99'],
+            'booked_on' => ['nullable', 'date'],
+            'reference' => ['nullable', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'receipt_file_id' => ['nullable', Rule::exists('files', 'id')],
+        ]);
+
+        return [
+            ...$data,
+            'category' => filled($data['category'] ?? null) ? trim($data['category']) : null,
+            'title' => trim($data['title']),
+            'booked_on' => $data['booked_on'] ?? now()->toDateString(),
+            'reference' => filled($data['reference'] ?? null) ? trim($data['reference']) : null,
+            'description' => filled($data['description'] ?? null) ? trim($data['description']) : null,
+            'receipt_file_id' => $data['receipt_file_id'] ?? null,
         ];
     }
 

@@ -28,6 +28,8 @@ const invoiceMemberId = ref(null)
 const showAddMemberModal = ref(false)
 const showImportModal = ref(false)
 const showBankImportModal = ref(false)
+const showFinanceEntryModal = ref(false)
+const editingFinanceEntryId = ref(null)
 const memberForms = ref({})
 const sepaSettingsForms = ref({})
 const datevSettingsForms = ref({})
@@ -84,6 +86,16 @@ const contributionRuleForm = useForm({
     is_active: true,
     notes: '',
 })
+const financeEntryForm = useForm({
+    type: 'expense',
+    account: 'cash',
+    category: '',
+    title: '',
+    amount: '',
+    booked_on: new Date().toISOString().slice(0, 10),
+    reference: '',
+    description: '',
+})
 
 const fieldModeOptions = [
     { value: 'off', label: 'Aus' },
@@ -120,11 +132,33 @@ const canOpenEmailMembers = computed(() => capabilities.value.external_members !
 const members = computed(() => selectedClub.value?.members || [])
 const externalMembers = computed(() => selectedClub.value?.external_members || [])
 const invoices = computed(() => selectedClub.value?.invoices || [])
+const payments = computed(() => selectedClub.value?.payments || [])
+const financeEntries = computed(() => selectedClub.value?.finance_entries || [])
 const bankTransactions = computed(() => selectedClub.value?.bank_transactions || [])
 
 const activeMembersCount = computed(() => members.value.filter((member) => formFor(member).membership_status === 'active').length)
 const openInvoices = computed(() => invoices.value.filter((invoice) => ['open', 'overdue'].includes(invoice.status)))
 const openInvoiceTotal = computed(() => openInvoices.value.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0))
+const paymentAmount = (payment) => Number(payment.amount || 0)
+const fallbackCashBalance = computed(() => payments.value
+    .filter((payment) => payment.method === 'cash')
+    .reduce((sum, payment) => sum + paymentAmount(payment), 0))
+const fallbackBankBalance = computed(() => payments.value
+    .filter((payment) => ['bank_transfer', 'sepa_debit'].includes(payment.method))
+    .reduce((sum, payment) => sum + paymentAmount(payment), 0))
+const fallbackTotalBalance = computed(() => payments.value.reduce((sum, payment) => sum + paymentAmount(payment), 0))
+const cashBalance = computed(() => Number(selectedClub.value?.cash_balance ?? fallbackCashBalance.value))
+const bankBalance = computed(() => Number(selectedClub.value?.bank_balance ?? fallbackBankBalance.value))
+const totalBalance = computed(() => Number(selectedClub.value?.total_balance ?? fallbackTotalBalance.value))
+const unassignedBalance = computed(() => Number(selectedClub.value?.unassigned_balance ?? Math.max(0, totalBalance.value - cashBalance.value - bankBalance.value)))
+const financeEntryAmount = (entry) => Number(entry.amount || 0)
+const incomeTotal = computed(() => Number(selectedClub.value?.income_total ?? (
+    payments.value.reduce((sum, payment) => sum + paymentAmount(payment), 0)
+    + financeEntries.value.filter((entry) => entry.type === 'income').reduce((sum, entry) => sum + financeEntryAmount(entry), 0)
+)))
+const expenseTotal = computed(() => Number(selectedClub.value?.expense_total ?? (
+    financeEntries.value.filter((entry) => entry.type === 'expense').reduce((sum, entry) => sum + financeEntryAmount(entry), 0)
+)))
 const sepaReadyMembersCount = computed(() => members.value.filter((member) => {
     const form = formFor(member)
 
@@ -224,7 +258,7 @@ const tabs = computed(() => [
     { key: 'requests', label: 'Anfragen', count: pendingRequests.value.length + clubRequests.value.length, icon: 'las la-user-plus' },
     { key: 'rules', label: 'Beitragsregeln', count: contributionRules.value.length, icon: 'las la-sliders-h' },
     { key: 'invoices', label: 'Rechnungen', count: openInvoices.value.length, icon: 'las la-file-invoice' },
-    { key: 'payments', label: 'Zahlungen', count: bankTransactions.value.length, icon: 'las la-university' },
+    { key: 'payments', label: 'Finanzen', count: payments.value.length + financeEntries.value.length, icon: 'las la-university' },
     { key: 'exports', label: 'SEPA & DATEV', count: sepaReadyMembersCount.value, icon: 'las la-file-export' },
 ])
 
@@ -308,6 +342,56 @@ const formatMoney = (value) => new Intl.NumberFormat('de-DE', {
 const formatDate = (value) => {
     if (!value) return '-'
     return new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value))
+}
+
+const financeTypeLabel = (type) => ({
+    income: 'Einnahme',
+    expense: 'Ausgabe',
+}[type] || type)
+
+const financeAccountLabel = (account) => ({
+    cash: 'Bar',
+    bank: 'Bank',
+}[account] || account)
+
+const financeEntryClasses = (entry) => entry.type === 'income'
+    ? 'border-air-green/30 bg-air-green/5 text-air-green'
+    : 'border-error/30 bg-error/5 text-error'
+
+const resetFinanceEntryForm = (type = 'expense', entry = null) => {
+    editingFinanceEntryId.value = entry?.id || null
+    financeEntryForm.type = entry?.type || type
+    financeEntryForm.account = entry?.account || 'cash'
+    financeEntryForm.category = entry?.category || ''
+    financeEntryForm.title = entry?.title || ''
+    financeEntryForm.amount = entry?.amount || ''
+    financeEntryForm.booked_on = entry?.booked_on || new Date().toISOString().slice(0, 10)
+    financeEntryForm.reference = entry?.reference || ''
+    financeEntryForm.description = entry?.description || ''
+    financeEntryForm.clearErrors()
+}
+
+const openFinanceEntryModal = (type = 'expense', entry = null) => {
+    resetFinanceEntryForm(type, entry)
+    showFinanceEntryModal.value = true
+}
+
+const saveFinanceEntry = () => {
+    const options = {
+        preserveScroll: true,
+        only: ['clubs', 'flash', 'errors'],
+        onSuccess: () => {
+            showFinanceEntryModal.value = false
+            resetFinanceEntryForm()
+        },
+    }
+
+    if (editingFinanceEntryId.value) {
+        financeEntryForm.put(route('auth.club-memberships.finance-entries.update', [selectedClub.value.id, editingFinanceEntryId.value]), options)
+        return
+    }
+
+    financeEntryForm.post(route('auth.club-memberships.finance-entries.store', selectedClub.value.id), options)
 }
 
 const formFor = (member) => {
@@ -1460,6 +1544,127 @@ const inviteExternalMember = (member) => {
             </section>
 
             <section v-if="activeTab === 'payments'" class="surface-card p-5">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-air-blue">Vereinskasse</p>
+                        <h2 class="mt-1 text-lg font-semibold text-primary">Einnahmen, Ausgaben und Bestände</h2>
+                        <p class="mt-1 max-w-2xl text-sm text-secondary">
+                            Mitgliedszahlungen, Spenden und Vorauszahlungen fließen automatisch ein. Zusätzliche Einnahmen und Ausgaben werden im Kassenbuch erfasst.
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            class="rounded-lg border border-air-green/50 px-4 py-2 text-sm font-semibold text-air-green hover:bg-air-green/10"
+                            @click="openFinanceEntryModal('income')"
+                        >
+                            Einnahme buchen
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-lg border border-error/50 px-4 py-2 text-sm font-semibold text-error hover:bg-error/10"
+                            @click="openFinanceEntryModal('expense')"
+                        >
+                            Ausgabe buchen
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                    <div class="rounded-lg border border-border bg-inputBg/60 p-4">
+                        <div class="text-xs font-semibold uppercase text-secondary">Barbestand</div>
+                        <div class="mt-2 text-2xl font-bold text-primary">{{ formatMoney(cashBalance) }}</div>
+                        <div class="mt-1 text-xs text-secondary">Kasse vor Ort</div>
+                    </div>
+                    <div class="rounded-lg border border-border bg-inputBg/60 p-4">
+                        <div class="text-xs font-semibold uppercase text-secondary">Bankbestand</div>
+                        <div class="mt-2 text-2xl font-bold text-primary">{{ formatMoney(bankBalance) }}</div>
+                        <div class="mt-1 text-xs text-secondary">Überweisung und SEPA</div>
+                    </div>
+                    <div class="rounded-lg border border-border bg-inputBg/60 p-4">
+                        <div class="text-xs font-semibold uppercase text-secondary">Gesamt</div>
+                        <div class="mt-2 text-2xl font-bold text-primary">{{ formatMoney(totalBalance) }}</div>
+                        <div class="mt-1 text-xs text-secondary">
+                            <span v-if="unassignedBalance > 0">inkl. {{ formatMoney(unassignedBalance) }} manuell</span>
+                            <span v-else>Bar plus Bank</span>
+                        </div>
+                    </div>
+                    <div class="rounded-lg border border-air-green/25 bg-air-green/5 p-4">
+                        <div class="text-xs font-semibold uppercase text-secondary">Einnahmen</div>
+                        <div class="mt-2 text-2xl font-bold text-air-green">{{ formatMoney(incomeTotal) }}</div>
+                        <div class="mt-1 text-xs text-secondary">Zahlungen und Buchungen</div>
+                    </div>
+                    <div class="rounded-lg border border-error/25 bg-error/5 p-4">
+                        <div class="text-xs font-semibold uppercase text-secondary">Ausgaben</div>
+                        <div class="mt-2 text-2xl font-bold text-error">{{ formatMoney(expenseTotal) }}</div>
+                        <div class="mt-1 text-xs text-secondary">aus Kassenbuch</div>
+                    </div>
+                </div>
+            </section>
+
+            <section v-if="activeTab === 'payments'" class="surface-card p-5">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-primary">Kassenbuch</h2>
+                        <p class="mt-1 text-sm text-secondary">
+                            Freie Einnahmen und Ausgaben, die nicht aus einer Mitgliedsrechnung entstehen.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-inputBg"
+                        @click="openFinanceEntryModal('expense')"
+                    >
+                        Buchung hinzufügen
+                    </button>
+                </div>
+
+                <div class="mt-4 overflow-x-auto">
+                    <table v-if="financeEntries.length" class="min-w-full text-left text-sm">
+                        <thead class="text-xs uppercase text-secondary">
+                            <tr>
+                                <th class="py-2 pr-4">Datum</th>
+                                <th class="py-2 pr-4">Buchung</th>
+                                <th class="py-2 pr-4">Konto</th>
+                                <th class="py-2 pr-4">Betrag</th>
+                                <th class="py-2 pr-4">Aktion</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-border">
+                            <tr v-for="entry in financeEntries" :key="entry.id">
+                                <td class="py-3 pr-4 text-secondary">{{ formatDate(entry.booked_on) }}</td>
+                                <td class="py-3 pr-4">
+                                    <div class="font-semibold text-primary">{{ entry.title }}</div>
+                                    <div class="text-xs text-secondary">
+                                        {{ entry.category || financeTypeLabel(entry.type) }}
+                                        <span v-if="entry.reference"> · {{ entry.reference }}</span>
+                                    </div>
+                                </td>
+                                <td class="py-3 pr-4 text-secondary">{{ financeAccountLabel(entry.account) }}</td>
+                                <td class="py-3 pr-4">
+                                    <span class="rounded-full border px-2 py-1 text-xs font-semibold" :class="financeEntryClasses(entry)">
+                                        {{ entry.type === 'income' ? '+' : '-' }} {{ formatMoney(entry.amount) }}
+                                    </span>
+                                </td>
+                                <td class="py-3 pr-4">
+                                    <button
+                                        type="button"
+                                        class="rounded border border-border px-2 py-1 text-xs font-semibold text-primary hover:bg-inputBg"
+                                        @click="openFinanceEntryModal(entry.type, entry)"
+                                    >
+                                        Bearbeiten
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p v-else class="rounded-lg border border-dashed border-border bg-bg/50 p-4 text-sm text-secondary">
+                        Noch keine freien Einnahmen oder Ausgaben erfasst.
+                    </p>
+                </div>
+            </section>
+
+            <section v-if="activeTab === 'payments'" class="surface-card p-5">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                         <h2 class="text-lg font-semibold text-primary">Bankabgleich</h2>
@@ -1836,6 +2041,102 @@ const inviteExternalMember = (member) => {
                         </button>
                         <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="importForm.processing">
                             Import starten
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </Modal>
+
+        <Modal :show="showFinanceEntryModal" max-width="2xl" @close="showFinanceEntryModal = false">
+            <div class="p-2">
+                <h2 class="text-xl font-bold text-primary">
+                    {{ editingFinanceEntryId ? 'Buchung bearbeiten' : financeTypeLabel(financeEntryForm.type) + ' buchen' }}
+                </h2>
+                <p class="mt-1 text-sm text-secondary">
+                    Erfasse freie Einnahmen und Ausgaben für Kasse oder Bank. Mitgliedszahlungen werden weiterhin über Rechnungen, Spenden oder Vorauszahlungen gebucht.
+                </p>
+
+                <form class="mt-5 space-y-4" @submit.prevent="saveFinanceEntry">
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Typ</label>
+                            <select v-model="financeEntryForm.type" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                <option value="income">Einnahme</option>
+                                <option value="expense">Ausgabe</option>
+                            </select>
+                            <p v-if="financeEntryForm.errors.type" class="mt-1 text-xs text-error">{{ financeEntryForm.errors.type }}</p>
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Konto</label>
+                            <select v-model="financeEntryForm.account" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                                <option value="cash">Bar</option>
+                                <option value="bank">Bank</option>
+                            </select>
+                            <p v-if="financeEntryForm.errors.account" class="mt-1 text-xs text-error">{{ financeEntryForm.errors.account }}</p>
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Titel</label>
+                            <input
+                                v-model="financeEntryForm.title"
+                                class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                                placeholder="z. B. Hallenmiete"
+                                required
+                            >
+                            <p v-if="financeEntryForm.errors.title" class="mt-1 text-xs text-error">{{ financeEntryForm.errors.title }}</p>
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Kategorie</label>
+                            <input
+                                v-model="financeEntryForm.category"
+                                class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                                placeholder="z. B. Miete, Zuschuss, Material"
+                            >
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Betrag EUR</label>
+                            <input
+                                v-model="financeEntryForm.amount"
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                                required
+                            >
+                            <p v-if="financeEntryForm.errors.amount" class="mt-1 text-xs text-error">{{ financeEntryForm.errors.amount }}</p>
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold uppercase text-secondary">Datum</label>
+                            <input
+                                v-model="financeEntryForm.booked_on"
+                                type="date"
+                                class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                            >
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="text-xs font-semibold uppercase text-secondary">Referenz</label>
+                            <input
+                                v-model="financeEntryForm.reference"
+                                class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                                placeholder="Belegnummer, Kontoauszug, Notiz"
+                            >
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="text-xs font-semibold uppercase text-secondary">Beschreibung</label>
+                            <textarea
+                                v-model="financeEntryForm.description"
+                                rows="3"
+                                class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                                placeholder="Optional"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-2">
+                        <button type="button" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary" @click="showFinanceEntryModal = false">
+                            Abbrechen
+                        </button>
+                        <button class="rounded-lg bg-buttonPrimary px-4 py-2 text-sm font-semibold text-buttonTextPrimary" :disabled="financeEntryForm.processing">
+                            Speichern
                         </button>
                     </div>
                 </form>

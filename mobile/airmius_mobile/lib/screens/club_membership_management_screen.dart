@@ -32,8 +32,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
   bool _sendingInvitation = false;
 
   int _parseEuroCents(String value) {
-    final normalized = value.replaceAll(' EUR', '').replaceAll('.', '').replaceAll(',', '.').trim();
-    return ((double.tryParse(normalized) ?? 0) * 100).round();
+    return ((_parseMoneyNumber(value) ?? 0) * 100).round();
   }
 
   String _formatEuro(int cents) {
@@ -94,12 +93,30 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     return int.tryParse('$value') ?? 0;
   }
 
+  double? _parseMoneyNumber(Object? value) {
+    if (value is num) return value.toDouble();
+
+    var raw = '$value'
+        .replaceAll('EUR', '')
+        .replaceAll('€', '')
+        .replaceAll('\u00a0', '')
+        .replaceAll(' ', '')
+        .trim();
+    if (raw.isEmpty || raw == 'null') return null;
+
+    if (raw.contains(',') && raw.contains('.')) {
+      raw = raw.replaceAll('.', '').replaceAll(',', '.');
+    } else if (raw.contains(',')) {
+      raw = raw.replaceAll('.', '').replaceAll(',', '.');
+    }
+
+    return double.tryParse(raw);
+  }
+
   String _moneyFromValue(Object? value) {
-    if (value is num) return _formatEuroAmount(value.toDouble());
     final raw = '$value'.trim();
     if (raw.isEmpty || raw == 'null') return '0,00 EUR';
-    final normalized = raw.replaceAll('EUR', '').replaceAll('€', '').replaceAll('.', '').replaceAll(',', '.').trim();
-    final parsed = double.tryParse(normalized);
+    final parsed = _parseMoneyNumber(value);
     return parsed == null ? raw : _formatEuroAmount(parsed);
   }
 
@@ -241,6 +258,59 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
       'membership_invoice' => AirmiusColors.amber,
       _ => AirmiusColors.blue,
     };
+  }
+
+  String _financeTypeLabel(String type) {
+    return switch (type) {
+      'income' => 'Einnahme',
+      'expense' => 'Ausgabe',
+      _ => type,
+    };
+  }
+
+  String _financeAccountLabel(String account) {
+    return switch (account) {
+      'cash' => 'Bar',
+      'bank' => 'Bank',
+      _ => account,
+    };
+  }
+
+  Color _financeEntryColor(String type) => type == 'income' ? AirmiusColors.green : AirmiusColors.red;
+
+  IconData _financeEntryIcon(String type) => type == 'income' ? Icons.add_card_outlined : Icons.receipt_long_outlined;
+
+  List<_FinanceEntry> _financeEntriesFromManagement(AirmiusClubManagement? management) {
+    final entries = management?.financeEntries ?? const <JsonMap>[];
+    return entries.map((entry) {
+      final type = _stringFromJson(entry, ['type'], fallback: 'expense');
+      final account = _stringFromJson(entry, ['account'], fallback: 'cash');
+      final reference = _stringFromJson(entry, ['reference'], fallback: '');
+      final description = _stringFromJson(entry, ['description'], fallback: '');
+      final category = _stringFromJson(entry, ['category'], fallback: '');
+      final detail = [
+        if (category.isNotEmpty) category,
+        if (reference.isNotEmpty) reference,
+        if (description.isNotEmpty) description,
+      ].join(' - ');
+
+      return _FinanceEntry(
+        id: _intFromAny(entry['id']),
+        type: type,
+        account: account,
+        title: _stringFromJson(entry, ['title'], fallback: _financeTypeLabel(type)),
+        category: category,
+        amount: _moneyFromValue(entry['amount']),
+        amountInput: _paymentAmountInput(_moneyFromValue(entry['amount'])),
+        date: _dateLabelFromValue(entry['booked_on'] ?? entry['created_at']),
+        bookedOnInput: _dateLabelFromValue(entry['booked_on'] ?? entry['created_at']),
+        reference: reference,
+        description: description,
+        detail: detail,
+        icon: _financeEntryIcon(type),
+        color: _financeEntryColor(type),
+      );
+    }).toList();
   }
 
   List<_BankEntry> _bankEntriesFromManagement(AirmiusClubManagement? management) {
@@ -954,6 +1024,111 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     }
   }
 
+  Future<void> _editFinanceEntry(ClubSummary club, {String initialType = 'expense', _FinanceEntry? entry}) async {
+    final isEdit = entry != null && entry.id > 0;
+    const typeOptions = ['income', 'expense'];
+    const accountOptions = ['cash', 'bank'];
+    var type = typeOptions.contains(entry?.type) ? entry!.type : initialType;
+    var account = accountOptions.contains(entry?.account) ? entry!.account : 'cash';
+    final title = TextEditingController(text: entry?.title ?? '');
+    final category = TextEditingController(text: entry?.category ?? '');
+    final amount = TextEditingController(text: entry?.amountInput ?? '');
+    final bookedOn = TextEditingController(text: entry == null || entry.bookedOnInput == '-' ? _dateDisplay(DateTime.now()) : entry.bookedOnInput);
+    final reference = TextEditingController(text: entry?.reference ?? '');
+    final description = TextEditingController(text: entry?.description ?? '');
+
+    final payload = await showDialog<JsonMap>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: AirmiusColors.card,
+            title: Text(
+              isEdit ? 'Buchung bearbeiten' : '${_financeTypeLabel(type)} buchen',
+              style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
+            ),
+            content: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                DropdownButtonFormField<String>(
+                  value: type,
+                  dropdownColor: AirmiusColors.cardSoft,
+                  decoration: const InputDecoration(labelText: 'Typ'),
+                  items: typeOptions.map((item) => DropdownMenuItem<String>(value: item, child: Text(_financeTypeLabel(item)))).toList(),
+                  onChanged: (value) => setDialogState(() => type = value ?? type),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: account,
+                  dropdownColor: AirmiusColors.cardSoft,
+                  decoration: const InputDecoration(labelText: 'Konto'),
+                  items: accountOptions.map((item) => DropdownMenuItem<String>(value: item, child: Text(_financeAccountLabel(item)))).toList(),
+                  onChanged: (value) => setDialogState(() => account = value ?? account),
+                ),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Titel', hint: 'z. B. Hallenmiete', controller: title),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Kategorie', hint: 'z. B. Miete, Zuschuss, Material', controller: category),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Betrag EUR', hint: '0,00', controller: amount, keyboardType: TextInputType.number),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Datum', hint: 'TT.MM.JJJJ', controller: bookedOn),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Referenz', hint: 'Belegnummer oder Kontoauszug', controller: reference),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Beschreibung', hint: 'Optional', controller: description, maxLines: 3),
+              ]),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Abbrechen')),
+              FilledButton.icon(
+                onPressed: () {
+                  if (title.text.trim().isEmpty || amount.text.trim().isEmpty) return;
+                  Navigator.pop(dialogContext, {
+                    'type': type,
+                    'account': account,
+                    'title': title.text.trim(),
+                    'category': category.text.trim().isEmpty ? null : category.text.trim(),
+                    'amount': _normalizePaymentAmount(amount.text),
+                    'booked_on': _dateInputForApi(bookedOn.text),
+                    'reference': reference.text.trim().isEmpty ? null : reference.text.trim(),
+                    'description': description.text.trim().isEmpty ? null : description.text.trim(),
+                  });
+                },
+                icon: const Icon(Icons.save_outlined),
+                label: const Text('Speichern'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    title.dispose();
+    category.dispose();
+    amount.dispose();
+    bookedOn.dispose();
+    reference.dispose();
+    description.dispose();
+
+    if (payload == null) return;
+
+    try {
+      final repositories = AirmiusServicesScope.of(context).repositories.clubs;
+      final management = isEdit ? await repositories.updateFinanceEntry(club.id, entry!.id, payload) : await repositories.createFinanceEntry(club.id, payload);
+      if (!mounted) return;
+      _applyManagement(management);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(isEdit ? 'Buchung wurde aktualisiert.' : '${_financeTypeLabel('${payload['type']}')} wurde gebucht.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      final message = error is AirmiusApiException ? error.userMessage : '$error';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Buchung konnte nicht gespeichert werden: $message')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<_ManagedMembershipData?>(
@@ -1011,6 +1186,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
         final invoices = _invoicesFromManagement(management);
         final bankEntries = _bankEntriesFromManagement(management);
         final payments = _paymentsFromManagement(management, members);
+        final financeEntries = _financeEntriesFromManagement(management);
         final activeMembersCount = management?.activeMembersCount ?? members.where((member) => member.type == 'Aktiv').length;
         final linkedPeopleCount = management?.linkedPeopleCount ?? members.length;
         final openInvoicesCount = management?.openInvoicesCount ?? invoices.where((invoice) => invoice.status == 'Offen').length;
@@ -1020,6 +1196,15 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
         final cashBalance = management == null ? _cashBalanceFromPayments(payments) : _formatEuroAmount(management.cashBalance);
         final bankBalance = management == null ? _bankBalanceFromPayments(payments) : _formatEuroAmount(management.bankBalance);
         final totalBalance = management == null ? _totalBalanceFromPayments(payments) : _formatEuroAmount(management.totalBalance);
+        final incomeTotal = management == null
+            ? _formatEuro(
+                payments.fold<int>(0, (sum, payment) => sum + _parseEuroCents(payment.amount)) +
+                    financeEntries.where((entry) => entry.type == 'income').fold<int>(0, (sum, entry) => sum + _parseEuroCents(entry.amount)),
+              )
+            : _formatEuroAmount(management.incomeTotal);
+        final expenseTotal = management == null
+            ? _formatEuro(financeEntries.where((entry) => entry.type == 'expense').fold<int>(0, (sum, entry) => sum + _parseEuroCents(entry.amount)))
+            : _formatEuroAmount(management.expenseTotal);
         final unassignedBalance = management?.unassignedBalance ?? 0;
 
     return Scaffold(
@@ -1155,13 +1340,15 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
               const SizedBox(height: 10),
               _MembershipKpiGrid(
                 cards: [
-                  _MembershipKpi(title: 'Barbestand', value: cashBalance, detail: 'Barzahlungen in der Vereinskasse'),
+                  _MembershipKpi(title: 'Barbestand', value: cashBalance, detail: 'Kasse vor Ort'),
                   _MembershipKpi(title: 'Bankbestand', value: bankBalance, detail: 'Überweisung und SEPA'),
                   _MembershipKpi(
                     title: 'Gesamt',
                     value: totalBalance,
                     detail: unassignedBalance > 0 ? 'inkl. ${_formatEuroAmount(unassignedBalance)} manuell' : 'aus erfassten Zahlungseingängen',
                   ),
+                  _MembershipKpi(title: 'Einnahmen', value: incomeTotal, detail: 'Zahlungen und Buchungen'),
+                  _MembershipKpi(title: 'Ausgaben', value: expenseTotal, detail: 'aus Kassenbuch'),
                 ],
               ),
               const SizedBox(height: 14),
@@ -1199,9 +1386,33 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                       AirmiusButton(label: 'Zahlung erfassen', icon: Icons.payments_outlined, onPressed: () => _recordPayment(club, invoices)),
                       AirmiusButton(label: 'Spende erfassen', icon: Icons.volunteer_activism_outlined, secondary: true, onPressed: () => _recordDonation(club, members)),
                       AirmiusButton(label: 'Vorauszahlung', icon: Icons.account_balance_wallet_outlined, secondary: true, onPressed: () => _recordPrepayment(club, members)),
+                      AirmiusButton(label: 'Einnahme buchen', icon: Icons.add_card_outlined, secondary: true, onPressed: () => _editFinanceEntry(club, initialType: 'income')),
+                      AirmiusButton(label: 'Ausgabe buchen', icon: Icons.receipt_long_outlined, secondary: true, onPressed: () => _editFinanceEntry(club, initialType: 'expense')),
                       AirmiusButton(label: 'Mahnung vorbereiten', icon: Icons.notification_important_outlined, secondary: true, onPressed: () => openUiAction(context, title: 'Mahnung vorbereiten', body: 'Diese Aktion ist in der Mobile-App vorbereitet und wird später über die Laravel-API synchronisiert.', status: 'UI bereit', icon: Icons.notification_important_outlined)),
                     ],
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            AirmiusPanel(
+              borderColor: AirmiusColors.amber.withValues(alpha: 0.45),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(child: Eyebrow('Kassenbuch')),
+                      AirmiusButton(label: 'Buchung', icon: Icons.add_outlined, secondary: true, onPressed: () => _editFinanceEntry(club, initialType: 'expense')),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  for (final entry in financeEntries) _FinanceEntryLine(entry: entry, onEdit: () => _editFinanceEntry(club, entry: entry)),
+                  if (financeEntries.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Text('Noch keine freien Einnahmen oder Ausgaben erfasst.', style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w700)),
+                    ),
                 ],
               ),
             ),
@@ -1309,7 +1520,7 @@ class _MembershipSectionTabs extends StatelessWidget {
       if (hasRules) const _MembershipSectionTabData('rules', 'Regeln', Icons.tune_outlined),
       const _MembershipSectionTabData('members', 'Mitglieder', Icons.groups_2_outlined),
       const _MembershipSectionTabData('invite', 'Einladen', Icons.mark_email_read_outlined),
-      const _MembershipSectionTabData('payments', 'Zahlungen', Icons.receipt_long_outlined),
+      const _MembershipSectionTabData('payments', 'Finanzen', Icons.receipt_long_outlined),
       const _MembershipSectionTabData('export', 'Export', Icons.ios_share_outlined),
     ];
 
@@ -2786,6 +2997,40 @@ class _PaymentEntry {
   final Color color;
 }
 
+class _FinanceEntry {
+  const _FinanceEntry({
+    required this.id,
+    required this.type,
+    required this.account,
+    required this.title,
+    required this.category,
+    required this.amount,
+    required this.amountInput,
+    required this.date,
+    required this.bookedOnInput,
+    required this.reference,
+    required this.description,
+    required this.detail,
+    required this.icon,
+    required this.color,
+  });
+
+  final int id;
+  final String type;
+  final String account;
+  final String title;
+  final String category;
+  final String amount;
+  final String amountInput;
+  final String date;
+  final String bookedOnInput;
+  final String reference;
+  final String description;
+  final String detail;
+  final IconData icon;
+  final Color color;
+}
+
 class _BankEntry {
   const _BankEntry({required this.title, required this.detail});
 
@@ -2934,6 +3179,76 @@ class _PaymentLine extends StatelessWidget {
                 if (payment.detail.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text(payment.detail, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FinanceEntryLine extends StatelessWidget {
+  const _FinanceEntryLine({required this.entry, required this.onEdit});
+
+  final _FinanceEntry entry;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final typeLabel = entry.type == 'income' ? 'Einnahme' : 'Ausgabe';
+    final accountLabel = entry.account == 'bank' ? 'Bank' : 'Bar';
+    final amountPrefix = entry.type == 'income' ? '+' : '-';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(color: AirmiusColors.cardSoft, borderRadius: BorderRadius.circular(16), border: Border.all(color: entry.color.withValues(alpha: 0.45))),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(color: entry.color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(14), border: Border.all(color: entry.color.withValues(alpha: 0.45))),
+            child: Icon(entry.icon, color: entry.color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(entry.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('$amountPrefix ${entry.amount}', style: TextStyle(color: entry.color, fontWeight: FontWeight.w900)),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      tooltip: 'Bearbeiten',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: onEdit,
+                      icon: Icon(Icons.edit_outlined, color: entry.color, size: 20),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    StatusPill(typeLabel, color: entry.color),
+                    StatusPill(accountLabel, color: AirmiusColors.blue),
+                    StatusPill(entry.date, color: AirmiusColors.muted),
+                  ],
+                ),
+                if (entry.detail.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(entry.detail, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.muted, height: 1.35)),
                 ],
               ],
             ),
