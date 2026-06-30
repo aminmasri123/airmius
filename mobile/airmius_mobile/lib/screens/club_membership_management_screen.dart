@@ -59,6 +59,21 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     return _formatEuro(total);
   }
 
+  String _cashBalanceFromPayments(List<_PaymentEntry> payments) {
+    final total = payments.where((payment) => payment.methodKey == 'cash').fold<int>(0, (sum, payment) => sum + _parseEuroCents(payment.amount));
+    return _formatEuro(total);
+  }
+
+  String _bankBalanceFromPayments(List<_PaymentEntry> payments) {
+    final total = payments.where((payment) => payment.methodKey == 'bank_transfer' || payment.methodKey == 'sepa_debit').fold<int>(0, (sum, payment) => sum + _parseEuroCents(payment.amount));
+    return _formatEuro(total);
+  }
+
+  String _totalBalanceFromPayments(List<_PaymentEntry> payments) {
+    final total = payments.fold<int>(0, (sum, payment) => sum + _parseEuroCents(payment.amount));
+    return _formatEuro(total);
+  }
+
   bool _boolFromAny(Object? value) {
     if (value is bool) return value;
     final normalized = '$value'.toLowerCase();
@@ -143,14 +158,25 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     return payments.map((payment) {
       final purpose = _stringFromJson(payment, ['purpose'], fallback: 'payment').toLowerCase();
       final method = _stringFromJson(payment, ['method'], fallback: 'manual');
-      final detail = _stringFromJson(payment, ['notes', 'reference'], fallback: '');
+      final notes = _stringFromJson(payment, ['notes'], fallback: '');
+      final reference = _stringFromJson(payment, ['reference'], fallback: '');
+      final detail = notes.isNotEmpty ? notes : reference;
 
       return _PaymentEntry(
+        id: _intFromAny(payment['id']),
+        userId: _intFromAny(payment['user_id']),
+        invoiceId: _intFromAny(payment['invoice_id']),
+        purpose: purpose,
         title: _paymentPurposeLabel(purpose),
         person: _paymentPersonLabel(payment, members),
         amount: _moneyFromValue(payment['amount']),
+        amountInput: _paymentAmountInput(_moneyFromValue(payment['amount'])),
         method: _paymentMethodLabel(method),
+        methodKey: method,
         date: _dateLabelFromValue(payment['paid_at'] ?? payment['created_at']),
+        paidAtInput: _dateLabelFromValue(payment['paid_at'] ?? payment['created_at']),
+        reference: reference,
+        notes: notes,
         detail: detail,
         icon: _paymentPurposeIcon(purpose),
         color: _paymentPurposeColor(purpose),
@@ -330,6 +356,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
       'cash' => 'Barzahlung',
       'bank_transfer' => 'Überweisung',
       'sepa_debit' => 'SEPA-Lastschrift',
+      'manual' => 'Manuell',
       _ => method,
     };
   }
@@ -818,6 +845,115 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     }
   }
 
+  Future<void> _editPayment(ClubSummary club, _PaymentEntry payment, List<_MemberEntry> members) async {
+    if (payment.id <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Diese Zahlung kann nicht bearbeitet werden, weil keine Zahlungs-ID geladen wurde.')),
+      );
+      return;
+    }
+
+    final availableMembers = members.where((member) => member.id > 0).toList();
+    final canChangeMember = payment.invoiceId <= 0 && availableMembers.isNotEmpty;
+    var selectedMemberId = payment.userId;
+    if (canChangeMember && !availableMembers.any((member) => member.id == selectedMemberId)) {
+      selectedMemberId = availableMembers.first.id;
+    }
+
+    const methodOptions = ['cash', 'bank_transfer', 'sepa_debit', 'manual'];
+    var method = methodOptions.contains(payment.methodKey) ? payment.methodKey : 'manual';
+    final amount = TextEditingController(text: payment.amountInput);
+    final paidAt = TextEditingController(text: payment.paidAtInput == '-' ? _dateDisplay(DateTime.now()) : payment.paidAtInput);
+    final reference = TextEditingController(text: payment.reference);
+    final notes = TextEditingController(text: payment.notes);
+
+    final payload = await showDialog<JsonMap>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: AirmiusColors.card,
+            title: Text('${payment.title} bearbeiten', style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+            content: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                if (canChangeMember) ...[
+                  _memberPickerField(
+                    context: dialogContext,
+                    members: availableMembers,
+                    selectedMemberId: selectedMemberId,
+                    onChanged: (value) => setDialogState(() => selectedMemberId = value),
+                  ),
+                  const SizedBox(height: 10),
+                ] else ...[
+                  InputDecorator(
+                    decoration: const InputDecoration(labelText: 'Mitglied'),
+                    child: Text(payment.person, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                AirmiusTextField(label: 'Betrag EUR', hint: '0,00', controller: amount, keyboardType: TextInputType.number),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: method,
+                  dropdownColor: AirmiusColors.cardSoft,
+                  decoration: const InputDecoration(labelText: 'Zahlungsart'),
+                  items: methodOptions.map((item) => DropdownMenuItem<String>(value: item, child: Text(_paymentMethodLabel(item)))).toList(),
+                  onChanged: (value) => setDialogState(() => method = value ?? method),
+                ),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Erhalten am', hint: 'TT.MM.JJJJ', controller: paidAt),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Referenz', hint: 'optional', controller: reference),
+                const SizedBox(height: 10),
+                AirmiusTextField(label: 'Notiz / Zeitraum', hint: 'optional', controller: notes, maxLines: 3),
+              ]),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Abbrechen')),
+              FilledButton.icon(
+                onPressed: () {
+                  if (amount.text.trim().isEmpty) return;
+                  Navigator.pop(dialogContext, {
+                    if (canChangeMember) 'user_id': selectedMemberId,
+                    'amount': _normalizePaymentAmount(amount.text),
+                    'method': method,
+                    'paid_at': _dateInputForApi(paidAt.text),
+                    'reference': reference.text.trim().isEmpty ? null : reference.text.trim(),
+                    'notes': notes.text.trim().isEmpty ? null : notes.text.trim(),
+                  });
+                },
+                icon: const Icon(Icons.save_outlined),
+                label: const Text('Speichern'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    amount.dispose();
+    paidAt.dispose();
+    reference.dispose();
+    notes.dispose();
+
+    if (payload == null) return;
+
+    try {
+      final management = await AirmiusServicesScope.of(context).repositories.clubs.updatePayment(club.id, payment.id, payload);
+      if (!mounted) return;
+      _applyManagement(management);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Zahlung wurde aktualisiert.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      final message = error is AirmiusApiException ? error.userMessage : '$error';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Zahlung konnte nicht aktualisiert werden: $message')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<_ManagedMembershipData?>(
@@ -881,6 +1017,10 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
         final sepaReadyMembersCount = management?.sepaReadyMembersCount ?? members.where((member) => member.sepa).length;
         final openInvoiceTotal = management == null ? _openTotalFromInvoices(invoices) : _formatEuroAmount(management.openInvoiceAmount);
         final recurringContributionTotal = management == null ? _recurringTotalFromMembers(members) : _formatEuroAmount(management.recurringContributionTotal);
+        final cashBalance = management == null ? _cashBalanceFromPayments(payments) : _formatEuroAmount(management.cashBalance);
+        final bankBalance = management == null ? _bankBalanceFromPayments(payments) : _formatEuroAmount(management.bankBalance);
+        final totalBalance = management == null ? _totalBalanceFromPayments(payments) : _formatEuroAmount(management.totalBalance);
+        final unassignedBalance = management?.unassignedBalance ?? 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -1011,6 +1151,20 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
               const SizedBox(height: 14),
             ],
             if (_section == 'payments') ...[
+              const Eyebrow('Vereinskasse'),
+              const SizedBox(height: 10),
+              _MembershipKpiGrid(
+                cards: [
+                  _MembershipKpi(title: 'Barbestand', value: cashBalance, detail: 'Barzahlungen in der Vereinskasse'),
+                  _MembershipKpi(title: 'Bankbestand', value: bankBalance, detail: 'Überweisung und SEPA'),
+                  _MembershipKpi(
+                    title: 'Gesamt',
+                    value: totalBalance,
+                    detail: unassignedBalance > 0 ? 'inkl. ${_formatEuroAmount(unassignedBalance)} manuell' : 'aus erfassten Zahlungseingängen',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
               AirmiusPanel(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1059,7 +1213,7 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                 children: [
                   const Eyebrow('Erfasste Zahlungen'),
                   const SizedBox(height: 10),
-                  for (final payment in payments) _PaymentLine(payment: payment),
+                  for (final payment in payments) _PaymentLine(payment: payment, onEdit: () => _editPayment(club, payment, members)),
                   if (payments.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 10),
@@ -2512,12 +2666,14 @@ class _MembershipKpiGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 720 ? 4 : 2;
+        final maxColumns = constraints.maxWidth >= 720 ? 4 : 2;
+        final columns = cards.length < maxColumns ? cards.length : maxColumns;
         const gap = 10.0;
         const cardHeight = 150.0;
         final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
 
         return Wrap(
+          alignment: WrapAlignment.center,
           spacing: gap,
           runSpacing: gap,
           children: [
@@ -2592,21 +2748,39 @@ class _InvoiceEntry {
 
 class _PaymentEntry {
   const _PaymentEntry({
+    required this.id,
+    required this.userId,
+    required this.invoiceId,
+    required this.purpose,
     required this.title,
     required this.person,
     required this.amount,
+    required this.amountInput,
     required this.method,
+    required this.methodKey,
     required this.date,
+    required this.paidAtInput,
+    required this.reference,
+    required this.notes,
     required this.detail,
     required this.icon,
     required this.color,
   });
 
+  final int id;
+  final int userId;
+  final int invoiceId;
+  final String purpose;
   final String title;
   final String person;
   final String amount;
+  final String amountInput;
   final String method;
+  final String methodKey;
   final String date;
+  final String paidAtInput;
+  final String reference;
+  final String notes;
   final String detail;
   final IconData icon;
   final Color color;
@@ -2704,9 +2878,10 @@ class _InvoiceLine extends StatelessWidget {
 }
 
 class _PaymentLine extends StatelessWidget {
-  const _PaymentLine({required this.payment});
+  const _PaymentLine({required this.payment, required this.onEdit});
 
   final _PaymentEntry payment;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -2736,6 +2911,13 @@ class _PaymentLine extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(payment.amount, style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900)),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      tooltip: 'Bearbeiten',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: onEdit,
+                      icon: Icon(Icons.edit_outlined, color: payment.color, size: 20),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 3),

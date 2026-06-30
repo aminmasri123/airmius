@@ -162,6 +162,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('/clubs/{club}/membership-invoices/{invoice}/payments', [ClubController::class, 'recordMembershipPayment'])->name('clubs.membership-invoices.payments.store');
         Route::post('/clubs/{club}/donations', [ClubController::class, 'recordDonation'])->name('clubs.donations.store');
         Route::post('/clubs/{club}/prepayments', [ClubController::class, 'recordPrepayment'])->name('clubs.prepayments.store');
+        Route::put('/clubs/{club}/payments/{payment}', [ClubController::class, 'updatePayment'])->name('clubs.payments.update');
         Route::get('/clubs/{club}/billing', [ClubController::class, 'billing'])->name('clubs.billing');
         Route::get('/clubs/{club}/membership-requests', [ClubController::class, 'membershipRequests'])->name('clubs.membership-requests.index');
         Route::post('/clubs/{club}/membership-requests', [ClubController::class, 'storeMembershipRequest'])->name('clubs.membership-requests.store');

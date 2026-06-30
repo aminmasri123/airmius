@@ -340,6 +340,14 @@ class AirmiusClubManagement {
 
   double get recurringContributionTotal => _double(summary['recurring_contribution_total']);
 
+  double get cashBalance => _double(summary['cash_balance']);
+
+  double get bankBalance => _double(summary['bank_balance']);
+
+  double get unassignedBalance => _double(summary['unassigned_balance']);
+
+  double get totalBalance => _double(summary['total_balance']);
+
   factory AirmiusClubManagement.fromJson(JsonMap json) => AirmiusClubManagement(
         canManage: _bool(json['can_manage']),
         summary: json['summary'] is JsonMap ? json['summary'] as JsonMap : const {},
@@ -1570,6 +1578,7 @@ abstract class AirmiusClubRepository {
   Future<AirmiusClubManagement> recordMembershipPayment(int clubId, int invoiceId, JsonMap payload);
   Future<AirmiusClubManagement> recordDonation(int clubId, JsonMap payload);
   Future<AirmiusClubManagement> recordPrepayment(int clubId, JsonMap payload);
+  Future<AirmiusClubManagement> updatePayment(int clubId, int paymentId, JsonMap payload);
   Future<AirmiusClubManagement> inviteClubMember(int clubId, JsonMap payload);
   Future<AirmiusClubManagement> updateClubMemberRole(int clubId, int userId, String role);
   Future<AirmiusPage<AirmiusTeam>> teams({int page = 1});

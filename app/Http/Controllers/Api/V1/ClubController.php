@@ -624,6 +624,49 @@ class ClubController extends Controller
         ]);
     }
 
+    public function updatePayment(Request $request, Club $club, Payment $payment)
+    {
+        $this->authorizeVisible($request, $club);
+        abort_unless($this->canManageMembership($request, $club), 403);
+        abort_unless((int) $payment->club_id === (int) $club->id, 404);
+        $this->planFeatures->ensureAllows($club, 'payment_tracking');
+
+        $data = $request->validate([
+            'user_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
+            'amount' => ['required', 'numeric', 'min:0.01', 'max:999999.99'],
+            'method' => ['nullable', 'string', Rule::in(['cash', 'bank_transfer', 'sepa_debit', 'manual'])],
+            'reference' => ['nullable', 'string', 'max:255'],
+            'paid_at' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $attributes = [
+            'amount' => $data['amount'],
+            'method' => $data['method'] ?? 'manual',
+            'reference' => $data['reference'] ?? null,
+            'paid_at' => $data['paid_at'] ?? now(),
+            'notes' => $data['notes'] ?? null,
+        ];
+
+        if (! $payment->invoice_id && filled($data['user_id'] ?? null)) {
+            $member = $club->users()->where('users.id', $data['user_id'])->firstOrFail();
+            $attributes['user_id'] = $member->id;
+        }
+
+        $payment->update($attributes);
+
+        if ($payment->invoice_id && $payment->invoice) {
+            $payment->invoice->update([
+                'paid_at' => $attributes['paid_at'],
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Zahlung aktualisiert.',
+            'data' => $this->managementPayload($request, $club->fresh(), true),
+        ]);
+    }
+
     public function membershipRequests(Request $request, Club $club)
     {
         $this->authorizeVisible($request, $club);
@@ -999,6 +1042,20 @@ class ClubController extends Controller
             ->limit(60)
             ->get();
 
+        $paymentTotalsByMethod = Payment::query()
+            ->where('club_id', $club->id)
+            ->where('status', 'paid')
+            ->selectRaw("COALESCE(method, 'manual') as payment_method, SUM(amount) as amount")
+            ->groupBy('payment_method')
+            ->pluck('amount', 'payment_method');
+
+        $cashBalance = (float) ($paymentTotalsByMethod->get('cash', 0));
+        $bankBalance = (float) $paymentTotalsByMethod
+            ->only(['bank_transfer', 'sepa_debit'])
+            ->sum(fn ($amount) => (float) $amount);
+        $paymentBalanceTotal = (float) $paymentTotalsByMethod->sum(fn ($amount) => (float) $amount);
+        $unassignedBalance = max(0, $paymentBalanceTotal - $cashBalance - $bankBalance);
+
         return [
             ...$base,
             'membership_statuses' => ['active', 'non_member', 'pending', 'paused', 'former'],
@@ -1108,6 +1165,10 @@ class ClubController extends Controller
                 'open_invoices_count' => $invoices->where('status', '!=', 'paid')->count(),
                 'sepa_ready_members_count' => $club->users->filter(fn (User $member) => (bool) ($member->pivot?->sepa_mandate_active ?? false))->count(),
                 'recurring_contribution_total' => (float) $club->users->sum(fn (User $member) => (float) ($member->pivot?->contribution_amount ?? 0)),
+                'cash_balance' => $cashBalance,
+                'bank_balance' => $bankBalance,
+                'unassigned_balance' => $unassignedBalance,
+                'total_balance' => $paymentBalanceTotal,
             ],
         ];
     }
