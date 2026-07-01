@@ -279,7 +279,17 @@ window.addEventListener('storage', (event) => {
 });
 
 createInertiaApp({
-    title: (title) => `${title} - ${appName}`,
+    title: (title) => {
+        const pageTitle = String(title || '').trim();
+
+        if (!pageTitle) {
+            return appName;
+        }
+
+        return pageTitle.toLowerCase().includes(appName.toLowerCase())
+            ? pageTitle
+            : `${pageTitle} - ${appName}`;
+    },
     resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob('./Pages/**/*.vue')),
     async setup({ el, App, props, plugin }) {
         // Theme früh laden

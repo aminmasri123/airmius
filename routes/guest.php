@@ -154,7 +154,7 @@ Route::get('/top-inhalte', fn () => Inertia::render('Guest/Top-Inhalte', [
     'canRegister' => Route::has('register'),
 ]))->name('guest.top-inhalte');
 
-Route::get('/preise', [PricingController::class, 'index']);
+Route::redirect('/preise', '/abos', 301);
 Route::get('/abos', [PricingController::class, 'index'])->name('guest.pricing');
 
 Route::get('/jobs', [OrganizationJobController::class, 'publicIndex'])->name('guest.jobs');
@@ -164,12 +164,9 @@ Route::get('/sponsoren', [PublicSponsorController::class, 'index'])->name('guest
 Route::get('/werbeagentur-fuer-vereine', fn () => Inertia::render('Guest/Werbeagentur', [
     'canLogin' => Route::has('login'),
     'canRegister' => Route::has('register'),
-]));
-
-Route::get('/werbeagentur-für-vereine', fn () => Inertia::render('Guest/Werbeagentur', [
-    'canLogin' => Route::has('login'),
-    'canRegister' => Route::has('register'),
 ]))->name('guest.werbeagentur');
+
+Route::get('/werbeagentur-für-vereine', fn () => redirect()->route('guest.werbeagentur', [], 301));
 
 Route::post('/werbeagentur-fuer-vereine/anfrage', [CommerceCheckoutController::class, 'storePublicWebsiteRequest'])->name('guest.werbeagentur.request');
 

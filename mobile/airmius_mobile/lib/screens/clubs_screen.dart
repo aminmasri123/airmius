@@ -803,7 +803,7 @@ class _ClubWorkspaceNav extends StatelessWidget {
                 Expanded(
                   child: _WorkspaceTab(
                     icon: Icons.badge_outlined,
-                    label: 'Mitglieder',
+                    label: 'Mitglieder & Finanzen',
                     selected: false,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ClubMembershipManagementScreen())),
                   ),
@@ -832,7 +832,7 @@ class _WorkspaceTab extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(4),
       child: Container(
-        height: 38,
+        height: 46,
         padding: const EdgeInsets.symmetric(horizontal: 6),
         decoration: BoxDecoration(
           color: selected ? AirmiusColors.text : AirmiusColors.card,
@@ -844,7 +844,15 @@ class _WorkspaceTab extends StatelessWidget {
           children: [
             Icon(icon, size: 15, color: color),
             const SizedBox(width: 5),
-            Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900))),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900),
+              ),
+            ),
           ],
         ),
       ),

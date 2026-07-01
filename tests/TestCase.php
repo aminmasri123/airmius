@@ -11,5 +11,13 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         $this->withoutVite();
+
+        $compiledViewsPath = sys_get_temp_dir().DIRECTORY_SEPARATOR.'airmius-test-views-'.getmypid();
+
+        if (! is_dir($compiledViewsPath)) {
+            mkdir($compiledViewsPath, 0777, true);
+        }
+
+        config(['view.compiled' => $compiledViewsPath]);
     }
 }

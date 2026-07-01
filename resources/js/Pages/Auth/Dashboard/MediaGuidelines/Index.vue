@@ -248,7 +248,7 @@ const actionLabel = (item) => item.visual_keys?.some((key) => visualKeys.value.h
                             <input
                                 v-model="visualForm.login_slider_sources[index]"
                                 class="mt-1 w-full rounded-lg border-border bg-card text-sm text-primary"
-                                placeholder="/img/login/bild1.png oder login/visuals/..."
+                                placeholder="/img/login/airmius-auth-team-platform.png oder login/visuals/..."
                             >
                             <p v-if="visualForm.errors[`login_slider_sources.${index}`]" class="mt-1 text-xs text-error">{{ visualForm.errors[`login_slider_sources.${index}`] }}</p>
 

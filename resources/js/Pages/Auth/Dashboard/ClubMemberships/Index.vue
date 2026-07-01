@@ -2,6 +2,7 @@
 import AppLayout from '@/Components/Auth/Layouts/AppLayout.vue'
 import ClubWorkspaceNav from '@/Components/Auth/ClubWorkspaceNav.vue'
 import Modal from '@/Components/Modal.vue'
+import SearchableSelect from '@/Components/SearchableSelect.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import { confirmDialog } from '@/services/dialogService'
@@ -97,6 +98,47 @@ const financeEntryForm = useForm({
     description: '',
 })
 
+const financeExpenseCategories = [
+    'Miete & Hallenkosten',
+    'Material & Ausrüstung',
+    'Trikots & Kleidung',
+    'Trainerhonorare',
+    'Schiedsrichter & Gebühren',
+    'Verbandsbeiträge',
+    'Versicherungen',
+    'Reisekosten & Fahrtkosten',
+    'Verpflegung',
+    'Turniere & Wettkämpfe',
+    'Lizenzen & Software',
+    'Marketing & Werbung',
+    'Büro & Verwaltung',
+    'Bankgebühren',
+    'Steuern & Abgaben',
+    'Reparatur & Wartung',
+    'Reinigung',
+    'Energie & Nebenkosten',
+    'Telefon & Internet',
+    'Fortbildung',
+    'Veranstaltungskosten',
+    'Sonstige Ausgabe',
+]
+
+const financeIncomeCategories = [
+    'Mitgliedsbeiträge',
+    'Aufnahmegebühren',
+    'Spenden',
+    'Sponsoring',
+    'Zuschüsse & Fördermittel',
+    'Kursgebühren',
+    'Event-Einnahmen',
+    'Ticketverkauf',
+    'Merchandise',
+    'Vermietung',
+    'Rückerstattung',
+    'Zinsen',
+    'Sonstige Einnahme',
+]
+
 const fieldModeOptions = [
     { value: 'off', label: 'Aus' },
     { value: 'optional', label: 'Optional' },
@@ -152,13 +194,27 @@ const bankBalance = computed(() => Number(selectedClub.value?.bank_balance ?? fa
 const totalBalance = computed(() => Number(selectedClub.value?.total_balance ?? fallbackTotalBalance.value))
 const unassignedBalance = computed(() => Number(selectedClub.value?.unassigned_balance ?? Math.max(0, totalBalance.value - cashBalance.value - bankBalance.value)))
 const financeEntryAmount = (entry) => Number(entry.amount || 0)
-const incomeTotal = computed(() => Number(selectedClub.value?.income_total ?? (
-    payments.value.reduce((sum, payment) => sum + paymentAmount(payment), 0)
-    + financeEntries.value.filter((entry) => entry.type === 'income').reduce((sum, entry) => sum + financeEntryAmount(entry), 0)
+const currentYear = new Date().getFullYear()
+const isInCurrentYear = (value) => {
+    if (!value) return false
+
+    const raw = String(value).trim()
+    const datePrefix = raw.match(/^(\d{4})-/)
+
+    if (datePrefix) return Number(datePrefix[1]) === currentYear
+
+    const date = new Date(value)
+
+    return !Number.isNaN(date.getTime()) && date.getFullYear() === currentYear
+}
+const incomePeriodTotal = computed(() => Number(selectedClub.value?.income_period_total ?? (
+    payments.value.filter((payment) => isInCurrentYear(payment.paid_at || payment.created_at)).reduce((sum, payment) => sum + paymentAmount(payment), 0)
+    + financeEntries.value.filter((entry) => entry.type === 'income' && isInCurrentYear(entry.booked_on)).reduce((sum, entry) => sum + financeEntryAmount(entry), 0)
 )))
-const expenseTotal = computed(() => Number(selectedClub.value?.expense_total ?? (
-    financeEntries.value.filter((entry) => entry.type === 'expense').reduce((sum, entry) => sum + financeEntryAmount(entry), 0)
+const expensePeriodTotal = computed(() => Number(selectedClub.value?.expense_period_total ?? (
+    financeEntries.value.filter((entry) => entry.type === 'expense' && isInCurrentYear(entry.booked_on)).reduce((sum, entry) => sum + financeEntryAmount(entry), 0)
 )))
+const financePeriodLabel = computed(() => selectedClub.value?.finance_period_label || 'Dieses Jahr')
 const sepaReadyMembersCount = computed(() => members.value.filter((member) => {
     const form = formFor(member)
 
@@ -357,6 +413,27 @@ const financeAccountLabel = (account) => ({
 const financeEntryClasses = (entry) => entry.type === 'income'
     ? 'border-air-green/30 bg-air-green/5 text-air-green'
     : 'border-error/30 bg-error/5 text-error'
+
+const normalizedFinanceCategory = (value) => String(value || '').trim().toLowerCase()
+const financeCategoryBaseList = computed(() => financeEntryForm.type === 'income' ? financeIncomeCategories : financeExpenseCategories)
+const financeCategoryOptions = computed(() => {
+    const selected = String(financeEntryForm.category || '').trim()
+    const base = financeCategoryBaseList.value
+    const categories = selected && !base.some((category) => normalizedFinanceCategory(category) === normalizedFinanceCategory(selected))
+        ? [selected, ...base]
+        : base
+
+    return categories.map((category) => ({ name: category }))
+})
+
+const syncFinanceEntryCategoryForType = () => {
+    const selected = String(financeEntryForm.category || '').trim()
+
+    if (!selected) return
+    if (financeCategoryBaseList.value.some((category) => normalizedFinanceCategory(category) === normalizedFinanceCategory(selected))) return
+
+    financeEntryForm.category = ''
+}
 
 const resetFinanceEntryForm = (type = 'expense', entry = null) => {
     editingFinanceEntryId.value = entry?.id || null
@@ -724,7 +801,7 @@ const inviteExternalMember = (member) => {
 </script>
 
 <template>
-    <Head title="Mitgliederverwaltung" />
+    <Head title="Mitglieder & Finanzen" />
 
     <div class="space-y-6">
         <div
@@ -743,14 +820,14 @@ const inviteExternalMember = (member) => {
 
         <ClubWorkspaceNav
             active="memberships"
-            description="Mitgliedschaft, Beiträge, Abrechnung und Exporte."
+            description="Mitgliedschaft, Beiträge, Finanzen und Exporte."
         />
 
         <section class="surface-card overflow-hidden">
             <div class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-end">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Vereinsverwaltung</p>
-                    <h1 class="mt-1 text-2xl font-bold text-primary">Mitglieder & Beiträge</h1>
+                    <h1 class="mt-1 text-2xl font-bold text-primary">Mitglieder & Finanzen</h1>
                     <p class="mt-2 max-w-2xl text-sm leading-6 text-secondary">
                         Mitglieder pflegen, Anfragen prüfen, Beiträge abrechnen und Zahlungen abgleichen.
                     </p>
@@ -1574,30 +1651,30 @@ const inviteExternalMember = (member) => {
                     <div class="rounded-lg border border-border bg-inputBg/60 p-4">
                         <div class="text-xs font-semibold uppercase text-secondary">Barbestand</div>
                         <div class="mt-2 text-2xl font-bold text-primary">{{ formatMoney(cashBalance) }}</div>
-                        <div class="mt-1 text-xs text-secondary">Kasse vor Ort</div>
+                        <div class="mt-1 text-xs text-secondary">aktueller Bestand</div>
                     </div>
                     <div class="rounded-lg border border-border bg-inputBg/60 p-4">
                         <div class="text-xs font-semibold uppercase text-secondary">Bankbestand</div>
                         <div class="mt-2 text-2xl font-bold text-primary">{{ formatMoney(bankBalance) }}</div>
-                        <div class="mt-1 text-xs text-secondary">Überweisung und SEPA</div>
+                        <div class="mt-1 text-xs text-secondary">aktueller Bestand</div>
                     </div>
                     <div class="rounded-lg border border-border bg-inputBg/60 p-4">
                         <div class="text-xs font-semibold uppercase text-secondary">Gesamt</div>
                         <div class="mt-2 text-2xl font-bold text-primary">{{ formatMoney(totalBalance) }}</div>
                         <div class="mt-1 text-xs text-secondary">
                             <span v-if="unassignedBalance > 0">inkl. {{ formatMoney(unassignedBalance) }} manuell</span>
-                            <span v-else>Bar plus Bank</span>
+                            <span v-else>aktueller Gesamtbestand</span>
                         </div>
                     </div>
                     <div class="rounded-lg border border-air-green/25 bg-air-green/5 p-4">
                         <div class="text-xs font-semibold uppercase text-secondary">Einnahmen</div>
-                        <div class="mt-2 text-2xl font-bold text-air-green">{{ formatMoney(incomeTotal) }}</div>
-                        <div class="mt-1 text-xs text-secondary">Zahlungen und Buchungen</div>
+                        <div class="mt-2 text-2xl font-bold text-air-green">{{ formatMoney(incomePeriodTotal) }}</div>
+                        <div class="mt-1 text-xs text-secondary">{{ financePeriodLabel }}</div>
                     </div>
                     <div class="rounded-lg border border-error/25 bg-error/5 p-4">
                         <div class="text-xs font-semibold uppercase text-secondary">Ausgaben</div>
-                        <div class="mt-2 text-2xl font-bold text-error">{{ formatMoney(expenseTotal) }}</div>
-                        <div class="mt-1 text-xs text-secondary">aus Kassenbuch</div>
+                        <div class="mt-2 text-2xl font-bold text-error">{{ formatMoney(expensePeriodTotal) }}</div>
+                        <div class="mt-1 text-xs text-secondary">{{ financePeriodLabel }}</div>
                     </div>
                 </div>
             </section>
@@ -2060,7 +2137,11 @@ const inviteExternalMember = (member) => {
                     <div class="grid gap-3 sm:grid-cols-2">
                         <div>
                             <label class="text-xs font-semibold uppercase text-secondary">Typ</label>
-                            <select v-model="financeEntryForm.type" class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary">
+                            <select
+                                v-model="financeEntryForm.type"
+                                class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
+                                @change="syncFinanceEntryCategoryForType"
+                            >
                                 <option value="income">Einnahme</option>
                                 <option value="expense">Ausgabe</option>
                             </select>
@@ -2086,11 +2167,15 @@ const inviteExternalMember = (member) => {
                         </div>
                         <div>
                             <label class="text-xs font-semibold uppercase text-secondary">Kategorie</label>
-                            <input
+                            <SearchableSelect
                                 v-model="financeEntryForm.category"
-                                class="mt-1 w-full rounded-lg border border-border bg-inputBg px-3 py-2 text-sm text-primary"
-                                placeholder="z. B. Miete, Zuschuss, Material"
-                            >
+                                :options="financeCategoryOptions"
+                                placeholder="Kategorie suchen oder auswählen"
+                                empty-text="Keine Kategorie gefunden."
+                                :allow-custom="false"
+                                class="mt-1"
+                            />
+                            <p v-if="financeEntryForm.errors.category" class="mt-1 text-xs text-error">{{ financeEntryForm.errors.category }}</p>
                         </div>
                         <div>
                             <label class="text-xs font-semibold uppercase text-secondary">Betrag EUR</label>

@@ -354,6 +354,14 @@ class AirmiusClubManagement {
 
   double get expenseTotal => _double(summary['expense_total']);
 
+  bool get hasFinancePeriodTotals => summary.containsKey('income_period_total') && summary.containsKey('expense_period_total');
+
+  double get incomePeriodTotal => _double(summary['income_period_total'], fallback: incomeTotal);
+
+  double get expensePeriodTotal => _double(summary['expense_period_total'], fallback: expenseTotal);
+
+  String get financePeriodLabel => _string(summary['finance_period_label'], fallback: 'Dieses Jahr');
+
   factory AirmiusClubManagement.fromJson(JsonMap json) => AirmiusClubManagement(
         canManage: _bool(json['can_manage']),
         summary: json['summary'] is JsonMap ? json['summary'] as JsonMap : const {},

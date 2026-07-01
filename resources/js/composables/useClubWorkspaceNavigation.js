@@ -26,7 +26,7 @@ export const useClubWorkspaceNavigation = () => {
         can('club-memberships.view')
             ? {
                 key: 'memberships',
-                label: 'Mitglieder & Beiträge',
+                label: 'Mitglieder & Finanzen',
                 href: route('auth.club-memberships.index'),
                 icon: 'las la-id-card',
                 activePaths: ['/club-memberships'],

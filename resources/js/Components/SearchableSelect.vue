@@ -10,6 +10,8 @@ const props = defineProps({
     valueKey: { type: String, default: 'name' },
     translationPrefix: { type: String, default: '' },
     categoryTranslationPrefix: { type: String, default: '' },
+    emptyText: { type: String, default: 'Keine Sportart gefunden.' },
+    allowCustom: { type: Boolean, default: true },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -92,7 +94,9 @@ const selectOption = (option) => {
 
 const updateQuery = (value) => {
     query.value = value
-    emit('update:modelValue', value)
+    if (props.allowCustom) {
+        emit('update:modelValue', value)
+    }
     open.value = true
 }
 
@@ -104,7 +108,15 @@ const clear = () => {
 
 const closeOnOutsideClick = (event) => {
     if (!selectRef.value?.contains(event.target)) {
-        open.value = false
+        close()
+    }
+}
+
+const close = () => {
+    open.value = false
+
+    if (!props.allowCustom) {
+        query.value = selectedLabel(props.modelValue)
     }
 }
 
@@ -127,8 +139,8 @@ onBeforeUnmount(() => {
                 :placeholder="placeholder"
                 @focus="open = true"
                 @input="updateQuery($event.target.value)"
-                @keydown.escape="open = false"
-                @blur="setTimeout(() => open = false, 120)"
+                @keydown.escape="close"
+                @blur="setTimeout(close, 120)"
             >
             <button
                 v-if="query"
@@ -156,7 +168,7 @@ onBeforeUnmount(() => {
             </button>
 
             <div v-if="!filteredOptions.length" class="px-3 py-2 text-sm text-secondary">
-                Keine Sportart gefunden.
+                {{ emptyText }}
             </div>
         </div>
     </div>

@@ -252,17 +252,20 @@ class MediaGuidelineController extends Controller
     {
         $stored = Setting::valueFor('login_visual_slider');
         $decoded = is_string($stored) ? json_decode($stored, true) : null;
+        $legacySourceMap = $this->legacyLoginSliderSourceMap();
 
         if (is_array($decoded) && count(array_filter($decoded))) {
             return collect($decoded)
                 ->map(fn ($source) => trim((string) $source))
                 ->filter()
+                ->map(fn (string $source) => $legacySourceMap[$source] ?? $source)
                 ->values()
                 ->all();
         }
 
         return collect($this->defaultLoginSliderSources())
             ->map(fn (string $source, int $index) => Setting::valueFor('login_visual_slide_'.($index + 1), $source))
+            ->map(fn (string $source) => $legacySourceMap[$source] ?? $source)
             ->filter()
             ->values()
             ->all();
@@ -271,11 +274,21 @@ class MediaGuidelineController extends Controller
     private function defaultLoginSliderSources(): array
     {
         return [
+            '/img/login/airmius-auth-team-platform.png',
+            '/img/login/airmius-auth-club-operations.png',
+            '/img/login/airmius-auth-community-events.png',
+            '/img/login/airmius-auth-marketplace-services.png',
+        ];
+    }
+
+    private function legacyLoginSliderSourceMap(): array
+    {
+        return array_combine([
             '/img/login/bild1.png',
             '/img/login/bild2.png',
             '/img/login/bild3.png',
             '/img/login/bild4.png',
-        ];
+        ], $this->defaultLoginSliderSources());
     }
 
     private function visualDefinitions(): array

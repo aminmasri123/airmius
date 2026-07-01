@@ -299,12 +299,8 @@ class HandleInertiaRequests extends Middleware
 
     private function loginImages(): array
     {
-        $fallback = [
-            '/img/login/bild1.png',
-            '/img/login/bild2.png',
-            '/img/login/bild3.png',
-            '/img/login/bild4.png',
-        ];
+        $fallback = $this->defaultLoginSliderSources();
+        $legacySourceMap = $this->legacyLoginSliderSourceMap();
 
         $stored = \App\Models\Setting::valueFor('login_visual_slider');
         $decoded = is_string($stored) ? json_decode($stored, true) : null;
@@ -317,11 +313,32 @@ class HandleInertiaRequests extends Middleware
         return collect($sources)
             ->map(fn ($source) => trim((string) $source))
             ->filter()
+            ->map(fn (string $source) => $legacySourceMap[$source] ?? $source)
             ->values()
             ->map(fn (string $source, int $index) => [
                 'src' => \App\Support\UploadStorage::url($source),
                 'alt' => 'Airmius Login-Slider Bild '.($index + 1),
             ])
             ->all();
+    }
+
+    private function defaultLoginSliderSources(): array
+    {
+        return [
+            '/img/login/airmius-auth-team-platform.png',
+            '/img/login/airmius-auth-club-operations.png',
+            '/img/login/airmius-auth-community-events.png',
+            '/img/login/airmius-auth-marketplace-services.png',
+        ];
+    }
+
+    private function legacyLoginSliderSourceMap(): array
+    {
+        return array_combine([
+            '/img/login/bild1.png',
+            '/img/login/bild2.png',
+            '/img/login/bild3.png',
+            '/img/login/bild4.png',
+        ], $this->defaultLoginSliderSources());
     }
 }

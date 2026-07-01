@@ -1,8 +1,8 @@
 ﻿<script setup>
 import { computed } from 'vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import AuthenticationCard from '@/Components/AuthenticationCard.vue';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
+import AuthVisualSlider from '@/Components/AuthVisualSlider.vue';
 import Checkbox from '@/Components/Checkbox.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -14,6 +14,7 @@ const page = usePage()
 const redirectTarget = new URLSearchParams(page.url.split('?')[1] || '').get('redirect')
 const authRouteParams = redirectTarget ? { redirect: redirectTarget } : {}
 const socialRouteParams = (provider) => ({ provider, ...authRouteParams })
+const loginImages = computed(() => page.props.loginImages || [])
 
 const form = useForm({
     first_name: '',
@@ -55,34 +56,44 @@ const submit = () => {
         onFinish: () => form.reset('password', 'password_confirmation'),
     });
 };
+
+const goBack = () => {
+    window.history.back()
+}
 </script>
 
 <template>
     <Head :title="$t('Registrieren')" />
 
-    <AuthenticationCard>
-        <div class="mx-auto h-36 w-36 md:h-48 md:w-48">
-            <AuthenticationCardLogo />
-        </div>
+    <button type="button" @click="goBack" class="absolute top-4 left-4 z-[101] md:top-16 md:left-24 text-primary text-sm">
+        <i class="las la-chevron-circle-left la-lg"></i>
+    </button>
 
-        <div class="mb-5 grid gap-2">
-            <a
-                :href="route('social-auth.redirect', socialRouteParams('google'))"
-                class="flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
-            >
-                <i class="lab la-google text-lg"></i>
-                {{ $t('Mit Google registrieren') }}
-            </a>
-            <a
-                :href="route('social-auth.redirect', socialRouteParams('microsoft'))"
-                class="flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
-            >
-                <i class="lab la-microsoft text-lg"></i>
-                {{ $t('Mit Outlook registrieren') }}
-            </a>
-        </div>
+    <div class="min-h-screen flex bg-bg text-primary">
+        <div class="w-full md:w-1/2 flex items-start justify-center px-4 py-10 sm:px-8 lg:px-10">
+            <div class="surface-card w-full max-w-md px-6 py-5 overflow-hidden">
+                <div class="mx-auto h-36 w-36 md:h-48 md:w-48">
+                    <AuthenticationCardLogo />
+                </div>
 
-        <form @submit.prevent="submit">
+                <div class="mb-5 grid gap-2">
+                    <a
+                        :href="route('social-auth.redirect', socialRouteParams('google'))"
+                        class="flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
+                    >
+                        <i class="lab la-google text-lg"></i>
+                        {{ $t('Mit Google registrieren') }}
+                    </a>
+                    <a
+                        :href="route('social-auth.redirect', socialRouteParams('microsoft'))"
+                        class="flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-primary hover:border-borderHover"
+                    >
+                        <i class="lab la-microsoft text-lg"></i>
+                        {{ $t('Mit Outlook registrieren') }}
+                    </a>
+                </div>
+
+                <form @submit.prevent="submit">
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
                     <InputLabel for="first_name" :value="$t('Vorname')" />
@@ -331,7 +342,11 @@ const submit = () => {
                     <Link :href="route('login', authRouteParams)">{{ $t('Anmelden') }}</Link>
                 </SecondaryButton>
             </div>
-        </form>
-    </AuthenticationCard>
+                </form>
+            </div>
+        </div>
+
+        <AuthVisualSlider :slides="loginImages" title="Airmius starten" subtitle="Teams - Events - Marketplace" />
+    </div>
 </template>
 

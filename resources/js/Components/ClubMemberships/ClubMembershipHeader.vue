@@ -12,7 +12,7 @@ defineEmits(['update:selectedClubId'])
         <div class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-end">
             <div>
                 <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Vereinsverwaltung</p>
-                <h1 class="mt-1 text-2xl font-bold text-primary">Mitglieder & Beiträge</h1>
+                <h1 class="mt-1 text-2xl font-bold text-primary">Mitglieder & Finanzen</h1>
                 <p class="mt-2 max-w-2xl text-sm leading-6 text-secondary">
                     Mitglieder pflegen, Anfragen prüfen, Beiträge abrechnen und Zahlungen abgleichen.
                 </p>

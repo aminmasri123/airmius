@@ -281,6 +281,9 @@ class ClubMembershipController extends Controller
 
     private function financeBalanceSummary(Club $club): array
     {
+        $periodStart = now()->startOfYear();
+        $periodEnd = now()->endOfYear();
+
         $paymentTotalsByMethod = Payment::query()
             ->where('club_id', $club->id)
             ->where('status', 'paid')
@@ -316,6 +319,30 @@ class ClubMembershipController extends Controller
         $cashBalance = $paymentCash + $entryTotal('cash', 'income') - $entryTotal('cash', 'expense');
         $bankBalance = $paymentBank + $entryTotal('bank', 'income') - $entryTotal('bank', 'expense');
 
+        $periodPaymentTotal = (float) Payment::query()
+            ->where('club_id', $club->id)
+            ->where('status', 'paid')
+            ->where(function ($query) use ($periodStart, $periodEnd) {
+                $query
+                    ->whereBetween('paid_at', [$periodStart, $periodEnd])
+                    ->orWhere(function ($fallbackQuery) use ($periodStart, $periodEnd) {
+                        $fallbackQuery
+                            ->whereNull('paid_at')
+                            ->whereBetween('created_at', [$periodStart, $periodEnd]);
+                    });
+            })
+            ->sum('amount');
+
+        $periodEntryTotals = ClubFinanceEntry::query()
+            ->where('club_id', $club->id)
+            ->whereBetween('booked_on', [$periodStart->toDateString(), $periodEnd->toDateString()])
+            ->selectRaw('type, SUM(amount) as amount')
+            ->groupBy('type')
+            ->pluck('amount', 'type');
+
+        $incomePeriodTotal = $periodPaymentTotal + (float) ($periodEntryTotals->get('income', 0));
+        $expensePeriodTotal = (float) ($periodEntryTotals->get('expense', 0));
+
         return [
             'cash_balance' => $cashBalance,
             'bank_balance' => $bankBalance,
@@ -323,6 +350,11 @@ class ClubMembershipController extends Controller
             'total_balance' => $cashBalance + $bankBalance + $unassignedBalance,
             'income_total' => $incomeTotal,
             'expense_total' => $expenseTotal,
+            'income_period_total' => $incomePeriodTotal,
+            'expense_period_total' => $expensePeriodTotal,
+            'finance_period' => 'year',
+            'finance_period_year' => (int) $periodStart->year,
+            'finance_period_label' => 'Dieses Jahr',
         ];
     }
 

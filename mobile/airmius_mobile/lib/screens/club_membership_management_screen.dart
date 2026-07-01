@@ -31,6 +31,47 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
   final _inviteEmailController = TextEditingController();
   bool _sendingInvitation = false;
 
+  static const _expenseCategories = [
+    'Miete & Hallenkosten',
+    'Material & Ausrüstung',
+    'Trikots & Kleidung',
+    'Trainerhonorare',
+    'Schiedsrichter & Gebühren',
+    'Verbandsbeiträge',
+    'Versicherungen',
+    'Reisekosten & Fahrtkosten',
+    'Verpflegung',
+    'Turniere & Wettkaempfe',
+    'Lizenzen & Software',
+    'Marketing & Werbung',
+    'Büro & Verwaltung',
+    'Bankgebühren',
+    'Steuern & Abgaben',
+    'Reparatur & Wartung',
+    'Reinigung',
+    'Energie & Nebenkosten',
+    'Telefon & Internet',
+    'Fortbildung',
+    'Veranstaltungskosten',
+    'Sonstige Ausgabe',
+  ];
+
+  static const _incomeCategories = [
+    'Mitgliedsbeiträge',
+    'Aufnahmegebühren',
+    'Spenden',
+    'Sponsoring',
+    'Zuschüsse & Fördermittel',
+    'Kursgebühren',
+    'Event-Einnahmen',
+    'Ticketverkauf',
+    'Merchandise',
+    'Vermietung',
+    'Rückerstattung',
+    'Zinsen',
+    'Sonstige Einnahme',
+  ];
+
   int _parseEuroCents(String value) {
     return ((_parseMoneyNumber(value) ?? 0) * 100).round();
   }
@@ -276,6 +317,105 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
     };
   }
 
+  List<String> _financeCategoryOptions(String type, {String? current}) {
+    final selected = (current ?? '').trim();
+    final base = type == 'income' ? _incomeCategories : _expenseCategories;
+
+    if (selected.isEmpty || base.any((item) => item.toLowerCase() == selected.toLowerCase())) {
+      return base;
+    }
+
+    return [selected, ...base];
+  }
+
+  Future<String?> _pickFinanceCategory(BuildContext context, {required String type, required String current}) async {
+    final search = TextEditingController();
+    final selected = current.trim();
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final query = search.text.trim().toLowerCase();
+          final options = _financeCategoryOptions(type, current: selected)
+              .where((category) => query.isEmpty || category.toLowerCase().contains(query))
+              .toList();
+
+          return AlertDialog(
+            backgroundColor: AirmiusColors.card,
+            title: Text(
+              '${_financeTypeLabel(type)}-Kategorie',
+              style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w900),
+            ),
+            content: SizedBox(
+              width: 420,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: search,
+                    autofocus: true,
+                    onChanged: (_) => setDialogState(() {}),
+                    style: const TextStyle(color: AirmiusColors.text, fontWeight: FontWeight.w800),
+                    decoration: const InputDecoration(
+                      labelText: 'Kategorie suchen',
+                      hintText: 'z. B. Miete, Material, Spenden',
+                      prefixIcon: Icon(Icons.search_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 320),
+                    child: options.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.all(18),
+                            child: Text(
+                              'Keine Kategorie gefunden.',
+                              style: TextStyle(color: AirmiusColors.muted, fontWeight: FontWeight.w800),
+                            ),
+                          )
+                        : ListView.separated(
+                            shrinkWrap: true,
+                            itemCount: options.length,
+                            separatorBuilder: (_, __) => const Divider(height: 1, color: AirmiusColors.border),
+                            itemBuilder: (context, index) {
+                              final category = options[index];
+                              final isSelected = category.toLowerCase() == selected.toLowerCase();
+
+                              return ListTile(
+                                dense: true,
+                                leading: Icon(
+                                  isSelected ? Icons.check_circle : Icons.label_outline,
+                                  color: isSelected ? AirmiusColors.blue : AirmiusColors.muted,
+                                ),
+                                title: Text(
+                                  category,
+                                  style: TextStyle(
+                                    color: isSelected ? AirmiusColors.text : AirmiusColors.muted,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                onTap: () => Navigator.pop(dialogContext, category),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Abbrechen')),
+            ],
+          );
+        },
+      ),
+    );
+
+    search.dispose();
+
+    return result;
+  }
+
   Color _financeEntryColor(String type) => type == 'income' ? AirmiusColors.green : AirmiusColors.red;
 
   IconData _financeEntryIcon(String type) => type == 'income' ? Icons.add_card_outlined : Icons.receipt_long_outlined;
@@ -463,6 +603,13 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
 
     final parsed = DateTime.tryParse(trimmed);
     return parsed == null ? trimmed : _dateOnly(parsed);
+  }
+
+  bool _isCurrentYearDate(String value) {
+    final normalized = _dateInputForApi(value);
+    final parsed = normalized == null ? null : DateTime.tryParse(normalized);
+
+    return parsed != null && parsed.year == DateTime.now().year;
   }
 
   String _dateRangeLabel(DateTimeRange range) => '${_dateDisplay(range.start)} bis ${_dateDisplay(range.end)}';
@@ -1054,7 +1201,14 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                   dropdownColor: AirmiusColors.cardSoft,
                   decoration: const InputDecoration(labelText: 'Typ'),
                   items: typeOptions.map((item) => DropdownMenuItem<String>(value: item, child: Text(_financeTypeLabel(item)))).toList(),
-                  onChanged: (value) => setDialogState(() => type = value ?? type),
+                  onChanged: (value) => setDialogState(() {
+                    type = value ?? type;
+                    final categoryText = category.text.trim();
+                    final options = _financeCategoryOptions(type);
+                    if (categoryText.isNotEmpty && !options.any((item) => item.toLowerCase() == categoryText.toLowerCase())) {
+                      category.clear();
+                    }
+                  }),
                 ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
@@ -1067,7 +1221,37 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
                 const SizedBox(height: 10),
                 AirmiusTextField(label: 'Titel', hint: 'z. B. Hallenmiete', controller: title),
                 const SizedBox(height: 10),
-                AirmiusTextField(label: 'Kategorie', hint: 'z. B. Miete, Zuschuss, Material', controller: category),
+                InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () async {
+                    final selected = await _pickFinanceCategory(dialogContext, type: type, current: category.text);
+                    if (selected == null) return;
+                    setDialogState(() => category.text = selected);
+                  },
+                  child: InputDecorator(
+                    isEmpty: category.text.trim().isEmpty,
+                    decoration: const InputDecoration(labelText: 'Kategorie'),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            category.text.trim().isEmpty ? 'Kategorie auswählen' : category.text.trim(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: category.text.trim().isEmpty ? AirmiusColors.muted : AirmiusColors.text,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.search_outlined, color: AirmiusColors.muted, size: 20),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.arrow_drop_down, color: AirmiusColors.muted),
+                      ],
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 10),
                 AirmiusTextField(label: 'Betrag EUR', hint: '0,00', controller: amount, keyboardType: TextInputType.number),
                 const SizedBox(height: 10),
@@ -1196,15 +1380,17 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
         final cashBalance = management == null ? _cashBalanceFromPayments(payments) : _formatEuroAmount(management.cashBalance);
         final bankBalance = management == null ? _bankBalanceFromPayments(payments) : _formatEuroAmount(management.bankBalance);
         final totalBalance = management == null ? _totalBalanceFromPayments(payments) : _formatEuroAmount(management.totalBalance);
-        final incomeTotal = management == null
+        final hasBackendFinancePeriodTotals = management?.hasFinancePeriodTotals ?? false;
+        final incomePeriodTotal = !hasBackendFinancePeriodTotals
             ? _formatEuro(
-                payments.fold<int>(0, (sum, payment) => sum + _parseEuroCents(payment.amount)) +
-                    financeEntries.where((entry) => entry.type == 'income').fold<int>(0, (sum, entry) => sum + _parseEuroCents(entry.amount)),
+                payments.where((payment) => _isCurrentYearDate(payment.paidAtInput)).fold<int>(0, (sum, payment) => sum + _parseEuroCents(payment.amount)) +
+                    financeEntries.where((entry) => entry.type == 'income' && _isCurrentYearDate(entry.bookedOnInput)).fold<int>(0, (sum, entry) => sum + _parseEuroCents(entry.amount)),
               )
-            : _formatEuroAmount(management.incomeTotal);
-        final expenseTotal = management == null
-            ? _formatEuro(financeEntries.where((entry) => entry.type == 'expense').fold<int>(0, (sum, entry) => sum + _parseEuroCents(entry.amount)))
-            : _formatEuroAmount(management.expenseTotal);
+            : _formatEuroAmount(management!.incomePeriodTotal);
+        final expensePeriodTotal = !hasBackendFinancePeriodTotals
+            ? _formatEuro(financeEntries.where((entry) => entry.type == 'expense' && _isCurrentYearDate(entry.bookedOnInput)).fold<int>(0, (sum, entry) => sum + _parseEuroCents(entry.amount)))
+            : _formatEuroAmount(management!.expensePeriodTotal);
+        final financePeriodLabel = hasBackendFinancePeriodTotals ? management!.financePeriodLabel : 'Dieses Jahr';
         final unassignedBalance = management?.unassignedBalance ?? 0;
 
     return Scaffold(
@@ -1338,17 +1524,41 @@ class _ClubMembershipManagementScreenState extends State<ClubMembershipManagemen
             if (_section == 'payments') ...[
               const Eyebrow('Vereinskasse'),
               const SizedBox(height: 10),
-              _MembershipKpiGrid(
+              _MembershipTreasuryKpiGrid(
                 cards: [
-                  _MembershipKpi(title: 'Barbestand', value: cashBalance, detail: 'Kasse vor Ort'),
-                  _MembershipKpi(title: 'Bankbestand', value: bankBalance, detail: 'Überweisung und SEPA'),
+                  _MembershipKpi(
+                    title: 'Barbestand',
+                    value: cashBalance,
+                    detail: 'aktueller Bestand',
+                    icon: Icons.account_balance_wallet_outlined,
+                  ),
+                  _MembershipKpi(
+                    title: 'Bankbestand',
+                    value: bankBalance,
+                    detail: 'aktueller Bestand',
+                    icon: Icons.account_balance_outlined,
+                  ),
                   _MembershipKpi(
                     title: 'Gesamt',
                     value: totalBalance,
-                    detail: unassignedBalance > 0 ? 'inkl. ${_formatEuroAmount(unassignedBalance)} manuell' : 'aus erfassten Zahlungseingängen',
+                    detail: unassignedBalance > 0 ? 'aktuell inkl. ${_formatEuroAmount(unassignedBalance)} manuell' : 'aktueller Gesamtbestand',
+                    icon: Icons.layers_outlined,
+                    accent: AirmiusColors.blue,
                   ),
-                  _MembershipKpi(title: 'Einnahmen', value: incomeTotal, detail: 'Zahlungen und Buchungen'),
-                  _MembershipKpi(title: 'Ausgaben', value: expenseTotal, detail: 'aus Kassenbuch'),
+                  _MembershipKpi(
+                    title: 'Einnahmen',
+                    value: incomePeriodTotal,
+                    detail: financePeriodLabel,
+                    icon: Icons.call_received_outlined,
+                    accent: AirmiusColors.green,
+                  ),
+                  _MembershipKpi(
+                    title: 'Ausgaben',
+                    value: expensePeriodTotal,
+                    detail: financePeriodLabel,
+                    icon: Icons.call_made_outlined,
+                    accent: AirmiusColors.red,
+                  ),
                 ],
               ),
               const SizedBox(height: 14),
@@ -2861,11 +3071,13 @@ class _ClubMembershipHeader extends StatelessWidget {
 }
 
 class _MembershipKpi {
-  const _MembershipKpi({required this.title, required this.value, required this.detail});
+  const _MembershipKpi({required this.title, required this.value, required this.detail, this.icon, this.accent});
 
   final String title;
   final String value;
   final String detail;
+  final IconData? icon;
+  final Color? accent;
 }
 
 class _MembershipKpiGrid extends StatelessWidget {
@@ -2896,6 +3108,89 @@ class _MembershipKpiGrid extends StatelessWidget {
   }
 }
 
+class _MembershipTreasuryKpiGrid extends StatelessWidget {
+  const _MembershipTreasuryKpiGrid({required this.cards});
+
+  final List<_MembershipKpi> cards;
+
+  @override
+  Widget build(BuildContext context) {
+    if (cards.length < 5) return _MembershipKpiGrid(cards: cards);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 10.0;
+
+        Widget tile(_MembershipKpi card, double width, double height) {
+          return SizedBox(width: width, height: height, child: _MembershipKpiCard(card: card));
+        }
+
+        if (constraints.maxWidth >= 720) {
+          final topWidth = (constraints.maxWidth - gap * 2) / 3;
+          final bottomWidth = (constraints.maxWidth - gap) / 2;
+
+          return Column(
+            children: [
+              Row(
+                children: [
+                  tile(cards[0], topWidth, 150),
+                  const SizedBox(width: gap),
+                  tile(cards[1], topWidth, 150),
+                  const SizedBox(width: gap),
+                  tile(cards[2], topWidth, 150),
+                ],
+              ),
+              const SizedBox(height: gap),
+              Row(
+                children: [
+                  tile(cards[3], bottomWidth, 138),
+                  const SizedBox(width: gap),
+                  tile(cards[4], bottomWidth, 138),
+                ],
+              ),
+            ],
+          );
+        }
+
+        if (constraints.maxWidth >= 520) {
+          final halfWidth = (constraints.maxWidth - gap) / 2;
+
+          return Column(
+            children: [
+              Row(
+                children: [
+                  tile(cards[0], halfWidth, 150),
+                  const SizedBox(width: gap),
+                  tile(cards[1], halfWidth, 150),
+                ],
+              ),
+              const SizedBox(height: gap),
+              tile(cards[2], constraints.maxWidth, 138),
+              const SizedBox(height: gap),
+              Row(
+                children: [
+                  tile(cards[3], halfWidth, 138),
+                  const SizedBox(width: gap),
+                  tile(cards[4], halfWidth, 138),
+                ],
+              ),
+            ],
+          );
+        }
+
+        return Column(
+          children: [
+            for (var index = 0; index < cards.length; index++) ...[
+              tile(cards[index], constraints.maxWidth, 138),
+              if (index != cards.length - 1) const SizedBox(height: gap),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _MembershipKpiCard extends StatelessWidget {
   const _MembershipKpiCard({required this.card});
 
@@ -2903,22 +3198,46 @@ class _MembershipKpiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = card.accent;
+    final borderColor = accent == null ? AirmiusColors.border : Color.lerp(AirmiusColors.border, accent, 0.55) ?? AirmiusColors.border;
+    final backgroundColor = accent == null ? AirmiusColors.card : Color.lerp(AirmiusColors.card, accent, 0.08) ?? AirmiusColors.card;
+
     return Container(
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        color: AirmiusColors.card,
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AirmiusColors.border),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            card.title.toUpperCase(),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: .2),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  card.title.toUpperCase(),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: AirmiusColors.muted, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: .2),
+                ),
+              ),
+              if (card.icon != null) ...[
+                const SizedBox(width: 8),
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: (accent ?? AirmiusColors.borderStrong).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(11),
+                    border: Border.all(color: (accent ?? AirmiusColors.borderStrong).withValues(alpha: 0.35)),
+                  ),
+                  child: Icon(card.icon, color: accent ?? AirmiusColors.muted, size: 18),
+                ),
+              ],
+            ],
           ),
           const SizedBox(height: 12),
           FittedBox(

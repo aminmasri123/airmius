@@ -38,7 +38,7 @@ const componentTitles = {
     'Auth/Dashboard/Badges/Index': 'Badges verwalten',
     'Auth/Dashboard/Blogs/Index': 'Blogs',
     'Auth/Dashboard/Blogs/Categories': 'Blog-Kategorien',
-    'Auth/Dashboard/ClubMemberships/Index': 'Mitglieder & Beiträge',
+    'Auth/Dashboard/ClubMemberships/Index': 'Mitglieder & Finanzen',
     'Auth/Dashboard/Teams/Index': 'Vereine & Teams',
     'Auth/Dashboard/Users/Index': 'Nutzerverwaltung',
     'Auth/Dashboard/Users/Create': 'Neuen Nutzer erstellen',
